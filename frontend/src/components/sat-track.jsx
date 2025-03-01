@@ -205,7 +205,7 @@ function segmentOrbit(positions) {
 // -------------------------------------------------
 // 6) Main SatelliteTracker component
 // -------------------------------------------------
-function SatelliteTrackerDashboard() {
+function TargetSatelliteGridLayout() {
     const [latitude, setLatitude] = useState(0);
     const [longitude, setLongitude] = useState(0);
     const [altitude, setAltitude] = useState(0);
@@ -297,7 +297,7 @@ function SatelliteTrackerDashboard() {
             draggableHandle=".react-grid-draggable"
         >
             {/* MAP ISLAND */}
-            <div key="map" style={{ border:'1px solid grey', overflow:'hidden' }}>
+            <div key="map" style={{ border:'1px solid #424242', overflow:'hidden'}}>
                 <TitleBar className={"react-grid-draggable"}></TitleBar>
                 <MapContainer
                     center={[latitude, longitude]}
@@ -385,7 +385,7 @@ function SatelliteTrackerDashboard() {
             </div>
 
             {/* INFO ISLAND */}
-            <div key="info" style={{ padding:'0rem 0rem 0rem 0rem', border:'1px solid grey' }}>
+            <div key="info" style={{ padding:'0rem 0rem 0rem 0rem', border:'1px solid #424242' }}>
                 <TitleBar className={"react-grid-draggable"}></TitleBar>
                 <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
                     <h3>Satellite Info (ISS)</h3>
@@ -397,7 +397,7 @@ function SatelliteTrackerDashboard() {
             </div>
 
             {/* PASSES ISLAND */}
-            <div key="passes" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid grey' }}>
+            <div key="passes" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
                 <TitleBar className={"react-grid-draggable"}></TitleBar>
                 <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
                     <h3>Next 24-hour Passes</h3>
@@ -417,4 +417,4 @@ function RecenterAutomatically({ lat, lon }) {
     return null;
 }
 
-export default SatelliteTrackerDashboard;
+export default TargetSatelliteGridLayout;
