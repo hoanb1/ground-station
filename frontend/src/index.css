@@ -1,0 +1,7 @@
+.react-resizable-handle {
+    z-index: 1000;
+}
+
+.react-grid-draggable {
+    border-radius: 0;
+}

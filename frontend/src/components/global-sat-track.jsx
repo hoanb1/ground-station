@@ -9,7 +9,8 @@ import {
     Circle,
     Polyline,
     Polygon,
-    useMap, Popup
+    useMap, Popup,
+    Tooltip,
 } from 'react-leaflet';
 import L from 'leaflet';
 import * as satellite from 'satellite.js';
@@ -22,16 +23,25 @@ import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
 
+
 const TitleBar = styled(Paper)(({ theme }) => ({
     width: '100%',
     height: '30px',
     padding: '3px',
     ...theme.typography.body2,
     textAlign: 'center',
+}));
+
+const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
+    color: theme.palette.text.primary,
+    backgroundColor: theme.palette.background.paper,
+    borderRadius: theme.shape.borderRadius,
+    borderColor: theme.palette.background.paper,
 
 }));
 
-const gridLayoutStoreName = 'target-sat-track-layouts';
+
+const gridLayoutStoreName = 'global-sat-track-layouts';
 
 // -------------------------------------------------
 // 1) Leaflet icon path fix for React
@@ -160,7 +170,7 @@ function segmentOrbit(positions) {
 // -------------------------------------------------
 // 6) Main SatelliteTracker component
 // -------------------------------------------------
-function TargetSatelliteGridLayout() {
+function GlobalSatelliteTrack() {
     const [latitude, setLatitude] = useState(0);
     const [longitude, setLongitude] = useState(0);
     const [altitude, setAltitude] = useState(0);
@@ -269,19 +279,10 @@ function TargetSatelliteGridLayout() {
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                         attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                     />
-                    <RecenterAutomatically lat={latitude} lon={longitude} />
 
-                    <Marker position={sunPos} icon={sunIcon} opacity={0.3}>
-                        <Popup>
-                            A pretty CSS3 popup. <br /> Easily customizable.
-                        </Popup>
-                    </Marker>
+                    <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>
 
-                    <Marker position={moonPos} icon={moonIcon} opacity={0.3}>
-                        <Popup>
-                            A pretty CSS3 popup. <br /> Easily customizable.
-                        </Popup>
-                    </Marker>
+                    <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>
 
                     {/* Day side highlight */}
                     {daySidePolygon.length>1 && (
@@ -336,7 +337,11 @@ function TargetSatelliteGridLayout() {
                     ))}
 
                     {/* satellite marker  */}
-                    <Marker position={[latitude, longitude]} icon={satelliteIcon} />
+                    <Marker position={[latitude, longitude]} icon={satelliteIcon}>
+                        <ThemedLeafletTooltip direction="bottom" offset={[0, 20]} opacity={0.9} permanent>
+                            ISS
+                        </ThemedLeafletTooltip>
+                    </Marker>
 
                     {/* Home location marker (default) */}
                     <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
@@ -354,38 +359,8 @@ function TargetSatelliteGridLayout() {
                     />
                 </MapContainer>
             </div>
-
-            {/* INFO ISLAND */}
-            <div key="info" style={{ padding:'0rem 0rem 0rem 0rem', border:'1px solid #424242' }}>
-                <TitleBar className={"react-grid-draggable"}></TitleBar>
-                <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
-                    <h3>Satellite Info (ISS)</h3>
-                    <p><strong>Latitude:</strong> {latitude.toFixed(4)}°</p>
-                    <p><strong>Longitude:</strong> {longitude.toFixed(4)}°</p>
-                    <p><strong>Altitude:</strong> {altitude.toFixed(2)} km</p>
-                    <p><strong>Velocity:</strong> {velocity.toFixed(2)} km/s</p>
-                </div>
-            </div>
-
-            {/* PASSES ISLAND */}
-            <div key="passes" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
-                <TitleBar className={"react-grid-draggable"}></TitleBar>
-                <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
-                    <h3>Next 24-hour Passes</h3>
-                    <p>Pass data, etc.</p>
-                </div>
-            </div>
         </ResponsiveGridLayout>
     );
 }
 
-// Keep map centered on satellite
-function RecenterAutomatically({ lat, lon }) {
-    const map = useMap();
-    useEffect(()=>{
-        map.setView([lat, lon]);
-    },[lat, lon, map]);
-    return null;
-}
-
-export default TargetSatelliteGridLayout;
+export default GlobalSatelliteTrack;

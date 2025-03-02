@@ -5,6 +5,7 @@ import {BrowserRouter, createBrowserRouter, Route, RouterProvider, Routes} from 
 import Dashboard from "./App.jsx";
 import SettingsTabs from "./components/settings.jsx";
 import TargetSatelliteGridLayout from "./components/sat-track.jsx";
+import GlobalSatelliteTrack from "./components/global-sat-track.jsx";
 import App from "./App.jsx";
 import Layout from "./components/dashboard.jsx";
 
@@ -18,6 +19,10 @@ const router = createBrowserRouter([
                 children: [
                     {
                         path: "",
+                        Component: GlobalSatelliteTrack,
+                    },
+                    {
+                        path: "track",
                         Component: TargetSatelliteGridLayout,
                     },
                     {

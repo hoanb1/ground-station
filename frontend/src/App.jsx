@@ -4,7 +4,7 @@ import {BrowserRouter, Routes, Route, Outlet} from "react-router";
 import PublicIcon from '@mui/icons-material/Public';
 import SettingsIcon from '@mui/icons-material/Settings';
 import {ReactRouterAppProvider} from "@toolpad/core/react-router";
-
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 
 const NAVIGATION = [
     {
@@ -13,8 +13,13 @@ const NAVIGATION = [
     },
     {
         segment: '',
-        title: 'Track',
+        title: 'Globe',
         icon: <PublicIcon />,
+    },
+    {
+        segment: 'track',
+        title: 'Track',
+        icon: <GpsFixedIcon />,
     },
     {
         segment: 'settings',
