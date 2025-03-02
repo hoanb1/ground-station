@@ -18,6 +18,7 @@ import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
 import Paper from "@mui/material/Paper";
 import {styled} from "@mui/material/styles";
+import createTerminatorLine from './terminator.jsx';
 
 
 const TitleBar = styled(Paper)(({ theme }) => ({
@@ -135,54 +136,6 @@ function getDayOfYear(d) {
     return Math.floor((d - start) / (24 * 60 * 60 * 1000)) + 1;
 }
 
-function getSubSolarPoint(d) {
-    const dayOfYr = getDayOfYear(d);
-    const hours = d.getUTCHours() + d.getUTCMinutes()/60 + d.getUTCSeconds()/3600;
-    const dayFrac = hours/24;
-    const dayAngle = (2*Math.PI/365)*(dayOfYr+dayFrac-81);
-    const decl = 23.44 * Math.sin(dayAngle);
-
-    const lat = decl;
-    const subSolarLon = -15*(hours - 12);
-    let lon = subSolarLon;
-    if(lon>180) lon -= 360;
-    if(lon<-180) lon += 360;
-    return { lat, lon };
-}
-
-function createTerminatorLine(date, steps=180) {
-    const { lat: lat0Deg, lon: lon0Deg } = getSubSolarPoint(date);
-    const lat0 = satellite.degreesToRadians(lat0Deg);
-    const lon0 = satellite.degreesToRadians(lon0Deg);
-
-    const d = Math.PI/2;
-    const line = [];
-
-    for(let i=0; i<steps; i++){
-        const alpha = (2*Math.PI*i)/(steps-1);
-
-        const lat = Math.asin(
-            Math.sin(lat0)*Math.cos(d) +
-            Math.cos(lat0)*Math.sin(d)*Math.cos(alpha)
-        );
-        const lon =
-            lon0 +
-            Math.atan2(
-                Math.sin(alpha)*Math.sin(d)*Math.cos(lat0),
-                Math.cos(d) - Math.sin(lat0)*Math.sin(lat)
-            );
-
-        let latDeg = satellite.radiansToDegrees(lat);
-        let lonDeg = satellite.radiansToDegrees(lon);
-
-        if(lonDeg>180) lonDeg-=360;
-        if(lonDeg<-180) lonDeg+=360;
-
-        line.push([latDeg, lonDeg]);
-    }
-    return line;
-}
-
 function segmentOrbit(positions) {
     if(!positions.length) return [];
     const segments = [];
@@ -261,12 +214,13 @@ function TargetSatelliteGridLayout() {
             setFuturePositions(futureArr);
 
             // Day/night boundary
-            const line = createTerminatorLine(now, 180);
-            setTerminatorLine(line);
+            const terminatorLine = createTerminatorLine().reverse();
+            setTerminatorLine(terminatorLine);
+            console.info(terminatorLine);
 
             // Day side polygon
-            const dayPoly = [...line].reverse();
-            dayPoly.push(dayPoly[0]);
+            const dayPoly = [...terminatorLine];
+            dayPoly.push(dayPoly[dayPoly.length - 1]);
             setDaySidePolygon(dayPoly);
 
         }, 1000);
@@ -317,8 +271,8 @@ function TargetSatelliteGridLayout() {
                         <Polygon
                             positions={daySidePolygon}
                             pathOptions={{
-                                fillColor:'white',
-                                fillOpacity:0.1,
+                                fillColor:'black',
+                                fillOpacity:0.4,
                                 color:'white',
                                 weight:0
                             }}

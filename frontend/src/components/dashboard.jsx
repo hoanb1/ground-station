@@ -67,10 +67,6 @@ function CustomAppTitle() {
         <Stack direction="row" alignItems="center" spacing={2}>
             <SatelliteAltIcon fontSize="large" color="primary" />
             <Typography variant="h6">Ground Station</Typography>
-            <Chip size="small" label="BETA" color="info" />
-            <Tooltip title="Connected to production">
-                <CheckCircleIcon color="success" fontSize="small" />
-            </Tooltip>
         </Stack>
     );
 }
