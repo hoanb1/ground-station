@@ -9,3 +9,7 @@
 .leaflet-tooltip-bottom::before {
     border-bottom-color: #121212 !important;
 }
+
+.leaflet-tooltip {
+    opacity: 0.6 !important;
+}

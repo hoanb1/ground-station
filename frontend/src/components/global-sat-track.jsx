@@ -215,6 +215,55 @@ function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints = 36) 
 }
 
 
+/**
+ * Projects latitude and longitude to Web Mercator coordinates.
+ * This uses the common Web Mercator (EPSG:3857) projection.
+ *
+ * @param {number} lat - Latitude in degrees.
+ * @param {number} lon - Longitude in degrees.
+ * @returns {{x: number, y: number}} The Mercator projected coordinates.
+ */
+function projectToMercator(lat, lon) {
+    const R = 6378137; // Earth's radius in meters for Web Mercator
+    const x = (lon * Math.PI / 180) * R;
+    const y = R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
+    return { x, y };
+}
+
+/**
+ * Checks if an array of lat/lon coordinates represents a closed circle
+ * when projected on a Mercator projection.
+ * It compares the projected first and last points within a small tolerance.
+ *
+ * @param {Array<{lat: number, lon: number}>} coordinates - Array of lat/lon coordinates.
+ * @param {number} [tolerance=1e-6] - Tolerance (in meters) for considering two points as identical.
+ * @returns {boolean} True if the first and last projected points are nearly identical.
+ */
+function isCircleClosedOnMercator(coordinates, tolerance = 1e-6) {
+    if (coordinates.length < 2) {
+        return false; // Not enough points to form a circle.
+    }
+
+    const first = projectToMercator(coordinates[0].lat, coordinates[0].lon);
+    const last = projectToMercator(
+        coordinates[coordinates.length - 1].lat,
+        coordinates[coordinates.length - 1].lon
+    );
+
+    const dx = Math.abs(first.x - last.x);
+    const dy = Math.abs(first.y - last.y);
+
+    return dx < tolerance && dy < tolerance;
+}
+
+function correctOpenCirclesOnMercator(coordinates) {
+    coordinates.push({lat: 90, lon: coordinates[coordinates.length - 1].lon});
+    coordinates.unshift({lat: 90, lon: coordinates[0].lon});
+    return coordinates;
+}
+
+
+
 function GlobalSatelliteTrack() {
     const [latitude, setLatitude] = useState(0);
     const [longitude, setLongitude] = useState(0);
@@ -248,6 +297,7 @@ function GlobalSatelliteTrack() {
             let currentPos = [];
             let currentCoverage = [];
             Object.keys(groupSatellites).map(key=>{
+                //if (key === "40069") {
                     let [lat, lon, altitude, velocity] = getSatelliteLatLon(
                         groupSatellites[key]['tleLine1'],
                         groupSatellites[key]['tleLine2'],
@@ -256,11 +306,19 @@ function GlobalSatelliteTrack() {
                     currentPos.push(<Marker key={"marker-"+groupSatellites[key]['name']} position={[lat, lon]}
                                             icon={satelliteIcon}>
                         <ThemedLeafletTooltip direction="bottom" offset={[0, 20]} opacity={0.9} permanent>
-                            {groupSatellites[key]['name']} - {altitude}
+                            {groupSatellites[key]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
                         </ThemedLeafletTooltip>
                     </Marker>);
 
                     let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+
+                    // correct the open circle issue where plotting coverage circles on mercator map
+                    if (!isCircleClosedOnMercator(coverage)) {
+                        console.log("Circle is open on mercator map");
+                        coverage = correctOpenCirclesOnMercator(coverage);
+                    } else {
+                        console.log("Circle is closed on mercator map");
+                    }
 
                     currentCoverage.push(<Polyline
                         noClip={true}
@@ -269,26 +327,11 @@ function GlobalSatelliteTrack() {
                             color: 'purple',
                             weight: 1,
                             fill: true,
+                            fillOpacity: 0.1,
                         }}
                         positions={coverage}
                     />);
-
-
-                    // const earthRadiusKm = 6378.137;
-                    // const coverageRadiusArc = (earthRadiusKm * Math.acos(earthRadiusKm / (earthRadiusKm + altitude)));
-                    // console.info(groupSatellites[key]['name'], coverageRadiusArc, altitude);
-                    // currentCoverage.push(<Circle
-                    //     key={"footprint-"+groupSatellites[key]['name']}
-                    //     center={[lat, lon]}
-                    //     radius={coverageRadiusArc*1000}
-                    //     pathOptions={{
-                    //         color:'yellow',
-                    //         weight:1,
-                    //         opacity:0.3,
-                    //         fillOpacity: 0.2,
-                    //     }}
-                    // />)
-
+                //}
             });
 
             setCurrentSatellitesPosition(currentPos);
