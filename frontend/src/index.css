@@ -5,3 +5,7 @@
 .react-grid-draggable {
     border-radius: 0;
 }
+
+.leaflet-tooltip-bottom::before {
+    border-bottom-color: #121212 !important;
+}

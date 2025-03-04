@@ -28,7 +28,6 @@ const TitleBar = styled(Paper)(({ theme }) => ({
     padding: '3px',
     ...theme.typography.body2,
     textAlign: 'center',
-
 }));
 
 const gridLayoutStoreName = 'target-sat-track-layouts';
