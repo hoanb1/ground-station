@@ -153,278 +153,100 @@ function getSatelliteLatLon(tleLine1, tleLine2, date) {
     const velocity = Math.sqrt(x * x + y * y + z * z);
     return [lat, lon, altitude, velocity];
 }
+
 /**
- * Returns an array of { lat, lon } points representing the coverage
- * circle on Earth from a satellite at (satLat, satLon, altitude).
+ * Returns an array of { lat, lon } points representing the satellite’s
+ * coverage area on Earth (its horizon circle), adjusted so that if the area
+ * includes the north or south pole, a vertex for that pole is inserted.
  *
  * @param {number} satLat - Satellite latitude in degrees.
  * @param {number} satLon - Satellite longitude in degrees.
- * @param {number} altitudeKm - Satellite altitude above Earth's surface in kilometers.
+ * @param {number} altitudeKm - Satellite altitude above Earth's surface in km.
  * @param {number} [numPoints=36] - Number of segments for the circle boundary.
- *                                  The returned array will contain numPoints+1 points,
- *                                  with the last point equal to the first.
- * @return {Array<{lat: number, lon: number}>} List of lat/lon points (in degrees) forming a closed circle.
+ *                                  (The resulting array will have numPoints+1 points.)
+ * @return {Array<{lat: number, lon: number}>} The polygon (in degrees) for the coverage area.
  */
 function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints = 36) {
     // Mean Earth radius in kilometers (WGS-84 approximate)
     const R_EARTH = 6378.137;
 
-    // Convert input satellite lat/lon to radians
+    // Convert satellite subpoint to radians
     const lat0 = (satLat * Math.PI) / 180;
     const lon0 = (satLon * Math.PI) / 180;
 
-    // Compute the angular radius of the coverage circle:
-    // coverageAngle = arccos(R_EARTH / (R_EARTH + altitudeKm))
-    const coverageAngle = Math.acos(R_EARTH / (R_EARTH + altitudeKm));
+    // Compute angular radius of the coverage circle (in radians)
+    // d = arccos(R_EARTH / (R_EARTH + altitudeKm))
+    const d = Math.acos(R_EARTH / (R_EARTH + altitudeKm));
 
-    // Array to hold our coverage boundary points
-    const coveragePoints = [];
-
-    // Loop from 0 to numPoints (inclusive) to ensure a closed circle
+    // Generate the circle points (closed polygon)
+    const circlePoints = [];
     for (let i = 0; i <= numPoints; i++) {
-        // Azimuth angle (θ) from 0 to 2π
         const theta = (2 * Math.PI * i) / numPoints;
 
-        // Calculate latitude of the point on the coverage circle:
-        //   lat_i = arcsin( sin(lat0)*cos(coverageAngle) + cos(lat0)*sin(coverageAngle)*cos(theta) )
+        // Using spherical trigonometry to compute a point d away from (lat0,lon0)
         const lat_i = Math.asin(
-            Math.sin(lat0) * Math.cos(coverageAngle) +
-            Math.cos(lat0) * Math.sin(coverageAngle) * Math.cos(theta)
+            Math.sin(lat0) * Math.cos(d) +
+            Math.cos(lat0) * Math.sin(d) * Math.cos(theta)
+        );
+        const lon_i = lon0 + Math.atan2(
+            Math.sin(d) * Math.sin(theta) * Math.cos(lat0),
+            Math.cos(d) - Math.sin(lat0) * Math.sin(lat_i)
         );
 
-        // Calculate longitude of the point on the coverage circle:
-        //   lon_i = lon0 + atan2( sin(coverageAngle)*sin(theta)*cos(lat0),
-        //                         cos(coverageAngle) - sin(lat0)*sin(lat_i) )
-        const lon_i =
-            lon0 +
-            Math.atan2(
-                Math.sin(coverageAngle) * Math.sin(theta) * Math.cos(lat0),
-                Math.cos(coverageAngle) - Math.sin(lat0) * Math.sin(lat_i)
-            );
-
-        // Convert radians back to degrees
+        // Convert back to degrees and normalize longitude to [-180, 180)
         const latDeg = (lat_i * 180) / Math.PI;
         let lonDeg = (lon_i * 180) / Math.PI;
-        // Normalize longitude to [-180, 180)
         //lonDeg = ((lonDeg + 540) % 360) - 180;
 
-        coveragePoints.push({ lat: latDeg, lon: lonDeg });
+        circlePoints.push({ lat: latDeg, lon: lonDeg });
     }
 
-    return coveragePoints;
-}
+    // Adjust the polygon if it should include a pole.
+    // Condition for north pole inclusion: the spherical cap extends beyond the north pole.
+    // (That is, if d > (π/2 - lat0)). Similarly for the south pole: d > (π/2 + lat0) when lat0 is negative.
+    let adjustedPoints = circlePoints.slice();
 
-
-/**
- * Projects latitude and longitude to Web Mercator coordinates.
- * This uses the common Web Mercator (EPSG:3857) projection.
- *
- * @param {number} lat - Latitude in degrees.
- * @param {number} lon - Longitude in degrees.
- * @returns {{x: number, y: number}} The Mercator projected coordinates.
- */
-function projectToMercator(lat, lon) {
-    const R = 6378137; // Earth's radius in meters for Web Mercator
-    const x = (lon * Math.PI / 180) * R;
-    const y = R * Math.log(Math.tan(Math.PI / 4 + (lat * Math.PI / 180) / 2));
-    return { x, y };
-}
-
-/**
- * Checks if an array of lat/lon coordinates represents a closed circle
- * when projected on a Mercator projection.
- * It compares the projected first and last points within a small tolerance.
- *
- * @param {Array<{lat: number, lon: number}>} coordinates - Array of lat/lon coordinates.
- * @param {number} [tolerance=1e-6] - Tolerance (in meters) for considering two points as identical.
- * @returns {boolean} True if the first and last projected points are nearly identical.
- */
-function isCircleClosedOnMercator(coordinates, tolerance = 1e-6) {
-    if (coordinates.length < 2) {
-        return false; // Not enough points to form a circle.
-    }
-
-    const first = projectToMercator(coordinates[0].lat, coordinates[0].lon);
-    const last = projectToMercator(
-        coordinates[coordinates.length - 1].lat,
-        coordinates[coordinates.length - 1].lon
-    );
-
-    const dx = Math.abs(first.x - last.x);
-    const dy = Math.abs(first.y - last.y);
-
-    return dx < tolerance && dy < tolerance;
-}
-
-
-/**
- * Adjusts the given set of geographical coordinates to close open circles on a Mercator map projection.
- * If the coordinates represent points in the northern hemisphere, the circle is closed by adding points at the North Pole.
- * If the coordinates are in the southern hemisphere, the circle is closed by adding points at the South Pole.
- *
- * @param {Array<Object>} coordinates - An array of coordinate objects, where each object contains `lat` (latitude) and `lon` (longitude) properties.
- * @return {Array<Object>} The modified array of coordinates with additional points to close the circle.
- */
-function correctOpenCirclesOnMercator(coordinates) {
-
-    if (coordinates[0].lat > 0) {
-        coordinates.push({lat: 90, lon: coordinates[coordinates.length - 1].lon});
-        coordinates.unshift({lat: 90, lon: coordinates[0].lon});
-    } else {
-        coordinates.push({lat: -90, lon: coordinates[coordinates.length - 1].lon});
-        coordinates.unshift({lat: -90, lon: coordinates[0].lon});
-    }
-    return coordinates;
-}
-
-
-/**
- * Detects if there is a dominant line in a set of 2D points using RANSAC.
- *
- * @param {Array<{x: number, y: number}>} points - Array of point objects with x,y properties.
- * @param {Object} [options]
- * @param {number} [options.iterations=1000] - Number of RANSAC iterations.
- * @param {number} [options.distanceThreshold=0.1] - Max distance from line to be considered an inlier.
- * @param {number} [options.minInliers=5] - Minimum number of inliers required to consider it a valid line.
- * @returns {Object|null} - If a line is found, returns an object with:
- *   {
- *     start: {x, y},
- *     end: {x, y},
- *     inliers: Array of points belonging to that line,
- *     line: { a, b, c }  // line equation ax + by + c = 0
- *   }
- *   Otherwise returns null if no sufficient line is found.
- */
-function ransacLineDetection(points, {
-    iterations = 1000,
-    distanceThreshold = 0.1,
-    minInliers = 5
-} = {}) {
-    if (points.length < 2) {
-        return null; // Need at least two points to define a line
-    }
-
-    // Helper to compute distance from a point to line ax + by + c = 0
-    function distanceToLine(a, b, c, x, y) {
-        return Math.abs(a * x + b * y + c) / Math.sqrt(a * a + b * b);
-    }
-
-    // Keep track of the best line so far
-    let bestLine = null;       // Will store {a, b, c}
-    let bestInliersCount = 0;
-    let bestInliers = [];
-
-    for (let i = 0; i < iterations; i++) {
-        // 1. Randomly pick two distinct points
-        const idx1 = Math.floor(Math.random() * points.length);
-        let idx2 = Math.floor(Math.random() * points.length);
-        // Ensure idx2 != idx1
-        while (idx2 === idx1) {
-            idx2 = Math.floor(Math.random() * points.length);
-        }
-
-        const p1 = points[idx1];
-        const p2 = points[idx2];
-
-        // Edge case: if x2 ~ x1, define a vertical line x = constant
-        let a, b, c;
-        if (Math.abs(p2.x - p1.x) < 1e-12) {
-            // line: x = p1.x => 1*x + 0*y - p1.x = 0
-            a = 1;
-            b = 0;
-            c = -p1.x;
-        } else {
-            // 2. Fit line in form: a x + b y + c = 0
-            // Using slope-intercept => slope = (y2 - y1)/(x2 - x1)
-            // Then line is slope*x - y + intercept = 0
-            const slope = (p2.y - p1.y) / (p2.x - p1.x);
-            const intercept = p1.y - slope * p1.x;
-            // Convert y = slope*x + intercept to a x + b y + c = 0:
-            // => slope*x - y + intercept = 0
-            a = slope;
-            b = -1;
-            c = intercept;
-        }
-
-        // 3. Count how many points are inliers
-        const inliers = [];
-        for (const pt of points) {
-            const dist = distanceToLine(a, b, c, pt.x, pt.y);
-            if (dist < distanceThreshold) {
-                inliers.push(pt);
+    // North pole case (for satellites in the northern hemisphere or whose cap covers the north)
+    if (d > (Math.PI / 2 - lat0)) {
+        // Find the index with the maximum latitude (the highest point in our computed circle)
+        let maxIndex = 0, maxLat = -Infinity;
+        for (let i = 0; i < circlePoints.length; i++) {
+            if (circlePoints[i].lat > maxLat) {
+                maxLat = circlePoints[i].lat;
+                maxIndex = i;
             }
         }
+        // Insert the north pole as an extra vertex immediately after the highest point.
+        // (Using the same longitude as that highest point.)
+        adjustedPoints = [
+            { lat: 90, lon: circlePoints[0].lon },
+            ...circlePoints.slice(0, maxIndex + 1),
+            ...circlePoints.slice(maxIndex + 1),
+            { lat: 90, lon: circlePoints[circlePoints.length - 1].lon },
+        ];
+    }
 
-        // 4. Check if this is the best so far
-        if (inliers.length > bestInliersCount) {
-            bestInliersCount = inliers.length;
-            bestLine = { a, b, c };
-            bestInliers = inliers;
+    // South pole case (for satellites in the southern hemisphere or whose cap covers the south)
+    if (d > (Math.PI / 2 + lat0)) {
+        // Find the index with the minimum latitude (the lowest point in our computed circle)
+        let minIndex = 0, minLat = Infinity;
+        for (let i = 0; i < circlePoints.length; i++) {
+            if (circlePoints[i].lat < minLat) {
+                minLat = circlePoints[i].lat;
+                minIndex = i;
+            }
         }
+        // Insert the south pole as an extra vertex immediately after the lowest point.
+        adjustedPoints = [
+            ...adjustedPoints.slice(0, minIndex + 1),
+            { lat: -90, lon: circlePoints[minIndex].lon },
+            { lat: -90, lon: circlePoints[minIndex + 1].lon },
+            ...adjustedPoints.slice(minIndex + 1),
+        ];
     }
 
-    // If not enough inliers, no valid line found
-    if (!bestLine || bestInliersCount < minInliers) {
-        return null;
-    }
-
-    // 5. Determine start and end of the line segment using the inliers
-    //    We can do this by projecting inliers onto the direction vector of the line.
-    //    The direction vector can be taken from any two inliers, e.g., from the first two inliers.
-    //    Then find min and max projections.
-    const [first, second] = bestInliers;
-    // If we don't have at least two distinct inliers, we can't define a segment
-    if (!second) {
-        return null;
-    }
-
-    const dx = second.x - first.x;
-    const dy = second.y - first.y;
-    const dirLen = Math.sqrt(dx * dx + dy * dy);
-    if (dirLen < 1e-12) {
-        return null;
-    }
-
-    // Unit direction vector
-    const ux = dx / dirLen;
-    const uy = dy / dirLen;
-
-    // Project each inlier onto the direction
-    let minProj = Infinity, maxProj = -Infinity;
-    let minPoint = null, maxPoint = null;
-
-    // We'll choose the first inlier as a reference anchor (x0,y0)
-    const x0 = first.x;
-    const y0 = first.y;
-
-    for (const pt of bestInliers) {
-        // Vector from reference to current
-        const vx = pt.x - x0;
-        const vy = pt.y - y0;
-        // Dot product with direction => param along the line
-        const proj = vx * ux + vy * uy;
-
-        if (proj < minProj) {
-            minProj = proj;
-            minPoint = pt;
-        }
-        if (proj > maxProj) {
-            maxProj = proj;
-            maxPoint = pt;
-        }
-    }
-
-    // minPoint and maxPoint define the line segment
-    return {
-        start: minPoint,
-        end: maxPoint,
-        inliers: bestInliers,
-        line: bestLine  // { a, b, c } => line eqn a*x + b*y + c = 0
-    };
+    return adjustedPoints;
 }
-
-
-
 
 
 function GlobalSatelliteTrack() {
@@ -453,57 +275,33 @@ function GlobalSatelliteTrack() {
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
-            Object.keys(groupSatellites).map(key=>{
-                //if (key === "40069") {
-                    let name = groupSatellites[key]['name'];
-                    let noradid = groupSatellites[key]['noradid'];
-                    let [lat, lon, altitude, velocity] = getSatelliteLatLon(
-                        groupSatellites[key]['tleLine1'],
-                        groupSatellites[key]['tleLine2'],
-                        now);
+            Object.keys(groupSatellites).map(noradid=>{
+                let name = groupSatellites[noradid]['name'];
+                let [lat, lon, altitude, velocity] = getSatelliteLatLon(
+                    groupSatellites[noradid]['tleLine1'],
+                    groupSatellites[noradid]['tleLine2'],
+                    now);
 
-                    currentPos.push(<Marker key={"marker-"+groupSatellites[key]['name']} position={[lat, lon]}
-                                            icon={satelliteIcon}>
-                        <ThemedLeafletTooltip direction="bottom" offset={[0, 15]} opacity={0.9} permanent>
-                            {groupSatellites[key]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                        </ThemedLeafletTooltip>
-                    </Marker>);
+                currentPos.push(<Marker key={"marker-"+groupSatellites[noradid]['name']} position={[lat, lon]}
+                                        icon={satelliteIcon}>
+                    <ThemedLeafletTooltip direction="bottom" offset={[0, 15]} opacity={0.9} permanent>
+                        {groupSatellites[noradid]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                    </ThemedLeafletTooltip>
+                </Marker>);
 
-                    let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 180);
-                    // if (noradid === 40069) {
-                    //     console.info(coverage);
-                    // }
+                let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
 
-                    const result = ransacLineDetection(coverage, {
-                        iterations: 2000,
-                        distanceThreshold: 0.1,
-                        minInliers: 3
-                    });
-
-                    if (result) {
-                        console.info("A straight line "+groupSatellites[key]['name']+" segment was detected in the series.");
-                        console.info(result)
-                    } else {
-                    }
-
-                    // correct the open circle issue where plotting coverage circles on mercator map
-                    if (!isCircleClosedOnMercator(coverage)) {
-                        coverage = correctOpenCirclesOnMercator(coverage);
-                    } else {
-                    }
-
-                    currentCoverage.push(<Polyline
-                        noClip={true}
-                        key={"coverage-"+groupSatellites[key]['name']}
-                        pathOptions={{
-                            color: 'purple',
-                            weight: 1,
-                            fill: true,
-                            fillOpacity: 0.05,
-                        }}
-                        positions={coverage}
-                    />);
-                //}
+                currentCoverage.push(<Polyline
+                    noClip={true}
+                    key={"coverage-"+groupSatellites[noradid]['name']}
+                    pathOptions={{
+                        color: 'purple',
+                        weight: 1,
+                        fill: true,
+                        fillOpacity: 0.05,
+                    }}
+                    positions={coverage}
+                />);
             });
 
             setCurrentSatellitesPosition(currentPos);
@@ -548,7 +346,6 @@ function GlobalSatelliteTrack() {
             isDraggable
             draggableHandle=".react-grid-draggable"
         >
-            {/* MAP ISLAND */}
             <div key="map" style={{ border:'1px solid #424242', overflow:'hidden'}}>
                 <TitleBar className={"react-grid-draggable"}></TitleBar>
                 <MapContainer
@@ -568,7 +365,6 @@ function GlobalSatelliteTrack() {
                     {sunPos? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
                     {moonPos? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
 
-                    {/* Day side highlight */}
                     {daySidePolygon.length>1 && (
                         <Polygon
                             positions={daySidePolygon}
@@ -581,7 +377,6 @@ function GlobalSatelliteTrack() {
                         />
                     )}
 
-                    {/* Terminator line */}
                     {terminatorLine.length>1 && (
                         <Polyline
                             positions={terminatorLine}
