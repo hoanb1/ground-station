@@ -13,3 +13,7 @@
 .leaflet-tooltip {
     opacity: 0.6 !important;
 }
+
+.leaflet-control-attribution {
+    display: none;
+}

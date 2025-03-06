@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from 'react';
+import React, {useState, useEffect, useRef} from 'react';
 import { SatelliteAlt } from '@mui/icons-material';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Responsive, WidthProvider } from 'react-grid-layout';
@@ -13,7 +13,6 @@ import {
     useMap, Popup,
     Tooltip,
 } from 'react-leaflet';
-import * as d3 from "d3";
 import L from 'leaflet';
 import * as satellite from 'satellite.js';
 import 'react-grid-layout/css/styles.css';
@@ -25,8 +24,8 @@ import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
 import TLEs from './tles.jsx';
-import {Satellite} from './satellite.jsx';
-import {geoProject} from 'd3-geo-projection';
+import SettingsIsland from "./global-map-settings.jsx";
+import {LatLngBounds} from "leaflet/src/geo/index.js";
 
 const TitleBar = styled(Paper)(({ theme }) => ({
     width: '100%',
@@ -103,25 +102,21 @@ const defaultLayouts = {
             i: 'map',
             x: 0,
             y: 0,
-            w: 6,
-            h: 14,
+            w: 10,
+            h: 20,
             resizeHandles: ['se','ne','nw','sw','n','s','e','w']
         },
         {
-            i: 'info',
+            i: 'settings',
             x: 6,
             y: 0,
-            w: 3,
-            h: 14,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w']
-        },
-        {
-            i: 'passes',
-            x: 9,
-            y: 0,
-            w: 3,
-            h: 14,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+            w: 2,
+            h: 12,
+            minW: 2,
+            maxW: 2,
+            minH: 12,
+            maxH: 12,
+            isResizable: true
         }
     ]
 };
@@ -248,8 +243,9 @@ function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints = 36) 
     return adjustedPoints;
 }
 
-
 function GlobalSatelliteTrack() {
+    const mapRef = useRef(null);
+    const resizeObserverRef = useRef(null);
     const [groupSatellites, setGroupSatellites] = useState({});
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
@@ -264,10 +260,22 @@ function GlobalSatelliteTrack() {
         return loaded ?? defaultLayouts;
     });
 
+    const handleWhenReady = (map) => {
+        // map is ready
+        setInterval(()=>{
+            map.target.invalidateSize();
+        }, 1000);
+    };
+
+    // map bounds
+    const bounds = new LatLngBounds([40.712216, -74.22655], [40.773941, -74.12544])
+
+
     // update the satellites position, day/night terminator every second
     useEffect(()=>{
         const timer = setInterval(()=>{
             const now = new Date();
+
 
             // populate the satellite group
             setGroupSatellites(TLEs);
@@ -326,7 +334,6 @@ function GlobalSatelliteTrack() {
         return ()=>clearInterval(timer);
     },[groupSatellites]);
 
-    // 3) Save new layouts to localStorage whenever the user drags/resizes
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
         saveLayoutsToLocalStorage(allLayouts);
@@ -335,9 +342,7 @@ function GlobalSatelliteTrack() {
     return (
         <ResponsiveGridLayout
             className="layout"
-            // Provide our loaded (or default) layouts
             layouts={layouts}
-            // When user changes them, store them
             onLayoutChange={handleLayoutsChange}
             breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
             cols={{ lg:12, md:10, sm:6, xs:4, xxs:2 }}
@@ -347,15 +352,16 @@ function GlobalSatelliteTrack() {
             draggableHandle=".react-grid-draggable"
         >
             <div key="map" style={{ border:'1px solid #424242', overflow:'hidden'}}>
-                <TitleBar className={"react-grid-draggable"}></TitleBar>
+                <TitleBar className={"react-grid-draggable"}>Global map</TitleBar>
                 <MapContainer
                     center={[0, 0]}
                     zoom={2}
-                    style={{ width:'100%', height:'100%', minHeight:'400px' }}
+                    style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
                     dragging={false}
                     scrollWheelZoom={false}
                     maxZoom={10}
                     minZoom={0}
+                    whenReady={handleWhenReady}
                 >
                     <TileLayer
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
@@ -393,6 +399,9 @@ function GlobalSatelliteTrack() {
                     {currentSatellitesCoverage}
 
                 </MapContainer>
+            </div>
+            <div key="settings" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
+                <SettingsIsland/>
             </div>
         </ResponsiveGridLayout>
     );

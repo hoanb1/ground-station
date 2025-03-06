@@ -1,12 +1,13 @@
-import React, { useState } from 'react';
+import React, {useState} from 'react';
 import {
     Box,
     Tabs,
     Tab,
     TextField,
     Button,
-    Typography,
+    Typography, Grid,
 } from '@mui/material';
+import Stack from "@mui/material/Stack";
 
 function ConfigurationTabs() {
     const [activeTab, setActiveTab] = useState(0);
@@ -17,20 +18,20 @@ function ConfigurationTabs() {
 
     // Forms for each tab can be extracted into separate components if desired:
     const HomeForm = () => (
-        <Box component="form" sx={{ mt: 2 }}>
+        <Box component="form" sx={{mt: 2}}>
             <Typography variant="h6" gutterBottom>
                 Home Settings
             </Typography>
             <TextField
                 label="Home Title"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <TextField
                 label="Description"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 multiline
                 rows={4}
                 fullWidth
@@ -40,20 +41,20 @@ function ConfigurationTabs() {
     );
 
     const PreferencesForm = () => (
-        <Box component="form" sx={{ mt: 2 }}>
+        <Box component="form" sx={{mt: 2}}>
             <Typography variant="h6" gutterBottom>
                 User Preferences
             </Typography>
             <TextField
                 label="Preferred Language"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <TextField
                 label="Theme"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <Button variant="contained">Save Preferences</Button>
@@ -61,20 +62,20 @@ function ConfigurationTabs() {
     );
 
     const RotorControlForm = () => (
-        <Box component="form" sx={{ mt: 2 }}>
+        <Box component="form" sx={{mt: 2}}>
             <Typography variant="h6" gutterBottom>
                 Rotor Control
             </Typography>
             <TextField
                 label="Azimuth"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <TextField
                 label="Elevation"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <Button variant="contained">Set Rotor Position</Button>
@@ -82,26 +83,26 @@ function ConfigurationTabs() {
     );
 
     const TLEsForm = () => (
-        <Box component="form" sx={{ mt: 2 }}>
+        <Box component="form" sx={{mt: 2}}>
             <Typography variant="h6" gutterBottom>
                 TLE Configuration
             </Typography>
             <TextField
                 label="Satellite Name"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <TextField
                 label="Line 1"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <TextField
                 label="Line 2"
                 variant="outlined"
-                sx={{ mb: 2, display: 'block' }}
+                sx={{mb: 2, display: 'block'}}
                 fullWidth
             />
             <Button variant="contained">Save TLE Data</Button>
@@ -112,32 +113,34 @@ function ConfigurationTabs() {
     const renderActiveTabForm = () => {
         switch (activeTab) {
             case 0:
-                return <HomeForm />;
+                return <HomeForm/>;
             case 1:
-                return <PreferencesForm />;
+                return <PreferencesForm/>;
             case 2:
-                return <RotorControlForm />;
+                return <RotorControlForm/>;
             case 3:
-                return <TLEsForm />;
+                return <TLEsForm/>;
             default:
                 return null;
         }
     };
 
     return (
-        <Box sx={{ width: '100%', mt: 2 }}>
+        <Box sx={{bgcolor: 'background.paper'}}>
             <Tabs
                 value={activeTab}
                 onChange={handleTabChange}
                 aria-label="configuration tabs"
+                scrollButtons="auto"
             >
-                <Tab label="Home" />
-                <Tab label="Preferences" />
-                <Tab label="Rotor control" />
-                <Tab label="TLEs" />
+                <Tab label="Home"/>
+                <Tab label="Preferences"/>
+                <Tab label="Rotor control"/>
+                <Tab label="TLEs"/>
             </Tabs>
-            {/* Render the form corresponding to the currently selected tab */}
-            {renderActiveTabForm()}
+            <Grid spacing={2}>
+                {renderActiveTabForm()}
+            </Grid>
         </Box>
     );
 }
