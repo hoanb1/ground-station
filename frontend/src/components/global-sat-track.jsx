@@ -256,24 +256,181 @@ function isCircleClosedOnMercator(coordinates, tolerance = 1e-6) {
     return dx < tolerance && dy < tolerance;
 }
 
+
+/**
+ * Adjusts the given set of geographical coordinates to close open circles on a Mercator map projection.
+ * If the coordinates represent points in the northern hemisphere, the circle is closed by adding points at the North Pole.
+ * If the coordinates are in the southern hemisphere, the circle is closed by adding points at the South Pole.
+ *
+ * @param {Array<Object>} coordinates - An array of coordinate objects, where each object contains `lat` (latitude) and `lon` (longitude) properties.
+ * @return {Array<Object>} The modified array of coordinates with additional points to close the circle.
+ */
 function correctOpenCirclesOnMercator(coordinates) {
-    coordinates.push({lat: 90, lon: coordinates[coordinates.length - 1].lon});
-    coordinates.unshift({lat: 90, lon: coordinates[0].lon});
+
+    if (coordinates[0].lat > 0) {
+        coordinates.push({lat: 90, lon: coordinates[coordinates.length - 1].lon});
+        coordinates.unshift({lat: 90, lon: coordinates[0].lon});
+    } else {
+        coordinates.push({lat: -90, lon: coordinates[coordinates.length - 1].lon});
+        coordinates.unshift({lat: -90, lon: coordinates[0].lon});
+    }
     return coordinates;
 }
 
 
+/**
+ * Detects if there is a dominant line in a set of 2D points using RANSAC.
+ *
+ * @param {Array<{x: number, y: number}>} points - Array of point objects with x,y properties.
+ * @param {Object} [options]
+ * @param {number} [options.iterations=1000] - Number of RANSAC iterations.
+ * @param {number} [options.distanceThreshold=0.1] - Max distance from line to be considered an inlier.
+ * @param {number} [options.minInliers=5] - Minimum number of inliers required to consider it a valid line.
+ * @returns {Object|null} - If a line is found, returns an object with:
+ *   {
+ *     start: {x, y},
+ *     end: {x, y},
+ *     inliers: Array of points belonging to that line,
+ *     line: { a, b, c }  // line equation ax + by + c = 0
+ *   }
+ *   Otherwise returns null if no sufficient line is found.
+ */
+function ransacLineDetection(points, {
+    iterations = 1000,
+    distanceThreshold = 0.1,
+    minInliers = 5
+} = {}) {
+    if (points.length < 2) {
+        return null; // Need at least two points to define a line
+    }
+
+    // Helper to compute distance from a point to line ax + by + c = 0
+    function distanceToLine(a, b, c, x, y) {
+        return Math.abs(a * x + b * y + c) / Math.sqrt(a * a + b * b);
+    }
+
+    // Keep track of the best line so far
+    let bestLine = null;       // Will store {a, b, c}
+    let bestInliersCount = 0;
+    let bestInliers = [];
+
+    for (let i = 0; i < iterations; i++) {
+        // 1. Randomly pick two distinct points
+        const idx1 = Math.floor(Math.random() * points.length);
+        let idx2 = Math.floor(Math.random() * points.length);
+        // Ensure idx2 != idx1
+        while (idx2 === idx1) {
+            idx2 = Math.floor(Math.random() * points.length);
+        }
+
+        const p1 = points[idx1];
+        const p2 = points[idx2];
+
+        // Edge case: if x2 ~ x1, define a vertical line x = constant
+        let a, b, c;
+        if (Math.abs(p2.x - p1.x) < 1e-12) {
+            // line: x = p1.x => 1*x + 0*y - p1.x = 0
+            a = 1;
+            b = 0;
+            c = -p1.x;
+        } else {
+            // 2. Fit line in form: a x + b y + c = 0
+            // Using slope-intercept => slope = (y2 - y1)/(x2 - x1)
+            // Then line is slope*x - y + intercept = 0
+            const slope = (p2.y - p1.y) / (p2.x - p1.x);
+            const intercept = p1.y - slope * p1.x;
+            // Convert y = slope*x + intercept to a x + b y + c = 0:
+            // => slope*x - y + intercept = 0
+            a = slope;
+            b = -1;
+            c = intercept;
+        }
+
+        // 3. Count how many points are inliers
+        const inliers = [];
+        for (const pt of points) {
+            const dist = distanceToLine(a, b, c, pt.x, pt.y);
+            if (dist < distanceThreshold) {
+                inliers.push(pt);
+            }
+        }
+
+        // 4. Check if this is the best so far
+        if (inliers.length > bestInliersCount) {
+            bestInliersCount = inliers.length;
+            bestLine = { a, b, c };
+            bestInliers = inliers;
+        }
+    }
+
+    // If not enough inliers, no valid line found
+    if (!bestLine || bestInliersCount < minInliers) {
+        return null;
+    }
+
+    // 5. Determine start and end of the line segment using the inliers
+    //    We can do this by projecting inliers onto the direction vector of the line.
+    //    The direction vector can be taken from any two inliers, e.g., from the first two inliers.
+    //    Then find min and max projections.
+    const [first, second] = bestInliers;
+    // If we don't have at least two distinct inliers, we can't define a segment
+    if (!second) {
+        return null;
+    }
+
+    const dx = second.x - first.x;
+    const dy = second.y - first.y;
+    const dirLen = Math.sqrt(dx * dx + dy * dy);
+    if (dirLen < 1e-12) {
+        return null;
+    }
+
+    // Unit direction vector
+    const ux = dx / dirLen;
+    const uy = dy / dirLen;
+
+    // Project each inlier onto the direction
+    let minProj = Infinity, maxProj = -Infinity;
+    let minPoint = null, maxPoint = null;
+
+    // We'll choose the first inlier as a reference anchor (x0,y0)
+    const x0 = first.x;
+    const y0 = first.y;
+
+    for (const pt of bestInliers) {
+        // Vector from reference to current
+        const vx = pt.x - x0;
+        const vy = pt.y - y0;
+        // Dot product with direction => param along the line
+        const proj = vx * ux + vy * uy;
+
+        if (proj < minProj) {
+            minProj = proj;
+            minPoint = pt;
+        }
+        if (proj > maxProj) {
+            maxProj = proj;
+            maxPoint = pt;
+        }
+    }
+
+    // minPoint and maxPoint define the line segment
+    return {
+        start: minPoint,
+        end: maxPoint,
+        inliers: bestInliers,
+        line: bestLine  // { a, b, c } => line eqn a*x + b*y + c = 0
+    };
+}
+
+
+
+
 
 function GlobalSatelliteTrack() {
-    const [latitude, setLatitude] = useState(0);
-    const [longitude, setLongitude] = useState(0);
     const [groupSatellites, setGroupSatellites] = useState({});
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
-    const [altitude, setAltitude] = useState(0);
-    const [velocity, setVelocity] = useState(0);
-    const [pastPositions, setPastPositions] = useState([]);
-    const [futurePositions, setFuturePositions] = useState([]);
     const [terminatorLine, setTerminatorLine] = useState([]);
     const [daySidePolygon, setDaySidePolygon] = useState([]);
     const [sunPos, setSunPos] = useState(null);
@@ -298,6 +455,8 @@ function GlobalSatelliteTrack() {
             let currentCoverage = [];
             Object.keys(groupSatellites).map(key=>{
                 //if (key === "40069") {
+                    let name = groupSatellites[key]['name'];
+                    let noradid = groupSatellites[key]['noradid'];
                     let [lat, lon, altitude, velocity] = getSatelliteLatLon(
                         groupSatellites[key]['tleLine1'],
                         groupSatellites[key]['tleLine2'],
@@ -305,19 +464,32 @@ function GlobalSatelliteTrack() {
 
                     currentPos.push(<Marker key={"marker-"+groupSatellites[key]['name']} position={[lat, lon]}
                                             icon={satelliteIcon}>
-                        <ThemedLeafletTooltip direction="bottom" offset={[0, 20]} opacity={0.9} permanent>
+                        <ThemedLeafletTooltip direction="bottom" offset={[0, 15]} opacity={0.9} permanent>
                             {groupSatellites[key]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
                         </ThemedLeafletTooltip>
                     </Marker>);
 
-                    let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                    let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 180);
+                    // if (noradid === 40069) {
+                    //     console.info(coverage);
+                    // }
+
+                    const result = ransacLineDetection(coverage, {
+                        iterations: 2000,
+                        distanceThreshold: 0.1,
+                        minInliers: 3
+                    });
+
+                    if (result) {
+                        console.info("A straight line "+groupSatellites[key]['name']+" segment was detected in the series.");
+                        console.info(result)
+                    } else {
+                    }
 
                     // correct the open circle issue where plotting coverage circles on mercator map
                     if (!isCircleClosedOnMercator(coverage)) {
-                        console.log("Circle is open on mercator map");
                         coverage = correctOpenCirclesOnMercator(coverage);
                     } else {
-                        console.log("Circle is closed on mercator map");
                     }
 
                     currentCoverage.push(<Polyline
@@ -327,7 +499,7 @@ function GlobalSatelliteTrack() {
                             color: 'purple',
                             weight: 1,
                             fill: true,
-                            fillOpacity: 0.1,
+                            fillOpacity: 0.05,
                         }}
                         positions={coverage}
                     />);
