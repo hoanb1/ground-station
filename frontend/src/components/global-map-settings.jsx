@@ -11,7 +11,6 @@ import {
     Stack
 } from '@mui/material';
 import {styled} from '@mui/material/styles';
-import {Tooltip} from "react-leaflet";
 
 const TitleBar = styled(Paper)(({theme}) => ({
     width: '100%',
@@ -29,8 +28,14 @@ const ThemedStack = styled(Stack)(({theme}) => ({
     padding: theme.spacing(0),
 }));
 
-const Item = styled('div')(({theme}) => ({
+const ThemedSettingsDiv = styled('div')(({theme}) => ({
+    backgroundColor: theme.palette.background.paper,
+    fontsize: 'o.9rem !important',
+}));
+
+const SettingItem = styled('div')(({theme}) => ({
     padding: theme.spacing(1),
+    fontsize: 'o.9rem !important',
 }));
 
 const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
@@ -71,10 +76,10 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
 
     return (
-        <div>
+        <ThemedSettingsDiv>
             <TitleBar className={"react-grid-draggable"}>Map settings</TitleBar>
             <ThemedStack spacing={0}>
-                <Item>
+                <SettingItem>
                     <FormControl fullWidth size={"small"}>
                         <InputLabel id="orbit-time-label">Orbit Projection Time</InputLabel>
                         <Select
@@ -94,8 +99,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                             ))}
                         </Select>
                     </FormControl>
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControl fullWidth size={"small"}>
                         <InputLabel id="tile-layer-label">Tile Layer</InputLabel>
                         <Select
@@ -111,8 +116,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                             ))}
                         </Select>
                     </FormControl>
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel
                         style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
@@ -127,8 +132,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Satellite coverage"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel
                         style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
@@ -143,8 +148,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Past orbit path plotting"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel
                         style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
@@ -159,8 +164,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Future orbit path plotting"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
                             <Switch
@@ -174,8 +179,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Show Sun"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
                             <Switch
@@ -189,8 +194,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Show Moon"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
                             <Switch
@@ -204,8 +209,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Day/night seperator line"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
                             <Switch
@@ -216,8 +221,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Satellite Tooltip"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel
                         style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
@@ -238,8 +243,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Footprint color"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel
                         style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
@@ -260,8 +265,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Past orbit line color"
                     />
-                </Item>
-                <Item>
+                </SettingItem>
+                <SettingItem>
                     <FormControlLabel
                         style={{padding: '0rem 0rem 0rem 1rem'}}
                         control={
@@ -282,9 +287,9 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         }
                         label="Future orbit line color"
                     />
-                </Item>
+                </SettingItem>
             </ThemedStack>
-        </div>
+        </ThemedSettingsDiv>
     );
 };
 

@@ -30,10 +30,6 @@ export default function App(props) {
 
     const NAVIGATION = [
         {
-            kind: 'header',
-            title: 'Main items',
-        },
-        {
             segment: '',
             title: 'Globe',
             icon: <PublicIcon />,

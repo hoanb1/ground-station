@@ -10,6 +10,7 @@ import {
 import {
     Link,
 } from 'react-router';
+import {PageContainer} from "@toolpad/core";
 
 
 export function SettingsTabHome() {
@@ -157,9 +158,9 @@ function SettingsTabs({initialTab}) {
                 <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
                 <Tab label="TLEs" to="/settings/tles" component={Link}/>
             </Tabs>
-            <Grid2 spacing={2}>
+            <PageContainer >
                 {renderActiveTabForm()}
-            </Grid2>
+            </PageContainer>
         </Box>
     );
 }

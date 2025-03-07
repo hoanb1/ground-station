@@ -26,6 +26,7 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "settings",
+                        Component: SettingsTabHome,
                         children: [
                             {
                                 path: "home",

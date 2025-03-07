@@ -23,9 +23,10 @@ import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
-import TLEs from './tles.jsx';
+import TLEs, {HAMTLEs, NOAATLEs} from './tles.jsx';
 import SettingsIsland from "./global-map-settings.jsx";
 import {LatLngBounds} from "leaflet/src/geo/index.js";
+import MYGROUPTLEs from "./tles.jsx";
 
 const TitleBar = styled(Paper)(({ theme }) => ({
     width: '100%',
@@ -116,7 +117,7 @@ const defaultLayouts = {
             maxW: 2,
             minH: 12,
             maxH: 12,
-            isResizable: true
+            isResizable: false,
         }
     ]
 };
@@ -343,6 +344,10 @@ function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
     return { past, future };
 }
 
+const ThemedDiv = styled('div')(({theme}) => ({
+    backgroundColor: theme.palette.background.paper,
+}));
+
 function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true, initialShowSatelliteCoverage=true,
                                   initialShowSunIcon=true, initialShowMoonIcon=true, initialShowTerminatorLine=true,
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
@@ -428,7 +433,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
             const now = new Date();
 
             // populate the satellite group
-            setGroupSatellites(TLEs);
+            setGroupSatellites(MYGROUPTLEs);
 
             // generate current positions for the group of satellites
             let currentPos = [];
@@ -436,63 +441,61 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
             let currentFuturePaths = [];
             let currentPastPaths = [];
             Object.keys(groupSatellites).map(noradid=>{
-                if (noradid === "25338") {
-                    let name = groupSatellites[noradid]['name'];
-                    let [lat, lon, altitude, velocity] = getSatelliteLatLon(
-                        groupSatellites[noradid]['tleLine1'],
-                        groupSatellites[noradid]['tleLine2'],
-                        now);
+                let name = groupSatellites[noradid]['name'];
+                let [lat, lon, altitude, velocity] = getSatelliteLatLon(
+                    groupSatellites[noradid]['tleLine1'],
+                    groupSatellites[noradid]['tleLine2'],
+                    now);
 
-                    let paths = {};
-                    // calculate paths
-                    paths = getSatellitePaths([
-                        groupSatellites[noradid]['tleLine1'],
-                        groupSatellites[noradid]['tleLine2']
-                    ], orbitProjectionDuration);
+                let paths = {};
+                // calculate paths
+                paths = getSatellitePaths([
+                    groupSatellites[noradid]['tleLine1'],
+                    groupSatellites[noradid]['tleLine2']
+                ], orbitProjectionDuration);
 
-                    // past path
-                    currentPastPaths.push(<Polyline
-                        key={`past-path-${noradid}`}
-                        positions={paths.past}
-                        pathOptions={{
-                            color: pastOrbitLineColor,
-                            weight:1,
-                            opacity:1
-                        }}
-                    />)
+                // past path
+                currentPastPaths.push(<Polyline
+                    key={`past-path-${noradid}`}
+                    positions={paths.past}
+                    pathOptions={{
+                        color: pastOrbitLineColor,
+                        weight:1,
+                        opacity:1
+                    }}
+                />)
 
-                    // future path
-                    currentFuturePaths.push(<Polyline
-                        key={`future-path-${noradid}`}
-                        positions={paths.future}
-                        pathOptions={{
-                            color: futureOrbitLineColor,
-                            weight:1,
-                            opacity:1
-                        }}
-                    />)
+                // future path
+                currentFuturePaths.push(<Polyline
+                    key={`future-path-${noradid}`}
+                    positions={paths.future}
+                    pathOptions={{
+                        color: futureOrbitLineColor,
+                        weight:1,
+                        opacity:1
+                    }}
+                />)
 
-                    currentPos.push(<Marker key={"marker-"+groupSatellites[noradid]['name']} position={[lat, lon]}
-                                            icon={satelliteIcon}>
-                        <ThemedLeafletTooltip direction="bottom" offset={[0, 15]} opacity={0.9} permanent>
-                            {groupSatellites[noradid]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                        </ThemedLeafletTooltip>
-                    </Marker>);
+                currentPos.push(<Marker key={"marker-"+groupSatellites[noradid]['name']} position={[lat, lon]}
+                                        icon={satelliteIcon}>
+                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
+                        {groupSatellites[noradid]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                    </ThemedLeafletTooltip>
+                </Marker>);
 
-                    let coverage = [];
-                    coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
-                    currentCoverage.push(<Polyline
-                        noClip={true}
-                        key={"coverage-"+groupSatellites[noradid]['name']}
-                        pathOptions={{
-                            color: satelliteCoverageColor,
-                            weight: 1,
-                            fill: true,
-                            fillOpacity: 0.05,
-                        }}
-                        positions={coverage}
-                    />);
-                }
+                let coverage = [];
+                coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                currentCoverage.push(<Polyline
+                    noClip={true}
+                    key={"coverage-"+groupSatellites[noradid]['name']}
+                    pathOptions={{
+                        color: satelliteCoverageColor,
+                        weight: 1,
+                        fill: true,
+                        fillOpacity: 0.05,
+                    }}
+                    positions={coverage}
+                />);
             });
 
             setCurrentPastSatellitesPaths(currentPastPaths);
@@ -590,7 +593,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
 
                 </MapContainer>
             </div>
-            <div key="settings" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
+            <ThemedDiv key="settings" style={{ border:'1px solid #424242' }}>
                 <SettingsIsland
                     initialShowPastOrbitPath={showPastOrbitPath}
                     initialShowFutureOrbitPath={showFutureOrbitPath}
@@ -613,7 +616,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
                     handleSatelliteCoverageColor={handleSatelliteCoverageColor}
                     handleOrbitProjectionDuration={handleOrbitProjectionDuration}
                 />
-            </div>
+            </ThemedDiv>
         </ResponsiveGridLayout>
     );
 }
