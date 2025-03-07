@@ -2,8 +2,7 @@ import { StrictMode } from 'react'
 import { createRoot } from 'react-dom/client'
 import './index.css'
 import {BrowserRouter, createBrowserRouter, Route, RouterProvider, Routes} from "react-router";
-import Dashboard from "./App.jsx";
-import SettingsTabs from "./components/settings.jsx";
+import {SettingsTabHome, SettingsTabRotor, SettingsTabPreferences, SettingsTabTLEs} from "./components/settings.jsx";
 import TargetSatelliteGridLayout from "./components/sat-track.jsx";
 import GlobalSatelliteTrack from "./components/global-sat-track.jsx";
 import App from "./App.jsx";
@@ -27,15 +26,22 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "settings",
-                        Component: SettingsTabs,
                         children: [
                             {
                                 path: "home",
-                                Component: SettingsTabs,
+                                Component: SettingsTabHome,
                             },
                             {
                                 path: "preferences",
-                                Component: SettingsTabs,
+                                Component: SettingsTabPreferences,
+                            },
+                            {
+                                path: "rotor",
+                                Component: SettingsTabRotor,
+                            },
+                            {
+                                path: "tles",
+                                Component: SettingsTabTLEs,
                             },
                         ],
                     },

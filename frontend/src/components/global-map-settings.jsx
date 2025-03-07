@@ -8,8 +8,6 @@ import {
     MenuItem,
     Switch,
     FormControlLabel,
-    Typography,
-    Divider,
     Stack
 } from '@mui/material';
 import {styled} from '@mui/material/styles';
@@ -35,48 +33,58 @@ const Item = styled('div')(({theme}) => ({
     padding: theme.spacing(1),
 }));
 
-const SettingsIsland = () => {
+const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
+                            initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
+                            initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
+                            initialOrbitProjectionDuration, handleShowFutureOrbitPath, handleShowPastOrbitPath,
+                            handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
+                            handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
+                            handleSatelliteCoverageColor, handleOrbitProjectionDuration}) => {
+
     // Example tile layers for a leaflet map
     const tileLayers = [
         {id: 'osm', name: 'OpenStreetMap'},
         {id: 'satellite', name: 'Satellite'},
         {id: 'topo', name: 'Topographic'},
-        // Add more tile layers as needed
     ];
 
     // Example options for orbit projection time range
     const timeOptions = [
-        {value: '1h', label: '1 Hour'},
-        {value: '2h', label: '2 Hours'},
-        {value: '4h', label: '4 Hours'},
-        {value: '8h', label: '8 Hours'},
-        // Add more options as needed
+        {value: '60',  label: '1 Hour'},
+        {value: '120', label: '2 Hours'},
+        {value: '240', label: '4 Hours'},
+        {value: '480', label: '8 Hours'},
     ];
 
     // State for all settings
     const [selectedTileLayer, setSelectedTileLayer] = useState(tileLayers[0].id);
-    const [satelliteCoverage, setSatelliteCoverage] = useState(false);
-    const [coverageColor, setCoverageColor] = useState('#ff0000');
-    const [orbitPlotting, setOrbitPlotting] = useState(false);
-    const [showSun, setShowSun] = useState(true);
-    const [showMoon, setShowMoon] = useState(true);
-    const [showTerminator, setShowTerminator] = useState(false);
+    const [satelliteCoverage, setSatelliteCoverage] = useState(initialShowSatelliteCoverage);
+    const [showPastOrbitPlot, setShowPastOrbitPlot] = useState(initialShowPastOrbitPath);
+    const [showFutureOrbitPlot, setShowFutureOrbitPlot] = useState(initialShowFutureOrbitPath);
+    const [showSun, setShowSun] = useState(initialShowSunIcon);
+    const [showMoon, setShowMoon] = useState(initialShowMoonIcon);
+    const [showTerminator, setShowTerminator] = useState(initialShowTerminatorLine);
     const [showSatelliteTooltip, setShowSatelliteTooltip] = useState(true);
-    const [orbitTimeOption, setOrbitTimeOption] = useState(timeOptions[0].value);
+    const [pastOrbitLineColor, setPastOrbitLineColor] = useState(initialPastOrbitLineColor);
+    const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
+    const [coverageColor, setCoverageColor] = useState(initialSatelliteCoverageColor);
+    const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
 
     return (
         <div>
             <TitleBar className={"react-grid-draggable"}>Map settings</TitleBar>
             <ThemedStack spacing={0}>
-                {/* Orbit Projection Time Dropdown */}
                 <Item>
                     <FormControl fullWidth size={"small"}>
                         <InputLabel id="orbit-time-label">Orbit Projection Time</InputLabel>
                         <Select
                             labelId="orbit-time-label"
-                            value={orbitTimeOption}
+                            value={orbitProjectionDuration}
                             label="Orbit Projection Time"
-                            onChange={(e) => setOrbitTimeOption(e.target.value)}
+                            onChange={(e) => {
+                                handleOrbitProjectionDuration(e.target.value);
+                                setOrbitProjectionDuration(e.target.value);
+                            }}
                             variant={"outlined"}
                         >
                             {timeOptions.map((option) => (
@@ -111,29 +119,13 @@ const SettingsIsland = () => {
                             <Switch
                                 size={"small"}
                                 checked={satelliteCoverage}
-                                onChange={(e) => setSatelliteCoverage(e.target.checked)}
-                            />
-                        }
-                        label="Satellite Coverage"
-                    />
-                </Item>
-                <Item>
-                    <FormControlLabel
-                        style={{padding: '0rem 0rem 0rem 1rem'}}
-                        control={
-                            <input
-                                type="color"
-                                value={coverageColor}
-                                onChange={(e) => setCoverageColor(e.target.value)}
-                                style={{
-                                    width: '50px',
-                                    height: '20px',
-                                    border: 'none',
-                                    background: 'none',
+                                onChange={(e) => {
+                                    handleShowSatelliteCoverage(e.target.checked);
+                                    setSatelliteCoverage(e.target.checked);
                                 }}
                             />
                         }
-                        label="Orbit line color"
+                        label="Satellite coverage"
                     />
                 </Item>
                 <Item>
@@ -142,11 +134,30 @@ const SettingsIsland = () => {
                         control={
                             <Switch
                                 size={"small"}
-                                checked={orbitPlotting}
-                                onChange={(e) => setOrbitPlotting(e.target.checked)}
+                                checked={showPastOrbitPlot}
+                                onChange={(e) => {
+                                    handleShowPastOrbitPath(e.target.checked);
+                                    setShowPastOrbitPlot(e.target.checked);
+                                }}
                             />
                         }
-                        label="Orbit Plotting"
+                        label="Past orbit path plotting"
+                    />
+                </Item>
+                <Item>
+                    <FormControlLabel
+                        style={{padding: '0rem 0rem 0rem 1rem'}}
+                        control={
+                            <Switch
+                                size={"small"}
+                                checked={showFutureOrbitPlot}
+                                onChange={(e) => {
+                                    handleShowFutureOrbitPath(e.target.checked);
+                                    setShowFutureOrbitPlot(e.target.checked);
+                                }}
+                            />
+                        }
+                        label="Future orbit path plotting"
                     />
                 </Item>
                 <Item>
@@ -155,7 +166,10 @@ const SettingsIsland = () => {
                             <Switch
                                 size={"small"}
                                 checked={showSun}
-                                onChange={(e) => setShowSun(e.target.checked)}
+                                onChange={(e) => {
+                                    handleSetShowSunIcon(e.target.checked);
+                                    setShowSun(e.target.checked);
+                                }}
                             />
                         }
                         label="Show Sun"
@@ -167,7 +181,10 @@ const SettingsIsland = () => {
                             <Switch
                                 size={"small"}
                                 checked={showMoon}
-                                onChange={(e) => setShowMoon(e.target.checked)}
+                                onChange={(e) => {
+                                    handleSetShowMoonIcon(e.target.checked);
+                                    setShowMoon(e.target.checked);
+                                }}
                             />
                         }
                         label="Show Moon"
@@ -179,10 +196,13 @@ const SettingsIsland = () => {
                             <Switch
                                 size={"small"}
                                 checked={showTerminator}
-                                onChange={(e) => setShowTerminator(e.target.checked)}
+                                onChange={(e) => {
+                                    handleShowTerminatorLine(e.target.checked);
+                                    setShowTerminator(e.target.checked);
+                                }}
                             />
                         }
-                        label="Day/Night Terminator"
+                        label="Day/night seperator line"
                     />
                 </Item>
                 <Item>
@@ -195,6 +215,72 @@ const SettingsIsland = () => {
                             />
                         }
                         label="Satellite Tooltip"
+                    />
+                </Item>
+                <Item>
+                    <FormControlLabel
+                        style={{padding: '0rem 0rem 0rem 1rem'}}
+                        control={
+                            <input
+                                type="color"
+                                value={coverageColor}
+                                onChange={(e) => {
+                                    handleSatelliteCoverageColor(e.target.value);
+                                    setCoverageColor(e.target.value);
+                                }}
+                                style={{
+                                    width: '40px',
+                                    height: '24px',
+                                    border: 'none',
+                                    background: 'none',
+                                }}
+                            />
+                        }
+                        label="Footprint color"
+                    />
+                </Item>
+                <Item>
+                    <FormControlLabel
+                        style={{padding: '0rem 0rem 0rem 1rem'}}
+                        control={
+                            <input
+                                type="color"
+                                value={pastOrbitLineColor}
+                                onChange={(e) => {
+                                    handlePastOrbitLineColor(e.target.value);
+                                    setPastOrbitLineColor(e.target.value);
+                                }}
+                                style={{
+                                    width: '40px',
+                                    height: '24px',
+                                    border: 'none',
+                                    background: 'none',
+                                }}
+                            />
+                        }
+                        label="Past orbit line color"
+                    />
+                </Item>
+                <Item>
+                    <FormControlLabel
+                        style={{padding: '0rem 0rem 0rem 1rem'}}
+                        control={
+                            <input
+                                type="color"
+                                value={futureOrbitLineColor}
+                                onChange={(e) => {
+                                    handleFutureOrbitLineColor(e.target.value);
+                                    setFutureOrbitLineColor(e.target.value);
+                                }}
+                                style={{
+                                    width: '40px',
+                                    height: '24px',
+                                    border: 'none',
+                                    background: 'none',
+                                }}
+                            />
+                        }
+                        label="Future orbit line color"
                     />
                 </Item>
             </ThemedStack>

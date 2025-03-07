@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useRef} from 'react';
+import React, {useState, useEffect, useRef, useCallback} from 'react';
 import { SatelliteAlt } from '@mui/icons-material';
 import { renderToStaticMarkup } from 'react-dom/server';
 import { Responsive, WidthProvider } from 'react-grid-layout';
@@ -111,7 +111,7 @@ const defaultLayouts = {
             x: 6,
             y: 0,
             w: 2,
-            h: 12,
+            h: 15,
             minW: 2,
             maxW: 2,
             minH: 12,
@@ -242,17 +242,172 @@ function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints = 36) 
 
     return adjustedPoints;
 }
+// Make sure satellite.js is imported, e.g.,
+// const satellite = require('satellite.js');
 
-function GlobalSatelliteTrack() {
-    const mapRef = useRef(null);
-    const resizeObserverRef = useRef(null);
+/**
+ * Normalizes a longitude value to be within -180 to 180 degrees.
+ * @param {number} lon - The longitude in degrees.
+ * @returns {number} - The normalized longitude.
+ */
+function normalizeLongitude(lon) {
+    while (lon > 180) {
+        lon -= 360;
+    }
+    while (lon < -180) {
+        lon += 360;
+    }
+    return lon;
+}
+
+/**
+ * Splits an array of points into segments so that no segment contains a jump
+ * greater than 180 degrees in longitude.
+ *
+ * @param {Array} points - An array of objects of the form {lat, lon}.
+ * @returns {Array} - Either an array of points (if only one segment exists) or an array of segments.
+ */
+function splitAtDateline(points) {
+    if (points.length === 0) return points;
+    const segments = [];
+    let currentSegment = [points[0]];
+
+    for (let i = 1; i < points.length; i++) {
+        const prev = points[i - 1];
+        const curr = points[i];
+        // Because our points are normalized, a jump of more than 180 degrees
+        // indicates a crossing of the dateline.
+        if (Math.abs(curr.lon - prev.lon) > 180) {
+            // End the current segment and start a new one.
+            segments.push(currentSegment);
+            currentSegment = [curr];
+        } else {
+            currentSegment.push(curr);
+        }
+    }
+    segments.push(currentSegment);
+    // If there is only one segment, return it directly; otherwise return the segments.
+    return segments.length === 1 ? segments[0] : segments;
+}
+
+/**
+ * Computes the satellite's past and future path coordinates from its TLE.
+ * The path is computed at a fixed time step and then split into segments so that
+ * no segment contains a line crossing the dateline (+180 or -180 longitude).
+ *
+ * @param {Array} tle - An array containing two TLE lines [line1, line2].
+ * @param {number} durationMinutes - The projection duration (in minutes) for both past and future.
+ * @param {number} [stepMinutes=1] - (Optional) The time interval in minutes between coordinate samples.
+ * @returns {Object} An object with two properties:
+ *                   { past: [{lat, lon}] or [[{lat, lon}], ...],
+ *                     future: [{lat, lon}] or [[{lat, lon}], ...] }
+ */
+function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
+    // Create a satellite record from the provided TLE
+    const satrec = satellite.twoline2satrec(tle[0], tle[1]);
+    const now = new Date();
+    const pastPoints = [];
+    const futurePoints = [];
+    const stepMs = stepMinutes * 60 * 1000;
+
+    // Compute past points: from (now - durationMinutes) up to now (inclusive)
+    for (let t = now.getTime() - durationMinutes * 60 * 1000; t <= now.getTime(); t += stepMs) {
+        const time = new Date(t);
+        const { position } = satellite.propagate(satrec, time);
+        if (position) {
+            const gmst = satellite.gstime(time);
+            const posGd = satellite.eciToGeodetic(position, gmst);
+            let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
+            const lat = satellite.degreesLat(posGd.latitude);
+            pastPoints.push({ lat, lon });
+        }
+    }
+
+    // Compute future points: from now up to (now + durationMinutes) (inclusive)
+    for (let t = now.getTime(); t <= now.getTime() + durationMinutes * 60 * 1000; t += stepMs) {
+        const time = new Date(t);
+        const { position } = satellite.propagate(satrec, time);
+        if (position) {
+            const gmst = satellite.gstime(time);
+            const posGd = satellite.eciToGeodetic(position, gmst);
+            let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
+            const lat = satellite.degreesLat(posGd.latitude);
+            futurePoints.push({ lat, lon });
+        }
+    }
+
+    // Split the past and future arrays into segments to avoid drawing lines across the dateline.
+    const past = splitAtDateline(pastPoints);
+    const future = splitAtDateline(futurePoints);
+
+    return { past, future };
+}
+
+function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true, initialShowSatelliteCoverage=true,
+                                  initialShowSunIcon=true, initialShowMoonIcon=true, initialShowTerminatorLine=true,
+                                  initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
+                                  initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=60 }) {
+
+    const [showPastOrbitPath, setShowPastOrbitPath] = useState(initialShowPastOrbitPath);
+    const [showFutureOrbitPath, setShowFutureOrbitPath] = useState(initialShowFutureOrbitPath);
+    const [showSatelliteCoverage, setShowSatelliteCoverage] = useState(initialShowSatelliteCoverage);
+    const [showSunIcon, setShowSunIcon] = useState(initialShowSunIcon);
+    const [showMoonIcon, setShowMoonIcon] = useState(initialShowMoonIcon);
+    const [showTerminatorLine, setShowTerminatorLine] = useState(initialShowTerminatorLine);
     const [groupSatellites, setGroupSatellites] = useState({});
+    const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
+    const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
     const [terminatorLine, setTerminatorLine] = useState([]);
     const [daySidePolygon, setDaySidePolygon] = useState([]);
+    const [pastOrbitLineColor, setPastOrbitLineColor] = useState(initialPastOrbitLineColor);
+    const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
+    const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
+    const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
+
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
+
+    const handleShowPastOrbitPath = useCallback((value) => {
+        setShowPastOrbitPath(value);
+    }, [showPastOrbitPath]);
+
+    const handleShowFutureOrbitPath = useCallback((value) => {
+        setShowFutureOrbitPath(value);
+    }, [showFutureOrbitPath]);
+
+    const handleShowSatelliteCoverage = useCallback((value) => {
+        setShowSatelliteCoverage(value);
+    }, [showSatelliteCoverage]);
+
+    const handleSetShowSunIcon = useCallback((value) => {
+        setShowSunIcon(value);
+    }, [showSunIcon]);
+
+    const handleSetShowMoonIcon = useCallback((value) => {
+        setShowMoonIcon(value);
+    }, [showMoonIcon]);
+
+    const handleShowTerminatorLine = useCallback((value) => {
+        setShowTerminatorLine(value);
+    }, [showTerminatorLine]);
+
+    const handlePastOrbitLineColor = useCallback((color) => {
+        setPastOrbitLineColor(color);
+    }, [pastOrbitLineColor]);
+
+    const handleFutureOrbitLineColor = useCallback((color) => {
+        setFutureOrbitLineColor(color);
+    }, [futureOrbitLineColor]);
+
+    const handleSatelliteCoverageColor = useCallback((color) => {
+        setSatelliteCoverageColor(color);
+    }, [satelliteCoverageColor]);
+
+    const handleOrbitProjectionDuration = useCallback((minutes) => {
+        setOrbitProjectionDuration(minutes);
+    }, [orbitProjectionDuration]);
 
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
@@ -267,15 +422,10 @@ function GlobalSatelliteTrack() {
         }, 1000);
     };
 
-    // map bounds
-    const bounds = new LatLngBounds([40.712216, -74.22655], [40.773941, -74.12544])
-
-
     // update the satellites position, day/night terminator every second
     useEffect(()=>{
         const timer = setInterval(()=>{
             const now = new Date();
-
 
             // populate the satellite group
             setGroupSatellites(TLEs);
@@ -283,35 +433,70 @@ function GlobalSatelliteTrack() {
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
+            let currentFuturePaths = [];
+            let currentPastPaths = [];
             Object.keys(groupSatellites).map(noradid=>{
-                let name = groupSatellites[noradid]['name'];
-                let [lat, lon, altitude, velocity] = getSatelliteLatLon(
-                    groupSatellites[noradid]['tleLine1'],
-                    groupSatellites[noradid]['tleLine2'],
-                    now);
+                if (noradid === "25338") {
+                    let name = groupSatellites[noradid]['name'];
+                    let [lat, lon, altitude, velocity] = getSatelliteLatLon(
+                        groupSatellites[noradid]['tleLine1'],
+                        groupSatellites[noradid]['tleLine2'],
+                        now);
 
-                currentPos.push(<Marker key={"marker-"+groupSatellites[noradid]['name']} position={[lat, lon]}
-                                        icon={satelliteIcon}>
-                    <ThemedLeafletTooltip direction="bottom" offset={[0, 15]} opacity={0.9} permanent>
-                        {groupSatellites[noradid]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                    </ThemedLeafletTooltip>
-                </Marker>);
+                    let paths = {};
+                    // calculate paths
+                    paths = getSatellitePaths([
+                        groupSatellites[noradid]['tleLine1'],
+                        groupSatellites[noradid]['tleLine2']
+                    ], orbitProjectionDuration);
 
-                let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                    // past path
+                    currentPastPaths.push(<Polyline
+                        key={`past-path-${noradid}`}
+                        positions={paths.past}
+                        pathOptions={{
+                            color: pastOrbitLineColor,
+                            weight:1,
+                            opacity:1
+                        }}
+                    />)
 
-                currentCoverage.push(<Polyline
-                    noClip={true}
-                    key={"coverage-"+groupSatellites[noradid]['name']}
-                    pathOptions={{
-                        color: 'purple',
-                        weight: 1,
-                        fill: true,
-                        fillOpacity: 0.05,
-                    }}
-                    positions={coverage}
-                />);
+                    // future path
+                    currentFuturePaths.push(<Polyline
+                        key={`future-path-${noradid}`}
+                        positions={paths.future}
+                        pathOptions={{
+                            color: futureOrbitLineColor,
+                            weight:1,
+                            opacity:1
+                        }}
+                    />)
+
+                    currentPos.push(<Marker key={"marker-"+groupSatellites[noradid]['name']} position={[lat, lon]}
+                                            icon={satelliteIcon}>
+                        <ThemedLeafletTooltip direction="bottom" offset={[0, 15]} opacity={0.9} permanent>
+                            {groupSatellites[noradid]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                        </ThemedLeafletTooltip>
+                    </Marker>);
+
+                    let coverage = [];
+                    coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                    currentCoverage.push(<Polyline
+                        noClip={true}
+                        key={"coverage-"+groupSatellites[noradid]['name']}
+                        pathOptions={{
+                            color: satelliteCoverageColor,
+                            weight: 1,
+                            fill: true,
+                            fillOpacity: 0.05,
+                        }}
+                        positions={coverage}
+                    />);
+                }
             });
 
+            setCurrentPastSatellitesPaths(currentPastPaths);
+            setCurrentFutureSatellitesPaths(currentFuturePaths);
             setCurrentSatellitesPosition(currentPos);
             setCurrentSatellitesCoverage(currentCoverage);
 
@@ -332,7 +517,8 @@ function GlobalSatelliteTrack() {
         }, 1000);
 
         return ()=>clearInterval(timer);
-    },[groupSatellites]);
+    },[groupSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
+        showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration]);
 
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
@@ -355,23 +541,25 @@ function GlobalSatelliteTrack() {
                 <TitleBar className={"react-grid-draggable"}>Global map</TitleBar>
                 <MapContainer
                     center={[0, 0]}
-                    zoom={2}
+                    zoom={1.8}
                     style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
                     dragging={false}
                     scrollWheelZoom={false}
                     maxZoom={10}
                     minZoom={0}
                     whenReady={handleWhenReady}
+                    zoomSnap={0.25}
+                    zoomDelta={0.25}
                 >
                     <TileLayer
                         url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
                         attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                     />
 
-                    {sunPos? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
-                    {moonPos? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
+                    {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
+                    {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
 
-                    {daySidePolygon.length>1 && (
+                    {daySidePolygon.length>1 && showTerminatorLine && (
                         <Polygon
                             positions={daySidePolygon}
                             pathOptions={{
@@ -383,7 +571,7 @@ function GlobalSatelliteTrack() {
                         />
                     )}
 
-                    {terminatorLine.length>1 && (
+                    {terminatorLine.length>1 && showTerminatorLine && (
                         <Polyline
                             positions={terminatorLine}
                             pathOptions={{
@@ -395,13 +583,36 @@ function GlobalSatelliteTrack() {
                     )}
 
                     <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
+                    {showPastOrbitPath? currentPastSatellitesPaths: null}
+                    {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                     {currentSatellitesPosition}
-                    {currentSatellitesCoverage}
+                    {showSatelliteCoverage? currentSatellitesCoverage: null}
 
                 </MapContainer>
             </div>
             <div key="settings" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
-                <SettingsIsland/>
+                <SettingsIsland
+                    initialShowPastOrbitPath={showPastOrbitPath}
+                    initialShowFutureOrbitPath={showFutureOrbitPath}
+                    initialShowSatelliteCoverage={showSatelliteCoverage}
+                    initialShowSunIcon={showSunIcon}
+                    initialShowMoonIcon={showMoonIcon}
+                    initialShowTerminatorLine={showTerminatorLine}
+                    initialPastOrbitLineColor={pastOrbitLineColor}
+                    initialFutureOrbitLineColor={futureOrbitLineColor}
+                    initialSatelliteCoverageColor={satelliteCoverageColor}
+                    initialOrbitProjectionDuration={orbitProjectionDuration}
+                    handleShowPastOrbitPath={handleShowPastOrbitPath}
+                    handleShowFutureOrbitPath={handleShowFutureOrbitPath}
+                    handleShowSatelliteCoverage={handleShowSatelliteCoverage}
+                    handleSetShowSunIcon={handleSetShowSunIcon}
+                    handleSetShowMoonIcon={handleSetShowMoonIcon}
+                    handleShowTerminatorLine={handleShowTerminatorLine}
+                    handlePastOrbitLineColor={handlePastOrbitLineColor}
+                    handleFutureOrbitLineColor={handleFutureOrbitLineColor}
+                    handleSatelliteCoverageColor={handleSatelliteCoverageColor}
+                    handleOrbitProjectionDuration={handleOrbitProjectionDuration}
+                />
             </div>
         </ResponsiveGridLayout>
     );

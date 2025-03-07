@@ -7,10 +7,7 @@ import {DashboardLayout, ThemeSwitcher} from "@toolpad/core/DashboardLayout";
 import Typography from "@mui/material/Typography";
 import PropTypes from "prop-types";
 import SatelliteAltIcon from "@mui/icons-material/SatelliteAlt";
-import Chip from "@mui/material/Chip";
-import CheckCircleIcon from "@mui/icons-material/CheckCircle";
 import * as React from "react";
-import {PageContainer} from "@toolpad/core";
 import {Outlet} from "react-router";
 
 function ToolbarActionsSearch() {

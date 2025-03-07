@@ -5,12 +5,31 @@ import {
     Tab,
     TextField,
     Button,
-    Typography, Grid,
+    Typography, Grid2,
 } from '@mui/material';
-import Stack from "@mui/material/Stack";
+import {
+    Link,
+} from 'react-router';
 
-function ConfigurationTabs() {
-    const [activeTab, setActiveTab] = useState(0);
+
+export function SettingsTabHome() {
+    return (<SettingsTabs initialTab={0}/>);
+}
+
+export function SettingsTabPreferences() {
+    return (<SettingsTabs initialTab={1}/>);
+}
+
+export function SettingsTabRotor() {
+    return (<SettingsTabs initialTab={2}/>);
+}
+
+export function SettingsTabTLEs() {
+    return (<SettingsTabs initialTab={3}/>);
+}
+
+function SettingsTabs({initialTab}) {
+    const [activeTab, setActiveTab] = useState(initialTab);
 
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
@@ -133,16 +152,16 @@ function ConfigurationTabs() {
                 aria-label="configuration tabs"
                 scrollButtons="auto"
             >
-                <Tab label="Home"/>
-                <Tab label="Preferences"/>
-                <Tab label="Rotor control"/>
-                <Tab label="TLEs"/>
+                <Tab label="Home" to="/settings/home" component={Link}/>
+                <Tab label="Preferences" to="/settings/preferences" component={Link}/>
+                <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
+                <Tab label="TLEs" to="/settings/tles" component={Link}/>
             </Tabs>
-            <Grid spacing={2}>
+            <Grid2 spacing={2}>
                 {renderActiveTabForm()}
-            </Grid>
+            </Grid2>
         </Box>
     );
 }
 
-export default ConfigurationTabs;
+export default SettingsTabs;

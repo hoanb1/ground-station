@@ -6,7 +6,7 @@ let _D2R = Math.PI / 180;
 let options = {
     interactive: false, // Disable "clickable" mouse pointer
         color: '#00',
-        opacity: 0.5,
+        opacity: 0.4,
         fillColor: '#00',
         fillOpacity: 0.5,
         resolution: 5,
