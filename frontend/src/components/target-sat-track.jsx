@@ -23,7 +23,7 @@ import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
-import {HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
+import {getSatelliteDataByNoradId, HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
 import SettingsIsland from "./global-map-settings.jsx";
 import {LatLngBounds} from "leaflet/src/geo/index.js";
 import {MYGROUPTLEs} from "./tles.jsx";
@@ -35,7 +35,7 @@ import NavigationIcon from '@mui/icons-material/Navigation';
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import {getTileLayerById, tileLayers} from "./tile-layer.jsx";
+import {getTileLayerById} from "./tile-layer.jsx";
 
 // global leaflet map object
 let MapObject = null;
@@ -58,7 +58,7 @@ const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
     borderColor: theme.palette.background.paper,
 }));
 
-const gridLayoutStoreName = 'global-sat-track-layouts';
+const gridLayoutStoreName = 'target-sat-track-layouts';
 
 // -------------------------------------------------
 // Leaflet icon path fix for React
@@ -109,7 +109,15 @@ const defaultLayouts = {
             minH: 12,
             maxH: 12,
             isResizable: false,
-        }
+        },
+        {
+            i: 'info',
+            x: 6,
+            y: 0,
+            w: 3,
+            h: 14,
+            resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+        },
     ]
 };
 
@@ -164,6 +172,17 @@ function FullscreenMapButton() {
 
     return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
         <FullscreenIcon />
+    </Fab>;
+}
+
+function CenterSatelliteButton() {
+    const targetCoordinates = [0, 0];
+    const handleClick = () => {
+        MapObject.setView(targetCoordinates, MapObject.getZoom());
+    };
+
+    return <Fab size="small" color="primary" aria-label="Follow satellite" onClick={()=>{handleClick()}}>
+        <SatelliteAlt />
     </Fab>;
 }
 
@@ -393,12 +412,17 @@ const ThemedDiv = styled('div')(({theme}) => ({
     backgroundColor: theme.palette.background.paper,
 }));
 
-function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutureOrbitPath=false,
+function TargetSatelliteTrack({ noradid=25544, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
                                   initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
-                                  initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=60 }) {
+                                  initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=240 }) {
 
+    const [satelliteName, setSatelliteName] = useState(null);
+    const [satelliteLat, setSatelliteLat] = useState(null);
+    const [satelliteLon, setSatelliteLon] = useState(null);
+    const [satelliteAltitude, setSatelliteAltitude] = useState(0.0);
+    const [satelliteVelocity, setSatelliteVelocity] = useState(0.0);
     const [showPastOrbitPath, setShowPastOrbitPath] = useState(initialShowPastOrbitPath);
     const [showFutureOrbitPath, setShowFutureOrbitPath] = useState(initialShowFutureOrbitPath);
     const [showSatelliteCoverage, setShowSatelliteCoverage] = useState(initialShowSatelliteCoverage);
@@ -417,6 +441,8 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
     const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
+
+    const satelliteData = getSatelliteDataByNoradId(noradid);
 
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
@@ -479,76 +505,82 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         }, 1000);
     };
 
+    let [latitude, longitude, altitude, velocity] = [null, null, null, null];
+
     // update the satellites position, day/night terminator every second
     useEffect(()=>{
         const timer = setInterval(()=>{
             const now = new Date();
-
-            // populate the satellite group
-            setGroupSatellites(MYGROUPTLEs);
 
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
             let currentFuturePaths = [];
             let currentPastPaths = [];
-            Object.keys(groupSatellites).map(noradid=>{
-                let name = groupSatellites[noradid]['name'];
-                let [lat, lon, altitude, velocity] = getSatelliteLatLon(
-                    groupSatellites[noradid]['tleLine1'],
-                    groupSatellites[noradid]['tleLine2'],
-                    now);
+            setSatelliteName(satelliteData['name']);
+            [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
+                satelliteData['tleLine1'],
+                satelliteData['tleLine2'],
+                now);
 
-                let paths = {};
-                // calculate paths
-                paths = getSatellitePaths([
-                    groupSatellites[noradid]['tleLine1'],
-                    groupSatellites[noradid]['tleLine2']
-                ], orbitProjectionDuration);
+            // set satellite data
+            setSatelliteLat(latitude);
+            setSatelliteLon(longitude);
+            setSatelliteAltitude(altitude);
+            setSatelliteVelocity(velocity);
 
-                // past path
-                currentPastPaths.push(<Polyline
-                    key={`past-path-${noradid}`}
-                    positions={paths.past}
-                    pathOptions={{
-                        color: pastOrbitLineColor,
-                        weight:1,
-                        opacity:1
-                    }}
-                />)
+            // focus on satellite
+            MapObject.setView([latitude, longitude], MapObject.getZoom());
 
-                // future path
-                currentFuturePaths.push(<Polyline
-                    key={`future-path-${noradid}`}
-                    positions={paths.future}
-                    pathOptions={{
-                        color: futureOrbitLineColor,
-                        weight:1,
-                        opacity:1
-                    }}
-                />)
+            let paths = {};
+            // calculate paths
+            paths = getSatellitePaths([
+                satelliteData['tleLine1'],
+                satelliteData['tleLine2']
+            ], orbitProjectionDuration);
 
-                currentPos.push(<Marker key={"marker-"+groupSatellites[noradid]['name']} position={[lat, lon]}
-                                        icon={satelliteIcon}>
-                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
-                        {groupSatellites[noradid]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                    </ThemedLeafletTooltip>
-                </Marker>);
+            // past path
+            currentPastPaths.push(<Polyline
+                key={`past-path-${noradid}`}
+                positions={paths.past}
+                pathOptions={{
+                    color: pastOrbitLineColor,
+                    weight:1,
+                    opacity:1
+                }}
+            />)
 
-                let coverage = [];
-                coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
-                currentCoverage.push(<Polyline
-                    noClip={true}
-                    key={"coverage-"+groupSatellites[noradid]['name']}
-                    pathOptions={{
-                        color: satelliteCoverageColor,
-                        weight: 1,
-                        fill: true,
-                        fillOpacity: 0.05,
-                    }}
-                    positions={coverage}
-                />);
-            });
+            // future path
+            currentFuturePaths.push(<Polyline
+                key={`future-path-${noradid}`}
+                positions={paths.future}
+                pathOptions={{
+                    color: futureOrbitLineColor,
+                    weight:1,
+                    opacity:1
+                }}
+            />)
+
+            currentPos.push(<Marker key={"marker-"+satelliteData['name']} position={[latitude, longitude]}
+                                    icon={satelliteIcon}>
+                <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
+                    {satelliteData['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                </ThemedLeafletTooltip>
+            </Marker>);
+
+            let coverage = [];
+            coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
+            currentCoverage.push(<Polyline
+                noClip={true}
+                key={"coverage-"+satelliteData['name']}
+                pathOptions={{
+                    color: satelliteCoverageColor,
+                    weight: 1,
+                    fill: true,
+                    fillOpacity: 0.05,
+                }}
+                positions={coverage}
+            />);
 
             setCurrentPastSatellitesPaths(currentPastPaths);
             setCurrentFutureSatellitesPaths(currentFuturePaths);
@@ -573,7 +605,8 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
 
         return ()=>clearInterval(timer);
     },[groupSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
-        showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration]);
+        showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
+        latitude, longitude, altitude, velocity, tileLayerID]);
 
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
@@ -593,15 +626,15 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
             draggableHandle=".react-grid-draggable"
         >
             <div key="map" style={{ border:'1px solid #424242', overflow:'hidden'}}>
-                <TitleBar className={"react-grid-draggable"}>Global map</TitleBar>
+                <TitleBar className={"react-grid-draggable"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</TitleBar>
                 <MapContainer
                     center={[0, 0]}
                     zoom={2}
                     style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
-                    dragging={true}
-                    scrollWheelZoom={true}
-                    maxZoom={10}
-                    minZoom={0}
+                    dragging={false}
+                    scrollWheelZoom={false}
+                    maxZoom={7}
+                    minZoom={1}
                     whenReady={handleWhenReady}
                     zoomSnap={0.25}
                     zoomDelta={0.25}
@@ -677,8 +710,28 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                     handleTileLayerID={handleTileLayerID}
                 />
             </ThemedDiv>
+            {/* INFO ISLAND */}
+            <div key="info" style={{ padding:'0rem 0rem 0rem 0rem', border:'1px solid #424242' }}>
+                <TitleBar className={"react-grid-draggable"}></TitleBar>
+                <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
+                    <h2>{satelliteName}</h2>
+                    <p><strong>Latitude:</strong> {satelliteLat? satelliteLat.toFixed(4): "n/a"}°</p>
+                    <p><strong>Longitude:</strong> {satelliteLon? satelliteLon.toFixed(4): "n/a"}°</p>
+                    <p><strong>Altitude:</strong> {satelliteAltitude? satelliteAltitude.toFixed(2): "n/a"} km</p>
+                    <p><strong>Velocity:</strong> {satelliteVelocity? satelliteVelocity.toFixed(2): "n/a"} km/s</p>
+                </div>
+            </div>
+
+            {/* PASSES ISLAND */}
+            <div key="passes" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
+                <TitleBar className={"react-grid-draggable"}></TitleBar>
+                <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
+                    <h3>Next 24-hour Passes</h3>
+                    <p>Pass data, etc.</p>
+                </div>
+            </div>
         </ResponsiveGridLayout>
     );
 }
 
-export default GlobalSatelliteTrack;
+export default TargetSatelliteTrack;

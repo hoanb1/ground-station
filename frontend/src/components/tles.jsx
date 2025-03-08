@@ -1,5 +1,5 @@
 // noinspection SpellCheckingInspection
-let MYGROUPTLEs = {
+export let MYGROUPTLEs = {
     25544: {
         noradid: 25544,
         name: "ISS",
@@ -1259,4 +1259,8 @@ export let HAMTLEs = {
 };
 
 
-export default MYGROUPTLEs;
+export function getSatelliteDataByNoradId(noradId) {
+     return MYGROUPTLEs[noradId] || HAMTLEs[noradId] || MERIDIANTLEs[noradId] || NOAATLEs[noradId] ||  null;
+}
+
+

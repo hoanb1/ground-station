@@ -17,3 +17,7 @@
 .leaflet-control-attribution {
     display: none;
 }
+
+.leaflet-container {
+    background: #121212 !important;
+}

@@ -11,8 +11,8 @@ import {
     Stack
 } from '@mui/material';
 import {styled} from '@mui/material/styles';
-import tileLayers from './tile-layer.jsx';
-import {getTileLayerById} from './tile-layer.jsx';
+import {tileLayers, getTileLayerById} from './tile-layer.jsx';
+
 
 const TitleBar = styled(Paper)(({theme}) => ({
     width: '100%',

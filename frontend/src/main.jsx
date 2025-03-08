@@ -3,10 +3,10 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import {BrowserRouter, createBrowserRouter, Route, RouterProvider, Routes} from "react-router";
 import {SettingsTabHome, SettingsTabRotor, SettingsTabPreferences, SettingsTabTLEs} from "./components/settings.jsx";
-import TargetSatelliteGridLayout from "./components/sat-track.jsx";
 import GlobalSatelliteTrack from "./components/global-sat-track.jsx";
 import App from "./App.jsx";
 import Layout from "./components/dashboard.jsx";
+import TargetSatelliteTrack from "./components/target-sat-track.jsx";
 
 const router = createBrowserRouter([
     {
@@ -22,7 +22,7 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "track",
-                        Component: TargetSatelliteGridLayout,
+                        Component: TargetSatelliteTrack,
                     },
                     {
                         path: "settings",
