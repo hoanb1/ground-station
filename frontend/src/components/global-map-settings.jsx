@@ -11,6 +11,8 @@ import {
     Stack
 } from '@mui/material';
 import {styled} from '@mui/material/styles';
+import tileLayers from './tile-layer.jsx';
+import {getTileLayerById} from './tile-layer.jsx';
 
 const TitleBar = styled(Paper)(({theme}) => ({
     width: '100%',
@@ -41,17 +43,10 @@ const SettingItem = styled('div')(({theme}) => ({
 const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
                             initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
-                            initialOrbitProjectionDuration, handleShowFutureOrbitPath, handleShowPastOrbitPath,
+                            initialOrbitProjectionDuration, initialTileLayerID, handleShowFutureOrbitPath, handleShowPastOrbitPath,
                             handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
                             handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
-                            handleSatelliteCoverageColor, handleOrbitProjectionDuration}) => {
-
-    // Example tile layers for a leaflet map
-    const tileLayers = [
-        {id: 'osm', name: 'OpenStreetMap'},
-        {id: 'satellite', name: 'Satellite'},
-        {id: 'topo', name: 'Topographic'},
-    ];
+                            handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleTileLayerID}) => {
 
     // Example options for orbit projection time range
     const timeOptions = [
@@ -62,7 +57,6 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
     ];
 
     // State for all settings
-    const [selectedTileLayer, setSelectedTileLayer] = useState(tileLayers[0].id);
     const [satelliteCoverage, setSatelliteCoverage] = useState(initialShowSatelliteCoverage);
     const [showPastOrbitPlot, setShowPastOrbitPlot] = useState(initialShowPastOrbitPath);
     const [showFutureOrbitPlot, setShowFutureOrbitPlot] = useState(initialShowFutureOrbitPath);
@@ -74,6 +68,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
     const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
     const [coverageColor, setCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
+    const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
 
     return (
         <ThemedSettingsDiv>
@@ -105,9 +100,9 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         <InputLabel id="tile-layer-label">Tile Layer</InputLabel>
                         <Select
                             labelId="tile-layer-label"
-                            value={selectedTileLayer}
+                            value={tileLayerID}
                             label="Tile Layer"
-                            onChange={(e) => setSelectedTileLayer(e.target.value)}
+                            onChange={(e) => {setTileLayerID(e.target.value); handleTileLayerID(e.target.value);}}
                          variant={"outlined"}>
                             {tileLayers.map((layer) => (
                                 <MenuItem key={layer.id} value={layer.id}>
@@ -177,7 +172,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                                 }}
                             />
                         }
-                        label="Show Sun"
+                        label="Show the sun"
                     />
                 </SettingItem>
                 <SettingItem>
@@ -192,7 +187,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                                 }}
                             />
                         }
-                        label="Show Moon"
+                        label="Show the moon"
                     />
                 </SettingItem>
                 <SettingItem>
@@ -219,7 +214,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                                 onChange={(e) => setShowSatelliteTooltip(e.target.checked)}
                             />
                         }
-                        label="Satellite Tooltip"
+                        label="Satellite tooltip"
                     />
                 </SettingItem>
                 <SettingItem>

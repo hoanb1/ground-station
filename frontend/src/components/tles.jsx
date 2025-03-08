@@ -9,33 +9,6 @@ let MYGROUPTLEs = {
         currentAlt: 0,
         currentVel: [0, 0, 0]
     },
-    52145: {
-        noradid: 52145,
-        name: "MERIDIAN 10",
-        tleLine1: '1 52145U 22030A   25065.38949457  .00000204  00000-0  00000-0 0  9997',
-        tleLine2: '2 52145  62.6556 190.0218 6756698 273.5538  17.5853  2.00598079 21642',
-        currentLonLat: [0, 0],
-        currentAlt: 0,
-        currentVel: [0, 0, 0]
-    },
-    38995: {
-        noradid: 38995,
-        name: "MERIDIAN 6",
-        tleLine1: '1 38995U 12063A   25061.07648855  .00000541  00000+0  00000+0 0  9991',
-        tleLine2: '2 38995  64.8496  59.4514 7212937 232.8614  37.7338  2.00566729 90038',
-        currentLonLat: [0, 0],
-        currentAlt: 0,
-        currentVel: [0, 0, 0]
-    },
-    44453: {
-        noradid: 44453,
-        name: "MERIDIAN 8",
-        tleLine1: '1 44453U 19046A   25062.17369302  .00000172  00000-0  00000-0 0  9996',
-        tleLine2: '2 44453  62.7762 108.5454 6883966 273.6623  16.5718  2.00600345 40893',
-        currentLonLat: [0, 0],
-        currentAlt: 0,
-        currentVel: [0, 0, 0]
-    },
     25338: {
         noradid: 25338,
         name: "NOAA 15",
@@ -91,6 +64,39 @@ let MYGROUPTLEs = {
         currentVel: [0, 0, 0]
     },
 };
+
+
+export let MERIDIANTLEs = {
+    52145: {
+        noradid: 52145,
+        name: "MERIDIAN 10",
+        tleLine1: '1 52145U 22030A   25065.38949457  .00000204  00000-0  00000-0 0  9997',
+        tleLine2: '2 52145  62.6556 190.0218 6756698 273.5538  17.5853  2.00598079 21642',
+        currentLonLat: [0, 0],
+        currentAlt: 0,
+        currentVel: [0, 0, 0]
+    },
+    38995: {
+        noradid: 38995,
+        name: "MERIDIAN 6",
+        tleLine1: '1 38995U 12063A   25061.07648855  .00000541  00000+0  00000+0 0  9991',
+        tleLine2: '2 38995  64.8496  59.4514 7212937 232.8614  37.7338  2.00566729 90038',
+        currentLonLat: [0, 0],
+        currentAlt: 0,
+        currentVel: [0, 0, 0]
+    },
+    44453: {
+        noradid: 44453,
+        name: "MERIDIAN 8",
+        tleLine1: '1 44453U 19046A   25062.17369302  .00000172  00000-0  00000-0 0  9996',
+        tleLine2: '2 44453  62.7762 108.5454 6883966 273.6623  16.5718  2.00600345 40893',
+        currentLonLat: [0, 0],
+        currentAlt: 0,
+        currentVel: [0, 0, 0]
+    }
+};
+
+
 
 export let NOAATLEs = {
     4793: {

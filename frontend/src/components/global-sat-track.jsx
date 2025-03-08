@@ -23,10 +23,25 @@ import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
-import TLEs, {HAMTLEs, NOAATLEs} from './tles.jsx';
+import TLEs, {HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
 import SettingsIsland from "./global-map-settings.jsx";
 import {LatLngBounds} from "leaflet/src/geo/index.js";
 import MYGROUPTLEs from "./tles.jsx";
+import {Box, Fab} from "@mui/material";
+import AddIcon from '@mui/icons-material/Add';
+import EditIcon from '@mui/icons-material/Edit';
+import FavoriteIcon from '@mui/icons-material/Favorite';
+import NavigationIcon from '@mui/icons-material/Navigation';
+import HomeIcon from '@mui/icons-material/Home';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
+import {getTileLayerById} from "./tile-layer.jsx";
+
+// global leaflet map object
+let MapObject = null;
+
+const HOME_LAT = 40.6293;
+const HOME_LON = 22.9474;
 
 const TitleBar = styled(Paper)(({ theme }) => ({
     width: '100%',
@@ -43,11 +58,10 @@ const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
     borderColor: theme.palette.background.paper,
 }));
 
-const coverageRadius = 2250000; // about 2250 km
 const gridLayoutStoreName = 'global-sat-track-layouts';
 
 // -------------------------------------------------
-// 1) Leaflet icon path fix for React
+// Leaflet icon path fix for React
 // -------------------------------------------------
 delete L.Icon.Default.prototype._getIconUrl;
 L.Icon.Default.mergeOptions({
@@ -59,30 +73,7 @@ L.Icon.Default.mergeOptions({
 const ResponsiveGridLayout = WidthProvider(Responsive);
 
 
-// -------------------------------------------------
-// 2) Convert MUI SatelliteAlt icon to a Leaflet icon (optional)
-// -------------------------------------------------
-const iconSvgString = renderToStaticMarkup(<SatelliteAlt style={{ fontSize: 32 }} />);
-const materialSatelliteIcon = L.icon({
-    iconUrl: 'data:image/svg+xml;base64,' + btoa(iconSvgString),
-    iconSize: [32, 32],
-    iconAnchor: [16, 16],
-});
-
-// -------------------------------------------------
-// 3) TLE for ISS and example "Home" location
-// -------------------------------------------------
-const TLE_LINE_1 =
-    '1 25544U 98067A   25057.69551956  .00051272  00000-0  91556-3 0  9991';
-const TLE_LINE_2 =
-    '2 25544  51.6387 134.2889 0005831 315.8203 179.6729 15.49515680498024';
-
-const HOME_LAT = 40.6293;
-const HOME_LON = 22.9474;
-
-// -------------------------------------------------
-// 4) Load / Save layouts from localStorage
-// -------------------------------------------------
+// load / save layouts from localStorage
 function loadLayoutsFromLocalStorage() {
     try {
         const raw = localStorage.getItem(gridLayoutStoreName);
@@ -121,6 +112,60 @@ const defaultLayouts = {
         }
     ]
 };
+
+function CenterHomeButton() {
+    const targetCoordinates = [HOME_LAT, HOME_LON];
+    const handleClick = () => {
+        MapObject.setView(targetCoordinates, MapObject.getZoom());
+    };
+
+    return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
+        <HomeIcon />
+    </Fab>;
+}
+
+function CenterMapButton() {
+    const targetCoordinates = [0, 0];
+    const handleClick = () => {
+        MapObject.setView(targetCoordinates, MapObject.getZoom());
+    };
+
+    return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
+        <FilterCenterFocusIcon />
+    </Fab>;
+}
+
+function FullscreenMapButton() {
+    const handleMapFullscreen = () => {
+        const mapContainer = MapObject.getContainer();
+        if (!document.fullscreenElement) {
+            if (mapContainer.requestFullscreen) {
+                mapContainer.requestFullscreen();
+            } else if (mapContainer.mozRequestFullScreen) {
+                mapContainer.mozRequestFullScreen();
+            } else if (mapContainer.webkitRequestFullscreen) {
+                mapContainer.webkitRequestFullscreen();
+            } else if (mapContainer.msRequestFullscreen) {
+                mapContainer.msRequestFullscreen();
+            }
+        } else {
+            // Exit fullscreen if we're already in it
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) {
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) {
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) {
+                document.msExitFullscreen();
+            }
+        }
+    };
+
+    return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
+        <FullscreenIcon />
+    </Fab>;
+}
 
 
 /**
@@ -348,8 +393,9 @@ const ThemedDiv = styled('div')(({theme}) => ({
     backgroundColor: theme.palette.background.paper,
 }));
 
-function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true, initialShowSatelliteCoverage=true,
-                                  initialShowSunIcon=true, initialShowMoonIcon=true, initialShowTerminatorLine=true,
+function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
+                                  initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
+                                  initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=60 }) {
 
@@ -370,6 +416,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
     const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
+    const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
 
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
@@ -414,6 +461,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
         setOrbitProjectionDuration(minutes);
     }, [orbitProjectionDuration]);
 
+    const handleTileLayerID = useCallback((id) => {
+        setTileLayerID(id);
+    }, [tileLayerID]);
+
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
@@ -422,6 +473,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
 
     const handleWhenReady = (map) => {
         // map is ready
+        MapObject = map.target;
         setInterval(()=>{
             map.target.invalidateSize();
         }, 1000);
@@ -544,10 +596,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
                 <TitleBar className={"react-grid-draggable"}>Global map</TitleBar>
                 <MapContainer
                     center={[0, 0]}
-                    zoom={1.8}
+                    zoom={2}
                     style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
-                    dragging={false}
-                    scrollWheelZoom={false}
+                    dragging={true}
+                    scrollWheelZoom={true}
                     maxZoom={10}
                     minZoom={0}
                     whenReady={handleWhenReady}
@@ -555,9 +607,15 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
                     zoomDelta={0.25}
                 >
                     <TileLayer
-                        url="https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png"
+                        url={getTileLayerById(tileLayerID)['url']}
                         attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                     />
+                    <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 0, position: 'absolute'}}>
+                        <CenterHomeButton/>
+                        <CenterMapButton/>
+                        <FullscreenMapButton/>
+                    </Box>
+
 
                     {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
                     {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
@@ -605,6 +663,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
                     initialFutureOrbitLineColor={futureOrbitLineColor}
                     initialSatelliteCoverageColor={satelliteCoverageColor}
                     initialOrbitProjectionDuration={orbitProjectionDuration}
+                    initialTileLayerID={tileLayerID}
                     handleShowPastOrbitPath={handleShowPastOrbitPath}
                     handleShowFutureOrbitPath={handleShowFutureOrbitPath}
                     handleShowSatelliteCoverage={handleShowSatelliteCoverage}
@@ -615,6 +674,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=true, initialShowFuture
                     handleFutureOrbitLineColor={handleFutureOrbitLineColor}
                     handleSatelliteCoverageColor={handleSatelliteCoverageColor}
                     handleOrbitProjectionDuration={handleOrbitProjectionDuration}
+                    handleTileLayerID={handleTileLayerID}
                 />
             </ThemedDiv>
         </ResponsiveGridLayout>
