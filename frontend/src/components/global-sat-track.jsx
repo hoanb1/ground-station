@@ -24,7 +24,7 @@ import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
 import {HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
-import SettingsIsland from "./global-map-settings.jsx";
+import SettingsIsland from "./map-settings.jsx";
 import {LatLngBounds} from "leaflet/src/geo/index.js";
 import {MYGROUPTLEs} from "./tles.jsx";
 import {Box, Fab} from "@mui/material";

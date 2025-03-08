@@ -1260,7 +1260,19 @@ export let HAMTLEs = {
 
 
 export function getSatelliteDataByNoradId(noradId) {
-     return MYGROUPTLEs[noradId] || HAMTLEs[noradId] || MERIDIANTLEs[noradId] || NOAATLEs[noradId] ||  null;
+     return MYGROUPTLEs[noradId] || HAMTLEs[noradId] || MERIDIANTLEs[noradId] || NOAATLEs[noradId] || {};
 }
 
+export let TLEGROUPS = [
+    {id: "noaa", name: "NOAA", TLEs: NOAATLEs},
+    {id: "ham", name: "HAM", TLEs: HAMTLEs},
+    {id: "mygroup", name: "MYGROUP", TLEs: MYGROUPTLEs},
+    {id: "meridian", name: "MERIDIAN", TLEs: MERIDIANTLEs},
+    {id: "goes", name: "GOES", TLEs: GOESTLEs}
+];
+
+export function getTLEsByGroupId(id) {
+    const group = TLEGROUPS.find(group => group.id === id);
+    return group ? Object.values(group.TLEs) : [];
+}
 
