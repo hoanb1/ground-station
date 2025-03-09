@@ -143,29 +143,28 @@ export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSe
     }));
 
     useEffect(() => {
+        // Your effect logic here
 
-    }, []);
-    
+        return () => {
+            // Cleanup logic here
+        };
+    }, [/* Dependencies here */]);
+
+    const memoizedValue = React.useMemo(() => {
+        return selectedSatellites;
+    }, [selectedSatellites]);
+
     return (
         <ThemedSettingsDiv>
             <TitleBar className={"react-grid-draggable"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '1rem 1rem 0rem 1rem'}}>
                     <Autocomplete
-                        open={openPopup}
-                        onOpen={() => setOpenPopup(true)}
-
                         onChange={(e, satellites) => {
                             setSelectedSatellites(satellites);
                             handleGroupSatelliteSelection(satellites);
                         }}
-                        onClose={(e, reason) => {
-                            setOpenPopup(false);
-                        }}
-                        onBlur={(e, reason) => {
-                            console.info("reason", reason);
-                        }}
-                        value={selectedSatellites}
+                        value={memoizedValue}
                         multiple={true}
                         fullWidth={true}
                         disableCloseOnSelect={true}
@@ -195,5 +194,5 @@ export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSe
     );
 }
 
-
-export default React.memo(OverviewSatelliteSelector);
+const MemoizedOverviewSatelliteSelector = React.memo(OverviewSatelliteSelector);
+export default MemoizedOverviewSatelliteSelector;

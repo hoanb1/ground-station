@@ -33,7 +33,7 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById, tileLayers} from "./tile-layer.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
-import OverviewSatelliteSelector from "./overview-sat-selector.jsx";
+import MemoizedOverviewSatelliteSelector from "./overview-sat-selector.jsx";
 
 // global leaflet map object
 let MapObject = null;
@@ -102,7 +102,7 @@ const defaultLayouts = {
             x: 0,
             y: 4,
             w: 10,
-            h: 20,
+            h: 18,
             resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
             isResizable: true,
         },
@@ -702,7 +702,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 />
             </ThemedDiv>
             <div key="satselector" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
-                <OverviewSatelliteSelector
+                <MemoizedOverviewSatelliteSelector
                     satelliteList={satelliteList}
                     handleGroupSatelliteSelection={handleGroupSatelliteSelection}/>
             </div>

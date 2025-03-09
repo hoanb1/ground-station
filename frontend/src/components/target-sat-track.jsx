@@ -603,21 +603,22 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                 setCurrentFutureSatellitesPaths(currentFuturePaths);
                 setCurrentSatellitesPosition(currentPos);
                 setCurrentSatellitesCoverage(currentCoverage);
-
-                // Day/night boundary
-                const terminatorLine = createTerminatorLine().reverse();
-                setTerminatorLine(terminatorLine);
-
-                // Day side polygon
-                const dayPoly = [...terminatorLine];
-                dayPoly.push(dayPoly[dayPoly.length - 1]);
-                setDaySidePolygon(dayPoly);
-
-                // sun and moon position
-                const [sunPos, moonPos] = getSunMoonCoords();
-                setSunPos(sunPos);
-                setMoonPos(moonPos);
             }
+
+            // Day/night boundary
+            const terminatorLine = createTerminatorLine().reverse();
+            setTerminatorLine(terminatorLine);
+
+            // Day side polygon
+            const dayPoly = [...terminatorLine];
+            dayPoly.push(dayPoly[dayPoly.length - 1]);
+            setDaySidePolygon(dayPoly);
+
+            // sun and moon position
+            const [sunPos, moonPos] = getSunMoonCoords();
+            setSunPos(sunPos);
+            setMoonPos(moonPos);
+
         }, 1000);
 
         return ()=>clearInterval(timer);
@@ -647,7 +648,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                 <TitleBar className={"react-grid-draggable"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</TitleBar>
                 <MapContainer
                     center={[0, 0]}
-                    zoom={2}
+                    zoom={1.4}
                     style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
                     dragging={false}
                     scrollWheelZoom={false}

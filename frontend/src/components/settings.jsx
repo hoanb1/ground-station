@@ -142,27 +142,28 @@ function SettingsTabs({initialTab}) {
                 <Box display="flex" flexDirection="column" gap={2}>
                     <Box>
                         <Typography variant="body2">
+                            <Button variant="contained" color="warning" onClick={clearLayoutLocalStorage}>
+                                clear layout
+                            </Button>
                             Clear layout configuration from local storage
                         </Typography>
-                        <Button variant="contained" color="primary" onClick={clearLayoutLocalStorage}>
-                            clear
-                        </Button>
                     </Box>
                     <Box>
                         <Typography variant="body2">
+                            <Button variant="outlined" color="secondary">
+                                Button 2
+                            </Button>
                             Explanation for Button 2: This button is used for secondary tasks.
                         </Typography>
-                        <Button variant="outlined" color="secondary">
-                            Button 2
-                        </Button>
                     </Box>
                     <Box>
                         <Typography variant="body2">
+                            <Button variant="text" color="inherit">
+                                Button 3
+                            </Button>
                             Explanation for Button 3: This button provides additional information.
                         </Typography>
-                        <Button variant="text" color="inherit">
-                            Button 3
-                        </Button>
+
                     </Box>
                 </Box>
             </Box>
