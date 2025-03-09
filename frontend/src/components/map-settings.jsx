@@ -54,6 +54,8 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
         {value: '120', label: '2 Hours'},
         {value: '240', label: '4 Hours'},
         {value: '480', label: '8 Hours'},
+        {value: '720', label: '12 Hours'},
+        {value: '1440', label: '24 Hours'},
     ];
 
     // State for all settings

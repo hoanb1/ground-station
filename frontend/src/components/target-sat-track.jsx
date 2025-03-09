@@ -536,7 +536,8 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     // update the satellites position, day/night terminator every second
     useEffect(()=>{
         const timer = setInterval(()=>{
-            if (satelliteData !== {}) {
+            console.info("satelliteData: ", satelliteData);
+            if (satelliteData !== null) {
                 const now = new Date();
 
                 // generate current positions for the group of satellites
@@ -631,6 +632,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         }, 1000);
 
         return ()=>clearInterval(timer);
+
     },[groupSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
         latitude, longitude, altitude, velocity, tileLayerID, noradId]);

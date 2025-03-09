@@ -474,8 +474,8 @@ export let GOESTLEs = {
     60133: {
         noradid: 60133,
         name: "GOES 19",
-        tleLine1: '1 60133U 24119A   25064.42753125 -.00000189  00000+0  00000+0 0  9993',
-        tleLine2: '2 60133   0.0195 330.9160 0001990  19.4143 237.4955  1.00270263  2269',
+        tleLine1: '1 60133U 24119A   25067.54003051 -.00000198  00000-0  00000+0 0  9996',
+        tleLine2: '2 60133   0.0378 330.6581 0002012  20.2294 280.4900  1.00269422  2633',
         currentLonLat: [0, 0],
         currentAlt: 0,
         currentVel: [0, 0, 0]
@@ -1260,7 +1260,7 @@ export let HAMTLEs = {
 
 
 export function getSatelliteDataByNoradId(noradId) {
-     return MYGROUPTLEs[noradId] || HAMTLEs[noradId] || MERIDIANTLEs[noradId] || NOAATLEs[noradId] || {};
+     return MYGROUPTLEs[noradId] || HAMTLEs[noradId] || MERIDIANTLEs[noradId] || NOAATLEs[noradId] || GOESTLEs[noradId] || null;
 }
 
 export let TLEGROUPS = [

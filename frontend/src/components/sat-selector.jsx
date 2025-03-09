@@ -60,6 +60,7 @@ function SearchSatellite({initialSelectedSatelliteId, initialSelectedGroupId, in
     return (
         <Autocomplete
             onChange={(e, satellite) => {
+                console.info("satellite selected", satellite);
                 setSelectedSatelliteId(satellite['noradid']);
                 handleSelectSatelliteId(satellite['noradid']);
             }}
@@ -115,15 +116,10 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
                 <Grid size={{ xs: 12, sm: 12, md: 6 }} style={{padding: '1rem 1rem 0rem 1rem'}}>
                     <FormControl fullWidth size={"small"}>
                         <InputLabel id="satellite-group">Group</InputLabel>
-                        <Select
-                            labelId="satellite-group"
-                            value={selectedSatGroupId}
-                            label="Group"
+                        <Select labelId="satellite-group" value={selectedSatGroupId} label="Group" variant={"outlined"}
                             onChange={(e) => {
                                 setSelectedSatGroupId(e.target.value);
-                            }}
-                            variant={"outlined"}
-                        >
+                            }}>
                             {TLEGROUPS.map((o, key) => (
                                 <MenuItem key={TLEGROUPS[key]['id']} value={TLEGROUPS[key]['id']}>
                                     {TLEGROUPS[key]['name']}
