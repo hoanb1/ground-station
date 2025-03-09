@@ -1,0 +1,199 @@
+import Autocomplete from "@mui/material/Autocomplete";
+import TextField from "@mui/material/TextField";
+import {autocompleteClasses, Checkbox, ListSubheader, Paper, Popper, useMediaQuery} from "@mui/material";
+import { useTheme, styled } from '@mui/material/styles';
+import React, {useEffect, useState, forwardRef, createContext, useContext, useRef} from "react";
+import {getAllSatellites} from "./tles.jsx";
+import Typography from "@mui/material/Typography";
+import { VariableSizeList } from 'react-window';
+import PropTypes from "prop-types";
+import Grid from "@mui/material/Grid2";
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+
+
+const LISTBOX_PADDING = 8; // px
+
+function renderRow(props) {
+    const { data, index, style } = props;
+    const dataSet = data[index];
+
+    const inlineStyle = {
+        ...style,
+        top: style.top + LISTBOX_PADDING,
+    };
+
+    if (dataSet.hasOwnProperty('group')) {
+        return (
+            <ListSubheader key={dataSet.key} component="div" style={inlineStyle}>
+                {dataSet.group}
+            </ListSubheader>
+        );
+    }
+    //console.info("dataSet", dataSet);
+
+    const { key, ...optionProps } = dataSet[0];
+    return (
+        <Typography key={key} component="li" {...optionProps} noWrap style={inlineStyle}>
+            {`#${dataSet[1]['noradid']} - ${dataSet[1]['name']}`}
+        </Typography>
+    );
+}
+
+const OuterElementContext = createContext({});
+
+const OuterElementType = forwardRef((props, ref) => {
+    const outerProps = useContext(OuterElementContext);
+    return <div ref={ref} {...props} {...outerProps} />;
+});
+
+function useResetCache(data) {
+    const ref = useRef(null);
+    useEffect(() => {
+        if (ref.current != null) {
+            ref.current.resetAfterIndex(0, true);
+        }
+    }, [data]);
+    return ref;
+}
+
+// Adapter for react-window
+const ListboxComponent = forwardRef(function ListboxComponent(props, ref) {
+    const { children, ...other } = props;
+    const itemData = [];
+    children.forEach((item) => {
+        //console.info("item:", item);
+        itemData.push(item);
+        itemData.push(...(item.children || []));
+    });
+
+    const theme = useTheme();
+    const smUp = useMediaQuery(theme.breakpoints.up('sm'), {
+        noSsr: true,
+    });
+    const itemCount = itemData.length;
+    const itemSize = smUp ? 36 : 48;
+
+    const getChildSize = (child) => {
+        if (child.hasOwnProperty('group')) {
+            return 48;
+        }
+        return itemSize;
+    };
+
+    const getHeight = () => {
+        if (itemCount > 8) {
+            return 8 * itemSize;
+        }
+        return itemData.map(getChildSize).reduce((a, b) => a + b, 0);
+    };
+
+    const gridRef = useResetCache(itemCount);
+
+    return (
+        <div ref={ref}>
+            <OuterElementContext.Provider value={other}>
+                <VariableSizeList
+                    itemData={itemData}
+                    height={getHeight() + 2 * LISTBOX_PADDING}
+                    width="100%"
+                    ref={gridRef}
+                    outerElementType={OuterElementType}
+                    innerElementType="ul"
+                    itemSize={(index) => getChildSize(itemData[index])}
+                    overscanCount={5}
+                    itemCount={itemCount}
+                >
+                    {renderRow}
+                </VariableSizeList>
+            </OuterElementContext.Provider>
+        </div>
+    );
+});
+
+ListboxComponent.propTypes = {
+    children: PropTypes.node,
+};
+
+export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSelection}) {
+    const [selectedSatellites, setSelectedSatellites] = useState([]);
+    const [openPopup, setOpenPopup] = useState(false);
+
+    const StyledPopper = styled(Popper)({
+        [`& .${autocompleteClasses.listbox}`]: {
+            boxSizing: 'border-box',
+            '& ul': {
+                padding: 0,
+                margin: 0,
+            },
+        },
+    });
+
+    const TitleBar = styled(Paper)(({theme}) => ({
+        width: '100%',
+        height: '30px',
+        padding: '3px',
+        ...theme.typography.body2,
+        textAlign: 'center',
+    }));
+
+    const ThemedSettingsDiv = styled('div')(({theme}) => ({
+        backgroundColor: theme.palette.background.paper,
+        fontsize: '0.9rem !important',
+    }));
+
+    useEffect(() => {
+
+    }, []);
+    
+    return (
+        <ThemedSettingsDiv>
+            <TitleBar className={"react-grid-draggable"}>Select group and satellite</TitleBar>
+            <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
+                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '1rem 1rem 0rem 1rem'}}>
+                    <Autocomplete
+                        open={openPopup}
+                        onOpen={() => setOpenPopup(true)}
+
+                        onChange={(e, satellites) => {
+                            setSelectedSatellites(satellites);
+                            handleGroupSatelliteSelection(satellites);
+                        }}
+                        onClose={(e, reason) => {
+                            setOpenPopup(false);
+                        }}
+                        onBlur={(e, reason) => {
+                            console.info("reason", reason);
+                        }}
+                        value={selectedSatellites}
+                        multiple={true}
+                        fullWidth={true}
+                        disableCloseOnSelect={true}
+                        size={"small"}
+                        disableListWrap={true}
+                        noOptionsText={"Could not find any satellites"}
+                        options={satelliteList}
+                        getOptionLabel={(option) => option.name}
+                        //groupBy={(option) => option['noradid']}
+                        renderInput={(params) => <TextField {...params} label="Selected satellites" placeholder="Select satellites" variant="outlined" />}
+                        renderOption={(props, option, state) => [props, option, state.index]}
+                        renderGroup={(params) => {
+                            return params;
+                        }}
+                        slots={{
+                            popper: StyledPopper,
+                        }}
+                        slotProps={{
+                            listbox: {
+                                component: ListboxComponent,
+                            },
+                        }}
+                    />
+                </Grid>
+            </Grid>
+        </ThemedSettingsDiv>
+    );
+}
+
+
+export default React.memo(OverviewSatelliteSelector);

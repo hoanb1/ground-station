@@ -1,16 +1,12 @@
-import React, {useState, useEffect, useRef, useCallback} from 'react';
+import React, {useState, useEffect, useCallback} from 'react';
 import { SatelliteAlt } from '@mui/icons-material';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import {
     MapContainer,
     TileLayer,
     Marker,
-    Circle,
-    CircleMarker,
     Polyline,
     Polygon,
-    useMap, Popup,
     Tooltip,
 } from 'react-leaflet';
 import L from 'leaflet';
@@ -23,20 +19,14 @@ import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
-import {getSatelliteDataByNoradId, HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
+import {getSatelliteDataByNoradId} from './tles.jsx';
 import SettingsIsland from "./map-settings.jsx";
-import {LatLngBounds} from "leaflet/src/geo/index.js";
-import {MYGROUPTLEs} from "./tles.jsx";
 import {Box, Fab} from "@mui/material";
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import NavigationIcon from '@mui/icons-material/Navigation';
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "./tile-layer.jsx";
-import SatSelectorIsland from "./sat-selector.jsx";
+import SatSelectorIsland from "./target-sat-selector.jsx";
 
 
 // global leaflet map object
@@ -60,7 +50,7 @@ const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
     borderColor: theme.palette.background.paper,
 }));
 
-const gridLayoutStoreName = 'target-sat-track-layouts';
+export const gridLayoutStoreName = 'target-sat-track-layouts';
 
 // -------------------------------------------------
 // Leaflet icon path fix for React
@@ -647,7 +637,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
             breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-            cols={{ lg:12, md:10, sm:6, xs:4, xxs:2 }}
+            cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
             rowHeight={30}
             isResizable
             isDraggable

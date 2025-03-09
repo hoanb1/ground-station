@@ -23,19 +23,17 @@ import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
-import {HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
+import {getAllSatellites, HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
 import SettingsIsland from "./map-settings.jsx";
 import {LatLngBounds} from "leaflet/src/geo/index.js";
 import {MYGROUPTLEs} from "./tles.jsx";
 import {Box, Fab} from "@mui/material";
-import AddIcon from '@mui/icons-material/Add';
-import EditIcon from '@mui/icons-material/Edit';
-import FavoriteIcon from '@mui/icons-material/Favorite';
-import NavigationIcon from '@mui/icons-material/Navigation';
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById, tileLayers} from "./tile-layer.jsx";
+import SatSelectorIsland from "./target-sat-selector.jsx";
+import OverviewSatelliteSelector from "./overview-sat-selector.jsx";
 
 // global leaflet map object
 let MapObject = null;
@@ -58,7 +56,7 @@ const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
     borderColor: theme.palette.background.paper,
 }));
 
-const gridLayoutStoreName = 'global-sat-track-layouts';
+export const gridLayoutStoreName = 'global-sat-track-layouts';
 
 // -------------------------------------------------
 // Leaflet icon path fix for React
@@ -91,23 +89,33 @@ function saveLayoutsToLocalStorage(layouts) {
 const defaultLayouts = {
     lg: [
         {
-            i: 'map',
+            i: 'satselector',
             x: 0,
             y: 0,
+            w: 12,
+            h: 3,
+            resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+            isResizable: true,
+        },
+        {
+            i: 'map',
+            x: 0,
+            y: 4,
             w: 10,
             h: 20,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+            resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+            isResizable: true,
         },
         {
             i: 'settings',
-            x: 6,
-            y: 0,
+            x: 10,
+            y: 4,
             w: 2,
             h: 15,
             minW: 2,
             maxW: 2,
-            minH: 12,
-            maxH: 12,
+            minH: 15,
+            maxH: 15,
             isResizable: false,
         }
     ]
@@ -405,7 +413,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [showSunIcon, setShowSunIcon] = useState(initialShowSunIcon);
     const [showMoonIcon, setShowMoonIcon] = useState(initialShowMoonIcon);
     const [showTerminatorLine, setShowTerminatorLine] = useState(initialShowTerminatorLine);
-    const [groupSatellites, setGroupSatellites] = useState({});
+    const [selectedSatellites, setSelectedSatellites] = useState([]);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -417,9 +425,9 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
     const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
-
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
+    const [satelliteList, setSatelliteList] = useState(null);
 
     const handleShowPastOrbitPath = useCallback((value) => {
         setShowPastOrbitPath(value);
@@ -465,6 +473,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         setTileLayerID(id);
     }, [tileLayerID]);
 
+    const handleGroupSatelliteSelection = useCallback((satellites) => {
+        setSelectedSatellites(satellites)
+    }, [selectedSatellites]);
+
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
@@ -479,31 +491,43 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         }, 1000);
     };
 
+    useEffect(() => {
+        // get all satellites
+        setSatelliteList(getAllSatellites());
+
+        // populate the satellite group
+        //setGroupSatellites(MYGROUPTLEs);
+
+
+        return () => {
+            // Cleanup function (optional), runs when component unmounts or before the effect re-runs
+        };
+    }, [/* Add your dependencies here */]);
+
     // update the satellites position, day/night terminator every second
     useEffect(()=>{
+
         const timer = setInterval(()=>{
             const now = new Date();
-
-            // populate the satellite group
-            setGroupSatellites(MYGROUPTLEs);
 
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
             let currentFuturePaths = [];
             let currentPastPaths = [];
-            Object.keys(groupSatellites).map(noradid=>{
-                let name = groupSatellites[noradid]['name'];
+
+            selectedSatellites.forEach(satellite => {
+                let noradid = satellite['noradid'];
                 let [lat, lon, altitude, velocity] = getSatelliteLatLon(
-                    groupSatellites[noradid]['tleLine1'],
-                    groupSatellites[noradid]['tleLine2'],
+                    satellite['tleLine1'],
+                    satellite['tleLine2'],
                     now);
 
                 let paths = {};
                 // calculate paths
                 paths = getSatellitePaths([
-                    groupSatellites[noradid]['tleLine1'],
-                    groupSatellites[noradid]['tleLine2']
+                    satellite['tleLine1'],
+                    satellite['tleLine2']
                 ], orbitProjectionDuration);
 
                 // past path
@@ -528,10 +552,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                     }}
                 />)
 
-                currentPos.push(<Marker key={"marker-"+groupSatellites[noradid]['name']} position={[lat, lon]}
+                currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]}
                                         icon={satelliteIcon}>
                     <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
-                        {groupSatellites[noradid]['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                        {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
                     </ThemedLeafletTooltip>
                 </Marker>);
 
@@ -539,7 +563,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
                 currentCoverage.push(<Polyline
                     noClip={true}
-                    key={"coverage-"+groupSatellites[noradid]['name']}
+                    key={"coverage-"+satellite['name']}
                     pathOptions={{
                         color: satelliteCoverageColor,
                         weight: 1,
@@ -572,7 +596,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         }, 1000);
 
         return ()=>clearInterval(timer);
-    },[groupSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
+    },[selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration]);
 
     function handleLayoutsChange(currentLayout, allLayouts){
@@ -586,7 +610,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
             breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-            cols={{ lg:12, md:10, sm:6, xs:4, xxs:2 }}
+            cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
             rowHeight={30}
             isResizable
             isDraggable
@@ -596,10 +620,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 <TitleBar className={"react-grid-draggable"}>Global map</TitleBar>
                 <MapContainer
                     center={[0, 0]}
-                    zoom={2}
+                    zoom={1.4}
                     style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
-                    dragging={true}
-                    scrollWheelZoom={true}
+                    dragging={false}
+                    scrollWheelZoom={false}
                     maxZoom={10}
                     minZoom={0}
                     whenReady={handleWhenReady}
@@ -677,6 +701,11 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                     handleTileLayerID={handleTileLayerID}
                 />
             </ThemedDiv>
+            <div key="satselector" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
+                <OverviewSatelliteSelector
+                    satelliteList={satelliteList}
+                    handleGroupSatelliteSelection={handleGroupSatelliteSelection}/>
+            </div>
         </ResponsiveGridLayout>
     );
 }

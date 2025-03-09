@@ -1,17 +1,14 @@
 import React, {useState} from 'react';
-import {
-    Box,
-    Tabs,
-    Tab,
-    TextField,
-    Button,
-    Typography, Grid2, Container,
-} from '@mui/material';
-import {
-    Link,
-} from 'react-router';
+import { Box, Tab, TextField, Button, Typography, Grid2, Container} from '@mui/material';
+import { Link } from 'react-router';
+import PropTypes from 'prop-types';
 import {PageContainer} from "@toolpad/core";
 import Paper from "@mui/material/Paper";
+import Tabs, { tabsClasses } from '@mui/material/Tabs';
+import {gridLayoutStoreName as overviewGridLayoutName} from './overview-sat-track.jsx';
+import {gridLayoutStoreName as targetGridLayoutName} from './target-sat-track.jsx';
+import AppBar from '@mui/material/AppBar';
+import {useTheme} from "@mui/material/styles";
 
 export function SettingsTabPreferences() {
     return (<SettingsTabs initialTab={0}/>);
@@ -134,15 +131,21 @@ function SettingsTabs({initialTab}) {
     );
 
     const MaintenanceForm = () => {
+
+        const clearLayoutLocalStorage = () => {
+            localStorage.setItem(overviewGridLayoutName, null);
+            localStorage.setItem(targetGridLayoutName, null);
+        }
+
         return (
             <Box component="form" sx={{mt: 2}}>
                 <Box display="flex" flexDirection="column" gap={2}>
                     <Box>
                         <Typography variant="body2">
-                            Explanation for Button 1: This button triggers the primary action.
+                            Clear layout configuration from local storage
                         </Typography>
-                        <Button variant="contained" color="primary">
-                            Button 1
+                        <Button variant="contained" color="primary" onClick={clearLayoutLocalStorage}>
+                            clear
                         </Button>
                     </Box>
                     <Box>
@@ -185,23 +188,29 @@ function SettingsTabs({initialTab}) {
     };
 
     return (
-        <PageContainer maxWidth={false}>
-        <Box sx={{bgcolor: 'background.paper'}}>
-            <Tabs
-                value={activeTab}
-                onChange={handleTabChange}
-                aria-label="configuration tabs"
-                scrollButtons="auto"
-            >
-                <Tab label="Preferences" to="/settings/preferences" component={Link}/>
-                <Tab label="Home" to="/settings/home" component={Link}/>
-                <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
-                <Tab label="TLEs" to="/settings/tles" component={Link}/>
-                <Tab label="Maintenance" to="/settings/maintenance" component={Link}/>
-            </Tabs>
-                {renderActiveTabForm()}
-        </Box>
-        </PageContainer>
+         <PageContainer maxWidth={true}>
+         <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
+             <Tabs
+                 sx={{
+                     [`& .${tabsClasses.scrollButtons}`]: {
+                         '&.Mui-disabled': { opacity: 0.3 },
+                     },
+                 }}
+                 value={activeTab}
+                 onChange={handleTabChange}
+                 aria-label="configuration tabs"
+                 scrollButtons={true}
+                 variant="scrollable"
+             >
+                 <Tab label="Preferences" to="/settings/preferences" component={Link}/>
+                 <Tab label="Home" to="/settings/home" component={Link}/>
+                 <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
+                 <Tab label="TLEs" to="/settings/tles" component={Link}/>
+                 <Tab label="Maintenance" to="/settings/maintenance" component={Link}/>
+             </Tabs>
+                 {renderActiveTabForm()}
+         </Box>
+         </PageContainer>
     );
 }
 

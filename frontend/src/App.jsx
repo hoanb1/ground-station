@@ -46,14 +46,14 @@ export default function App(props) {
             icon: <SettingsIcon />,
             children: [
                 {
-                    segment: 'home',
-                    title: 'Home',
-                    icon: <HomeIcon />,
-                },
-                {
                     segment: 'preferences',
                     title: 'Preferences',
                     icon: <BuildIcon />,
+                },
+                {
+                    segment: 'home',
+                    title: 'Home location',
+                    icon: <HomeIcon />,
                 },
                 {
                     segment: 'rotor',

@@ -113,7 +113,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
         <ThemedSettingsDiv>
             <TitleBar className={"react-grid-draggable"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 6 }} style={{padding: '1rem 1rem 0rem 1rem'}}>
+                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 1rem 0rem 1rem'}}>
                     <FormControl fullWidth size={"small"}>
                         <InputLabel id="satellite-group">Group</InputLabel>
                         <Select labelId="satellite-group" value={selectedSatGroupId} label="Group" variant={"outlined"}
@@ -128,7 +128,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
                         </Select>
                     </FormControl>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 12, md: 6 }} style={{padding: '1rem 1rem 1rem 1rem'}}>
+                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 1rem 1rem 1rem'}}>
                     <SearchSatellite
                         initialSelectedSatelliteId={selectedSatelliteId}
                         initialSelectedGroupId={selectedSatGroupId}

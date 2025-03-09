@@ -1259,6 +1259,17 @@ export let HAMTLEs = {
 };
 
 
+export function getAllSatellites() {
+    const allTLEGroups = [MYGROUPTLEs, HAMTLEs, MERIDIANTLEs, NOAATLEs, GOESTLEs];
+    const allSatellites = [];
+
+    allTLEGroups.forEach(group => {
+        allSatellites.push(...Object.values(group));
+    });
+
+    return allSatellites;
+}
+
 export function getSatelliteDataByNoradId(noradId) {
      return MYGROUPTLEs[noradId] || HAMTLEs[noradId] || MERIDIANTLEs[noradId] || NOAATLEs[noradId] || GOESTLEs[noradId] || null;
 }
