@@ -536,7 +536,6 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     // update the satellites position, day/night terminator every second
     useEffect(()=>{
         const timer = setInterval(()=>{
-            console.info("satelliteData: ", satelliteData);
             if (satelliteData !== null) {
                 const now = new Date();
 
@@ -557,7 +556,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                 setSatelliteAltitude(altitude);
                 setSatelliteVelocity(velocity);
 
-                // focus on satellite
+                // focus map on satellite
                 MapObject.setView([latitude, longitude], MapObject.getZoom());
 
                 let paths = {};

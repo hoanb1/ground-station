@@ -26,15 +26,18 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "settings",
-                        Component: SettingsTabHome,
                         children: [
                             {
-                                path: "home",
-                                Component: SettingsTabHome,
+                                path: "",
+                                Component: SettingsTabPreferences,
                             },
                             {
                                 path: "preferences",
                                 Component: SettingsTabPreferences,
+                            },
+                            {
+                                path: "home",
+                                Component: SettingsTabHome,
                             },
                             {
                                 path: "rotor",
@@ -42,6 +45,10 @@ const router = createBrowserRouter([
                             },
                             {
                                 path: "tles",
+                                Component: SettingsTabTLEs,
+                            },
+                            {
+                                path: "maintenance",
                                 Component: SettingsTabTLEs,
                             },
                         ],

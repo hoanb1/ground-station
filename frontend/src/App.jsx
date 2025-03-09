@@ -9,6 +9,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import BuildIcon from '@mui/icons-material/Build';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import EngineeringIcon from '@mui/icons-material/Engineering';
 
 const dashboardTheme = createTheme({
     cssVariables: {
@@ -31,7 +32,7 @@ export default function App(props) {
     const NAVIGATION = [
         {
             segment: '',
-            title: 'Globe',
+            title: 'Overview',
             icon: <PublicIcon />,
         },
         {
@@ -63,6 +64,11 @@ export default function App(props) {
                     segment: 'tles',
                     title: 'Satellite and TLEs',
                     icon: <SatelliteAltIcon />,
+                },
+                {
+                    segment: 'maintenance',
+                    title: 'Maintenance',
+                    icon: <EngineeringIcon />,
                 },
             ],
         },

@@ -5,19 +5,19 @@ import {
     Tab,
     TextField,
     Button,
-    Typography, Grid2,
+    Typography, Grid2, Container,
 } from '@mui/material';
 import {
     Link,
 } from 'react-router';
 import {PageContainer} from "@toolpad/core";
+import Paper from "@mui/material/Paper";
 
-
-export function SettingsTabHome() {
+export function SettingsTabPreferences() {
     return (<SettingsTabs initialTab={0}/>);
 }
 
-export function SettingsTabPreferences() {
+export function SettingsTabHome() {
     return (<SettingsTabs initialTab={1}/>);
 }
 
@@ -27,6 +27,10 @@ export function SettingsTabRotor() {
 
 export function SettingsTabTLEs() {
     return (<SettingsTabs initialTab={3}/>);
+}
+
+export function SettingsTabMaintenance() {
+    return (<SettingsTabs initialTab={4}/>);
 }
 
 function SettingsTabs({initialTab}) {
@@ -129,23 +133,59 @@ function SettingsTabs({initialTab}) {
         </Box>
     );
 
+    const MaintenanceForm = () => {
+        return (
+            <Box component="form" sx={{mt: 2}}>
+                <Box display="flex" flexDirection="column" gap={2}>
+                    <Box>
+                        <Typography variant="body2">
+                            Explanation for Button 1: This button triggers the primary action.
+                        </Typography>
+                        <Button variant="contained" color="primary">
+                            Button 1
+                        </Button>
+                    </Box>
+                    <Box>
+                        <Typography variant="body2">
+                            Explanation for Button 2: This button is used for secondary tasks.
+                        </Typography>
+                        <Button variant="outlined" color="secondary">
+                            Button 2
+                        </Button>
+                    </Box>
+                    <Box>
+                        <Typography variant="body2">
+                            Explanation for Button 3: This button provides additional information.
+                        </Typography>
+                        <Button variant="text" color="inherit">
+                            Button 3
+                        </Button>
+                    </Box>
+                </Box>
+            </Box>
+        );
+    };
+
     // Helper function to render the correct form for the active tab.
     const renderActiveTabForm = () => {
         switch (activeTab) {
             case 0:
-                return <HomeForm/>;
-            case 1:
                 return <PreferencesForm/>;
+            case 1:
+                return <HomeForm/>;
             case 2:
                 return <RotorControlForm/>;
             case 3:
                 return <TLEsForm/>;
+            case 4:
+                return <MaintenanceForm/>;
             default:
                 return null;
         }
     };
 
     return (
+        <PageContainer maxWidth={false}>
         <Box sx={{bgcolor: 'background.paper'}}>
             <Tabs
                 value={activeTab}
@@ -153,15 +193,15 @@ function SettingsTabs({initialTab}) {
                 aria-label="configuration tabs"
                 scrollButtons="auto"
             >
-                <Tab label="Home" to="/settings/home" component={Link}/>
                 <Tab label="Preferences" to="/settings/preferences" component={Link}/>
+                <Tab label="Home" to="/settings/home" component={Link}/>
                 <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
                 <Tab label="TLEs" to="/settings/tles" component={Link}/>
+                <Tab label="Maintenance" to="/settings/maintenance" component={Link}/>
             </Tabs>
-            <PageContainer >
                 {renderActiveTabForm()}
-            </PageContainer>
         </Box>
+        </PageContainer>
     );
 }
 

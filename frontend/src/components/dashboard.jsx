@@ -62,7 +62,7 @@ SidebarFooter.propTypes = {
 function CustomAppTitle() {
     return (
         <Stack direction="row" alignItems="center" spacing={2}>
-            <SatelliteAltIcon fontSize="large" color="primary" />
+            <SatelliteAltIcon fontSize="small" color="primary" />
             <Typography variant="h6">Ground Station</Typography>
         </Stack>
     );
