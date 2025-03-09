@@ -546,8 +546,9 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                 setSatelliteAltitude(altitude);
                 setSatelliteVelocity(velocity);
 
-                // focus map on satellite
-                MapObject.setView([latitude, longitude], MapObject.getZoom());
+                // focus map on satellite, center on latitude only
+                let mapCoords = MapObject.getCenter();
+                MapObject.setView([mapCoords.lat, longitude], MapObject.getZoom());
 
                 let paths = {};
                 // calculate paths
