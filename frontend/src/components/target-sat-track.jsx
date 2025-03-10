@@ -27,6 +27,7 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "./tile-layer.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
+import {StyledIslandParent} from "./common.jsx";
 
 
 // global leaflet map object
@@ -645,7 +646,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             isDraggable
             draggableHandle=".react-grid-draggable"
         >
-            <div key="map" style={{ border:'1px solid #424242', overflow:'hidden'}}>
+            <StyledIslandParent key="map">
                 <TitleBar className={"react-grid-draggable"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</TitleBar>
                 <MapContainer
                     center={[0, 0]}
@@ -703,8 +704,8 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                     {showSatelliteCoverage? currentSatellitesCoverage: null}
 
                 </MapContainer>
-            </div>
-            <ThemedDiv key="settings" style={{ border:'1px solid #424242' }}>
+            </StyledIslandParent>
+            <StyledIslandParent key="settings">
                 <SettingsIsland
                     initialShowPastOrbitPath={showPastOrbitPath}
                     initialShowFutureOrbitPath={showFutureOrbitPath}
@@ -729,9 +730,9 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                     handleOrbitProjectionDuration={handleOrbitProjectionDuration}
                     handleTileLayerID={handleTileLayerID}
                 />
-            </ThemedDiv>
+            </StyledIslandParent>
 
-            <div key="info" style={{ padding:'0rem 0rem 0rem 0rem', border:'1px solid #424242' }}>
+            <StyledIslandParent key="info">
                 <TitleBar className={"react-grid-draggable"}></TitleBar>
                 <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
                     <h2>{satelliteName}</h2>
@@ -740,19 +741,19 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                     <p><strong>Altitude:</strong> {satelliteAltitude? satelliteAltitude.toFixed(2): "n/a"} km</p>
                     <p><strong>Velocity:</strong> {satelliteVelocity? satelliteVelocity.toFixed(2): "n/a"} km/s</p>
                 </div>
-            </div>
+            </StyledIslandParent>
 
-            <div key="passes" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
+            <StyledIslandParent key="passes">
                 <TitleBar className={"react-grid-draggable"}></TitleBar>
                 <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
                     <h3>Next 24-hour Passes</h3>
                     <p>Pass data, etc.</p>
                 </div>
-            </div>
+            </StyledIslandParent>
 
-            <div key="satselector" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
+            <StyledIslandParent key="satselector">
                 <SatSelectorIsland handleSelectSatelliteId={handleSelectSatelliteId}/>
-            </div>
+            </StyledIslandParent>
         </ResponsiveGridLayout>
     );
 }

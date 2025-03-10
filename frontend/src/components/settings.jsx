@@ -1,14 +1,18 @@
 import React, {useState} from 'react';
 import { Box, Tab, TextField, Button, Typography, Grid2, Container} from '@mui/material';
 import { Link } from 'react-router';
-import PropTypes from 'prop-types';
 import {PageContainer} from "@toolpad/core";
 import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 import {gridLayoutStoreName as overviewGridLayoutName} from './overview-sat-track.jsx';
 import {gridLayoutStoreName as targetGridLayoutName} from './target-sat-track.jsx';
-import AppBar from '@mui/material/AppBar';
-import {useTheme} from "@mui/material/styles";
+import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import Autocomplete from "@mui/material/Autocomplete";
+import Grid from "@mui/material/Grid2";
+import cities from 'cities.json';
+
 
 export function SettingsTabPreferences() {
     return (<SettingsTabs initialTab={0}/>);
@@ -39,26 +43,7 @@ function SettingsTabs({initialTab}) {
 
     // Forms for each tab can be extracted into separate components if desired:
     const HomeForm = () => (
-        <Box component="form" sx={{mt: 2}}>
-            <Typography variant="h6" gutterBottom>
-                Home Settings
-            </Typography>
-            <TextField
-                label="Home Title"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <TextField
-                label="Description"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                multiline
-                rows={4}
-                fullWidth
-            />
-            <Button variant="contained">Save Home Settings</Button>
-        </Box>
+        <HomeLocatorPage/>
     );
 
     const PreferencesForm = () => (
@@ -214,5 +199,181 @@ function SettingsTabs({initialTab}) {
          </PageContainer>
     );
 }
+
+// Fix for missing marker icons in React-Leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon-2x.png',
+    iconUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-icon.png',
+    shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
+});
+
+// Function to calculate the Maidenhead grid locator (QTH) from latitude and longitude.
+function getMaidenhead(lat, lon) {
+    let adjLon = lon + 180;
+    let adjLat = lat + 90;
+    // Field (first two letters)
+    const A = Math.floor(adjLon / 20);
+    const B = Math.floor(adjLat / 10);
+    const field = String.fromCharCode(65 + A) + String.fromCharCode(65 + B);
+    // Square (two digits)
+    adjLon = adjLon - A * 20;
+    adjLat = adjLat - B * 10;
+    const C = Math.floor(adjLon / 2);
+    const D = Math.floor(adjLat);
+    const square = C.toString() + D.toString();
+    // Subsquare (final two letters)
+    adjLon = adjLon - C * 2;
+    adjLat = adjLat - D;
+    const E = Math.floor(adjLon * 12);
+    const F = Math.floor(adjLat * 24);
+    const subsquare = String.fromCharCode(97 + E) + String.fromCharCode(97 + F);
+    return field + square + subsquare;
+}
+
+// A helper component that listens for click events on the map.
+function MapClickHandler({ onClick }) {
+    useMapEvents({
+        click: onClick,
+    });
+    return null;
+}
+
+const HomeLocatorPage = () => {
+    // cityValue holds either a string (free text) or an object (selected from the JSON).
+    const [cityValue, setCityValue] = useState('');
+    const [location, setLocation] = useState({ lat: 51.505, lng: -0.09 });
+    const [qth, setQth] = useState(getMaidenhead(51.505, -0.09));
+    const [loading, setLoading] = useState(false);
+
+    // Uses Nominatim API to geocode the entered city if it isn’t found in the JSON.
+    const handleCitySearch = async () => {
+        if (!cityValue) return;
+        if (typeof cityValue === 'object' && cityValue.lat && cityValue.lng) {
+            // Use the coordinates directly from the JSON entry.
+            const newLocation = { lat: parseFloat(cityValue.lat), lng: parseFloat(cityValue.lng) };
+            setLocation(newLocation);
+            setQth(getMaidenhead(newLocation.lat, newLocation.lng));
+        } else {
+            // Fall back to geocoding the free text using Nominatim.
+            setLoading(true);
+            try {
+                const response = await fetch(
+                    `https://nominatim.openstreetmap.org/search?city=${cityValue}&format=json&limit=1`
+                );
+                const data = await response.json();
+                if (data && data.length > 0) {
+                    const { lat, lon } = data[0];
+                    const newLocation = { lat: parseFloat(lat), lng: parseFloat(lon) };
+                    setLocation(newLocation);
+                    setQth(getMaidenhead(newLocation.lat, newLocation.lng));
+                }
+            } catch (err) {
+                console.error(err);
+            }
+            setLoading(false);
+        }
+    };
+
+    // Update location when the map is clicked.
+    const handleMapClick = (e) => {
+        const { lat, lng } = e.latlng;
+        setLocation({ lat, lng });
+        setQth(getMaidenhead(lat, lng));
+    };
+
+    function generateString(length) {
+        const characters ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
+        let result = ' ';
+        const charactersLength = characters.length;
+        for ( let i = 0; i < length; i++ ) {
+            result += characters.charAt(Math.floor(Math.random() * charactersLength));
+        }
+        return result;
+    }
+
+    return (
+        <Paper elevation={3} sx={{ padding: 4, marginTop: 4 }}>
+            <Grid container spacing={4}>
+                {/* Left Side: Autocomplete City Input & Location Info */}
+                <Grid>
+                    <Typography variant="h6" gutterBottom>
+                        Enter Your City
+                    </Typography>
+                    <Autocomplete
+                        freeSolo
+                        options={cities}
+                        getOptionLabel={(option) =>
+                            typeof option === 'string'
+                                ? option
+                                : `${option.name}, ${option.country}`
+                        }
+                        filterOptions={(options, state) =>
+                            options.filter((option) =>
+                                option.name.toLowerCase().includes(state.inputValue.toLowerCase())
+                            )
+                        }
+                        onChange={(event, newValue) => {
+                            setCityValue(newValue);
+                        }}
+                        onInputChange={(event, newInputValue) => {
+                            setCityValue(newInputValue);
+                        }}
+                        renderInput={(params) => {
+                            return <TextField {...params} key={""} label="City" variant="outlined" margin="normal" fullWidth />;
+                        }}
+                        renderOption={(props, option) => {
+                            return (
+                                <li {...props} key={generateString(12)}>
+                                    {option.name}
+                                </li>
+                            );
+                        }}
+                    />
+                    <Button variant="contained" color="primary" onClick={handleCitySearch} disabled={loading} sx={{ marginTop: 2 }}>
+                        {loading ? 'Searching...' : 'Search City'}
+                    </Button>
+                    <Box mt={3}>
+                        <Typography variant="subtitle1">
+                            <strong>Latitude:</strong> {location.lat.toFixed(4)}
+                        </Typography>
+                        <Typography variant="subtitle1">
+                            <strong>Longitude:</strong> {location.lng.toFixed(4)}
+                        </Typography>
+                        <Typography variant="subtitle1">
+                            <strong>QTH Locator:</strong> {qth}
+                        </Typography>
+                    </Box>
+                </Grid>
+                <Grid>
+                    <Typography variant="h6" gutterBottom>
+                        Select Location on Map
+                    </Typography>
+                    <Box
+                        sx={{
+                            height: { xs: '200px', sm: '300px', md: '400px' },
+                            width: '100%',
+                        }}
+                    >
+                        <MapContainer center={[location.lat, location.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                            <TileLayer
+                                attribution='© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors'
+                                url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+                            />
+                            <MapClickHandler onClick={handleMapClick} />
+                            <Marker position={[location.lat, location.lng]}>
+                                <Popup>Your Selected Location</Popup>
+                            </Marker>
+                        </MapContainer>
+                    </Box>
+                </Grid>
+            </Grid>
+        </Paper>
+    );
+};
+
+
+
+
 
 export default SettingsTabs;

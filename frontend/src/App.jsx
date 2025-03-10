@@ -10,24 +10,10 @@ import BuildIcon from '@mui/icons-material/Build';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import EngineeringIcon from '@mui/icons-material/Engineering';
-
-const dashboardTheme = createTheme({
-    cssVariables: {
-        colorSchemeSelector: 'data-toolpad-color-scheme',
-    },
-    colorSchemes: { light: true, dark: true },
-    breakpoints: {
-        values: {
-            xs: 0,
-            sm: 600,
-            md: 600,
-            lg: 1200,
-            xl: 1536,
-        },
-    },
-});
+import {setupTheme} from './theme.js';
 
 export default function App(props) {
+    const dashboardTheme = setupTheme();
 
     const NAVIGATION = [
         {

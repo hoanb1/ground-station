@@ -8,8 +8,6 @@ import Typography from "@mui/material/Typography";
 import { VariableSizeList } from 'react-window';
 import PropTypes from "prop-types";
 import Grid from "@mui/material/Grid2";
-import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
-import CheckBoxIcon from '@mui/icons-material/CheckBox';
 
 
 const LISTBOX_PADDING = 8; // px
@@ -138,7 +136,7 @@ export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSe
     }));
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
-        backgroundColor: theme.palette.background.paper,
+        backgroundColor: "#1e1e1e",
         fontsize: '0.9rem !important',
     }));
 

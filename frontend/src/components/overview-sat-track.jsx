@@ -34,6 +34,8 @@ import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById, tileLayers} from "./tile-layer.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import MemoizedOverviewSatelliteSelector from "./overview-sat-selector.jsx";
+import {StyledIslandParent} from "./common.jsx";
+
 
 // global leaflet map object
 let MapObject = null;
@@ -616,7 +618,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
             isDraggable
             draggableHandle=".react-grid-draggable"
         >
-            <div key="map" style={{ border:'1px solid #424242', overflow:'hidden'}}>
+            <StyledIslandParent key="map">
                 <TitleBar className={"react-grid-draggable"}>Global map</TitleBar>
                 <MapContainer
                     center={[0, 0]}
@@ -674,8 +676,8 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                     {showSatelliteCoverage? currentSatellitesCoverage: null}
 
                 </MapContainer>
-            </div>
-            <ThemedDiv key="settings" style={{ border:'1px solid #424242' }}>
+            </StyledIslandParent>
+            <StyledIslandParent key="settings">
                 <SettingsIsland
                     initialShowPastOrbitPath={showPastOrbitPath}
                     initialShowFutureOrbitPath={showFutureOrbitPath}
@@ -700,12 +702,12 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                     handleOrbitProjectionDuration={handleOrbitProjectionDuration}
                     handleTileLayerID={handleTileLayerID}
                 />
-            </ThemedDiv>
-            <div key="satselector" style={{ padding:'0rem 0rem 1rem 0rem', border:'1px solid #424242' }}>
+            </StyledIslandParent>
+            <StyledIslandParent key={"satselector"}>
                 <MemoizedOverviewSatelliteSelector
                     satelliteList={satelliteList}
                     handleGroupSatelliteSelection={handleGroupSatelliteSelection}/>
-            </div>
+            </StyledIslandParent>
         </ResponsiveGridLayout>
     );
 }

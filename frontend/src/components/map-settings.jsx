@@ -24,20 +24,22 @@ const TitleBar = styled(Paper)(({theme}) => ({
 
 const ThemedStack = styled(Stack)(({theme}) => ({
     color: theme.palette.text.secondary,
-    backgroundColor: theme.palette.background.paper,
+    backgroundColor: "#1e1e1e",
     borderRadius: theme.shape.borderRadius,
     borderColor: theme.palette.background.paper,
     padding: theme.spacing(0),
+
 }));
 
 const ThemedSettingsDiv = styled('div')(({theme}) => ({
-    backgroundColor: theme.palette.background.paper,
-    fontsize: 'o.9rem !important',
+    backgroundColor: "#1e1e1e",
+    fontsize: '0.9rem !important',
+    height: "100%",
 }));
 
 const SettingItem = styled('div')(({theme}) => ({
     padding: theme.spacing(1),
-    fontsize: 'o.9rem !important',
+    fontsize: '0.9rem !important',
 }));
 
 const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
