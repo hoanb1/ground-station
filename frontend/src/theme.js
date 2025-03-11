@@ -66,6 +66,7 @@ export function setupTheme() {
                 styleOverrides: {
                     paper: {
                         backgroundColor: "#1e1e1e",
+                        borderRight: "1px solid #4b4b4b",
                     },
                 },
             },
@@ -89,7 +90,14 @@ export function setupTheme() {
                         backgroundColor: "#121212",
                     }
                 },
-            }
+            },
+            MuiListSubheader: {
+                styleOverrides: {
+                    root: {
+                        backgroundColor: "#1e1e1e",
+                    }
+                },
+            },
             // MuiAppBar: {
             //     styleOverrides: {
             //         backgroundColor: "#1e1e1e",

@@ -8,6 +8,9 @@ import Typography from "@mui/material/Typography";
 import { VariableSizeList } from 'react-window';
 import PropTypes from "prop-types";
 import Grid from "@mui/material/Grid2";
+import {useLocalStorageState} from "@toolpad/core";
+import {CODEC_JSON} from "./common.jsx";
+import {GroundStationTinyLogo} from "./icons.jsx";
 
 
 const LISTBOX_PADDING = 8; // px
@@ -28,7 +31,6 @@ function renderRow(props) {
             </ListSubheader>
         );
     }
-    //console.info("dataSet", dataSet);
 
     const { key, ...optionProps } = dataSet[0];
     return (
@@ -60,7 +62,6 @@ const ListboxComponent = forwardRef(function ListboxComponent(props, ref) {
     const { children, ...other } = props;
     const itemData = [];
     children.forEach((item) => {
-        //console.info("item:", item);
         itemData.push(item);
         itemData.push(...(item.children || []));
     });
@@ -114,7 +115,7 @@ ListboxComponent.propTypes = {
 };
 
 export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSelection}) {
-    const [selectedSatellites, setSelectedSatellites] = useState([]);
+    const [selectedSatellites, setSelectedSatellites] = useLocalStorageState('overview-selected-satellites', [], {codec: CODEC_JSON});
     const [openPopup, setOpenPopup] = useState(false);
 
     const StyledPopper = styled(Popper)({
