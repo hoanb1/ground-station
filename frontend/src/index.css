@@ -15,10 +15,10 @@
 }
 
 .leaflet-control-attribution {
-    display: block;
+    display: none;
     background-color: #1e1e1e;
     color: #ccc;
-    z-index: 2000;
+    z-index: 3001;
 }
 
 .leaflet-container {

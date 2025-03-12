@@ -36,7 +36,8 @@ import {
     StyledIslandParentScrollbar,
     MapTitleBar,
     ThemedLeafletTooltip,
-    MapStatusBar
+    MapStatusBar,
+    InternationalDateLinePolyline
 } from "./common.jsx";
 import { useLocalStorageState } from '@toolpad/core';
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon, splitAtDateline, normalizeLongitude} from './tracking-logic.jsx';
@@ -390,6 +391,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         return null;
     }
 
+
+
+    
+
     return (
         <ResponsiveGridLayout
             className="layout"
@@ -454,7 +459,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                         }}
                         />
                     )}
-
+                    {InternationalDateLinePolyline()}
                     <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
                     {showPastOrbitPath? currentPastSatellitesPaths: null}
                     {showFutureOrbitPath? currentFutureSatellitesPaths: null}

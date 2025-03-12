@@ -1,6 +1,7 @@
 import {styled} from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
-import {Tooltip} from "react-leaflet";
+import {Polyline, Tooltip} from "react-leaflet";
+import React from "react";
 
 export const StyledIslandParent = styled("div")(({ theme }) => ({
     padding: '0rem',
@@ -89,3 +90,37 @@ export const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
     borderRadius: theme.shape.borderRadius,
     borderColor: theme.palette.background.paper,
 }));
+
+export function InternationalDateLinePolyline() {
+    // Coordinates for the International Date Line
+    const dateLineCoordinates1 = [
+        [90, 180],
+        [-90, 180],
+    ];
+
+    const dateLineCoordinates2 = [
+        [90, -180],
+        [-90, -180],
+    ];
+
+    return [
+        <Polyline
+            positions={dateLineCoordinates1}
+            pathOptions={{
+                opacity: 0.5,
+                color: 'grey', // Customize the color
+                weight: 1,    // Line thickness
+                dashArray: '5, 5', // Dashed line effect
+            }}
+        />,
+        <Polyline
+            positions={dateLineCoordinates2}
+            pathOptions={{
+                opacity: 0.5,
+                color: 'grey', // Customize the color
+                weight: 1,    // Line thickness
+                dashArray: '5, 5', // Dashed line effect
+            }}
+        />
+    ];
+}

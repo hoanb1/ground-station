@@ -27,7 +27,13 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "./tile-layer.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
-import {MapStatusBar, MapTitleBar, StyledIslandParent, StyledIslandParentScrollbar} from "./common.jsx";
+import {
+    InternationalDateLinePolyline,
+    MapStatusBar,
+    MapTitleBar,
+    StyledIslandParent,
+    StyledIslandParentScrollbar
+} from "./common.jsx";
 import {TitleBar} from "./common.jsx";
 
 
@@ -715,7 +721,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                         }}
                         />
                     )}
-
+                    {InternationalDateLinePolyline()}
                     <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
                     {showPastOrbitPath? currentPastSatellitesPaths: null}
                     {showFutureOrbitPath? currentFutureSatellitesPaths: null}
