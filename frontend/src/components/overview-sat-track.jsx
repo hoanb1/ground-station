@@ -1,6 +1,4 @@
 import React, {useState, useEffect, useRef, useCallback} from 'react';
-import { SatelliteAlt } from '@mui/icons-material';
-import { renderToStaticMarkup } from 'react-dom/server';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import {
     MapContainer,
@@ -18,7 +16,6 @@ import * as satellite from 'satellite.js';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
-import Paper from "@mui/material/Paper";
 import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
@@ -35,17 +32,17 @@ import {CODEC_BOOL, CODEC_JSON, StyledIslandParent, StyledIslandParentScrollbar}
 import { useLocalStorageState } from '@toolpad/core';
 
 // global leaflet map object
-let MapObject = null;
 const HOME_LAT = 40.6293;
 const HOME_LON = 22.9474;
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
-const TitleBar = styled(Paper)(({ theme }) => ({
+const TitleBar = styled('div')(({ theme }) => ({
     width: '100%',
     height: '30px',
     padding: '3px',
     ...theme.typography.body2,
     textAlign: 'center',
+    position: 'relative',
 }));
 
 const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
@@ -123,8 +120,9 @@ const defaultLayouts = {
 
 function CenterHomeButton() {
     const targetCoordinates = [HOME_LAT, HOME_LON];
+    const map = useMap();
     const handleClick = () => {
-        MapObject.setView(targetCoordinates, MapObject.getZoom());
+        map.setView(targetCoordinates, map.getZoom());
     };
 
     return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
@@ -134,8 +132,10 @@ function CenterHomeButton() {
 
 function CenterMapButton() {
     const targetCoordinates = [0, 0];
+    const map = useMap();
     const handleClick = () => {
-        MapObject.setView(targetCoordinates, MapObject.getZoom());
+        console.info("centering...");
+        map.setView(targetCoordinates, map.getZoom());
     };
 
     return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
@@ -143,37 +143,6 @@ function CenterMapButton() {
     </Fab>;
 }
 
-function FullscreenMapButton() {
-    const handleMapFullscreen = () => {
-        const mapContainer = MapObject.getContainer();
-        if (!document.fullscreenElement) {
-            if (mapContainer.requestFullscreen) {
-                mapContainer.requestFullscreen();
-            } else if (mapContainer.mozRequestFullScreen) {
-                mapContainer.mozRequestFullScreen();
-            } else if (mapContainer.webkitRequestFullscreen) {
-                mapContainer.webkitRequestFullscreen();
-            } else if (mapContainer.msRequestFullscreen) {
-                mapContainer.msRequestFullscreen();
-            }
-        } else {
-            // Exit fullscreen if we're already in it
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-        }
-    };
-
-    return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
-        <FullscreenIcon />
-    </Fab>;
-}
 
 
 /**
@@ -407,10 +376,10 @@ function getMapZoomFromStorage() {
 }
 
 function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutureOrbitPath=false,
-                                initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
-                                initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
-                                initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
-                                initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=60 }) {
+                                  initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
+                                  initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
+                                  initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
+                                  initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=60 }) {
 
     const [showPastOrbitPath, setShowPastOrbitPath] = useLocalStorageState('overview-show-past-orbit', initialShowPastOrbitPath, { codec: CODEC_BOOL });
     const [showFutureOrbitPath, setShowFutureOrbitPath] = useLocalStorageState('overview-show-future-orbit', initialShowFutureOrbitPath, { codec: CODEC_BOOL });
@@ -434,6 +403,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [moonPos, setMoonPos] = useState(null);
     const [satelliteList, setSatelliteList] = useLocalStorageState('overview-satellite-list',null, { codec: CODEC_JSON });
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
+    const [mapObject, setMapObject] = useState(null);
 
     const handleShowPastOrbitPath = useCallback((value) => {
         setShowPastOrbitPath(value);
@@ -495,11 +465,42 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
 
     const handleWhenReady = (map) => {
         // map is ready
-        MapObject = map.target;
+        console.info("handleWhenReady", map.target);
         setInterval(()=>{
             map.target.invalidateSize();
         }, 1000);
     };
+
+    function FullscreenMapButton() {
+        const handleMapFullscreen = () => {
+            if (!document.fullscreenElement) {
+                if (mapObject.requestFullscreen) {
+                    mapObject.requestFullscreen();
+                } else if (mapObject.mozRequestFullScreen) {
+                    mapObject.mozRequestFullScreen();
+                } else if (mapObject.webkitRequestFullscreen) {
+                    mapObject.webkitRequestFullscreen();
+                } else if (mapObject.msRequestFullscreen) {
+                    mapObject.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen if we're already in it
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        };
+
+        return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
+            <FullscreenIcon />
+        </Fab>;
+    }
 
     function satelliteUpdate(now) {
         // generate current positions for the group of satellites
@@ -649,11 +650,12 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
             <StyledIslandParent key="map">
                 <TitleBar className={"react-grid-draggable"}>Global map</TitleBar>
                 <MapContainer
+                    ref={setMapObject}
                     center={[0, 0]}
                     zoom={mapZoomLevel}
-                    style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
-                    dragging={false}
-                    scrollWheelZoom={false}
+                    style={{ width:'100%', height:'100%' }}
+                    dragging={true}
+                    scrollWheelZoom={true}
                     maxZoom={10}
                     minZoom={0}
                     whenReady={handleWhenReady}
@@ -665,7 +667,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                         url={getTileLayerById(tileLayerID)['url']}
                         attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                     />
-                    <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 0, position: 'absolute'}}>
+                    <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 5, top: 0, position: 'absolute'}}>
                         <CenterHomeButton/>
                         <CenterMapButton/>
                         <FullscreenMapButton/>

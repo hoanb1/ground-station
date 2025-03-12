@@ -15,9 +15,11 @@
 }
 
 .leaflet-control-attribution {
-    display: none;
+    display: inherit;
+    background-color: #1e1e1e;
+    color: #ccc;
 }
 
 .leaflet-container {
-    background: #121212 !important;
+    background-color: #121212 !important;
 }
