@@ -17,7 +17,7 @@ import * as satellite from 'satellite.js';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
-import {styled} from "@mui/material/styles";
+import {duration, styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
@@ -169,9 +169,9 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
     const [terminatorLine, setTerminatorLine] = useState([]);
     const [daySidePolygon, setDaySidePolygon] = useState([]);
-    const [pastOrbitLineColor, setPastOrbitLineColor] = useState(initialPastOrbitLineColor);
-    const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
-    const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
+    const [pastOrbitLineColor, setPastOrbitLineColor] = useLocalStorageState('overview-past-orbit-color', initialPastOrbitLineColor);
+    const [futureOrbitLineColor, setFutureOrbitLineColor] = useLocalStorageState('overview-future-orbit-color', initialFutureOrbitLineColor);
+    const [satelliteCoverageColor, setSatelliteCoverageColor] = useLocalStorageState('overview-coverage-color', initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useLocalStorageState('overview-orbit-projection-duration', initialOrbitProjectionDuration, { codec: CODEC_JSON });
     const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
     const [sunPos, setSunPos] = useState(null);
@@ -390,11 +390,6 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         });
         return null;
     }
-
-
-
-    
-
     return (
         <ResponsiveGridLayout
             className="layout"

@@ -6,14 +6,10 @@ import Autocomplete from '@mui/material/Autocomplete';
 import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid2';
 import {TLEGROUPS, getTLEsByGroupId} from "./tles.jsx";
-import {StyledIslandParent} from "./common.jsx";
+import {CODEC_JSON, StyledIslandParent} from "./common.jsx";
 import {TitleBar} from "./common.jsx";
+import {useLocalStorageState} from "@toolpad/core";
 
-
-const ThemedSettingsDiv = styled('div')(({theme}) => ({
-    backgroundColor: theme.palette.background.paper,
-    fontsize: '0.9rem !important',
-}));
 
 function sleep(duration) {
     return new Promise((resolve) => {
@@ -28,6 +24,7 @@ function SearchSatellite({initialSelectedSatelliteId, initialSelectedGroupId, in
     const [options, setOptions] = useState(initialSelectedSatelliteGroup);
     const [loading, setLoading] = useState(false);
     const [selectedSatelliteId, setSelectedSatelliteId] = useState(initialSelectedSatelliteId);
+    const [satelliteObj, setSatelliteObj] = useLocalStorageState('target-search-satellite-data', initialSelectedSatelliteGroup, {codec: CODEC_JSON});
 
     useEffect(() => {
         let group = getTLEsByGroupId(initialSelectedGroupId);
@@ -55,10 +52,12 @@ function SearchSatellite({initialSelectedSatelliteId, initialSelectedGroupId, in
     return (
         <Autocomplete
             onChange={(e, satellite) => {
+                setSatelliteObj(satellite);
                 setSelectedSatelliteId(satellite['noradid']);
                 handleSelectSatelliteId(satellite['noradid']);
             }}
             fullWidth
+            value={satelliteObj}
             size={"small"}
             open={open}
             onOpen={handleOpen}
@@ -91,8 +90,8 @@ function SearchSatellite({initialSelectedSatelliteId, initialSelectedGroupId, in
 const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
 
     // State for all settings
-    const [selectedSatGroupId, setSelectedSatGroupId] = useState("noaa");
-    const [selectedSatelliteId, setSelectedSatelliteId] = useState(25544);
+    const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('target-satellite-groupid', 'noaa');
+    const [selectedSatelliteId, setSelectedSatelliteId] = useLocalStorageState('target-satellite-noradid', 0);
     const [selectedSatelliteGroup, setSelectedSatelliteGroup] = useState({});
 
     useEffect(() => {
@@ -107,7 +106,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
         <div>
             <TitleBar className={"react-grid-draggable"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 1rem 0rem 1rem'}}>
+                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 0rem 0rem 1rem'}}>
                     <FormControl fullWidth size={"small"}>
                         <InputLabel id="satellite-group">Group</InputLabel>
                         <Select labelId="satellite-group" value={selectedSatGroupId} label="Group" variant={"outlined"}
@@ -122,7 +121,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
                         </Select>
                     </FormControl>
                 </Grid>
-                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 1rem 1rem 1rem'}}>
+                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 1rem 1rem 0rem'}}>
                     <SearchSatellite
                         initialSelectedSatelliteId={selectedSatelliteId}
                         initialSelectedGroupId={selectedSatGroupId}

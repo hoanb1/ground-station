@@ -170,8 +170,6 @@ export function splitAtDateline(points) {
     return segments.length === 1 ? segments[0] : segments;
 }
 
-
-
 /**
  * Computes the satellite's past and future path coordinates from its TLE.
  * The path is computed at a fixed time step and then split into segments so that
@@ -224,3 +222,4 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
 
     return { past, future };
 }
+

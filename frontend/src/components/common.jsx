@@ -54,8 +54,8 @@ export const MapTitleBar = styled(Paper)(({ theme }) => ({
     borderBottom: '1px solid #494949',
     zIndex: 1000,
     top: 0,
+    fontWeight: 'bold',
     textAlign: 'left',
-
 }));
 
 export const MapStatusBar = styled(Paper)(({ theme }) => ({
@@ -105,6 +105,7 @@ export function InternationalDateLinePolyline() {
 
     return [
         <Polyline
+            key={'first-date-line'}
             positions={dateLineCoordinates1}
             pathOptions={{
                 opacity: 0.5,
@@ -114,6 +115,7 @@ export function InternationalDateLinePolyline() {
             }}
         />,
         <Polyline
+            key={'second-date-line'}
             positions={dateLineCoordinates2}
             pathOptions={{
                 opacity: 0.5,

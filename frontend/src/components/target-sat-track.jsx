@@ -35,6 +35,7 @@ import {
     StyledIslandParentScrollbar
 } from "./common.jsx";
 import {TitleBar} from "./common.jsx";
+import {useLocalStorageState} from "@toolpad/core";
 
 
 // global leaflet map object
@@ -456,7 +457,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
     const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
-    const [noradId, setNoradId] = useState(initialNoradId);
+    const [noradId, setNoradId] = useLocalStorageState('target-satellite-noradid', initialNoradId);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const satelliteData = getSatelliteDataByNoradId(noradId);
 
@@ -508,14 +509,12 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     }, [tileLayerID]);
 
     const handleSelectSatelliteId = useCallback((noradId) => {
-        console.info("Callback selecting satellite with noradId: " + noradId);
         setNoradId(noradId);
     }, [noradId]);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
         setMapZoomLevel(zoomLevel);
     }, [mapZoomLevel]);
-
 
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
@@ -535,7 +534,6 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
 
     function satelliteUpdate(now) {
         if (satelliteData !== null) {
-            const now = new Date();
 
             // generate current positions for the group of satellites
             let currentPos = [];
