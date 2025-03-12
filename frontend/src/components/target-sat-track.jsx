@@ -27,21 +27,15 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "./tile-layer.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
-import {StyledIslandParent, StyledIslandParentScrollbar} from "./common.jsx";
+import {MapStatusBar, MapTitleBar, StyledIslandParent, StyledIslandParentScrollbar} from "./common.jsx";
+import {TitleBar} from "./common.jsx";
+
 
 // global leaflet map object
 let MapObject = null;
 const HOME_LAT = 40.6293;
 const HOME_LON = 22.9474;
 const storageMapZoomValueKey = "target-map-zoom-level";
-
-const TitleBar = styled(Paper)(({ theme }) => ({
-    width: '100%',
-    height: '30px',
-    padding: '3px',
-    ...theme.typography.body2,
-    textAlign: 'center',
-}));
 
 const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
     color: theme.palette.text.primary,
@@ -672,7 +666,6 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             draggableHandle=".react-grid-draggable"
         >
             <StyledIslandParent key="map">
-                <TitleBar className={"react-grid-draggable"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</TitleBar>
                 <MapContainer
                     center={[0, 0]}
                     zoom={mapZoomLevel}
@@ -685,17 +678,17 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                     zoomSnap={0.25}
                     zoomDelta={0.25}
                 >
+                    <MapTitleBar className={"react-grid-draggable"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</MapTitleBar>
                     <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                     <TileLayer
                         url={getTileLayerById(tileLayerID)['url']}
                         attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                     />
-                    <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 0, position: 'absolute'}}>
+                    <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 30, position: 'absolute'}}>
                         <CenterHomeButton/>
                         <CenterMapButton/>
                         <FullscreenMapButton/>
                     </Box>
-
 
                     {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
                     {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
@@ -728,7 +721,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                     {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                     {currentSatellitesPosition}
                     {showSatelliteCoverage? currentSatellitesCoverage: null}
-
+                    <MapStatusBar/>
                 </MapContainer>
             </StyledIslandParent>
             <StyledIslandParentScrollbar key="settings">
@@ -759,7 +752,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             </StyledIslandParentScrollbar>
 
             <StyledIslandParentScrollbar key="info">
-                <TitleBar className={"react-grid-draggable"}></TitleBar>
+                <TitleBar className={"react-grid-draggable"}>Information</TitleBar>
                 <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
                     <h2>{satelliteName}</h2>
                     <p><strong>Latitude:</strong> {satelliteLat? satelliteLat.toFixed(4): "n/a"}°</p>
@@ -770,7 +763,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             </StyledIslandParentScrollbar>
 
             <StyledIslandParentScrollbar key="passes">
-                <TitleBar className={"react-grid-draggable"}></TitleBar>
+                <TitleBar className={"react-grid-draggable"}>Next passes</TitleBar>
                 <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
                     <h3>Next 24-hour Passes</h3>
                     <p>Pass data, etc.</p>

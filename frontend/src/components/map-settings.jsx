@@ -12,15 +12,7 @@ import {
 } from '@mui/material';
 import {styled} from '@mui/material/styles';
 import {tileLayers, getTileLayerById} from './tile-layer.jsx';
-
-
-const TitleBar = styled(Paper)(({theme}) => ({
-    width: '100%',
-    height: '30px',
-    padding: '3px',
-    ...theme.typography.body2,
-    textAlign: 'center',
-}));
+import {TitleBar} from './common.jsx';
 
 const ThemedStack = styled(Stack)(({theme}) => ({
     color: theme.palette.text.secondary,

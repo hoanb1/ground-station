@@ -15,11 +15,19 @@
 }
 
 .leaflet-control-attribution {
-    display: inherit;
+    display: block;
     background-color: #1e1e1e;
     color: #ccc;
+    z-index: 2000;
 }
 
 .leaflet-container {
     background-color: #121212 !important;
+}
+
+.leaflet-left{
+    top: 32px !important;
+}
+.leaflet-control-fullscreen {
+    display: none;
 }

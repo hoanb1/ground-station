@@ -7,14 +7,8 @@ import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid2';
 import {TLEGROUPS, getTLEsByGroupId} from "./tles.jsx";
 import {StyledIslandParent} from "./common.jsx";
+import {TitleBar} from "./common.jsx";
 
-const TitleBar = styled(Paper)(({theme}) => ({
-    width: '100%',
-    height: '30px',
-    padding: '3px',
-    ...theme.typography.body2,
-    textAlign: 'center',
-}));
 
 const ThemedSettingsDiv = styled('div')(({theme}) => ({
     backgroundColor: theme.palette.background.paper,

@@ -11,7 +11,7 @@ import Grid from "@mui/material/Grid2";
 import {useLocalStorageState} from "@toolpad/core";
 import {CODEC_JSON} from "./common.jsx";
 import {GroundStationTinyLogo} from "./icons.jsx";
-
+import {TitleBar} from "./common.jsx";
 
 const LISTBOX_PADDING = 8; // px
 
@@ -127,14 +127,6 @@ export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSe
             },
         },
     });
-
-    const TitleBar = styled(Paper)(({theme}) => ({
-        width: '100%',
-        height: '30px',
-        padding: '3px',
-        ...theme.typography.body2,
-        textAlign: 'center',
-    }));
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
         backgroundColor: "#1e1e1e",

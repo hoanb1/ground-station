@@ -18,6 +18,7 @@
     "cities.json": "^1.1.47",
     "hugeicons-react": "^0.3.0",
     "leaflet": "^1.9.4",
+    "leaflet-fullscreen": "^1.0.2",
     "lodash": "^4.17.21",
     "material": "^0.9.23",
     "react": "^19.0.0",
