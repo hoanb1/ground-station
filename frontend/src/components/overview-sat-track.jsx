@@ -41,11 +41,8 @@ import {
 } from "./common.jsx";
 import { useLocalStorageState } from '@toolpad/core';
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon, splitAtDateline, normalizeLongitude} from './tracking-logic.jsx';
-import Paper from "@mui/material/Paper";
+import {HOME_LON, HOME_LAT} from "./common.jsx";
 
-// global leaflet map object
-const HOME_LAT = 40.6293;
-const HOME_LON = 22.9474;
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
 let MapObject = null;

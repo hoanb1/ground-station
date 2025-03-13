@@ -1,5 +1,5 @@
 import React, {useEffect, useState} from 'react';
-import { Box, Tab, TextField, Button, Typography, Grid2, Container} from '@mui/material';
+import {Box, Tab, TextField, Button, Typography, Grid2, Container, Alert} from '@mui/material';
 import { Link } from 'react-router';
 import {PageContainer} from "@toolpad/core";
 import Paper from "@mui/material/Paper";
@@ -13,6 +13,9 @@ import Autocomplete from "@mui/material/Autocomplete";
 import Grid from "@mui/material/Grid2";
 import cities from 'cities.json';
 import Item from "material/src/item.js";
+import IconButton from "@mui/material/IconButton";
+import InfoIcon from '@mui/icons-material/Info';
+import {HOME_LON, HOME_LAT} from "./common.jsx";
 
 
 export function SettingsTabPreferences() {
@@ -240,10 +243,14 @@ function MapClickHandler({ onClick }) {
     return null;
 }
 
+function CloseRoundedIcon() {
+    return null;
+}
+
 const HomeLocatorPage = () => {
     // cityValue holds either a string (free text) or an object (selected from the JSON).
     const [cityValue, setCityValue] = useState('');
-    const [location, setLocation] = useState({ lat: 51.505, lng: -0.09 });
+    const [location, setLocation] = useState({ lat: HOME_LAT, lng: HOME_LON });
     const [qth, setQth] = useState(getMaidenhead(51.505, -0.09));
     const [loading, setLoading] = useState(false);
     const [polylines, setPolylines] = useState([]);
@@ -311,9 +318,26 @@ const HomeLocatorPage = () => {
 
     return (
         <Paper elevation={3} sx={{ padding: 4, marginTop: 4 }}>
-            <Typography variant="h6" gutterBottom>
-                Select location on map
-            </Typography>
+            <Alert
+                key={"Select location on map"}
+                sx={{ alignItems: 'flex-start' }}
+                startDecorator={<InfoIcon />}
+                variant="soft"
+                color={"primary"}
+                endDecorator={
+                    <IconButton variant="soft" color={"primary"}>
+                        <InfoIcon />
+                    </IconButton>
+                }
+            >
+                <div>
+                    <div>Select location on map</div>
+                    <Typography level="body-sm" color={"primary"}>
+                        Use the map below to set the ground station location
+                    </Typography>
+                </div>
+            </Alert>
+
             <Grid container spacing={1} columns={{ xs: 1, sm: 1, md: 1, lg: 1 }}>
                 <Grid>
                     <Box mt={3}>
@@ -355,7 +379,7 @@ const HomeLocatorPage = () => {
                         }}
                     >
                         <MapContainer
-                            center={[0, 0]}
+                            center={[HOME_LAT, HOME_LON]}
                             zoom={2}
                             maxZoom={10}
                             minZoom={2}

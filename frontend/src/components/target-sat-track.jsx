@@ -35,12 +35,10 @@ import {
 } from "./common.jsx";
 import {TitleBar} from "./common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
-
+import {HOME_LON, HOME_LAT} from "./common.jsx";
 
 // global leaflet map object
 let MapObject = null;
-const HOME_LAT = 40.6293;
-const HOME_LON = 22.9474;
 const storageMapZoomValueKey = "target-map-zoom-level";
 
 const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
