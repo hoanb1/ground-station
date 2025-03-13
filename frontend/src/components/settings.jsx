@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useEffect, useState} from 'react';
 import { Box, Tab, TextField, Button, Typography, Grid2, Container} from '@mui/material';
 import { Link } from 'react-router';
 import {PageContainer} from "@toolpad/core";
@@ -6,12 +6,13 @@ import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 import {gridLayoutStoreName as overviewGridLayoutName} from './overview-sat-track.jsx';
 import {gridLayoutStoreName as targetGridLayoutName} from './target-sat-track.jsx';
-import { MapContainer, TileLayer, Marker, Popup, useMapEvents } from 'react-leaflet';
+import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Autocomplete from "@mui/material/Autocomplete";
 import Grid from "@mui/material/Grid2";
 import cities from 'cities.json';
+import Item from "material/src/item.js";
 
 
 export function SettingsTabPreferences() {
@@ -245,6 +246,7 @@ const HomeLocatorPage = () => {
     const [location, setLocation] = useState({ lat: 51.505, lng: -0.09 });
     const [qth, setQth] = useState(getMaidenhead(51.505, -0.09));
     const [loading, setLoading] = useState(false);
+    const [polylines, setPolylines] = useState([]);
 
     // Uses Nominatim API to geocode the entered city if it isn’t found in the JSON.
     const handleCitySearch = async () => {
@@ -275,6 +277,21 @@ const HomeLocatorPage = () => {
         }
     };
 
+    useEffect(() => {
+        const horizontalLine = [
+            [location.lat, -270], // Line spans horizontally across the map at fixed latitude
+            [location.lat, 270]
+        ];
+        const verticalLine = [
+            [-90, location.lng], // Line spans vertically across the map at fixed longitude
+            [90, location.lng]
+        ];
+        setPolylines([horizontalLine, verticalLine]); // This assumes you'll update your state to handle polylines
+        return () => {
+            // Optional cleanup logic
+        };
+    }, [location]);
+
     // Update location when the map is clicked.
     const handleMapClick = (e) => {
         const { lat, lng } = e.latlng;
@@ -294,68 +311,56 @@ const HomeLocatorPage = () => {
 
     return (
         <Paper elevation={3} sx={{ padding: 4, marginTop: 4 }}>
-            <Grid container spacing={4}>
-                {/* Left Side: Autocomplete City Input & Location Info */}
+            <Typography variant="h6" gutterBottom>
+                Select location on map
+            </Typography>
+            <Grid container spacing={1} columns={{ xs: 1, sm: 1, md: 1, lg: 1 }}>
                 <Grid>
-                    <Typography variant="h6" gutterBottom>
-                        Enter Your City
-                    </Typography>
-                    <Autocomplete
-                        freeSolo
-                        options={cities}
-                        getOptionLabel={(option) =>
-                            typeof option === 'string'
-                                ? option
-                                : `${option.name}, ${option.country}`
-                        }
-                        filterOptions={(options, state) =>
-                            options.filter((option) =>
-                                option.name.toLowerCase().includes(state.inputValue.toLowerCase())
-                            )
-                        }
-                        onChange={(event, newValue) => {
-                            setCityValue(newValue);
-                        }}
-                        onInputChange={(event, newInputValue) => {
-                            setCityValue(newInputValue);
-                        }}
-                        renderInput={(params) => {
-                            return <TextField {...params} key={""} label="City" variant="outlined" margin="normal" fullWidth />;
-                        }}
-                        renderOption={(props, option) => {
-                            return (
-                                <li {...props} key={generateString(12)}>
-                                    {option.name}
-                                </li>
-                            );
-                        }}
-                    />
-                    <Button variant="contained" color="primary" onClick={handleCitySearch} disabled={loading} sx={{ marginTop: 2 }}>
-                        {loading ? 'Searching...' : 'Search City'}
-                    </Button>
                     <Box mt={3}>
-                        <Typography variant="subtitle1">
-                            <strong>Latitude:</strong> {location.lat.toFixed(4)}
-                        </Typography>
-                        <Typography variant="subtitle1">
-                            <strong>Longitude:</strong> {location.lng.toFixed(4)}
-                        </Typography>
-                        <Typography variant="subtitle1">
-                            <strong>QTH Locator:</strong> {qth}
-                        </Typography>
+                        <Grid container rowSpacing={3} columnSpacing={3} columns={{ xs: 2, sm: 2, md: 2, lg: 2 }}>
+                            <Grid size={{ xs: 1, md: 1 }}>
+                                <Typography variant="subtitle1">
+                                    <strong>Latitude:</strong>
+                                </Typography>
+                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
+                                    {location.lat.toFixed(4)}
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 1, md: 1 }}>
+                                    <Typography variant="subtitle1">
+                                        <strong>Longitude:</strong>
+                                    </Typography>
+                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
+                                    {location.lng.toFixed(4)}
+                                </Typography>
+                            </Grid>
+                            <Grid size={{ xs: 1, md: 1 }}>
+                                    <Typography variant="subtitle1">
+                                        <strong>QTH Locator:</strong>
+                                    </Typography>
+                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
+                                    {qth}
+                                </Typography>
+                            </Grid>
+                        </Grid>
                     </Box>
                 </Grid>
-                <Grid>
-                    <Typography variant="h6" gutterBottom>
-                        Select Location on Map
-                    </Typography>
+                <Grid size={{ xs: 1, md: 8 }}>
+
                     <Box
                         sx={{
-                            height: { xs: '200px', sm: '300px', md: '400px' },
-                            width: '100%',
+                            width: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },
+                            height: '500px',
+                            border: '1px solid #424242',
                         }}
                     >
-                        <MapContainer center={[location.lat, location.lng]} zoom={13} style={{ height: '100%', width: '100%' }}>
+                        <MapContainer
+                            center={[0, 0]}
+                            zoom={2}
+                            maxZoom={10}
+                            minZoom={2}
+                            style={{ height: '100%', width: '100%' }}
+                        >
                             <TileLayer
                                 attribution='© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors'
                                 url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
@@ -364,16 +369,35 @@ const HomeLocatorPage = () => {
                             <Marker position={[location.lat, location.lng]}>
                                 <Popup>Your Selected Location</Popup>
                             </Marker>
+                            {polylines.map((polyline, index) => (
+                                <Polyline
+                                    key={index}
+                                    positions={polyline}
+                                    color="grey"
+                                    opacity={0.7}
+                                    lineCap="round"
+                                    lineJoin="round"
+                                    dashArray="2, 2"
+                                    dashOffset="10"
+                                    interactive={false}
+                                    smoothFactor={1}
+                                    noClip={false}
+                                    className="leaflet-interactive"
+                                    weight={1}
+                                />
+                            ))}
                         </MapContainer>
                     </Box>
+                </Grid>
+
+                <Grid size={{ xs: 6, md: 8 }}>
+                    <Button variant="contained" color="primary">
+                        Set location
+                    </Button>
                 </Grid>
             </Grid>
         </Paper>
     );
 };
-
-
-
-
 
 export default SettingsTabs;

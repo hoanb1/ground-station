@@ -14,7 +14,6 @@ import * as satellite from 'satellite.js';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
-import Paper from "@mui/material/Paper";
 import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
@@ -456,7 +455,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
-    const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
+    const [tileLayerID, setTileLayerID] = useLocalStorageState('target-tile-id', initialTileLayerID);
     const [noradId, setNoradId] = useLocalStorageState('target-satellite-noradid', initialNoradId);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const satelliteData = getSatelliteDataByNoradId(noradId);

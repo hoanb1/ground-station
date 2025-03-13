@@ -4,6 +4,7 @@
 
 .react-grid-draggable {
     border-radius: 0;
+    cursor: move;
 }
 
 .leaflet-tooltip-bottom::before {

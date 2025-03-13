@@ -10,7 +10,7 @@ let options = {
         fillColor: '#00',
         fillOpacity: 0.5,
         resolution: 5,
-        longitudeRange: 720
+        longitudeRange: 1080
 }
 
 function julian(date) {

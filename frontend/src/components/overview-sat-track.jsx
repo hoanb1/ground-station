@@ -110,8 +110,8 @@ const defaultLayouts = {
             maxW: 2,
             minH: 15,
             maxH: 15,
-            isResizable: true,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+            isResizable: false,
+            //resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
         }
     ]
 };
@@ -173,10 +173,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [futureOrbitLineColor, setFutureOrbitLineColor] = useLocalStorageState('overview-future-orbit-color', initialFutureOrbitLineColor);
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useLocalStorageState('overview-coverage-color', initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useLocalStorageState('overview-orbit-projection-duration', initialOrbitProjectionDuration, { codec: CODEC_JSON });
-    const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
+    const [tileLayerID, setTileLayerID] = useLocalStorageState('overview-tile-id', initialTileLayerID);
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
-    const [satelliteList, setSatelliteList] = useLocalStorageState('overview-satellite-list',null, { codec: CODEC_JSON });
+    const [satelliteList, setSatelliteList] = useState([]);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const [mapObject, setMapObject] = useState(null);
 
