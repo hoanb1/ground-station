@@ -38,7 +38,7 @@ export function SettingsTabPreferences() {
     return (<SettingsTabs initialTab={0}/>);
 }
 
-export function SettingsTabHome() {
+export function SettingsTabLocation() {
     return (<SettingsTabs initialTab={1}/>);
 }
 
@@ -102,7 +102,7 @@ function SettingsTabs({initialTab}) {
                  variant="scrollable"
              >
                  <Tab label="Preferences" to="/settings/preferences" component={Link}/>
-                 <Tab label="Home" to="/settings/home" component={Link}/>
+                 <Tab label="Location" to="/settings/location" component={Link}/>
                  <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
                  <Tab label="TLEs" to="/settings/tles" component={Link}/>
                  <Tab label="Maintenance" to="/settings/maintenance" component={Link}/>

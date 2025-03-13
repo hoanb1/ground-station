@@ -68,8 +68,8 @@ export default function App(props) {
             icon: <PreferenceVerticalIcon />,
         },
         {
-            segment: 'settings/home',
-            title: 'Home location',
+            segment: 'settings/location',
+            title: 'Location',
             icon: <AddHomeIcon />,
         },
         {

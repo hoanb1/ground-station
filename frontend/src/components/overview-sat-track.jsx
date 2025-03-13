@@ -414,7 +414,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                     zoomSnap={0.25}
                     zoomDelta={0.25}
                 >
-                    <MapTitleBar className={"react-grid-draggable"}>Global map</MapTitleBar>
+                    <MapTitleBar className={"react-grid-draggable window-title-bar"}>Global map</MapTitleBar>
                     <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                     <TileLayer
                         url={getTileLayerById(tileLayerID)['url']}

@@ -3,7 +3,7 @@ import { createRoot } from 'react-dom/client'
 import './index.css'
 import {BrowserRouter, createBrowserRouter, Route, RouterProvider, Routes} from "react-router";
 import {
-    SettingsTabHome,
+    SettingsTabLocation,
     SettingsTabRotor,
     SettingsTabPreferences,
     SettingsTabTLEs,
@@ -42,8 +42,8 @@ const router = createBrowserRouter([
                                 Component: SettingsTabPreferences,
                             },
                             {
-                                path: "home",
-                                Component: SettingsTabHome,
+                                path: "location",
+                                Component: SettingsTabLocation,
                             },
                             {
                                 path: "rotor",

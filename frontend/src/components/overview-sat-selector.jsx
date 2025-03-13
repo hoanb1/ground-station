@@ -147,7 +147,7 @@ export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSe
 
     return (
         <ThemedSettingsDiv>
-            <TitleBar className={"react-grid-draggable"}>Select group and satellite</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '1rem 1rem 0rem 1rem'}}>
                     <Autocomplete

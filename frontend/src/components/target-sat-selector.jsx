@@ -104,7 +104,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
 
     return (
         <div>
-            <TitleBar className={"react-grid-draggable"}>Select group and satellite</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 0rem 0rem 1rem'}}>
                     <FormControl fullWidth size={"small"}>

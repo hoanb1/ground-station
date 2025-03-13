@@ -22,31 +22,23 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { visuallyHidden } from '@mui/utils';
 
-function createData(id, name, calories, fat, carbs, protein) {
+function createData(id, name, host, port, minaz, maxaz, minel, maxel, aztype, azendstop) {
     return {
         id,
         name,
-        calories,
-        fat,
-        carbs,
-        protein,
+        host,
+        port,
+        minaz,
+        maxaz,
+        minel,
+        maxel,
+        aztype,
+        azendstop,
     };
 }
 
 const rows = [
-    createData(1, 'Cupcake', 305, 3.7, 67, 4.3),
-    createData(2, 'Donut', 452, 25.0, 51, 4.9),
-    createData(3, 'Eclair', 262, 16.0, 24, 6.0),
-    createData(4, 'Frozen yoghurt', 159, 6.0, 24, 4.0),
-    createData(5, 'Gingerbread', 356, 16.0, 49, 3.9),
-    createData(6, 'Honeycomb', 408, 3.2, 87, 6.5),
-    createData(7, 'Ice cream sandwich', 237, 9.0, 37, 4.3),
-    createData(8, 'Jelly Bean', 375, 0.0, 94, 0.0),
-    createData(9, 'KitKat', 518, 26.0, 65, 7.0),
-    createData(10, 'Lollipop', 392, 0.2, 98, 0.0),
-    createData(11, 'Marshmallow', 318, 0, 81, 2.0),
-    createData(12, 'Nougat', 360, 19.0, 9, 37.0),
-    createData(13, 'Oreo', 437, 18.0, 63, 4.0),
+    createData(1, 'yaesu', '192.168.60.34', 4533, 0, 360, 0, 90, 1, 0),
 ];
 
 function descendingComparator(a, b, orderBy) {
@@ -70,32 +62,51 @@ const headCells = [
         id: 'name',
         numeric: false,
         disablePadding: true,
-        label: 'Dessert (100g serving)',
+        label: 'Name',
     },
     {
-        id: 'calories',
-        numeric: true,
+        id: 'host',
+        numeric: false,
         disablePadding: false,
-        label: 'Calories',
+        label: 'Host',
     },
     {
-        id: 'fat',
+        id: 'port',
         numeric: true,
         disablePadding: false,
-        label: 'Fat (g)',
+        label: 'Port',
     },
     {
-        id: 'carbs',
+        id: 'minaz',
         numeric: true,
         disablePadding: false,
-        label: 'Carbs (g)',
+        label: 'Min Az',
     },
     {
-        id: 'protein',
+        id: 'maxaz',
         numeric: true,
         disablePadding: false,
-        label: 'Protein (g)',
+        label: 'Max Az',
     },
+    {
+        id: 'minel',
+        numeric: true,
+        disablePadding: false,
+        label: 'Min El',
+    },
+    {
+        id: 'maxel',
+        numeric: true,
+        disablePadding: false,
+        label: 'Max El',
+    },
+    {
+        id: 'aztype',
+        numeric: true,
+        disablePadding: false,
+        label: 'Azimuth type',
+    },
+
 ];
 
 function EnhancedTableHead(props) {
@@ -327,10 +338,14 @@ export default function AntennaRotorTable() {
                                         >
                                             {row.name}
                                         </TableCell>
-                                        <TableCell align="right">{row.calories}</TableCell>
-                                        <TableCell align="right">{row.fat}</TableCell>
-                                        <TableCell align="right">{row.carbs}</TableCell>
-                                        <TableCell align="right">{row.protein}</TableCell>
+                                        <TableCell align="left">{row.host}</TableCell>
+                                        <TableCell align="right">{row.port}</TableCell>
+                                        <TableCell align="right">{row.minaz}</TableCell>
+                                        <TableCell align="right">{row.maxaz}</TableCell>
+                                        <TableCell align="right">{row.minel}</TableCell>
+                                        <TableCell align="right">{row.maxel}</TableCell>
+                                        <TableCell align="right">{row.aztype}</TableCell>
+                                        <TableCell align="right">{row.azendstop}</TableCell>
                                     </TableRow>
                                 );
                             })}

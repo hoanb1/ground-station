@@ -679,7 +679,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                     zoomSnap={0.25}
                     zoomDelta={0.25}
                 >
-                    <MapTitleBar className={"react-grid-draggable"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</MapTitleBar>
+                    <MapTitleBar className={"react-grid-draggable window-title-bar"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</MapTitleBar>
                     <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                     <TileLayer
                         url={getTileLayerById(tileLayerID)['url']}
@@ -764,7 +764,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             </StyledIslandParentScrollbar>
 
             <StyledIslandParentScrollbar key="passes">
-                <TitleBar className={"react-grid-draggable"}>Next passes</TitleBar>
+                <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
                 <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
                     <h3>Next 24-hour Passes</h3>
                     <p>Pass data, etc.</p>

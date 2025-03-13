@@ -69,7 +69,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
 
     return (
         <ThemedSettingsDiv>
-            <TitleBar className={"react-grid-draggable"}>Map settings</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Map settings</TitleBar>
             <ThemedStack spacing={0}>
                 <SettingItem>
                     <FormControl fullWidth size={"small"}>
