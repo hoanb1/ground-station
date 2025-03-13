@@ -14,6 +14,7 @@ import {Avatar, Checkbox} from "@mui/material";
 import {useMemo, useState} from "react";
 import {GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
 import {stringAvatar} from "./components/common.jsx";
+import RadioIcon from '@mui/icons-material/Radio';
 
 const providers = [{ id: 'credentials', name: 'Username and password' }];
 
@@ -71,6 +72,11 @@ export default function App(props) {
             segment: 'settings/location',
             title: 'Location',
             icon: <AddHomeIcon />,
+        },
+        {
+            segment: 'settings/rig',
+            title: 'Rig control',
+            icon: <RadioIcon/>,
         },
         {
             segment: 'settings/rotor',

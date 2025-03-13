@@ -22,23 +22,22 @@ import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { visuallyHidden } from '@mui/utils';
 
-function createData(id, name, host, port, minaz, maxaz, minel, maxel, aztype, azendstop) {
+function createData(id, name, host, port, radiotype, pttstatus, vfotype, lodown, loup) {
     return {
         id,
         name,
         host,
         port,
-        minaz,
-        maxaz,
-        minel,
-        maxel,
-        aztype,
-        azendstop,
+        radiotype,
+        pttstatus,
+        vfotype,
+        lodown,
+        loup
     };
 }
 
 const rows = [
-    createData(1, 'yaesu', '192.168.60.34', 4533, 0, 360, 0, 90, 1, 0),
+    createData(1, 'sdrcontrol', '192.168.60.34', 4533, "rx", 0, 0, 0, 0),
 ];
 
 function descendingComparator(a, b, orderBy) {
@@ -77,36 +76,35 @@ const headCells = [
         label: 'Port',
     },
     {
-        id: 'minaz',
-        numeric: true,
+        id: 'radiotype',
+        numeric: false,
         disablePadding: false,
-        label: 'Min Az',
+        label: 'Radio type',
     },
     {
-        id: 'maxaz',
+        id: 'pttstatus',
         numeric: true,
         disablePadding: false,
-        label: 'Max Az',
+        label: 'PTT status',
     },
     {
-        id: 'minel',
+        id: 'vfotype',
         numeric: true,
         disablePadding: false,
-        label: 'Min El',
+        label: 'VFO type',
     },
     {
-        id: 'maxel',
+        id: 'lodown',
         numeric: true,
         disablePadding: false,
-        label: 'Max El',
+        label: 'LO down',
     },
     {
-        id: 'aztype',
+        id: 'loup',
         numeric: true,
         disablePadding: false,
-        label: 'Azimuth type',
+        label: 'Lo up',
     },
-
 ];
 
 function EnhancedTableHead(props) {
@@ -196,7 +194,7 @@ function EnhancedTableToolbar(props) {
                     id="tableTitle"
                     component="div"
                 >
-                    Antenna rotors
+                    Rigs
                 </Typography>
             )}
             {numSelected > 0 ? (
@@ -220,7 +218,7 @@ EnhancedTableToolbar.propTypes = {
     numSelected: PropTypes.number.isRequired,
 };
 
-export default function AntennaRotorTable() {
+export default function RigTable() {
     const [order, setOrder] = React.useState('asc');
     const [orderBy, setOrderBy] = React.useState('calories');
     const [selected, setSelected] = React.useState([]);
@@ -340,12 +338,11 @@ export default function AntennaRotorTable() {
                                         </TableCell>
                                         <TableCell align="left">{row.host}</TableCell>
                                         <TableCell align="right">{row.port}</TableCell>
-                                        <TableCell align="right">{row.minaz}</TableCell>
-                                        <TableCell align="right">{row.maxaz}</TableCell>
-                                        <TableCell align="right">{row.minel}</TableCell>
-                                        <TableCell align="right">{row.maxel}</TableCell>
-                                        <TableCell align="right">{row.aztype}</TableCell>
-                                        <TableCell align="right">{row.azendstop}</TableCell>
+                                        <TableCell align="right">{row.radiotype}</TableCell>
+                                        <TableCell align="right">{row.pttstatus}</TableCell>
+                                        <TableCell align="right">{row.vfotype}</TableCell>
+                                        <TableCell align="right">{row.lodown}</TableCell>
+                                        <TableCell align="right">{row.loup}</TableCell>
                                     </TableRow>
                                 );
                             })}

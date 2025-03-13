@@ -39,7 +39,12 @@ function CustomAppTitle() {
     return (
         <Stack direction="row" alignItems="center" spacing={2}>
             <img src={GSRetroLogo} alt="Ground Station" width="32" height="32" />
-            <Typography variant="h6">Ground Station</Typography>
+            <Box display={{xs: "none", sm: "block"}}>
+                <Typography variant="h6">Ground Station</Typography>
+            </Box>
+            <Box display={{xs: "block", sm: "none"}}>
+                <Typography variant="h6">GS</Typography>
+            </Box>
         </Stack>
     );
 }

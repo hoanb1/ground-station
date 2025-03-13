@@ -32,6 +32,7 @@ import {HOME_LON, HOME_LAT} from "./common.jsx";
 import {SimpleVectorCircle} from "./icons.jsx";
 import AntennaRotorTable from "./rotor-table.jsx";
 import Stack from "@mui/material/Stack";
+import RigTable from "./rig-table.jsx";
 
 
 export function SettingsTabPreferences() {
@@ -42,16 +43,20 @@ export function SettingsTabLocation() {
     return (<SettingsTabs initialTab={1}/>);
 }
 
-export function SettingsTabRotor() {
+export function SettingsTabRig() {
     return (<SettingsTabs initialTab={2}/>);
 }
 
-export function SettingsTabTLEs() {
+export function SettingsTabRotor() {
     return (<SettingsTabs initialTab={3}/>);
 }
 
-export function SettingsTabMaintenance() {
+export function SettingsTabTLEs() {
     return (<SettingsTabs initialTab={4}/>);
+}
+
+export function SettingsTabMaintenance () {
+    return (<SettingsTabs initialTab={5}/>);
 }
 
 function SettingsTabs({initialTab}) {
@@ -62,11 +67,9 @@ function SettingsTabs({initialTab}) {
     };
 
     // Forms for each tab can be extracted into separate components if desired:
-    const HomeForm = () => (
-        <HomeLocatorPage/>
+    const LocationForm = () => (
+        <LocationPage/>
     );
-
-
 
     // Helper function to render the correct form for the active tab.
     const renderActiveTabForm = () => {
@@ -74,12 +77,14 @@ function SettingsTabs({initialTab}) {
             case 0:
                 return <PreferencesForm/>;
             case 1:
-                return <HomeForm/>;
+                return <LocationForm/>;
             case 2:
-                return <RotorControlForm/>;
+                return <RigControlForm/>;
             case 3:
-                return <TLEsForm/>;
+                return <RotorControlForm/>;
             case 4:
+                return <TLEsForm/>;
+            case 5:
                 return <MaintenanceForm/>;
             default:
                 return null;
@@ -100,9 +105,11 @@ function SettingsTabs({initialTab}) {
                  aria-label="configuration tabs"
                  scrollButtons={true}
                  variant="scrollable"
+                 allowScrollButtonsMobile
              >
                  <Tab label="Preferences" to="/settings/preferences" component={Link}/>
                  <Tab label="Location" to="/settings/location" component={Link}/>
+                 <Tab label="Rig control" to="/settings/rig" component={Link}/>
                  <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
                  <Tab label="TLEs" to="/settings/tles" component={Link}/>
                  <Tab label="Maintenance" to="/settings/maintenance" component={Link}/>
@@ -166,6 +173,32 @@ const RotorControlForm = () => {
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <AntennaRotorTable/>
+                <Stack direction="row" spacing={2}>
+                    <Button variant="contained">
+                        Add
+                    </Button>
+                    <Button variant="contained">
+                        Edit
+                    </Button>
+                    <Button variant="contained" color="error">
+                        Delete
+                    </Button>
+                </Stack>
+            </Box>
+        </Paper>
+    );
+};
+
+const RigControlForm = () => {
+
+    return (
+        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+            <Alert severity="info">
+                <AlertTitle>Rig control setup</AlertTitle>
+                Configure and manage your rig control setup here
+            </Alert>
+            <Box component="form" sx={{mt: 2}}>
+                <RigTable/>
                 <Stack direction="row" spacing={2}>
                     <Button variant="contained">
                         Add
@@ -337,7 +370,7 @@ const PreferencesForm = () => {
         </Paper>);
 };
 
-const HomeLocatorPage = () => {
+const LocationPage = () => {
     // cityValue holds either a string (free text) or an object (selected from the JSON).
     const [cityValue, setCityValue] = useState('');
     const [location, setLocation] = useState({ lat: HOME_LAT, lng: HOME_LON });
@@ -398,21 +431,10 @@ const HomeLocatorPage = () => {
         setQth(getMaidenhead(lat, lng));
     };
 
-    function generateString(length) {
-        const characters ='ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789';
-        let result = ' ';
-        const charactersLength = characters.length;
-        for ( let i = 0; i < length; i++ ) {
-            result += characters.charAt(Math.floor(Math.random() * charactersLength));
-        }
-        return result;
-    }
-
     const getCurrentLocation = async () => {
         if (!navigator.geolocation) {
             throw new Error('Geolocation is not supported by your browser.');
         }
-
         return new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
