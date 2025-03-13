@@ -338,7 +338,7 @@ export default function RigTable() {
                                         </TableCell>
                                         <TableCell align="left">{row.host}</TableCell>
                                         <TableCell align="right">{row.port}</TableCell>
-                                        <TableCell align="right">{row.radiotype}</TableCell>
+                                        <TableCell align="left">{row.radiotype}</TableCell>
                                         <TableCell align="right">{row.pttstatus}</TableCell>
                                         <TableCell align="right">{row.vfotype}</TableCell>
                                         <TableCell align="right">{row.lodown}</TableCell>

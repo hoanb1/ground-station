@@ -30,7 +30,7 @@ import IconButton from "@mui/material/IconButton";
 import InfoIcon from '@mui/icons-material/Info';
 import {HOME_LON, HOME_LAT} from "./common.jsx";
 import {SimpleVectorCircle} from "./icons.jsx";
-import AntennaRotorTable from "./rotor-table.jsx";
+import AntennaRotatorTable from "./rotator-table.jsx";
 import Stack from "@mui/material/Stack";
 import RigTable from "./rig-table.jsx";
 
@@ -47,7 +47,7 @@ export function SettingsTabRig() {
     return (<SettingsTabs initialTab={2}/>);
 }
 
-export function SettingsTabRotor() {
+export function SettingsTabRotator() {
     return (<SettingsTabs initialTab={3}/>);
 }
 
@@ -81,7 +81,7 @@ function SettingsTabs({initialTab}) {
             case 2:
                 return <RigControlForm/>;
             case 3:
-                return <RotorControlForm/>;
+                return <RotatorControlForm/>;
             case 4:
                 return <TLEsForm/>;
             case 5:
@@ -110,7 +110,7 @@ function SettingsTabs({initialTab}) {
                  <Tab label="Preferences" to="/settings/preferences" component={Link}/>
                  <Tab label="Location" to="/settings/location" component={Link}/>
                  <Tab label="Rig control" to="/settings/rig" component={Link}/>
-                 <Tab label="Rotor control" to="/settings/rotor" component={Link}/>
+                 <Tab label="Rotator control" to="/settings/rotator" component={Link}/>
                  <Tab label="TLEs" to="/settings/tles" component={Link}/>
                  <Tab label="Maintenance" to="/settings/maintenance" component={Link}/>
              </Tabs>
@@ -163,16 +163,16 @@ function CloseRoundedIcon() {
     return null;
 }
 
-const RotorControlForm = () => {
+const RotatorControlForm = () => {
 
     return (
         <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
             <Alert severity="info">
-                <AlertTitle>Antenna rotor control setup</AlertTitle>
-                Configure and manage your antenna rotor control setup here
+                <AlertTitle>Antenna rotator control setup</AlertTitle>
+                Configure and manage your antenna rotator control setup here
             </Alert>
             <Box component="form" sx={{mt: 2}}>
-                <AntennaRotorTable/>
+                <AntennaRotatorTable/>
                 <Stack direction="row" spacing={2}>
                     <Button variant="contained">
                         Add

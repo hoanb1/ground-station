@@ -4,7 +4,7 @@ import './index.css'
 import {BrowserRouter, createBrowserRouter, Route, RouterProvider, Routes} from "react-router";
 import {
     SettingsTabLocation,
-    SettingsTabRotor,
+    SettingsTabRotator,
     SettingsTabPreferences,
     SettingsTabTLEs,
     SettingsTabMaintenance, SettingsTabRig
@@ -50,8 +50,8 @@ const router = createBrowserRouter([
                                 Component: SettingsTabRig,
                             },
                             {
-                                path: "rotor",
-                                Component: SettingsTabRotor,
+                                path: "rotator",
+                                Component: SettingsTabRotator,
                             },
                             {
                                 path: "tles",
