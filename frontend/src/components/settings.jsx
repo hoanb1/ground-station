@@ -1,5 +1,17 @@
 import React, {useEffect, useState} from 'react';
-import {Box, Tab, TextField, Button, Typography, Grid2, Container, Alert} from '@mui/material';
+import {
+    Box,
+    Tab,
+    TextField,
+    Button,
+    Typography,
+    Grid2,
+    Container,
+    Alert,
+    FormControl,
+    InputLabel,
+    Select, FormHelperText, MenuItem, AlertTitle, Divider
+} from '@mui/material';
 import { Link } from 'react-router';
 import {PageContainer} from "@toolpad/core";
 import Paper from "@mui/material/Paper";
@@ -10,6 +22,7 @@ import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline} from 're
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Autocomplete from "@mui/material/Autocomplete";
+import { DataGrid } from '@mui/x-data-grid';
 import Grid from "@mui/material/Grid2";
 import cities from 'cities.json';
 import Item from "material/src/item.js";
@@ -50,114 +63,7 @@ function SettingsTabs({initialTab}) {
         <HomeLocatorPage/>
     );
 
-    const PreferencesForm = () => (
-        <Box component="form" sx={{mt: 2}}>
-            <Typography variant="h6" gutterBottom>
-                User Preferences
-            </Typography>
-            <TextField
-                label="Preferred Language"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <TextField
-                label="Theme"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <Button variant="contained">Save Preferences</Button>
-        </Box>
-    );
 
-    const RotorControlForm = () => (
-        <Box component="form" sx={{mt: 2}}>
-            <Typography variant="h6" gutterBottom>
-                Rotor Control
-            </Typography>
-            <TextField
-                label="Azimuth"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <TextField
-                label="Elevation"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <Button variant="contained">Set Rotor Position</Button>
-        </Box>
-    );
-
-    const TLEsForm = () => (
-        <Box component="form" sx={{mt: 2}}>
-            <Typography variant="h6" gutterBottom>
-                TLE Configuration
-            </Typography>
-            <TextField
-                label="Satellite Name"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <TextField
-                label="Line 1"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <TextField
-                label="Line 2"
-                variant="outlined"
-                sx={{mb: 2, display: 'block'}}
-                fullWidth
-            />
-            <Button variant="contained">Save TLE Data</Button>
-        </Box>
-    );
-
-    const MaintenanceForm = () => {
-
-        const clearLayoutLocalStorage = () => {
-            localStorage.setItem(overviewGridLayoutName, null);
-            localStorage.setItem(targetGridLayoutName, null);
-        }
-
-        return (
-            <Box component="form" sx={{mt: 2}}>
-                <Box display="flex" flexDirection="column" gap={2}>
-                    <Box>
-                        <Typography variant="body2">
-                            <Button variant="contained" color="warning" onClick={clearLayoutLocalStorage}>
-                                clear layout
-                            </Button>
-                            Clear layout configuration from local storage
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2">
-                            <Button variant="outlined" color="secondary">
-                                Button 2
-                            </Button>
-                            Explanation for Button 2: This button is used for secondary tasks.
-                        </Typography>
-                    </Box>
-                    <Box>
-                        <Typography variant="body2">
-                            <Button variant="text" color="inherit">
-                                Button 3
-                            </Button>
-                            Explanation for Button 3: This button provides additional information.
-                        </Typography>
-
-                    </Box>
-                </Box>
-            </Box>
-        );
-    };
 
     // Helper function to render the correct form for the active tab.
     const renderActiveTabForm = () => {
@@ -247,6 +153,194 @@ function CloseRoundedIcon() {
     return null;
 }
 
+
+const RotorControlForm = () => {
+
+
+    return (
+        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+            <Alert severity="info">
+                <AlertTitle>Antenna rotor control setup</AlertTitle>
+                Configure and manage your antenna rotor control setup here
+            </Alert>
+            <Box component="form" sx={{mt: 2}}>
+                <Typography variant="h6" gutterBottom>
+                    Rotor Control
+                </Typography>
+                <TextField
+                    label="Azimuth"
+                    variant="outlined"
+                    sx={{mb: 2, display: 'block'}}
+                    fullWidth
+                />
+                <TextField
+                    label="Elevation"
+                    variant="outlined"
+                    sx={{mb: 2, display: 'block'}}
+                    fullWidth
+                />
+                <Button variant="contained">Set Rotor Position</Button>
+            </Box>
+        </Paper>
+    );
+};
+
+
+const TLEsForm = () => {
+    const columns = [
+        { field: 'id', headerName: 'ID', width: 70 },
+        { field: 'firstName', headerName: 'First name', width: 130 },
+        { field: 'lastName', headerName: 'Last name', width: 130 },
+        {
+            field: 'age',
+            headerName: 'Age',
+            type: 'number',
+            width: 90,
+        },
+        {
+            field: 'fullName',
+            headerName: 'Full name',
+            description: 'This column has a value getter and is not sortable.',
+            sortable: false,
+            width: 160,
+            valueGetter: (value, row) => `${row.firstName || ''} ${row.lastName || ''}`,
+        },
+    ];
+    const rows = [
+        { id: 1, lastName: 'Snow', firstName: 'Jon', age: 35 },
+        { id: 2, lastName: 'Lannister', firstName: 'Cersei', age: 42 },
+        { id: 3, lastName: 'Lannister', firstName: 'Jaime', age: 45 },
+        { id: 4, lastName: 'Stark', firstName: 'Arya', age: 16 },
+        { id: 5, lastName: 'Targaryen', firstName: 'Daenerys', age: null },
+        { id: 6, lastName: 'Melisandre', firstName: null, age: 150 },
+        { id: 7, lastName: 'Clifford', firstName: 'Ferrara', age: 44 },
+        { id: 8, lastName: 'Frances', firstName: 'Rossini', age: 36 },
+        { id: 9, lastName: 'Roxie', firstName: 'Harvey', age: 65 },
+    ];
+
+    const paginationModel = { page: 0, pageSize: 5 };
+
+    return (
+        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+            <Alert severity="info">
+                <AlertTitle>Satellites, groups and TLEs</AlertTitle>
+                Manage satellites, groups and TLEs here
+            </Alert>
+            <Divider />
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                initialState={{ pagination: { paginationModel } }}
+                pageSizeOptions={[5, 10]}
+                checkboxSelection
+                sx={{ border: 0 }}
+            />
+        </Paper>);
+};
+
+const MaintenanceForm = () => {
+    const clearLayoutLocalStorage = () => {
+        localStorage.setItem(overviewGridLayoutName, null);
+        localStorage.setItem(targetGridLayoutName, null);
+    }
+
+    return (
+        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+            <Alert severity="info">
+                <AlertTitle>Maintenance</AlertTitle>
+                Maintenance related functions
+           </Alert>
+            <Box component="form" sx={{mt: 2}}>
+                <Grid container spacing={2} columns={16}>
+                    <Grid size={8}>
+                        Clear local browser layout data
+                    </Grid>
+                    <Grid size={8}>
+                        <Button variant="contained" color="warning" onClick={clearLayoutLocalStorage}>
+                            clear layout
+                        </Button>
+                    </Grid>
+                    <Grid size={8}>
+                        Clear local browser satellite data
+                    </Grid>
+                    <Grid size={8}>
+                        <Button variant="outlined" color="secondary">
+                            Button 2
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Box>
+        </Paper>
+    );
+};
+
+const PreferencesForm = () => {
+    const [language, setLanguage] = useState('en');
+    const [themes, setThemes] = useState('dark');
+
+    const handleLanguageChange = function (e) {
+        setLanguage(e.target.value);
+    }
+
+    const handleThemeChange = function (e) {
+        setThemes(e.target.value);
+    }
+
+    const languageOptions = [{name: 'English', value: 'en'}, {name: 'Deutsch', value: 'de'}];
+    const themesOptions = [{name: 'Dark', value: 'dark'}, {name: 'Light', value: 'light'}];
+
+    return (
+        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+            <Alert severity="info">
+                <AlertTitle>Change your preferences</AlertTitle>
+                Use the form below to change your preferences
+            </Alert>
+            <Box component="form" sx={{mt: 2}}>
+                <Grid container spacing={2} columns={16}>
+                    <Grid size={8}>
+                        Language
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl variant="filled" sx={{ m: 1, minWidth: 120 }}>
+                            <InputLabel id="demo-simple-select-filled-label">Language</InputLabel>
+                            <Select
+                                fullWidth={true}
+                                labelId="demo-simple-select-filled-label"
+                                id="demo-simple-select-filled"
+                                value={language}
+                                onChange={handleLanguageChange}
+                             variant={"filled"}>
+                                {languageOptions.map((option) => (
+                                    <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid size={8}>
+                        Theme
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl variant="filled" sx={{ m: 1, minWidth: 120 }}>
+                            <InputLabel id="demo-simple-select-filled-label">Theme</InputLabel>
+                            <Select
+                                fullWidth={true}
+                                labelId=""
+                                id=""
+                                value={themes}
+                                onChange={handleThemeChange}
+                                variant={"filled"}>
+                                {themesOptions.map((option) => (
+                                    <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                </Grid>
+                <Button variant="contained">Save Preferences</Button>
+            </Box>
+        </Paper>);
+};
+
 const HomeLocatorPage = () => {
     // cityValue holds either a string (free text) or an object (selected from the JSON).
     const [cityValue, setCityValue] = useState('');
@@ -293,7 +387,9 @@ const HomeLocatorPage = () => {
             [-90, location.lng], // Line spans vertically across the map at fixed longitude
             [90, location.lng]
         ];
-        setPolylines([horizontalLine, verticalLine]); // This assumes you'll update your state to handle polylines
+        setPolylines([horizontalLine, verticalLine]);
+        setQth(getMaidenhead(location.lat, location.lng));
+
         return () => {
             // Optional cleanup logic
         };
@@ -317,27 +413,11 @@ const HomeLocatorPage = () => {
     }
 
     return (
-        <Paper elevation={3} sx={{ padding: 4, marginTop: 4 }}>
-            <Alert
-                key={"Select location on map"}
-                sx={{ alignItems: 'flex-start' }}
-                startDecorator={<InfoIcon />}
-                variant="soft"
-                color={"primary"}
-                endDecorator={
-                    <IconButton variant="soft" color={"primary"}>
-                        <InfoIcon />
-                    </IconButton>
-                }
-            >
-                <div>
-                    <div>Select location on map</div>
-                    <Typography level="body-sm" color={"primary"}>
-                        Use the map below to set the ground station location
-                    </Typography>
-                </div>
+        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+            <Alert severity="info">
+                <AlertTitle>Select location on map</AlertTitle>
+                Use the map below to set the ground station location
             </Alert>
-
             <Grid container spacing={1} columns={{ xs: 1, sm: 1, md: 1, lg: 1 }}>
                 <Grid>
                     <Box mt={3}>
@@ -370,7 +450,6 @@ const HomeLocatorPage = () => {
                     </Box>
                 </Grid>
                 <Grid size={{ xs: 1, md: 8 }}>
-
                     <Box
                         sx={{
                             width: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },

@@ -11,7 +11,7 @@ import * as React from "react";
 import {Outlet} from "react-router";
 import {Avatar, Box, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GroundStationTinyLogo, logo2blue} from "./icons.jsx";
+import {GroundStationTinyLogo, logo2blue, GSRetroLogo} from "./icons.jsx";
 import {stringAvatar} from "./common.jsx";
 
 function ToolbarActionsSearch() {
@@ -38,7 +38,7 @@ SidebarFooter.propTypes = {
 function CustomAppTitle() {
     return (
         <Stack direction="row" alignItems="center" spacing={2}>
-            <img src={logo2blue} alt="Ground Station" width="32" height="32" />
+            <img src={GSRetroLogo} alt="Ground Station" width="32" height="32" />
             <Typography variant="h6">Ground Station</Typography>
         </Stack>
     );

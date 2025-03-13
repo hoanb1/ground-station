@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.5",
+    "@mui/x-data-grid": "^7.27.3",
     "@toolpad/core": "^0.12.0",
     "cities.json": "^1.1.47",
     "hugeicons-react": "^0.3.0",

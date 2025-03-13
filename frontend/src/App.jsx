@@ -12,7 +12,7 @@ import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-
 import {SignInPage} from "@toolpad/core";
 import {Avatar, Checkbox} from "@mui/material";
 import {useMemo, useState} from "react";
-import {GroundStationTinyLogo, logo2blue} from "./components/icons.jsx";
+import {GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
 import {stringAvatar} from "./components/common.jsx";
 
 const providers = [{ id: 'credentials', name: 'Username and password' }];
@@ -29,7 +29,7 @@ const demoSession = {
 const BRANDING = {
     logo: (
         <img
-            src={logo2blue}
+            src={GSRetroLogo}
             alt="Ground Station"
             style={{ height: 48 }}
         />
