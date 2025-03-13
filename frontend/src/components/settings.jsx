@@ -10,7 +10,7 @@ import {
     Alert,
     FormControl,
     InputLabel,
-    Select, FormHelperText, MenuItem, AlertTitle, Divider
+    Select, FormHelperText, MenuItem, AlertTitle, Divider, ButtonGroup
 } from '@mui/material';
 import { Link } from 'react-router';
 import {PageContainer} from "@toolpad/core";
@@ -18,7 +18,7 @@ import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 import {gridLayoutStoreName as overviewGridLayoutName} from './overview-sat-track.jsx';
 import {gridLayoutStoreName as targetGridLayoutName} from './target-sat-track.jsx';
-import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline} from 'react-leaflet';
+import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Autocomplete from "@mui/material/Autocomplete";
@@ -29,6 +29,9 @@ import Item from "material/src/item.js";
 import IconButton from "@mui/material/IconButton";
 import InfoIcon from '@mui/icons-material/Info';
 import {HOME_LON, HOME_LAT} from "./common.jsx";
+import {SimpleVectorCircle} from "./icons.jsx";
+import AntennaRotorTable from "./rotor-table.jsx";
+import Stack from "@mui/material/Stack";
 
 
 export function SettingsTabPreferences() {
@@ -153,9 +156,7 @@ function CloseRoundedIcon() {
     return null;
 }
 
-
 const RotorControlForm = () => {
-
 
     return (
         <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
@@ -164,27 +165,22 @@ const RotorControlForm = () => {
                 Configure and manage your antenna rotor control setup here
             </Alert>
             <Box component="form" sx={{mt: 2}}>
-                <Typography variant="h6" gutterBottom>
-                    Rotor Control
-                </Typography>
-                <TextField
-                    label="Azimuth"
-                    variant="outlined"
-                    sx={{mb: 2, display: 'block'}}
-                    fullWidth
-                />
-                <TextField
-                    label="Elevation"
-                    variant="outlined"
-                    sx={{mb: 2, display: 'block'}}
-                    fullWidth
-                />
-                <Button variant="contained">Set Rotor Position</Button>
+                <AntennaRotorTable/>
+                <Stack direction="row" spacing={2}>
+                    <Button variant="contained">
+                        Add
+                    </Button>
+                    <Button variant="contained">
+                        Edit
+                    </Button>
+                    <Button variant="contained" color="error">
+                        Delete
+                    </Button>
+                </Stack>
             </Box>
         </Paper>
     );
 };
-
 
 const TLEsForm = () => {
     const columns = [
@@ -389,7 +385,7 @@ const HomeLocatorPage = () => {
         ];
         setPolylines([horizontalLine, verticalLine]);
         setQth(getMaidenhead(location.lat, location.lng));
-
+        
         return () => {
             // Optional cleanup logic
         };
@@ -412,6 +408,31 @@ const HomeLocatorPage = () => {
         return result;
     }
 
+    const getCurrentLocation = async () => {
+        if (!navigator.geolocation) {
+            throw new Error('Geolocation is not supported by your browser.');
+        }
+
+        return new Promise((resolve, reject) => {
+            navigator.geolocation.getCurrentPosition(
+                (position) => {
+                    resolve({
+                        lat: position.coords.latitude,
+                        lng: position.coords.longitude,
+                    });
+                },
+                (error) => {
+                    reject(new Error('Unable to retrieve your location: ' + error.message));
+                },
+                {
+                    enableHighAccuracy: true,
+                    timeout: 10000,
+                    maximumAge: 0,
+                }
+            );
+        });
+    };
+
     return (
         <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
             <Alert severity="info">
@@ -429,6 +450,7 @@ const HomeLocatorPage = () => {
                                 <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
                                     {location.lat.toFixed(4)}
                                 </Typography>
+
                             </Grid>
                             <Grid size={{ xs: 1, md: 1 }}>
                                     <Typography variant="subtitle1">
@@ -446,6 +468,22 @@ const HomeLocatorPage = () => {
                                     {qth}
                                 </Typography>
                             </Grid>
+                            <Grid size={{ xs: 1, md: 1 }}>
+                                <Button
+                                    variant="contained"
+                                    color="secondary"
+                                    onClick={async () => {
+                                        try {
+                                            const currentLocation = await getCurrentLocation();
+                                            setLocation(currentLocation);
+                                        } catch (error) {
+                                            console.error(error.message);
+                                        }
+                                    }}
+                                >
+                                    Query location
+                                </Button>
+                            </Grid>
                         </Grid>
                     </Box>
                 </Grid>
@@ -460,7 +498,7 @@ const HomeLocatorPage = () => {
                         <MapContainer
                             center={[HOME_LAT, HOME_LON]}
                             zoom={2}
-                            maxZoom={10}
+                            maxZoom={12}
                             minZoom={2}
                             style={{ height: '100%', width: '100%' }}
                         >
@@ -489,6 +527,11 @@ const HomeLocatorPage = () => {
                                     weight={1}
                                 />
                             ))}
+                            <Marker
+                                position={location}
+                                icon={SimpleVectorCircle}
+                            >
+                            </Marker>
                         </MapContainer>
                     </Box>
                 </Grid>
