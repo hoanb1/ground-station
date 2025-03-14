@@ -58,7 +58,7 @@ class Transmitters(Base):
     uplink_mode = Column(String, nullable=False)
     invert = Column(Boolean, nullable=False)
     baud = Column(Integer, nullable=False)
-    sat_id = Column(String, ForeignKey('satellites.sat_id'), nullable=False)
+    sat_id = Column(String, ForeignKey('satellites.sat_id'), nullable=True)
     norad_cat_id = Column(Integer, nullable=False)
     norad_follow_id = Column(Integer, nullable=False)
     status = Column(String, nullable=False)
