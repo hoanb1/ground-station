@@ -780,6 +780,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
 
     if (gridEditable === true) {
         ResponsiveGridLayoutParent = <ResponsiveReactGridLayout
+            useCSSTransforms={false}
             className="layout"
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
@@ -794,6 +795,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         </ResponsiveReactGridLayout>;
     } else {
         ResponsiveGridLayoutParent = <ResponsiveReactGridLayout
+            useCSSTransforms={false}
             className="layout"
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}

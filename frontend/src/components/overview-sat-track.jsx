@@ -501,6 +501,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     if (gridEditable === true) {
         ResponsiveGridLayoutParent =
             <ResponsiveReactGridLayout
+                useCSSTransforms={false}
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}
@@ -516,6 +517,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     } else {
         ResponsiveGridLayoutParent =
             <ResponsiveReactGridLayout
+                useCSSTransforms={false}
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}
