@@ -106,6 +106,12 @@ const headCells = [
         disablePadding: false,
         label: 'Azimuth type',
     },
+    {
+        id: 'azstop',
+        numeric: true,
+        disablePadding: false,
+        label: 'Azimuth endstop',
+    },
 
 ];
 

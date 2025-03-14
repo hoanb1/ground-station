@@ -12,7 +12,7 @@ import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-
 import {SignInPage} from "@toolpad/core";
 import {Avatar, Checkbox} from "@mui/material";
 import {useMemo, useState} from "react";
-import {GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
+import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
 import {stringAvatar} from "./components/common.jsx";
 import RadioIcon from '@mui/icons-material/Radio';
 
@@ -30,9 +30,9 @@ const demoSession = {
 const BRANDING = {
     logo: (
         <img
-            src={GSRetroLogo}
+            src={GroundStationLogoGreenBlue}
             alt="Ground Station"
-            style={{ height: 48 }}
+            style={{ height: 128 }}
         />
     ),
     title: 'Ground Station',
@@ -150,8 +150,8 @@ export default function App(props) {
                     signIn={signIn}
                     providers={providers}
                     slotProps={{
-                        emailField: {variant: 'standard', autoFocus: false},
-                        passwordField: {variant: 'standard'},
+                        emailField: {variant: 'standard', autoFocus: false, initialValue: 'sgoudelis@nerv.home'},
+                        passwordField: {variant: 'standard', initialValue: 'password'},
                         submitButton: {variant: 'outlined'},
                         rememberMe: {
                             control: (

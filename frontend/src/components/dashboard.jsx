@@ -6,7 +6,7 @@ import * as React from "react";
 import {Outlet} from "react-router";
 import {Avatar, Box, Button, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GSRetroLogo} from "./icons.jsx";
+import {GroundStationLogoGreenBlue, GSRetroLogo} from "./icons.jsx";
 import {stringAvatar} from "./common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
@@ -39,7 +39,7 @@ function DashboardEditor() {
         <Box>
             {isEditing ? (
                 <Stack direction="row" spacing={2}>
-                    <Button size={"small"} variant={"outlined"} onClick={handleSaveClick} startIcon={<CheckIcon/>}>Done</Button>
+                    <Button size={"small"} variant={"outlined"} onClick={handleSaveClick} startIcon={<CheckIcon/>}>Done editing</Button>
                 </Stack>
             ) : (
                 <Button size={"small"} variant={"text"} onClick={handleEditClick} startIcon={<BorderColorIcon/>}>Edit layout</Button>
@@ -75,7 +75,7 @@ function CustomAppTitle() {
         <Grid container direction="row">
             <Grid row={1} column={1} sx={{display: 'flex', alignItems: 'center'}}>
                 <Stack direction="row" alignItems="center" spacing={2}>
-                    <img src={GSRetroLogo} alt="Ground Station" width="32" height="32" />
+                    <img src={GroundStationLogoGreenBlue} alt="Ground Station" width="32" height="32" />
                     <Box display={{xs: "none", sm: "block"}}>
                         <Typography variant="h6">Ground Station</Typography>
                     </Box>
