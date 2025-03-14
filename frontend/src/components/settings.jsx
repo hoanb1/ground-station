@@ -21,18 +21,14 @@ import {gridLayoutStoreName as targetGridLayoutName} from './target-sat-track.js
 import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import Autocomplete from "@mui/material/Autocomplete";
 import { DataGrid } from '@mui/x-data-grid';
 import Grid from "@mui/material/Grid2";
-import cities from 'cities.json';
-import Item from "material/src/item.js";
-import IconButton from "@mui/material/IconButton";
-import InfoIcon from '@mui/icons-material/Info';
 import {HOME_LON, HOME_LAT} from "./common.jsx";
 import {SimpleVectorCircle} from "./icons.jsx";
 import AntennaRotatorTable from "./rotator-table.jsx";
 import Stack from "@mui/material/Stack";
 import RigTable from "./rig-table.jsx";
+import {styled} from "@mui/material/styles";
 
 
 export function SettingsTabPreferences() {
@@ -91,10 +87,32 @@ function SettingsTabs({initialTab}) {
         }
     };
 
+    const AntTabs = styled(Tabs)({
+        '& .MuiTabs-indicator': {
+            backgroundColor: '#262626',
+        },
+    });
+
+    const AntTab = styled((props) => <Tab disableRipple {...props} />)(({ theme }) => ({
+        '&.MuiTab-root': {
+            fontSize: theme.typography.pxToRem(16),
+        },
+        '&.Mui-selected': {
+            color: '#fff',
+            fontWeight: theme.typography.fontWeightMedium,
+            backgroundColor: '#262626',
+            marginTop: '1px',
+            borderTop: '1px #071318 solid',
+        },
+        '&.Mui-focusVisible': {
+            backgroundColor: '#d1eaff',
+        },
+    }));
+
     return (
-         <PageContainer maxWidth={true}>
+         //<PageContainer maxWidth={true}>
          <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
-             <Tabs
+             <AntTabs
                  sx={{
                      [`& .${tabsClasses.scrollButtons}`]: {
                          '&.Mui-disabled': { opacity: 0.3 },
@@ -107,16 +125,16 @@ function SettingsTabs({initialTab}) {
                  variant="scrollable"
                  allowScrollButtonsMobile
              >
-                 <Tab label="Preferences" to="/settings/preferences" component={Link}/>
-                 <Tab label="Location" to="/settings/location" component={Link}/>
-                 <Tab label="Rig control" to="/settings/rig" component={Link}/>
-                 <Tab label="Rotator control" to="/settings/rotator" component={Link}/>
-                 <Tab label="TLEs" to="/settings/tles" component={Link}/>
-                 <Tab label="Maintenance" to="/settings/maintenance" component={Link}/>
-             </Tabs>
+                 <AntTab label="Preferences" to="/settings/preferences" component={Link}/>
+                 <AntTab label="Location" to="/settings/location" component={Link}/>
+                 <AntTab label="Rig control" to="/settings/rig" component={Link}/>
+                 <AntTab label="Rotator control" to="/settings/rotator" component={Link}/>
+                 <AntTab label="TLEs" to="/settings/tles" component={Link}/>
+                 <AntTab label="Maintenance" to="/settings/maintenance" component={Link}/>
+             </AntTabs>
                  {renderActiveTabForm()}
          </Box>
-         </PageContainer>
+         //</PageContainer>
     );
 }
 
@@ -166,7 +184,7 @@ function CloseRoundedIcon() {
 const RotatorControlForm = () => {
 
     return (
-        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
             <Alert severity="info">
                 <AlertTitle>Antenna rotator control setup</AlertTitle>
                 Configure and manage your antenna rotator control setup here
@@ -192,7 +210,7 @@ const RotatorControlForm = () => {
 const RigControlForm = () => {
 
     return (
-        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
             <Alert severity="info">
                 <AlertTitle>Rig control setup</AlertTitle>
                 Configure and manage your rig control setup here
@@ -250,7 +268,7 @@ const TLEsForm = () => {
     const paginationModel = { page: 0, pageSize: 5 };
 
     return (
-        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
             <Alert severity="info">
                 <AlertTitle>Satellites, groups and TLEs</AlertTitle>
                 Manage satellites, groups and TLEs here
@@ -274,7 +292,7 @@ const MaintenanceForm = () => {
     }
 
     return (
-        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+        <Paper elevation={3} sx={{ padding: 3, marginTop: 0  }}>
             <Alert severity="info">
                 <AlertTitle>Maintenance</AlertTitle>
                 Maintenance related functions
@@ -319,7 +337,7 @@ const PreferencesForm = () => {
     const themesOptions = [{name: 'Dark', value: 'dark'}, {name: 'Light', value: 'light'}];
 
     return (
-        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
             <Alert severity="info">
                 <AlertTitle>Change your preferences</AlertTitle>
                 Use the form below to change your preferences
@@ -456,7 +474,7 @@ const LocationPage = () => {
     };
 
     return (
-        <Paper elevation={3} sx={{ padding: 3, marginTop: 1 }}>
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
             <Alert severity="info">
                 <AlertTitle>Select location on map</AlertTitle>
                 Use the map below to set the ground station location
@@ -522,6 +540,7 @@ const LocationPage = () => {
                             zoom={2}
                             maxZoom={12}
                             minZoom={2}
+                            dragging={true}
                             style={{ height: '100%', width: '100%' }}
                         >
                             <TileLayer

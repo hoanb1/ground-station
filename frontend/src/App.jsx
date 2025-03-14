@@ -80,7 +80,7 @@ export default function App(props) {
         },
         {
             segment: 'settings/rotator',
-            title: 'Antenna rotor',
+            title: 'Antenna rotator',
             icon: <SatelliteIcon/>,
         },
         {

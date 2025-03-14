@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback} from 'react';
+import React, {useState, useEffect, useCallback, useMemo} from 'react';
 import { SatelliteAlt } from '@mui/icons-material';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import {
@@ -36,10 +36,14 @@ import {
 import {TitleBar} from "./common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
 import {HOME_LON, HOME_LAT} from "./common.jsx";
+import {handleSetGridEditableOverview} from "./overview-sat-track.jsx";
 
 // global leaflet map object
 let MapObject = null;
 const storageMapZoomValueKey = "target-map-zoom-level";
+
+// global callback for dashboard editing here
+export let handleSetGridEditableTarget = function () {};
 
 const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
     color: theme.palette.text.primary,
@@ -76,58 +80,6 @@ function loadLayoutsFromLocalStorage() {
 function saveLayoutsToLocalStorage(layouts) {
     localStorage.setItem(gridLayoutStoreName, JSON.stringify(layouts));
 }
-
-// Default layout if none in localStorage
-const defaultLayouts = {
-    lg: [
-        {
-            i: 'satselector',
-            x: 0,
-            y: 0,
-            w: 12,
-            h: 3,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
-            isResizable: true,
-        },
-        {
-            i: 'map',
-            x: 0,
-            y: 3,
-            w: 8,
-            h: 15,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w']
-        },
-        {
-            i: 'settings',
-            x: 8,
-            y: 9,
-            w: 2,
-            h: 15,
-            minW: 2,
-            maxW: 2,
-            minH: 12,
-            maxH: 12,
-            isResizable: false,
-        },
-        {
-            i: 'info',
-            x: 10,
-            y: 11,
-            w: 2,
-            h: 8,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w']
-        },
-        {
-            i: 'passes',
-            x: 10,
-            y: 14,
-            w: 2,
-            h: 7,
-            resizeHandles: ['se','ne','nw','sw','n','s','e','w']
-        },
-
-    ]
-};
 
 function CenterHomeButton() {
     const targetCoordinates = [HOME_LAT, HOME_LON];
@@ -457,9 +409,68 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     const [noradId, setNoradId] = useLocalStorageState('target-satellite-noradid', initialNoradId);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const satelliteData = getSatelliteDataByNoradId(noradId);
-
+    const [gridDraggable, setGridDraggable] = useState(false);
+    const [gridResizable, setGridResizable] = useState(false);
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
+    const [gridEditable, setGridEditable] = useState(false);
+
+    const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
+
+    // default layout if none in localStorage
+    const defaultLayouts = {
+        lg: [
+            {
+                i: 'satselector',
+                x: 0,
+                y: 0,
+                w: 12,
+                h: 3,
+                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+            },
+            {
+                i: 'map',
+                x: 0,
+                y: 3,
+                w: 8,
+                h: 15,
+                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+            },
+            {
+                i: 'settings',
+                x: 8,
+                y: 9,
+                w: 2,
+                h: 15,
+                minW: 2,
+                maxW: 2,
+                minH: 15,
+                maxH: 15,
+            },
+            {
+                i: 'info',
+                x: 10,
+                y: 11,
+                w: 2,
+                h: 8,
+                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+            },
+            {
+                i: 'passes',
+                x: 10,
+                y: 14,
+                w: 2,
+                h: 7,
+                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+            },
+
+        ]
+    };
+
+    // globalize the callback
+    handleSetGridEditableTarget = useCallback((value) => {
+        setGridEditable(value);
+    }, [gridEditable]);
 
     const handleShowPastOrbitPath = useCallback((value) => {
         setShowPastOrbitPath(value);
@@ -518,6 +529,8 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         const loaded = loadLayoutsFromLocalStorage();
         return loaded ?? defaultLayouts;
     });
+
+
 
     const handleWhenReady = (map) => {
         // map is ready
@@ -654,128 +667,148 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         return null;
     }
 
-    return (
-        <ResponsiveGridLayout
+    // pre-make the components
+    let gridContents = [
+        <StyledIslandParent key="map">
+            <MapContainer
+                center={[0, 0]}
+                zoom={mapZoomLevel}
+                style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
+                dragging={false}
+                scrollWheelZoom={false}
+                maxZoom={7}
+                minZoom={0}
+                whenReady={handleWhenReady}
+                zoomSnap={0.25}
+                zoomDelta={0.25}
+            >
+                <MapTitleBar className={"react-grid-draggable window-title-bar"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</MapTitleBar>
+                <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
+                <TileLayer
+                    url={getTileLayerById(tileLayerID)['url']}
+                    attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
+                />
+                <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 30, position: 'absolute'}}>
+                    <CenterHomeButton/>
+                    <CenterMapButton/>
+                    <FullscreenMapButton/>
+                </Box>
+
+                {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
+                {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
+
+                {daySidePolygon.length>1 && showTerminatorLine && (
+                    <Polygon
+                        positions={daySidePolygon}
+                        pathOptions={{
+                            fillColor:'black',
+                            fillOpacity:0.4,
+                            color:'white',
+                            weight:0
+                        }}
+                    />
+                )}
+
+                {terminatorLine.length>1 && showTerminatorLine && (
+                    <Polyline
+                        positions={terminatorLine}
+                        pathOptions={{
+                            color:'white',
+                            weight:1,
+                            opacity:0.2,
+                        }}
+                    />
+                )}
+                {InternationalDateLinePolyline()}
+                <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
+                {showPastOrbitPath? currentPastSatellitesPaths: null}
+                {showFutureOrbitPath? currentFutureSatellitesPaths: null}
+                {currentSatellitesPosition}
+                {showSatelliteCoverage? currentSatellitesCoverage: null}
+                <MapStatusBar/>
+            </MapContainer>
+        </StyledIslandParent>,
+        <StyledIslandParentScrollbar key="settings">
+            <SettingsIsland
+                initialShowPastOrbitPath={showPastOrbitPath}
+                initialShowFutureOrbitPath={showFutureOrbitPath}
+                initialShowSatelliteCoverage={showSatelliteCoverage}
+                initialShowSunIcon={showSunIcon}
+                initialShowMoonIcon={showMoonIcon}
+                initialShowTerminatorLine={showTerminatorLine}
+                initialPastOrbitLineColor={pastOrbitLineColor}
+                initialFutureOrbitLineColor={futureOrbitLineColor}
+                initialSatelliteCoverageColor={satelliteCoverageColor}
+                initialOrbitProjectionDuration={orbitProjectionDuration}
+                initialTileLayerID={tileLayerID}
+                handleShowPastOrbitPath={handleShowPastOrbitPath}
+                handleShowFutureOrbitPath={handleShowFutureOrbitPath}
+                handleShowSatelliteCoverage={handleShowSatelliteCoverage}
+                handleSetShowSunIcon={handleSetShowSunIcon}
+                handleSetShowMoonIcon={handleSetShowMoonIcon}
+                handleShowTerminatorLine={handleShowTerminatorLine}
+                handlePastOrbitLineColor={handlePastOrbitLineColor}
+                handleFutureOrbitLineColor={handleFutureOrbitLineColor}
+                handleSatelliteCoverageColor={handleSatelliteCoverageColor}
+                handleOrbitProjectionDuration={handleOrbitProjectionDuration}
+                handleTileLayerID={handleTileLayerID}
+            />
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="info">
+            <TitleBar className={"react-grid-draggable"}>Information</TitleBar>
+            <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
+                <h2>{satelliteName}</h2>
+                <p><strong>Latitude:</strong> {satelliteLat? satelliteLat.toFixed(4): "n/a"}°</p>
+                <p><strong>Longitude:</strong> {satelliteLon? satelliteLon.toFixed(4): "n/a"}°</p>
+                <p><strong>Altitude:</strong> {satelliteAltitude? satelliteAltitude.toFixed(2): "n/a"} km</p>
+                <p><strong>Velocity:</strong> {satelliteVelocity? satelliteVelocity.toFixed(2): "n/a"} km/s</p>
+            </div>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="passes">
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
+            <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
+                <h3>Next 24-hour Passes</h3>
+                <p>Pass data, etc.</p>
+            </div>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="satselector">
+            <SatSelectorIsland handleSelectSatelliteId={handleSelectSatelliteId}/>
+        </StyledIslandParentScrollbar>
+    ];
+
+    let ResponsiveGridLayoutParent = null;
+
+    if (gridEditable === true) {
+        ResponsiveGridLayoutParent = <ResponsiveReactGridLayout
             className="layout"
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
             breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
             cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
             rowHeight={30}
-            isResizable
-            isDraggable
+            isResizable={true}
+            isDraggable={true}
             draggableHandle=".react-grid-draggable"
         >
-            <StyledIslandParent key="map">
-                <MapContainer
-                    center={[0, 0]}
-                    zoom={mapZoomLevel}
-                    style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
-                    dragging={false}
-                    scrollWheelZoom={false}
-                    maxZoom={7}
-                    minZoom={0}
-                    whenReady={handleWhenReady}
-                    zoomSnap={0.25}
-                    zoomDelta={0.25}
-                >
-                    <MapTitleBar className={"react-grid-draggable window-title-bar"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</MapTitleBar>
-                    <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
-                    <TileLayer
-                        url={getTileLayerById(tileLayerID)['url']}
-                        attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
-                    />
-                    <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 30, position: 'absolute'}}>
-                        <CenterHomeButton/>
-                        <CenterMapButton/>
-                        <FullscreenMapButton/>
-                    </Box>
+            {gridContents}
+        </ResponsiveReactGridLayout>;
+    } else {
+        ResponsiveGridLayoutParent = <ResponsiveReactGridLayout
+            className="layout"
+            layouts={layouts}
+            onLayoutChange={handleLayoutsChange}
+            breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
+            cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
+            rowHeight={30}
+            isResizable={false}
+            isDraggable={false}
+            draggableHandle=".react-grid-draggable"
+        >
+            {gridContents}
+        </ResponsiveReactGridLayout>;
+    }
 
-                    {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
-                    {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
-
-                    {daySidePolygon.length>1 && showTerminatorLine && (
-                        <Polygon
-                            positions={daySidePolygon}
-                            pathOptions={{
-                                fillColor:'black',
-                                fillOpacity:0.4,
-                                color:'white',
-                                weight:0
-                            }}
-                        />
-                    )}
-
-                    {terminatorLine.length>1 && showTerminatorLine && (
-                        <Polyline
-                            positions={terminatorLine}
-                            pathOptions={{
-                                color:'white',
-                                weight:1,
-                                opacity:0.2,
-                        }}
-                        />
-                    )}
-                    {InternationalDateLinePolyline()}
-                    <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
-                    {showPastOrbitPath? currentPastSatellitesPaths: null}
-                    {showFutureOrbitPath? currentFutureSatellitesPaths: null}
-                    {currentSatellitesPosition}
-                    {showSatelliteCoverage? currentSatellitesCoverage: null}
-                    <MapStatusBar/>
-                </MapContainer>
-            </StyledIslandParent>
-            <StyledIslandParentScrollbar key="settings">
-                <SettingsIsland
-                    initialShowPastOrbitPath={showPastOrbitPath}
-                    initialShowFutureOrbitPath={showFutureOrbitPath}
-                    initialShowSatelliteCoverage={showSatelliteCoverage}
-                    initialShowSunIcon={showSunIcon}
-                    initialShowMoonIcon={showMoonIcon}
-                    initialShowTerminatorLine={showTerminatorLine}
-                    initialPastOrbitLineColor={pastOrbitLineColor}
-                    initialFutureOrbitLineColor={futureOrbitLineColor}
-                    initialSatelliteCoverageColor={satelliteCoverageColor}
-                    initialOrbitProjectionDuration={orbitProjectionDuration}
-                    initialTileLayerID={tileLayerID}
-                    handleShowPastOrbitPath={handleShowPastOrbitPath}
-                    handleShowFutureOrbitPath={handleShowFutureOrbitPath}
-                    handleShowSatelliteCoverage={handleShowSatelliteCoverage}
-                    handleSetShowSunIcon={handleSetShowSunIcon}
-                    handleSetShowMoonIcon={handleSetShowMoonIcon}
-                    handleShowTerminatorLine={handleShowTerminatorLine}
-                    handlePastOrbitLineColor={handlePastOrbitLineColor}
-                    handleFutureOrbitLineColor={handleFutureOrbitLineColor}
-                    handleSatelliteCoverageColor={handleSatelliteCoverageColor}
-                    handleOrbitProjectionDuration={handleOrbitProjectionDuration}
-                    handleTileLayerID={handleTileLayerID}
-                />
-            </StyledIslandParentScrollbar>
-
-            <StyledIslandParentScrollbar key="info">
-                <TitleBar className={"react-grid-draggable"}>Information</TitleBar>
-                <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
-                    <h2>{satelliteName}</h2>
-                    <p><strong>Latitude:</strong> {satelliteLat? satelliteLat.toFixed(4): "n/a"}°</p>
-                    <p><strong>Longitude:</strong> {satelliteLon? satelliteLon.toFixed(4): "n/a"}°</p>
-                    <p><strong>Altitude:</strong> {satelliteAltitude? satelliteAltitude.toFixed(2): "n/a"} km</p>
-                    <p><strong>Velocity:</strong> {satelliteVelocity? satelliteVelocity.toFixed(2): "n/a"} km/s</p>
-                </div>
-            </StyledIslandParentScrollbar>
-
-            <StyledIslandParentScrollbar key="passes">
-                <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
-                <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
-                    <h3>Next 24-hour Passes</h3>
-                    <p>Pass data, etc.</p>
-                </div>
-            </StyledIslandParentScrollbar>
-
-            <StyledIslandParentScrollbar key="satselector">
-                <SatSelectorIsland handleSelectSatelliteId={handleSelectSatelliteId}/>
-            </StyledIslandParentScrollbar>
-        </ResponsiveGridLayout>
-    );
+    return ResponsiveGridLayoutParent;
 }
 
 export default TargetSatelliteTrack;

@@ -1,22 +1,57 @@
 import Stack from "@mui/material/Stack";
-import Tooltip from "@mui/material/Tooltip";
-import IconButton from "@mui/material/IconButton";
-import SearchIcon from "@mui/icons-material/Search";
-import TextField from "@mui/material/TextField";
 import {DashboardLayout, ThemeSwitcher} from "@toolpad/core/DashboardLayout";
 import Typography from "@mui/material/Typography";
 import PropTypes from "prop-types";
-import SatelliteAltIcon from "@mui/icons-material/SatelliteAlt";
 import * as React from "react";
 import {Outlet} from "react-router";
-import {Avatar, Box, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
+import {Avatar, Box, Button, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GroundStationTinyLogo, logo2blue, GSRetroLogo} from "./icons.jsx";
+import {GSRetroLogo} from "./icons.jsx";
 import {stringAvatar} from "./common.jsx";
+import Grid from "@mui/material/Grid2";
+import BorderColorIcon from '@mui/icons-material/BorderColor';
+import {useCallback} from "react";
+import {handleSetGridEditableOverview as OverviewModeSetEditing} from './overview-sat-track.jsx'
+import {handleSetGridEditableTarget as TargetModeSetEditing} from './target-sat-track.jsx'
+import CheckIcon from '@mui/icons-material/Check';
+
+function DashboardEditor() {
+    const [isEditing, setIsEditing] = React.useState(false);
+
+    const handleEditClick = () => {
+        setIsEditing(true);
+        OverviewModeSetEditing(true);
+        TargetModeSetEditing(true);
+    };
+
+    const handleSaveClick = () => {
+        setIsEditing(false);
+        OverviewModeSetEditing(false);
+        TargetModeSetEditing(false);
+    };
+
+    const handleCancelClick = () => {
+        // Revert changes and exit edit mode
+        setIsEditing(false);
+    };
+
+    return (
+        <Box>
+            {isEditing ? (
+                <Stack direction="row" spacing={2}>
+                    <Button size={"small"} variant={"outlined"} onClick={handleSaveClick} startIcon={<CheckIcon/>}>Done</Button>
+                </Stack>
+            ) : (
+                <Button size={"small"} variant={"text"} onClick={handleEditClick} startIcon={<BorderColorIcon/>}>Edit layout</Button>
+            )}
+        </Box>
+    );
+}
 
 function ToolbarActionsSearch() {
     return (
-        <Stack direction="row">
+        <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
+            <DashboardEditor/>
             <TimeDisplay/>
             <ThemeSwitcher />
         </Stack>
@@ -37,15 +72,26 @@ SidebarFooter.propTypes = {
 
 function CustomAppTitle() {
     return (
-        <Stack direction="row" alignItems="center" spacing={2}>
-            <img src={GSRetroLogo} alt="Ground Station" width="32" height="32" />
-            <Box display={{xs: "none", sm: "block"}}>
-                <Typography variant="h6">Ground Station</Typography>
-            </Box>
-            <Box display={{xs: "block", sm: "none"}}>
-                <Typography variant="h6">GS</Typography>
-            </Box>
-        </Stack>
+        <Grid container direction="row">
+            <Grid row={1} column={1} sx={{display: 'flex', alignItems: 'center'}}>
+                <Stack direction="row" alignItems="center" spacing={2}>
+                    <img src={GSRetroLogo} alt="Ground Station" width="32" height="32" />
+                    <Box display={{xs: "none", sm: "block"}}>
+                        <Typography variant="h6">Ground Station</Typography>
+                    </Box>
+                    <Box display={{xs: "block", sm: "none"}}>
+                        <Typography variant="h6">GS</Typography>
+                    </Box>
+                </Stack>
+            <Grid/>
+            <Grid spacing={3} row={1} column={1}>
+                <Grid container direction="row" spacing={4}>
+                    <Grid>
+                    </Grid>
+                </Grid>
+            </Grid>
+            </Grid>
+        </Grid>
     );
 }
 
@@ -118,7 +164,7 @@ function TimeDisplay() {
             }}
         >
             <Typography variant="body2" sx={{fontWeight: "bold", fontFamily: "monospace"}}>
-                {formattedTime} {isUTC ? "UTC Time" : "Local Time"}
+                {formattedTime} {isUTC ? "UTC" : "local"}
             </Typography>
         </Box>
     );
