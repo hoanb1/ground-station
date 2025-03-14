@@ -4,6 +4,10 @@ from sqlalchemy.orm import relationship
 from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Table, MetaData
 import uuid
+from datetime import datetime, UTC
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON
+from sqlalchemy.dialects.postgresql import UUID
+from sqlalchemy.ext.declarative import declarative_base
 
 # Creates a base class for declarative models using SQLAlchemy.
 Base = declarative_base()
@@ -30,11 +34,44 @@ class Satellites(Base):
     website = Column(String, nullable=True)
     operator = Column(String, nullable=True)
     countries = Column(String, nullable=True)
-    added = Column(DateTime, nullable=False)
-    updated = Column(DateTime, nullable=True)
     citation = Column(String, nullable=True)
     is_frequency_violator = Column(Boolean, nullable=False, default=False)
     associated_satellites = Column(String, nullable=True)
+    added = Column(DateTime, nullable=False,  default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
+class Transmitters(Base):
+    __tablename__ = 'transmitters'
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    description = Column(String, nullable=False)
+    alive = Column(Boolean, nullable=False)
+    type = Column(String, nullable=False)
+    uplink_low = Column(Integer, nullable=False)
+    uplink_high = Column(Integer, nullable=False)
+    uplink_drift = Column(Integer, nullable=False)
+    downlink_low = Column(Integer, nullable=False)
+    downlink_high = Column(Integer, nullable=False)
+    downlink_drift = Column(Integer, nullable=False)
+    mode = Column(String, nullable=False)
+    mode_id = Column(Integer, nullable=False)
+    uplink_mode = Column(String, nullable=False)
+    invert = Column(Boolean, nullable=False)
+    baud = Column(Integer, nullable=False)
+    sat_id = Column(String, ForeignKey('satellites.sat_id'), nullable=False)
+    norad_cat_id = Column(Integer, nullable=False)
+    norad_follow_id = Column(Integer, nullable=False)
+    status = Column(String, nullable=False)
+    citation = Column(String, nullable=True)
+    service = Column(String, nullable=False)
+    iaru_coordination = Column(String, nullable=True)
+    iaru_coordination_url = Column(String, nullable=True)
+    itu_notification = Column(JSON, nullable=True)
+    frequency_violation = Column(Boolean, nullable=False, default=False)
+    unconfirmed = Column(Boolean, nullable=False, default=False)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
 
 class Rigs(Base):
     __tablename__ = 'rigs'
@@ -47,8 +84,8 @@ class Rigs(Base):
     vfotype = Column(Integer, nullable=False)
     lodown = Column(Integer, nullable=False)
     loup = Column(Integer, nullable=False)
-    added = Column(DateTime, nullable=False)
-    updated = Column(DateTime, nullable=False)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Rotators(Base):
     __tablename__ = 'rotators'
@@ -62,8 +99,8 @@ class Rotators(Base):
     maxel = Column(Integer, nullable=False)
     aztype = Column(Integer, nullable=False)
     azendstop = Column(Integer, nullable=False)
-    added = Column(DateTime, nullable=False)
-    updated = Column(DateTime, nullable=False)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC),)
+    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Locations(Base):
     __tablename__ = 'locations'
@@ -72,8 +109,8 @@ class Locations(Base):
     name = Column(String, nullable=False)
     lat = Column(String, nullable=False)
     lon = Column(String, nullable=False)
-    added = Column(DateTime, nullable=False)
-    updated = Column(DateTime, nullable=True)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Users(Base):
     __tablename__ = 'users'
@@ -81,8 +118,8 @@ class Users(Base):
     email = Column(String, nullable=False, unique=True)
     password = Column(String, nullable=False)
     fullname = Column(String, nullable=False)
-    added = Column(DateTime, nullable=False)
-    updated = Column(DateTime, nullable=False)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Preferences(Base):
     __tablename__ = 'preferences'
@@ -90,5 +127,7 @@ class Preferences(Base):
     userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
     name = Column(String, nullable=False)
     value = Column(String, nullable=False)
-    added = Column(DateTime, nullable=False)
-    updated = Column(DateTime, nullable=True)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
+
