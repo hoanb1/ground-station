@@ -21,6 +21,8 @@ import Switch from '@mui/material/Switch';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { visuallyHidden } from '@mui/utils';
+import {Button} from "@mui/material";
+import Stack from "@mui/material/Stack";
 
 function createData(id, name, host, port, radiotype, pttstatus, vfotype, lodown, loup) {
     return {
@@ -372,6 +374,17 @@ export default function RigTable() {
                 control={<Switch checked={dense} onChange={handleChangeDense} />}
                 label="Dense padding"
             />
+            <Stack direction="row" spacing={2}>
+                <Button variant="contained">
+                    Add
+                </Button>
+                <Button variant="contained">
+                    Edit
+                </Button>
+                <Button variant="contained" color="error">
+                    Delete
+                </Button>
+            </Stack>
         </Box>
     );
 }

@@ -130,6 +130,7 @@ class SatelliteTLESources(Base):
     __tablename__ = 'satellite_tle_sources'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
+    identifier = Column(String, nullable=False)
     url = Column(String, nullable=False)
     added = Column(DateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))

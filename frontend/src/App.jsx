@@ -68,12 +68,12 @@ export default function App(props) {
         },
         {
             segment: 'hardware/rig',
-            title: 'Rig control',
+            title: 'Radio rigs',
             icon: <RadioIcon/>,
         },
         {
             segment: 'hardware/rotator',
-            title: 'Antenna rotator',
+            title: 'Antenna rotators',
             icon: <SatelliteIcon/>,
         },
         { kind: 'divider' },
