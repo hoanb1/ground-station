@@ -29,37 +29,80 @@ import AntennaRotatorTable from "./rotator-table.jsx";
 import Stack from "@mui/material/Stack";
 import RigTable from "./rig-table.jsx";
 import {styled} from "@mui/material/styles";
+import SatelliteTables from "./satellite-tables.jsx";
+import TLESourcesTable from "./tle-sources.jsx";
+import VirtualizedSatelliteTable from "./satellite-tables.jsx";
+import SatelliteTable from "./satellite-tables.jsx";
+import AboutPage from "./about.jsx";
+import SatelliteGroupsTable from "./satellite-groups.jsx";
 
+
+export function SettingsTabSatellites() {
+    return (<SettingsTabs initialMainTab={"satellites"} initialTab={"satellites"}/>);
+}
+
+export function SettingsTabTLESources() {
+    return (<SettingsTabs initialMainTab={"satellites"} initialTab={"tlesources"}/>);
+}
+
+export function SettingsTabSatelliteGroups() {
+    return (<SettingsTabs initialMainTab={"satellites"} initialTab={"groups"}/>);
+}
 
 export function SettingsTabPreferences() {
-    return (<SettingsTabs initialTab={0}/>);
+    return (<SettingsTabs initialMainTab={"settings"} initialTab={"preferences"}/>);
 }
 
 export function SettingsTabLocation() {
-    return (<SettingsTabs initialTab={1}/>);
+    return (<SettingsTabs initialMainTab={"settings"} initialTab={"location"}/>);
 }
 
 export function SettingsTabRig() {
-    return (<SettingsTabs initialTab={2}/>);
+    return (<SettingsTabs initialMainTab={"hardware"} initialTab={"rigcontrol"}/>);
 }
 
 export function SettingsTabRotator() {
-    return (<SettingsTabs initialTab={3}/>);
-}
-
-export function SettingsTabTLEs() {
-    return (<SettingsTabs initialTab={4}/>);
+    return (<SettingsTabs initialMainTab={"hardware"} initialTab={"rotatorcontrol"}/>);
 }
 
 export function SettingsTabMaintenance () {
-    return (<SettingsTabs initialTab={5}/>);
+    return (<SettingsTabs initialMainTab={"settings"} initialTab={"maintenance"}/>);
 }
 
-function SettingsTabs({initialTab}) {
+export function SettingsTabAbout () {
+    return (<SettingsTabs initialMainTab={"settings"} initialTab={"about"}/>);
+}
+
+const tabsTree = {
+    "hardware": ["rigcontrol", "rotatorcontrol"],
+    "satellites": ["satellites", "tlesources", "groups"],
+    "settings": ["preferences", "location", "maintenance", "about"],
+};
+
+function getTabCategory(value) {
+    for (const [key, values] of Object.entries(tabsTree)) {
+        if (values.includes(value)) {
+            return key;
+        }
+    }
+    return null;
+}
+
+function SettingsTabs({initialMainTab, initialTab}) {
+    const [activeMainTab, setActiveMainTab] = useState(initialMainTab);
     const [activeTab, setActiveTab] = useState(initialTab);
+    const [childTabRow, setChildTabRow] = useState([])
+    const [childTabs, setChildTabs] = useState([]);
+
+    const handleMainTabChange = (event, newValue) => {
+        setActiveMainTab(newValue);
+        setActiveTab(tabsTree[newValue][0]);
+    };
 
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
+        const mainTab = getTabCategory(newValue);
+        setActiveMainTab(mainTab);
     };
 
     // Forms for each tab can be extracted into separate components if desired:
@@ -70,24 +113,31 @@ function SettingsTabs({initialTab}) {
     // Helper function to render the correct form for the active tab.
     const renderActiveTabForm = () => {
         switch (activeTab) {
-            case 0:
+            case "preferences":
                 return <PreferencesForm/>;
-            case 1:
+            case "location":
                 return <LocationForm/>;
-            case 2:
+            case "rigcontrol":
                 return <RigControlForm/>;
-            case 3:
+            case "rotatorcontrol":
                 return <RotatorControlForm/>;
-            case 4:
-                return <TLEsForm/>;
-            case 5:
+            case "tlesources":
+                return <TLESourcesForm/>;
+            case "satellites":
+                return <SatellitesForm/>;
+            case "groups":
+                return <SatelliteGroupsForm/>;
+            case "maintenance":
                 return <MaintenanceForm/>;
+            case "about":
+                return <AboutPage/>;
             default:
                 return null;
         }
     };
 
     const AntTabs = styled(Tabs)({
+        borderBottom: '1px #4c4c4c solid',
         '& .MuiTabs-indicator': {
             backgroundColor: '#262626',
         },
@@ -101,40 +151,91 @@ function SettingsTabs({initialTab}) {
             color: '#fff',
             fontWeight: theme.typography.fontWeightMedium,
             backgroundColor: '#262626',
-            marginTop: '1px',
-            borderTop: '1px #071318 solid',
+            marginTop: '0px',
+            //borderTop: '1px #071318 solid',
         },
         '&.Mui-focusVisible': {
             backgroundColor: '#d1eaff',
         },
     }));
 
+    useEffect(() => {
+
+        let childTabs = [];
+        // Define arrays of tabs for each main category
+        switch (activeMainTab) {
+            case "hardware":
+                childTabs = [
+                    <AntTab key="rigcontrol" value="rigcontrol" label="Rig control" to="/hardware/rig" component={Link} />,
+                    <AntTab key="rotatorcontrol" value="rotatorcontrol" label="Rotator control" to="/hardware/rotator" component={Link} />,
+                ];
+                break;
+            case "satellites":
+                childTabs = [
+                    <AntTab key="satellites" value="satellites" label="Satellites" to="/satellites/satellites" component={Link} />,
+                    <AntTab key="tlesources" value="tlesources" label="TLE sources" to="/satellites/tlesources" component={Link} />,
+                    <AntTab key="groups" value="groups" label="Groups" to="/satellites/groups" component={Link} />,
+                ];
+                break;
+            case "settings":
+                childTabs = [
+                    <AntTab key="preferences" value="preferences" label="Preferences" to="/settings/preferences" component={Link} />,
+                    <AntTab key="location" value="location" label="Location" to="/settings/location" component={Link} />,
+                    <AntTab key="maintenance" value="maintenance" label="Maintenance" to="/settings/maintenance" component={Link} />,
+                    <AntTab key="about" value="about" label="About" to="/settings/about" component={Link} />,
+                ];
+                break;
+            default:
+                setChildTabs([]);
+        }
+
+        // make the child tab
+        setChildTabRow(<AntTabs
+            sx={{
+                [`& .${tabsClasses.scrollButtons}`]: {
+                    '&.Mui-disabled': { opacity: 0.3 },
+                },
+            }}
+            value={activeTab}
+            onChange={handleTabChange}
+            aria-label="configuration tabs"
+            scrollButtons={true}
+            variant="scrollable"
+            allowScrollButtonsMobile
+        >
+            {childTabs}
+        </AntTabs>);
+
+        // Cleanup function (optional)
+        return () => {
+
+        };
+    }, [activeMainTab]);
+    
     return (
-         //<PageContainer maxWidth={true}>
          <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
              <AntTabs
                  sx={{
                      [`& .${tabsClasses.scrollButtons}`]: {
                          '&.Mui-disabled': { opacity: 0.3 },
                      },
+                     bottomBorder: '1px #4c4c4c solid',
+
                  }}
-                 value={activeTab}
-                 onChange={handleTabChange}
-                 aria-label="configuration tabs"
+                 value={activeMainTab}
+                 onChange={handleMainTabChange}
+                 aria-label="main settings tabs"
                  scrollButtons={true}
-                 variant="scrollable"
+                 variant="fullWidth"
                  allowScrollButtonsMobile
              >
-                 <AntTab label="Preferences" to="/settings/preferences" component={Link}/>
-                 <AntTab label="Location" to="/settings/location" component={Link}/>
-                 <AntTab label="Rig control" to="/settings/rig" component={Link}/>
-                 <AntTab label="Rotator control" to="/settings/rotator" component={Link}/>
-                 <AntTab label="TLEs" to="/settings/tles" component={Link}/>
-                 <AntTab label="Maintenance" to="/settings/maintenance" component={Link}/>
+                 <AntTab value={"hardware"} label="Hardware" to="/hardware/rig" component={Link}/>
+                 <AntTab value={"satellites"} label="Satellites" to="/satellites/satellites" component={Link}/>
+                 <AntTab value={"settings"} label="Settings" to="/settings/preferences" component={Link}/>
              </AntTabs>
-                 {renderActiveTabForm()}
+             {childTabRow}
+             {renderActiveTabForm()}
          </Box>
-         //</PageContainer>
     );
 }
 
@@ -233,55 +334,27 @@ const RigControlForm = () => {
     );
 };
 
-const TLEsForm = () => {
-    const columns = [
-        { field: 'id', headerName: 'ID', width: 70 },
-        { field: 'firstName', headerName: 'First name', width: 130 },
-        { field: 'lastName', headerName: 'Last name', width: 130 },
-        {
-            field: 'age',
-            headerName: 'Age',
-            type: 'number',
-            width: 90,
-        },
-        {
-            field: 'fullName',
-            headerName: 'Full name',
-            description: 'This column has a value getter and is not sortable.',
-            sortable: false,
-            width: 160,
-            valueGetter: (value, row) => `${row.firstName || ''} ${row.lastName || ''}`,
-        },
-    ];
-    const rows = [
-        { id: 1, lastName: 'Snow', firstName: 'Jon', age: 35 },
-        { id: 2, lastName: 'Lannister', firstName: 'Cersei', age: 42 },
-        { id: 3, lastName: 'Lannister', firstName: 'Jaime', age: 45 },
-        { id: 4, lastName: 'Stark', firstName: 'Arya', age: 16 },
-        { id: 5, lastName: 'Targaryen', firstName: 'Daenerys', age: null },
-        { id: 6, lastName: 'Melisandre', firstName: null, age: 150 },
-        { id: 7, lastName: 'Clifford', firstName: 'Ferrara', age: 44 },
-        { id: 8, lastName: 'Frances', firstName: 'Rossini', age: 36 },
-        { id: 9, lastName: 'Roxie', firstName: 'Harvey', age: 65 },
-    ];
-
-    const paginationModel = { page: 0, pageSize: 5 };
+const SatellitesForm = () => {
 
     return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
-            <Alert severity="info">
-                <AlertTitle>Satellites, groups and TLEs</AlertTitle>
-                Manage satellites, groups and TLEs here
-            </Alert>
-            <Divider />
-            <DataGrid
-                rows={rows}
-                columns={columns}
-                initialState={{ pagination: { paginationModel } }}
-                pageSizeOptions={[5, 10]}
-                checkboxSelection
-                sx={{ border: 0 }}
-            />
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
+            <SatelliteTable/>
+        </Paper>);
+};
+
+const SatelliteGroupsForm = () => {
+
+    return (
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
+            <SatelliteGroupsTable/>
+        </Paper>);
+};
+
+const TLESourcesForm = () => {
+
+    return (
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
+            <TLESourcesTable/>
         </Paper>);
 };
 
@@ -292,7 +365,7 @@ const MaintenanceForm = () => {
     }
 
     return (
-        <Paper elevation={3} sx={{ padding: 3, marginTop: 0  }}>
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0  }}>
             <Alert severity="info">
                 <AlertTitle>Maintenance</AlertTitle>
                 Maintenance related functions
@@ -576,7 +649,6 @@ const LocationPage = () => {
                         </MapContainer>
                     </Box>
                 </Grid>
-
                 <Grid size={{ xs: 6, md: 8 }}>
                     <Button variant="contained" color="primary">
                         Set location

@@ -15,6 +15,9 @@ import {useMemo, useState} from "react";
 import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
 import {stringAvatar} from "./components/common.jsx";
 import RadioIcon from '@mui/icons-material/Radio';
+import SegmentIcon from '@mui/icons-material/Segment';
+import InfoIcon from '@mui/icons-material/Info';
+import GroupWorkIcon from '@mui/icons-material/GroupWork';
 
 const providers = [{ id: 'credentials', name: 'Username and password' }];
 
@@ -61,6 +64,41 @@ export default function App(props) {
         { kind: 'divider' },
         {
             kind: 'header',
+            title: 'Hardware',
+        },
+        {
+            segment: 'hardware/rig',
+            title: 'Rig control',
+            icon: <RadioIcon/>,
+        },
+        {
+            segment: 'hardware/rotator',
+            title: 'Antenna rotator',
+            icon: <SatelliteIcon/>,
+        },
+        { kind: 'divider' },
+        {
+            kind: 'header',
+            title: 'Satellites',
+        },
+        {
+            segment: 'satellites/satellites',
+            title: 'Satellites',
+            icon: <Satellite03Icon />,
+        },
+        {
+            segment: 'satellites/tlesources',
+            title: 'TLE sources',
+            icon: <SegmentIcon />,
+        },
+        {
+            segment: 'satellites/groups',
+            title: 'Groups',
+            icon: <GroupWorkIcon />,
+        },
+        { kind: 'divider' },
+        {
+            kind: 'header',
             title: 'Settings',
         },
         {
@@ -74,24 +112,14 @@ export default function App(props) {
             icon: <AddHomeIcon />,
         },
         {
-            segment: 'settings/rig',
-            title: 'Rig control',
-            icon: <RadioIcon/>,
-        },
-        {
-            segment: 'settings/rotator',
-            title: 'Antenna rotator',
-            icon: <SatelliteIcon/>,
-        },
-        {
-            segment: 'settings/tles',
-            title: 'Satellite and TLEs',
-            icon: <Satellite03Icon />,
-        },
-        {
             segment: 'settings/maintenance',
             title: 'Maintenance',
             icon: <EngineeringIcon />,
+        },
+        {
+            segment: 'settings/about',
+            title: 'About',
+            icon: <InfoIcon />,
         },
     ];
     const authentication = useMemo(() => {
@@ -150,8 +178,8 @@ export default function App(props) {
                     signIn={signIn}
                     providers={providers}
                     slotProps={{
-                        emailField: {variant: 'standard', autoFocus: false, initialValue: 'sgoudelis@nerv.home'},
-                        passwordField: {variant: 'standard', initialValue: 'password'},
+                        emailField: {variant: 'standard', autoFocus: false},
+                        passwordField: {variant: 'standard'},
                         submitButton: {variant: 'outlined'},
                         rememberMe: {
                             control: (

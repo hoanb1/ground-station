@@ -15,6 +15,7 @@
     "@mui/icons-material": "^6.4.5",
     "@mui/material": "^6.4.5",
     "@mui/x-data-grid": "^7.27.3",
+    "@mui/x-data-grid-generator": "^7.27.3",
     "@toolpad/core": "^0.12.0",
     "cities.json": "^1.1.47",
     "hugeicons-react": "^0.3.0",
@@ -29,6 +30,7 @@
     "react-leaflet": "^5.0.0",
     "react-resize-detector": "^12.0.2",
     "react-router": "^7.2.0",
+    "react-virtuoso": "^4.12.5",
     "react-window": "^1.8.11",
     "satellite.js": "^5.0.0",
     "uuid": "^11.1.0"

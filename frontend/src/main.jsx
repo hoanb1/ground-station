@@ -6,8 +6,8 @@ import {
     SettingsTabLocation,
     SettingsTabRotator,
     SettingsTabPreferences,
-    SettingsTabTLEs,
-    SettingsTabMaintenance, SettingsTabRig
+    SettingsTabSatellites,
+    SettingsTabMaintenance, SettingsTabRig, SettingsTabTLESources, SettingsTabAbout, SettingsTabSatelliteGroups
 } from "./components/settings.jsx";
 import GlobalSatelliteTrack from "./components/overview-sat-track.jsx";
 import App from "./App.jsx";
@@ -31,6 +31,27 @@ const router = createBrowserRouter([
                         Component: TargetSatelliteTrack,
                     },
                     {
+                        path: "satellites",
+                        children: [
+                            {
+                                path: "",
+                                Component: SettingsTabSatellites,
+                            },
+                            {
+                                path: "satellites",
+                                Component: SettingsTabSatellites,
+                            },
+                            {
+                                path: "tlesources",
+                                Component: SettingsTabTLESources,
+                            },
+                            {
+                                path: "groups",
+                                Component: SettingsTabSatelliteGroups,
+                            },
+                        ],
+                    },
+                    {
                         path: "settings",
                         children: [
                             {
@@ -46,20 +67,29 @@ const router = createBrowserRouter([
                                 Component: SettingsTabLocation,
                             },
                             {
+                                path: "maintenance",
+                                Component: SettingsTabMaintenance,
+                            },
+                            {
+                                path: "about",
+                                Component: SettingsTabAbout,
+                            },
+                        ],
+                    },
+                    {
+                        path: "hardware",
+                        children: [
+                            {
+                                path: "",
+                                Component: SettingsTabRig,
+                            },
+                            {
                                 path: "rig",
                                 Component: SettingsTabRig,
                             },
                             {
                                 path: "rotator",
                                 Component: SettingsTabRotator,
-                            },
-                            {
-                                path: "tles",
-                                Component: SettingsTabTLEs,
-                            },
-                            {
-                                path: "maintenance",
-                                Component: SettingsTabMaintenance,
                             },
                         ],
                     },

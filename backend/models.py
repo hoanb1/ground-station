@@ -1,7 +1,3 @@
-from sqlalchemy import Column, String, Integer, DateTime, Boolean, ForeignKey
-from sqlalchemy.dialects.postgresql import UUID
-from sqlalchemy.orm import relationship
-from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy import Table, MetaData
 import uuid
 from datetime import datetime, UTC
@@ -105,7 +101,7 @@ class Rotators(Base):
 class Locations(Base):
     __tablename__ = 'locations'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
     name = Column(String, nullable=False)
     lat = Column(String, nullable=False)
     lon = Column(String, nullable=False)
@@ -124,10 +120,24 @@ class Users(Base):
 class Preferences(Base):
     __tablename__ = 'preferences'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=False)
+    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
     name = Column(String, nullable=False)
     value = Column(String, nullable=False)
     added = Column(DateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
+class SatelliteTLESources(Base):
+    __tablename__ = 'satellite_tle_sources'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    name = Column(String, nullable=False)
+    url = Column(String, nullable=False)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
+class SatelliteGroups(Base):
+    __tablename__ = 'satellite_groups'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    name = Column(String, nullable=False)
+    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
