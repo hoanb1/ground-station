@@ -1,4 +1,4 @@
-![GS Logo](public/gs-logo-green-blue.png)
+![GS Logo](frontend/public/gs-logo-green-blue.png)
 # Overview
 This software is a comprehensive satellite tracking and rig control application designed for monitoring satellites in real time and managing associated hardware. The application brings together orbit propagation, real-time position calculations, and hardware control interfaces into a single, easy-to-use user interface. It leverages modern JavaScript frameworks and libraries such as React, Material UI, and react-leaflet to create an interactive experience for users.
 
