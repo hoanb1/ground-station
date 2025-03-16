@@ -22,7 +22,7 @@ import LoginForm, {demoSession} from "./components/login.jsx";
 import {SocketProvider} from './components/socket.jsx';
 import NotificationBar from "./components/notification.jsx";
 import {enqueueSnackbar, SnackbarProvider, useSnackbar} from 'notistack';
-
+import PeopleIcon from '@mui/icons-material/People';
 
 const BRANDING = {
     logo: (
@@ -130,6 +130,11 @@ export default function App(props) {
             segment: 'settings/maintenance',
             title: 'Maintenance',
             icon: <EngineeringIcon/>,
+        },
+        {
+            segment: 'settings/users',
+            title: 'Users',
+            icon: <PeopleIcon/>,
         },
         {
             segment: 'settings/about',

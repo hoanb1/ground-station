@@ -35,6 +35,7 @@ import VirtualizedSatelliteTable from "./satellite-tables.jsx";
 import SatelliteTable from "./satellite-tables.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "./satellite-groups.jsx";
+import UsersTable from "./users.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -69,6 +70,10 @@ export function SettingsTabMaintenance () {
     return (<SettingsTabs initialMainTab={"settings"} initialTab={"maintenance"}/>);
 }
 
+export function SettingsTabUsers () {
+    return (<SettingsTabs initialMainTab={"settings"} initialTab={"users"}/>);
+}
+
 export function SettingsTabAbout () {
     return (<SettingsTabs initialMainTab={"settings"} initialTab={"about"}/>);
 }
@@ -76,7 +81,7 @@ export function SettingsTabAbout () {
 const tabsTree = {
     "hardware": ["rigcontrol", "rotatorcontrol"],
     "satellites": ["satellites", "tlesources", "groups"],
-    "settings": ["preferences", "location", "maintenance", "about"],
+    "settings": ["preferences", "location", "maintenance", "users", "about"],
 };
 
 function getTabCategory(value) {
@@ -129,6 +134,8 @@ function SettingsTabs({initialMainTab, initialTab}) {
                 return <SatelliteGroupsForm/>;
             case "maintenance":
                 return <MaintenanceForm/>;
+            case "users":
+                return <UsersForm/>;
             case "about":
                 return <AboutPage/>;
             default:
@@ -182,10 +189,12 @@ function SettingsTabs({initialMainTab, initialTab}) {
                     <AntTab key="preferences" value="preferences" label="Preferences" to="/settings/preferences" component={Link} />,
                     <AntTab key="location" value="location" label="Location" to="/settings/location" component={Link} />,
                     <AntTab key="maintenance" value="maintenance" label="Maintenance" to="/settings/maintenance" component={Link} />,
+                    <AntTab key="users" value="users" label="Users" to="/settings/users" component={Link} />,
                     <AntTab key="about" value="about" label="About" to="/settings/about" component={Link} />,
                 ];
                 break;
             default:
+                console.log("Unknown main tab: " + activeMainTab);
                 setChildTabs([]);
         }
 
@@ -328,6 +337,18 @@ const SatellitesForm = () => {
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
             <SatelliteTable/>
+        </Paper>);
+};
+
+const UsersForm = () => {
+
+    return (
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
+            <Alert severity="info">
+                <AlertTitle>Users</AlertTitle>
+                Manage add and remove users here
+            </Alert>
+            <UsersTable/>
         </Paper>);
 };
 

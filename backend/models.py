@@ -1,7 +1,7 @@
 from sqlalchemy import Table, MetaData
 import uuid
 from datetime import datetime, UTC
-from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON
+from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 
@@ -110,6 +110,7 @@ class Users(Base):
     __tablename__ = 'users'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     email = Column(String, nullable=False, unique=True)
+    status = Column(Enum('active', 'inactive', name='user_status_enum'), nullable=False, default='active')
     password = Column(String, nullable=False)
     fullname = Column(String, nullable=False)
     added = Column(DateTime, nullable=False, default=datetime.now(UTC))

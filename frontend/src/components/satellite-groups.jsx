@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import Typography from "@mui/material/Typography";
 import { Alert, AlertTitle, Box, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from "@mui/material";
+import {useSocket} from "./socket.jsx";
 
 const columns = [
     { field: 'friendlyname', headerName: 'Name', width: 150 },
@@ -31,6 +32,8 @@ const paginationModel = { page: 0, pageSize: 10 };
 export default function SatelliteGroupsTable() {
     const [rows, setRows] = useState(initialRows);
     const [dialogOpen, setDialogOpen] = useState(false);
+    const socket = useSocket();
+    const [groups, setGroups] = useState([]);
 
     // Form state
     const [friendlyname, setFriendlyname] = useState('');
@@ -42,6 +45,19 @@ export default function SatelliteGroupsTable() {
         return adjustedDate.toISOString().slice(0, 16);
     });
 
+    useEffect(() => {
+        // fetch groups from backend
+        console.info('Fetching groups from backend...');
+        socket.emit('get_satellite_groups', (data) => {
+            console.info('Received groups from backend:', data);
+            setGroups(data);
+        });
+
+        return () => {
+            // Cleanup logic when the component unmounts or before re-running the effect
+        };
+    }, []);
+    
     const handleAddClick = () => {
         // Clear previous values
         setFriendlyname('');

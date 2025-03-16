@@ -48,7 +48,7 @@ function DashboardEditor() {
     );
 }
 
-function ToolbarActionsSearch() {
+function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
             <DashboardEditor/>
@@ -269,8 +269,8 @@ export default function Layout() {
     return (
         <DashboardLayout defaultSidebarCollapsed slots={{
             appTitle: CustomAppTitle,
-            toolbarActions: ToolbarActionsSearch,
-            toolbarAccount: SidebarFooterAccount,
+            toolbarActions: ToolbarActions,
+            toolbarAccount: () => {},
             sidebarFooter: SidebarFooterAccount
         }}>
             <Outlet />

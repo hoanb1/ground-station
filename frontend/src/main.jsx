@@ -7,7 +7,12 @@ import {
     SettingsTabRotator,
     SettingsTabPreferences,
     SettingsTabSatellites,
-    SettingsTabMaintenance, SettingsTabRig, SettingsTabTLESources, SettingsTabAbout, SettingsTabSatelliteGroups
+    SettingsTabMaintenance,
+    SettingsTabRig,
+    SettingsTabTLESources,
+    SettingsTabAbout,
+    SettingsTabSatelliteGroups,
+    SettingsTabUsers
 } from "./components/settings.jsx";
 import GlobalSatelliteTrack from "./components/overview-sat-track.jsx";
 import App from "./App.jsx";
@@ -69,6 +74,10 @@ const router = createBrowserRouter([
                             {
                                 path: "maintenance",
                                 Component: SettingsTabMaintenance,
+                            },
+                            {
+                                path: "users",
+                                Component: SettingsTabUsers,
                             },
                             {
                                 path: "about",
