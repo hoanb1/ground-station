@@ -2,6 +2,7 @@ import argparse
 from fastapi import FastAPI, WebSocket, Depends
 from models import Base
 import logging
+import socketio
 from fastapi.middleware.cors import CORSMiddleware
 from sqlalchemy import create_engine, text
 from sqlalchemy.ext.declarative import declarative_base
@@ -29,8 +30,36 @@ def setup_arguments():
 
     return arguments
 
-# FastAPI app
+# Create an asynchronous Socket.IO server using ASGI mode.
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
 app = FastAPI()
+
+# Wrap the Socket.IO server with an ASGI application.
+# This allows non-Socket.IO routes (like the FastAPI endpoints) to be served as well.
+socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+
+@sio.event
+async def connect(sid, environ):
+    print("Client connected:", sid)
+    # Optionally, send a welcome message to the connecting client
+    await sio.emit("message", {"data": "Welcome!"}, to=sid)
+
+@sio.event
+async def disconnect(sid):
+    print("Client disconnected:", sid)
+
+@sio.event
+async def join(sid, data):
+    room = data.get("room")
+    if room:
+        await sio.enter_room(sid, room)
+        await sio.emit("message", {"data": f"Joined room: {room}"}, room=room)
+
+@sio.event
+async def message(sid, data):
+    print("Received message:", data)
+    # Broadcast the message to all connected clients
+    await sio.emit("message", data)
 
 # Function to check and create tables
 def check_and_create_tables():
@@ -81,4 +110,6 @@ if __name__ == "__main__":
 
     # create tables
     check_and_create_tables()
-    uvicorn.run(app, host=args.host, port=args.port)
+
+    # Run the ASGI application with Uvicorn on port 5000.
+    uvicorn.run(socket_app, host="0.0.0.0", port=5000)

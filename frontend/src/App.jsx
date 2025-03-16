@@ -1,5 +1,5 @@
 import * as React from 'react';
-import { createTheme } from '@mui/material/styles';
+import {createTheme} from '@mui/material/styles';
 import {Outlet} from "react-router";
 import PublicIcon from '@mui/icons-material/Public';
 import SettingsIcon from '@mui/icons-material/Settings';
@@ -10,7 +10,7 @@ import {setupTheme} from './theme.js';
 import AddHomeIcon from '@mui/icons-material/AddHome';
 import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-react";
 import {SignInPage} from "@toolpad/core";
-import {Avatar, Checkbox} from "@mui/material";
+import {Alert, Avatar, Checkbox} from "@mui/material";
 import {useMemo, useState} from "react";
 import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
 import {stringAvatar} from "./components/common.jsx";
@@ -18,33 +18,45 @@ import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
+import LoginForm, {demoSession} from "./components/login.jsx";
+import {SocketProvider} from './components/socket.jsx';
+import NotificationBar from "./components/notification.jsx";
+import {enqueueSnackbar, SnackbarProvider, useSnackbar} from 'notistack';
 
-const providers = [{ id: 'credentials', name: 'Username and password' }];
-
-
-const demoSession = {
-    user: {
-        name: 'Efstatios Goudelis',
-        email: 'sgoudelis@nerv.home',
-        image: null,
-    },
-};
 
 const BRANDING = {
     logo: (
         <img
             src={GroundStationLogoGreenBlue}
             alt="Ground Station"
-            style={{ height: 128 }}
+            style={{height: 128}}
         />
     ),
     title: 'Ground Station',
 };
 
 export default function App(props) {
-    const dashboardTheme = setupTheme();
     const [loggedIn, setLoggedIn] = useState(false);
     const [session, setSession] = useState(demoSession);
+    const dashboardTheme = setupTheme();
+
+    const handleSignedInCallback = React.useCallback((value) => {
+        setLoggedIn(value);
+    }, []);
+
+    const authentication = useMemo(() => {
+        return {
+            signIn: () => {
+                setSession(demoSession);
+                setLoggedIn(true);
+            },
+            signOut: () => {
+                setSession(null);
+                setLoggedIn(false);
+                enqueueSnackbar('You have been logged out', {variant: 'success'});
+            },
+        };
+    }, []);
 
     const NAVIGATION = [
         {
@@ -54,14 +66,14 @@ export default function App(props) {
         {
             segment: '',
             title: 'Overview',
-            icon: <PublicIcon />,
+            icon: <PublicIcon/>,
         },
         {
             segment: 'track',
             title: 'Track single satellite',
-            icon: <GpsFixedIcon />,
+            icon: <GpsFixedIcon/>,
         },
-        { kind: 'divider' },
+        {kind: 'divider'},
         {
             kind: 'header',
             title: 'Hardware',
@@ -76,7 +88,7 @@ export default function App(props) {
             title: 'Antenna rotators',
             icon: <SatelliteIcon/>,
         },
-        { kind: 'divider' },
+        {kind: 'divider'},
         {
             kind: 'header',
             title: 'Satellites',
@@ -84,19 +96,19 @@ export default function App(props) {
         {
             segment: 'satellites/satellites',
             title: 'Satellites',
-            icon: <Satellite03Icon />,
+            icon: <Satellite03Icon/>,
         },
         {
             segment: 'satellites/tlesources',
             title: 'TLE sources',
-            icon: <SegmentIcon />,
+            icon: <SegmentIcon/>,
         },
         {
             segment: 'satellites/groups',
             title: 'Groups',
-            icon: <GroupWorkIcon />,
+            icon: <GroupWorkIcon/>,
         },
-        { kind: 'divider' },
+        {kind: 'divider'},
         {
             kind: 'header',
             title: 'Settings',
@@ -104,98 +116,42 @@ export default function App(props) {
         {
             segment: 'settings/preferences',
             title: 'Preferences',
-            icon: <PreferenceVerticalIcon />,
+            icon: <PreferenceVerticalIcon/>,
         },
         {
             segment: 'settings/location',
             title: 'Location',
-            icon: <AddHomeIcon />,
+            icon: <AddHomeIcon/>,
         },
         {
             segment: 'settings/maintenance',
             title: 'Maintenance',
-            icon: <EngineeringIcon />,
+            icon: <EngineeringIcon/>,
         },
         {
             segment: 'settings/about',
             title: 'About',
-            icon: <InfoIcon />,
+            icon: <InfoIcon/>,
         },
     ];
-    const authentication = useMemo(() => {
-        return {
-            signIn: () => {
-                setSession(demoSession);
-            },
-            signOut: () => {
-                setSession(null);
-            },
-        };
-    }, []);
-
-    const signIn = async (provider, formData) => {
-        return new Promise((resolve) => {
-            setTimeout(() => {
-                const email = formData?.get('email');
-                const password = formData?.get('password');
-                // preview-start
-                // resolve({
-                //     type: 'CredentialsSignin',
-                //     error: 'Invalid credentials.',
-                // });
-
-                setLoggedIn(true);
-
-                // preview-end
-            }, 300);
-        });
-    };
 
     return (
-        <ReactRouterAppProvider
-            navigation={NAVIGATION}
-            theme={dashboardTheme}
-            authentication={authentication}
-            session={session}
-            branding={BRANDING}
-        >
-            {loggedIn ? (
-                <Outlet/>
-            ) : (
-                <SignInPage
-                    sx={{
-                        bgcolor: 'background.paper',
-                        boxShadow: 1,
-                        borderRadius: 2,
-                        p: 2,
-                        minWidth: 300,
-                        '& main > .MuiBox-root': {
-                            backgroundColor: '#1e1e1e',
-                        },
-                    }}
-                    title={"Ground Station"}
-                    subtitle={"Your own personal satellite tracking station"}
-                    signIn={signIn}
-                    providers={providers}
-                    slotProps={{
-                        emailField: {variant: 'standard', autoFocus: false},
-                        passwordField: {variant: 'standard'},
-                        submitButton: {variant: 'outlined'},
-                        rememberMe: {
-                            control: (
-                                <Checkbox
-                                    name="rememberme"
-                                    value="true"
-                                    color="primary"
-                                    sx={{padding: 0.5, '& .MuiSvgIcon-root': {fontSize: 20}}}
-                                />
-                            ),
-                            color: 'textSecondary',
-                            label: 'Remember me',
-                        },
-                    }}
-                />
-            )}
-        </ReactRouterAppProvider>
+        <SnackbarProvider maxSnack={5} autoHideDuration={5000} anchorOrigin={{vertical: 'top', horizontal: 'right'}}>
+            <ReactRouterAppProvider
+                navigation={NAVIGATION}
+                theme={dashboardTheme}
+                authentication={authentication}
+                session={session}
+                branding={BRANDING}
+            >
+                <SocketProvider>
+                    {loggedIn ? (
+                        <Outlet/>
+                    ) : (
+                        <LoginForm handleSignedInCallback={handleSignedInCallback}/>
+                    )}
+                </SocketProvider>
+            </ReactRouterAppProvider>
+        </SnackbarProvider>
     );
 }

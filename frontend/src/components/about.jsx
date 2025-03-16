@@ -39,14 +39,14 @@ const AboutPage = () => {
                             Ground Station
                         </Typography>
                     </Box>
-                    <Typography variant="body1" paragraph>
+                    <Typography variant="body1" >
                         This Satellite Tracking and Ground Station Management software is a powerful tool
                         for satellite operations, combining robust tracking logic with user-friendly interface
                         elements. With the ability to handle real-time visualization and hardware integration,
                         it is ideal for a wide range of users, from hobbyists to professional ground station
                         operators.
                     </Typography>
-                    <Typography variant="body1" paragraph>
+                    <Typography variant="body1" >
                         <strong>Detailed Description:</strong>
                         <br />
                         The software provides advanced satellite orbit tracking, telemetry management, and
@@ -54,7 +54,7 @@ const AboutPage = () => {
                         primarily using React and Material-UI for frontend responsiveness, it leverages advanced
                         geospatial computation using libraries like Satellite.js for accurate orbital tracking.
                     </Typography>
-                    <Typography variant="body1" paragraph>
+                    <Typography variant="body1" >
                         <strong>Key Features include:</strong>
                     </Typography>
                     <List
@@ -83,7 +83,7 @@ const AboutPage = () => {
                             <ListItemText primary="A user-friendly dashboard for editing layout and components." />
                         </ListItem>
                     </List>
-                    <Typography variant="body1" paragraph>
+                    <Typography variant="body1" >
                         <strong>Use Cases:</strong>
                         <br />
                         This software is beneficial to a diverse range of users:
@@ -108,35 +108,6 @@ const AboutPage = () => {
                             <ListItemText primary="Researchers analyzing orbital data, such as satellite coverage or velocity calculations." />
                         </ListItem>
                     </List>
-                    <Typography variant="body1" paragraph>
-                        With its focus on flexibility, modularity, and an extensive feature set, the software
-                        evolves alongside the needs of its users. Whether you're a hobbyist or a seasoned ground
-                        station operator, this tool is designed to enhance your satellite tracking experience!
-                    </Typography>
-                    {/* About the Author Section */}
-                    <Box
-                        sx={{
-                            marginTop: 4,
-                            paddingTop: 2,
-                            borderTop: '1px solid #e0e0e0',
-                        }}
-                    >
-                        <Typography variant="h5" gutterBottom>
-                            About the Author
-                        </Typography>
-                        <Typography variant="body1" paragraph>
-                            **[Author Name]** is a passionate developer with expertise in satellite tracking
-                            technologies and web application development. With a background in aerospace engineering
-                            and a strong proficiency in React and Python, [Author Name] has dedicated their career
-                            to creating tools that bridge the gap between complex satellite operations and user-friendly
-                            interfaces. When not developing software, [Author Name] enjoys amateur radio, stargazing,
-                            and contributing to open-source projects.
-                        </Typography>
-                        <Typography variant="body1" paragraph>
-                            You can connect with the author on [LinkedIn](https://www.linkedin.com/) or view their
-                            portfolio at [www.authorwebsite.com](https://www.authorwebsite.com).
-                        </Typography>
-                    </Box>
                 </Box>
             </CardContent>
         </Paper>

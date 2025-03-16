@@ -199,8 +199,6 @@ function SidebarFooterAccountPopover() {
                             }}
                             primary={account.name}
                             secondary={account.email}
-                            primaryTypographyProps={{ variant: 'body2' }}
-                            secondaryTypographyProps={{ variant: 'caption' }}
                         />
                     </MenuItem>
                 ))}

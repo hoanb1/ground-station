@@ -23,6 +23,7 @@
     "leaflet-fullscreen": "^1.0.2",
     "lodash": "^4.17.21",
     "material": "^0.9.23",
+    "notistack": "^3.0.2",
     "react": "^19.0.0",
     "react-dom": "^19.0.0-rc.1",
     "react-grid-layout": "^1.5.1",
@@ -33,6 +34,8 @@
     "react-virtuoso": "^4.12.5",
     "react-window": "^1.8.11",
     "satellite.js": "^5.0.0",
+    "socket.io": "^4.8.1",
+    "socket.io-client": "^4.8.1",
     "uuid": "^11.1.0"
   },
   "devDependencies": {
