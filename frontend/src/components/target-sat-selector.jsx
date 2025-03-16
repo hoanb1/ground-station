@@ -5,7 +5,7 @@ import TextField from '@mui/material/TextField';
 import Autocomplete from '@mui/material/Autocomplete';
 import CircularProgress from '@mui/material/CircularProgress';
 import Grid from '@mui/material/Grid2';
-import {TLEGROUPS, getTLEsByGroupId} from "./tles.jsx";
+import {TLEGROUPS, getSatellitesByGroupId} from "./tles.jsx";
 import {CODEC_JSON, StyledIslandParent} from "./common.jsx";
 import {TitleBar} from "./common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
@@ -27,7 +27,7 @@ function SearchSatellite({initialSelectedSatelliteId, initialSelectedGroupId, in
     const [satelliteObj, setSatelliteObj] = useLocalStorageState('target-search-satellite-data', initialSelectedSatelliteGroup, {codec: CODEC_JSON});
 
     useEffect(() => {
-        let group = getTLEsByGroupId(initialSelectedGroupId);
+        let group = getSatellitesByGroupId(initialSelectedGroupId);
         setOptions(group);
         return () => {
             setOptions([]);
@@ -38,7 +38,7 @@ function SearchSatellite({initialSelectedSatelliteId, initialSelectedGroupId, in
         setOpen(true);
         (async () => {
             setLoading(true);
-            let group = getTLEsByGroupId(initialSelectedGroupId);
+            let group = getSatellitesByGroupId(initialSelectedGroupId);
             setLoading(false);
             setOptions(group);
         })();
@@ -95,7 +95,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
     const [selectedSatelliteGroup, setSelectedSatelliteGroup] = useState({});
 
     useEffect(() => {
-        let group = getTLEsByGroupId(selectedSatGroupId);
+        let group = getSatellitesByGroupId(selectedSatGroupId);
         setSelectedSatelliteGroup(group);
         return () => {
             // Cleanup logic goes here (optional)

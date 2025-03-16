@@ -38,7 +38,6 @@ class Satellites(Base):
 
 class Transmitters(Base):
     __tablename__ = 'transmitters'
-
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     description = Column(String, nullable=False)
     alive = Column(Boolean, nullable=False)
@@ -67,7 +66,6 @@ class Transmitters(Base):
     unconfirmed = Column(Boolean, nullable=False, default=False)
     added = Column(DateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-
 
 class Rigs(Base):
     __tablename__ = 'rigs'

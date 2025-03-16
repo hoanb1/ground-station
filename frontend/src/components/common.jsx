@@ -59,6 +59,7 @@ export const MapTitleBar = styled(Paper)(({ theme }) => ({
     top: 0,
     fontWeight: 'bold',
     textAlign: 'left',
+    backgroundColor: "#26241c",
 }));
 
 export const MapStatusBar = styled(Paper)(({ theme }) => ({
@@ -85,6 +86,7 @@ export const TitleBar = styled(Paper)(({ theme }) => ({
     borderBottom: '1px solid #494949',
     textAlign: 'left',
     fontWeight: 'bold',
+    backgroundColor: "#1f131f",
 }));
 
 export const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({

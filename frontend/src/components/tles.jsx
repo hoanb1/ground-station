@@ -1258,6 +1258,17 @@ export let HAMTLEs = {
     }
 };
 
+export let TLEGROUPS = [
+    {id: "noaa", name: "NOAA", TLEs: NOAATLEs},
+    {id: "ham", name: "HAM", TLEs: HAMTLEs},
+    {id: "mygroup", name: "MYGROUP", TLEs: MYGROUPTLEs},
+    {id: "meridian", name: "MERIDIAN", TLEs: MERIDIANTLEs},
+    {id: "goes", name: "GOES", TLEs: GOESTLEs}
+];
+
+export function getSatellitesGroups() {
+    return TLEGROUPS.map(({id, name}) => ({id, name}));
+}
 
 export function getAllSatellites() {
     const allTLEGroups = [MYGROUPTLEs, HAMTLEs, MERIDIANTLEs, NOAATLEs, GOESTLEs];
@@ -1274,15 +1285,7 @@ export function getSatelliteDataByNoradId(noradId) {
      return MYGROUPTLEs[noradId] || HAMTLEs[noradId] || MERIDIANTLEs[noradId] || NOAATLEs[noradId] || GOESTLEs[noradId] || null;
 }
 
-export let TLEGROUPS = [
-    {id: "noaa", name: "NOAA", TLEs: NOAATLEs},
-    {id: "ham", name: "HAM", TLEs: HAMTLEs},
-    {id: "mygroup", name: "MYGROUP", TLEs: MYGROUPTLEs},
-    {id: "meridian", name: "MERIDIAN", TLEs: MERIDIANTLEs},
-    {id: "goes", name: "GOES", TLEs: GOESTLEs}
-];
-
-export function getTLEsByGroupId(id) {
+export function getSatellitesByGroupId(id) {
     const group = TLEGROUPS.find(group => group.id === id);
     return group ? Object.values(group.TLEs) : [];
 }

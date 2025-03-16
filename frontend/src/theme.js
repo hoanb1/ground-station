@@ -73,7 +73,7 @@ export function setupTheme() {
             MuiAppBar: {
                 styleOverrides: {
                     root: {
-                        backgroundColor: "#1e1e1e",
+                        backgroundColor: "#071318",
                     },
                 },
             },

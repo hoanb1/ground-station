@@ -1,7 +1,6 @@
 <p align="center">
   <img src="frontend/public/gs-logo-green-blue.png" alt="GS Logo" />
 </p>
-
 <div align="center">
   <h1>Ground Station</h1>
 </div>
