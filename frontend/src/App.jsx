@@ -40,8 +40,10 @@ export default function App(props) {
     const [session, setSession] = useState(demoSession);
     const dashboardTheme = setupTheme();
 
-    const handleSignedInCallback = React.useCallback((value) => {
+    const handleSignedInCallback = React.useCallback((value, session) => {
         setLoggedIn(value);
+        setSession(session);
+        enqueueSnackbar('You have been logged in', {variant: 'success'});
     }, []);
 
     const authentication = useMemo(() => {
@@ -49,6 +51,7 @@ export default function App(props) {
             signIn: () => {
                 setSession(demoSession);
                 setLoggedIn(true);
+                enqueueSnackbar('You have been logged in', {variant: 'success'});
             },
             signOut: () => {
                 setSession(null);
@@ -136,7 +139,7 @@ export default function App(props) {
     ];
 
     return (
-        <SnackbarProvider maxSnack={5} autoHideDuration={5000} anchorOrigin={{vertical: 'top', horizontal: 'right'}}>
+        <SnackbarProvider maxSnack={5} autoHideDuration={5000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}>
             <ReactRouterAppProvider
                 navigation={NAVIGATION}
                 theme={dashboardTheme}

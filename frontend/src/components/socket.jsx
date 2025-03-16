@@ -31,7 +31,8 @@ export const SocketProvider = ({ children }) => {
 
     useEffect(() => {
         // Initialize socket connection (replace URL with your server's URL)
-        const newSocket = io('ws://localhost:5000');
+        const host = window.location.hostname;
+        const newSocket = io(`ws://${host}:5000`);
         setSocket(newSocket);
 
         // Cleanup on unmount

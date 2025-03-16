@@ -270,7 +270,7 @@ export default function Layout() {
         <DashboardLayout defaultSidebarCollapsed slots={{
             appTitle: CustomAppTitle,
             toolbarActions: ToolbarActionsSearch,
-            toolbarAccount: () => null,
+            toolbarAccount: SidebarFooterAccount,
             sidebarFooter: SidebarFooterAccount
         }}>
             <Outlet />

@@ -26,16 +26,18 @@ const LoginForm = ({handleSignedInCallback}) => {
             setTimeout(() => {
                 const email = formData?.get('email');
                 const password = formData?.get('password');
-                // preview-start
-                // resolve({
-                //     type: 'CredentialsSignin',
-                //     error: 'Invalid credentials.',
-                // });
+                if (email === 'stratos.goudelis@gmail.com' && password === 'a') {
+                    handleSignedInCallback(true, session);
+                    resolve({
+                        type: 'CredentialsSignin',
+                    })
 
-                enqueueSnackbar('Successful login', {variant: 'success'});
-                handleSignedInCallback(true);
-
-                // preview-end
+                } else {
+                    resolve({
+                        type: 'CredentialsSignin',
+                        error: 'Invalid credentials.',
+                    });
+                }
             }, 300);
         });
     };
