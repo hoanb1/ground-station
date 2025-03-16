@@ -35,7 +35,7 @@ export const SocketProvider = ({ children }) => {
             });
 
             socket.on("reconnect_attempt", (attempt) => {
-                enqueueSnackbar("Not connected! Attempting to reconnect...", {variant: 'info'});
+                enqueueSnackbar(`Not connected! Attempting to reconnect (${attempt})...`, {variant: 'info'});
             });
 
             socket.on("error", (error) => {
@@ -48,6 +48,9 @@ export const SocketProvider = ({ children }) => {
 
             return () => {
                 socket.off('connect');
+                socket.off('reconnect_attempt');
+                socket.off('error');
+                socket.off('disconnect');
             };
         }
     }, [socket]);

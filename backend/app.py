@@ -54,15 +54,23 @@ app.add_middleware(
 
 @sio.event
 async def connect(sid, environ):
-    logger.info("Client connected: %s", sid)
+    logger.info(f'Client ${sid} connected')
 
 @sio.event
 async def disconnect(sid):
-    logger.info("Client disconnected: %s", sid)
+    logger.info(f'Client ${sid} disconnected',)
+
+@sio.on('get_satellite_groups')
+async def handle_my_custom_event(sid, arg1, arg2):
+    logger.info(f'Received event from ${sid}: ${arg1} ${arg2}')
+
+    return {'success': True, 'message': "Event received"}
 
 @sio.event
 async def message(sid, data):
-    logger.info("Received message: %s", data)
+    logger.info(f'Received message from ${sid}: ${data}')
+
+    return {'success': True, 'message': "Message received"}
 
 # Example route
 @app.get("/")
@@ -116,7 +124,6 @@ if __name__ == "__main__":
     logging.config.dictConfig(logging_config)
     logger = logging.getLogger("ground-station")
     logger.info("Starting the Ground Station Backend with the following arguments: %s", args)
-
 
     # SQLAlchemy setup
     DATABASE_URL = f"sqlite:///./{args.db}"

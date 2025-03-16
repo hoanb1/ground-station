@@ -36,6 +36,7 @@ import SatelliteTable from "./satellite-tables.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "./satellite-groups.jsx";
 import UsersTable from "./users.jsx";
+import MemoizedSatelliteGroupsTable from "./satellite-groups.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -356,7 +357,7 @@ const SatelliteGroupsForm = () => {
 
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
-            <SatelliteGroupsTable/>
+            <MemoizedSatelliteGroupsTable/>
         </Paper>);
 };
 
@@ -478,35 +479,6 @@ const LocationPage = () => {
     const [qth, setQth] = useState(getMaidenhead(51.505, -0.09));
     const [loading, setLoading] = useState(false);
     const [polylines, setPolylines] = useState([]);
-
-    // Uses Nominatim API to geocode the entered city if it isn’t found in the JSON.
-    const handleCitySearch = async () => {
-        if (!cityValue) return;
-        if (typeof cityValue === 'object' && cityValue.lat && cityValue.lng) {
-            // Use the coordinates directly from the JSON entry.
-            const newLocation = { lat: parseFloat(cityValue.lat), lng: parseFloat(cityValue.lng) };
-            setLocation(newLocation);
-            setQth(getMaidenhead(newLocation.lat, newLocation.lng));
-        } else {
-            // Fall back to geocoding the free text using Nominatim.
-            setLoading(true);
-            try {
-                const response = await fetch(
-                    `https://nominatim.openstreetmap.org/search?city=${cityValue}&format=json&limit=1`
-                );
-                const data = await response.json();
-                if (data && data.length > 0) {
-                    const { lat, lon } = data[0];
-                    const newLocation = { lat: parseFloat(lat), lng: parseFloat(lon) };
-                    setLocation(newLocation);
-                    setQth(getMaidenhead(newLocation.lat, newLocation.lng));
-                }
-            } catch (err) {
-                console.error(err);
-            }
-            setLoading(false);
-        }
-    };
 
     useEffect(() => {
         const horizontalLine = [

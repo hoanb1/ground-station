@@ -1,13 +1,24 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
-import { DataGrid } from '@mui/x-data-grid';
+import {DataGrid} from '@mui/x-data-grid';
 import Typography from "@mui/material/Typography";
-import { Alert, AlertTitle, Box, Button, Stack, Dialog, DialogTitle, DialogContent, DialogActions, TextField } from "@mui/material";
+import {
+    Alert,
+    AlertTitle,
+    Box,
+    Button,
+    Stack,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField
+} from "@mui/material";
 import {useSocket} from "./socket.jsx";
 
 const columns = [
-    { field: 'friendlyname', headerName: 'Name', width: 150 },
-    { field: 'added', headerName: 'Added', width: 400 },
+    {field: 'friendlyname', headerName: 'Name', width: 150},
+    {field: 'added', headerName: 'Added', width: 400},
 ];
 
 const initialRows = [
@@ -27,9 +38,9 @@ const initialRows = [
     },
 ];
 
-const paginationModel = { page: 0, pageSize: 10 };
+const paginationModel = {page: 0, pageSize: 10};
 
-export default function SatelliteGroupsTable() {
+function SatelliteGroupsTable() {
     const [rows, setRows] = useState(initialRows);
     const [dialogOpen, setDialogOpen] = useState(false);
     const socket = useSocket();
@@ -47,17 +58,16 @@ export default function SatelliteGroupsTable() {
 
     useEffect(() => {
         // fetch groups from backend
-        console.info('Fetching groups from backend...');
-        socket.emit('get_satellite_groups', (data) => {
-            console.info('Received groups from backend:', data);
-            setGroups(data);
+        console.info(`Fetching groups from backend... ${new Date().toISOString()}`);
+        socket.emit("get_satellite_groups", "1", { name: "updated" }, (response) => {
+            console.log(response); // ok
         });
 
         return () => {
-            // Cleanup logic when the component unmounts or before re-running the effect
+
         };
     }, []);
-    
+
     const handleAddClick = () => {
         // Clear previous values
         setFriendlyname('');
@@ -83,7 +93,7 @@ export default function SatelliteGroupsTable() {
     };
 
     return (
-        <Box sx={{ width: '100%', marginTop: 0 }}>
+        <Box sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">
                 <AlertTitle>Satellite groups</AlertTitle>
                 Manage satellite groups
@@ -91,12 +101,12 @@ export default function SatelliteGroupsTable() {
             <DataGrid
                 rows={rows}
                 columns={columns}
-                initialState={{ pagination: { paginationModel } }}
+                initialState={{pagination: {paginationModel}}}
                 pageSizeOptions={[5, 10]}
                 checkboxSelection
-                sx={{ border: 0, marginTop: 2 }}
+                sx={{border: 0, marginTop: 2}}
             />
-            <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
+            <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
                 <Button variant="contained" onClick={handleAddClick}>
                     Add
                 </Button>
@@ -144,3 +154,6 @@ export default function SatelliteGroupsTable() {
         </Box>
     );
 }
+
+const MemoizedSatelliteGroupsTable = React.memo(SatelliteGroupsTable);
+export default MemoizedSatelliteGroupsTable;

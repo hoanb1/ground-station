@@ -24,13 +24,13 @@ handlers:
 
 loggers:
   uvicorn.error:
-    level: INFO
+    level: ERROR
     handlers:
       - default
     propagate: no
 
   uvicorn.access:
-    level: INFO
+    level: ERROR
     handlers:
       - access
     propagate: no
@@ -42,7 +42,13 @@ loggers:
     propagate: no
 
   socketio.server:
-    level: INFO
+    level: ERROR
+    handlers:
+      - access
+    propagate: no
+
+  asyncio:
+    level: ERROR
     handlers:
       - access
     propagate: no
