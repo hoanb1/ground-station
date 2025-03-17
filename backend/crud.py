@@ -14,6 +14,8 @@ from models import Transmitters
 from models import SatelliteTLESources
 from app import logger
 from models import serialize_object
+from typing import Optional
+from sqlalchemy.orm import Session
 
 
 def fetch_user(session: Session, user_id: uuid.UUID) -> dict:
@@ -412,14 +414,20 @@ def delete_rig(session: Session, rig_id: uuid.UUID) -> dict:
         return {"success": False, "error": str(e)}
 
 
-
-def fetch_satellite(session: Session, satellite_id: uuid.UUID) -> dict:
+def fetch_satellites(session: Session, satellite_id: Optional[uuid.UUID] = None) -> dict:
     """
-    Fetch a single satellite record by its UUID.
+    Fetch satellite records.
+
+    If 'satellite_id' is provided, return a single satellite record.
+    Otherwise, return all satellite records.
     """
     try:
-        satellite = session.query(Satellites).filter(Satellites.id == satellite_id).first()
-        return {"success": True, "data": satellite, "error": None}
+        if satellite_id is None:
+            satellites = session.query(Satellites).all()
+            return {"success": True, "data": satellites, "error": None}
+        else:
+            satellite = session.query(Satellites).filter(Satellites.id == satellite_id).first()
+            return {"success": True, "data": satellite, "error": None}
     except Exception as e:
         return {"success": False, "error": str(e)}
 

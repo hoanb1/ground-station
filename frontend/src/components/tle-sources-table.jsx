@@ -25,6 +25,7 @@ export default function TLESourcesTable() {
         url: '',
     };
     const [formDialogValues, setFormDialogValues] = useState(defaultFormValues);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
 
     const handleAddClick = () => {
         setFormDialogValues(defaultFormValues);
@@ -109,9 +110,26 @@ export default function TLESourcesTable() {
                 <Button variant="contained" disabled={selectedRows.length !== 1} onClick={handleEditClick}>
                     Edit
                 </Button>
-                <Button variant="contained" color="error" onClick={handleDeleteClick}>
+                <Button variant="contained" color="error" onClick={() => setDeleteConfirmOpen(true)}>
                     Delete
                 </Button>
+                <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+                    <DialogTitle>Confirm Deletion</DialogTitle>
+                    <DialogContent>Are you sure you want to delete the selected rows?</DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            onClick={() => {
+                                handleDeleteClick();
+                                setDeleteConfirmOpen(false);
+                            }}
+                        >
+                            Delete
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Stack>
 
             {/* Add TLE Source Dialog */}

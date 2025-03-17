@@ -72,6 +72,14 @@ async def handle_frontend_data_requests(sid, cmd, data):
         # get rows
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
         reply = {'success': True, 'data': tle_sources.get('data', [])}
+
+    elif cmd == "get_satellites":
+        # get rows
+        tle_sources = crud.fetch_satellites(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+    else:
+        logger.info(f'Unknown command: {cmd}')
+
     dbsession.close()
 
     return reply

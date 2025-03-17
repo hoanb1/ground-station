@@ -35,8 +35,8 @@ class Satellites(Base):
     name_other = Column(String, nullable=True)
     alternative_name = Column(String, nullable=True)
     image = Column(String, nullable=True)
-    sat_id = Column(String, nullable=False, unique=True)
-    norad_id = Column(Integer, nullable=False, unique=True)
+    sat_id = Column(String, nullable=False, primary_key=True, unique=True)
+    norad_id = Column(Integer, primary_key=True, nullable=False, unique=True)
     tle1 = Column(String, nullable=True)
     tle2 = Column(String, nullable=True)
     status = Column(String, nullable=False)
@@ -51,7 +51,6 @@ class Satellites(Base):
     associated_satellites = Column(String, nullable=True)
     added = Column(DateTime, nullable=False,  default=datetime.now(UTC))
     updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-
 
 class Transmitters(Base):
     __tablename__ = 'transmitters'
