@@ -277,6 +277,7 @@ export default function Layout() {
 
     // To listen to the connection event
     useEffect(() => {
+        console.info("dashboard here!");
         if (socket) {
             socket.on('connect', () => {
                 console.log('Socket connected with ID:', socket.id);

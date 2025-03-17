@@ -1,7 +1,5 @@
 import * as satellite from 'satellite.js';
 
-
-
 /**
  * Calculates the latitude, longitude, altitude, and velocity of a satellite based on TLE data and date.
  *

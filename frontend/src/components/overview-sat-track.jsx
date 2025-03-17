@@ -18,7 +18,7 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
 import {duration, styled} from "@mui/material/styles";
-import createTerminatorLine from './terminator.jsx';
+import createTerminatorLine from './terminator-line.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
 import {getAllSatellites, HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
@@ -27,7 +27,7 @@ import {Box, Fab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import {getTileLayerById, tileLayers} from "./tile-layer.jsx";
+import {getTileLayerById, tileLayers} from "./tile-layers.jsx";
 import MemoizedOverviewSatelliteSelector from "./overview-sat-selector.jsx";
 import {
     CODEC_BOOL,

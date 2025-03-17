@@ -117,7 +117,6 @@ const SatelliteGroupsTable = React.memo(function () {
                     Delete
                 </Button>
             </Stack>
-
             <Dialog open={dialogOpen} onClose={handleDialogClose}>
                 <DialogTitle>Add a new Satellite Group</DialogTitle>
                 <form onSubmit={handleFormSubmit}>

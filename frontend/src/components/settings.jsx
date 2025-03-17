@@ -27,8 +27,8 @@ import AntennaRotatorTable from "./rotator-table.jsx";
 import Stack from "@mui/material/Stack";
 import RigTable from "./rig-table.jsx";
 import {styled} from "@mui/material/styles";
-import TLESourcesTable from "./tle-sources.jsx";
-import SatelliteTable from "./satellite-tables.jsx";
+import TLESourcesTable from "./tle-sources-table.jsx";
+import SatelliteTable from "./satellite-table.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "./satellite-groups.jsx";
 import UsersTable from "./users.jsx";
@@ -89,11 +89,9 @@ function getTabCategory(value) {
     return null;
 }
 
-const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
+export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
     const [activeMainTab, setActiveMainTab] = useState(initialMainTab);
     const [activeTab, setActiveTab] = useState(initialTab);
-    const [childTabRow, setChildTabRow] = useState([])
-    const [childTabs, setChildTabs] = useState([]);
 
     const handleMainTabChange = (event, newValue) => {
         setActiveMainTab(newValue);
@@ -110,34 +108,6 @@ const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
     const LocationForm = () => (
         <LocationPage/>
     );
-
-    // Helper function to render the correct form for the active tab.
-    const renderActiveTabForm = () => {
-        switch (activeTab) {
-            case "preferences":
-                return <PreferencesForm/>;
-            case "location":
-                return <LocationForm/>;
-            case "rigcontrol":
-                return <RigControlForm/>;
-            case "rotatorcontrol":
-                return <RotatorControlForm/>;
-            case "tlesources":
-                return <TLESourcesForm/>;
-            case "satellites":
-                return <SatellitesForm/>;
-            case "groups":
-                return <SatelliteGroupsForm/>;
-            case "maintenance":
-                return <MaintenanceForm/>;
-            case "users":
-                return <UsersForm/>;
-            case "about":
-                return <AboutPage/>;
-            default:
-                return null;
-        }
-    };
 
     const AntTabs = styled(Tabs)({
         borderBottom: '1px #4c4c4c solid',
@@ -162,61 +132,88 @@ const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
         },
     }));
 
-    useEffect(() => {
-        console.info("here!");
-        let childTabs = [];
-        // Define arrays of tabs for each main category
-        switch (activeMainTab) {
-            case "hardware":
-                childTabs = [
-                    <AntTab key="rigcontrol" value="rigcontrol" label="Rig control" to="/hardware/rig" component={Link} />,
-                    <AntTab key="rotatorcontrol" value="rotatorcontrol" label="Rotator control" to="/hardware/rotator" component={Link} />,
-                ];
-                break;
-            case "satellites":
-                childTabs = [
-                    <AntTab key="satellites" value="satellites" label="Satellites" to="/satellites/satellites" component={Link} />,
-                    <AntTab key="tlesources" value="tlesources" label="TLE sources" to="/satellites/tlesources" component={Link} />,
-                    <AntTab key="groups" value="groups" label="Groups" to="/satellites/groups" component={Link} />,
-                ];
-                break;
-            case "settings":
-                childTabs = [
-                    <AntTab key="preferences" value="preferences" label="Preferences" to="/settings/preferences" component={Link} />,
-                    <AntTab key="location" value="location" label="Location" to="/settings/location" component={Link} />,
-                    <AntTab key="maintenance" value="maintenance" label="Maintenance" to="/settings/maintenance" component={Link} />,
-                    <AntTab key="users" value="users" label="Users" to="/settings/users" component={Link} />,
-                    <AntTab key="about" value="about" label="About" to="/settings/about" component={Link} />,
-                ];
-                break;
-            default:
-                console.log("Unknown main tab: " + activeMainTab);
-                setChildTabs([]);
-        }
+    let tabsList = [];
+    // Define arrays of tabs for each main category
+    switch (activeMainTab) {
+        case "hardware":
+            tabsList = [
+                <AntTab key="rigcontrol" value="rigcontrol" label="Rig control" to="/hardware/rig" component={Link} />,
+                <AntTab key="rotatorcontrol" value="rotatorcontrol" label="Rotator control" to="/hardware/rotator" component={Link} />,
+            ];
+            break;
+        case "satellites":
+            tabsList = [
+                <AntTab key="satellites" value="satellites" label="Satellites" to="/satellites/satellites" component={Link} />,
+                <AntTab key="tlesources" value="tlesources" label="TLE sources" to="/satellites/tlesources" component={Link} />,
+                <AntTab key="groups" value="groups" label="Groups" to="/satellites/groups" component={Link} />,
+            ];
+            break;
+        case "settings":
+            tabsList = [
+                <AntTab key="preferences" value="preferences" label="Preferences" to="/settings/preferences" component={Link} />,
+                <AntTab key="location" value="location" label="Location" to="/settings/location" component={Link} />,
+                <AntTab key="maintenance" value="maintenance" label="Maintenance" to="/settings/maintenance" component={Link} />,
+                <AntTab key="users" value="users" label="Users" to="/settings/users" component={Link} />,
+                <AntTab key="about" value="about" label="About" to="/settings/about" component={Link} />,
+            ];
+            break;
+        default:
+            console.log("Unknown main tab: " + activeMainTab);
+    }
 
-        // make the child tab
-        setChildTabRow(<AntTabs
-            sx={{
-                [`& .${tabsClasses.scrollButtons}`]: {
-                    '&.Mui-disabled': { opacity: 0.3 },
-                },
-            }}
-            value={activeTab}
-            onChange={handleTabChange}
-            aria-label="configuration tabs"
-            scrollButtons={true}
-            variant="scrollable"
-            allowScrollButtonsMobile
-        >
-            {childTabs}
-        </AntTabs>);
+    const tabObject = <AntTabs
+        sx={{
+            [`& .${tabsClasses.scrollButtons}`]: {
+                '&.Mui-disabled': { opacity: 0.3 },
+            },
+        }}
+        value={activeTab}
+        onChange={handleTabChange}
+        aria-label="configuration tabs"
+        scrollButtons={true}
+        variant="scrollable"
+        allowScrollButtonsMobile
+    >
+        {tabsList}
+    </AntTabs>;
 
-        // Cleanup function (optional)
-        return () => {
+    let activeTabContent = null;
 
-        };
-    }, [activeMainTab]);
-    
+    switch (activeTab) {
+        case "preferences":
+            activeTabContent = <PreferencesForm/>;
+            break;
+        case "location":
+            activeTabContent = <LocationForm/>;
+            break;
+        case "rigcontrol":
+            activeTabContent = <RigControlForm/>;
+            break;
+        case "rotatorcontrol":
+            activeTabContent = <RotatorControlForm/>;
+            break;
+        case "tlesources":
+            activeTabContent = <TLESourcesForm/>;
+            break;
+        case "satellites":
+            activeTabContent = <SatellitesForm/>;
+            break;
+        case "groups":
+            activeTabContent = <SatelliteGroupsForm/>;
+            break;
+        case "maintenance":
+            activeTabContent = <MaintenanceForm/>;
+            break;
+        case "users":
+            activeTabContent = <UsersForm/>;
+            break;
+        case "about":
+            activeTabContent = <AboutPage/>;
+            break;
+        default:
+            break;
+    }
+
     return (
          <Box sx={{ flexGrow: 1, bgcolor: 'background.paper' }}>
              <AntTabs
@@ -225,7 +222,6 @@ const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
                          '&.Mui-disabled': { opacity: 0.3 },
                      },
                      bottomBorder: '1px #4c4c4c solid',
-
                  }}
                  value={activeMainTab}
                  onChange={handleMainTabChange}
@@ -238,8 +234,8 @@ const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
                  <AntTab value={"satellites"} label="Satellites" to="/satellites/satellites" component={Link}/>
                  <AntTab value={"settings"} label="Settings" to="/settings/preferences" component={Link}/>
              </AntTabs>
-             {childTabRow}
-             {renderActiveTabForm()}
+             {tabObject}
+             {activeTabContent}
          </Box>
     );
 });
@@ -635,5 +631,3 @@ const LocationPage = () => {
         </Paper>
     );
 };
-
-export default SettingsTabs;
