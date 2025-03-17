@@ -1,4 +1,7 @@
+import json
 import uuid
+import traceback
+from utils import *
 from datetime import datetime, UTC
 from sqlalchemy.orm import Session
 from models import Users
@@ -7,7 +10,10 @@ from models import Preferences
 from models import Rotators
 from models import Rigs
 from models import Satellites
-from models import Transmitters 
+from models import Transmitters
+from models import SatelliteTLESources
+from app import logger
+from models import serialize_object
 
 
 def fetch_user(session: Session, user_id: uuid.UUID) -> dict:
@@ -631,4 +637,120 @@ def delete_transmitter(session: Session, transmitter_id: uuid.UUID) -> dict:
         return {"success": True, "data": None, "error": None}
     except Exception as e:
         session.rollback()
+        return {"success": False, "error": str(e)}
+
+
+def fetch_satellite_tle_source(session, satellite_tle_source_id: int = None):
+    """
+    Retrieve satellite TLE source records. If an ID is provided, fetch the specific record, otherwise return all sources.
+    """
+    try:
+        if satellite_tle_source_id is None:
+            sources = session.query(SatelliteTLESources).all()
+            sources = json.loads(json.dumps(sources, default=serialize_object))
+            return {"success": True, "data": sources}
+
+        source = session.query(SatelliteTLESources) \
+            .filter(SatelliteTLESources.id == satellite_tle_source_id) \
+            .first()
+
+        if source:
+            return {"success": True, "data": source}
+
+        return {"success": False, "error": "Satellite TLE source not found"}
+    except Exception as e:
+        logger.error(f"Error fetching satellite TLE source: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+def add_satellite_tle_source(session, payload: dict):
+    """
+    Create a new satellite TLE source record with the provided payload and return a result object.
+    """
+    try:
+        new_source = SatelliteTLESources(**payload)
+        session.add(new_source)
+        session.commit()
+        session.refresh(new_source)
+        return {"success": True, "data": new_source}
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error fetching satellite TLE source: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+def edit_satellite_tle_source(session, satellite_tle_source_id: str, payload: dict):
+    """
+    Update an existing satellite TLE source record with new values provided in payload.
+    Returns a result object containing the updated record or an error message.
+    """
+    try:
+        del payload['added']
+        del payload['updated']
+        del payload['id']
+        satellite_tle_source_id = uuid.UUID(satellite_tle_source_id)
+
+        source = session.query(SatelliteTLESources) \
+            .filter(SatelliteTLESources.id == satellite_tle_source_id) \
+            .first()
+        if not source:
+            return {"success": False, "error": "Satellite TLE source not found"}
+
+        for key, value in payload.items():
+            if hasattr(source, key):
+                setattr(source, key, value)
+
+        session.commit()
+        session.refresh(source)
+        return {"success": True, "data": source}
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error fetching satellite TLE source: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+def delete_satellite_tle_sources(session, satellite_tle_source_ids: list[str]):
+    """
+    Deletes multiple satellite TLE source records using their IDs.
+
+    Parameters:
+      session: SQLAlchemy session instance.
+      satellite_tle_source_ids: List of satellite TLE source IDs to delete.
+
+    Returns:
+      A dictionary indicating success or failure and a message containing the deleted IDs and those not found.
+    """
+    try:
+        satellite_tle_source_ids = convert_strings_to_uuids(satellite_tle_source_ids)
+
+        # Fetch sources that match the provided IDs
+        sources = session.query(SatelliteTLESources) \
+            .filter(SatelliteTLESources.id.in_(satellite_tle_source_ids)) \
+            .all()
+
+        # Determine which IDs were found
+        found_ids = [source.id for source in sources]
+        not_found_ids = [sat_id for sat_id in satellite_tle_source_ids if sat_id not in found_ids]
+
+        if not sources:
+            return {"success": False, "error": "None of the Satellite TLE sources were found."}
+
+        # Delete each found source
+        for source in sources:
+            session.delete(source)
+
+        session.commit()
+
+        message = f"Satellite TLE source(s) with IDs {found_ids} deleted."
+        if not_found_ids:
+            message += f" The following IDs were not found: {not_found_ids}."
+        return {"success": True, "data": message}
+
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error deleting satellite TLE sources: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}

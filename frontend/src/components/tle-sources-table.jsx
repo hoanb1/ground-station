@@ -1,75 +1,90 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
 import { DataGrid } from '@mui/x-data-grid';
-import Typography from "@mui/material/Typography";
 import { Alert, AlertTitle, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Stack } from "@mui/material";
 import {useSocket} from "./socket.jsx";
 
 const columns = [
-    { field: 'friendlyname', headerName: 'Name', width: 150 },
+    { field: 'name', headerName: 'Name', width: 150 },
+    { field: 'identifier', headerName: 'ID', width: 150 },
     { field: 'url', headerName: 'URL', width: 600 },
     { field: 'added', headerName: 'Added', width: 400 },
-];
-
-const rows = [
-    { id: 1, friendlyname: 'NOAA', name: 'noaa', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=noaa&FORMAT=tle', added: new Date() },
-    { id: 2, friendlyname: 'GOES', name: 'goes', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=goes&FORMAT=tle', added: new Date() },
-    { id: 3, friendlyname: 'SARSAT', name: 'sarsat', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=sarsat&FORMAT=tle', added: new Date() },
-    { id: 4, friendlyname: 'Disaster Monitoring', name: 'dmc', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=dmc&FORMAT=tle', added: new Date() },
-    { id: 5, friendlyname: 'Amateur', name: 'amateur', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle', added: new Date() },
-    { id: 6, friendlyname: 'Molniya', name: 'molniya', url: "https://www.celestrak.org/NORAD/elements/gp.php?GROUP=molniya&FORMAT=tle", added: new Date() },
-    { id: 7, friendlyname: 'GNSS', name: 'gnss', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=gnss&FORMAT=tle', added: new Date() },
-    { id: 8, friendlyname: 'GPS operational', name: 'gps-ops', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=gps-ops&FORMAT=tle', added: new Date() },
-    { id: 9, friendlyname: 'Galileo', name: 'galileo', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=galileo&FORMAT=tle', added: new Date() },
-    { id: 10, friendlyname: 'Science', name: 'science', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=science&FORMAT=tle', added: new Date() },
-    { id: 11, friendlyname: 'Engineering', name: 'engineering', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=engineering&FORMAT=tle', added: new Date() },
-    { id: 12, friendlyname: 'SATNOGS', name: 'satnogs', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=satnogs&FORMAT=tle', added: new Date() },
-    { id: 13, friendlyname: 'CubeSats', name: 'cubesat', url: 'https://www.celestrak.org/NORAD/elements/gp.php?GROUP=cubesat&FORMAT=tle', added: new Date() },
 ];
 
 const paginationModel = { page: 0, pageSize: 10 };
 
 export default function TLESourcesTable() {
-    const [open, setOpen] = useState(false);
     const socket = useSocket();
-    const [formValues, setFormValues] = useState({
-        friendlyname: '',
+    const [rows, setRows] = useState([]);
+    const [formDialogOpen, setFormDialogOpen] = useState(false);
+    const [selectedRows, setSelectedRows] = useState([]);
+    const defaultFormValues = {
+        id: null,
+        identifier: '',
+        name: '',
         url: '',
-        added: new Date().toISOString().split('T')[0],
-    });
+    };
+    const [formDialogValues, setFormDialogValues] = useState(defaultFormValues);
 
     const handleAddClick = () => {
-        setOpen(true);
+        setFormDialogValues(defaultFormValues);
+        setFormDialogOpen(true);
     };
 
     const handleClose = () => {
-        setOpen(false);
+        setFormDialogOpen(false);
     };
 
     const handleInputChange = (e) => {
         const { name, value } = e.target;
-        setFormValues(prev => ({ ...prev, [name]: value }));
+        setFormDialogValues(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditClick = (e) => {
+        const singleRowId = selectedRows[0];
+        setFormDialogValues({...rows.find(r => r.id === singleRowId), id: singleRowId});
+        setFormDialogOpen(true);
+    };
+
+    const handleDeleteClick = (e) => {
+        socket.emit("data_submission", "delete-tle-sources", selectedRows, (response) => {
+            if (response.success === true) {
+                setRows(response.data);
+            } else {
+                console.error(response.error);
+            }
+        });
     };
 
     const handleSubmit = () => {
-        // Process the form values as needed, e.g., add a new row to the table
-        console.log('Form Submitted:', formValues);
-        // Close the dialog
-        setOpen(false);
+        let cmd = null;
+        if(formDialogValues.id === null) {
+            cmd = 'submit-tle-sources';
+        } else if (formDialogValues.id) {
+            cmd = 'edit-tle-source';
+        }
+
+        socket.emit("data_submission", cmd, {...formDialogValues}, (response) => {
+            if (response.success === true) {
+                setFormDialogOpen(false);
+                setRows(response.data);
+            } else {
+                console.error(response.error);
+            }
+        });
     };
 
     useEffect(() => {
         console.info(`Fetching TLE sources from backend... ${new Date().toISOString()}`);
-        socket.emit("data_request", "get_tle_sources", (response) => {
-            console.log(response); // ok
+        socket.emit("data_request", "get-tle-sources", null, (response) => {
+            setRows(response.data);
         });
 
         return () => {
-            // Cleanup logic here
+
         };
     }, []);
     
-
     return (
         <Box sx={{ width: '100%', marginTop: 0 }}>
             <Alert severity="info">
@@ -81,50 +96,49 @@ export default function TLESourcesTable() {
                 columns={columns}
                 initialState={{ pagination: { paginationModel } }}
                 pageSizeOptions={[5, 10]}
-                checkboxSelection
+                checkboxSelection={true}
+                onRowSelectionModelChange={(selected) => {
+                    setSelectedRows(selected);
+                }}
                 sx={{ border: 0, marginTop: 2 }}
             />
             <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
                 <Button variant="contained" onClick={handleAddClick}>
                     Add
                 </Button>
-                <Button variant="contained">
+                <Button variant="contained" disabled={selectedRows.length !== 1} onClick={handleEditClick}>
                     Edit
                 </Button>
-                <Button variant="contained" color="error">
+                <Button variant="contained" color="error" onClick={handleDeleteClick}>
                     Delete
                 </Button>
             </Stack>
 
             {/* Add TLE Source Dialog */}
-            <Dialog open={open} onClose={handleClose}>
+            <Dialog open={formDialogOpen} onClose={handleClose} sx={{ minWidth: 400 }} fullWidth maxWidth="sm">
                 <DialogTitle>Add TLE Source</DialogTitle>
                 <DialogContent>
                     <Stack spacing={2} sx={{ marginTop: 1 }}>
                         <TextField
                             label="Name"
-                            name="friendlyname"
-                            value={formValues.friendlyname}
+                            name="name"
+                            value={formDialogValues.name}
+                            onChange={handleInputChange}
+                            fullWidth
+                        />
+                        <TextField
+                            label="ID"
+                            name="identifier"
+                            value={formDialogValues.identifier}
                             onChange={handleInputChange}
                             fullWidth
                         />
                         <TextField
                             label="URL"
                             name="url"
-                            value={formValues.url}
+                            value={formDialogValues.url}
                             onChange={handleInputChange}
                             fullWidth
-                        />
-                        <TextField
-                            label="Added"
-                            name="added"
-                            type="date"
-                            value={formValues.added}
-                            onChange={handleInputChange}
-                            fullWidth
-                            InputLabelProps={{
-                                shrink: true,
-                            }}
                         />
                     </Stack>
                 </DialogContent>

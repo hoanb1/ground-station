@@ -1,6 +1,8 @@
-from sqlalchemy import Table, MetaData
 import uuid
+import json
+from sqlalchemy import Table, MetaData
 from datetime import datetime, UTC
+from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
@@ -11,6 +13,20 @@ Base = declarative_base()
 # Creates a MetaData object that holds schema-level information such as tables, columns, and constraints.
 metadata = MetaData()
 
+# Assuming serialize_sqla_object has been defined as before:
+def serialize_object(obj):
+    from datetime import date, datetime
+    from sqlalchemy.inspection import inspect
+
+    serialized = {}
+    for column in inspect(obj).mapper.column_attrs:
+        value = getattr(obj, column.key)
+        if isinstance(value, (datetime, date)):
+            value = value.isoformat()
+        elif isinstance(value, uuid.UUID):
+            value = str(value)
+        serialized[column.key] = value
+    return serialized
 
 class Satellites(Base):
     __tablename__ = 'satellites'
@@ -35,6 +51,7 @@ class Satellites(Base):
     associated_satellites = Column(String, nullable=True)
     added = Column(DateTime, nullable=False,  default=datetime.now(UTC))
     updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
 
 class Transmitters(Base):
     __tablename__ = 'transmitters'

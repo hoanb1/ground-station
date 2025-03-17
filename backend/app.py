@@ -1,39 +1,38 @@
 import argparse
-from fastapi import FastAPI, WebSocket, Depends
-from models import Base
-import logging
-import socketio
-from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker
 import uvicorn
 import logging.config
 import yaml
+import logging
+import socketio
 import json
+from datetime import datetime
+import crud
+from fastapi import FastAPI, WebSocket, Depends
+from models import Base
+from fastapi.middleware.cors import CORSMiddleware
+from sqlalchemy import create_engine, text
+from sqlalchemy.ext.declarative import declarative_base
+from sqlalchemy.orm import sessionmaker, declared_attr
+from logger import get_logger, get_logger_config
+from arguments import arguments
 
+# setup a logger
+logger = get_logger(arguments)
 
-def setup_arguments():
+# hold a list of sessions
+SESSIONS = {}
+
+def get_database_session():
     """
-    Configures and parses command-line arguments for launching a FastAPI application.
+    Provides a database session instance.
 
-    This function sets up an argument parser to accept custom inputs such as the
-    host address, port number, and database file path necessary to configure and
-    run a FastAPI application. It returns an object containing the parsed arguments.
+    This function creates and returns a scoped session to interact with
+    the database. Always close the session after use.
 
-    :raises SystemExit: If the parsing fails or the arguments are invalid.
-
-    :return: A namespace object containing the parsed arguments.
-    :rtype: argparse.Namespace
+    :return: A database session instance.
+    :rtype: sqlalchemy.orm.Session
     """
-    parser = argparse.ArgumentParser(description="Start the FastAPI app with custom arguments.")
-    parser.add_argument("--host", type=str, default="127.0.0.1", help="Host to run the server on")
-    parser.add_argument("--port", type=int, default=8000, help="Port to run the server on")
-    parser.add_argument("--db", type=str, default="./gs.db", help="Path to the database file")
-    parser.add_argument("--log-level", type=str, default="info", choices=["debug", "info", "warning", "error", "critical"], help="Set the logging level")
-    parser.add_argument("--log-config", type=str, default="logconfig.yaml", help="Path to the logger configuration file")
-    arguments = parser.parse_args()
-    return arguments
+    return SessionLocal()
 
 # Create an asynchronous Socket.IO server using ASGI mode.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True)
@@ -54,23 +53,74 @@ app.add_middleware(
 
 @sio.event
 async def connect(sid, environ):
-    logger.info(f'Client ${sid} connected')
+    client_ip = environ.get("REMOTE_ADDR")
+    logger.info(f'Client {sid} from {client_ip} connected')
+    SESSIONS[sid] = environ
 
 @sio.event
-async def disconnect(sid):
-    logger.info(f'Client ${sid} disconnected',)
+async def disconnect(sid, environ):
+    logger.info(f'Client {sid} from {SESSIONS[sid]['REMOTE_ADDR']} disconnected',)
+    del SESSIONS[sid]
 
 @sio.on('data_request')
-async def handle_frontend_data_requests(sid, *params):
+async def handle_frontend_data_requests(sid, cmd, data):
+    logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
+    dbsession = SessionLocal()
+    reply = {'success': None, 'data': None}
+
+    if cmd == "get-tle-sources":
+        # get rows
+        tle_sources = crud.fetch_satellite_tle_source(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+    dbsession.close()
+
+    return reply
+
+@sio.on('data_submission')
+async def handle_frontend_data_submissions(sid, cmd, data):
+    logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
+
+    reply = {'success': None, 'data': None}
+    dbsession = SessionLocal()
+
+    if cmd == "submit-tle-sources":
+        # create a TLE source
+        logger.info(f'Adding TLE source: {data}')
+        crud.add_satellite_tle_source(dbsession, data)
+
+        # get rows
+        tle_sources = crud.fetch_satellite_tle_source(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+
+    elif cmd == "delete-tle-sources":
+        logger.info(f'Deleting TLE source: {data}')
+        crud.delete_satellite_tle_sources(dbsession, data)
+
+        # get rows
+        tle_sources = crud.fetch_satellite_tle_source(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+
+    elif cmd == "edit-tle-source":
+        logger.info(f'Editing TLE source: {data}')
+        crud.edit_satellite_tle_source(dbsession, data['id'], data)
+
+        # get rows
+        tle_sources = crud.fetch_satellite_tle_source(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+
+    else:
+        logger.info(f'Unknown command: {cmd}')
+
+    dbsession.close()
+
+    return reply
+
+@sio.on('auth_request')
+async def handle_frontend_auth_requests(sid, *params):
     logger.info(f'Received event from ${sid}: ${params[0]}')
 
     return {'success': True, 'message': "Event received"}
 
-@sio.event
-async def message(sid, data):
-    logger.info(f'Received message from ${sid}: ${data}')
-
-    return {'success': True, 'message': "Message received"}
 
 # Example route
 @app.get("/")
@@ -94,44 +144,22 @@ def check_and_create_tables():
     logger.info("Database tables are ensured to exist.")
 
 
-def yaml_to_json_config(filepath):
-    """
-    Converts a YAML file to a Python dictionary.
-
-    This function reads a YAML configuration file from the provided file path
-    and returns its contents as a Python dictionary. It is useful for loading
-    configuration settings stored in YAML format.
-
-    :param filepath: Path to the YAML file that needs to be converted.
-    :type filepath: str
-    :return: Python dictionary containing the loaded YAML configuration.
-    :rtype: dict
-    :raises FileNotFoundError: If the specified file cannot be found.
-    :raises yaml.YAMLError: If the YAML file cannot be parsed due to invalid syntax.
-    """
-    with open(filepath, "r") as file:
-        return yaml.safe_load(file)
-
 
 # Command-line argument parsing
 if __name__ == "__main__":
 
-    # setup cli arguments
-    args = setup_arguments()
+    # setup a logger
+    logger = get_logger(arguments)
 
-    # logger setup
-    logging_config = yaml_to_json_config(args.log_config)
-    logging.config.dictConfig(logging_config)
-    logger = logging.getLogger("ground-station")
-    logger.info("Starting the Ground Station Backend with the following arguments: %s", args)
-
+    logger.info("Configuring database connection...")
     # SQLAlchemy setup
-    DATABASE_URL = f"sqlite:///./{args.db}"
+    DATABASE_URL = f"sqlite:///./{arguments.db}"
     engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
     SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
 
     # create tables
     check_and_create_tables()
 
+    logger.info(f'Starting Ground Station server with parameters {arguments}')
     # Run the ASGI application with Uvicorn on port 5000.
-    uvicorn.run(socket_app, host="0.0.0.0", port=5000, log_config=logging_config)
+    uvicorn.run(socket_app, host="0.0.0.0", port=5000, log_config=get_logger_config(arguments))
