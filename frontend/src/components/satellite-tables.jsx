@@ -10,6 +10,8 @@ import TableRow from '@mui/material/TableRow';
 import Typography from "@mui/material/Typography";
 import {Alert, AlertTitle, Box, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {getSatellitesByGroupId, getSatellitesGroups, getAllSatellites, getSatelliteDataByNoradId} from './tles.jsx';
+import {useEffect} from "react";
+import {useSocket} from "./socket.jsx";
 
 
 const columns = [
@@ -43,6 +45,7 @@ export default function SatelliteTable() {
     const [satGroups, setSatGroups] = React.useState(getSatellitesGroups());
     const [satellites, setSatellites] = React.useState([]);
     const [satGroupId, setSatGroupId] = React.useState(null);
+    const socket = useSocket();
 
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
@@ -54,6 +57,12 @@ export default function SatelliteTable() {
     };
 
     React.useEffect(() => {
+
+        console.info(`Fetching satellites from backend... ${new Date().toISOString()}`);
+        socket.emit("data_request", "get_satellites", (response) => {
+            console.log(response); // ok
+        });
+
         setSatellites(getSatellitesByGroupId(satGroupId))
         return () => {
             // Optional cleanup logic

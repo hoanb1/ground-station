@@ -4,16 +4,19 @@ import Typography from "@mui/material/Typography";
 import PropTypes from "prop-types";
 import * as React from "react";
 import {Outlet} from "react-router";
-import {Avatar, Box, Button, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
+import {Avatar, Backdrop, Box, Button, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import {GroundStationLogoGreenBlue, GSRetroLogo} from "./icons.jsx";
 import {stringAvatar} from "./common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
-import {useCallback} from "react";
+import {useCallback, useEffect, useState} from "react";
 import {handleSetGridEditableOverview as OverviewModeSetEditing} from './overview-sat-track.jsx'
 import {handleSetGridEditableTarget as TargetModeSetEditing} from './target-sat-track.jsx'
 import CheckIcon from '@mui/icons-material/Check';
+import CircularProgress from "@mui/material/CircularProgress";
+import {useSocket} from "./socket.jsx";
+import {enqueueSnackbar, SnackbarProvider} from "notistack";
 
 function DashboardEditor() {
     const [isEditing, setIsEditing] = React.useState(false);
@@ -265,15 +268,61 @@ const createPreviewComponent = (mini) => {
 };
 
 export default function Layout() {
+    const socket = useSocket();
+    const [ loading, setLoading ] = useState(true);
+    
+    const handleMainSpinningCircleClose = () => {
+        setLoading(false);
+    };
+
+    // To listen to the connection event
+    useEffect(() => {
+        if (socket) {
+            socket.on('connect', () => {
+                console.log('Socket connected with ID:', socket.id);
+                enqueueSnackbar("Connected to server", {variant: 'success'});
+                setLoading(false);
+            });
+
+            socket.on("reconnect_attempt", (attempt) => {
+                enqueueSnackbar(`Not connected! Attempting to reconnect (${attempt})...`, {variant: 'info'});
+            });
+
+            socket.on("error", (error) => {
+                enqueueSnackbar(`Error occurred, ${error}`, {variant: 'error'});
+            });
+
+            socket.on('disconnect', () => {
+                enqueueSnackbar("Disconnected from server", {variant: 'error'});
+                setLoading(true);
+            })
+
+            return () => {
+                socket.off('connect');
+                socket.off('reconnect_attempt');
+                socket.off('error');
+                socket.off('disconnect');
+            };
+        }
+    }, [socket]);
 
     return (
-        <DashboardLayout defaultSidebarCollapsed slots={{
-            appTitle: CustomAppTitle,
-            toolbarActions: ToolbarActions,
-            toolbarAccount: () => {},
-            sidebarFooter: SidebarFooterAccount
-        }}>
-            <Outlet />
-        </DashboardLayout>
+        <SnackbarProvider maxSnack={5} autoHideDuration={5000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}>
+            {loading === true? (
+                <Backdrop sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}
+                onClick={handleMainSpinningCircleClose}>
+                    <CircularProgress color="secondary" />
+                </Backdrop>
+            ) : (
+                <DashboardLayout defaultSidebarCollapsed slots={{
+                    appTitle: CustomAppTitle,
+                    toolbarActions: ToolbarActions,
+                    toolbarAccount: () => {},
+                    sidebarFooter: SidebarFooterAccount
+                }}>
+                    <Outlet />
+                </DashboardLayout>
+            )}
+        </SnackbarProvider>
     );
 }

@@ -36,7 +36,7 @@ const BRANDING = {
 };
 
 export default function App(props) {
-    const [loggedIn, setLoggedIn] = useState(false);
+    const [loggedIn, setLoggedIn] = useState(true);
     const [session, setSession] = useState(demoSession);
     const dashboardTheme = setupTheme();
 
@@ -144,22 +144,20 @@ export default function App(props) {
     ];
 
     return (
-        <SnackbarProvider maxSnack={5} autoHideDuration={5000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}>
-            <ReactRouterAppProvider
-                navigation={NAVIGATION}
-                theme={dashboardTheme}
-                authentication={authentication}
-                session={session}
-                branding={BRANDING}
-            >
-                <SocketProvider>
-                    {loggedIn ? (
-                        <Outlet/>
-                    ) : (
-                        <LoginForm handleSignedInCallback={handleSignedInCallback}/>
-                    )}
-                </SocketProvider>
-            </ReactRouterAppProvider>
-        </SnackbarProvider>
+        <SocketProvider>
+                <ReactRouterAppProvider
+                    navigation={NAVIGATION}
+                    theme={dashboardTheme}
+                    authentication={authentication}
+                    session={session}
+                    branding={BRANDING}
+                >
+                        {loggedIn ? (
+                            <Outlet/>
+                        ) : (
+                            <LoginForm handleSignedInCallback={handleSignedInCallback}/>
+                        )}
+                </ReactRouterAppProvider>
+        </SocketProvider>
     );
 }

@@ -39,10 +39,6 @@ const router = createBrowserRouter([
                         path: "satellites",
                         children: [
                             {
-                                path: "",
-                                Component: SettingsTabSatellites,
-                            },
-                            {
                                 path: "satellites",
                                 Component: SettingsTabSatellites,
                             },
@@ -59,10 +55,6 @@ const router = createBrowserRouter([
                     {
                         path: "settings",
                         children: [
-                            {
-                                path: "",
-                                Component: SettingsTabPreferences,
-                            },
                             {
                                 path: "preferences",
                                 Component: SettingsTabPreferences,
@@ -88,10 +80,6 @@ const router = createBrowserRouter([
                     {
                         path: "hardware",
                         children: [
-                            {
-                                path: "",
-                                Component: SettingsTabRig,
-                            },
                             {
                                 path: "rig",
                                 Component: SettingsTabRig,

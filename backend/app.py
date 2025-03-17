@@ -60,9 +60,9 @@ async def connect(sid, environ):
 async def disconnect(sid):
     logger.info(f'Client ${sid} disconnected',)
 
-@sio.on('get_satellite_groups')
-async def handle_my_custom_event(sid, arg1, arg2):
-    logger.info(f'Received event from ${sid}: ${arg1} ${arg2}')
+@sio.on('data_request')
+async def handle_frontend_data_requests(sid, *params):
+    logger.info(f'Received event from ${sid}: ${params[0]}')
 
     return {'success': True, 'message': "Event received"}
 

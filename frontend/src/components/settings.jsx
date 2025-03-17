@@ -13,7 +13,6 @@ import {
     Select, FormHelperText, MenuItem, AlertTitle, Divider, ButtonGroup
 } from '@mui/material';
 import { Link } from 'react-router';
-import {PageContainer} from "@toolpad/core";
 import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 import {gridLayoutStoreName as overviewGridLayoutName} from './overview-sat-track.jsx';
@@ -21,7 +20,6 @@ import {gridLayoutStoreName as targetGridLayoutName} from './target-sat-track.js
 import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
-import { DataGrid } from '@mui/x-data-grid';
 import Grid from "@mui/material/Grid2";
 import {HOME_LON, HOME_LAT} from "./common.jsx";
 import {SimpleVectorCircle} from "./icons.jsx";
@@ -29,14 +27,11 @@ import AntennaRotatorTable from "./rotator-table.jsx";
 import Stack from "@mui/material/Stack";
 import RigTable from "./rig-table.jsx";
 import {styled} from "@mui/material/styles";
-import SatelliteTables from "./satellite-tables.jsx";
 import TLESourcesTable from "./tle-sources.jsx";
-import VirtualizedSatelliteTable from "./satellite-tables.jsx";
 import SatelliteTable from "./satellite-tables.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "./satellite-groups.jsx";
 import UsersTable from "./users.jsx";
-import MemoizedSatelliteGroupsTable from "./satellite-groups.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -94,7 +89,7 @@ function getTabCategory(value) {
     return null;
 }
 
-function SettingsTabs({initialMainTab, initialTab}) {
+const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
     const [activeMainTab, setActiveMainTab] = useState(initialMainTab);
     const [activeTab, setActiveTab] = useState(initialTab);
     const [childTabRow, setChildTabRow] = useState([])
@@ -168,7 +163,7 @@ function SettingsTabs({initialMainTab, initialTab}) {
     }));
 
     useEffect(() => {
-
+        console.info("here!");
         let childTabs = [];
         // Define arrays of tabs for each main category
         switch (activeMainTab) {
@@ -247,7 +242,7 @@ function SettingsTabs({initialMainTab, initialTab}) {
              {renderActiveTabForm()}
          </Box>
     );
-}
+});
 
 // Fix for missing marker icons in React-Leaflet
 delete L.Icon.Default.prototype._getIconUrl;
@@ -357,7 +352,7 @@ const SatelliteGroupsForm = () => {
 
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
-            <MemoizedSatelliteGroupsTable/>
+            <SatelliteGroupsTable/>
         </Paper>);
 };
 

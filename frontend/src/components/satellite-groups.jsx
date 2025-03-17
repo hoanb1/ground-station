@@ -40,7 +40,7 @@ const initialRows = [
 
 const paginationModel = {page: 0, pageSize: 10};
 
-function SatelliteGroupsTable() {
+const SatelliteGroupsTable = React.memo(function () {
     const [rows, setRows] = useState(initialRows);
     const [dialogOpen, setDialogOpen] = useState(false);
     const socket = useSocket();
@@ -59,7 +59,7 @@ function SatelliteGroupsTable() {
     useEffect(() => {
         // fetch groups from backend
         console.info(`Fetching groups from backend... ${new Date().toISOString()}`);
-        socket.emit("get_satellite_groups", "1", { name: "updated" }, (response) => {
+        socket.emit("data_request", "satellite_groups", (response) => {
             console.log(response); // ok
         });
 
@@ -153,7 +153,6 @@ function SatelliteGroupsTable() {
             </Dialog>
         </Box>
     );
-}
+});
 
-const MemoizedSatelliteGroupsTable = React.memo(SatelliteGroupsTable);
-export default MemoizedSatelliteGroupsTable;
+export default SatelliteGroupsTable;

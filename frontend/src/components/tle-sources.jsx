@@ -1,8 +1,9 @@
 import * as React from 'react';
-import { useState } from 'react';
+import {useEffect, useState} from 'react';
 import { DataGrid } from '@mui/x-data-grid';
 import Typography from "@mui/material/Typography";
 import { Alert, AlertTitle, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Stack } from "@mui/material";
+import {useSocket} from "./socket.jsx";
 
 const columns = [
     { field: 'friendlyname', headerName: 'Name', width: 150 },
@@ -30,6 +31,7 @@ const paginationModel = { page: 0, pageSize: 10 };
 
 export default function TLESourcesTable() {
     const [open, setOpen] = useState(false);
+    const socket = useSocket();
     const [formValues, setFormValues] = useState({
         friendlyname: '',
         url: '',
@@ -55,6 +57,18 @@ export default function TLESourcesTable() {
         // Close the dialog
         setOpen(false);
     };
+
+    useEffect(() => {
+        console.info(`Fetching TLE sources from backend... ${new Date().toISOString()}`);
+        socket.emit("data_request", "get_tle_sources", (response) => {
+            console.log(response); // ok
+        });
+
+        return () => {
+            // Cleanup logic here
+        };
+    }, []);
+    
 
     return (
         <Box sx={{ width: '100%', marginTop: 0 }}>
