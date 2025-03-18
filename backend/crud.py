@@ -12,6 +12,7 @@ from models import Rigs
 from models import Satellites
 from models import Transmitters
 from models import SatelliteTLESources
+from models import SatelliteGroups
 from app import logger
 from models import serialize_object
 from typing import Optional
@@ -684,7 +685,7 @@ def add_satellite_tle_source(session, payload: dict):
         return {"success": True, "data": new_source}
     except Exception as e:
         session.rollback()
-        logger.error(f"Error fetching satellite TLE source: {e}")
+        logger.error(f"Error adding satellite TLE source: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
@@ -715,7 +716,7 @@ def edit_satellite_tle_source(session, satellite_tle_source_id: str, payload: di
         return {"success": True, "data": source}
     except Exception as e:
         session.rollback()
-        logger.error(f"Error fetching satellite TLE source: {e}")
+        logger.error(f"Error editing satellite TLE source: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
@@ -762,3 +763,78 @@ def delete_satellite_tle_sources(session, satellite_tle_source_ids: list[str]):
         logger.error(f"Error deleting satellite TLE sources: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
+
+
+def fetch_satellite_group(session: Session, satellite_group_id: Optional[uuid.UUID] = None) -> dict:
+    """
+    Fetch satellite group records.
+
+    If satellite_group_id is provided, returns one satellite group record.
+    Otherwise, returns all satellite group records.
+    """
+    try:
+        if satellite_group_id is None:
+            groups = session.query(SatelliteGroups).all()
+            groups = [serialize_object(group) for group in groups]  # Serialize all groups
+            return {"success": True, "data": groups, "error": None}
+        else:
+            group = session.query(SatelliteGroups).filter(SatelliteGroups.id == satellite_group_id).first()
+            group = serialize_object(group) if group else None  # Serialize single group if found
+            return {"success": True, "data": group, "error": None}
+    except Exception as e:
+        logger.error(f"Error fetching satellite groups: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "data": None, "error": str(e)}
+
+
+def add_satellite_group(session: Session, data: dict) -> dict:
+    """
+    Add a new satellite group record.
+    """
+    try:
+        group = SatelliteGroups(**data)
+        session.add(group)
+        session.commit()
+        return {"success": True, "data": group, "error": None}
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error adding satellite groups: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "data": None, "error": str(e)}
+
+
+def edit_satellite_group(session: Session, satellite_group_id: uuid.UUID, data: dict) -> dict:
+    """
+    Edit an existing satellite group record.
+    """
+    try:
+        group = session.query(SatelliteGroups).filter(SatelliteGroups.id == satellite_group_id).first()
+        if not group:
+            return {"success": False, "data": None, "error": "Satellite group not found."}
+        for key, value in data.items():
+            setattr(group, key, value)
+        session.commit()
+        return {"success": True, "data": group, "error": None}
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error editing satellite groups: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "data": None, "error": str(e)}
+
+
+def delete_satellite_group(session: Session, satellite_group_id: uuid.UUID) -> dict:
+    """
+    Delete a satellite group record.
+    """
+    try:
+        group = session.query(SatelliteGroups).filter(SatelliteGroups.id == satellite_group_id).first()
+        if not group:
+            return {"success": False, "data": None, "error": "Satellite group not found."}
+        session.delete(group)
+        session.commit()
+        return {"success": True, "data": None, "error": None}
+    except Exception as e:
+        session.rollback()
+        logger.error(f"Error deleting satellite groups: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "data": None, "error": str(e)}

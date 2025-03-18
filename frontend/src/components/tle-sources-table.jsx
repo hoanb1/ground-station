@@ -1,17 +1,166 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
 import { DataGrid } from '@mui/x-data-grid';
-import { Alert, AlertTitle, Box, Button, Dialog, DialogTitle, DialogContent, DialogActions, TextField, Stack } from "@mui/material";
+import {styled, useTheme} from '@mui/material/styles';
+import {
+    Alert,
+    AlertTitle,
+    Box,
+    Button,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogActions,
+    TextField,
+    Stack, Select, MenuItem,
+} from "@mui/material";
 import {useSocket} from "./socket.jsx";
+import PropTypes from "prop-types";
+import Card from '@mui/material/Card';
+import CardContent from '@mui/material/CardContent';
+import CardMedia from '@mui/material/CardMedia';
+import IconButton from '@mui/material/IconButton';
+import Typography from '@mui/material/Typography';
+import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SkipNextIcon from '@mui/icons-material/SkipNext';
+import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
+
 
 const columns = [
     { field: 'name', headerName: 'Name', width: 150 },
     { field: 'identifier', headerName: 'ID', width: 150 },
     { field: 'url', headerName: 'URL', width: 600 },
+    { field: 'format', headerName: 'Format', width: 60 },
     { field: 'added', headerName: 'Added', width: 400 },
 ];
 
 const paginationModel = { page: 0, pageSize: 10 };
+
+function LinearProgressWithLabel(props) {
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'center' }}>
+            <Box sx={{ width: '100%', mr: 1 }}>
+                <LinearProgress variant="determinate" {...props} />
+            </Box>
+            <Box sx={{ minWidth: 35 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {`${Math.round(props.value)}%`}
+                </Typography>
+            </Box>
+        </Box>
+    );
+}
+
+LinearProgressWithLabel.propTypes = {
+    /**
+     * The value of the progress indicator for the determinate and buffer variants.
+     * Value between 0 and 100.
+     */
+    value: PropTypes.number.isRequired,
+};
+
+function LinearWithValueLabel() {
+    const [progress, setProgress] = React.useState(0);
+
+    const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
+        height: 20,
+        borderRadius: 5,
+        [`&.${linearProgressClasses.colorPrimary}`]: {
+            backgroundColor: theme.palette.grey[200],
+            ...theme.applyStyles('dark', {
+                backgroundColor: theme.palette.grey[800],
+            }),
+        },
+        [`& .${linearProgressClasses.bar}`]: {
+            borderRadius: 5,
+            backgroundColor: '#1a90ff',
+            ...theme.applyStyles('dark', {
+                backgroundColor: '#308fe8',
+            }),
+        },
+    }));
+
+    useEffect(() => {
+        //setProgress((prevProgress) => (prevProgress >= 100 ? 10 : prevProgress + 10));
+        return () => {
+        };
+    }, []);
+
+    return (
+        <Box sx={{ display: 'flex', alignItems: 'left', width: '100%' }}>
+            <Box sx={{ width: '100%', mr: 1 }}>
+                <BorderLinearProgress
+                    value={progress}
+                    variant="determinate"
+                />
+            </Box>
+                <Box sx={{ minWidth: 35 }}>
+                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                    {`${Math.round(progress)}%`}
+                </Typography>
+            </Box>
+        </Box>
+    );
+}
+
+const SynchronizeTLEsCard = function () {
+    const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+
+    return (
+        <Card sx={{ display: 'flex', marginTop: 2, marginBottom: 0}}>
+            <Box sx={{ display: 'flex', flexDirection: 'column', width: '40%' }}>
+                <CardContent sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column' }}>
+                    <Typography component="div" variant="h6">
+                        Fetch data from TLE sources
+                    </Typography>
+                    <Typography variant="subtitle1" component="div" sx={{ color: 'text.secondary' }}>
+                        click to start
+                    </Typography>
+                </CardContent>
+                <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pb: 1, padding: 2}}>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => setConfirmationDialogOpen(true)}
+                    >
+                        Synchronize
+                    </Button>
+                </Box>
+            </Box>
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 2}}>
+                <LinearWithValueLabel/>
+            </Box>
+            <Dialog
+                open={confirmationDialogOpen}
+                onClose={() => setConfirmationDialogOpen(false)}
+            >
+                <DialogTitle>Confirm Action</DialogTitle>
+                <DialogContent>Are you sure you want to perform this action?</DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmationDialogOpen(false)}>Cancel</Button>
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={() => {
+                            socket.emit("data_submission", "custom-action", null, (response) => {
+                                if (response.success) {
+                                    console.log("Action completed successfully", response);
+                                } else {
+                                    console.error("Action failed", response.error);
+                                }
+                            });
+                            setConfirmationDialogOpen(false);
+                        }}
+                    >
+                        Yes
+                    </Button>
+                </DialogActions>
+            </Dialog>
+        </Card>
+    );
+}
+
 
 export default function TLESourcesTable() {
     const socket = useSocket();
@@ -23,9 +172,12 @@ export default function TLESourcesTable() {
         identifier: '',
         name: '',
         url: '',
+        format: '3le',
     };
     const [formDialogValues, setFormDialogValues] = useState(defaultFormValues);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+    const theme = useTheme();
 
     const handleAddClick = () => {
         setFormDialogValues(defaultFormValues);
@@ -76,7 +228,6 @@ export default function TLESourcesTable() {
     };
 
     useEffect(() => {
-        console.info(`Fetching TLE sources from backend... ${new Date().toISOString()}`);
         socket.emit("data_request", "get-tle-sources", null, (response) => {
             setRows(response.data);
         });
@@ -92,6 +243,32 @@ export default function TLESourcesTable() {
                 <AlertTitle>TLE sources</AlertTitle>
                 TLE sources are loaded from Celestrak.org in TLE format
             </Alert>
+            <SynchronizeTLEsCard/>
+            <Box sx={{marginTop: 4}}>
+                <Dialog open={confirmationDialogOpen} onClose={() => setConfirmationDialogOpen(false)}>
+                    <DialogTitle>Confirm Action</DialogTitle>
+                    <DialogContent>Are you sure you want to perform this action?</DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setConfirmationDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            variant="contained"
+                            color="primary"
+                            onClick={() => {
+                                socket.emit("data_submission", "custom-action", null, (response) => {
+                                    if (response.success) {
+                                        console.log("Action completed successfully", response);
+                                    } else {
+                                        console.error("Action failed", response.error);
+                                    }
+                                });
+                                setConfirmationDialogOpen(false);
+                            }}
+                        >
+                            Yes
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Box>
             <DataGrid
                 rows={rows}
                 columns={columns}
@@ -110,7 +287,7 @@ export default function TLESourcesTable() {
                 <Button variant="contained" disabled={selectedRows.length !== 1} onClick={handleEditClick}>
                     Edit
                 </Button>
-                <Button variant="contained" color="error" onClick={() => setDeleteConfirmOpen(true)}>
+                <Button variant="contained" color="error" disabled={selectedRows.length < 1} onClick={() => setDeleteConfirmOpen(true)}>
                     Delete
                 </Button>
                 <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
@@ -131,8 +308,6 @@ export default function TLESourcesTable() {
                     </DialogActions>
                 </Dialog>
             </Stack>
-
-            {/* Add TLE Source Dialog */}
             <Dialog open={formDialogOpen} onClose={handleClose} sx={{ minWidth: 400 }} fullWidth maxWidth="sm">
                 <DialogTitle>Add TLE Source</DialogTitle>
                 <DialogContent>
@@ -140,6 +315,7 @@ export default function TLESourcesTable() {
                         <TextField
                             label="Name"
                             name="name"
+                            variant={"filled"}
                             value={formDialogValues.name}
                             onChange={handleInputChange}
                             fullWidth
@@ -147,6 +323,7 @@ export default function TLESourcesTable() {
                         <TextField
                             label="ID"
                             name="identifier"
+                            variant={"filled"}
                             value={formDialogValues.identifier}
                             onChange={handleInputChange}
                             fullWidth
@@ -154,10 +331,21 @@ export default function TLESourcesTable() {
                         <TextField
                             label="URL"
                             name="url"
+                            variant={"filled"}
                             value={formDialogValues.url}
                             onChange={handleInputChange}
                             fullWidth
                         />
+                        <Select
+                            label="Format"
+                            name="format"
+                            value={formDialogValues.format || ''}
+                            onChange={handleInputChange}
+                            fullWidth
+                         variant={"filled"}>
+                            <MenuItem value="3le">3LE</MenuItem>
+                            <MenuItem value="json">JSON</MenuItem>
+                        </Select>
                     </Stack>
                 </DialogContent>
                 <DialogActions>

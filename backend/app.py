@@ -15,6 +15,7 @@ from sqlalchemy.ext.declarative import declarative_base
 from sqlalchemy.orm import sessionmaker, declared_attr
 from logger import get_logger, get_logger_config
 from arguments import arguments
+from handlers import *
 
 # setup a logger
 logger = get_logger(arguments)
@@ -63,64 +64,15 @@ async def disconnect(sid, environ):
     del SESSIONS[sid]
 
 @sio.on('data_request')
-async def handle_frontend_data_requests(sid, cmd, data):
+async def handle_frontend_data_requests(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-    dbsession = SessionLocal()
-    reply = {'success': None, 'data': None}
-
-    if cmd == "get-tle-sources":
-        # get rows
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
-
-    elif cmd == "get_satellites":
-        # get rows
-        tle_sources = crud.fetch_satellites(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
-    else:
-        logger.info(f'Unknown command: {cmd}')
-
-    dbsession.close()
-
+    reply = data_request_routing(SessionLocal, cmd, data, logger)
     return reply
 
 @sio.on('data_submission')
-async def handle_frontend_data_submissions(sid, cmd, data):
+async def handle_frontend_data_submissions(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-
-    reply = {'success': None, 'data': None}
-    dbsession = SessionLocal()
-
-    if cmd == "submit-tle-sources":
-        # create a TLE source
-        logger.info(f'Adding TLE source: {data}')
-        crud.add_satellite_tle_source(dbsession, data)
-
-        # get rows
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
-
-    elif cmd == "delete-tle-sources":
-        logger.info(f'Deleting TLE source: {data}')
-        crud.delete_satellite_tle_sources(dbsession, data)
-
-        # get rows
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
-
-    elif cmd == "edit-tle-source":
-        logger.info(f'Editing TLE source: {data}')
-        crud.edit_satellite_tle_source(dbsession, data['id'], data)
-
-        # get rows
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
-
-    else:
-        logger.info(f'Unknown command: {cmd}')
-
-    dbsession.close()
-
+    reply = data_submission_routing(SessionLocal, cmd, data, logger)
     return reply
 
 @sio.on('auth_request')

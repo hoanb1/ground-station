@@ -147,6 +147,7 @@ class SatelliteTLESources(Base):
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=False)
     url = Column(String, nullable=False)
+    format = Column(String, nullable=False, default='3le')
     added = Column(DateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
