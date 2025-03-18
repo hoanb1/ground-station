@@ -649,7 +649,7 @@ def delete_transmitter(session: Session, transmitter_id: uuid.UUID) -> dict:
         return {"success": False, "error": str(e)}
 
 
-def fetch_satellite_tle_source(session, satellite_tle_source_id: int = None):
+def fetch_satellite_tle_source(session: Session, satellite_tle_source_id: int = None):
     """
     Retrieve satellite TLE source records. If an ID is provided, fetch the specific record, otherwise return all sources.
     """
@@ -673,7 +673,7 @@ def fetch_satellite_tle_source(session, satellite_tle_source_id: int = None):
         return {"success": False, "error": str(e)}
 
 
-def add_satellite_tle_source(session, payload: dict):
+def add_satellite_tle_source(session: Session, payload: dict):
     """
     Create a new satellite TLE source record with the provided payload and return a result object.
     """
@@ -690,7 +690,7 @@ def add_satellite_tle_source(session, payload: dict):
         return {"success": False, "error": str(e)}
 
 
-def edit_satellite_tle_source(session, satellite_tle_source_id: str, payload: dict):
+def edit_satellite_tle_source(session: Session, satellite_tle_source_id: str, payload: dict):
     """
     Update an existing satellite TLE source record with new values provided in payload.
     Returns a result object containing the updated record or an error message.
@@ -721,7 +721,7 @@ def edit_satellite_tle_source(session, satellite_tle_source_id: str, payload: di
         return {"success": False, "error": str(e)}
 
 
-def delete_satellite_tle_sources(session, satellite_tle_source_ids: list[str]):
+def delete_satellite_tle_sources(session: Session, satellite_tle_source_ids: list[str] | dict):
     """
     Deletes multiple satellite TLE source records using their IDs.
 
@@ -747,7 +747,7 @@ def delete_satellite_tle_sources(session, satellite_tle_source_ids: list[str]):
         if not sources:
             return {"success": False, "error": "None of the Satellite TLE sources were found."}
 
-        # Delete each found source
+        # delete each found source
         for source in sources:
             session.delete(source)
 
@@ -773,6 +773,7 @@ def fetch_satellite_group(session: Session, satellite_group_id: Optional[uuid.UU
     Otherwise, returns all satellite group records.
     """
     try:
+
         if satellite_group_id is None:
             groups = session.query(SatelliteGroups).all()
             groups = [serialize_object(group) for group in groups]  # Serialize all groups
@@ -803,11 +804,13 @@ def add_satellite_group(session: Session, data: dict) -> dict:
         return {"success": False, "data": None, "error": str(e)}
 
 
-def edit_satellite_group(session: Session, satellite_group_id: uuid.UUID, data: dict) -> dict:
+def edit_satellite_group(session: Session, satellite_group_id: str, data: dict) -> dict:
     """
     Edit an existing satellite group record.
     """
     try:
+        del data['id']
+        satellite_group_id = uuid.UUID(satellite_group_id)
         group = session.query(SatelliteGroups).filter(SatelliteGroups.id == satellite_group_id).first()
         if not group:
             return {"success": False, "data": None, "error": "Satellite group not found."}
@@ -822,15 +825,22 @@ def edit_satellite_group(session: Session, satellite_group_id: uuid.UUID, data: 
         return {"success": False, "data": None, "error": str(e)}
 
 
-def delete_satellite_group(session: Session, satellite_group_id: uuid.UUID) -> dict:
+def delete_satellite_group(session: Session, satellite_group_ids: list[str] | dict) -> dict:
     """
     Delete a satellite group record.
     """
     try:
-        group = session.query(SatelliteGroups).filter(SatelliteGroups.id == satellite_group_id).first()
-        if not group:
+        satellite_group_ids = convert_strings_to_uuids(satellite_group_ids)
+        groups = session.query(SatelliteGroups).filter(SatelliteGroups.id.in_(satellite_group_ids)).all()
+        logger.info(groups)
+
+        if not groups:
             return {"success": False, "data": None, "error": "Satellite group not found."}
-        session.delete(group)
+
+        # delete each found group
+        for group in groups:
+            session.delete(group)
+
         session.commit()
         return {"success": True, "data": None, "error": None}
     except Exception as e:

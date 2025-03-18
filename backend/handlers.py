@@ -31,12 +31,12 @@ def data_request_routing(session, cmd, data, logger):
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
         reply = {'success': True, 'data': tle_sources.get('data', [])}
 
-    elif cmd == "get_satellites":
+    elif cmd == "get-satellites":
         # get rows
         tle_sources = crud.fetch_satellites(dbsession)
         reply = {'success': True, 'data': tle_sources.get('data', [])}
 
-    elif cmd == "satellite_groups":
+    elif cmd == "get-satellite-groups":
         satellite_groups = crud.fetch_satellite_group(dbsession)
         reply = {'success': True, 'data': satellite_groups.get('data', [])}
 
@@ -77,11 +77,9 @@ def data_submission_routing(session, cmd, data, logger):
     dbsession = session()
 
     if cmd == "submit-tle-sources":
-        # create a TLE source
         logger.info(f'Adding TLE source: {data}')
         crud.add_satellite_tle_source(dbsession, data)
 
-        # get rows
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
         reply = {'success': True, 'data': tle_sources.get('data', [])}
 
@@ -89,7 +87,6 @@ def data_submission_routing(session, cmd, data, logger):
         logger.info(f'Deleting TLE source: {data}')
         crud.delete_satellite_tle_sources(dbsession, data)
 
-        # get rows
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
         reply = {'success': True, 'data': tle_sources.get('data', [])}
 
@@ -99,6 +96,28 @@ def data_submission_routing(session, cmd, data, logger):
 
         # get rows
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+
+    elif cmd == "submit-satellite-group":
+        logger.info(f'Adding satellite group: {data}')
+        crud.add_satellite_group(dbsession, data)
+
+        tle_sources = crud.fetch_satellite_group(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+
+    elif cmd == "delete-satellite-group":
+        logger.info(f'Deleting satellite groups: {data}')
+        crud.delete_satellite_group(dbsession, data)
+
+        tle_sources = crud.fetch_satellite_group(dbsession)
+        reply = {'success': True, 'data': tle_sources.get('data', [])}
+
+    elif cmd == "edit-satellite-group":
+        logger.info(f'Editing satellite group: {data}')
+        crud.edit_satellite_group(dbsession, data['id'], data)
+
+        # get rows
+        tle_sources = crud.fetch_satellite_group(dbsession)
         reply = {'success': True, 'data': tle_sources.get('data', [])}
 
     else:

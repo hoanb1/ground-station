@@ -16,37 +16,25 @@ import {
 } from "@mui/material";
 import {useSocket} from "./socket.jsx";
 
-const columns = [
-    {field: 'friendlyname', headerName: 'Name', width: 150},
-    {field: 'added', headerName: 'Added', width: 400},
-];
-
-const initialRows = [
-    {id: 1, friendlyname: 'My weather sats', name: 'weather', added: new Date()},
-    {id: 2, friendlyname: 'My Ham sats', name: 'Ham', added: new Date()},
-    {
-        id: 3,
-        friendlyname: 'My cubesats',
-        name: 'cubesats',
-        added: new Date()
-    },
-    {
-        id: 4,
-        friendlyname: 'My zombie sats',
-        name: 'zombie',
-        added: new Date()
-    },
-];
 
 const paginationModel = {page: 0, pageSize: 10};
 
 const SatelliteGroupsTable = React.memo(function () {
-    const [rows, setRows] = useState(initialRows);
+    const defaultFormValues = {id: null, name: ''};
+    const [rows, setRows] = useState([]);
     const [dialogOpen, setDialogOpen] = useState(false);
     const socket = useSocket();
     const [groups, setGroups] = useState([]);
+    const [selectedRows, setSelectedRows] = useState([]);
+    const [formDialogOpen, setFormDialogOpen] = useState(false);
+    const [formDialogValues, setFormDialogValues] = useState(defaultFormValues);
 
-    // Form state
+    const columns = [
+        {field: 'name', headerName: 'Name', width: 150},
+        {field: 'added', headerName: 'Added', width: 400},
+    ];
+
+    // form state
     const [friendlyname, setFriendlyname] = useState('');
     const [added, setAdded] = useState(() => {
         // Format current date-time for datetime-local input
@@ -58,9 +46,8 @@ const SatelliteGroupsTable = React.memo(function () {
 
     useEffect(() => {
         // fetch groups from backend
-        console.info(`Fetching groups from backend... ${new Date().toISOString()}`);
-        socket.emit("data_request", "satellite_groups", (response) => {
-            console.log(response); // ok
+        socket.emit("data_request", "get-satellite-groups", (response) => {
+            setRows(response.data);
         });
 
         return () => {
@@ -72,25 +59,57 @@ const SatelliteGroupsTable = React.memo(function () {
         // Clear previous values
         setFriendlyname('');
         setAdded('');
-        setDialogOpen(true);
+        setFormDialogOpen(true);
     };
 
     const handleDialogClose = () => {
-        setDialogOpen(false);
+        setFormDialogOpen(false);
     };
 
     const handleFormSubmit = (event) => {
         event.preventDefault();
-        // Create a new row based on input values
-        const newId = rows.length ? Math.max(...rows.map(r => r.id)) + 1 : 1;
+
+        let cmd = null;
+        if(formDialogValues.id === null) {
+            cmd = 'submit-satellite-group';
+        } else if (formDialogValues.id) {
+            cmd = 'edit-satellite-group';
+        }
+
+        // create a new row based on input values
         const newRow = {
-            id: newId,
-            friendlyname: friendlyname,
-            added: new Date(added),
+            id: formDialogValues.id,
+            name: formDialogValues.name,
         };
-        setRows(prev => [...prev, newRow]);
-        setDialogOpen(false);
+
+        socket.emit("data_submission", cmd, newRow, (response) => {
+            if (response.success === true) {
+                setRows(response.data)
+                setFormDialogOpen(false);
+            }
+        });
     };
+
+    const handleInputChange = (e) => {
+        const { name, value } = e.target;
+        setFormDialogValues(prev => ({ ...prev, [name]: value }));
+    };
+
+    const handleEditGroup = function (event) {
+        const singleRowId = selectedRows[0];
+        setFormDialogValues({...rows.find(r => r.id === singleRowId), id: singleRowId});
+        setFormDialogOpen(true);
+    }
+
+    const handleDeleteGroup = function (event) {
+        socket.emit("data_submission", "delete-satellite-group", selectedRows, (response) => {
+            if (response.success === true) {
+                setRows(response.data);
+            } else {
+                console.error(response.error);
+            }
+        });
+    }
 
     return (
         <Box sx={{width: '100%', marginTop: 0}}>
@@ -104,43 +123,54 @@ const SatelliteGroupsTable = React.memo(function () {
                 initialState={{pagination: {paginationModel}}}
                 pageSizeOptions={[5, 10]}
                 checkboxSelection
+                onRowSelectionModelChange={(selected) => {
+                    setSelectedRows(selected);
+                }}
                 sx={{border: 0, marginTop: 2}}
             />
             <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
                 <Button variant="contained" onClick={handleAddClick}>
                     Add
                 </Button>
-                <Button variant="contained">
+                <Button variant="contained" disabled={selectedRows.length !== 1} onClick={handleEditGroup}>
                     Edit
                 </Button>
-                <Button variant="contained" color="error">
+                <Button variant="contained" color="error" disabled={selectedRows.length < 1}
+                        onClick={() => setDialogOpen(true)}>
                     Delete
                 </Button>
+                <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
+                    <DialogTitle>Confirm Delete</DialogTitle>
+                    <DialogContent>
+                        Are you sure you want to delete the selected group(s)?
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
+                        <Button
+                            onClick={() => {
+                                handleDeleteGroup();
+                                setDialogOpen(false);
+                            }}
+                            color="error"
+                            variant="contained"
+                        >
+                            Confirm
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Stack>
-            <Dialog open={dialogOpen} onClose={handleDialogClose}>
-                <DialogTitle>Add a new Satellite Group</DialogTitle>
+            <Dialog open={formDialogOpen} onClose={handleDialogClose}>
+                <DialogTitle>Add a new satellite group</DialogTitle>
                 <form onSubmit={handleFormSubmit}>
                     <DialogContent>
                         <TextField
+                            name="name"
                             margin="dense"
                             label="Name"
                             fullWidth
-                            variant="outlined"
-                            value={friendlyname}
-                            onChange={(e) => setFriendlyname(e.target.value)}
-                            required
-                        />
-                        <TextField
-                            margin="dense"
-                            label="Added"
-                            type="datetime-local"
-                            fullWidth
-                            variant="outlined"
-                            value={added}
-                            onChange={(e) => setAdded(e.target.value)}
-                            InputLabelProps={{
-                                shrink: true,
-                            }}
+                            variant={"filled"}
+                            value={formDialogValues.name}
+                            onChange={handleInputChange}
                             required
                         />
                     </DialogContent>
