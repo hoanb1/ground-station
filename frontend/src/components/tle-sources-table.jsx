@@ -60,8 +60,7 @@ LinearProgressWithLabel.propTypes = {
     value: PropTypes.number.isRequired,
 };
 
-function LinearWithValueLabel() {
-    const [progress, setProgress] = React.useState(0);
+function LinearWithValueLabel({progress}) {
 
     const BorderLinearProgress = styled(LinearProgress)(({ theme }) => ({
         height: 20,
@@ -80,12 +79,6 @@ function LinearWithValueLabel() {
             }),
         },
     }));
-
-    useEffect(() => {
-        //setProgress((prevProgress) => (prevProgress >= 100 ? 10 : prevProgress + 10));
-        return () => {
-        };
-    }, []);
 
     return (
         <Box sx={{ display: 'flex', alignItems: 'left', width: '100%' }}>
@@ -107,6 +100,7 @@ function LinearWithValueLabel() {
 const SynchronizeTLEsCard = function () {
     const socket = useSocket();
     const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+    const [progress, setProgress] = useState(0);
 
     const handleSynchronizeSatellites = function (event) {
         socket.emit("data_request", "sync-satellite-data", null, (response) => {
@@ -117,6 +111,17 @@ const SynchronizeTLEsCard = function () {
             }
         });
     }
+
+    useEffect(() => {
+        socket.on("sat-sync-events", (data) => {
+            console.log("Received data for sat-sync-events:", data);
+            setProgress(data.progress);
+        });
+
+        return () => {
+            socket.off("sat-sync-events");
+        };
+    }, []);
 
     return (
         <Card sx={{ display: 'flex', marginTop: 2, marginBottom: 0}}>
@@ -136,7 +141,7 @@ const SynchronizeTLEsCard = function () {
                 </Box>
             </Box>
             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 2}}>
-                <LinearWithValueLabel/>
+                <LinearWithValueLabel progress={progress}/>
             </Box>
             <Dialog
                 open={confirmationDialogOpen}

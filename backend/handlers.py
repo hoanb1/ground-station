@@ -4,15 +4,14 @@ import json
 from db import engine, AsyncSessionLocal
 from sync import *
 
-async def data_request_routing(cmd, data, logger):
+async def data_request_routing(sio, cmd, data, logger):
     """
     Routes data requests based on the command provided, fetching respective
     data from the database. Depending on the `cmd` parameter, it retrieves
     specific information by invoking respective CRUD operations. Logs
     information if the command is unrecognized.
 
-    :param session: Database session factory for creating session instances.
-    :type session: Callable
+    :param sio:
     :param cmd: Command string specifying the action to perform. It determines
                 the target data to fetch.
     :type cmd: str
@@ -45,14 +44,14 @@ async def data_request_routing(cmd, data, logger):
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "sync-satellite-data":
-            await synchronize_satellite_data(dbsession, logger)
+            await synchronize_satellite_data(dbsession, logger, sio)
 
         else:
             logger.info(f'Unknown command: {cmd}')
 
     return reply
 
-async def data_submission_routing(cmd, data, logger):
+async def data_submission_routing(sio, cmd, data, logger):
     """
     Routes data submission commands to the appropriate CRUD operations and
     returns the response. The function supports creating, deleting, and
@@ -60,8 +59,7 @@ async def data_submission_routing(cmd, data, logger):
     executes the corresponding command, and fetches the latest data from
     the database to include in the response.
 
-    :param session: Database session factory used to interact with the database.
-    :type session: callable
+    :param sio:
     :param cmd: Command string indicating the operation to perform. Supported
                 commands are "submit-tle-sources", "delete-tle-sources",
                 and "edit-tle-source".

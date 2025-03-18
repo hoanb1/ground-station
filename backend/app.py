@@ -66,13 +66,13 @@ async def disconnect(sid, environ):
 @sio.on('data_request')
 async def handle_frontend_data_requests(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-    reply = await data_request_routing(cmd, data, logger)
+    reply = await data_request_routing(sio, cmd, data, logger)
     return reply
 
 @sio.on('data_submission')
 async def handle_frontend_data_submissions(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-    reply = await data_submission_routing(cmd, data, logger)
+    reply = await data_submission_routing(sio, cmd, data, logger)
     return reply
 
 @sio.on('auth_request')
