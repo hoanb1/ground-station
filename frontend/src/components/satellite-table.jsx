@@ -59,7 +59,7 @@ export default function SatelliteTable() {
     React.useEffect(() => {
 
         console.info(`Fetching satellites from backend... ${new Date().toISOString()}`);
-        socket.emit("data_request", "get_satellites", null, (response) => {
+        socket.emit("data_request", "get-satellites", null, (response) => {
             console.log(response); // ok
         });
 

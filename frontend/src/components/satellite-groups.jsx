@@ -70,17 +70,20 @@ const SatelliteGroupsTable = React.memo(function () {
         event.preventDefault();
 
         let cmd = null;
+        let newRow = {};
         if(formDialogValues.id === null) {
             cmd = 'submit-satellite-group';
+            // create a new row based on input values
+            newRow = {
+                name: formDialogValues.name,
+            };
         } else if (formDialogValues.id) {
+            newRow = {
+                id: formDialogValues.id,
+                name: formDialogValues.name,
+            };
             cmd = 'edit-satellite-group';
         }
-
-        // create a new row based on input values
-        const newRow = {
-            id: formDialogValues.id,
-            name: formDialogValues.name,
-        };
 
         socket.emit("data_submission", cmd, newRow, (response) => {
             if (response.success === true) {

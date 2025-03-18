@@ -29,16 +29,19 @@ def data_request_routing(session, cmd, data, logger):
     if cmd == "get-tle-sources":
         # get rows
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
     elif cmd == "get-satellites":
         # get rows
         tle_sources = crud.fetch_satellites(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
     elif cmd == "get-satellite-groups":
         satellite_groups = crud.fetch_satellite_group(dbsession)
-        reply = {'success': True, 'data': satellite_groups.get('data', [])}
+        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+
+    elif cmd == "fetch-satellite-data":
+        pass
 
     else:
         logger.info(f'Unknown command: {cmd}')
@@ -81,14 +84,14 @@ def data_submission_routing(session, cmd, data, logger):
         crud.add_satellite_tle_source(dbsession, data)
 
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
     elif cmd == "delete-tle-sources":
         logger.info(f'Deleting TLE source: {data}')
         crud.delete_satellite_tle_sources(dbsession, data)
 
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
     elif cmd == "edit-tle-source":
         logger.info(f'Editing TLE source: {data}')
@@ -96,29 +99,29 @@ def data_submission_routing(session, cmd, data, logger):
 
         # get rows
         tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
     elif cmd == "submit-satellite-group":
         logger.info(f'Adding satellite group: {data}')
         crud.add_satellite_group(dbsession, data)
 
-        tle_sources = crud.fetch_satellite_group(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        satellite_groups = crud.fetch_satellite_group(dbsession)
+        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
     elif cmd == "delete-satellite-group":
         logger.info(f'Deleting satellite groups: {data}')
         crud.delete_satellite_group(dbsession, data)
 
-        tle_sources = crud.fetch_satellite_group(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        satellite_groups = crud.fetch_satellite_group(dbsession)
+        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
     elif cmd == "edit-satellite-group":
         logger.info(f'Editing satellite group: {data}')
         crud.edit_satellite_group(dbsession, data['id'], data)
 
         # get rows
-        tle_sources = crud.fetch_satellite_group(dbsession)
-        reply = {'success': True, 'data': tle_sources.get('data', [])}
+        satellite_groups = crud.fetch_satellite_group(dbsession)
+        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
     else:
         logger.info(f'Unknown command: {cmd}')

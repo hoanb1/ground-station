@@ -415,14 +415,17 @@ def delete_rig(session: Session, rig_id: uuid.UUID) -> dict:
         return {"success": False, "error": str(e)}
 
 
-def fetch_satellites(session: Session, satellite_id: Optional[uuid.UUID] = None) -> dict:
+def fetch_satellites(session: Session, satellite_id: Optional[uuid.UUID] = None):
     """
     Fetch satellite records.
 
     If 'satellite_id' is provided, return a single satellite record.
     Otherwise, return all satellite records.
     """
+
     try:
+        reply = {'success': False}
+
         if satellite_id is None:
             satellites = session.query(Satellites).all()
             return {"success": True, "data": satellites, "error": None}
@@ -765,7 +768,7 @@ def delete_satellite_tle_sources(session: Session, satellite_tle_source_ids: lis
         return {"success": False, "error": str(e)}
 
 
-def fetch_satellite_group(session: Session, satellite_group_id: Optional[uuid.UUID] = None) -> dict:
+def fetch_satellite_group(session: Session, satellite_group_id: Optional[uuid.UUID] = None):
     """
     Fetch satellite group records.
 
@@ -788,7 +791,7 @@ def fetch_satellite_group(session: Session, satellite_group_id: Optional[uuid.UU
         return {"success": False, "data": None, "error": str(e)}
 
 
-def add_satellite_group(session: Session, data: dict) -> dict:
+def add_satellite_group(session: Session, data: dict):
     """
     Add a new satellite group record.
     """
