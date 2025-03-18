@@ -1,21 +1,12 @@
 import json
-import uuid
 import traceback
-from datetime import datetime, timezone
-from typing import Optional, Union
+from typing import Union
 
-from sqlalchemy import select
+from pydantic.v1 import UUID4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete
-from utils import convert_strings_to_uuids
-from models import (
-    SatelliteGroups,
-    serialize_object,
-)
-from app import logger
 from utils import *
 from datetime import datetime, UTC
-from sqlalchemy.orm import Session
 from models import Users
 from models import Locations
 from models import Preferences
@@ -28,7 +19,6 @@ from models import SatelliteGroups
 from app import logger
 from models import serialize_object
 from typing import Optional
-from sqlalchemy.orm import Session
 
 
 async def fetch_user(session: AsyncSession, user_id: uuid.UUID) -> dict:
@@ -522,7 +512,65 @@ async def delete_rig(session: AsyncSession, rig_id: uuid.UUID) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def fetch_satellites(session: AsyncSession, satellite_id: uuid.UUID = None) -> dict:
+async def fetch_system_satellite_group_by_identifier(session: AsyncSession, group_identifier: str) -> dict:
+    """
+    Fetch a satellite group with type='system' by its 'group_identifier'.
+    """
+
+    try:
+        # Add a filter for the 'type' column
+        stmt = (
+            select(SatelliteGroups)
+            .filter(
+                SatelliteGroups.identifier == group_identifier,
+                SatelliteGroups.type == "system",
+                )
+        )
+        result = await session.execute(stmt)
+        group = result.scalar_one_or_none()
+
+        if not group:
+            return {"success": False, "error": "Satellite group (type=system) not found"}
+
+        return {"success": True, "data": group, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching satellite group by identifier: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | UUID4) -> dict:
+    """
+    Fetch satellite records for the given group id
+
+    If 'satellite_id' is provided, return a single satellite record.
+    Otherwise, return all satellite records.
+    """
+    try:
+        if isinstance(group_id, str):
+            group_id = uuid.UUID(group_id)
+
+        group = await fetch_satellite_group(session, group_id)
+        if group.get('data', {}).get('satellite_ids') is not None:
+            group['data']['satellite_ids'] = json.loads(group['data']['satellite_ids'])
+        else:
+            group['data']['satellite_ids'] = []
+
+        satellite_ids = group['data']['satellite_ids']
+        stmt = select(Satellites).filter(Satellites.norad_id.in_(satellite_ids))
+        result = await session.execute(stmt)
+        satellites = result.scalars().all()
+
+        return {"success": True, "data": satellites, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching satellite(s): {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def fetch_satellites(session: AsyncSession, satellite_id: str | None) -> dict:
     """
     Fetch satellite records.
 
@@ -536,11 +584,14 @@ async def fetch_satellites(session: AsyncSession, satellite_id: uuid.UUID = None
             satellites = result.scalars().all()
             return {"success": True, "data": satellites, "error": None}
         else:
-            stmt = select(Satellites).filter(Satellites.id == satellite_id)
+            stmt = select(Satellites).filter(Satellites.norad_id == satellite_id)
             result = await session.execute(stmt)
             satellite = result.scalar_one_or_none()
-            return {"success": True, "data": satellite, "error": None}
+            return {"success": True, "data": [satellite], "error": None}
+
     except Exception as e:
+        logger.error(f"Error fetching satellite(s): {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -574,13 +625,12 @@ async def add_satellite(
         stmt = (
             insert(Satellites)
             .values(
-                id=new_id,
+                norad_id=norad_id,
                 name=name,
                 name_other=name_other,
                 alternative_name=alternative_name,
                 image=image,
                 sat_id=sat_id,
-                norad_id=norad_id,
                 tle1=tle1,
                 tle2=tle2,
                 status=status,
@@ -602,8 +652,11 @@ async def add_satellite(
         await session.commit()
         new_satellite = result.scalar_one()
         return {"success": True, "data": new_satellite, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error adding satellite: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -613,7 +666,7 @@ async def edit_satellite(session: AsyncSession, satellite_id: uuid.UUID, **kwarg
     """
     try:
         # Check if the satellite exists
-        stmt = select(Satellites).filter(Satellites.id == satellite_id)
+        stmt = select(Satellites).filter(Satellites.norad_id == satellite_id)
         result = await session.execute(stmt)
         satellite = result.scalar_one_or_none()
         if not satellite:
@@ -624,7 +677,7 @@ async def edit_satellite(session: AsyncSession, satellite_id: uuid.UUID, **kwarg
 
         upd_stmt = (
             update(Satellites)
-            .where(Satellites.id == satellite_id)
+            .where(Satellites.norad_id == satellite_id)
             .values(**kwargs)
             .returning(Satellites)
         )
@@ -632,8 +685,11 @@ async def edit_satellite(session: AsyncSession, satellite_id: uuid.UUID, **kwarg
         await session.commit()
         updated_satellite = upd_result.scalar_one_or_none()
         return {"success": True, "data": updated_satellite, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error editing satellite {satellite_id}: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -644,7 +700,7 @@ async def delete_satellite(session: AsyncSession, satellite_id: uuid.UUID) -> di
     try:
         stmt = (
             delete(Satellites)
-            .where(Satellites.id == satellite_id)
+            .where(Satellites.norad_id == satellite_id)
             .returning(Satellites)
         )
         result = await session.execute(stmt)
@@ -653,8 +709,11 @@ async def delete_satellite(session: AsyncSession, satellite_id: uuid.UUID) -> di
             return {"success": False, "error": f"Satellite with id {satellite_id} not found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error deleting satellite {satellite_id}: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -667,6 +726,7 @@ async def fetch_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) ->
         result = await session.execute(stmt)
         transmitter = result.scalar_one_or_none()
         return {"success": True, "data": transmitter, "error": None}
+
     except Exception as e:
         return {"success": False, "error": str(e)}
 
@@ -915,28 +975,44 @@ async def delete_satellite_tle_sources(
         return {"success": False, "error": str(e)}
 
 
-async def fetch_satellite_group(
-        session: AsyncSession, satellite_group_id: Optional[uuid.UUID] = None
-) -> dict:
+async def fetch_satellite_group(session: AsyncSession, group_id: Optional[Union[str, uuid.UUID]] = None,
+                                group_type: Optional[str] = None) -> dict:
     """
     Fetch satellite group records.
 
-    If satellite_group_id is provided, returns one satellite group record.
-    Otherwise, returns all satellite group records.
+    If 'group_id' is provided, returns one satellite group record
+    (optionally filtering by 'group_type' if given).
+    Otherwise, returns all satellite group records (optionally filtered by 'group_type').
     """
+
     try:
-        if satellite_group_id is None:
-            result = await session.execute(select(SatelliteGroups))
+        # 1. If no group_id is given, return all groups (possibly filtered by group_type).
+        if group_id is None:
+            if group_type is not None:
+                stmt = select(SatelliteGroups).where(SatelliteGroups.type == group_type)
+            else:
+                stmt = select(SatelliteGroups)
+
+            result = await session.execute(stmt)
             groups = result.scalars().all()
-            groups = [serialize_object(group) for group in groups]  # Serialize all groups
+            groups = [serialize_object(g) for g in groups]
             return {"success": True, "data": groups, "error": None}
-        else:
-            result = await session.execute(
-                select(SatelliteGroups).filter(SatelliteGroups.id == satellite_group_id)
-            )
-            group = result.scalars().first()
-            group = serialize_object(group) if group else None  # Serialize single group if found
-            return {"success": True, "data": group, "error": None}
+
+        # 2. group_id is provided, we return a single group (optionally filtered by group_type).
+        #    Convert group_id from string to UUID if needed.
+        if isinstance(group_id, str):
+            group_id = uuid.UUID(group_id)
+
+        stmt = select(SatelliteGroups).where(SatelliteGroups.id == group_id)
+        if group_type is not None:
+            stmt = stmt.where(SatelliteGroups.type == group_type)
+
+        result = await session.execute(stmt)
+        group = result.scalars().first()
+
+        group = serialize_object(group) if group else None
+        return {"success": True, "data": group, "error": None}
+
     except Exception as e:
         logger.error(f"Error fetching satellite groups: {e}")
         logger.error(traceback.format_exc())

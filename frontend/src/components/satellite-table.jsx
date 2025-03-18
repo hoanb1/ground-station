@@ -1,51 +1,30 @@
 import * as React from 'react';
-import Paper from '@mui/material/Paper';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TablePagination from '@mui/material/TablePagination';
-import TableRow from '@mui/material/TableRow';
-import Typography from "@mui/material/Typography";
 import {Alert, AlertTitle, Box, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import {getSatellitesByGroupId, getSatellitesGroups, getAllSatellites, getSatelliteDataByNoradId} from './tles.jsx';
-import {useEffect} from "react";
+import {useEffect, useState} from "react";
 import {useSocket} from "./socket.jsx";
+import {DataGrid} from "@mui/x-data-grid";
 
 
-const columns = [
-    { id: 'name', label: 'Name', minWidth: 170 },
-    {
-        id: 'noradid',
-        label: 'NORAD ID',
-        minWidth: 170,
-        align: 'right',
-        format: (value) => value,
-    },
-    {
-        id: 'tleLine1',
-        label: 'TLE line 1',
-        minWidth: 170,
-        align: 'right',
-        format: (value) => value.toLocaleString('en-US'),
-    },
-    {
-        id: 'tleLine2',
-        label: 'TLE line 2',
-        minWidth: 170,
-        align: 'right',
-        format: (value) => value.toFixed(2),
-    },
-];
-
-export default function SatelliteTable() {
-    const [page, setPage] = React.useState(0);
-    const [rowsPerPage, setRowsPerPage] = React.useState(10);
-    const [satGroups, setSatGroups] = React.useState(getSatellitesGroups());
-    const [satellites, setSatellites] = React.useState([]);
-    const [satGroupId, setSatGroupId] = React.useState(null);
+const SatelliteTable = React.memo(function () {
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
+    const [satGroups, setSatGroups] = useState([]);
+    const [satellites, setSatellites] = useState([]);
+    const [satGroupId, setSatGroupId] = useState(null);
+    const [selectedRows, setSelectedRows] = useState([]);
     const socket = useSocket();
+
+    const columns = [
+        { field: 'name', headerName: 'Name', width: 200 },
+        { field: 'norad_id', headerName: 'ID', width: 150 },
+        { field: 'status', headerName: 'Status', width: 150 },
+        { field: 'decayed', headerName: 'Decayed', width: 150 },
+        { field: 'launched', headerName: 'Launched', width: 150 },
+        { field: 'deployed', headerName: 'Deployed', width: 150 },
+        { field: 'updated', headerName: 'Updated', width: 200 },
+    ];
+
+    const paginationModel = { page: 0, pageSize: 10 };
 
     const handleChangePage = (event, newPage) => {
         setPage(newPage);
@@ -56,18 +35,19 @@ export default function SatelliteTable() {
         setPage(0);
     };
 
-    React.useEffect(() => {
+    useEffect(() => {
+        socket.emit("data_request", "get-satellite-groups", null, (response) => {
+            if (response['success']) {
+                setSatGroups(response.data);
+            } else {
 
-        console.info(`Fetching satellites from backend... ${new Date().toISOString()}`);
-        socket.emit("data_request", "get-satellites", null, (response) => {
-            console.log(response); // ok
+            }
         });
 
-        setSatellites(getSatellitesByGroupId(satGroupId))
         return () => {
-            // Optional cleanup logic
+
         };
-    }, [satGroups]);
+    }, []);
 
     function handleOnGroupChange (event) {
         const groupId = event.target.value;
@@ -75,7 +55,11 @@ export default function SatelliteTable() {
         if (groupId === null) {
             return null;
         } else {
-            setSatellites(getSatellitesByGroupId(groupId));
+            socket.emit("data_request", "get-satellites-for-group-id", groupId, (response) => {
+                if (response['success']) {
+                    setSatellites(response.data);
+                }
+            });
         }
     }
     
@@ -89,73 +73,36 @@ export default function SatelliteTable() {
                 <InputLabel htmlFor="grouped-select">Select one of the satellite groups</InputLabel>
                 <Select defaultValue="" id="grouped-select" label="Grouping" variant={"filled"} onChange={handleOnGroupChange}>
                     <ListSubheader>User defined satellite groups</ListSubheader>
-                    {satGroups.map((group, index) => (
-                        <MenuItem value={group.id} key={index}>
-                            {group.name}
-                        </MenuItem>
-                    ))}
+                    {satGroups.map((group, index) => {
+                        if (group.type === "user") {
+                            return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                        }
+                    })}
                     <ListSubheader>Build-in satellite groups</ListSubheader>
-                    {satGroups.map((group, index) => (
-                        <MenuItem value={group.id} key={index}>
-                            {group.name}
-                        </MenuItem>
-                    ))}
+                    {satGroups.map((group, index) => {
+                        if (group.type === "system") {
+                            return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                        }
+                    })}
                 </Select>
             </FormControl>
-            <TableContainer sx={{ maxHeight: 600, marginTop: 2, minHeight: 600}}>
-                <Table stickyHeader aria-label="sticky table">
-                    <TableHead>
-                        <TableRow>
-                            {columns.map((column) => (
-                                <TableCell
-                                    key={column.id}
-                                    align={column.align}
-                                    style={{ minWidth: column.minWidth }}
-                                >
-                                    {column.label}
-                                </TableCell>
-                            ))}
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {satellites.length === 0 ? (
-                            <TableRow>
-                                <TableCell colSpan={columns.length} align="center">
-                                    No satellites available for the selected group.
-                                </TableCell>
-                            </TableRow>
-                        ) : (
-                            satellites
-                                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage)
-                                .map((satellite) => {
-                                    return (
-                                        <TableRow hover role="checkbox" tabIndex={-1} key={satellite.noradid}>
-                                            {columns.map((column) => {
-                                                const value = satellite[column.id];
-                                                return (
-                                                    <TableCell key={column.id} align={column.align}>
-                                                        {column.format && typeof value === 'number'
-                                                            ? column.format(value)
-                                                            : value}
-                                                    </TableCell>
-                                                );
-                                            })}
-                                        </TableRow>
-                                    );
-                                })
-                        )}
-                    </TableBody>
-                </Table>
-            </TableContainer>
-            <TablePagination
-                rowsPerPageOptions={[10, 25, 100]}
-                component="div"
-                count={satellites.length}
-                rowsPerPage={rowsPerPage}
-                page={page}
-                onPageChange={handleChangePage}
-                onRowsPerPageChange={handleChangeRowsPerPage}
+            <DataGrid
+                getRowId={(satellite) => {
+                    return satellite.norad_id;
+                }}
+                rows={satellites}
+                columns={columns}
+                initialState={{ pagination: { paginationModel } }}
+                pageSizeOptions={[5, 10]}
+                checkboxSelection={false}
+                onRowSelectionModelChange={(selected) => {
+                    setSelectedRows(selected);
+                }}
+                sx={{ border: 0, marginTop: 2 }}
             />
         </Box>
     );
-}
+});
+
+
+export default SatelliteTable;

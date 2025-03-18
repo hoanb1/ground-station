@@ -6,6 +6,9 @@ from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
+from enum import Enum as PyEnum
+from sqlalchemy import Column, Enum
+
 
 # Creates a base class for declarative models using SQLAlchemy.
 Base = declarative_base()
@@ -36,10 +39,10 @@ class Satellites(Base):
     name_other = Column(String, nullable=True)
     alternative_name = Column(String, nullable=True)
     image = Column(String, nullable=True)
-    sat_id = Column(String, nullable=False, unique=True)
-    tle1 = Column(String, nullable=True)
-    tle2 = Column(String, nullable=True)
-    status = Column(String, nullable=False)
+    sat_id = Column(String, nullable=True)
+    tle1 = Column(String, nullable=False)
+    tle2 = Column(String, nullable=False)
+    status = Column(String, nullable=True)
     decayed = Column(DateTime, nullable=True)
     launched = Column(DateTime, nullable=True)
     deployed = Column(DateTime, nullable=True)
@@ -47,7 +50,7 @@ class Satellites(Base):
     operator = Column(String, nullable=True)
     countries = Column(String, nullable=True)
     citation = Column(String, nullable=True)
-    is_frequency_violator = Column(Boolean, nullable=False, default=False)
+    is_frequency_violator = Column(Boolean, nullable=True, default=False)
     associated_satellites = Column(String, nullable=True)
     added = Column(DateTime, nullable=False,  default=datetime.now(UTC))
     updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
@@ -151,10 +154,19 @@ class SatelliteTLESources(Base):
     added = Column(DateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
+
+class SatelliteGroupType(str, PyEnum):
+    USER = "user"
+    SYSTEM = "system"
+
+
 class SatelliteGroups(Base):
     __tablename__ = 'satellite_groups'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
+    identifier = Column(String, nullable=True)
     userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    type = Column(Enum(SatelliteGroupType), nullable=False, default=SatelliteGroupType.USER)
+    satellite_ids = Column(JSON, nullable=True)
     added = Column(DateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))

@@ -19,6 +19,7 @@ from arguments import arguments
 from handlers import *
 from db import *
 from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
+from fastapi.staticfiles import StaticFiles
 
 # setup a logger
 logger = get_logger(arguments)
@@ -100,12 +101,7 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized.")
 
-
-async def serve():
-    config = uvicorn.Config("main:app", host="0.0.0.0", port=5000, log_level="info")
-    server = uvicorn.Server(config)
-    await server.serve()
-
+app.mount("/public", StaticFiles(directory="public"), name="public")
 
 # Command-line argument parsing
 if __name__ == "__main__":

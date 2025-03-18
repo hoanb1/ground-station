@@ -45,7 +45,7 @@ const SatelliteGroupsTable = React.memo(function () {
 
     useEffect(() => {
         // fetch groups from backend
-        socket.emit("data_request", "get-satellite-groups", (response) => {
+        socket.emit("data_request", "get-satellite-groups-user", (response) => {
             setRows(response.data);
         });
 

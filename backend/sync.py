@@ -4,16 +4,41 @@ import json
 import asyncio
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
-from models import Satellites, Transmitters
+from models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
 from typing import List, Optional
 from logger import get_logger
 from arguments import arguments
+from exceptions import *
+from uuid import uuid4
+from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def parse_date(date_str: str) -> datetime:
     # Replace 'Z' with '+00:00' to indicate UTC offset
     date_str = date_str.replace("Z", "+00:00")
     return datetime.fromisoformat(date_str)
+
+
+def get_norad_ids(tle_objects: list) -> list:
+    """
+    Extracts the NORAD ID from the 'line1' field in each object of the list.
+
+    :param tle_objects: A list of dictionaries containing {'name', 'line1', 'line2'}.
+    :return: A list of integer NORAD IDs.
+    """
+    return [parse_norad_id_from_line1(obj['line1']) for obj in tle_objects]
+
+
+def parse_norad_id_from_line1(line1: str) -> int:
+    """
+    Parses the NORAD ID from the TLE's first line.
+    Assumes the NORAD ID is located at indices 2..6 in the string.
+
+    :param line1: TLE line1 string (e.g. '1 25544U 98067A   23109.65481637 ...').
+    :return: The integer NORAD ID extracted from line1.
+    """
+    norad_str = line1[2:7].strip()
+    return int(norad_str)
 
 
 def get_norad_id_from_tle(tle: str) -> int:
@@ -88,7 +113,7 @@ def get_transmitter_info_by_norad_id(norad_id: int, transmitters: List[dict]) ->
     return None
 
 
-def simple_parse_3le(file_contents):
+def simple_parse_3le(file_contents: str) -> list:
     """
     Parses satellite 3LE data from a string and returns a list of dictionaries.
     Each dictionary has "name", "line1", and "line2" keys.
@@ -138,32 +163,76 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     satnogs_satellite_data = []
     satnogs_transmitter_data = []
     celestrak_list = []
+    group_assignments =  {}
 
     tle_sources_reply = await crud.fetch_satellite_tle_source(dbsession)
     tle_sources = tle_sources_reply.get('data', [])
 
     # emit an event
-    await sio.emit('sat-sync-event', {'status': 'inproress', 'progress': 1,})
+    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': 1,})
 
     # Use a single ThreadPoolExecutor for all async_fetch calls
     with ThreadPoolExecutor(max_workers=1) as pool:
         # get TLEs from our user-defined TLE sources (probably from celestrak.org)
         for tle_source in tle_sources:
-            satellite_data = []
-            try:
-                logger.info(f"Fetching {tle_source['url']}")
-                response = await async_fetch(tle_source['url'], pool)
-                if response.status_code != 200:
-                    logger.error(f"HTTP Error: Received status code {response.status_code} from {tle_source['url']}")
+            tle_source_name = tle_source['name']
+            tle_source_identifier = tle_source['identifier']
+            tle_source_url = tle_source['url']
+            tle_source_format = tle_source['format']
+            group_assignments[tle_source_identifier] = []
 
+            try:
+                logger.info(f"Fetching {tle_source_url}")
+                response = await async_fetch(tle_source_url, pool)
+                if response.status_code != 200:
+                    logger.error(f"HTTP Error: Received status code {response.status_code} from {tle_source_url}")
+                    raise Exception(f"Unable to fetch data from {tle_source_url}, error code was {response.status_code}")
                 else:
                     satellite_data = simple_parse_3le(response.text)
+                    group_assignments[tle_source_identifier] = get_norad_ids(satellite_data)
 
                 celestrak_list = celestrak_list + satellite_data
-                logger.info(f"Fetched {len(satellite_data)} TLEs from {tle_source['url']}")
+                logger.info(f"Fetched {len(satellite_data)} TLEs from {tle_source_url}")
+
+            except SynchronizationErrorMainTLESource as e:
+                logger.error(f'Failed to fetch data from {tle_source["url"]}: {e.message}')
+                await sio.emit('sat-sync-events', {'success': False, 'status': 'inprogress', 'progress': 0, 'error': e.message})
 
             except requests.exceptions.RequestException as e:
                 logger.error(f'Failed to fetch data from {tle_source["url"]}: {e}')
+                await sio.emit('sat-sync-events', {'success': False, 'status': 'inprogress', 'progress': 0, 'error': e})
+
+            logger.info(f"Group assignments for {tle_source_identifier}: {group_assignments[tle_source_identifier]}")
+
+            # fetch group by identifier
+            group = await crud.fetch_system_satellite_group_by_identifier(dbsession, tle_source_identifier)
+            group = group.get('data', None)
+
+            if group:
+                group.satellite_ids = json.dumps(group_assignments[tle_source_identifier])
+                await dbsession.commit()
+
+            else:
+                # make a system group and upsert it
+                new_group = SatelliteGroups(
+                    name=tle_source.get('name', None),
+                    identifier=tle_source.get('identifier', None),
+                    userid=None,
+                    satellite_ids=json.dumps(group_assignments[tle_source_identifier]),
+                    type=SatelliteGroupType.SYSTEM,
+                )
+
+                # merge and commit
+                await dbsession.merge(new_group)
+                await dbsession.commit()
+
+    if not celestrak_list:
+        logger.error("No TLEs were fetched from any TLE source, aborting!")
+        await sio.emit('sat-sync-events', {'success': False, 'status': 'complete', 'progress': 0, 'error': 'No TLEs were fetched from any TLE source'})
+        return
+
+    # emit an event
+    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': 50})
 
     # get a complete list of satellite data (no TLEs) from Satnogs
     logger.info(f'Fetching satellite data from SATNOGS ({satnogs_satellites_url})')
@@ -181,6 +250,9 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     except requests.exceptions.RequestException as e:
         logger.error(f'Failed to fetch data from {satnogs_satellites_url}: {e}')
 
+    # emit an event
+    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': 70,})
+
     # get transmitters from satnogs
     logger.info(f'Fetching transmitter data from SATNOGS ({satnogs_transmitters_url})')
     try:
@@ -189,13 +261,16 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             if response.status_code != 200:
                 logger.error(f"HTTP Error: Received status code {response.status_code} from {satnogs_transmitters_url}")
             else:
-                satnogs_satellite_data = json.loads(response.text)
+                satnogs_transmitter_data = json.loads(response.text)
 
             satnogs_transmitter_data = json.loads(response.text)
             logger.info(f"Fetched {len(satnogs_transmitter_data)} transmitters from SATNOGS")
 
     except requests.exceptions.RequestException as e:
         logger.error(f'Failed to fetch data from {satnogs_transmitters_url}: {e}')
+
+    # emit an event
+    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': 80,})
 
     #  we now have everything, TLE from celestack sat info and transmitter info  from satnogs, lets put them in the db
     try:
@@ -226,7 +301,6 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             satnogs_sat_info = get_satellite_by_norad_id(norad_id, satnogs_satellite_data)
 
             if satnogs_sat_info:
-                logger.info(f"Found a satnogs sat info for {norad_id} {sat['name']}")
                 satellite.sat_id = satnogs_sat_info.get('sat_id', None)
                 satellite.name = satnogs_sat_info.get('name', None)
                 satellite.image = satnogs_sat_info.get('image', None)
@@ -243,14 +317,16 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 satellite.is_frequency_violator = satnogs_sat_info.get('is_frequency_violator', None)
                 satellite.associated_satellites = json.dumps(satnogs_sat_info.get('associated_satellites', {}))
 
-                # add sto dbsession
-                await dbsession.merge(satellite)
+            # add sto dbsession
+            await dbsession.merge(satellite)
+
+            # commit session
+            await dbsession.commit()
 
             # let's find transmitter info in the satnogs_transmitter_data list
             satnogs_transmitter_info = get_transmitter_info_by_norad_id(norad_id, satnogs_transmitter_data)
 
             if satnogs_transmitter_info:
-                logger.info(f"Found a satnogs transmitter info for {norad_id}")
                 transmitter = Transmitters(
                     description=satnogs_transmitter_info.get('description', None),
                     alive=satnogs_transmitter_info.get('alive', None),
@@ -281,15 +357,17 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
                 await dbsession.merge(transmitter)
 
-            # commit session
-            await dbsession.commit()
+                # commit session
+                await dbsession.commit()
 
     except Exception as e:
         await dbsession.rollback()  # Rollback in case of error
-        logger.error(f"Error while storing satellite data in the db: {e}")
+        logger.error(f"Error while synchronizing satellite data in the db: {e}")
         logger.exception(e)
 
     finally:
         # Always close the session when you're done
         await dbsession.close()
 
+    # emit an event
+    await sio.emit('sat-sync-events', {'success': True, 'status': 'complete', 'progress': 100,})

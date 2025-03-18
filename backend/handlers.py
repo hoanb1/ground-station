@@ -3,6 +3,26 @@ import requests
 import json
 from db import engine, AsyncSessionLocal
 from sync import *
+from datetime import date, datetime
+
+
+class SQLAlchemyRowEncoder(json.JSONEncoder):
+    def default(self, obj):
+        # Handle date and datetime objects
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+
+        # Attempt to convert SQLAlchemy model objects
+        # by reading their columns
+        try:
+            return {
+                column.name: getattr(obj, column.name)
+                for column in obj.__table__.columns
+            }
+        except AttributeError:
+            # If the object is not a SQLAlchemy model row, fallback
+            return super().default(obj)
+
 
 async def data_request_routing(sio, cmd, data, logger):
     """
@@ -36,11 +56,39 @@ async def data_request_routing(sio, cmd, data, logger):
 
         elif cmd == "get-satellites":
             # get rows
-            tle_sources = await crud.fetch_satellites(dbsession)
-            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+            satellites = await crud.fetch_satellites(dbsession, None)
+            satellites = json.loads(json.dumps(satellites, cls=SQLAlchemyRowEncoder))
+
+            reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
+
+        elif cmd == "get-satellites-for-group-id":
+            # get rows
+            satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
+            satellites = json.loads(json.dumps(satellites, cls=SQLAlchemyRowEncoder))
+
+            reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
+
+        elif cmd == "get-satellite-groups-user":
+            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
+
+            # only return the user groups
+            filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
+                                        if satellite_group['type'] == SatelliteGroupType.USER]
+            reply = {'success': satellite_groups['success'], 'data': filtered_groups}
+
+        elif cmd == "get-satellite-groups-system":
+            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
+
+            # only return the system groups
+            filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
+                               if satellite_group['type'] == SatelliteGroupType.SYSTEM]
+            reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups":
             satellite_groups = await crud.fetch_satellite_group(dbsession)
+            satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "sync-satellite-data":
@@ -105,7 +153,7 @@ async def data_submission_routing(sio, cmd, data, logger):
             logger.info(f'Adding satellite group: {data}')
             await crud.add_satellite_group(dbsession, data)
 
-            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            satellite_groups = await crud.fetch_satellite_group(dbsession, group_type='user')
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "delete-satellite-group":
