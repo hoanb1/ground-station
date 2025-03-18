@@ -38,19 +38,37 @@ loggers:
   engineio.server:
     level: ERROR
     handlers:
-      - access
+      - default
     propagate: no
 
   socketio.server:
     level: ERROR
     handlers:
-      - access
+      - default
     propagate: no
 
   asyncio:
     level: ERROR
     handlers:
-      - access
+      - default
+    propagate: no
+
+  urllib3.connectionpool:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
+
+  aiosqlite:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  sqlalchemy:
+    level: ERROR
+    handlers:
+      - default
     propagate: no
 
 root:

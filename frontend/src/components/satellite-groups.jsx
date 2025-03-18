@@ -16,7 +16,6 @@ import {
 } from "@mui/material";
 import {useSocket} from "./socket.jsx";
 
-
 const paginationModel = {page: 0, pageSize: 10};
 
 const SatelliteGroupsTable = React.memo(function () {

@@ -105,7 +105,18 @@ function LinearWithValueLabel() {
 }
 
 const SynchronizeTLEsCard = function () {
+    const socket = useSocket();
     const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
+
+    const handleSynchronizeSatellites = function (event) {
+        socket.emit("data_request", "sync-satellite-data", null, (response) => {
+            if (response.success === true) {
+                console.log("Satellite data synchronization completed successfully", response);
+            } else {
+                console.error(response.error);
+            }
+        });
+    }
 
     return (
         <Card sx={{ display: 'flex', marginTop: 2, marginBottom: 0}}>
@@ -119,11 +130,7 @@ const SynchronizeTLEsCard = function () {
                     </Typography>
                 </CardContent>
                 <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pb: 1, padding: 2}}>
-                    <Button
-                        variant="contained"
-                        color="primary"
-                        onClick={() => setConfirmationDialogOpen(true)}
-                    >
+                    <Button variant="contained" color="primary" onClick={handleSynchronizeSatellites}>
                         Synchronize
                     </Button>
                 </Box>

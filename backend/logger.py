@@ -43,7 +43,6 @@ def get_logger(args):
     :rtype: logging.Logger
     """
     logging_config = get_logger_config(args)
-
     logging.config.dictConfig(logging_config)
     logger = logging.getLogger("ground-station")
 

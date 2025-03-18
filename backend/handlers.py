@@ -1,7 +1,10 @@
 import crud
+import requests
+import json
+from db import engine, AsyncSessionLocal
+from sync import *
 
-
-def data_request_routing(session, cmd, data, logger):
+async def data_request_routing(cmd, data, logger):
     """
     Routes data requests based on the command provided, fetching respective
     data from the database. Depending on the `cmd` parameter, it retrieves
@@ -23,34 +26,33 @@ def data_request_routing(session, cmd, data, logger):
     :rtype: dict
     """
 
-    dbsession = session()
-    reply = {'success': None, 'data': None}
+    async with AsyncSessionLocal() as dbsession:
 
-    if cmd == "get-tle-sources":
-        # get rows
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+        reply = {'success': None, 'data': None}
 
-    elif cmd == "get-satellites":
-        # get rows
-        tle_sources = crud.fetch_satellites(dbsession)
-        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+        if cmd == "get-tle-sources":
+            # get rows
+            tle_sources = await crud.fetch_satellite_tle_source(dbsession)
+            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
-    elif cmd == "get-satellite-groups":
-        satellite_groups = crud.fetch_satellite_group(dbsession)
-        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+        elif cmd == "get-satellites":
+            # get rows
+            tle_sources = await crud.fetch_satellites(dbsession)
+            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
-    elif cmd == "fetch-satellite-data":
-        pass
+        elif cmd == "get-satellite-groups":
+            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
-    else:
-        logger.info(f'Unknown command: {cmd}')
+        elif cmd == "sync-satellite-data":
+            await synchronize_satellite_data(dbsession, logger)
 
-    dbsession.close()
+        else:
+            logger.info(f'Unknown command: {cmd}')
 
     return reply
 
-def data_submission_routing(session, cmd, data, logger):
+async def data_submission_routing(cmd, data, logger):
     """
     Routes data submission commands to the appropriate CRUD operations and
     returns the response. The function supports creating, deleting, and
@@ -77,56 +79,54 @@ def data_submission_routing(session, cmd, data, logger):
     """
 
     reply = {'success': None, 'data': None}
-    dbsession = session()
+    async with AsyncSessionLocal() as dbsession:
 
-    if cmd == "submit-tle-sources":
-        logger.info(f'Adding TLE source: {data}')
-        crud.add_satellite_tle_source(dbsession, data)
+        if cmd == "submit-tle-sources":
+            logger.info(f'Adding TLE source: {data}')
+            await crud.add_satellite_tle_source(dbsession, data)
 
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+            tle_sources = await crud.fetch_satellite_tle_source(dbsession)
+            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
-    elif cmd == "delete-tle-sources":
-        logger.info(f'Deleting TLE source: {data}')
-        crud.delete_satellite_tle_sources(dbsession, data)
+        elif cmd == "delete-tle-sources":
+            logger.info(f'Deleting TLE source: {data}')
+            await crud.delete_satellite_tle_sources(dbsession, data)
 
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+            tle_sources = await crud.fetch_satellite_tle_source(dbsession)
+            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
-    elif cmd == "edit-tle-source":
-        logger.info(f'Editing TLE source: {data}')
-        crud.edit_satellite_tle_source(dbsession, data['id'], data)
+        elif cmd == "edit-tle-source":
+            logger.info(f'Editing TLE source: {data}')
+            await crud.edit_satellite_tle_source(dbsession, data['id'], data)
 
-        # get rows
-        tle_sources = crud.fetch_satellite_tle_source(dbsession)
-        reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+            # get rows
+            tle_sources = await crud.fetch_satellite_tle_source(dbsession)
+            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
-    elif cmd == "submit-satellite-group":
-        logger.info(f'Adding satellite group: {data}')
-        crud.add_satellite_group(dbsession, data)
+        elif cmd == "submit-satellite-group":
+            logger.info(f'Adding satellite group: {data}')
+            await crud.add_satellite_group(dbsession, data)
 
-        satellite_groups = crud.fetch_satellite_group(dbsession)
-        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
-    elif cmd == "delete-satellite-group":
-        logger.info(f'Deleting satellite groups: {data}')
-        crud.delete_satellite_group(dbsession, data)
+        elif cmd == "delete-satellite-group":
+            logger.info(f'Deleting satellite groups: {data}')
+            await crud.delete_satellite_group(dbsession, data)
 
-        satellite_groups = crud.fetch_satellite_group(dbsession)
-        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
-    elif cmd == "edit-satellite-group":
-        logger.info(f'Editing satellite group: {data}')
-        crud.edit_satellite_group(dbsession, data['id'], data)
+        elif cmd == "edit-satellite-group":
+            logger.info(f'Editing satellite group: {data}')
+            await crud.edit_satellite_group(dbsession, data['id'], data)
 
-        # get rows
-        satellite_groups = crud.fetch_satellite_group(dbsession)
-        reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+            # get rows
+            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
-    else:
-        logger.info(f'Unknown command: {cmd}')
-
-    dbsession.close()
+        else:
+            logger.info(f'Unknown command: {cmd}')
 
     return reply
 

@@ -7,6 +7,7 @@ import socketio
 import json
 from datetime import datetime
 import crud
+import asyncio
 from fastapi import FastAPI, WebSocket, Depends
 from models import Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -16,24 +17,23 @@ from sqlalchemy.orm import sessionmaker, declared_attr
 from logger import get_logger, get_logger_config
 from arguments import arguments
 from handlers import *
+from db import *
+from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
 
 # setup a logger
 logger = get_logger(arguments)
 
+
+
 # hold a list of sessions
 SESSIONS = {}
 
-def get_database_session():
-    """
-    Provides a database session instance.
-
-    This function creates and returns a scoped session to interact with
-    the database. Always close the session after use.
-
-    :return: A database session instance.
-    :rtype: sqlalchemy.orm.Session
-    """
-    return SessionLocal()
+# Create a session factory
+AsyncSessionLocal = sessionmaker(
+    bind=engine,
+    expire_on_commit=False,
+    class_=AsyncSession
+)
 
 # Create an asynchronous Socket.IO server using ASGI mode.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True)
@@ -66,13 +66,13 @@ async def disconnect(sid, environ):
 @sio.on('data_request')
 async def handle_frontend_data_requests(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-    reply = data_request_routing(SessionLocal, cmd, data, logger)
+    reply = await data_request_routing(cmd, data, logger)
     return reply
 
 @sio.on('data_submission')
 async def handle_frontend_data_submissions(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-    reply = data_submission_routing(SessionLocal, cmd, data, logger)
+    reply = await data_submission_routing(cmd, data, logger)
     return reply
 
 @sio.on('auth_request')
@@ -89,20 +89,22 @@ def read_root():
     return {"message": "Welcome to the FastAPI app!"}
 
 # Function to check and create tables
-def check_and_create_tables():
+async def init_db():
     """
-    Checks the database for table existence and creates the tables if they do not exist.
-
-    This function ensures that all the database tables defined in the metadata
-    are present in the database. If a table is missing, it will be created. Logging
-    is performed to indicate the start and completion of the process.
-
-    :return: None
+    Create all tables and insert a sample user into the database.
     """
-    logger.info("Checking if database tables exist...")
-    Base.metadata.create_all(bind=engine)
-    logger.info("Database tables are ensured to exist.")
+    logger.info("Initializing database...")
+    async with engine.begin() as conn:
+        # Create tables
+        #await conn.run_sync(Base.metadata.drop_all)
+        await conn.run_sync(Base.metadata.create_all)
+    logger.info("Database initialized.")
 
+
+async def serve():
+    config = uvicorn.Config("main:app", host="0.0.0.0", port=5000, log_level="info")
+    server = uvicorn.Server(config)
+    await server.serve()
 
 
 # Command-line argument parsing
@@ -112,14 +114,10 @@ if __name__ == "__main__":
     logger = get_logger(arguments)
 
     logger.info("Configuring database connection...")
-    # SQLAlchemy setup
-    DATABASE_URL = f"sqlite:///./{arguments.db}"
-    engine = create_engine(DATABASE_URL, connect_args={"check_same_thread": False})
-    SessionLocal = sessionmaker(autocommit=False, autoflush=False, bind=engine)
-
-    # create tables
-    check_and_create_tables()
+    loop = asyncio.get_event_loop()
+    loop.run_until_complete(init_db())
 
     logger.info(f'Starting Ground Station server with parameters {arguments}')
+
     # Run the ASGI application with Uvicorn on port 5000.
     uvicorn.run(socket_app, host="0.0.0.0", port=5000, log_config=get_logger_config(arguments))
