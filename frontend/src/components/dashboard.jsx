@@ -280,7 +280,7 @@ export default function Layout() {
         if (socket) {
             socket.on('connect', () => {
                 console.log('Socket connected with ID:', socket.id);
-                enqueueSnackbar("Connected to server", {variant: 'success'});
+                enqueueSnackbar("Connected to backend!", {variant: 'success'});
                 setLoading(false);
             });
 
@@ -293,7 +293,7 @@ export default function Layout() {
             });
 
             socket.on('disconnect', () => {
-                enqueueSnackbar("Disconnected from server", {variant: 'error'});
+                enqueueSnackbar("Disconnected from backend!", {variant: 'error'});
                 setLoading(true);
             })
 

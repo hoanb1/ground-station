@@ -17,7 +17,11 @@ export const SocketProvider = ({ children }) => {
         // Initialize socket connection (replace URL with your server's URL)
         const host = window.location.hostname;
         const backendURL = `ws://${host}:5000/ws`;
-        console.info("Connecting to server at", backendURL);
+        console.info("Connecting to backend at", backendURL);
+        enqueueSnackbar(`Connecting to backend at ${backendURL}`, {
+            variant: 'info',
+            autoHideDuration: 2000,
+        });
         const manager = new Manager(backendURL);
         const newSocket = manager.socket("/");
         setSocket(newSocket);
