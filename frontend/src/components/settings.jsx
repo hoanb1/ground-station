@@ -143,8 +143,8 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             break;
         case "satellites":
             tabsList = [
-                <AntTab key="satellites" value="satellites" label="Satellites" to="/satellites/satellites" component={Link} />,
                 <AntTab key="tlesources" value="tlesources" label="TLE sources" to="/satellites/tlesources" component={Link} />,
+                <AntTab key="satellites" value="satellites" label="Satellites" to="/satellites/satellites" component={Link} />,
                 <AntTab key="groups" value="groups" label="Groups" to="/satellites/groups" component={Link} />,
             ];
             break;

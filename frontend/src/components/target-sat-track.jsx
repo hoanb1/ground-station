@@ -334,7 +334,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                 x: 10,
                 y: 0,
                 w: 2,
-                h: 5,
+                h: 4,
                 resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
             },
             {

@@ -65,8 +65,8 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
         <ThemedSettingsDiv>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Select group of satellites</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0rem 1rem 0rem'}}>
-                    <FormControl sx={{ minWidth: 200, marginTop: 2, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
+                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: 'calc(1 * var(--mui-spacing))'}}>
+                    <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
                         <Select error={formGroupSelectError} value={selectedSatGroupId} id="grouped-select" label="Grouping"
                                 variant={"filled"} size={"small"} onChange={handleOnGroupChange}>
