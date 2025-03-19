@@ -121,7 +121,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [showSunIcon, setShowSunIcon] = useLocalStorageState('overview-show-sun-icon', initialShowSunIcon, { codec: CODEC_BOOL });
     const [showMoonIcon, setShowMoonIcon] = useLocalStorageState('overview-show-moon-icon', initialShowMoonIcon, { codec: CODEC_BOOL });
     const [showTerminatorLine, setShowTerminatorLine] = useLocalStorageState('overview-show-terminator-line', initialShowTerminatorLine);
-    const [selectedSatellites, setSelectedSatellites] = useLocalStorageState('overview-selected-satellites', [], { codec: CODEC_JSON });
+    const [selectedSatellites, setSelectedSatellites] = useState([]);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -348,6 +348,11 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
         const initialMapZoom = savedZoomLevel ? parseFloat(savedZoomLevel) : 1;
         setMapZoomLevel(initialMapZoom);
+
+        if (true) {
+
+        }
+
 
         return () => {
 

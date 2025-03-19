@@ -24,10 +24,11 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
         fontsize: '0.9rem !important',
     }));
 
-    useEffect(() => {
+    const fetchSatelliteGroups = function() {
         socket.emit("data_request", "get-satellite-groups", null, (response) => {
             if (response['success']) {
                 setSatGroups(response.data);
+
             } else {
                 enqueueSnackbar('Failed to get satellite groups', {
                     variant: 'error',
@@ -36,29 +37,47 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
                 setFormGroupSelectError(true);
             }
         });
+    }
+
+    useEffect(() => {
+        fetchSatelliteGroups();
 
         return () => {
-            // Cleanup logic goes here (optional)
+
+        };
+    }, []);
+
+    useEffect(() => {
+        fetchSatellitesByGroupId(selectedSatGroupId);
+
+        return () => {
+
         };
     }, [selectedSatGroupId]);
 
-    function handleOnGroupChange(event) {
-        // let get a list of satellites for the selected group
-        const satGroupId = event.target.value;
+    function fetchSatellitesByGroupId(satGroupId) {
         socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
             if (response['success']) {
                 setSelectedSatellites(response.data);
-                setSelectedSatGroupId(event.target.value);
+                setSelectedSatGroupId(satGroupId);
                 handleGroupSatelliteSelection(response.data);
                 setFormGroupSelectError(false);
+
             } else {
-                enqueueSnackbar('Failed to set satellites for group id: ' + selectedSatGroupId + '', {
+                enqueueSnackbar('Failed to set satellites for group id: ' + satGroupId + '', {
                     variant: 'error',
                     autoHideDuration: 5000
                 });
                 setFormGroupSelectError(true);
+
             }
         });
+    }
+
+    function handleOnGroupChange(event) {
+        // let get a list of satellites for the selected group
+        const satGroupId = event.target.value;
+        fetchSatellitesByGroupId(satGroupId);
     }
 
     return (
