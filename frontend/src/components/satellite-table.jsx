@@ -108,7 +108,7 @@ const SatelliteTable = React.memo(function () {
                     rows={satellites}
                     columns={columns}
                     initialState={{ pagination: { paginationModel } }}
-                    pageSizeOptions={[5, 10]}
+                    pageSizeOptions={[5, 10, 20, 50, 100]}
                     checkboxSelection={false}
                     onRowSelectionModelChange={(selected) => {
                         setSelectedRows(selected);
