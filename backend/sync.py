@@ -158,8 +158,8 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         # Run sync_fetch in a thread pool
         return await loop.run_in_executor(executor, sync_fetch, url)
 
-    satnogs_satellites_url = "https://db-dev.satnogs.org/api/satellites/?format=json"
-    satnogs_transmitters_url = "https://db-dev.satnogs.org/api/transmitters/?format=json"
+    satnogs_satellites_url = "http://db.satnogs.org/api/satellites/?format=json"
+    satnogs_transmitters_url = "http://db.satnogs.org/api/transmitters/?format=json"
     satnogs_satellite_data = []
     satnogs_transmitter_data = []
     celestrak_list = []
@@ -248,7 +248,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             logger.info(f"Fetched {len(satnogs_satellite_data)} satellites from SATNOGS")
 
     except requests.exceptions.RequestException as e:
-        logger.error(f'Failed to fetch data from {satnogs_satellites_url}: {e}')
+        logger.error(f'Failed to fetch data from {satnogs_satellites_url} ({e})')
 
     # emit an event
     await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': 70,})

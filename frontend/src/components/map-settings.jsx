@@ -69,7 +69,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
         <ThemedSettingsDiv>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Map settings</TitleBar>
             <ThemedStack spacing={0}>
-                <SettingItem>
+                <SettingItem style={{padding: '0.5rem 0.5rem'}}>
                     <FormControl fullWidth size={"small"} variant={"filled"}>
                         <InputLabel id="orbit-time-label">Orbit Projection Time</InputLabel>
                         <Select
@@ -90,7 +90,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         </Select>
                     </FormControl>
                 </SettingItem>
-                <SettingItem>
+                <SettingItem style={{padding: '0rem 0.5rem 0.5rem 0.5rem'}}>
                     <FormControl fullWidth size={"small"} variant={"filled"}>
                         <InputLabel id="tile-layer-label">Tile Layer</InputLabel>
                         <Select

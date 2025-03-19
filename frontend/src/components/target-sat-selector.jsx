@@ -61,7 +61,6 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
     useEffect(() => {
         fetchSatelliteGroups();
 
-
         return () => {
 
         };
@@ -99,7 +98,9 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
         // call the backend to get the satellites for that group
         socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
             if (response['success']) {
-                setGroupOfSats(response.data);
+                let satGroup = response.data;
+                satGroup.sort((a, b) => a.name.localeCompare(b.name));
+                setGroupOfSats(satGroup);
 
                 // check if the initial norad id value is in the set of returned satellites
                 if (initialNoradId) {
