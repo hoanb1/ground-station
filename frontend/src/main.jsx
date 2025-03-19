@@ -39,12 +39,12 @@ const router = createBrowserRouter([
                         path: "satellites",
                         children: [
                             {
-                                path: "satellites",
-                                Component: SettingsTabSatellites,
-                            },
-                            {
                                 path: "tlesources",
                                 Component: SettingsTabTLESources,
+                            },
+                            {
+                                path: "satellites",
+                                Component: SettingsTabSatellites,
                             },
                             {
                                 path: "groups",
@@ -64,12 +64,12 @@ const router = createBrowserRouter([
                                 Component: SettingsTabLocation,
                             },
                             {
-                                path: "maintenance",
-                                Component: SettingsTabMaintenance,
-                            },
-                            {
                                 path: "users",
                                 Component: SettingsTabUsers,
+                            },
+                            {
+                                path: "maintenance",
+                                Component: SettingsTabMaintenance,
                             },
                             {
                                 path: "about",

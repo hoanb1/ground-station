@@ -72,7 +72,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
             <TitleBar className={"react-grid-draggable window-title-bar"}>Map settings</TitleBar>
             <ThemedStack spacing={0}>
                 <SettingItem>
-                    <FormControl fullWidth size={"small"}>
+                    <FormControl fullWidth size={"small"} variant={"filled"}>
                         <InputLabel id="orbit-time-label">Orbit Projection Time</InputLabel>
                         <Select
                             labelId="orbit-time-label"
@@ -82,7 +82,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                                 handleOrbitProjectionDuration(e.target.value);
                                 setOrbitProjectionDuration(e.target.value);
                             }}
-                            variant={"outlined"}
+                            variant={"filled"}
                         >
                             {timeOptions.map((option) => (
                                 <MenuItem key={option.value} value={option.value}>
@@ -93,14 +93,14 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                     </FormControl>
                 </SettingItem>
                 <SettingItem>
-                    <FormControl fullWidth size={"small"}>
+                    <FormControl fullWidth size={"small"} variant={"filled"}>
                         <InputLabel id="tile-layer-label">Tile Layer</InputLabel>
                         <Select
                             labelId="tile-layer-label"
                             value={tileLayerID}
                             label="Tile Layer"
                             onChange={(e) => {setTileLayerID(e.target.value); handleTileLayerID(e.target.value);}}
-                         variant={"outlined"}>
+                         variant={"filled"}>
                             {tileLayers.map((layer) => (
                                 <MenuItem key={layer.id} value={layer.id}>
                                     {layer.name}

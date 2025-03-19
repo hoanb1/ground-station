@@ -1025,6 +1025,8 @@ async def add_satellite_group(session: AsyncSession, data: dict) -> dict:
     Add a new satellite group record.
     """
     try:
+        assert "name" in data, "Name is required."
+
         group = SatelliteGroups(**data)
         session.add(group)
         await session.commit()
@@ -1067,9 +1069,7 @@ async def edit_satellite_group(
         return {"success": False, "data": None, "error": str(e)}
 
 
-async def delete_satellite_group(
-        session: AsyncSession, satellite_group_ids: Union[list[str], dict]
-) -> dict:
+async def delete_satellite_group(session: AsyncSession, satellite_group_ids: Union[list[str], dict]) -> dict:
     """
     Delete satellite group record(s).
     """
@@ -1088,6 +1088,7 @@ async def delete_satellite_group(
 
         await session.commit()
         return {"success": True, "data": None, "error": None}
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error deleting satellite groups: {e}")

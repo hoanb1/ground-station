@@ -14,7 +14,7 @@ import {useSocket} from "./socket.jsx";
 import {enqueueSnackbar} from "notistack";
 
 
-function SatelliteList({satellitesInGroup, handleSelectSatelliteId}) {
+function SatelliteList({initialNoradId, groupOfSats, handleSelectSatelliteId}) {
     const [selectedSatelliteId, setSelectedSatelliteId] = useState("");
 
     function handleChange(e) {
@@ -22,21 +22,27 @@ function SatelliteList({satellitesInGroup, handleSelectSatelliteId}) {
         handleSelectSatelliteId(e.target.value);
     }
 
+    function isNoradIdInSatellites(noradid) {
+        return groupOfSats.some(satellite => satellite["norad_id"] === noradid);
+    }
+    
     useEffect(() => {
-        if (!satellitesInGroup.some((group) => group["norad_id"] === selectedSatelliteId)) {
+        if (isNoradIdInSatellites(initialNoradId)) {
+            setSelectedSatelliteId(initialNoradId);
+        } else if(!isNoradIdInSatellites(selectedSatelliteId)) {
             setSelectedSatelliteId("");
         }
 
         return () => {
 
         };
-    }, [satellitesInGroup]);
+    }, [groupOfSats]);
 
     return (
         <FormControl fullWidth variant={"filled"} size={"small"}>
             <InputLabel htmlFor="satellite-select">Satellite</InputLabel>
-            <Select value={selectedSatelliteId} id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleChange}>
-                {satellitesInGroup.map((satellite, index) => {
+            <Select value={groupOfSats.length? initialNoradId: ""} id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleChange}>
+                {groupOfSats.map((satellite, index) => {
                     return <MenuItem value={satellite['norad_id']} key={index}>{satellite['name']}</MenuItem>;
                 })}
             </Select>
@@ -44,44 +50,84 @@ function SatelliteList({satellitesInGroup, handleSelectSatelliteId}) {
     );
 }
 
-const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
+const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelliteId }) => {
     const socket = useSocket();
     const [satGroups, setSatGroups] = useState([]);
-    const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('target-satellite-groupid', 'noaa');
-    const [satellitesInGroup, setSatellitesInGroup] = useState([]);
+    const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('target-satellite-groupid', "");
+    const [groupOfSats, setGroupOfSats] = useState([]);
     const [formGroupSelectError, setFormGroupSelectError] = useState(false);
+    const [loading, setLoading] = useState(false);
 
     useEffect(() => {
-        socket.emit("data_request", "get-satellite-groups", null, (response) => {
-            if (response['success']) {
-                setSatGroups(response.data);
-            } else {
+        fetchSatelliteGroups();
 
-            }
-        });
 
         return () => {
 
         };
-    }, [selectedSatGroupId]);
+    }, []);
+
+    useEffect(() => {
+        if (satGroups.some(group => group.id === initialGroupId)) {
+            console.log("initialGroupId: " + initialGroupId);
+            setSelectedSatGroupId(initialGroupId);
+            fetchSatellitesByGroupId(initialGroupId);
+        }
+
+        return () => {
+
+        };
+    }, [satGroups]);
+
+    const fetchSatelliteGroups = function() {
+        setLoading(true);
+        socket.emit("data_request", "get-satellite-groups", null, (response) => {
+            if (response['success']) {
+                setSatGroups(response.data);
+            } else {
+                setFormGroupSelectError(true);
+                enqueueSnackbar('Failed to set satellites groups:' + response.message, {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+            }
+        });
+        setLoading(false);
+    }
+
+    const  fetchSatellitesByGroupId = function(satGroupId) {
+        // call the backend to get the satellites for that group
+        socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
+            if (response['success']) {
+                setGroupOfSats(response.data);
+
+                // check if the initial norad id value is in the set of returned satellites
+                if (initialNoradId) {
+                    console.log("initialNoradId: " + initialNoradId);
+                    const selectedSatellite = response.data.find((satellite) => satellite['norad_id'] === initialNoradId);
+                    if (selectedSatellite) {
+                        console.log("selectedSatellite: " + selectedSatellite);
+                        handleSelectSatelliteId(initialNoradId);
+                    }
+                }
+                
+            } else {
+                setFormGroupSelectError(true);
+                enqueueSnackbar('Failed to set satellites for group id: ' + satGroupId + '', {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+            }
+        });
+    }
 
     const handleOnGroupChange = function (event) {
         // set the group id
         const satGroupId = event.target.value;
         setSelectedSatGroupId(satGroupId);
 
-        // call the backend to get the satellites for that group
-        socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
-            if (response['success']) {
-                setSatellitesInGroup(response.data);
-            } else {
-                setFormGroupSelectError(true);
-                enqueueSnackbar('Failed to set satellites for group id: ' + satGroupId + '', {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                });
-            }
-        });
+        // fetch satellite groups
+        fetchSatellitesByGroupId(satGroupId);
     };
 
     return (
@@ -91,7 +137,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 1rem'}}>
                     <FormControl sx={{ minWidth: 200, marginTop: 2, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
-                        <Select error={formGroupSelectError} defaultValue="" id="grouped-select" label="Grouping" variant={"filled"} size={"small"} onChange={handleOnGroupChange}>
+                        <Select disabled={loading} error={formGroupSelectError} value={satGroups.length? selectedSatGroupId: ""} id="grouped-select" label="Grouping" variant={"filled"} size={"small"} onChange={handleOnGroupChange}>
                             <ListSubheader>User defined satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "user") {
@@ -108,7 +154,7 @@ const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
                     </FormControl>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 1rem 0rem'}}>
-                    <SatelliteList satellitesInGroup={satellitesInGroup} handleSelectSatelliteId={handleSelectSatelliteId}/>
+                    <SatelliteList initialNoradId={initialNoradId} groupOfSats={groupOfSats} handleSelectSatelliteId={handleSelectSatelliteId}/>
                 </Grid>
             </Grid>
         </div>

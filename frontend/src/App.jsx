@@ -97,14 +97,14 @@ export default function App(props) {
             title: 'Satellites',
         },
         {
-            segment: 'satellites/satellites',
-            title: 'Satellites',
-            icon: <Satellite03Icon/>,
-        },
-        {
             segment: 'satellites/tlesources',
             title: 'TLE sources',
             icon: <SegmentIcon/>,
+        },
+        {
+            segment: 'satellites/satellites',
+            title: 'Satellites',
+            icon: <Satellite03Icon/>,
         },
         {
             segment: 'satellites/groups',
@@ -127,14 +127,14 @@ export default function App(props) {
             icon: <AddHomeIcon/>,
         },
         {
-            segment: 'settings/maintenance',
-            title: 'Maintenance',
-            icon: <EngineeringIcon/>,
-        },
-        {
             segment: 'settings/users',
             title: 'Users',
             icon: <PeopleIcon/>,
+        },
+        {
+            segment: 'settings/maintenance',
+            title: 'Maintenance',
+            icon: <EngineeringIcon/>,
         },
         {
             segment: 'settings/about',

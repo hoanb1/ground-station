@@ -309,10 +309,9 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
     const [tileLayerID, setTileLayerID] = useLocalStorageState('target-tile-id', initialTileLayerID);
     const [noradId, setNoradId] = useLocalStorageState('target-satellite-noradid', initialNoradId);
+    const [groupId, setGroupId] = useLocalStorageState('target-satellite-groupid', initialNoradId);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const satelliteData = getSatelliteDataByNoradId(noradId);
-    const [gridDraggable, setGridDraggable] = useState(false);
-    const [gridResizable, setGridResizable] = useState(false);
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
     const [gridEditable, setGridEditable] = useState(false);
@@ -672,7 +671,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             </div>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
-            <SatSelectorIsland handleSelectSatelliteId={handleSelectSatelliteId}/>
+            <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId} handleSelectSatelliteId={handleSelectSatelliteId}/>
         </StyledIslandParentScrollbar>
     ];
 

@@ -160,7 +160,7 @@ async def data_submission_routing(sio, cmd, data, logger):
             logger.info(f'Deleting satellite groups: {data}')
             await crud.delete_satellite_group(dbsession, data)
 
-            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            satellite_groups = await crud.fetch_satellite_group(dbsession, group_type="user")
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "edit-satellite-group":
@@ -168,7 +168,7 @@ async def data_submission_routing(sio, cmd, data, logger):
             await crud.edit_satellite_group(dbsession, data['id'], data)
 
             # get rows
-            satellite_groups = await crud.fetch_satellite_group(dbsession)
+            satellite_groups = await crud.fetch_satellite_group(dbsession, group_type="user")
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         else:

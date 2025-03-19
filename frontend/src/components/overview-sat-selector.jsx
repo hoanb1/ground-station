@@ -10,12 +10,13 @@ import Grid from "@mui/material/Grid2";
 import {TitleBar} from "./common.jsx";
 import {useSocket} from "./socket.jsx";
 import {enqueueSnackbar} from "notistack";
+import {useLocalStorageState} from "@toolpad/core";
 
 const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection}) {
     const socket = useSocket();
     const [satGroups, setSatGroups] = useState([]);
     const [formGroupSelectError, setFormGroupSelectError] = useState(false);
-    const [selectedSatGroupId, setSelectedSatGroupId] = useState("");
+    const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('overview-satellite-groupid', "");
     const [selectedSatellites, setSelectedSatellites] = useState([]);
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({

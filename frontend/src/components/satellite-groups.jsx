@@ -15,6 +15,7 @@ import {
     TextField
 } from "@mui/material";
 import {useSocket} from "./socket.jsx";
+import {enqueueSnackbar} from "notistack";
 
 const paginationModel = {page: 0, pageSize: 10};
 
@@ -27,6 +28,7 @@ const SatelliteGroupsTable = React.memo(function () {
     const [selectedRows, setSelectedRows] = useState([]);
     const [formDialogOpen, setFormDialogOpen] = useState(false);
     const [formDialogValues, setFormDialogValues] = useState(defaultFormValues);
+    const [formErrorStatus, setFormErrorStatus] = useState(false);
 
     const columns = [
         {field: 'name', headerName: 'Name', width: 150},
@@ -107,8 +109,14 @@ const SatelliteGroupsTable = React.memo(function () {
         socket.emit("data_submission", "delete-satellite-group", selectedRows, (response) => {
             if (response.success === true) {
                 setRows(response.data);
+                setFormErrorStatus(false);
             } else {
                 console.error(response.error);
+                enqueueSnackbar("Failed to delete group: " + response.error, {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+                setFormErrorStatus(true);
             }
         });
     }
@@ -166,6 +174,7 @@ const SatelliteGroupsTable = React.memo(function () {
                 <form onSubmit={handleFormSubmit}>
                     <DialogContent>
                         <TextField
+                            error={formErrorStatus}
                             name="name"
                             margin="dense"
                             label="Name"
