@@ -16,7 +16,7 @@ const SatelliteTable = React.memo(function () {
 
     const columns = [
         { field: 'name', headerName: 'Name', width: 200 },
-        { field: 'norad_id', headerName: 'ID', width: 150 },
+        { field: 'norad_id', headerName: 'NORAD ID', width: 150 },
         { field: 'status', headerName: 'Status', width: 150 },
         { field: 'decayed', headerName: 'Decayed', width: 150 },
         { field: 'launched', headerName: 'Launched', width: 150 },
@@ -25,15 +25,6 @@ const SatelliteTable = React.memo(function () {
     ];
 
     const paginationModel = { page: 0, pageSize: 10 };
-
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
-
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(+event.target.value);
-        setPage(0);
-    };
 
     useEffect(() => {
         socket.emit("data_request", "get-satellite-groups", null, (response) => {

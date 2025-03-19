@@ -548,6 +548,7 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
     Otherwise, return all satellite records.
     """
     try:
+        logger.info(f"Fetching satellites for group id: {group_id}")
         if isinstance(group_id, str):
             group_id = uuid.UUID(group_id)
 

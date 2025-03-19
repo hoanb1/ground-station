@@ -4,8 +4,6 @@ import {
     MapContainer,
     TileLayer,
     Marker,
-    Circle,
-    CircleMarker,
     Polyline,
     Polygon,
     useMap, Popup,
@@ -13,7 +11,6 @@ import {
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-fullscreen/dist/Leaflet.fullscreen.js';
-import * as satellite from 'satellite.js';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
@@ -28,7 +25,7 @@ import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById, tileLayers} from "./tile-layers.jsx";
-import MemoizedOverviewSatelliteSelector from "./overview-sat-selector.jsx";
+import OverviewSatelliteGroupSelector from "./overview-sat-selector.jsx";
 import {
     CODEC_BOOL,
     CODEC_JSON,
@@ -61,8 +58,6 @@ L.Icon.Default.mergeOptions({
     iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png'
 });
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
 
 
 // load / save layouts from localStorage
@@ -151,19 +146,19 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const defaultLayouts = {
         lg: [
             {
-                i: 'satselector',
-                x: 0,
-                y: 0,
-                w: 12,
-                h: 3,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
-            },
-            {
                 i: 'map',
                 x: 0,
                 y: 4,
                 w: 10,
                 h: 18,
+                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+            },
+            {
+                i: 'satselector',
+                x: 11,
+                y: 0,
+                w: 2,
+                h: 3,
                 resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
             },
             {
@@ -274,15 +269,15 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         selectedSatellites.forEach(satellite => {
             let noradid = satellite['noradid'];
             let [lat, lon, altitude, velocity] = getSatelliteLatLon(
-                satellite['tleLine1'],
-                satellite['tleLine2'],
+                satellite['tle1'],
+                satellite['tle2'],
                 now);
 
             let paths = {};
             // calculate paths
             paths = getSatellitePaths([
-                satellite['tleLine1'],
-                satellite['tleLine2']
+                satellite['tle1'],
+                satellite['tle2']
             ], orbitProjectionDuration);
 
             // past path
@@ -490,9 +485,9 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
             />
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key={"satselector"}>
-            <MemoizedOverviewSatelliteSelector
-                satelliteList={satelliteList}
-                handleGroupSatelliteSelection={handleGroupSatelliteSelection}/>
+            <OverviewSatelliteGroupSelector
+                handleGroupSatelliteSelection={handleGroupSatelliteSelection}
+            />
         </StyledIslandParentScrollbar>
     ];
 

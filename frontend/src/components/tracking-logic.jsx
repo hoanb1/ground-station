@@ -1,4 +1,5 @@
 import * as satellite from 'satellite.js';
+import {enqueueSnackbar} from "notistack";
 
 /**
  * Calculates the latitude, longitude, altitude, and velocity of a satellite based on TLE data and date.
@@ -10,21 +11,30 @@ import * as satellite from 'satellite.js';
  *                       Returns null if the satellite's position or velocity cannot be determined.
  */
 export function getSatelliteLatLon(tleLine1, tleLine2, date) {
+    try {
+        const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
+        const pv = satellite.propagate(satrec, date);
+        if (!pv.position || !pv.velocity) return null;
 
-    const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
-    const pv = satellite.propagate(satrec, date);
-    if (!pv.position || !pv.velocity) return null;
+        const gmst = satellite.gstime(date);
+        const geo = satellite.eciToGeodetic(pv.position, gmst);
 
-    const gmst = satellite.gstime(date);
-    const geo = satellite.eciToGeodetic(pv.position, gmst);
+        const lat = satellite.degreesLat(geo.latitude);
+        const lon = satellite.degreesLong(geo.longitude);
+        const altitude = geo.height;
 
-    const lat = satellite.degreesLat(geo.latitude);
-    const lon = satellite.degreesLong(geo.longitude);
-    const altitude = geo.height;
+        const {x, y, z} = pv.velocity;
+        const velocity = Math.sqrt(x * x + y * y + z * z);
+        return [lat, lon, altitude, velocity];
 
-    const {x, y, z} = pv.velocity;
-    const velocity = Math.sqrt(x * x + y * y + z * z);
-    return [lat, lon, altitude, velocity];
+    } catch (error) {
+        console.error("Error calculating satellite position and velocity:", error);
+        enqueueSnackbar("Error calculating satellite position and velocity: " + error.message, {
+            variant: "error",
+            autoHideDuration: 5000,
+        });
+        return [0, 0, 0, 0];
+    }
 }
 
 /**
@@ -181,43 +191,52 @@ export function splitAtDateline(points) {
  *                     future: [{lat, lon}] or [[{lat, lon}], ...] }
  */
 export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
-    // Create a satellite record from the provided TLE
-    const satrec = satellite.twoline2satrec(tle[0], tle[1]);
-    const now = new Date();
-    const pastPoints = [];
-    const futurePoints = [];
-    const stepMs = stepMinutes * 60 * 1000;
+    try {
+        // Create a satellite record from the provided TLE
+        const satrec = satellite.twoline2satrec(tle[0], tle[1]);
+        const now = new Date();
+        const pastPoints = [];
+        const futurePoints = [];
+        const stepMs = stepMinutes * 60 * 1000;
 
-    // Compute past points: from (now - durationMinutes) up to now (inclusive)
-    for (let t = now.getTime() - durationMinutes * 60 * 1000; t <= now.getTime(); t += stepMs) {
-        const time = new Date(t);
-        const { position } = satellite.propagate(satrec, time);
-        if (position) {
-            const gmst = satellite.gstime(time);
-            const posGd = satellite.eciToGeodetic(position, gmst);
-            let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
-            const lat = satellite.degreesLat(posGd.latitude);
-            pastPoints.push({ lat, lon });
+        // Compute past points: from (now - durationMinutes) up to now (inclusive)
+        for (let t = now.getTime() - durationMinutes * 60 * 1000; t <= now.getTime(); t += stepMs) {
+            const time = new Date(t);
+            const { position } = satellite.propagate(satrec, time);
+            if (position) {
+                const gmst = satellite.gstime(time);
+                const posGd = satellite.eciToGeodetic(position, gmst);
+                let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
+                const lat = satellite.degreesLat(posGd.latitude);
+                pastPoints.push({ lat, lon });
+            }
         }
-    }
 
-    // Compute future points: from now up to (now + durationMinutes) (inclusive)
-    for (let t = now.getTime(); t <= now.getTime() + durationMinutes * 60 * 1000; t += stepMs) {
-        const time = new Date(t);
-        const { position } = satellite.propagate(satrec, time);
-        if (position) {
-            const gmst = satellite.gstime(time);
-            const posGd = satellite.eciToGeodetic(position, gmst);
-            let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
-            const lat = satellite.degreesLat(posGd.latitude);
-            futurePoints.push({ lat, lon });
+        // Compute future points: from now up to (now + durationMinutes) (inclusive)
+        for (let t = now.getTime(); t <= now.getTime() + durationMinutes * 60 * 1000; t += stepMs) {
+            const time = new Date(t);
+            const { position } = satellite.propagate(satrec, time);
+            if (position) {
+                const gmst = satellite.gstime(time);
+                const posGd = satellite.eciToGeodetic(position, gmst);
+                let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
+                const lat = satellite.degreesLat(posGd.latitude);
+                futurePoints.push({ lat, lon });
+            }
         }
+
+        // Split the past and future arrays into segments to avoid drawing lines across the dateline.
+        const past = splitAtDateline(pastPoints);
+        const future = splitAtDateline(futurePoints);
+
+        return { past, future };
+    } catch (error) {
+        console.error("Error computing satellite paths:", error);
+        enqueueSnackbar("Error computing satellite paths: " + error.message, {
+            variant: "error",
+            autoHideDuration: 5000,
+        });
+        return { past: [], future: [] };
     }
-
-    // Split the past and future arrays into segments to avoid drawing lines across the dateline.
-    const past = splitAtDateline(pastPoints);
-    const future = splitAtDateline(futurePoints);
-
-    return { past, future };
 }
 

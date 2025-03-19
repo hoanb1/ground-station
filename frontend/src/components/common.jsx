@@ -59,7 +59,7 @@ export const MapTitleBar = styled(Paper)(({ theme }) => ({
     top: 0,
     fontWeight: 'bold',
     textAlign: 'left',
-    backgroundColor: "#26241c",
+    backgroundColor: "#1e261c",
 }));
 
 export const MapStatusBar = styled(Paper)(({ theme }) => ({

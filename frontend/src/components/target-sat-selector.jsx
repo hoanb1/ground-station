@@ -1,132 +1,114 @@
-import {Fragment, useEffect, useState} from "react";
-import {FormControl, FormControlLabel, InputLabel, MenuItem, Paper, Select, Stack, Switch} from "@mui/material";
-import {styled} from "@mui/material/styles";
-import TextField from '@mui/material/TextField';
-import Autocomplete from '@mui/material/Autocomplete';
-import CircularProgress from '@mui/material/CircularProgress';
+import { useEffect, useState} from "react";
+import {
+    FormControl,
+    InputLabel,
+    ListSubheader,
+    MenuItem,
+    Select,
+} from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import {TLEGROUPS, getSatellitesByGroupId} from "./tles.jsx";
-import {CODEC_JSON, StyledIslandParent} from "./common.jsx";
 import {TitleBar} from "./common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
+import * as React from "react";
+import {useSocket} from "./socket.jsx";
+import {enqueueSnackbar} from "notistack";
 
 
-function sleep(duration) {
-    return new Promise((resolve) => {
-        setTimeout(() => {
-            resolve();
-        }, duration);
-    });
-}
+function SatelliteList({satellitesInGroup, handleSelectSatelliteId}) {
+    const [selectedSatelliteId, setSelectedSatelliteId] = useState("");
 
-function SearchSatellite({initialSelectedSatelliteId, initialSelectedGroupId, initialSelectedSatelliteGroup, handleSelectSatelliteId}) {
-    const [open, setOpen] = useState(false);
-    const [options, setOptions] = useState(initialSelectedSatelliteGroup);
-    const [loading, setLoading] = useState(false);
-    const [selectedSatelliteId, setSelectedSatelliteId] = useState(initialSelectedSatelliteId);
-    const [satelliteObj, setSatelliteObj] = useLocalStorageState('target-search-satellite-data', initialSelectedSatelliteGroup, {codec: CODEC_JSON});
+    function handleChange(e) {
+        setSelectedSatelliteId(e.target.value);
+        handleSelectSatelliteId(e.target.value);
+    }
 
     useEffect(() => {
-        let group = getSatellitesByGroupId(initialSelectedGroupId);
-        setOptions(group);
+        if (!satellitesInGroup.some((group) => group["norad_id"] === selectedSatelliteId)) {
+            setSelectedSatelliteId("");
+        }
+
         return () => {
-            setOptions([]);
+
         };
-    }, [initialSelectedSatelliteGroup, initialSelectedGroupId]);
-
-    const handleOpen = () => {
-        setOpen(true);
-        (async () => {
-            setLoading(true);
-            let group = getSatellitesByGroupId(initialSelectedGroupId);
-            setLoading(false);
-            setOptions(group);
-        })();
-    };
-
-    const handleClose = () => {
-        setOpen(false);
-        setOptions([]);
-    };
+    }, [satellitesInGroup]);
 
     return (
-        <Autocomplete
-            onChange={(e, satellite) => {
-                setSatelliteObj(satellite);
-                setSelectedSatelliteId(satellite['noradid']);
-                handleSelectSatelliteId(satellite['noradid']);
-            }}
-            fullWidth
-            value={satelliteObj}
-            size={"small"}
-            open={open}
-            onOpen={handleOpen}
-            onClose={handleClose}
-            isOptionEqualToValue={(option, value) => option.name === value.name}
-            getOptionLabel={(option) => option.name}
-            options={options}
-            loading={loading}
-            renderInput={(params) => (
-                <TextField
-                    {...params}
-                    label="Satellite"
-                    slotProps={{
-                        input: {
-                            ...params.InputProps,
-                            endAdornment: (
-                                <Fragment>
-                                    {loading ? <CircularProgress color="inherit" size={20} /> : null}
-                                    {params.InputProps.endAdornment}
-                                </Fragment>
-                            ),
-                        },
-                    }}
-                />
-            )}
-        />
+        <FormControl fullWidth variant={"filled"} size={"small"}>
+            <InputLabel htmlFor="satellite-select">Satellite</InputLabel>
+            <Select value={selectedSatelliteId} id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleChange}>
+                {satellitesInGroup.map((satellite, index) => {
+                    return <MenuItem value={satellite['norad_id']} key={index}>{satellite['name']}</MenuItem>;
+                })}
+            </Select>
+        </FormControl>
     );
 }
 
 const SatSelectorIsland = ({ handleSelectSatelliteId }) => {
-
-    // State for all settings
+    const socket = useSocket();
+    const [satGroups, setSatGroups] = useState([]);
     const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('target-satellite-groupid', 'noaa');
-    const [selectedSatelliteId, setSelectedSatelliteId] = useLocalStorageState('target-satellite-noradid', 0);
-    const [selectedSatelliteGroup, setSelectedSatelliteGroup] = useState({});
+    const [satellitesInGroup, setSatellitesInGroup] = useState([]);
+    const [formGroupSelectError, setFormGroupSelectError] = useState(false);
 
     useEffect(() => {
-        let group = getSatellitesByGroupId(selectedSatGroupId);
-        setSelectedSatelliteGroup(group);
+        socket.emit("data_request", "get-satellite-groups", null, (response) => {
+            if (response['success']) {
+                setSatGroups(response.data);
+            } else {
+
+            }
+        });
+
         return () => {
-            // Cleanup logic goes here (optional)
+
         };
     }, [selectedSatGroupId]);
+
+    const handleOnGroupChange = function (event) {
+        // set the group id
+        const satGroupId = event.target.value;
+        setSelectedSatGroupId(satGroupId);
+
+        // call the backend to get the satellites for that group
+        socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
+            if (response['success']) {
+                setSatellitesInGroup(response.data);
+            } else {
+                setFormGroupSelectError(true);
+                enqueueSnackbar('Failed to set satellites for group id: ' + satGroupId + '', {
+                        variant: 'error',
+                        autoHideDuration: 5000,
+                });
+            }
+        });
+    };
 
     return (
         <div>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 0rem 0rem 1rem'}}>
-                    <FormControl fullWidth size={"small"}>
-                        <InputLabel id="satellite-group">Group</InputLabel>
-                        <Select labelId="satellite-group" value={selectedSatGroupId} label="Group" variant={"outlined"}
-                            onChange={(e) => {
-                                setSelectedSatGroupId(e.target.value);
-                            }}>
-                            {TLEGROUPS.map((o, key) => (
-                                <MenuItem key={TLEGROUPS[key]['id']} value={TLEGROUPS[key]['id']}>
-                                    {TLEGROUPS[key]['name']}
-                                </MenuItem>
-                            ))}
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 1rem'}}>
+                    <FormControl sx={{ minWidth: 200, marginTop: 2, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
+                        <InputLabel htmlFor="grouped-select">Group</InputLabel>
+                        <Select error={formGroupSelectError} defaultValue="" id="grouped-select" label="Grouping" variant={"filled"} size={"small"} onChange={handleOnGroupChange}>
+                            <ListSubheader>User defined satellite groups</ListSubheader>
+                            {satGroups.map((group, index) => {
+                                if (group.type === "user") {
+                                    return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                                }
+                            })}
+                            <ListSubheader>Build-in satellite groups</ListSubheader>
+                            {satGroups.map((group, index) => {
+                                if (group.type === "system") {
+                                    return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                                }
+                            })}
                         </Select>
                     </FormControl>
                 </Grid>
-                <Grid size={{ xs: 6, sm: 6, md: 6 }} style={{padding: '1rem 1rem 1rem 0rem'}}>
-                    <SearchSatellite
-                        initialSelectedSatelliteId={selectedSatelliteId}
-                        initialSelectedGroupId={selectedSatGroupId}
-                        initialSelectedSatelliteGroup={selectedSatelliteGroup}
-                        handleSelectSatelliteId={handleSelectSatelliteId}/>
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 1rem 0rem'}}>
+                    <SatelliteList satellitesInGroup={satellitesInGroup} handleSelectSatelliteId={handleSelectSatelliteId}/>
                 </Grid>
             </Grid>
         </div>

@@ -1,132 +1,22 @@
-import Autocomplete from "@mui/material/Autocomplete";
-import TextField from "@mui/material/TextField";
-import {autocompleteClasses, Checkbox, ListSubheader, Paper, Popper, useMediaQuery} from "@mui/material";
+import {
+    FormControl,
+    InputLabel,
+    ListSubheader, MenuItem,
+    Select,
+} from "@mui/material";
 import { useTheme, styled } from '@mui/material/styles';
-import React, {useEffect, useState, forwardRef, createContext, useContext, useRef} from "react";
-import {getAllSatellites} from "./tles.jsx";
-import Typography from "@mui/material/Typography";
-import { VariableSizeList } from 'react-window';
-import PropTypes from "prop-types";
+import React, {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
-import {useLocalStorageState} from "@toolpad/core";
-import {CODEC_JSON} from "./common.jsx";
-import {GroundStationTinyLogo} from "./icons.jsx";
 import {TitleBar} from "./common.jsx";
+import {useSocket} from "./socket.jsx";
+import {enqueueSnackbar} from "notistack";
 
-const LISTBOX_PADDING = 8; // px
-
-function renderRow(props) {
-    const { data, index, style } = props;
-    const dataSet = data[index];
-
-    const inlineStyle = {
-        ...style,
-        top: style.top + LISTBOX_PADDING,
-    };
-
-    if (dataSet.hasOwnProperty('group')) {
-        return (
-            <ListSubheader key={dataSet.key} component="div" style={inlineStyle}>
-                {dataSet.group}
-            </ListSubheader>
-        );
-    }
-
-    const { key, ...optionProps } = dataSet[0];
-    return (
-        <Typography key={key} component="li" {...optionProps} noWrap style={inlineStyle}>
-            {`#${dataSet[1]['noradid']} - ${dataSet[1]['name']}`}
-        </Typography>
-    );
-}
-
-const OuterElementContext = createContext({});
-
-const OuterElementType = forwardRef((props, ref) => {
-    const outerProps = useContext(OuterElementContext);
-    return <div ref={ref} {...props} {...outerProps} />;
-});
-
-function useResetCache(data) {
-    const ref = useRef(null);
-    useEffect(() => {
-        if (ref.current != null) {
-            ref.current.resetAfterIndex(0, true);
-        }
-    }, [data]);
-    return ref;
-}
-
-// Adapter for react-window
-const ListboxComponent = forwardRef(function ListboxComponent(props, ref) {
-    const { children, ...other } = props;
-    const itemData = [];
-    children.forEach((item) => {
-        itemData.push(item);
-        itemData.push(...(item.children || []));
-    });
-
-    const theme = useTheme();
-    const smUp = useMediaQuery(theme.breakpoints.up('sm'), {
-        noSsr: true,
-    });
-    const itemCount = itemData.length;
-    const itemSize = smUp ? 36 : 48;
-
-    const getChildSize = (child) => {
-        if (child.hasOwnProperty('group')) {
-            return 48;
-        }
-        return itemSize;
-    };
-
-    const getHeight = () => {
-        if (itemCount > 8) {
-            return 8 * itemSize;
-        }
-        return itemData.map(getChildSize).reduce((a, b) => a + b, 0);
-    };
-
-    const gridRef = useResetCache(itemCount);
-
-    return (
-        <div ref={ref}>
-            <OuterElementContext.Provider value={other}>
-                <VariableSizeList
-                    itemData={itemData}
-                    height={getHeight() + 2 * LISTBOX_PADDING}
-                    width="100%"
-                    ref={gridRef}
-                    outerElementType={OuterElementType}
-                    innerElementType="ul"
-                    itemSize={(index) => getChildSize(itemData[index])}
-                    overscanCount={5}
-                    itemCount={itemCount}
-                >
-                    {renderRow}
-                </VariableSizeList>
-            </OuterElementContext.Provider>
-        </div>
-    );
-});
-
-ListboxComponent.propTypes = {
-    children: PropTypes.node,
-};
-
-export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSelection}) {
-    const [selectedSatellites, setSelectedSatellites] = useLocalStorageState('overview-selected-satellites', [], {codec: CODEC_JSON});
-    const [openPopup, setOpenPopup] = useState(false);
-
-    const StyledPopper = styled(Popper)({
-        [`& .${autocompleteClasses.listbox}`]: {
-            boxSizing: 'border-box',
-            '& ul': {
-                padding: 0,
-                margin: 0,
-            },
-        },
-    });
+const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection}) {
+    const socket = useSocket();
+    const [satGroups, setSatGroups] = useState([]);
+    const [formGroupSelectError, setFormGroupSelectError] = useState(false);
+    const [selectedSatGroupId, setSelectedSatGroupId] = useState("");
+    const [selectedSatellites, setSelectedSatellites] = useState([]);
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
         backgroundColor: "#1e1e1e",
@@ -134,56 +24,69 @@ export function OverviewSatelliteSelector({satelliteList, handleGroupSatelliteSe
     }));
 
     useEffect(() => {
-        // Your effect logic here
+        socket.emit("data_request", "get-satellite-groups", null, (response) => {
+            if (response['success']) {
+                setSatGroups(response.data);
+            } else {
+                enqueueSnackbar('Failed to get satellite groups', {
+                    variant: 'error',
+                    autoHideDuration: 5000
+                });
+                setFormGroupSelectError(true);
+            }
+        });
 
         return () => {
-            // Cleanup logic here
+            // Cleanup logic goes here (optional)
         };
-    }, [/* Dependencies here */]);
+    }, [selectedSatGroupId]);
 
-    const memoizedValue = React.useMemo(() => {
-        return selectedSatellites;
-    }, [selectedSatellites]);
+    function handleOnGroupChange(event) {
+        // let get a list of satellites for the selected group
+        const satGroupId = event.target.value;
+        socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
+            if (response['success']) {
+                setSelectedSatellites(response.data);
+                setSelectedSatGroupId(event.target.value);
+                handleGroupSatelliteSelection(response.data);
+                setFormGroupSelectError(false);
+            } else {
+                enqueueSnackbar('Failed to set satellites for group id: ' + selectedSatGroupId + '', {
+                    variant: 'error',
+                    autoHideDuration: 5000
+                });
+                setFormGroupSelectError(true);
+            }
+        });
+    }
 
     return (
         <ThemedSettingsDiv>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Select group of satellites</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '1rem 1rem 0rem 1rem'}}>
-                    <Autocomplete
-                        onChange={(e, satellites) => {
-                            setSelectedSatellites(satellites);
-                            handleGroupSatelliteSelection(satellites);
-                        }}
-                        value={memoizedValue}
-                        multiple={true}
-                        fullWidth={true}
-                        disableCloseOnSelect={true}
-                        size={"small"}
-                        disableListWrap={true}
-                        noOptionsText={"Could not find any satellites"}
-                        options={satelliteList}
-                        getOptionLabel={(option) => option.name}
-                        //groupBy={(option) => option['noradid']}
-                        renderInput={(params) => <TextField {...params} label="Selected satellites" placeholder="Select satellites" variant="outlined" />}
-                        renderOption={(props, option, state) => [props, option, state.index]}
-                        renderGroup={(params) => {
-                            return params;
-                        }}
-                        slots={{
-                            popper: StyledPopper,
-                        }}
-                        slotProps={{
-                            listbox: {
-                                component: ListboxComponent,
-                            },
-                        }}
-                    />
+                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0rem 1rem 0rem'}}>
+                    <FormControl sx={{ minWidth: 200, marginTop: 2, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
+                        <InputLabel htmlFor="grouped-select">Group</InputLabel>
+                        <Select error={formGroupSelectError} value={selectedSatGroupId} id="grouped-select" label="Grouping"
+                                variant={"filled"} size={"small"} onChange={handleOnGroupChange}>
+                            <ListSubheader>User defined satellite groups</ListSubheader>
+                            {satGroups.map((group, index) => {
+                                if (group.type === "user") {
+                                    return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                                }
+                            })}
+                            <ListSubheader>Build-in satellite groups</ListSubheader>
+                            {satGroups.map((group, index) => {
+                                if (group.type === "system") {
+                                    return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                                }
+                            })}
+                        </Select>
+                    </FormControl>
                 </Grid>
             </Grid>
         </ThemedSettingsDiv>
     );
-}
+});
 
-const MemoizedOverviewSatelliteSelector = React.memo(OverviewSatelliteSelector);
-export default MemoizedOverviewSatelliteSelector;
+export default OverviewSatelliteGroupSelector;

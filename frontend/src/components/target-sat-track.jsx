@@ -36,7 +36,7 @@ import {
 import {TitleBar} from "./common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
 import {HOME_LON, HOME_LAT} from "./common.jsx";
-import {handleSetGridEditableOverview} from "./overview-sat-track.jsx";
+import {getSatelliteCoverageCircle} from "./tracking-logic.jsx";
 
 // global leaflet map object
 let MapObject = null;
@@ -63,9 +63,6 @@ L.Icon.Default.mergeOptions({
     iconUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-icon.png',
     shadowUrl: 'https://unpkg.com/leaflet@1.9.3/dist/images/marker-shadow.png'
 });
-
-const ResponsiveGridLayout = WidthProvider(Responsive);
-
 
 // load / save layouts from localStorage
 function loadLayoutsFromLocalStorage() {
@@ -174,101 +171,6 @@ function getSatelliteLatLon(tleLine1, tleLine2, date) {
     return [lat, lon, altitude, velocity];
 }
 
-/**
- * Returns an array of { lat, lon } points representing the satellite’s
- * coverage area on Earth (its horizon circle), adjusted so that if the area
- * includes the north or south pole, a vertex for that pole is inserted.
- *
- * @param {number} satLat - Satellite latitude in degrees.
- * @param {number} satLon - Satellite longitude in degrees.
- * @param {number} altitudeKm - Satellite altitude above Earth's surface in km.
- * @param {number} [numPoints=36] - Number of segments for the circle boundary.
- *                                  (The resulting array will have numPoints+1 points.)
- * @return {Array<{lat: number, lon: number}>} The polygon (in degrees) for the coverage area.
- */
-function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints = 36) {
-    // Mean Earth radius in kilometers (WGS-84 approximate)
-    const R_EARTH = 6378.137;
-
-    // Convert satellite subpoint to radians
-    const lat0 = (satLat * Math.PI) / 180;
-    const lon0 = (satLon * Math.PI) / 180;
-
-    // Compute angular radius of the coverage circle (in radians)
-    // d = arccos(R_EARTH / (R_EARTH + altitudeKm))
-    const d = Math.acos(R_EARTH / (R_EARTH + altitudeKm));
-
-    // Generate the circle points (closed polygon)
-    const circlePoints = [];
-    for (let i = 0; i <= numPoints; i++) {
-        const theta = (2 * Math.PI * i) / numPoints;
-
-        // Using spherical trigonometry to compute a point d away from (lat0,lon0)
-        const lat_i = Math.asin(
-            Math.sin(lat0) * Math.cos(d) +
-            Math.cos(lat0) * Math.sin(d) * Math.cos(theta)
-        );
-        const lon_i = lon0 + Math.atan2(
-            Math.sin(d) * Math.sin(theta) * Math.cos(lat0),
-            Math.cos(d) - Math.sin(lat0) * Math.sin(lat_i)
-        );
-
-        // Convert back to degrees and normalize longitude to [-180, 180)
-        const latDeg = (lat_i * 180) / Math.PI;
-        let lonDeg = (lon_i * 180) / Math.PI;
-        //lonDeg = ((lonDeg + 540) % 360) - 180;
-
-        circlePoints.push({ lat: latDeg, lon: lonDeg });
-    }
-
-    // Adjust the polygon if it should include a pole.
-    // Condition for north pole inclusion: the spherical cap extends beyond the north pole.
-    // (That is, if d > (π/2 - lat0)). Similarly for the south pole: d > (π/2 + lat0) when lat0 is negative.
-    let adjustedPoints = circlePoints.slice();
-
-    // North pole case (for satellites in the northern hemisphere or whose cap covers the north)
-    if (d > (Math.PI / 2 - lat0)) {
-        // Find the index with the maximum latitude (the highest point in our computed circle)
-        let maxIndex = 0, maxLat = -Infinity;
-        for (let i = 0; i < circlePoints.length; i++) {
-            if (circlePoints[i].lat > maxLat) {
-                maxLat = circlePoints[i].lat;
-                maxIndex = i;
-            }
-        }
-        // Insert the north pole as an extra vertex immediately after the highest point.
-        // (Using the same longitude as that highest point.)
-        adjustedPoints = [
-            { lat: 90, lon: circlePoints[0].lon },
-            ...circlePoints.slice(0, maxIndex + 1),
-            ...circlePoints.slice(maxIndex + 1),
-            { lat: 90, lon: circlePoints[circlePoints.length - 1].lon },
-        ];
-    }
-
-    // South pole case (for satellites in the southern hemisphere or whose cap covers the south)
-    if (d > (Math.PI / 2 + lat0)) {
-        // Find the index with the minimum latitude (the lowest point in our computed circle)
-        let minIndex = 0, minLat = Infinity;
-        for (let i = 0; i < circlePoints.length; i++) {
-            if (circlePoints[i].lat < minLat) {
-                minLat = circlePoints[i].lat;
-                minIndex = i;
-            }
-        }
-        // Insert the south pole as an extra vertex immediately after the lowest point.
-        adjustedPoints = [
-            ...adjustedPoints.slice(0, minIndex + 1),
-            { lat: -90, lon: circlePoints[minIndex].lon },
-            { lat: -90, lon: circlePoints[minIndex + 1].lon },
-            ...adjustedPoints.slice(minIndex + 1),
-        ];
-    }
-
-    return adjustedPoints;
-}
-// Make sure satellite.js is imported, e.g.,
-// const satellite = require('satellite.js');
 
 /**
  * Normalizes a longitude value to be within -180 to 180 degrees.
@@ -421,20 +323,20 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     const defaultLayouts = {
         lg: [
             {
-                i: 'satselector',
-                x: 0,
-                y: 0,
-                w: 12,
-                h: 3,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
-            },
-            {
                 i: 'map',
                 x: 0,
                 y: 3,
                 w: 8,
                 h: 15,
                 resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+            },
+            {
+                i: 'satselector',
+                x: 10,
+                y: 0,
+                w: 2,
+                h: 5,
+                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
             },
             {
                 i: 'settings',
@@ -529,8 +431,6 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         const loaded = loadLayoutsFromLocalStorage();
         return loaded ?? defaultLayouts;
     });
-
-
 
     const handleWhenReady = (map) => {
         // map is ready

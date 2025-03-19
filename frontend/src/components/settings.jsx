@@ -366,6 +366,11 @@ const MaintenanceForm = () => {
         localStorage.setItem(targetGridLayoutName, null);
     }
 
+    const clearSatelliteDataLocalStorage = () => {
+        localStorage.setItem('target-satellite-noradid', null);
+        localStorage.setItem('overview-selected-satellites', null);
+    }
+
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0  }}>
             <Alert severity="info">
@@ -386,8 +391,8 @@ const MaintenanceForm = () => {
                         Clear local browser satellite data
                     </Grid>
                     <Grid size={8}>
-                        <Button variant="outlined" color="secondary">
-                            Button 2
+                        <Button variant="contained" color="warning" onClick={clearSatelliteDataLocalStorage}>
+                            clear satellite data
                         </Button>
                     </Grid>
                 </Grid>

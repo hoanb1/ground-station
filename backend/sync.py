@@ -202,7 +202,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 logger.error(f'Failed to fetch data from {tle_source["url"]}: {e}')
                 await sio.emit('sat-sync-events', {'success': False, 'status': 'inprogress', 'progress': 0, 'error': e})
 
-            logger.info(f"Group assignments for {tle_source_identifier}: {group_assignments[tle_source_identifier]}")
+            logger.info(f"Group {tle_source_identifier} has {len(group_assignments[tle_source_identifier])} members")
 
             # fetch group by identifier
             group = await crud.fetch_system_satellite_group_by_identifier(dbsession, tle_source_identifier)
@@ -312,7 +312,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 satellite.operator = satnogs_sat_info.get('operator', None)
                 satellite.countries = satnogs_sat_info.get('countries', None)
                 satellite.telemetries = satnogs_sat_info.get('telemetries', None)
-                satellite.updated = parse_date(satnogs_sat_info.get('deployed')) if satnogs_sat_info.get('deployed', None) else None
+                #satellite.updated = parse_date(satnogs_sat_info.get('updated')) if satnogs_sat_info.get('updated', None) else None
                 satellite.citation = satnogs_sat_info.get('citation', None)
                 satellite.is_frequency_violator = satnogs_sat_info.get('is_frequency_violator', None)
                 satellite.associated_satellites = json.dumps(satnogs_sat_info.get('associated_satellites', {}))
