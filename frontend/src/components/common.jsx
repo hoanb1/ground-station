@@ -50,7 +50,7 @@ export const CODEC_BOOL = {
 export const MapTitleBar = styled(Paper)(({ theme }) => ({
     width: '100%',
     height: '30px',
-    padding: '4px 15px',
+    padding: '4px 8px',
     ...theme.typography.body2,
     position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
@@ -65,7 +65,7 @@ export const MapTitleBar = styled(Paper)(({ theme }) => ({
 export const MapStatusBar = styled(Paper)(({ theme }) => ({
     width: '100%',
     height: '30px',
-    padding: '4px 15px',
+    padding: '4px 8px',
     ...theme.typography.body2,
     position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
@@ -79,7 +79,7 @@ export const MapStatusBar = styled(Paper)(({ theme }) => ({
 export const TitleBar = styled(Paper)(({ theme }) => ({
     width: '100%',
     height: '30px',
-    padding: '4px 15px',
+    padding: '4px 8px',
     ...theme.typography.body2,
     position: 'relative',
     borderRadius: '0px 0px 0px 0px',

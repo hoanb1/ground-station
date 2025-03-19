@@ -20,8 +20,6 @@ const ThemedStack = styled(Stack)(({theme}) => ({
     borderRadius: theme.shape.borderRadius,
     borderColor: theme.palette.background.paper,
     padding: theme.spacing(0),
-    marginTop: "15px",
-
 }));
 
 const ThemedSettingsDiv = styled('div')(({theme}) => ({
