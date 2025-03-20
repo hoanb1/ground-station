@@ -135,7 +135,6 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [tileLayerID, setTileLayerID] = useLocalStorageState('overview-tile-id', initialTileLayerID);
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
-    const [satelliteList, setSatelliteList] = useState([]);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const [mapObject, setMapObject] = useState(null);
     const [gridEditable, setGridEditable] = useState(false);
@@ -349,24 +348,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         const initialMapZoom = savedZoomLevel ? parseFloat(savedZoomLevel) : 1;
         setMapZoomLevel(initialMapZoom);
 
-        if (true) {
-
-        }
-
-
         return () => {
 
         };
     }, []);
-
-    useEffect(() => {
-        // get all satellites
-        setSatelliteList(getAllSatellites());
-
-        return () => {
-            // Cleanup function (optional), runs when component unmounts or before the effect re-runs
-        };
-    }, [/* Add your dependencies here */]);
 
     // update the satellites position, day/night terminator every second
     useEffect(()=>{

@@ -50,25 +50,33 @@ async def data_request_routing(sio, cmd, data, logger):
         reply = {'success': None, 'data': None}
 
         if cmd == "get-tle-sources":
-            # get rows
+            logger.info(f'Getting TLE sources')
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
             reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
         elif cmd == "get-satellites":
-            # get rows
+            logger.info(f'Getting satellites: {data}')
             satellites = await crud.fetch_satellites(dbsession, None)
             satellites = json.loads(json.dumps(satellites, cls=SQLAlchemyRowEncoder))
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
+        elif cmd == "get-satellite":
+            logger.info(f'Getting satellite data for norad id: {data}')
+            satellite = await crud.fetch_satellites(dbsession, data)
+            satellite = json.loads(json.dumps(satellite, cls=SQLAlchemyRowEncoder))
+
+            reply = {'success': satellite['success'], 'data': satellite.get('data', [])}
+
         elif cmd == "get-satellites-for-group-id":
-            # get rows
+            logger.info(f'Getting satellites for group id: {data}')
             satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
             satellites = json.loads(json.dumps(satellites, cls=SQLAlchemyRowEncoder))
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite-groups-user":
+            logger.info(f'Getting user satellite groups: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
             satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
 
@@ -78,6 +86,7 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups-system":
+            logger.info(f'Getting system satellite groups: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
             satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
 
@@ -87,11 +96,13 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups":
+            logger.info(f'Getting satellite groups: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
             satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "sync-satellite-data":
+            logger.info(f'Syncing satellite data with known TLE sources')
             await synchronize_satellite_data(dbsession, logger, sio)
 
         else:

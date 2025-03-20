@@ -48,7 +48,9 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
     }, []);
 
     useEffect(() => {
-        fetchSatellitesByGroupId(selectedSatGroupId);
+        if (selectedSatGroupId) {
+            fetchSatellitesByGroupId(selectedSatGroupId);
+        }
 
         return () => {
 

@@ -1,4 +1,4 @@
-import React, {useState, useEffect, useCallback, useMemo} from 'react';
+import React, {useState, useEffect, useCallback, useMemo, memo} from 'react';
 import { SatelliteAlt } from '@mui/icons-material';
 import { Responsive, WidthProvider } from 'react-grid-layout';
 import {
@@ -18,7 +18,6 @@ import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator-line.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
-import {getSatelliteDataByNoradId} from './tles.jsx';
 import SettingsIsland from "./map-settings.jsx";
 import {Box, Fab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
@@ -36,7 +35,9 @@ import {
 import {TitleBar} from "./common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
 import {HOME_LON, HOME_LAT} from "./common.jsx";
-import {getSatelliteCoverageCircle} from "./tracking-logic.jsx";
+import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "./tracking-logic.jsx";
+import {enqueueSnackbar} from "notistack";
+import {useSocket} from "./socket.jsx";
 
 // global leaflet map object
 let MapObject = null;
@@ -143,148 +144,17 @@ function CenterSatelliteButton() {
     </Fab>;
 }
 
-
-/**
- * Calculates the latitude, longitude, altitude, and velocity of a satellite based on TLE data and date.
- *
- * @param {string} tleLine1 The first line of the two-line element set (TLE) describing the satellite's orbit.
- * @param {string} tleLine2 The second line of the two-line element set (TLE) describing the satellite's orbit.
- * @param {Date} date The date and time for which to calculate the satellite's position and velocity.
- * @return {Object|null} An object containing latitude (lat), longitude (lon), altitude, and velocity of the satellite.
- *                       Returns null if the satellite's position or velocity cannot be determined.
- */
-function getSatelliteLatLon(tleLine1, tleLine2, date) {
-
-    const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
-    const pv = satellite.propagate(satrec, date);
-    if (!pv.position || !pv.velocity) return null;
-
-    const gmst = satellite.gstime(date);
-    const geo = satellite.eciToGeodetic(pv.position, gmst);
-
-    const lat = satellite.degreesLat(geo.latitude);
-    const lon = satellite.degreesLong(geo.longitude);
-    const altitude = geo.height;
-
-    const {x, y, z} = pv.velocity;
-    const velocity = Math.sqrt(x * x + y * y + z * z);
-    return [lat, lon, altitude, velocity];
-}
-
-
-/**
- * Normalizes a longitude value to be within -180 to 180 degrees.
- * @param {number} lon - The longitude in degrees.
- * @returns {number} - The normalized longitude.
- */
-function normalizeLongitude(lon) {
-    while (lon > 180) {
-        lon -= 360;
-    }
-    while (lon < -180) {
-        lon += 360;
-    }
-    return lon;
-}
-
-/**
- * Splits an array of points into segments so that no segment contains a jump
- * greater than 180 degrees in longitude.
- *
- * @param {Array} points - An array of objects of the form {lat, lon}.
- * @returns {Array} - Either an array of points (if only one segment exists) or an array of segments.
- */
-function splitAtDateline(points) {
-    if (points.length === 0) return points;
-    const segments = [];
-    let currentSegment = [points[0]];
-
-    for (let i = 1; i < points.length; i++) {
-        const prev = points[i - 1];
-        const curr = points[i];
-        // Because our points are normalized, a jump of more than 180 degrees
-        // indicates a crossing of the dateline.
-        if (Math.abs(curr.lon - prev.lon) > 180) {
-            // End the current segment and start a new one.
-            segments.push(currentSegment);
-            currentSegment = [curr];
-        } else {
-            currentSegment.push(curr);
-        }
-    }
-    segments.push(currentSegment);
-    // If there is only one segment, return it directly; otherwise return the segments.
-    return segments.length === 1 ? segments[0] : segments;
-}
-
-/**
- * Computes the satellite's past and future path coordinates from its TLE.
- * The path is computed at a fixed time step and then split into segments so that
- * no segment contains a line crossing the dateline (+180 or -180 longitude).
- *
- * @param {Array} tle - An array containing two TLE lines [line1, line2].
- * @param {number} durationMinutes - The projection duration (in minutes) for both past and future.
- * @param {number} [stepMinutes=1] - (Optional) The time interval in minutes between coordinate samples.
- * @returns {Object} An object with two properties:
- *                   { past: [{lat, lon}] or [[{lat, lon}], ...],
- *                     future: [{lat, lon}] or [[{lat, lon}], ...] }
- */
-function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
-    // Create a satellite record from the provided TLE
-    const satrec = satellite.twoline2satrec(tle[0], tle[1]);
-    const now = new Date();
-    const pastPoints = [];
-    const futurePoints = [];
-    const stepMs = stepMinutes * 60 * 1000;
-
-    // Compute past points: from (now - durationMinutes) up to now (inclusive)
-    for (let t = now.getTime() - durationMinutes * 60 * 1000; t <= now.getTime(); t += stepMs) {
-        const time = new Date(t);
-        const { position } = satellite.propagate(satrec, time);
-        if (position) {
-            const gmst = satellite.gstime(time);
-            const posGd = satellite.eciToGeodetic(position, gmst);
-            let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
-            const lat = satellite.degreesLat(posGd.latitude);
-            pastPoints.push({ lat, lon });
-        }
-    }
-
-    // Compute future points: from now up to (now + durationMinutes) (inclusive)
-    for (let t = now.getTime(); t <= now.getTime() + durationMinutes * 60 * 1000; t += stepMs) {
-        const time = new Date(t);
-        const { position } = satellite.propagate(satrec, time);
-        if (position) {
-            const gmst = satellite.gstime(time);
-            const posGd = satellite.eciToGeodetic(position, gmst);
-            let lon = normalizeLongitude(satellite.degreesLong(posGd.longitude));
-            const lat = satellite.degreesLat(posGd.latitude);
-            futurePoints.push({ lat, lon });
-        }
-    }
-
-    // Split the past and future arrays into segments to avoid drawing lines across the dateline.
-    const past = splitAtDateline(pastPoints);
-    const future = splitAtDateline(futurePoints);
-
-    return { past, future };
-}
-
-const ThemedDiv = styled('div')(({theme}) => ({
-    backgroundColor: theme.palette.background.paper,
-}));
-
 function getMapZoomFromStorage() {
     const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
     return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
 
-function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
+const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
                                   initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=240 }) {
-
+    const socket = useSocket();
     const [satelliteName, setSatelliteName] = useState(null);
     const [satelliteLat, setSatelliteLat] = useState(null);
     const [satelliteLon, setSatelliteLon] = useState(null);
@@ -311,10 +181,10 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     const [noradId, setNoradId] = useLocalStorageState('target-satellite-noradid', initialNoradId);
     const [groupId, setGroupId] = useLocalStorageState('target-satellite-groupid', initialNoradId);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
-    const satelliteData = getSatelliteDataByNoradId(noradId);
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
     const [gridEditable, setGridEditable] = useState(false);
+    const [satelliteData, setSatelliteData] = useState({});
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -419,6 +289,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
 
     const handleSelectSatelliteId = useCallback((noradId) => {
         setNoradId(noradId);
+        fetchSatelliteData(noradId);
     }, [noradId]);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
@@ -439,23 +310,21 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         }, 1000);
     };
 
-    let [latitude, longitude, altitude, velocity] = [null, null, null, null];
-
-    function satelliteUpdate(now) {
-        if (satelliteData !== null) {
-
+    const satelliteUpdate = function (now) {
+        if (Object.keys(satelliteData).length !== 0) {
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
             let currentFuturePaths = [];
             let currentPastPaths = [];
-            setSatelliteName(satelliteData['name']);
-            [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
-                satelliteData['tleLine1'],
-                satelliteData['tleLine2'],
+
+            let [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
+                satelliteData['tle1'],
+                satelliteData['tle2'],
                 now);
 
             // set satellite data
+            setSatelliteName(satelliteData['name']);
             setSatelliteLat(latitude);
             setSatelliteLon(longitude);
             setSatelliteAltitude(altitude);
@@ -465,11 +334,10 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             let mapCoords = MapObject.getCenter();
             MapObject.setView([mapCoords.lat, longitude], MapObject.getZoom());
 
-            let paths = {};
             // calculate paths
-            paths = getSatellitePaths([
-                satelliteData['tleLine1'],
-                satelliteData['tleLine2']
+            let paths = getSatellitePaths([
+                satelliteData['tle1'],
+                satelliteData['tle2']
             ], orbitProjectionDuration);
 
             // past path
@@ -494,7 +362,7 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                 }}
             />)
 
-            currentPos.push(<Marker key={"marker-"+satelliteData['name']} position={[latitude, longitude]}
+            currentPos.push(<Marker key={"marker-"+satelliteData['norad_id']} position={[latitude, longitude]}
                                     icon={satelliteIcon}>
                 <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
                     {satelliteData['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
@@ -519,6 +387,8 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
             setCurrentFutureSatellitesPaths(currentFuturePaths);
             setCurrentSatellitesPosition(currentPos);
             setCurrentSatellitesCoverage(currentCoverage);
+        } else {
+            console.warn("No satellite data found for norad id: ", noradId, satelliteData);
         }
 
         // Day/night boundary
@@ -535,19 +405,6 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         setSunPos(sunPos);
         setMoonPos(moonPos);
     }
-
-    // update the satellites position, day/night terminator every second
-    useEffect(()=>{
-        satelliteUpdate(new Date());
-        const timer = setInterval(()=>{
-            satelliteUpdate(new Date());
-        }, 1000);
-
-        return ()=>clearInterval(timer);
-
-    },[groupSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
-        showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
-        latitude, longitude, altitude, velocity, tileLayerID, noradId]);
 
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
@@ -566,6 +423,43 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
         return null;
     }
 
+    const fetchSatelliteData = function(noradId) {
+        socket.emit("data_request", "get-satellite", noradId, (response) => {
+            if (response['success'] && response.data[0]) {
+                setSatelliteData(response.data[0]);
+
+            } else {
+                enqueueSnackbar(`Failed to get satellite data for norad id: ${noradId} (${response.message})`, {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+            }
+        });
+    }
+
+    useEffect(() => {
+        if (noradId) {
+            fetchSatelliteData(noradId);
+        }
+
+        return () => {
+
+        };
+    }, []);
+
+    useEffect(()=>{
+        satelliteUpdate(new Date());
+        let timer = setInterval(()=>{
+            let now = new Date();
+            satelliteUpdate(now);
+        }, 1000);
+
+        return ()=> {
+            clearInterval(timer);
+        };
+
+    },[noradId, satelliteData]);
+
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
@@ -581,7 +475,9 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
                 zoomSnap={0.25}
                 zoomDelta={0.25}
             >
-                <MapTitleBar className={"react-grid-draggable window-title-bar"}>Tracking {satelliteName} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s</MapTitleBar>
+                <MapTitleBar className={"react-grid-draggable window-title-bar"}>
+                    Tracking {satelliteName || "-"} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s
+                </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer
                     url={getTileLayerById(tileLayerID)['url']}
@@ -710,6 +606,6 @@ function TargetSatelliteTrack({ initialNoradId=0, initialShowPastOrbitPath=true,
     }
 
     return ResponsiveGridLayoutParent;
-}
+});
 
 export default TargetSatelliteTrack;

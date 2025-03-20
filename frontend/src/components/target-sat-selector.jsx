@@ -68,7 +68,6 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
 
     useEffect(() => {
         if (satGroups.some(group => group.id === initialGroupId)) {
-            console.log("initialGroupId: " + initialGroupId);
             setSelectedSatGroupId(initialGroupId);
             fetchSatellitesByGroupId(initialGroupId);
         }
@@ -104,10 +103,8 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
 
                 // check if the initial norad id value is in the set of returned satellites
                 if (initialNoradId) {
-                    console.log("initialNoradId: " + initialNoradId);
                     const selectedSatellite = response.data.find((satellite) => satellite['norad_id'] === initialNoradId);
                     if (selectedSatellite) {
-                        console.log("selectedSatellite: " + selectedSatellite);
                         handleSelectSatelliteId(initialNoradId);
                     }
                 }
