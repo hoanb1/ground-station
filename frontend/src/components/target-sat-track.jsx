@@ -171,7 +171,7 @@ const MapSlider = function ({handleSliderChange}) {
             bottom: 10,
             position: 'absolute',
             left: '0%',
-            zIndex: 1500,
+            zIndex: 999,
             textAlign: 'center',
             opacity: 0.7,
         }}>
@@ -259,10 +259,10 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 x: 8,
                 y: 9,
                 w: 2,
-                h: 15,
+                h: 12,
                 minW: 2,
                 maxW: 2,
-                minH: 15,
+                minH: 10,
                 maxH: 15,
             },
             {
@@ -569,6 +569,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                         }}
                     />
                 )}
+
                 {InternationalDateLinePolyline()}
                 <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
                 {showPastOrbitPath? currentPastSatellitesPaths: null}
@@ -578,6 +579,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 <MapStatusBar/>
                 <MapArrowControls mapObject={MapObject}/>
                 <MapSlider handleSliderChange={handleSliderChange}/>
+
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="settings">

@@ -29,7 +29,7 @@ const ThemedSettingsDiv = styled('div')(({theme}) => ({
 }));
 
 const SettingItem = styled('div')(({theme}) => ({
-    padding: theme.spacing(1),
+    padding: '0.1rem 0.1rem',
     fontsize: '0.9rem !important',
 }));
 
