@@ -7,19 +7,17 @@ import {
     Marker,
     Polyline,
     Polygon,
-    Tooltip, useMapEvents,
+    useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
-import * as satellite from 'satellite.js';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
-import {styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator-line.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
 import SettingsIsland from "./map-settings.jsx";
-import {Box, Fab} from "@mui/material";
+import {Box, Fab, Slider} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
@@ -142,6 +140,61 @@ function getMapZoomFromStorage() {
     return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
 
+const MapSlider = function ({handleSliderChange}) {
+
+    const marks = [
+        {
+            value: 0,
+            label: '0 minutes',
+        },
+        {
+            value: 15,
+            label: '+15 minutes',
+        },
+        {
+            value: -15,
+            label: '-15 minutes',
+        },
+        {
+            value: 30,
+            label: '+30 minutes',
+        },
+        {
+            value: -30,
+            label: '-30 minutes',
+        }
+    ];
+
+    return (
+        <Box sx={{
+            width: '100%;',
+            bottom: 10,
+            position: 'absolute',
+            left: '0%',
+            zIndex: 1500,
+            textAlign: 'center',
+            opacity: 0.7,
+        }}>
+            <Slider
+                marks={marks}
+                size="medium"
+                track={false}
+                aria-label=""
+                defaultValue={""}
+                onChange={(e, value) => {
+                    handleSliderChange(value);
+                }}
+                min={-30}
+                max={30}
+                sx={{
+                    height: 20,
+                    width: '70%',
+                }}
+            />
+        </Box>
+    );
+}
+
 const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
                                   initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
@@ -178,6 +231,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [moonPos, setMoonPos] = useState(null);
     const [gridEditable, setGridEditable] = useState(false);
     const [satelliteData, setSatelliteData] = useState({});
+    const [sliderTimeOffset, setSliderTimeOffset] = useState(0);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -289,6 +343,10 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         setMapZoomLevel(zoomLevel);
     }, [mapZoomLevel]);
 
+    const handleSliderChange = useCallback((value) => {
+        setSliderTimeOffset(value);
+    }, []);
+
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
@@ -311,6 +369,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             let currentFuturePaths = [];
             let currentPastPaths = [];
 
+            let now = new Date();
+            now.setMinutes(now.getMinutes() + sliderTimeOffset);
             let [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
                 satelliteData['tle1'],
                 satelliteData['tle2'],
@@ -452,7 +512,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             clearInterval(timer);
         };
 
-    },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor]);
+    },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor,
+        satelliteCoverageColor, sliderTimeOffset]);
 
     // pre-make the components
     let gridContents = [
@@ -516,6 +577,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapStatusBar/>
                 <MapArrowControls mapObject={MapObject}/>
+                <MapSlider handleSliderChange={handleSliderChange}/>
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="settings">
