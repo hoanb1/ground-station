@@ -1,6 +1,6 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
-import { DataGrid } from '@mui/x-data-grid';
+import {DataGrid, gridClasses} from '@mui/x-data-grid';
 import {styled, useTheme} from '@mui/material/styles';
 import {
     Alert,
@@ -292,7 +292,17 @@ export default function TLESourcesTable() {
                 onRowSelectionModelChange={(selected) => {
                     setSelectedRows(selected);
                 }}
-                sx={{ border: 0, marginTop: 2 }}
+                sx={{
+                    border: 0,
+                    marginTop: 2,
+                    [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                        outline: 'none',
+                    },
+                    [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                        {
+                            outline: 'none',
+                        },
+                }}
             />
             <Stack direction="row" spacing={2} sx={{ marginTop: 2 }}>
                 <Button variant="contained" onClick={handleAddClick}>
