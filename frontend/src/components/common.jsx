@@ -1,8 +1,13 @@
 import {styled} from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
-import {Polyline} from "react-leaflet";
+import {Polyline, Tooltip as LeafletTooltip} from "react-leaflet";
 import React from "react";
 import Tooltip from "@mui/material/Tooltip";
+import {Box, Fab} from "@mui/material";
+import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
+import ArrowBackIcon from "@mui/icons-material/ArrowBack";
+import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
+import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
 export const HOME_LAT = 40.6293;
 export const HOME_LON = 22.9474;
@@ -90,7 +95,7 @@ export const TitleBar = styled(Paper)(({ theme }) => ({
     backgroundColor: "#1f131f",
 }));
 
-export const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
+export const ThemedLeafletTooltip = styled(LeafletTooltip)(({ theme }) => ({
     color: theme.palette.text.primary,
     backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
@@ -194,3 +199,44 @@ export const betterDateTimes = (date) => {
         return "-";
     }
 };
+
+export const MapArrowControls = function ({mapObject}) {
+
+    return (
+        <Box sx={{'& > :not(style)': {m: 1}}} style={{
+            right: 15,
+            bottom: 42,
+            position: 'absolute',
+            display: 'flex',
+            flexDirection: 'column',
+            alignItems: 'center',
+            zIndex: 1500,
+            width: 115,
+        }}>
+            <Fab size={"small"} variant="contained" color="primary" style={{margin: 0}}
+                 onClick={() => mapObject.panBy([0, -100])}>
+                <ArrowUpwardIcon/>
+            </Fab>
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'row',
+                alignItems: 'center',
+                justifyContent: 'center',
+                marginTop: 1,
+                width: '100%',
+                height: 15,
+            }}>
+                <Fab size={"small"} color="primary" onClick={() => mapObject.panBy([100, 0])} style={{margin: 0, position: 'absolute', left: 0}}>
+                    <ArrowBackIcon/>
+                </Fab>
+                <Fab size={"small"} color="primary" variant="contained" onClick={() => mapObject.panBy([-100, 0])} style={{margin: 0, position: 'absolute', right: 0}}>
+                    <ArrowForwardIcon/>
+                </Fab>
+            </Box>
+            <Fab size={"small"} color="primary" variant="contained" style={{margin: 0}}
+                 onClick={() => mapObject.panBy([0, 100])}>
+                <ArrowDownwardIcon/>
+            </Fab>
+        </Box>
+    );
+}

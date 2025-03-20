@@ -26,11 +26,11 @@ import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "./tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
-    InternationalDateLinePolyline,
+    InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
     MapTitleBar,
     StyledIslandParent,
-    StyledIslandParentScrollbar
+    StyledIslandParentScrollbar, ThemedLeafletTooltip
 } from "./common.jsx";
 import {TitleBar} from "./common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
@@ -45,13 +45,6 @@ const storageMapZoomValueKey = "target-map-zoom-level";
 
 // global callback for dashboard editing here
 export let handleSetGridEditableTarget = function () {};
-
-const ThemedLeafletTooltip = styled(Tooltip)(({ theme }) => ({
-    color: theme.palette.text.primary,
-    backgroundColor: theme.palette.background.paper,
-    borderRadius: theme.shape.borderRadius,
-    borderColor: theme.palette.background.paper,
-}));
 
 export const gridLayoutStoreName = 'target-sat-track-layouts';
 
@@ -321,7 +314,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             let [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
                 satelliteData['tle1'],
                 satelliteData['tle2'],
-                now);
+                now
+            );
 
             // set satellite data
             setSatelliteName(satelliteData['name']);
@@ -388,7 +382,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             setCurrentSatellitesPosition(currentPos);
             setCurrentSatellitesCoverage(currentCoverage);
         } else {
-            console.warn("No satellite data found for norad id: ", noradId, satelliteData);
+            //console.warn("No satellite data found for norad id: ", noradId, satelliteData);
         }
 
         // Day/night boundary
@@ -458,7 +452,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             clearInterval(timer);
         };
 
-    },[noradId, satelliteData]);
+    },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor]);
 
     // pre-make the components
     let gridContents = [
@@ -521,6 +515,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapStatusBar/>
+                <MapArrowControls mapObject={MapObject}/>
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="settings">

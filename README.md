@@ -55,3 +55,26 @@ This software is a comprehensive satellite tracking and rig control application 
     - The current positions of satellites.
     - The computed coverage circles.
     - A visual reference for satellite trajectories and ground paths.
+
+# Data API Usage
+
+This software heavily relies on **open data APIs** to provide accurate and up-to-date information for satellite tracking
+and management. The use of these APIs has been instrumental in simplifying data acquisition and ensuring the application
+maintains high accuracy and reliability.
+
+- **CelesTrak API**  
+  [CelesTrak](https://www.celestrak.com/) offers comprehensive TLE (Two-Line Element) datasets for thousands of
+  satellites. These datasets are critical in predicting satellite orbits and positions. By integrating with the
+  CelesTrak API, the software can:
+  - Retrieve updated orbital data seamlessly.
+  - Stay synchronized with changes in satellite constellations.
+  - Support advanced satellite filtering and categorization.
+- **SatNOGS API**  
+  [SatNOGS](https://satnogs.org/) provides open-access telemetry, observation data, and additional satellite metadata.
+  By utilizing the SatNOGS API, the application gains:
+  - Access to real-time telemetry data that enhances satellite monitoring capabilities.
+  - A community-driven knowledge base that enriches satellite operations and research.
+    The integration of these open data APIs has been immensely helpful for this project, as it ensures reliable,
+    real-time access to critical satellite data while advocating for open and collaborative data-sharing practices.
+    These APIs form the backbone of the application’s predictive and tracking functionalities, empowering users with
+    accurate and up-to-date information.

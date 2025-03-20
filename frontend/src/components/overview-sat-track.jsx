@@ -7,7 +7,7 @@ import {
     Polyline,
     Polygon,
     useMap, Popup,
-    Tooltip, useMapEvents,
+    useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
 import 'leaflet-fullscreen/dist/Leaflet.fullscreen.js';
@@ -20,7 +20,7 @@ import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
 import {getAllSatellites, HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
 import SettingsIsland from "./map-settings.jsx";
-import {Box, Fab} from "@mui/material";
+import {Box, Button, Fab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
@@ -34,11 +34,16 @@ import {
     MapTitleBar,
     ThemedLeafletTooltip,
     MapStatusBar,
-    InternationalDateLinePolyline
+    InternationalDateLinePolyline, MapArrowControls
 } from "./common.jsx";
 import { useLocalStorageState } from '@toolpad/core';
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from './tracking-logic.jsx';
 import {HOME_LON, HOME_LAT} from "./common.jsx";
+import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
+import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
+import IconButton from "@mui/material/IconButton";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
@@ -108,6 +113,7 @@ function getMapZoomFromStorage() {
     const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
     return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
+
 
 function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutureOrbitPath=false,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
@@ -266,7 +272,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         let currentPastPaths = [];
 
         selectedSatellites.forEach(satellite => {
-            let noradid = satellite['noradid'];
+            let noradid = satellite['norad_id'];
             let [lat, lon, altitude, velocity] = getSatelliteLatLon(
                 satellite['tle1'],
                 satellite['tle2'],
@@ -303,7 +309,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
 
             currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]}
                                     icon={satelliteIcon}>
-                <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
+                <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent={true}>
                     {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
                 </ThemedLeafletTooltip>
             </Marker>);
@@ -446,6 +452,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapStatusBar/>
+                <MapArrowControls mapObject={mapObject}/>
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="settings">
