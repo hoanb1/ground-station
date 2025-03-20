@@ -18,21 +18,23 @@ import {useSocket} from "./socket.jsx";
 import PropTypes from "prop-types";
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
-import CardMedia from '@mui/material/CardMedia';
-import IconButton from '@mui/material/IconButton';
 import Typography from '@mui/material/Typography';
-import SkipPreviousIcon from '@mui/icons-material/SkipPrevious';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import SkipNextIcon from '@mui/icons-material/SkipNext';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
-
+import {betterDateTimes} from "./common.jsx";
 
 const columns = [
     { field: 'name', headerName: 'Name', width: 150 },
     { field: 'identifier', headerName: 'ID', width: 150 },
     { field: 'url', headerName: 'URL', width: 600 },
-    { field: 'format', headerName: 'Format', width: 60 },
-    { field: 'added', headerName: 'Added', width: 400 },
+    { field: 'format', headerName: 'Format', width: 80 },
+    {
+        field: 'added',
+        headerName: 'Added',
+        width: 400,
+        renderCell: (params) => {
+            return betterDateTimes(params.value);
+        }
+    },
 ];
 
 const paginationModel = { page: 0, pageSize: 10 };

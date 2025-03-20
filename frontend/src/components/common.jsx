@@ -1,7 +1,8 @@
 import {styled} from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
-import {Polyline, Tooltip} from "react-leaflet";
+import {Polyline} from "react-leaflet";
 import React from "react";
+import Tooltip from "@mui/material/Tooltip";
 
 export const HOME_LAT = 40.6293;
 export const HOME_LON = 22.9474;
@@ -156,3 +157,40 @@ export function stringAvatar(name) {
         children: `${name.split(' ')[0][0]}${name.split(' ')[1][0]}`,
     };
 }
+
+export const humanizeData = (isoString) => {
+    const now = new Date();
+    const pastDate = new Date(isoString);
+    const diffInSeconds = Math.floor((now - pastDate) / 1000);
+
+    const units = [
+        {label: "year", seconds: 365 * 24 * 60 * 60},
+        {label: "month", seconds: 30 * 24 * 60 * 60},
+        {label: "day", seconds: 24 * 60 * 60},
+        {label: "hour", seconds: 60 * 60},
+        {label: "minute", seconds: 60},
+        {label: "second", seconds: 1}
+    ];
+
+    for (let unit of units) {
+        const count = Math.floor(diffInSeconds / unit.seconds);
+        if (count >= 1) {
+            return `${count} ${unit.label}${count > 1 ? "s" : ""} ago`;
+        }
+    }
+    return "Just now";
+};
+
+export const betterDateTimes = (date) => {
+    if (date) {
+        return (
+            <Tooltip title={date} arrow>
+                    <span>
+                        {humanizeData(date)}
+                    </span>
+            </Tooltip>
+        );
+    } else {
+        return "-";
+    }
+};
