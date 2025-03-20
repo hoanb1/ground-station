@@ -226,10 +226,10 @@ export const MapArrowControls = function ({mapObject}) {
                 width: '100%',
                 height: 15,
             }}>
-                <Fab size={"small"} color="primary" onClick={() => mapObject.panBy([100, 0])} style={{margin: 0, position: 'absolute', left: 0}}>
+                <Fab size={"small"} color="primary" onClick={() => mapObject.panBy([-100, 0])} style={{margin: 0, position: 'absolute', left: 0}}>
                     <ArrowBackIcon/>
                 </Fab>
-                <Fab size={"small"} color="primary" variant="contained" onClick={() => mapObject.panBy([-100, 0])} style={{margin: 0, position: 'absolute', right: 0}}>
+                <Fab size={"small"} color="primary" variant="contained" onClick={() => mapObject.panBy([100, 0])} style={{margin: 0, position: 'absolute', right: 0}}>
                     <ArrowForwardIcon/>
                 </Fab>
             </Box>
