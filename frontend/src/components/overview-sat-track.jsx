@@ -44,6 +44,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import IconButton from "@mui/material/IconButton";
+import {enqueueSnackbar} from "notistack";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
@@ -126,7 +127,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [showSatelliteCoverage, setShowSatelliteCoverage] = useLocalStorageState('overview-show-satellite-coverage', initialShowSatelliteCoverage, { codec: CODEC_BOOL });
     const [showSunIcon, setShowSunIcon] = useLocalStorageState('overview-show-sun-icon', initialShowSunIcon, { codec: CODEC_BOOL });
     const [showMoonIcon, setShowMoonIcon] = useLocalStorageState('overview-show-moon-icon', initialShowMoonIcon, { codec: CODEC_BOOL });
-    const [showTerminatorLine, setShowTerminatorLine] = useLocalStorageState('overview-show-terminator-line', initialShowTerminatorLine);
+    const [showTerminatorLine, setShowTerminatorLine] = useLocalStorageState('overview-show-terminator-line', initialShowTerminatorLine, { codec: CODEC_BOOL });
     const [selectedSatellites, setSelectedSatellites] = useState([]);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
@@ -462,12 +463,12 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 initialShowSatelliteCoverage={showSatelliteCoverage}
                 initialShowSunIcon={showSunIcon}
                 initialShowMoonIcon={showMoonIcon}
-                initialShowTerminatorLine={showTerminatorLine}
                 initialPastOrbitLineColor={pastOrbitLineColor}
                 initialFutureOrbitLineColor={futureOrbitLineColor}
                 initialSatelliteCoverageColor={satelliteCoverageColor}
                 initialOrbitProjectionDuration={orbitProjectionDuration}
                 initialTileLayerID={tileLayerID}
+                initialShowTerminatorLine={showTerminatorLine}
                 handleShowPastOrbitPath={handleShowPastOrbitPath}
                 handleShowFutureOrbitPath={handleShowFutureOrbitPath}
                 handleShowSatelliteCoverage={handleShowSatelliteCoverage}
