@@ -273,6 +273,8 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': 80,})
 
     #  we now have everything, TLE from celestack sat info and transmitter info  from satnogs, lets put them in the db
+    count_sats = 0
+    count_transmitters = 0
     try:
         for sat in celestrak_list:
             norad_id = get_norad_id_from_tle(sat['line1'])
@@ -296,6 +298,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 is_frequency_violator=None,
                 associated_satellites=None,
             )
+            count_sats+=1
 
             # let's find the sat info from the satnogs list
             satnogs_sat_info = get_satellite_by_norad_id(norad_id, satnogs_satellite_data)
@@ -328,6 +331,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
             if satnogs_transmitter_info:
                 transmitter = Transmitters(
+                    id=satnogs_transmitter_info.get('uuid', None),
                     description=satnogs_transmitter_info.get('description', None),
                     alive=satnogs_transmitter_info.get('alive', None),
                     type=satnogs_transmitter_info.get('type', None),
@@ -354,11 +358,14 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     frequency_violation=satnogs_transmitter_info.get('frequency_violation', None),
                     unconfirmed=satnogs_transmitter_info.get('unconfirmed', None),
                 )
+                count_transmitters+=1
 
                 await dbsession.merge(transmitter)
 
                 # commit session
                 await dbsession.commit()
+
+        logger.info(f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters")
 
     except Exception as e:
         await dbsession.rollback()  # Rollback in case of error

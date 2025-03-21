@@ -163,7 +163,7 @@ export function stringAvatar(name) {
     };
 }
 
-export const humanizeData = (isoString) => {
+export const humanizeDate = (isoString) => {
     const now = new Date();
     const pastDate = new Date(isoString);
     const diffInSeconds = Math.floor((now - pastDate) / 1000);
@@ -191,7 +191,7 @@ export const betterDateTimes = (date) => {
         return (
             <Tooltip title={date} arrow>
                     <span>
-                        {humanizeData(date)}
+                        {humanizeDate(date)}
                     </span>
             </Tooltip>
         );

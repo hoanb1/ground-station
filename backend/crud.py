@@ -576,18 +576,21 @@ async def fetch_satellites(session: AsyncSession, satellite_id: str | None) -> d
 
     If 'satellite_id' is provided, return a single satellite record.
     Otherwise, return all satellite records.
+    If 'with_transmitters' is True, also fetch and attach any
+    associated transmitters for each satellite.
     """
     try:
         if satellite_id is None:
             stmt = select(Satellites)
             result = await session.execute(stmt)
             satellites = result.scalars().all()
-            return {"success": True, "data": satellites, "error": None}
         else:
             stmt = select(Satellites).filter(Satellites.norad_id == satellite_id)
             result = await session.execute(stmt)
             satellite = result.scalar_one_or_none()
-            return {"success": True, "data": [satellite], "error": None}
+            satellites = [satellite] if satellite else []
+
+        return {"success": True, "data": satellites, "error": None}
 
     except Exception as e:
         logger.error(f"Error fetching satellite(s): {e}")
@@ -713,6 +716,22 @@ async def delete_satellite(session: AsyncSession, satellite_id: uuid.UUID) -> di
     except Exception as e:
         await session.rollback()
         logger.error(f"Error deleting satellite {satellite_id}: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def fetch_transmitters_for_satellite(session: AsyncSession, norad_id: int) -> dict:
+    """
+    Fetch all transmitter records associated with the given satellite NORAD id.
+    """
+    try:
+        stmt = select(Transmitters).filter(Transmitters.norad_cat_id == norad_id)
+        result = await session.execute(stmt)
+        transmitters = result.scalars().all()
+        return {"success": True, "data": transmitters, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching transmitters for satellite {norad_id}: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 

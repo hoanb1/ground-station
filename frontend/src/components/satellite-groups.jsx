@@ -16,6 +16,7 @@ import {
 } from "@mui/material";
 import {useSocket} from "./socket.jsx";
 import {enqueueSnackbar} from "notistack";
+import {betterDateTimes, humanizeDate} from "./common.jsx";
 
 const paginationModel = {page: 0, pageSize: 10};
 
@@ -31,8 +32,21 @@ const SatelliteGroupsTable = React.memo(function () {
     const [formErrorStatus, setFormErrorStatus] = useState(false);
 
     const columns = [
-        {field: 'name', headerName: 'Name', width: 150},
-        {field: 'added', headerName: 'Added', width: 400},
+        {
+            field: 'name',
+            headerName: 'Name',
+            width: 150
+        },
+        {
+            field: 'added',
+            headerName: 'Added',
+            width: 200,
+            align: 'right',
+            headerAlign: 'right',
+            renderCell: (params) => {
+                return betterDateTimes(params.value);
+            }
+        },
     ];
 
     // form state

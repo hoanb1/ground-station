@@ -97,13 +97,21 @@ const SatelliteTable = React.memo(function () {
             headerAlign: 'center',
             align: 'center',
             renderCell: (params) => {
-                console.info(params.value);
                 if (params.value !== "None") {
                     return params.value;
                 } else {
                     return "-";
                 }
-
+            },
+        },
+        {
+            field: 'transmitters',
+            headerName: 'Transmitters',
+            width: 150,
+            headerAlign: 'center',
+            align: 'center',
+            renderCell: (params) => {
+                return params.row['transmitters'].length;
             },
         },
         {

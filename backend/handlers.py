@@ -1,3 +1,5 @@
+import uuid
+
 import crud
 import requests
 import json
@@ -6,11 +8,14 @@ from sync import *
 from datetime import date, datetime
 
 
-class SQLAlchemyRowEncoder(json.JSONEncoder):
+class ModelEncoder(json.JSONEncoder):
     def default(self, obj):
         # Handle date and datetime objects
         if isinstance(obj, (date, datetime)):
             return obj.isoformat()
+
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
 
         # Attempt to convert SQLAlchemy model objects
         # by reading their columns
@@ -52,33 +57,38 @@ async def data_request_routing(sio, cmd, data, logger):
         if cmd == "get-tle-sources":
             logger.info(f'Getting TLE sources')
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
+
             reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
         elif cmd == "get-satellites":
             logger.info(f'Getting satellites: {data}')
             satellites = await crud.fetch_satellites(dbsession, None)
-            satellites = json.loads(json.dumps(satellites, cls=SQLAlchemyRowEncoder))
+            satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite":
             logger.info(f'Getting satellite data for norad id: {data}')
             satellite = await crud.fetch_satellites(dbsession, data)
-            satellite = json.loads(json.dumps(satellite, cls=SQLAlchemyRowEncoder))
+            satellite = json.loads(json.dumps(satellite, cls=ModelEncoder))
 
             reply = {'success': satellite['success'], 'data': satellite.get('data', [])}
 
         elif cmd == "get-satellites-for-group-id":
             logger.info(f'Getting satellites for group id: {data}')
             satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
-            satellites = json.loads(json.dumps(satellites, cls=SQLAlchemyRowEncoder))
+            satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
+
+            for satellite in satellites.get('data', []):
+                transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
+                satellite['transmitters'] = json.loads(json.dumps(transmitters['data'], cls=ModelEncoder))
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite-groups-user":
             logger.info(f'Getting user satellite groups: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
-            satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
+            satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
 
             # only return the user groups
             filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
@@ -88,7 +98,7 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-satellite-groups-system":
             logger.info(f'Getting system satellite groups: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
-            satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
+            satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
 
             # only return the system groups
             filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
@@ -98,7 +108,7 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-satellite-groups":
             logger.info(f'Getting satellite groups: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
-            satellite_groups = json.loads(json.dumps(satellite_groups, cls=SQLAlchemyRowEncoder))
+            satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "sync-satellite-data":

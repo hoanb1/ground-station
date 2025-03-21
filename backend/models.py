@@ -57,7 +57,7 @@ class Satellites(Base):
 
 class Transmitters(Base):
     __tablename__ = 'transmitters'
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    id = Column(String, nullable=False, primary_key=True, unique=True)
     description = Column(String, nullable=True)
     alive = Column(Boolean, nullable=True)
     type = Column(String, nullable=True)
