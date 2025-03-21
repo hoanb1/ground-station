@@ -43,7 +43,9 @@ const SatelliteTable = React.memo(function () {
 
         const countryCodes = csvCodes.split(',').map(code => code.trim());
         return (
-            <div>
+            <div style={{
+                paddingTop: 5,
+            }}>
                 {countryCodes.map((countryCode, index) => (
                     <Tooltip key={index} title={countryCode.toUpperCase()} arrow>
                         <img

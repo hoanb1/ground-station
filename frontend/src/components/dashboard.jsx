@@ -16,7 +16,9 @@ import {handleSetGridEditableTarget as TargetModeSetEditing} from './target-sat-
 import CheckIcon from '@mui/icons-material/Check';
 import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "./socket.jsx";
-import {enqueueSnackbar, SnackbarProvider} from "notistack";
+import {enqueueSnackbar, SnackbarProvider, closeSnackbar} from "notistack";
+import CloseIcon from '@mui/icons-material/Close';
+
 
 function DashboardEditor() {
     const [isEditing, setIsEditing] = React.useState(false);
@@ -306,8 +308,16 @@ export default function Layout() {
         }
     }, [socket]);
 
+    const action = snackbarId => (
+        <>
+            <Button size={"small"} variant={"text"} onClick={() => { closeSnackbar(snackbarId) }} style={{color: '#000000'}}>
+                Dismiss
+            </Button>
+        </>
+    );
+
     return (
-        <SnackbarProvider maxSnack={5} autoHideDuration={5000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}}>
+        <SnackbarProvider maxSnack={5} autoHideDuration={4000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}} action={action}>
             {loading === true? (
                 <Backdrop sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}
                 onClick={handleMainSpinningCircleClose}>
