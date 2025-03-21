@@ -19,7 +19,9 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
-import {betterDateTimes, humanizeDate, betterStatusValue, renderCountryFlags } from './common.jsx';
+import {betterDateTimes, humanizeDate, betterStatusValue, renderCountryFlags, humanizeFrequency} from './common.jsx';
+
+
 
 const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
     return (
@@ -102,12 +104,12 @@ const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
                                                     <TableCell>{transmitter['type']}</TableCell>
                                                     <TableCell>{transmitter['status']}</TableCell>
                                                     <TableCell>{transmitter['alive'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['uplink_low'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['uplink_high'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['uplink_drift'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['downlink_low'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['downlink_high'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['downlink_drift'] || "-"}</TableCell>
+                                                    <TableCell>{humanizeFrequency(transmitter['uplink_low']) || "-"}</TableCell>
+                                                    <TableCell>{humanizeFrequency(transmitter['uplink_high']) || "-"}</TableCell>
+                                                    <TableCell>{humanizeFrequency(transmitter['uplink_drift']) || "-"}</TableCell>
+                                                    <TableCell>{humanizeFrequency(transmitter['downlink_low']) || "-"}</TableCell>
+                                                    <TableCell>{humanizeFrequency(transmitter['downlink_high']) || "-"}</TableCell>
+                                                    <TableCell>{humanizeFrequency(transmitter['downlink_drift']) || "-"}</TableCell>
                                                     <TableCell>{transmitter['mode'] || "-"}</TableCell>
                                                     <TableCell>{transmitter['uplink_mode'] || "-"}</TableCell>
                                                     <TableCell>{transmitter['invert'] || "-"}</TableCell>

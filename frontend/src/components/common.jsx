@@ -279,3 +279,23 @@ export const renderCountryFlags = (csvCodes) => {
         </div>
     );
 };
+
+
+export function humanizeFrequency(hertz, decimals = 2) {
+    if (typeof hertz !== "number" || isNaN(hertz)) {
+        return false;
+    }
+
+    if (hertz < 1) return `${hertz.toFixed(decimals)} Hz`;
+
+    const units = ["Hz", "kHz", "MHz", "GHz", "THz", "PHz"];
+    let unitIndex = 0;
+
+    while (hertz >= 1000 && unitIndex < units.length - 1) {
+        hertz /= 1000;
+        unitIndex++;
+    }
+
+    return `${hertz.toFixed(decimals)} ${units[unitIndex]}`;
+}
+

@@ -390,7 +390,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         logger.exception(e)
 
         # emit an event
-        await sio.emit('sat-sync-events', {'success': False, 'status': 'complete', 'progress': 100})
+        await sio.emit('sat-sync-events', {'success': False, 'status': 'complete', 'progress': 100, 'error': str(e)})
 
     finally:
         # Always close the session when you're done
