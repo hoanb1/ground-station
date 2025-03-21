@@ -21,6 +21,8 @@ import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
 import {betterDateTimes} from "./common.jsx";
+import {enqueueSnackbar} from "notistack";
+import {useLocalStorageState} from "@toolpad/core";
 
 const columns = [
     { field: 'name', headerName: 'Name', width: 150 },
@@ -102,7 +104,7 @@ function LinearWithValueLabel({progress}) {
 const SynchronizeTLEsCard = function () {
     const socket = useSocket();
     const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
-    const [progress, setProgress] = useState(0);
+    const [progress, setProgress] = useLocalStorageState('tle-source-sync-progress', {});
 
     const handleSynchronizeSatellites = function (event) {
         socket.emit("data_request", "sync-satellite-data", null, (response) => {
@@ -118,6 +120,13 @@ const SynchronizeTLEsCard = function () {
         socket.on("sat-sync-events", (data) => {
             console.log("Received data for sat-sync-events:", data);
             setProgress(data.progress);
+
+            if (data.status === 'complete') {
+                enqueueSnackbar("Satellite data synchronization completed successfully", {
+                    variant: 'success',
+                    autoHideDuration: 4000,
+                });
+            }
         });
 
         return () => {
@@ -368,7 +377,6 @@ export default function TLESourcesTable() {
                             fullWidth
                          variant={"filled"}>
                             <MenuItem value="3le">3LE</MenuItem>
-                            <MenuItem value="json">JSON</MenuItem>
                         </Select>
                     </Stack>
                 </DialogContent>

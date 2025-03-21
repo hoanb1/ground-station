@@ -3,7 +3,7 @@ import Paper from "@mui/material/Paper";
 import {Polyline, Tooltip as LeafletTooltip} from "react-leaflet";
 import React from "react";
 import Tooltip from "@mui/material/Tooltip";
-import {Box, Fab} from "@mui/material";
+import {Box, Chip, Fab} from "@mui/material";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
@@ -240,3 +240,42 @@ export const MapArrowControls = function ({mapObject}) {
         </Box>
     );
 }
+
+export const betterStatusValue = (status) => {
+    if (status) {
+        if (status === "alive") {
+            return (
+                <Chip label="Alive" size="small" color="success" variant="outlined" />
+            );
+        } else if (status === "dead") {
+            return (
+                <Chip label="Dead" size="small" color="error" variant="outlined" />
+            );
+        } else {
+            return (status);
+        }
+    } else {
+        return "-";
+    }
+};
+
+export const renderCountryFlags = (csvCodes) => {
+    if (!csvCodes) return "-";
+
+    const countryCodes = csvCodes.split(',').map(code => code.trim());
+    return (
+        <div style={{
+            paddingTop: 5,
+        }}>
+            {countryCodes.map((countryCode, index) => (
+                <Tooltip key={index} title={countryCode.toUpperCase()} arrow>
+                    <img
+                        src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`}
+                        alt={countryCode}
+                        style={{width: 32, height: 21, borderRadius: 2}}
+                    />
+                </Tooltip>
+            ))}
+        </div>
+    );
+};

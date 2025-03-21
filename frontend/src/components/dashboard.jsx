@@ -297,13 +297,24 @@ export default function Layout() {
             socket.on('disconnect', () => {
                 enqueueSnackbar("Disconnected from backend!", {variant: 'error'});
                 setLoading(true);
-            })
+            });
+
+            socket.on("sat-sync-events", (data) => {
+                console.log("Received data for sat-sync-events:", data);
+                if (data.status === 'complete') {
+                    enqueueSnackbar("Satellite data synchronization completed successfully", {
+                        variant: 'success',
+                        autoHideDuration: 4000,
+                    });
+                }
+            });
 
             return () => {
                 socket.off('connect');
                 socket.off('reconnect_attempt');
                 socket.off('error');
                 socket.off('disconnect');
+                socket.off("sat-sync-events");
             };
         }
     }, [socket]);
