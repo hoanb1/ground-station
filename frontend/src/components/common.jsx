@@ -265,14 +265,14 @@ export const renderCountryFlags = (csvCodes) => {
     const countryCodes = csvCodes.split(',').map(code => code.trim());
     return (
         <div style={{
-            paddingTop: 5,
+            height: 19,
         }}>
             {countryCodes.map((countryCode, index) => (
-                <Tooltip key={index} title={countryCode.toUpperCase()} arrow>
+                <Tooltip key={index} title={countryCode.toUpperCase()} arrow style={{paddingTop: 0, height: 18}}>
                     <img
                         src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`}
                         alt={countryCode}
-                        style={{width: 32, height: 21, borderRadius: 2}}
+                        style={{width: 30, height: 19}}
                     />
                 </Tooltip>
             ))}

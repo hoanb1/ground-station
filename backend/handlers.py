@@ -72,18 +72,24 @@ async def data_request_routing(sio, cmd, data, logger):
             satellite = await crud.fetch_satellites(dbsession, data)
             satellite = json.loads(json.dumps(satellite, cls=ModelEncoder))
 
-            reply = {'success': satellite['success'], 'data': satellite.get('data', [])}
+            # get transmitters
+            satellite_data = satellite.get('data', [])[0]
+            transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite_data['norad_id'])
+            satellite_data['transmitters'] = json.loads(json.dumps(transmitters['data'], cls=ModelEncoder))
+
+            reply = {'success': (satellite['success'] & transmitters['success']), 'data': [satellite_data]}
 
         elif cmd == "get-satellites-for-group-id":
             logger.info(f'Getting satellites for group id: {data}')
             satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
             satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
 
+            # get transmitters
             for satellite in satellites.get('data', []):
                 transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
                 satellite['transmitters'] = json.loads(json.dumps(transmitters['data'], cls=ModelEncoder))
 
-            reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
+            reply = {'success': (satellites['success'] & transmitters['success']), 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite-groups-user":
             logger.info(f'Getting user satellite groups: {data}')

@@ -1,24 +1,26 @@
-import React, {useState} from 'react';
-import {
-    Box,
-    Button,
-    Dialog,
-    DialogActions,
-    DialogContent,
-    DialogTitle,
-    Stack,
-    Table,
-    TableBody,
-    TableCell,
-    TableContainer,
-    TableHead,
-    TableRow,
-    TextField
-} from '@mui/material';
+import React, { useState } from 'react';
+import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, MenuItem, Select } from '@mui/material';
+import {DataGrid, gridClasses} from '@mui/x-data-grid';
 
 const UsersTable = () => {
+    const [users, setUsers] = useState([]);
+    const [selectedRows, setSelectedRows] = useState([]);
+
+    // Columns definition for DataGrid
+    const columns = [
+        { field: 'fullName', headerName: 'Full Name', flex: 1 },
+        { field: 'email', headerName: 'Email', flex: 1 },
+        { field: 'password', headerName: 'Password', flex: 1 },
+        { field: 'status', headerName: 'Status', flex: 1 },
+        {
+            field: 'addedWhen',
+            headerName: 'Added When',
+            flex: 1,
+        },
+    ];
+
     // Dummy data for users
-    const rows = [
+    const [rows, setRows] = useState([
         {
             id: 1,
             fullName: 'John Doe',
@@ -43,7 +45,7 @@ const UsersTable = () => {
             status: 'Active',
             addedWhen: new Date(),
         },
-    ];
+    ]);
 
     // State to control dialog visibility
     const [open, setOpen] = useState(false);
@@ -63,7 +65,6 @@ const UsersTable = () => {
 
     const handleClose = () => {
         setOpen(false);
-        // Optionally reset form values here
         setFormValues({
             fullName: '',
             email: '',
@@ -74,60 +75,67 @@ const UsersTable = () => {
     };
 
     const handleChange = (e) => {
-        const {name, value} = e.target;
-        setFormValues({...formValues, [name]: value});
+        const { name, value } = e.target;
+        setFormValues({ ...formValues, [name]: value });
     };
 
     const handleSubmit = (e) => {
         e.preventDefault();
-        // Process form submission here (e.g., add the new user to your data)
-        console.log('Submitted user:', formValues);
+        // Use some logic to add the new user to your data
+        const newId = rows.length ? Math.max(...rows.map((r) => r.id)) + 1 : 1;
+        setRows((prevRows) => [
+            ...prevRows,
+            {
+                id: newId,
+                ...formValues,
+                addedWhen: formValues.addedWhen || new Date(),
+            },
+        ]);
         handleClose();
     };
 
     return (
         <Box sx={{ width: '100%' }}>
-            <TableContainer component={Box}>
-                <Table variant="outlined" aria-label="simple table">
-                    <TableHead>
-                        <TableRow>
-                            <TableCell>Full Name</TableCell>
-                            <TableCell>Email</TableCell>
-                            <TableCell>Password</TableCell>
-                            <TableCell>Status</TableCell>
-                            <TableCell>Added When</TableCell>
-                        </TableRow>
-                    </TableHead>
-                    <TableBody>
-                        {rows.map((row) => (
-                            <TableRow key={row.id}>
-                                <TableCell>{row.fullName}</TableCell>
-                                <TableCell>{row.email}</TableCell>
-                                <TableCell>{row.password}</TableCell>
-                                <TableCell>{row.status}</TableCell>
-                                <TableCell>{row.addedWhen.toLocaleDateString()}</TableCell>
-                            </TableRow>
-                        ))}
-                    </TableBody>
-                </Table>
+            <Box sx={{ height: 400, width: '100%' }}>
+                <DataGrid
+                    checkboxSelection={true}
+                    columns={columns}
+                    rows={rows}
+                    pageSizeOptions={[5, 10]}
+                    onRowSelectionModelChange={(selected) => {
+                        setSelectedRows(selected);
+                    }}
+                    initialState={{
+                        pagination: { paginationModel: { pageSize: 5 } },
+                    }}
+                    sx={{
+                        border: 0,
+                        marginTop: 2,
+                        [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                            outline: 'none',
+                        },
+                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                            {
+                                outline: 'none',
+                            },
+                    }}
+                />
+            </Box>
 
-                {/* Stack for Add, Edit, Delete Buttons */}
-                <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                    <Button variant="contained" onClick={handleClickOpen}>Add</Button>
-                    <Button variant="contained">Edit</Button>
-                    <Button variant="contained" color="error">
-                        Delete
-                    </Button>
-                </Stack>
-            </TableContainer>
+            {/* Add, Edit, Delete Buttons */}
+            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
+                <Button variant="contained" onClick={handleClickOpen}>Add</Button>
+                <Button disabled={selectedRows.length !== 1} variant="contained">Edit</Button>
+                <Button disabled={selectedRows.length < 1} variant="contained" color="error">Delete</Button>
+            </Stack>
 
-            {/* Dialog with a Form */}
+            {/* Dialog for Adding User */}
             <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
                 <DialogTitle>Add New User</DialogTitle>
                 <form onSubmit={handleSubmit}>
                     <DialogContent>
                         <TextField
-                            autoFocus
+                            autoComplete="new-password"
                             margin="dense"
                             name="fullName"
                             label="Full Name"
@@ -135,9 +143,10 @@ const UsersTable = () => {
                             fullWidth
                             value={formValues.fullName}
                             onChange={handleChange}
-                            required
+                            variant={"filled"}
                         />
                         <TextField
+                            autoComplete="new-password"
                             margin="dense"
                             name="email"
                             label="Email"
@@ -145,9 +154,10 @@ const UsersTable = () => {
                             fullWidth
                             value={formValues.email}
                             onChange={handleChange}
-                            required
+                            variant={"filled"}
                         />
                         <TextField
+                            autoComplete="new-password"
                             margin="dense"
                             name="password"
                             label="Password"
@@ -155,33 +165,26 @@ const UsersTable = () => {
                             fullWidth
                             value={formValues.password}
                             onChange={handleChange}
-                            required
+                            variant={"filled"}
                         />
-                        <TextField
+                        <Select
                             margin="dense"
                             name="status"
                             label="Status"
-                            type="text"
                             fullWidth
                             value={formValues.status}
                             onChange={handleChange}
-                            required
-                        />
-                        <TextField
-                            margin="dense"
-                            name="addedWhen"
-                            label="Added When"
-                            type="date"
-                            fullWidth
-                            InputLabelProps={{ shrink: true }}
-                            value={formValues.addedWhen}
-                            onChange={handleChange}
-                            required
-                        />
+                         variant={"filled"}>
+                            <MenuItem value="Active">Active</MenuItem>
+                            <MenuItem value="Inactive">Inactive</MenuItem>
+                        </Select>
+
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={handleClose}>Cancel</Button>
-                        <Button type="submit" variant="contained">Save</Button>
+                        <Button type="submit" variant="contained" color="primary">
+                            Add
+                        </Button>
                     </DialogActions>
                 </form>
             </Dialog>

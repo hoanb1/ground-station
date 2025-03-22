@@ -24,10 +24,11 @@ import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "./tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
+    betterDateTimes, betterStatusValue,
     CODEC_BOOL,
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
-    MapTitleBar,
+    MapTitleBar, renderCountryFlags,
     StyledIslandParent,
     StyledIslandParentScrollbar, ThemedLeafletTooltip
 } from "./common.jsx";
@@ -37,6 +38,12 @@ import {HOME_LON, HOME_LAT} from "./common.jsx";
 import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "./tracking-logic.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "./socket.jsx";
+import Typography from "@mui/material/Typography";
+import Stack from "@mui/material/Stack";
+import TableCell from "@mui/material/TableCell";
+import TableRow from "@mui/material/TableRow";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
 
 // global leaflet map object
 let MapObject = null;
@@ -493,7 +500,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         socket.emit("data_request", "get-satellite", noradId, (response) => {
             if (response['success'] && response.data[0]) {
                 setSatelliteData(response.data[0]);
-
             } else {
                 enqueueSnackbar(`Failed to get satellite data for norad id: ${noradId} (${response.message})`, {
                     variant: 'error',
@@ -623,14 +629,44 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             />
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="info">
-            <TitleBar className={"react-grid-draggable"}>Information</TitleBar>
-            <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
-                <h2>{satelliteName}</h2>
-                <p><strong>Latitude:</strong> {satelliteLat? satelliteLat.toFixed(4): "n/a"}°</p>
-                <p><strong>Longitude:</strong> {satelliteLon? satelliteLon.toFixed(4): "n/a"}°</p>
-                <p><strong>Altitude:</strong> {satelliteAltitude? satelliteAltitude.toFixed(2): "n/a"} km</p>
-                <p><strong>Velocity:</strong> {satelliteVelocity? satelliteVelocity.toFixed(2): "n/a"} km/s</p>
-            </div>
+            <TitleBar className={"react-grid-draggable"}>Satellite info</TitleBar>
+            <Table size="small" style={{ width: '100%' }}>
+                <TableBody>
+                    <TableRow>
+                        <TableCell><strong>Name:</strong></TableCell>
+                        <TableCell>{satelliteData['name'] || "n/a"}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Latitude:</strong></TableCell>
+                        <TableCell>{satelliteLat ? satelliteLat.toFixed(4) : "n/a"}°</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Longitude:</strong></TableCell>
+                        <TableCell>{satelliteLon ? satelliteLon.toFixed(4) : "n/a"}°</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Altitude:</strong></TableCell>
+                        <TableCell>{satelliteAltitude ? satelliteAltitude.toFixed(2) : "n/a"} km</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Velocity:</strong></TableCell>
+                        <TableCell>{satelliteVelocity ? satelliteVelocity.toFixed(2) : "n/a"} km/s</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Status:</strong></TableCell>
+                        <TableCell>{satelliteData['status']? betterStatusValue(satelliteData['status']): "n/a"}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Launch Date:</strong></TableCell>
+                        <TableCell>{satelliteData['launched']? betterDateTimes(satelliteData['launched']) :"n/a"}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Countries:</strong></TableCell>
+                        <TableCell>{satelliteData['countries']? renderCountryFlags(satelliteData['countries']): "n/a"}</TableCell>
+                    </TableRow>
+                </TableBody>
+            </Table>
+
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="passes">
             <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
