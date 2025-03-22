@@ -245,7 +245,10 @@ export default function TLESourcesTable() {
                 setFormDialogOpen(false);
                 setRows(response.data);
             } else {
-                console.error(response.error);
+                enqueueSnackbar("Error adding TLE source", {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
             }
         });
     };

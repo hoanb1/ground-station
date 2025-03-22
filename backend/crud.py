@@ -1,7 +1,7 @@
 import json
 import traceback
+import bcrypt
 from typing import Union
-
 from pydantic.v1 import UUID4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete
@@ -21,33 +21,67 @@ from models import serialize_object
 from typing import Optional
 
 
-async def fetch_user(session: AsyncSession, user_id: uuid.UUID) -> dict:
+async def fetch_users(session: AsyncSession, user_id: Optional[Union[uuid.UUID, str]] = None,
+                      include_password: bool = False) -> dict:
     """
-    Fetch a single user by their UUID.
+    Fetch a single user by their UUID or all users if no UUID is provided.
+    Optionally include the password in the returned data.
     """
     try:
-        stmt = select(Users).filter(Users.id == user_id)
-        result = await session.execute(stmt)
-        user = result.scalar_one_or_none()
-        return {"success": True, "data": user, "error": None}
+        if user_id:
+            if isinstance(user_id, str):
+                user_id = uuid.UUID(user_id)
+            stmt = select(Users).filter(Users.id == user_id)
+            result = await session.execute(stmt)
+            user = result.scalar_one_or_none()
+            if user and not include_password:
+                user.password = None
+            return {"success": True, "data": user, "error": None}
+
+        else:
+            stmt = select(Users)
+            result = await session.execute(stmt)
+            users = result.scalars().all()
+            if not include_password:
+                for user in users:
+                    user.password = None
+            return {"success": True, "data": users, "error": None}
+
     except Exception as e:
+        logger.error(f"Error fetching users: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
-
-async def add_user(session: AsyncSession, email: str, password: str, fullname: str) -> dict:
+async def add_user(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new user.
     """
     try:
+        email = data.get("email")
+        password = data.get("password")
+        fullname = data.get("fullname")
+        status = data.get("status")
+
+        assert email, "Email cannot be empty."
+        assert password, "Password cannot be empty."
+        assert fullname, "Fullname cannot be empty."
+        assert status in ['active', 'inactive'], "Status must be active or inactive."
+
+        # Use Python's bcrypt library to hash the password
+        salt = bcrypt.gensalt()
+        password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+
         new_id = uuid.uuid4()
         now = datetime.now(UTC)
+
         stmt = (
             insert(Users)
             .values(
                 id=new_id,
                 email=email,
-                password=password,
+                password=password_hash,
                 fullname=fullname,
+                status=status,
                 added=now,
                 updated=now,
             )
@@ -56,18 +90,39 @@ async def add_user(session: AsyncSession, email: str, password: str, fullname: s
         result = await session.execute(stmt)
         await session.commit()
         new_user = result.scalar_one()
+
         return {"success": True, "data": new_user, "error": None}
+
     except Exception as e:
         await session.rollback()
         return {"success": False, "error": str(e)}
 
 
-async def edit_user(session: AsyncSession, user_id: uuid.UUID, **kwargs) -> dict:
+async def edit_user(session: AsyncSession, data: dict) -> dict:
     """
     Edit an existing user by updating provided fields.
     """
     try:
-        # Check if the user exists
+        assert data.get("id"), "User id cannot be empty."
+
+        # Extract user_id from data dict
+        user_id = data.get("id")
+
+        # Convert string UUID to UUID object if necessary
+        if isinstance(user_id, str):
+            user_id = uuid.UUID(user_id)
+
+        del data['id']
+
+        # hash the password
+        if data.get("password", "") != "":
+            logger.info("Hashing password for user: %s", user_id)
+            password = data.pop("password")
+            salt = bcrypt.gensalt()
+            password_hash = bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
+            data["password"] = password_hash
+
+    # Check if the user exists
         stmt = select(Users).filter(Users.id == user_id)
         result = await session.execute(stmt)
         user = result.scalar_one_or_none()
@@ -75,11 +130,11 @@ async def edit_user(session: AsyncSession, user_id: uuid.UUID, **kwargs) -> dict
             return {"success": False, "error": f"User with id {user_id} not found."}
 
         # Update provided fields; also update the timestamp
-        kwargs["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(UTC)
         upd_stmt = (
             update(Users)
             .where(Users.id == user_id)
-            .values(**kwargs)
+            .values(**data)
             .returning(Users)
         )
         upd_result = await session.execute(upd_stmt)
@@ -88,27 +143,33 @@ async def edit_user(session: AsyncSession, user_id: uuid.UUID, **kwargs) -> dict
         return {"success": True, "data": updated_user, "error": None}
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error editing user: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
-
-async def delete_user(session: AsyncSession, user_id: uuid.UUID) -> dict:
+async def delete_user(session: AsyncSession, user_ids: Union[list[uuid.UUID], list[str]]) -> dict:
     """
-    Delete a user by their UUID.
+    Delete multiple users by their UUIDs.
     """
     try:
+        # Convert any string UUIDs in the list to UUID objects
+        user_ids = [uuid.UUID(user_id) if isinstance(user_id, str) else user_id for user_id in user_ids]
         stmt = (
             delete(Users)
-            .where(Users.id == user_id)
+            .where(Users.id.in_(user_ids))
             .returning(Users)
         )
         result = await session.execute(stmt)
-        deleted_user = result.scalar_one_or_none()
-        if not deleted_user:
-            return {"success": False, "error": f"User with id {user_id} not found."}
+        deleted_users = result.scalars().all()
+        if not deleted_users:
+            return {"success": False, "error": "No users found with the provided IDs."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error deleting users: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -875,9 +936,7 @@ async def delete_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) -
         return {"success": False, "error": str(e)}
 
 
-async def fetch_satellite_tle_source(
-        session: AsyncSession, satellite_tle_source_id: Optional[int] = None
-) -> dict:
+async def fetch_satellite_tle_source(session: AsyncSession, satellite_tle_source_id: Optional[int] = None) -> dict:
     """
     Retrieve satellite TLE source records.
     If an ID is provided, fetch the specific record; otherwise, return all sources.
@@ -902,13 +961,15 @@ async def fetch_satellite_tle_source(
         return {"success": False, "error": str(e)}
 
 
-async def add_satellite_tle_source(
-        session: AsyncSession, payload: dict
-) -> dict:
+async def add_satellite_tle_source(session: AsyncSession, payload: dict) -> dict:
     """
     Create a new satellite TLE source record with the provided payload.
     """
     try:
+        assert payload['name']
+        assert payload['url']
+        assert payload['identifier']
+
         new_source = SatelliteTLESources(**payload)
         session.add(new_source)
         await session.commit()

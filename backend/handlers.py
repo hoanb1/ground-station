@@ -61,14 +61,14 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
         elif cmd == "get-satellites":
-            logger.info(f'Getting satellites: {data}')
+            logger.info(f'Getting satellites, data: {data}')
             satellites = await crud.fetch_satellites(dbsession, None)
             satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite":
-            logger.info(f'Getting satellite data for norad id: {data}')
+            logger.info(f'Getting satellite data for norad id, data: {data}')
             satellite = await crud.fetch_satellites(dbsession, data)
             satellite = json.loads(json.dumps(satellite, cls=ModelEncoder))
 
@@ -80,7 +80,7 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': (satellite['success'] & transmitters['success']), 'data': [satellite_data]}
 
         elif cmd == "get-satellites-for-group-id":
-            logger.info(f'Getting satellites for group id: {data}')
+            logger.info(f'Getting satellites for group id, data: {data}')
             satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
             satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
 
@@ -92,7 +92,7 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': (satellites['success'] & transmitters['success']), 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite-groups-user":
-            logger.info(f'Getting user satellite groups: {data}')
+            logger.info(f'Getting user satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
             satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
 
@@ -102,7 +102,7 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups-system":
-            logger.info(f'Getting system satellite groups: {data}')
+            logger.info(f'Getting system satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
             satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
 
@@ -112,7 +112,7 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups":
-            logger.info(f'Getting satellite groups: {data}')
+            logger.info(f'Getting satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
             satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
@@ -120,6 +120,12 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "sync-satellite-data":
             logger.info(f'Syncing satellite data with known TLE sources')
             await synchronize_satellite_data(dbsession, logger, sio)
+
+        elif cmd == "get-users":
+            logger.info(f'Getting users, data: {data}')
+            users = await crud.fetch_users(dbsession, user_id=None)
+            users = json.loads(json.dumps(users, cls=ModelEncoder))
+            reply = {'success': users['success'], 'data': users.get('data', [])}
 
         else:
             logger.info(f'Unknown command: {cmd}')
@@ -155,48 +161,79 @@ async def data_submission_routing(sio, cmd, data, logger):
     async with AsyncSessionLocal() as dbsession:
 
         if cmd == "submit-tle-sources":
-            logger.info(f'Adding TLE source: {data}')
-            await crud.add_satellite_tle_source(dbsession, data)
+            logger.info(f'Adding TLE source, data: {data}')
+            submit_reply = await crud.add_satellite_tle_source(dbsession, data)
 
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
-            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+            reply = {'success': (tle_sources['success'] & submit_reply['success']),
+                     'data': tle_sources.get('data', [])}
 
         elif cmd == "delete-tle-sources":
-            logger.info(f'Deleting TLE source: {data}')
-            await crud.delete_satellite_tle_sources(dbsession, data)
+            logger.info(f'Deleting TLE source, data: {data}')
+            delete_reply = await crud.delete_satellite_tle_sources(dbsession, data)
 
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
-            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+            reply = {'success': (tle_sources['success'] & delete_reply['success']),
+                     'data': tle_sources.get('data', [])}
 
         elif cmd == "edit-tle-source":
-            logger.info(f'Editing TLE source: {data}')
-            await crud.edit_satellite_tle_source(dbsession, data['id'], data)
+            logger.info(f'Editing TLE source, data: {data}')
+            edit_reply = await crud.edit_satellite_tle_source(dbsession, data['id'], data)
 
-            # get rows
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
-            reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
+            reply = {'success': (tle_sources['success'] & edit_reply['success']),
+                     'data': tle_sources.get('data', [])}
 
         elif cmd == "submit-satellite-group":
-            logger.info(f'Adding satellite group: {data}')
-            await crud.add_satellite_group(dbsession, data)
+            logger.info(f'Adding satellite group, data: {data}')
+            submit_reply = await crud.add_satellite_group(dbsession, data)
 
             satellite_groups = await crud.fetch_satellite_group(dbsession, group_type='user')
-            reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+            reply = {'success': (satellite_groups['success'] & submit_reply['success']),
+                     'data': satellite_groups.get('data', [])}
 
         elif cmd == "delete-satellite-group":
-            logger.info(f'Deleting satellite groups: {data}')
-            await crud.delete_satellite_group(dbsession, data)
+            logger.info(f'Deleting satellite groups, data: {data}')
+            delete_reply = await crud.delete_satellite_group(dbsession, data)
 
             satellite_groups = await crud.fetch_satellite_group(dbsession, group_type="user")
-            reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+            reply = {'success': (satellite_groups['success'] & delete_reply['success']),
+                     'data': satellite_groups.get('data', [])}
 
         elif cmd == "edit-satellite-group":
-            logger.info(f'Editing satellite group: {data}')
-            await crud.edit_satellite_group(dbsession, data['id'], data)
+            logger.info(f'Editing satellite group, data: {data}')
+            edit_reply = await crud.edit_satellite_group(dbsession, data['id'], data)
 
-            # get rows
             satellite_groups = await crud.fetch_satellite_group(dbsession, group_type="user")
-            reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
+            reply = {'success': (satellite_groups['success'] & edit_reply['success']),
+                     'data': satellite_groups.get('data', [])}
+
+        elif cmd == "submit-user":
+            logger.info(f'Adding user, data: {data}')
+            add_reply = await crud.add_user(dbsession, data)
+
+            users = await crud.fetch_users(dbsession, user_id=None)
+            users = json.loads(json.dumps(users, cls=ModelEncoder))
+            reply = {'success': (users['success'] & add_reply['success']),
+                     'data': users.get('data', [])}
+
+        elif cmd == "edit-user":
+            logger.info(f'Editing user, data: {data}')
+            edit_reply = await crud.edit_user(dbsession, data)
+
+            users = await crud.fetch_users(dbsession, user_id=None)
+            users = json.loads(json.dumps(users, cls=ModelEncoder))
+            reply = {'success': (users['success'] & edit_reply['success']),
+                     'data': users.get('data', [])}
+
+        elif cmd == "delete-user":
+            logger.info(f'Delete user, data: {data}')
+            delete_reply = await crud.delete_user(dbsession, data)
+
+            users = await crud.fetch_users(dbsession, user_id=None)
+            users = json.loads(json.dumps(users, cls=ModelEncoder))
+            reply = {'success': (users['success'] & delete_reply['success']),
+                     'data': users.get('data', [])}
 
         else:
             logger.info(f'Unknown command: {cmd}')

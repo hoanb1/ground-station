@@ -104,6 +104,11 @@ const SatelliteGroupsTable = React.memo(function () {
             if (response.success === true) {
                 setRows(response.data)
                 setFormDialogOpen(false);
+            } else {
+                enqueueSnackbar("Error adding satellite group", {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
             }
         });
     };
