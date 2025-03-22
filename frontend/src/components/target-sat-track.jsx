@@ -153,23 +153,23 @@ const MapSlider = function ({handleSliderChange}) {
     const marks = [
         {
             value: 0,
-            label: '0 minutes',
+            label: '0m',
         },
         {
             value: 15,
-            label: '+15 minutes',
+            label: '+15m',
         },
         {
             value: -15,
-            label: '-15 minutes',
+            label: '-15m',
         },
         {
             value: 30,
-            label: '+30 minutes',
+            label: '+30m',
         },
         {
             value: -30,
-            label: '-30 minutes',
+            label: '-30m',
         }
     ];
 
@@ -663,6 +663,10 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                     <TableRow>
                         <TableCell><strong>Countries:</strong></TableCell>
                         <TableCell>{satelliteData['countries']? renderCountryFlags(satelliteData['countries']): "n/a"}</TableCell>
+                    </TableRow>
+                    <TableRow>
+                        <TableCell><strong>Transmitters:</strong></TableCell>
+                        <TableCell>{satelliteData['transmitters'] ? satelliteData['transmitters'].length : "n/a"}</TableCell>
                     </TableRow>
                 </TableBody>
             </Table>

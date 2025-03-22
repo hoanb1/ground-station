@@ -1,7 +1,9 @@
 import crud
 import requests
+import os
 import json
 import asyncio
+import urllib.parse
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 from models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
