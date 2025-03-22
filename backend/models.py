@@ -112,7 +112,7 @@ class Rotators(Base):
     maxel = Column(Integer, nullable=False)
     aztype = Column(Integer, nullable=False)
     azendstop = Column(Integer, nullable=False)
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC),)
+    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Locations(Base):

@@ -2,8 +2,6 @@ import * as React from 'react';
 import {Alert, AlertTitle, Box, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {useEffect, useState} from "react";
 import {useSocket} from "./socket.jsx";
-import {DataGrid, gridClasses} from "@mui/x-data-grid";
-import CircularProgress from "@mui/material/CircularProgress";
 import {enqueueSnackbar} from "notistack";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
@@ -19,9 +17,38 @@ import TableCell from '@mui/material/TableCell';
 import TableContainer from '@mui/material/TableContainer';
 import TableHead from '@mui/material/TableHead';
 import TableRow from '@mui/material/TableRow';
+import {
+    DataGrid,
+    gridPageCountSelector,
+    GridPagination,
+    useGridApiContext,
+    useGridSelector,
+    gridClasses
+} from '@mui/x-data-grid';
+import MuiPagination from '@mui/material/Pagination';
 import {betterDateTimes, humanizeDate, betterStatusValue, renderCountryFlags, humanizeFrequency} from './common.jsx';
 
 
+function Pagination({ page, onPageChange, className }) {
+    const apiRef = useGridApiContext();
+    const pageCount = useGridSelector(apiRef, gridPageCountSelector);
+
+    return (
+        <MuiPagination
+            color="primary"
+            className={className}
+            count={pageCount}
+            page={page + 1}
+            onChange={(event, newPage) => {
+                onPageChange(event, newPage - 1);
+            }}
+        />
+    );
+}
+
+function CustomPagination(props) {
+    return <GridPagination ActionsComponent={Pagination} {...props} />;
+}
 
 const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
     return (
@@ -147,10 +174,9 @@ const SatelliteTable = React.memo(function () {
     const [satGroupId, setSatGroupId] = useState("");
     const [selectedRows, setSelectedRows] = useState([]);
     const socket = useSocket();
-    const [loading, setLoading] = useState(true);
+    const [loading, setLoading] = useState(false);
     const [satelliteInfoDialogOpen, setSatelliteInfoDialogOpen] = useState(false);
     const [clickedSatellite, setClickedSatellite] = useState({});
-
 
     const columns = [
         {
@@ -203,9 +229,7 @@ const SatelliteTable = React.memo(function () {
             width: 150,
             headerAlign: 'center',
             align: 'center',
-            renderCell: (params) => {
-                return params.row['transmitters'].length;
-            },
+            valueGetter: (value, row) => row['transmitters'].length
         },
         {
             field: 'decayed',
@@ -240,8 +264,6 @@ const SatelliteTable = React.memo(function () {
             },
         },
     ];
-
-    const paginationModel = { page: 0, pageSize: 10 };
 
     function fetchSatelliteGroups() {
         setLoading(true);
@@ -330,11 +352,17 @@ const SatelliteTable = React.memo(function () {
                     getRowId={(satellite) => {
                         return satellite['norad_id'];
                     }}
+                    loading={loading}
                     rows={satellites}
                     columns={columns}
-                    initialState={{ pagination: { paginationModel } }}
                     pageSizeOptions={[5, 10, 20, 50, 100]}
                     checkboxSelection={false}
+                    initialState={{
+                        pagination: { paginationModel: { pageSize: 10 } },
+                    }}
+                    slots={{
+                        pagination: CustomPagination,
+                    }}
                     onRowSelectionModelChange={(selected) => {
                         setSelectedRows(selected);
                     }}
