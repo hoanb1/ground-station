@@ -118,7 +118,7 @@ function getMapZoomFromStorage() {
 
 function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutureOrbitPath=false,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
-                                  initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
+                                  initialShowTerminatorLine=true, initialTileLayerID="stadiadark", initialShowTooltip=true,
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=60 }) {
 
@@ -135,6 +135,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
     const [terminatorLine, setTerminatorLine] = useState([]);
     const [daySidePolygon, setDaySidePolygon] = useState([]);
+    const [showTooltip, setShowTooltip] = useLocalStorageState('overview-show-tooltip', initialShowTooltip, { codec: CODEC_BOOL });
     const [pastOrbitLineColor, setPastOrbitLineColor] = useLocalStorageState('overview-past-orbit-color', initialPastOrbitLineColor);
     const [futureOrbitLineColor, setFutureOrbitLineColor] = useLocalStorageState('overview-future-orbit-color', initialFutureOrbitLineColor);
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useLocalStorageState('overview-coverage-color', initialSatelliteCoverageColor);
@@ -239,6 +240,10 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         setMapZoomLevel(zoomLevel);
     }, [mapZoomLevel]);
 
+    const handleShowTooltip = useCallback((value) => {
+        setShowTooltip(value);
+    }, [showTooltip]);
+    
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
@@ -308,12 +313,18 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 }}
             />)
 
-            currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]}
-                                    icon={satelliteIcon}>
-                <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent={true}>
-                    {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                </ThemedLeafletTooltip>
-            </Marker>);
+            if (showTooltip) {
+                currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]}
+                                        icon={satelliteIcon}>
+                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent={true}>
+                        {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                    </ThemedLeafletTooltip>
+                </Marker>);
+            } else {
+                currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]}
+                                        icon={satelliteIcon}>
+                </Marker>);
+            }
 
             let coverage = [];
             coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
@@ -373,7 +384,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         };
     },[selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
-        mapZoomLevel]);
+        mapZoomLevel, showTooltip]);
 
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
@@ -468,6 +479,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 initialSatelliteCoverageColor={satelliteCoverageColor}
                 initialOrbitProjectionDuration={orbitProjectionDuration}
                 initialTileLayerID={tileLayerID}
+                initialShowTooltip={showTooltip}
                 initialShowTerminatorLine={showTerminatorLine}
                 handleShowPastOrbitPath={handleShowPastOrbitPath}
                 handleShowFutureOrbitPath={handleShowFutureOrbitPath}
@@ -479,6 +491,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 handleFutureOrbitLineColor={handleFutureOrbitLineColor}
                 handleSatelliteCoverageColor={handleSatelliteCoverageColor}
                 handleOrbitProjectionDuration={handleOrbitProjectionDuration}
+                handleShowTooltip={handleShowTooltip}
                 handleTileLayerID={handleTileLayerID}
             />
         </StyledIslandParentScrollbar>,

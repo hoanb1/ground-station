@@ -24,6 +24,7 @@ import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "./tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
+    CODEC_BOOL,
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
     MapTitleBar,
@@ -197,7 +198,7 @@ const MapSlider = function ({handleSliderChange}) {
 
 const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
-                                  initialShowTerminatorLine=true, initialTileLayerID="stadiadark",
+                                  initialShowTerminatorLine=true, initialShowTooltip=true, initialTileLayerID="stadiadark",
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=240 }) {
     const socket = useSocket();
@@ -206,12 +207,13 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [satelliteLon, setSatelliteLon] = useState(null);
     const [satelliteAltitude, setSatelliteAltitude] = useState(0.0);
     const [satelliteVelocity, setSatelliteVelocity] = useState(0.0);
-    const [showPastOrbitPath, setShowPastOrbitPath] = useState(initialShowPastOrbitPath);
-    const [showFutureOrbitPath, setShowFutureOrbitPath] = useState(initialShowFutureOrbitPath);
-    const [showSatelliteCoverage, setShowSatelliteCoverage] = useState(initialShowSatelliteCoverage);
-    const [showSunIcon, setShowSunIcon] = useState(initialShowSunIcon);
-    const [showMoonIcon, setShowMoonIcon] = useState(initialShowMoonIcon);
-    const [showTerminatorLine, setShowTerminatorLine] = useState(initialShowTerminatorLine);
+    const [showPastOrbitPath, setShowPastOrbitPath] = useLocalStorageState('target-show-past-orbit-path', initialShowPastOrbitPath, { codec: CODEC_BOOL });
+    const [showFutureOrbitPath, setShowFutureOrbitPath] = useLocalStorageState('target-show-future-path', initialShowFutureOrbitPath, { codec: CODEC_BOOL });
+    const [showSatelliteCoverage, setShowSatelliteCoverage] = useLocalStorageState('target-show-coverage', initialShowSatelliteCoverage, { codec: CODEC_BOOL });
+    const [showSunIcon, setShowSunIcon] = useLocalStorageState('target-show-sun', initialShowSunIcon, { codec: CODEC_BOOL });
+    const [showMoonIcon, setShowMoonIcon] = useLocalStorageState('target-show-moon', initialShowMoonIcon, { codec: CODEC_BOOL });
+    const [showTerminatorLine, setShowTerminatorLine] = useLocalStorageState('target-show-terminator', initialShowTerminatorLine, { codec: CODEC_BOOL });
+    const [showTooltip, setShowTooltip] = useLocalStorageState('target-show-tooltip', initialShowTooltip, { codec: CODEC_BOOL });
     const [groupSatellites, setGroupSatellites] = useState({});
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
@@ -347,6 +349,10 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         setSliderTimeOffset(value);
     }, []);
 
+    const handleShowTooltip = useCallback((value) => {
+        setShowTooltip(value);
+    }, [showTooltip]);
+
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
@@ -416,12 +422,18 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 }}
             />)
 
-            currentPos.push(<Marker key={"marker-"+satelliteData['norad_id']} position={[latitude, longitude]}
-                                    icon={satelliteIcon}>
-                <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
-                    {satelliteData['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                </ThemedLeafletTooltip>
-            </Marker>);
+            if (showTooltip) {
+                currentPos.push(<Marker key={"marker-"+satelliteData['norad_id']} position={[latitude, longitude]}
+                                        icon={satelliteIcon}>
+                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
+                        {satelliteData['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                    </ThemedLeafletTooltip>
+                </Marker>);
+            } else {
+                currentPos.push(<Marker key={"marker-"+satelliteData['norad_id']} position={[latitude, longitude]}
+                                        icon={satelliteIcon}>
+                </Marker>);
+            }
 
             let coverage = [];
             coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
@@ -513,7 +525,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         };
 
     },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor,
-        satelliteCoverageColor, sliderTimeOffset]);
+        satelliteCoverageColor, sliderTimeOffset, showTooltip, showPastOrbitPath, showFutureOrbitPath]);
 
     // pre-make the components
     let gridContents = [
@@ -595,6 +607,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 initialSatelliteCoverageColor={satelliteCoverageColor}
                 initialOrbitProjectionDuration={orbitProjectionDuration}
                 initialTileLayerID={tileLayerID}
+                initialShowTooltip={showTooltip}
+                handleShowTooltip={handleShowTooltip}
                 handleShowPastOrbitPath={handleShowPastOrbitPath}
                 handleShowFutureOrbitPath={handleShowFutureOrbitPath}
                 handleShowSatelliteCoverage={handleShowSatelliteCoverage}

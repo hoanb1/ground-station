@@ -36,10 +36,10 @@ const SettingItem = styled('div')(({theme}) => ({
 const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
                             initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
-                            initialOrbitProjectionDuration, initialTileLayerID, handleShowFutureOrbitPath, handleShowPastOrbitPath,
+                            initialOrbitProjectionDuration, initialTileLayerID, initialShowTooltip, handleShowFutureOrbitPath, handleShowPastOrbitPath,
                             handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
                             handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
-                            handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleTileLayerID}) => {
+                            handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip, handleTileLayerID}) => {
 
     // Example options for orbit projection time range
     const timeOptions = [
@@ -58,7 +58,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
     const [showSun, setShowSun] = useState(initialShowSunIcon);
     const [showMoon, setShowMoon] = useState(initialShowMoonIcon);
     const [showTerminator, setShowTerminator] = useState(initialShowTerminatorLine);
-    const [showSatelliteTooltip, setShowSatelliteTooltip] = useState(true);
+    const [showTooltip, setShowTooltip] = useState(initialShowTooltip);
     const [pastOrbitLineColor, setPastOrbitLineColor] = useState(initialPastOrbitLineColor);
     const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
     const [coverageColor, setCoverageColor] = useState(initialSatelliteCoverageColor);
@@ -205,8 +205,11 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         control={
                             <Switch
                                 size={"small"}
-                                checked={showSatelliteTooltip}
-                                onChange={(e) => setShowSatelliteTooltip(e.target.checked)}
+                                checked={showTooltip}
+                                onChange={(e) => {
+                                    handleShowTooltip(e.target.checked);
+                                    setShowTooltip(e.target.checked);
+                                }}
                             />
                         }
                         label="Satellite tooltip"
