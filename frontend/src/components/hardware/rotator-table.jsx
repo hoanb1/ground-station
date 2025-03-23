@@ -1,386 +1,134 @@
 import * as React from 'react';
-import PropTypes from 'prop-types';
-import { alpha } from '@mui/material/styles';
 import Box from '@mui/material/Box';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TablePagination from '@mui/material/TablePagination';
-import TableRow from '@mui/material/TableRow';
-import TableSortLabel from '@mui/material/TableSortLabel';
-import Toolbar from '@mui/material/Toolbar';
-import Typography from '@mui/material/Typography';
-import Paper from '@mui/material/Paper';
-import Checkbox from '@mui/material/Checkbox';
-import IconButton from '@mui/material/IconButton';
-import Tooltip from '@mui/material/Tooltip';
-import FormControlLabel from '@mui/material/FormControlLabel';
-import Switch from '@mui/material/Switch';
-import DeleteIcon from '@mui/icons-material/Delete';
-import FilterListIcon from '@mui/icons-material/FilterList';
-import { visuallyHidden } from '@mui/utils';
+import {DataGrid, gridClasses} from "@mui/x-data-grid";
+import Stack from "@mui/material/Stack";
+import {Button} from "@mui/material";
+import {useState} from "react";
+import DialogTitle from "@mui/material/DialogTitle";
+import Dialog from "@mui/material/Dialog";
+import DialogContent from "@mui/material/DialogContent";
+import DialogActions from "@mui/material/DialogActions";
 
-function createData(id, name, host, port, minaz, maxaz, minel, maxel, aztype, azendstop) {
-    return {
-        id,
-        name,
-        host,
-        port,
-        minaz,
-        maxaz,
-        minel,
-        maxel,
-        aztype,
-        azendstop,
-    };
-}
-
-const rows = [
-    createData(1, 'yaesu', '192.168.60.34', 4533, 0, 360, 0, 90, 1, 0),
-];
-
-function descendingComparator(a, b, orderBy) {
-    if (b[orderBy] < a[orderBy]) {
-        return -1;
-    }
-    if (b[orderBy] > a[orderBy]) {
-        return 1;
-    }
-    return 0;
-}
-
-function getComparator(order, orderBy) {
-    return order === 'desc'
-        ? (a, b) => descendingComparator(a, b, orderBy)
-        : (a, b) => -descendingComparator(a, b, orderBy);
-}
-
-const headCells = [
-    {
-        id: 'name',
-        numeric: false,
-        disablePadding: true,
-        label: 'Name',
-    },
-    {
-        id: 'host',
-        numeric: false,
-        disablePadding: false,
-        label: 'Host',
-    },
-    {
-        id: 'port',
-        numeric: true,
-        disablePadding: false,
-        label: 'Port',
-    },
-    {
-        id: 'minaz',
-        numeric: true,
-        disablePadding: false,
-        label: 'Min Az',
-    },
-    {
-        id: 'maxaz',
-        numeric: true,
-        disablePadding: false,
-        label: 'Max Az',
-    },
-    {
-        id: 'minel',
-        numeric: true,
-        disablePadding: false,
-        label: 'Min El',
-    },
-    {
-        id: 'maxel',
-        numeric: true,
-        disablePadding: false,
-        label: 'Max El',
-    },
-    {
-        id: 'aztype',
-        numeric: true,
-        disablePadding: false,
-        label: 'Azimuth type',
-    },
-    {
-        id: 'azstop',
-        numeric: true,
-        disablePadding: false,
-        label: 'Azimuth endstop',
-    },
-
-];
-
-function EnhancedTableHead(props) {
-    const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } =
-        props;
-    const createSortHandler = (property) => (event) => {
-        onRequestSort(event, property);
-    };
-
-    return (
-        <TableHead>
-            <TableRow>
-                <TableCell padding="checkbox">
-                    <Checkbox
-                        color="primary"
-                        indeterminate={numSelected > 0 && numSelected < rowCount}
-                        checked={rowCount > 0 && numSelected === rowCount}
-                        onChange={onSelectAllClick}
-                        inputProps={{
-                            'aria-label': 'select all desserts',
-                        }}
-                    />
-                </TableCell>
-                {headCells.map((headCell) => (
-                    <TableCell
-                        key={headCell.id}
-                        align={headCell.numeric ? 'right' : 'left'}
-                        padding={headCell.disablePadding ? 'none' : 'normal'}
-                        sortDirection={orderBy === headCell.id ? order : false}
-                    >
-                        <TableSortLabel
-                            active={orderBy === headCell.id}
-                            direction={orderBy === headCell.id ? order : 'asc'}
-                            onClick={createSortHandler(headCell.id)}
-                        >
-                            {headCell.label}
-                            {orderBy === headCell.id ? (
-                                <Box component="span" sx={visuallyHidden}>
-                                    {order === 'desc' ? 'sorted descending' : 'sorted ascending'}
-                                </Box>
-                            ) : null}
-                        </TableSortLabel>
-                    </TableCell>
-                ))}
-            </TableRow>
-        </TableHead>
-    );
-}
-
-EnhancedTableHead.propTypes = {
-    numSelected: PropTypes.number.isRequired,
-    onRequestSort: PropTypes.func.isRequired,
-    onSelectAllClick: PropTypes.func.isRequired,
-    order: PropTypes.oneOf(['asc', 'desc']).isRequired,
-    orderBy: PropTypes.string.isRequired,
-    rowCount: PropTypes.number.isRequired,
-};
-
-function EnhancedTableToolbar(props) {
-    const { numSelected } = props;
-    return (
-        <Toolbar
-            sx={[
-                {
-                    pl: { sm: 2 },
-                    pr: { xs: 1, sm: 1 },
-                },
-                numSelected > 0 && {
-                    bgcolor: (theme) =>
-                        alpha(theme.palette.primary.main, theme.palette.action.activatedOpacity),
-                },
-            ]}
-        >
-            {numSelected > 0 ? (
-                <Typography
-                    sx={{ flex: '1 1 100%' }}
-                    color="inherit"
-                    variant="subtitle1"
-                    component="div"
-                >
-                    {numSelected} selected
-                </Typography>
-            ) : (
-                <Typography
-                    sx={{ flex: '1 1 100%' }}
-                    variant="h6"
-                    id="tableTitle"
-                    component="div"
-                >
-                    Antenna rotors
-                </Typography>
-            )}
-            {numSelected > 0 ? (
-                <Tooltip title="Delete">
-                    <IconButton>
-                        <DeleteIcon />
-                    </IconButton>
-                </Tooltip>
-            ) : (
-                <Tooltip title="Filter list">
-                    <IconButton>
-                        <FilterListIcon />
-                    </IconButton>
-                </Tooltip>
-            )}
-        </Toolbar>
-    );
-}
-
-EnhancedTableToolbar.propTypes = {
-    numSelected: PropTypes.number.isRequired,
-};
 
 export default function AntennaRotatorTable() {
-    const [order, setOrder] = React.useState('asc');
-    const [orderBy, setOrderBy] = React.useState('calories');
-    const [selected, setSelected] = React.useState([]);
-    const [page, setPage] = React.useState(0);
-    const [dense, setDense] = React.useState(false);
-    const [rowsPerPage, setRowsPerPage] = React.useState(5);
+    const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+    const [openAddDialog, setOpenAddDialog] = useState(false);
+    const [selected, setSelected] = useState([]);
+    const [loading, setLoading] = useState(false);
+    const [rows, setRows] = useState([
+        {
+            id: 1,
+            name: 'Default Rotator',
+            host: '192.168.10.5',
+            port: 4533,
+            minaz: 0,
+            maxaz: 360,
+            minel: 0,
+            maxel: 90,
+            aztype: 1,
+            azendstop: 0,
+        },
+        {
+            id: 2,
+            name: 'Another Rotator',
+            host: '192.168.10.7',
+            port: 4533,
+            minaz: 10,
+            maxaz: 350,
+            minel: 0,
+            maxel: 90,
+            aztype: 2,
+            azendstop: 5,
+        },
+    ]);
 
-    const handleRequestSort = (event, property) => {
-        const isAsc = orderBy === property && order === 'asc';
-        setOrder(isAsc ? 'desc' : 'asc');
-        setOrderBy(property);
-    };
+    const [selectionModel, setSelectionModel] = useState([]);
+    const [pageSize, setPageSize] = useState(5);
 
-    const handleSelectAllClick = (event) => {
-        if (event.target.checked) {
-            const newSelected = rows.map((n) => n.id);
-            setSelected(newSelected);
-            return;
-        }
-        setSelected([]);
-    };
-
-    const handleClick = (event, id) => {
-        const selectedIndex = selected.indexOf(id);
-        let newSelected = [];
-
-        if (selectedIndex === -1) {
-            newSelected = newSelected.concat(selected, id);
-        } else if (selectedIndex === 0) {
-            newSelected = newSelected.concat(selected.slice(1));
-        } else if (selectedIndex === selected.length - 1) {
-            newSelected = newSelected.concat(selected.slice(0, -1));
-        } else if (selectedIndex > 0) {
-            newSelected = newSelected.concat(
-                selected.slice(0, selectedIndex),
-                selected.slice(selectedIndex + 1),
-            );
-        }
-        setSelected(newSelected);
-    };
-
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
-
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
-
-    const handleChangeDense = (event) => {
-        setDense(event.target.checked);
-    };
-
-    // Avoid a layout jump when reaching the last page with empty rows.
-    const emptyRows =
-        page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
-
-    const visibleRows = React.useMemo(
-        () =>
-            [...rows]
-                .sort(getComparator(order, orderBy))
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-        [order, orderBy, page, rowsPerPage],
-    );
+    const columns = [
+        { field: 'name', headerName: 'Name', flex: 1 },
+        { field: 'host', headerName: 'Host', flex: 1 },
+        { field: 'port', headerName: 'Port', type: 'number', flex: 1 },
+        { field: 'minaz', headerName: 'Min Az', type: 'number', flex: 1 },
+        { field: 'maxaz', headerName: 'Max Az', type: 'number', flex: 1 },
+        { field: 'minel', headerName: 'Min El', type: 'number', flex: 1 },
+        { field: 'maxel', headerName: 'Max El', type: 'number', flex: 1 },
+        { field: 'aztype', headerName: 'Az Type', type: 'number', flex: 1 },
+        { field: 'azendstop', headerName: 'Az Endstop', type: 'number', flex: 1 },
+    ];
 
     return (
         <Box sx={{ width: '100%' }}>
-            <Paper sx={{ width: '100%', mb: 2 }}>
-                <EnhancedTableToolbar numSelected={selected.length} />
-                <TableContainer>
-                    <Table
-                        sx={{ minWidth: 750 }}
-                        aria-labelledby="tableTitle"
-                        size={dense ? 'small' : 'medium'}
-                    >
-                        <EnhancedTableHead
-                            numSelected={selected.length}
-                            order={order}
-                            orderBy={orderBy}
-                            onSelectAllClick={handleSelectAllClick}
-                            onRequestSort={handleRequestSort}
-                            rowCount={rows.length}
-                        />
-                        <TableBody>
-                            {visibleRows.map((row, index) => {
-                                const isItemSelected = selected.includes(row.id);
-                                const labelId = `enhanced-table-checkbox-${index}`;
-
-                                return (
-                                    <TableRow
-                                        hover
-                                        onClick={(event) => handleClick(event, row.id)}
-                                        role="checkbox"
-                                        aria-checked={isItemSelected}
-                                        tabIndex={-1}
-                                        key={row.id}
-                                        selected={isItemSelected}
-                                        sx={{ cursor: 'pointer' }}
-                                    >
-                                        <TableCell padding="checkbox">
-                                            <Checkbox
-                                                color="primary"
-                                                checked={isItemSelected}
-                                                inputProps={{
-                                                    'aria-labelledby': labelId,
-                                                }}
-                                            />
-                                        </TableCell>
-                                        <TableCell
-                                            component="th"
-                                            id={labelId}
-                                            scope="row"
-                                            padding="none"
-                                        >
-                                            {row.name}
-                                        </TableCell>
-                                        <TableCell align="left">{row.host}</TableCell>
-                                        <TableCell align="right">{row.port}</TableCell>
-                                        <TableCell align="right">{row.minaz}</TableCell>
-                                        <TableCell align="right">{row.maxaz}</TableCell>
-                                        <TableCell align="right">{row.minel}</TableCell>
-                                        <TableCell align="right">{row.maxel}</TableCell>
-                                        <TableCell align="right">{row.aztype}</TableCell>
-                                        <TableCell align="right">{row.azendstop}</TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                            {emptyRows > 0 && (
-                                <TableRow
-                                    style={{
-                                        height: (dense ? 33 : 53) * emptyRows,
-                                    }}
-                                >
-                                    <TableCell colSpan={6} />
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
-                    component="div"
-                    count={rows.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                />
-            </Paper>
-            <FormControlLabel
-                control={<Switch checked={dense} onChange={handleChangeDense} />}
-                label="Dense padding"
+            <DataGrid
+                loading={loading}
+                rows={rows}
+                columns={columns}
+                checkboxSelection
+                disableSelectionOnClick
+                onRowSelectionModelChange={(selected)=>{
+                    setSelected(selected);
+                }}
+                selectionModel={selected}
+                pageSize={pageSize}
+                onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
+                rowsPerPageOptions={[5, 10, 25]}
+                getRowId={(row) => row.id}
+                initialState={{
+                    pagination: { paginationModel: { pageSize: 5 } },
+                }}
+                sx={{
+                    border: 0,
+                    marginTop: 2,
+                    [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                        outline: 'none',
+                    },
+                    [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                        {
+                            outline: 'none',
+                        },
+                }}
             />
+
+            <Stack direction="row" spacing={2} style={{marginTop: 15}}>
+                <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
+                    Add
+                </Button>
+                <Button variant="contained" disabled={selected.length !== 1}>
+                    Edit
+                </Button>
+                <Button
+                    variant="contained"
+                    disabled={selected.length < 1}
+                    color="error"
+                    onClick={() => setOpenDeleteConfirm(true)}
+                >
+                    Delete
+                </Button>
+                <Dialog
+                    open={openDeleteConfirm}
+                    onClose={() => setOpenDeleteConfirm(false)}
+                >
+                    <DialogTitle>Confirm Deletion</DialogTitle>
+                    <DialogContent>
+                        Are you sure you want to delete the selected item(s)?
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenDeleteConfirm(false)} color="primary">
+                            Cancel
+                        </Button>
+                        <Button
+                            variant="contained"
+                            onClick={() => {
+                                // Perform delete logic here
+                                setOpenDeleteConfirm(false);
+                            }}
+                            color="error"
+                        >
+                            Delete
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+            </Stack>
         </Box>
     );
 }
