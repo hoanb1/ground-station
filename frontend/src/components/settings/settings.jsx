@@ -510,7 +510,7 @@ const LocationPage = () => {
                 (error) => {
                     reject(new Error('Unable to retrieve your location: ' + error.message));
                     enqueueSnackbar("Unable to retrieve your location", {
-                        variant: 'filled',
+                        variant: 'error',
                         autoHideDuration: 5000,
                     });
                     setLocationLoading(false);
