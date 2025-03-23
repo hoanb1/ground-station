@@ -1,5 +1,17 @@
 import React, {useEffect, useState} from 'react';
-import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, MenuItem, Select } from '@mui/material';
+import {
+    Box,
+    Button,
+    Dialog,
+    DialogActions,
+    DialogContent,
+    DialogTitle,
+    Stack,
+    TextField,
+    MenuItem,
+    Select,
+    FormControl, InputLabel
+} from '@mui/material';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -250,16 +262,18 @@ const UsersTable = () => {
                                 onChange={handleChange}
                                 variant={"filled"}
                             />
-                            <Select
-                                label="Status"
-                                name="status"
-                                value={formValues.status || ''}
-                                onChange={handleChange}
-                                fullWidth
-                                variant={"filled"}>
-                                <MenuItem value="active">Active</MenuItem>
-                                <MenuItem value="inactive">Inactive</MenuItem>
-                            </Select>
+                            <FormControl fullWidth variant="filled">
+                                <InputLabel id="status-label">Status</InputLabel>
+                                <Select
+                                    label="Status"
+                                    name="status"
+                                    value={formValues.status || ''}
+                                    onChange={handleChange}
+                                 variant={'filled'}>
+                                    <MenuItem value="active">Active</MenuItem>
+                                    <MenuItem value="inactive">Inactive</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Stack>
                     </DialogContent>
                     <DialogActions style={{padding: '20px 20px 20px 20px'}}>
