@@ -1,5 +1,6 @@
 import uuid
 import json
+from datetime import date, datetime
 from sqlalchemy import Table, MetaData
 from datetime import datetime, UTC
 from sqlalchemy.orm import DeclarativeMeta
@@ -15,6 +16,27 @@ Base = declarative_base()
 
 # Creates a MetaData object that holds schema-level information such as tables, columns, and constraints.
 metadata = MetaData()
+
+class ModelEncoder(json.JSONEncoder):
+    def default(self, obj):
+
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
+
+        # Attempt to convert SQLAlchemy model objects
+        # by reading their columns
+        try:
+            return {
+                column.name: getattr(obj, column.name)
+                for column in obj.__table__.columns
+            }
+        except AttributeError:
+            # If the object is not a SQLAlchemy model row, fallback
+            return super().default(obj)
+
 
 # Assuming serialize_sqla_object has been defined as before:
 def serialize_object(obj):

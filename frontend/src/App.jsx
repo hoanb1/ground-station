@@ -1,28 +1,25 @@
 import * as React from 'react';
-import {createTheme} from '@mui/material/styles';
 import {Outlet} from "react-router";
 import PublicIcon from '@mui/icons-material/Public';
-import SettingsIcon from '@mui/icons-material/Settings';
 import {ReactRouterAppProvider} from "@toolpad/core/react-router";
 import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import {setupTheme} from './theme.js';
 import AddHomeIcon from '@mui/icons-material/AddHome';
 import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-react";
-import {SignInPage} from "@toolpad/core";
-import {Alert, Avatar, Checkbox} from "@mui/material";
-import {useMemo, useState} from "react";
+import {Alert, Avatar, Button, Checkbox} from "@mui/material";
+import {useEffect, useMemo, useState} from "react";
 import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
-import {stringAvatar} from "./components/common.jsx";
 import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
-import LoginForm, {demoSession} from "./components/login.jsx";
-import {SocketProvider} from './components/socket.jsx';
-import NotificationBar from "./components/notification.jsx";
-import {enqueueSnackbar, SnackbarProvider, useSnackbar} from 'notistack';
+import LoginForm from "./components/login.jsx";
+import {closeSnackbar, enqueueSnackbar, SnackbarProvider, useSnackbar} from 'notistack';
 import PeopleIcon from '@mui/icons-material/People';
+import {useSocket} from "./components/socket.jsx";
+import {useAuth} from "./components/auth.jsx";
+
 
 const BRANDING = {
     logo: (
@@ -35,27 +32,23 @@ const BRANDING = {
     title: 'Ground Station',
 };
 
-export default function App(props) {
-    const [loggedIn, setLoggedIn] = useState(true);
-    const [session, setSession] = useState(demoSession);
-    const dashboardTheme = setupTheme();
 
-    const handleSignedInCallback = React.useCallback((value, session) => {
-        setLoggedIn(value);
-        setSession(session);
-        enqueueSnackbar('You have been logged in', {variant: 'success'});
-    }, []);
+export default function App(props) {
+    const socket = useSocket();
+    const [loggedIn, setLoggedIn] = useState(false);
+    const dashboardTheme = setupTheme();
+    const { session, logIn, logOut } = useAuth();
 
     const authentication = useMemo(() => {
         return {
             signIn: () => {
-                setSession(demoSession);
-                setLoggedIn(true);
-                enqueueSnackbar('You have been logged in', {variant: 'success'});
+                enqueueSnackbar('user clicked on the sign in button', {
+                    variant: 'info',
+
+                });
             },
             signOut: () => {
-                setSession(null);
-                setLoggedIn(false);
+                logOut();
                 enqueueSnackbar('You have been logged out', {variant: 'success'});
             },
         };
@@ -143,21 +136,68 @@ export default function App(props) {
         },
     ];
 
+    // To listen to the connection event
+    useEffect(() => {
+        if (socket) {
+            socket.on('connect', () => {
+                console.log('Socket connected with ID:', socket.id);
+                enqueueSnackbar("Connected to backend!", {variant: 'success'});
+            });
+
+            socket.on("reconnect_attempt", (attempt) => {
+                enqueueSnackbar(`Not connected! Attempting to reconnect (${attempt})...`, {variant: 'info'});
+            });
+
+            socket.on("error", (error) => {
+                enqueueSnackbar(`Error occurred, ${error}`, {variant: 'error'});
+            });
+
+            socket.on('disconnect', () => {
+                enqueueSnackbar("Disconnected from backend!", {variant: 'error'});
+            });
+
+            socket.on("sat-sync-events", (data) => {
+                console.log("Received data for sat-sync-events:", data);
+                if (data.status === 'complete') {
+                    enqueueSnackbar("Satellite data synchronization completed successfully", {
+                        variant: 'success',
+                        autoHideDuration: 4000,
+                    });
+                }
+            });
+
+            return () => {
+                socket.off('connect');
+                socket.off('reconnect_attempt');
+                socket.off('error');
+                socket.off('disconnect');
+                socket.off("sat-sync-events");
+            };
+        }
+    }, [socket]);
+
+    const action = snackbarId => (
+        <>
+            <Button size={"small"} variant={"text"} onClick={() => { closeSnackbar(snackbarId) }} style={{color: '#000000'}}>
+                Dismiss
+            </Button>
+        </>
+    );
+
     return (
-        <SocketProvider>
-                <ReactRouterAppProvider
-                    navigation={NAVIGATION}
-                    theme={dashboardTheme}
-                    authentication={authentication}
-                    session={session}
-                    branding={BRANDING}
-                >
-                        {loggedIn ? (
-                            <Outlet/>
-                        ) : (
-                            <LoginForm handleSignedInCallback={handleSignedInCallback}/>
-                        )}
-                </ReactRouterAppProvider>
-        </SocketProvider>
+        <SnackbarProvider maxSnack={5} autoHideDuration={4000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}} action={action}>
+            <ReactRouterAppProvider
+                navigation={NAVIGATION}
+                theme={dashboardTheme}
+                authentication={authentication}
+                session={session}
+                branding={BRANDING}>
+                    {session?.user?.token ? (
+                        <Outlet/>
+                    ) : (
+                        <LoginForm />
+                    )}
+            </ReactRouterAppProvider>
+        </SnackbarProvider>
     );
 }

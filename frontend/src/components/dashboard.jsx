@@ -18,6 +18,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "./socket.jsx";
 import {enqueueSnackbar, SnackbarProvider, closeSnackbar} from "notistack";
 import CloseIcon from '@mui/icons-material/Close';
+import {useAuth} from "./auth.jsx";
 
 
 function DashboardEditor() {
@@ -272,78 +273,29 @@ const createPreviewComponent = (mini) => {
 export default function Layout() {
     const socket = useSocket();
     const [ loading, setLoading ] = useState(true);
-    
+    const user = useAuth();
+
     const handleMainSpinningCircleClose = () => {
         setLoading(false);
     };
 
-    // To listen to the connection event
     useEffect(() => {
-        if (socket) {
-            socket.on('connect', () => {
-                console.log('Socket connected with ID:', socket.id);
-                enqueueSnackbar("Connected to backend!", {variant: 'success'});
-                setLoading(false);
-            });
+        console.info('user from Layout', user);
 
-            socket.on("reconnect_attempt", (attempt) => {
-                enqueueSnackbar(`Not connected! Attempting to reconnect (${attempt})...`, {variant: 'info'});
-            });
+        // Cleanup on unmount
+        return () => {
 
-            socket.on("error", (error) => {
-                enqueueSnackbar(`Error occurred, ${error}`, {variant: 'error'});
-            });
-
-            socket.on('disconnect', () => {
-                enqueueSnackbar("Disconnected from backend!", {variant: 'error'});
-                setLoading(true);
-            });
-
-            socket.on("sat-sync-events", (data) => {
-                console.log("Received data for sat-sync-events:", data);
-                if (data.status === 'complete') {
-                    enqueueSnackbar("Satellite data synchronization completed successfully", {
-                        variant: 'success',
-                        autoHideDuration: 4000,
-                    });
-                }
-            });
-
-            return () => {
-                socket.off('connect');
-                socket.off('reconnect_attempt');
-                socket.off('error');
-                socket.off('disconnect');
-                socket.off("sat-sync-events");
-            };
-        }
-    }, [socket]);
-
-    const action = snackbarId => (
-        <>
-            <Button size={"small"} variant={"text"} onClick={() => { closeSnackbar(snackbarId) }} style={{color: '#000000'}}>
-                Dismiss
-            </Button>
-        </>
-    );
+        };
+    }, [user]);
 
     return (
-        <SnackbarProvider maxSnack={5} autoHideDuration={4000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}} action={action}>
-            {loading === true? (
-                <Backdrop sx={(theme) => ({ color: '#fff', zIndex: theme.zIndex.drawer + 1 })} open={true}
-                onClick={handleMainSpinningCircleClose}>
-                    <CircularProgress color="secondary" />
-                </Backdrop>
-            ) : (
-                <DashboardLayout defaultSidebarCollapsed slots={{
-                    appTitle: CustomAppTitle,
-                    toolbarActions: ToolbarActions,
-                    toolbarAccount: () => {},
-                    sidebarFooter: SidebarFooterAccount
-                }}>
-                    <Outlet />
-                </DashboardLayout>
-            )}
-        </SnackbarProvider>
+            <DashboardLayout defaultSidebarCollapsed slots={{
+                appTitle: CustomAppTitle,
+                toolbarActions: ToolbarActions,
+                toolbarAccount: () => {},
+                sidebarFooter: SidebarFooterAccount
+            }}>
+                <Outlet />
+            </DashboardLayout>
     );
 }

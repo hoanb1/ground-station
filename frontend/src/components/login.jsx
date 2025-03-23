@@ -1,46 +1,51 @@
 import {Checkbox} from "@mui/material";
 import {SignInPage} from "@toolpad/core";
 import * as React from "react";
-import {useMemo, useState} from "react";
+import {useEffect, useMemo, useState} from "react";
 import { useSocket } from './socket.jsx';
-import { useSnackbar } from 'notistack';
+import {enqueueSnackbar, useSnackbar} from 'notistack';
+import { useAuth } from "./auth.jsx";
 
-export const demoSession = {
-    user: {
-        name: 'Efstatios Goudelis',
-        email: 'sgoudelis@nerv.home',
-        image: null,
-    },
-};
 
 const LoginForm = ({handleSignedInCallback}) => {
-    const [loggedIn, setLoggedIn] = useState(false);
-    const [session, setSession] = useState(demoSession);
     const socket = useSocket();
     const { enqueueSnackbar } = useSnackbar();
+    const [loading, setLoading] = useState(false);
+    const { user, logIn, logOut } = useAuth();
 
-    const providers = [{ id: 'credentials', name: 'Username and password' }];
+    const providers = [{ id: 'credentials', name: 'Email and password' }];
 
     const signIn = async (provider, formData) => {
+        console.info('signIn...', provider, formData);
         return new Promise((resolve) => {
-            setTimeout(() => {
-                const email = formData?.get('email');
-                const password = formData?.get('password');
-                if (email === 'stratos.goudelis@gmail.com' && password === 'a') {
-                    handleSignedInCallback(true, session);
-                    resolve({
-                        type: 'CredentialsSignin',
-                    })
-
-                } else {
-                    resolve({
-                        type: 'CredentialsSignin',
-                        error: 'Invalid credentials.',
-                    });
-                }
-            }, 300);
+            const email = formData?.get('email');
+            const password = formData?.get('password');
+            logIn(email, password, resolve);
         });
     };
+
+    useEffect(() => {
+        if (socket) {
+            socket.on('connect', () => {
+                setLoading(false);
+            });
+
+            socket.on("error", (error) => {
+                setLoading(true);
+            });
+
+            socket.on('disconnect', () => {
+                setLoading(true);
+            });
+        }
+        return () => {
+            if (socket) {
+                socket.off('connect');
+                socket.off('error');
+                socket.off('disconnect');
+            }
+        };
+    }, [socket]); // Dependencies array, update as necessary
 
     return (
         <SignInPage
@@ -59,9 +64,9 @@ const LoginForm = ({handleSignedInCallback}) => {
             signIn={signIn}
             providers={providers}
             slotProps={{
-                emailField: {variant: 'standard', autoFocus: false},
-                passwordField: {variant: 'standard'},
-                submitButton: {variant: 'contained', color: 'primary'},
+                emailField: {variant: 'standard', autoFocus: false, disabled: loading},
+                passwordField: {variant: 'standard', disabled: loading},
+                submitButton: {variant: 'contained', color: 'primary', disabled: loading},
                 rememberMe: {
                     control: (
                         <Checkbox
@@ -69,6 +74,7 @@ const LoginForm = ({handleSignedInCallback}) => {
                             checked={true}
                             value={"true"}
                             color="primary"
+                            disabled={loading}
                             sx={{padding: 0.5, '& .MuiSvgIcon-root': {fontSize: 20}}}
                         />
                     ),

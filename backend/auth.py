@@ -1,12 +1,15 @@
 import jwt
 import bcrypt
+import json
 import datetime
 from typing import Optional
+from sqlalchemy import select
+from sqlalchemy.ext.asyncio import AsyncSession
 from models import Users
 from arguments import arguments
+from models import ModelEncoder
 
 # Replace these placeholders with your actual secret key and algorithm
-JWT_SECRET_KEY = "YOUR_RANDOM_SECRET_KEY"
 JWT_ALGORITHM = "HS256"
 
 
@@ -20,30 +23,35 @@ def verify_password(password: str, passwordhash: str) -> bool:
     ) == passwordhash.encode("utf-8")
 
 
-def generate_jwt_token(user_id: str, user_email: str) -> str:
+def generate_jwt_token(user: Users) -> str:
     """
     Generate a JWT token with an expiration time.
     """
     payload = {
-        "id": user_id,
-        "sub": user_email,
+        "id": str(user.id),
+        "fullname": user.fullname,
+        "email": user.email,
         "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)  # 1 hour expiry
     }
-    token = jwt.encode(payload, JWT_SECRET_KEY, algorithm=JWT_ALGORITHM)
+    token = jwt.encode(payload, arguments.secret_key, algorithm=JWT_ALGORITHM)
     return token
 
 
-def authenticate_user(email: str, password: str, db_session) -> Optional[str]:
+async def authenticate_user(dbsession: AsyncSession, email: str, password: str) -> Optional[dict]:
     """
-    Attempt to authenticate user credentials against the database.
+    Attempt to authenticate user credentials against the database using an AsyncSession.
     Return a JWT token if authentication succeeds, otherwise None.
     """
-    # Fetch user record. Adjust this query for your real database logic.
-    user_record = db_session.query(Users).filter(Users.email == email).first()
+    query = select(Users).where(Users.email == email)
+    result = await dbsession.execute(query)
+    user_record = result.scalars().first()
 
     if user_record and verify_password(password, user_record.password):
-        # Successfully authenticated, return a signed JWT token
-        return generate_jwt_token(user_record.id, user_record.email)
+        user = json.loads(json.dumps(user_record, cls=ModelEncoder))
+        del user["password"]
+
+        return {'token': generate_jwt_token(user_record), 'user': user}
+
     else:
         return None
 
@@ -53,7 +61,7 @@ def verify_jwt_token(token: str) -> Optional[str]:
     Verify the JWT token and return the email if valid.
     """
     try:
-        decoded = jwt.decode(token, JWT_SECRET_KEY, algorithms=[JWT_ALGORITHM])
+        decoded = jwt.decode(token, arguments.secret_key, algorithms=[JWT_ALGORITHM])
         return decoded.get("sub")
     except jwt.ExpiredSignatureError:
         # Token has expired

@@ -18,6 +18,8 @@ import GlobalSatelliteTrack from "./components/overview-sat-track.jsx";
 import App from "./App.jsx";
 import Layout from "./components/dashboard.jsx";
 import TargetSatelliteTrack from "./components/target-sat-track.jsx";
+import {SocketProvider, useSocket} from './components/socket.jsx';
+import {AuthProvider} from "./components/auth.jsx";
 
 const router = createBrowserRouter([
     {
@@ -98,6 +100,10 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
-        <RouterProvider router={router} />
+        <SocketProvider>
+            <AuthProvider>
+                <RouterProvider router={router} />
+            </AuthProvider>
+        </SocketProvider>
     </StrictMode>
 );

@@ -1,0 +1,69 @@
+// src/context/AuthContext.js
+import React, { createContext, useState, useContext } from "react";
+import {useSocket} from "./socket.jsx";
+import {enqueueSnackbar} from "notistack";
+
+// Create an AuthContext for managing authentication
+const AuthContext = createContext(null);
+
+export const useAuth = () => {
+    return useContext(AuthContext);
+};
+
+export const AuthProvider = ({ children }) => {
+    const socket = useSocket();
+    const [session, setSession] = useState({
+        user: {
+            name: null,
+            email: null,
+            image: null,
+            token: null,
+        }
+    });
+
+    const logIn = (email, password, resolve) => {
+        console.info('logIn...', email, password);
+        socket.emit('auth_request', 'login', {email, password}, (response) => {
+            console.log('auth_request', response);
+            if (response.success && response.token) {
+                console.log('auth success with token', response.token);
+                setSession({ user: {...response.user, token: response.token} });
+                enqueueSnackbar('Logged in successfully', {
+                    variant: 'success',
+                    autoHideDuration: 5000,
+                })
+                resolve();
+            } else {
+                setSession({
+                    user: {
+                        name: null,
+                        email: null,
+                        image: null,
+                        token: null,
+                    }
+                });
+                resolve({
+                    type: 'CredentialsSignin',
+                    error: 'Invalid credentials.',
+                });
+            }
+        });
+    };
+
+    const logOut = () => {
+        setSession({
+            user: {
+                name: null,
+                email: null,
+                image: null,
+                token: null,
+            }
+        });
+    };
+
+    return (
+        <AuthContext.Provider value={{ session, logIn, logOut }}>
+            {children}
+        </AuthContext.Provider>
+    );
+};

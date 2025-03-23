@@ -1,32 +1,12 @@
 import uuid
-
 import crud
 import requests
 import json
 from db import engine, AsyncSessionLocal
 from sync import *
 from datetime import date, datetime
-
-
-class ModelEncoder(json.JSONEncoder):
-    def default(self, obj):
-        # Handle date and datetime objects
-        if isinstance(obj, (date, datetime)):
-            return obj.isoformat()
-
-        if isinstance(obj, uuid.UUID):
-            return str(obj)
-
-        # Attempt to convert SQLAlchemy model objects
-        # by reading their columns
-        try:
-            return {
-                column.name: getattr(obj, column.name)
-                for column in obj.__table__.columns
-            }
-        except AttributeError:
-            # If the object is not a SQLAlchemy model row, fallback
-            return super().default(obj)
+from auth import *
+from models import ModelEncoder
 
 
 async def data_request_routing(sio, cmd, data, logger):
@@ -241,22 +221,41 @@ async def data_submission_routing(sio, cmd, data, logger):
     return reply
 
 
-def auth_request_routing(session, cmd, data, logger):
+async def auth_request_routing(sio, cmd, data, logger):
     """
-    Routes authentication requests to the appropriate handler based on the provided
-    command and data, while managing the database session and logging activities.
+    Routes authentication requests to the appropriate handle based on the command
+    provided. Establishes an asynchronous session with the database for processing
+    the request. Ensures the database session is properly closed after use.
 
-    :param session: A callable used to create a new database session.
-    :param cmd: A string representing the specific command or action to be
-        executed.
-    :param data: A dictionary containing data required for processing the
-        authentication request.
-    :param logger: An object or module used for logging activity within the
-        function.
-    :return: A dictionary with keys 'success' and 'data' indicating the result of
-        the operation.
+    :param sio: Socket.IO server instance facilitating communication via events.
+    :type sio: AsyncServer
+    :param cmd: Command string determining the operation to be performed.
+    :param data: Payload of the authentication request containing data required for
+        processing.
+    :type data: dict
+    :param logger: Logger instance for logging the events, errors or general
+        information related to the processing of the request.
+    :type logger: Logger
+    :return: A dictionary containing the success status of the operation and
+        any resulting data after processing the request.
+    :rtype: dict
     """
-    reply = {'success': None, 'data': None}
-    dbsession = session()
-    dbsession.close()
+
+    reply = {'success': None, 'user': None, 'token': None}
+    async with AsyncSessionLocal() as dbsession:
+
+        logger.info(f'Auth request, cmd: {cmd}, data: {data}')
+        auth_reply = await authenticate_user(dbsession, data['email'], data['password'])
+
+        if auth_reply is not None:
+            # login success
+            reply['success'] = True
+            reply['token'] = auth_reply.get('token', None)
+
+            # fetch user data
+            reply['user'] = auth_reply.get('user', None)
+
+        else:
+            reply['success'] = False
+
     return reply

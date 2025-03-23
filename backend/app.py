@@ -77,10 +77,12 @@ async def handle_frontend_data_submissions(sid, cmd, data=None):
     return reply
 
 @sio.on('auth_request')
-async def handle_frontend_auth_requests(sid, *params):
-    logger.info(f'Received event from ${sid}: ${params[0]}')
+async def handle_frontend_auth_requests(sid, cmd, data):
+    logger.info(f'Received authentication event from client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}: {data}')
+    reply = await auth_request_routing(sio, cmd, data, logger)
 
-    return {'success': True, 'message': "Event received"}
+    logger.info(f'Replying to authentication event from client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}: {reply}')
+    return {'success': reply['success'], 'token': reply['token'], 'user': reply['user']}
 
 
 # Example route
