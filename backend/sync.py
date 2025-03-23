@@ -97,7 +97,7 @@ def get_satellite_by_norad_id(norad_id: int, satellites: List[dict]) -> dict | N
     return None
 
 
-def get_transmitter_info_by_norad_id(norad_id: int, transmitters: List[dict]) -> dict | None:
+def get_transmitter_info_by_norad_id(norad_id: int, transmitters: list) -> list:
     """
     Returns the satellite object from the provided list that matches the given NORAD ID.
 
@@ -108,11 +108,14 @@ def get_transmitter_info_by_norad_id(norad_id: int, transmitters: List[dict]) ->
     Returns:
         The matching satellite object if found, otherwise None.
     """
+
+    trxs = []
+
     for transmitter in transmitters:
         norad_id_from_list = transmitter['norad_cat_id']
         if norad_id_from_list == norad_id:
-            return transmitter
-    return None
+            trxs.append(transmitter)
+    return trxs
 
 
 def simple_parse_3le(file_contents: str) -> list:
@@ -350,34 +353,34 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             # let's find transmitter info in the satnogs_transmitter_data list
             satnogs_transmitter_info = get_transmitter_info_by_norad_id(norad_id, satnogs_transmitter_data)
 
-            if satnogs_transmitter_info:
+            for transmitter in satnogs_transmitter_info:
                 transmitter = Transmitters(
-                    id=satnogs_transmitter_info.get('uuid', None),
-                    description=satnogs_transmitter_info.get('description', None),
-                    alive=satnogs_transmitter_info.get('alive', None),
-                    type=satnogs_transmitter_info.get('type', None),
-                    uplink_low=satnogs_transmitter_info.get('uplink_low', None),
-                    uplink_high=satnogs_transmitter_info.get('uplink_high', None),
-                    uplink_drift=satnogs_transmitter_info.get('uplink_drift', None),
-                    downlink_low=satnogs_transmitter_info.get('downlink_low', None),
-                    downlink_high=satnogs_transmitter_info.get('downlink_high', None),
-                    downlink_drift=satnogs_transmitter_info.get('downlink_drift', None),
-                    mode=satnogs_transmitter_info.get('mode', None),
-                    mode_id=satnogs_transmitter_info.get('mode_id', None),
-                    uplink_mode=satnogs_transmitter_info.get('uplink_mode', None),
-                    invert=satnogs_transmitter_info.get('invert', None),
-                    baud=satnogs_transmitter_info.get('baud', None),
-                    sat_id=satnogs_transmitter_info.get('sat_id', None),
-                    norad_cat_id=satnogs_transmitter_info.get('norad_cat_id', None),
-                    norad_follow_id=satnogs_transmitter_info.get('norad_follow_id', None),
-                    status=satnogs_transmitter_info.get('status', None),
-                    citation=satnogs_transmitter_info.get('citation', None),
-                    service=satnogs_transmitter_info.get('service', None),
-                    iaru_coordination=satnogs_transmitter_info.get('iaru_coordination', None),
-                    iaru_coordination_url=satnogs_transmitter_info.get('iaru_coordination_url', None),
-                    itu_notification=satnogs_transmitter_info.get('itu_notification', None),
-                    frequency_violation=satnogs_transmitter_info.get('frequency_violation', None),
-                    unconfirmed=satnogs_transmitter_info.get('unconfirmed', None),
+                    id=transmitter.get('uuid', None),
+                    description=transmitter.get('description', None),
+                    alive=transmitter.get('alive', None),
+                    type=transmitter.get('type', None),
+                    uplink_low=transmitter.get('uplink_low', None),
+                    uplink_high=transmitter.get('uplink_high', None),
+                    uplink_drift=transmitter.get('uplink_drift', None),
+                    downlink_low=transmitter.get('downlink_low', None),
+                    downlink_high=transmitter.get('downlink_high', None),
+                    downlink_drift=transmitter.get('downlink_drift', None),
+                    mode=transmitter.get('mode', None),
+                    mode_id=transmitter.get('mode_id', None),
+                    uplink_mode=transmitter.get('uplink_mode', None),
+                    invert=transmitter.get('invert', None),
+                    baud=transmitter.get('baud', None),
+                    sat_id=transmitter.get('sat_id', None),
+                    norad_cat_id=transmitter.get('norad_cat_id', None),
+                    norad_follow_id=transmitter.get('norad_follow_id', None),
+                    status=transmitter.get('status', None),
+                    citation=transmitter.get('citation', None),
+                    service=transmitter.get('service', None),
+                    iaru_coordination=transmitter.get('iaru_coordination', None),
+                    iaru_coordination_url=transmitter.get('iaru_coordination_url', None),
+                    itu_notification=transmitter.get('itu_notification', None),
+                    frequency_violation=transmitter.get('frequency_violation', None),
+                    unconfirmed=transmitter.get('unconfirmed', None),
                 )
                 count_transmitters+=1
 

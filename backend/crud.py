@@ -147,7 +147,7 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
-async def delete_user(session: AsyncSession, user_ids: Union[list[uuid.UUID], list[str]]) -> dict:
+async def delete_user(session: AsyncSession, user_ids: Union[list[uuid.UUID], list[str], dict]) -> dict:
     """
     Delete multiple users by their UUIDs.
     """
@@ -466,16 +466,22 @@ async def delete_rotator(session: AsyncSession, rotator_id: uuid.UUID) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def fetch_rig(session: AsyncSession, rig_id: uuid.UUID) -> dict:
+async def fetch_rigs(session: AsyncSession, rig_id: Optional[Union[uuid.UUID | str | None]] = None) -> dict:
     """
-    Fetch a single rig by its UUID.
+    Fetch a single rig by its UUID or all rigs if UUID is not provided.
     """
     try:
-        stmt = select(Rigs).filter(Rigs.id == rig_id)
+        if rig_id is None:
+            stmt = select(Rigs)
+        else:
+            stmt = select(Rigs).filter(Rigs.id == rig_id)
         result = await session.execute(stmt)
-        rig = result.scalar_one_or_none()
-        return {"success": True, "data": rig, "error": None}
+        rigs = result.scalars().all() if rig_id is None else result.scalar_one_or_none()
+        return {"success": True, "data": rigs, "error": None}
+
     except Exception as e:
+        logger.error(f"Error fetching rigs: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -522,11 +528,17 @@ async def add_rig(
         return {"success": False, "error": str(e)}
 
 
-async def edit_rig(session: AsyncSession, rig_id: uuid.UUID, **kwargs) -> dict:
+async def edit_rig(session: AsyncSession, data: dict) -> dict:
     """
     Edit an existing rig record by updating provided fields.
     """
     try:
+        rig_id = data.get("id", None)
+        if isinstance(rig_id, str):
+            rig_id = uuid.UUID(rig_id)
+
+        del data['id']
+
         # Optionally check if the record exists
         stmt = select(Rigs).filter(Rigs.id == rig_id)
         result = await session.execute(stmt)
@@ -535,28 +547,31 @@ async def edit_rig(session: AsyncSession, rig_id: uuid.UUID, **kwargs) -> dict:
             return {"success": False, "error": f"Rig with id {rig_id} not found."}
 
         # Update the updated timestamp.
-        kwargs["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(UTC)
 
         upd_stmt = (
             update(Rigs)
             .where(Rigs.id == rig_id)
-            .values(**kwargs)
+            .values(**data)
             .returning(Rigs)
         )
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_rig = upd_result.scalar_one_or_none()
         return {"success": True, "data": updated_rig, "error": None}
+
     except Exception as e:
         await session.rollback()
         return {"success": False, "error": str(e)}
 
 
-async def delete_rig(session: AsyncSession, rig_id: uuid.UUID) -> dict:
+async def delete_rig(session: AsyncSession, rig_id: Union[uuid.UUID, str, dict]) -> dict:
     """
-    Delete a rig record by its UUID.
+    Delete a rig record by its UUID or string representation of UUID.
     """
     try:
+        if isinstance(rig_id, str):
+            rig_id = uuid.UUID(rig_id)
         stmt = (
             delete(Rigs)
             .where(Rigs.id == rig_id)

@@ -21,8 +21,13 @@ import Switch from '@mui/material/Switch';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { visuallyHidden } from '@mui/utils';
-import {Button} from "@mui/material";
+import {Button, DialogContentText, TextField} from "@mui/material";
 import Stack from "@mui/material/Stack";
+import DialogTitle from "@mui/material/DialogTitle";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import DialogContent from "@mui/material/DialogContent";
+import {useState} from "react";
 
 function createData(id, name, host, port, radiotype, pttstatus, vfotype, lodown, loup) {
     return {
@@ -39,7 +44,7 @@ function createData(id, name, host, port, radiotype, pttstatus, vfotype, lodown,
 }
 
 const rows = [
-    createData(1, 'sdrcontrol', '192.168.60.34', 4533, "rx", 0, 0, 0, 0),
+    createData("asdfadgfdfasgfdgdfg", 'sdrcontrol', '192.168.60.34', 4533, "rx", 0, 0, 0, 0),
 ];
 
 function descendingComparator(a, b, orderBy) {
@@ -105,7 +110,7 @@ const headCells = [
         id: 'loup',
         numeric: true,
         disablePadding: false,
-        label: 'Lo up',
+        label: 'LO up',
     },
 ];
 
@@ -221,12 +226,14 @@ EnhancedTableToolbar.propTypes = {
 };
 
 export default function RigTable() {
-    const [order, setOrder] = React.useState('asc');
-    const [orderBy, setOrderBy] = React.useState('calories');
-    const [selected, setSelected] = React.useState([]);
-    const [page, setPage] = React.useState(0);
-    const [dense, setDense] = React.useState(false);
-    const [rowsPerPage, setRowsPerPage] = React.useState(5);
+    const [order, setOrder] = useState('asc');
+    const [orderBy, setOrderBy] = useState('calories');
+    const [selected, setSelected] = useState([]);
+    const [page, setPage] = useState(0);
+    const [dense, setDense] = useState(false);
+    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+    const [openAddDialog, setOpenAddDialog] = useState(false);
 
     const handleRequestSort = (event, property) => {
         const isAsc = orderBy === property && order === 'asc';
@@ -286,6 +293,14 @@ export default function RigTable() {
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
         [order, orderBy, page, rowsPerPage],
     );
+
+    function handleDelete() {
+
+    }
+
+    function handleAddNewRig() {
+
+    }
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -375,15 +390,123 @@ export default function RigTable() {
                 label="Dense padding"
             />
             <Stack direction="row" spacing={2}>
-                <Button variant="contained">
+                <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
                     Add
                 </Button>
-                <Button variant="contained">
+                <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
+                    <DialogTitle>Add Radio Rig</DialogTitle>
+                    <DialogContent>
+                        <TextField
+                            autoFocus
+                            margin="dense"
+                            id="name"
+                            label="Name"
+                            type="text"
+                            fullWidth
+                            variant="filled"
+                        />
+                        <TextField
+                            margin="dense"
+                            id="host"
+                            label="Host"
+                            type="text"
+                            fullWidth
+                            variant="filled"
+                        />
+                        <TextField
+                            margin="dense"
+                            id="port"
+                            label="Port"
+                            type="number"
+                            fullWidth
+                            variant="filled"
+                        />
+                        <TextField
+                            margin="dense"
+                            id="radiotype"
+                            label="Radio Type"
+                            type="text"
+                            fullWidth
+                            variant="filled"
+                        />
+                        <TextField
+                            margin="dense"
+                            id="pttstatus"
+                            label="PTT Status"
+                            type="number"
+                            fullWidth
+                            variant="filled"
+                        />
+                        <TextField
+                            margin="dense"
+                            id="vfotype"
+                            label="VFO Type"
+                            type="text"
+                            fullWidth
+                            variant="filled"
+                        />
+                        <TextField
+                            margin="dense"
+                            id="lodown"
+                            label="LO Down"
+                            type="number"
+                            fullWidth
+                            variant="filled"
+                        />
+                        <TextField
+                            margin="dense"
+                            id="loup"
+                            label="LO Up"
+                            type="number"
+                            fullWidth
+                            variant="filled"
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenAddDialog(false)} color="primary">
+                            Cancel
+                        </Button>
+                        <Button onClick={() => handleAddNewRig()} color="primary">
+                            Add
+                        </Button>
+                    </DialogActions>
+                </Dialog>
+                <Button variant="contained" disabled={selected.length !== 1}>
                     Edit
                 </Button>
-                <Button variant="contained" color="error">
+                <Button
+                    variant="contained"
+                    disabled={selected.length < 1}
+                    color="error"
+                    onClick={() => setOpenDeleteConfirm(true)}
+                >
                     Delete
                 </Button>
+                <Dialog
+                    open={openDeleteConfirm}
+                    onClose={() => setOpenDeleteConfirm(false)}
+                >
+                    <DialogTitle>{"Confirm Deletion"}</DialogTitle>
+                    <DialogContent>
+                        <DialogContentText>
+                            Are you sure you want to delete the selected rig(s)?
+                        </DialogContentText>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setOpenDeleteConfirm(false)} color="primary">
+                            Cancel
+                        </Button>
+                        <Button
+                            onClick={() => {
+                                handleDelete();
+                                setOpenDeleteConfirm(false);
+                            }}
+                            color="error"
+                        >
+                            Confirm
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Stack>
         </Box>
     );
