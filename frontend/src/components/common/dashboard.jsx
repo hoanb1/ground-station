@@ -301,7 +301,8 @@ export default function Layout() {
                 appTitle: CustomAppTitle,
                 toolbarActions: ToolbarActions,
                 toolbarAccount: () => {},
-                sidebarFooter: SidebarFooterAccount
+                //sidebarFooter: SidebarFooterAccount
+                sidebarFooter: () => {}
             }}>
                 {loading ? (
                     <Backdrop open={loading}>

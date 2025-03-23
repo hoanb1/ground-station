@@ -107,6 +107,12 @@ async def data_request_routing(sio, cmd, data, logger):
             users = json.loads(json.dumps(users, cls=ModelEncoder))
             reply = {'success': users['success'], 'data': users.get('data', [])}
 
+        elif cmd == "get-rigs":
+            logger.info(f'Getting radio rigs, data: {data}')
+            rigs = await crud.fetch_rigs(dbsession)
+            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
+            reply = {'success': rigs['success'], 'data': rigs.get('data', [])}
+
         else:
             logger.info(f'Unknown command: {cmd}')
 
@@ -214,6 +220,24 @@ async def data_submission_routing(sio, cmd, data, logger):
             users = json.loads(json.dumps(users, cls=ModelEncoder))
             reply = {'success': (users['success'] & delete_reply['success']),
                      'data': users.get('data', [])}
+
+        elif cmd == "edit-rig":
+            logger.info(f'Editing rig, data: {data}')
+            edit_reply = await crud.edit_rig(dbsession, data)
+
+            rigs = await crud.fetch_rigs(dbsession)
+            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
+            reply = {'success': (rigs['success'] & edit_reply['success']),
+                     'data': rigs.get('data', [])}
+
+        elif cmd == "delete-rig":
+            logger.info(f'Delete rig, data: {data}')
+            delete_reply = await crud.delete_rig(dbsession, data)
+
+            rigs = await crud.fetch_rigs(dbsession)
+            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
+            reply = {'success': (rigs['success'] & delete_reply['success']),
+                     'data': rigs.get('data', [])}
 
         else:
             logger.info(f'Unknown command: {cmd}')
