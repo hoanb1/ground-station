@@ -114,6 +114,12 @@ async def data_request_routing(sio, cmd, data, logger):
             rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
             reply = {'success': rigs['success'], 'data': rigs.get('data', [])}
 
+        elif cmd == "get-rotators":
+            logger.info(f'Getting antenna rotators, data: {data}')
+            rotators = await crud.fetch_rotators(dbsession)
+            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
+            reply = {'success': rotators['success'], 'data': rotators.get('data', [])}
+
         else:
             logger.info(f'Unknown command: {cmd}')
 
@@ -248,6 +254,33 @@ async def data_submission_routing(sio, cmd, data, logger):
             rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
             reply = {'success': (rigs['success'] & delete_reply['success']),
                      'data': rigs.get('data', [])}
+
+        elif cmd == "submit-rotator":
+            logger.info(f'Adding rotator, data: {data}')
+            add_reply = await crud.add_rotator(dbsession, data)
+
+            rotators = await crud.fetch_rotators(dbsession)
+            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
+            reply = {'success': (rotators['success'] & add_reply['success']),
+                     'data': rotators.get('data', [])}
+
+        elif cmd == "edit-rotator":
+            logger.info(f'Editing rotator, data: {data}')
+            edit_reply = await crud.edit_rotator(dbsession, data)
+
+            rotators = await crud.fetch_rotators(dbsession)
+            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
+            reply = {'success': (rotators['success'] & edit_reply['success']),
+                     'data': rotators.get('data', [])}
+
+        elif cmd == "delete-rotator":
+            logger.info(f'Delete rotator, data: {data}')
+            delete_reply = await crud.delete_rotator(dbsession, data)
+
+            rotators = await crud.fetch_rotators(dbsession)
+            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
+            reply = {'success': (rotators['success'] & delete_reply['success']),
+                     'data': rotators.get('data', [])}
 
         else:
             logger.info(f'Unknown command: {cmd}')

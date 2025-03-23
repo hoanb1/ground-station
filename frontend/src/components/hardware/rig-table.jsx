@@ -451,11 +451,11 @@ export default function RigTable() {
                         onChange={handleChange}
                     />
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={() => setOpenAddDialog(false)} color="primary">
+                <DialogActions style={{padding: '0px 24px 20px 20px'}}>
+                    <Button onClick={() => setOpenAddDialog(false)} color="error" variant="outlined">
                         Cancel
                     </Button>
-                    <Button onClick={() => handleFormSubmit()} color="primary" variant="contained">
+                    <Button onClick={() => handleFormSubmit()} color="success" variant="contained">
                         Submit
                     </Button>
                 </DialogActions>
@@ -468,7 +468,7 @@ export default function RigTable() {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenDeleteConfirm(false)} color="primary">
+                    <Button onClick={() => setOpenDeleteConfirm(false)} color="error" variant="outlined">
                         Cancel
                     </Button>
                     <Button

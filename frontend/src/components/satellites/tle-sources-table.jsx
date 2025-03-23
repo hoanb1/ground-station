@@ -385,9 +385,9 @@ export default function TLESourcesTable() {
                         </FormControl>
                     </Stack>
                 </DialogContent>
-                <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button variant="contained" onClick={handleSubmit}>Submit</Button>
+                <DialogActions style={{margin: '0px 20px 20px 20px'}}>
+                    <Button onClick={handleClose} color={"error"} variant={"outlined"}>Cancel</Button>
+                    <Button variant="contained" onClick={handleSubmit} color={"success"}>Submit</Button>
                 </DialogActions>
             </Dialog>
         </Box>

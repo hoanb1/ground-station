@@ -275,7 +275,7 @@ const UsersTable = () => {
                             </FormControl>
                         </Stack>
                     </DialogContent>
-                    <DialogActions style={{padding: '20px 20px 20px 20px'}}>
+                    <DialogActions style={{padding: '0px 24px 20px 20px'}}>
                         <Button onClick={handleClose}>Cancel</Button>
                         <Button type="submit" variant="contained" color="primary"  disabled={loading}>
                             Submit

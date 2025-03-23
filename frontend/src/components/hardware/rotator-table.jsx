@@ -2,46 +2,23 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import Stack from "@mui/material/Stack";
-import {Button} from "@mui/material";
-import {useState} from "react";
+import {Button, TextField} from "@mui/material";
+import {useEffect, useState} from "react";
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
+import {useSocket} from "../common/socket.jsx";
+import {enqueueSnackbar} from "notistack";
 
 
 export default function AntennaRotatorTable() {
+    const {socket} = useSocket();
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openAddDialog, setOpenAddDialog] = useState(false);
     const [selected, setSelected] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [rows, setRows] = useState([
-        {
-            id: 1,
-            name: 'Default Rotator',
-            host: '192.168.10.5',
-            port: 4533,
-            minaz: 0,
-            maxaz: 360,
-            minel: 0,
-            maxel: 90,
-            aztype: 1,
-            azendstop: 0,
-        },
-        {
-            id: 2,
-            name: 'Another Rotator',
-            host: '192.168.10.7',
-            port: 4533,
-            minaz: 10,
-            maxaz: 350,
-            minel: 0,
-            maxel: 90,
-            aztype: 2,
-            azendstop: 5,
-        },
-    ]);
-
+    const [rows, setRows] = useState([]);
     const [selectionModel, setSelectionModel] = useState([]);
     const [pageSize, setPageSize] = useState(5);
 
@@ -56,6 +33,26 @@ export default function AntennaRotatorTable() {
         { field: 'aztype', headerName: 'Az Type', type: 'number', flex: 1 },
         { field: 'azendstop', headerName: 'Az Endstop', type: 'number', flex: 1 },
     ];
+
+    useEffect(() => {
+        setLoading(true);
+        socket.emit('data_request', 'get-rotators', null, (response) => {
+            console.log(response);
+            if (response.success) {
+                setRows(response.data);
+            } else {
+                enqueueSnackbar("Failed to fetch rotators", {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+            }
+            setLoading(false);
+        })
+
+        return () => {
+
+        };
+    }, []);
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -90,6 +87,37 @@ export default function AntennaRotatorTable() {
                 <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
                     Add
                 </Button>
+                <Dialog fullWidth={true} open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
+                    <DialogTitle>Add Antenna Rotator</DialogTitle>
+                    <DialogContent>
+                        <Stack spacing={2}>
+                            <TextField label="Name" fullWidth variant="filled"/>
+                            <TextField label="Host" fullWidth variant="filled"/>
+                            <TextField label="Port" type="number" fullWidth variant="filled"/>
+                            <TextField label="Min Az" type="number" fullWidth variant="filled"/>
+                            <TextField label="Max Az" type="number" fullWidth variant="filled"/>
+                            <TextField label="Min El" type="number" fullWidth variant="filled"/>
+                            <TextField label="Max El" type="number" fullWidth variant="filled"/>
+                            <TextField label="Az Type" type="number" fullWidth variant="filled"/>
+                            <TextField label="Az Endstop" type="number" fullWidth variant="filled"/>
+                        </Stack>
+                    </DialogContent>
+                    <DialogActions style={{padding: '0px 24px 20px 20px'}}>
+                        <Button onClick={() => setOpenAddDialog(false)} color="error" variant="outlined">
+                            Cancel
+                        </Button>
+                        <Button
+                            color="success"
+                            variant="contained"
+                            onClick={() => {
+                                // Perform add logic here
+                                setOpenAddDialog(false);
+                            }}
+                        >
+                            Submit
+                        </Button>
+                    </DialogActions>
+                </Dialog>
                 <Button variant="contained" disabled={selected.length !== 1}>
                     Edit
                 </Button>
@@ -110,7 +138,7 @@ export default function AntennaRotatorTable() {
                         Are you sure you want to delete the selected item(s)?
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setOpenDeleteConfirm(false)} color="primary">
+                        <Button onClick={() => setOpenDeleteConfirm(false)} color="error" variant="outlined">
                             Cancel
                         </Button>
                         <Button

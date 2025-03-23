@@ -358,31 +358,32 @@ async def delete_location(session: AsyncSession, location_id: uuid.UUID) -> dict
         return {"success": False, "error": str(e)}
 
 
-async def fetch_rotator(session: AsyncSession, rotator_id: uuid.UUID) -> dict:
+async def fetch_rotators(session: AsyncSession, rotator_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
     """
-    Fetch a single rotator by its UUID.
+    Fetch a single rotator by its UUID or all rotators if UUID is not provided.
     """
     try:
-        stmt = select(Rotators).filter(Rotators.id == rotator_id)
-        result = await session.execute(stmt)
-        rotator = result.scalar_one_or_none()
-        return {"success": True, "data": rotator, "error": None}
+        if rotator_id is not None:
+            if isinstance(rotator_id, str):
+                rotator_id = uuid.UUID(rotator_id)
+
+            stmt = select(Rotators).filter(Rotators.id == rotator_id)
+            result = await session.execute(stmt)
+            rotators = result.scalar_one_or_none()
+        else:
+            stmt = select(Rotators)
+            result = await session.execute(stmt)
+            rotators = result.scalars().all()
+
+        return {"success": True, "data": rotators, "error": None}
+
     except Exception as e:
+        logger.error(f"Error fetching rotators: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def add_rotator(
-        session: AsyncSession,
-        name: str,
-        host: str,
-        port: int,
-        minaz: int,
-        maxaz: int,
-        minel: int,
-        maxel: int,
-        aztype: int,
-        azendstop: int
-) -> dict:
+async def add_rotator(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new rotator record.
     """
@@ -393,15 +394,15 @@ async def add_rotator(
             insert(Rotators)
             .values(
                 id=new_id,
-                name=name,
-                host=host,
-                port=port,
-                minaz=minaz,
-                maxaz=maxaz,
-                minel=minel,
-                maxel=maxel,
-                aztype=aztype,
-                azendstop=azendstop,
+                name=data["name"],
+                host=data["host"],
+                port=data["port"],
+                minaz=data["minaz"],
+                maxaz=data["maxaz"],
+                minel=data["minel"],
+                maxel=data["maxel"],
+                aztype=data["aztype"],
+                azendstop=data["azendstop"],
                 added=now,
                 updated=now
             )
@@ -411,16 +412,28 @@ async def add_rotator(
         await session.commit()
         new_rotator = result.scalar_one()
         return {"success": True, "data": new_rotator, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error adding rotator: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def edit_rotator(session: AsyncSession, rotator_id: uuid.UUID, **kwargs) -> dict:
+async def edit_rotator(session: AsyncSession, data: dict) -> dict:
     """
     Edit an existing rotator record by updating provided fields.
     """
     try:
+        # Extract rotator_id from data
+        rotator_id = data.pop('rotator_id', None)
+        if not rotator_id:
+            return {"success": False, "error": "rotator_id is required."}
+
+        del data["id"]
+        del data["updated"]
+        del data["added"]
+
         # Confirm the rotator exists
         stmt = select(Rotators).filter(Rotators.id == rotator_id)
         result = await session.execute(stmt)
@@ -428,28 +441,35 @@ async def edit_rotator(session: AsyncSession, rotator_id: uuid.UUID, **kwargs) -
         if not rotator:
             return {"success": False, "error": f"Rotator with id {rotator_id} not found."}
 
-        kwargs["updated"] = datetime.now(UTC)
+        # Add updated timestamp
+        data["updated"] = datetime.now(UTC)
 
         upd_stmt = (
             update(Rotators)
             .where(Rotators.id == rotator_id)
-            .values(**kwargs)
+            .values(**data)
             .returning(Rotators)
         )
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_rotator = upd_result.scalar_one_or_none()
         return {"success": True, "data": updated_rotator, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error editing rotators: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def delete_rotator(session: AsyncSession, rotator_id: uuid.UUID) -> dict:
+async def delete_rotator(session: AsyncSession, rotator_id: Union[str, uuid.UUID] | dict) -> dict:
     """
-    Delete a rotator record by its UUID.
+    Delete a rotator record by its UUID or string representation of UUID.
     """
     try:
+        if isinstance(rotator_id, str):
+            rotator_id = uuid.UUID(rotator_id)
+
         stmt = (
             delete(Rotators)
             .where(Rotators.id == rotator_id)
@@ -461,8 +481,11 @@ async def delete_rotator(session: AsyncSession, rotator_id: uuid.UUID) -> dict:
             return {"success": False, "error": f"Rotator with id {rotator_id} not found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error deleting rotators: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -546,6 +569,7 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
         stmt = select(Rigs).filter(Rigs.id == rig_id)
         result = await session.execute(stmt)
         rig = result.scalar_one_or_none()
+
         if not rig:
             return {"success": False, "error": f"Rig with id {rig_id} not found."}
 
