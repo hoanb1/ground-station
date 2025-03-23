@@ -21,8 +21,8 @@ import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle} 
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Grid from "@mui/material/Grid2";
-import {HOME_LON, HOME_LAT} from "../common.jsx";
-import {SimpleVectorCircle} from "../icons.jsx";
+import {HOME_LON, HOME_LAT} from "../common/common.jsx";
+import {SimpleVectorCircle} from "../common/icons.jsx";
 import AntennaRotatorTable from "../hardware/rotator-table.jsx";
 import Stack from "@mui/material/Stack";
 import RigTable from "../hardware/rig-table.jsx";

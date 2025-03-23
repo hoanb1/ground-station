@@ -11,8 +11,8 @@ import {
     Stack
 } from '@mui/material';
 import {styled} from '@mui/material/styles';
-import {tileLayers, getTileLayerById} from './tile-layers.jsx';
-import {TitleBar} from './common.jsx';
+import {tileLayers, getTileLayerById} from './common/tile-layers.jsx';
+import {TitleBar} from './common/common.jsx';
 
 const ThemedStack = styled(Stack)(({theme}) => ({
     color: theme.palette.text.secondary,

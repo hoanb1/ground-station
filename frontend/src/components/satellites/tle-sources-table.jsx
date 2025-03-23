@@ -14,13 +14,13 @@ import {
     TextField,
     Stack, Select, MenuItem,
 } from "@mui/material";
-import {useSocket} from "../socket.jsx";
+import {useSocket} from "../common/socket.jsx";
 import PropTypes from "prop-types";
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import LinearProgress, { linearProgressClasses } from '@mui/material/LinearProgress';
-import {betterDateTimes} from "../common.jsx";
+import {betterDateTimes} from "../common/common.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
 

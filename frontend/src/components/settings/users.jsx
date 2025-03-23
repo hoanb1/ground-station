@@ -1,7 +1,7 @@
 import React, {useEffect, useState} from 'react';
 import { Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, Stack, TextField, MenuItem, Select } from '@mui/material';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
-import {useSocket} from "../socket.jsx";
+import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 
 const UsersTable = () => {
