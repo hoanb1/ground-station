@@ -227,7 +227,7 @@ export default function RigTable() {
     };
     const [rigs, setRigs] = useState([]);
     const [selected, setSelected] = useState([]);
-    const [pageSize, setPageSize] = useState(5);
+    const [pageSize, setPageSize] = useState(10);
     const [loading, setLoading] = useState(false);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openAddDialog, setOpenAddDialog] = useState(false);
@@ -326,11 +326,13 @@ export default function RigTable() {
                     setSelected(selected);
                 }}
                 initialState={{
+                    pagination: { paginationModel: { pageSize: 5 } },
                     sorting: {
                         sortModel: [{ field: 'name', sort: 'desc' }],
                     },
                 }}
                 pageSize={pageSize}
+                pageSizeOptions={[5, 10, 25, { value: -1, label: 'All' }]}
                 onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                 rowsPerPageOptions={[5, 10, 25]}
                 getRowId={(row) => row.id}
