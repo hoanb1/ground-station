@@ -221,6 +221,15 @@ async def data_submission_routing(sio, cmd, data, logger):
             reply = {'success': (users['success'] & delete_reply['success']),
                      'data': users.get('data', [])}
 
+        elif cmd == "submit-rig":
+            logger.info(f'Adding rig, data: {data}')
+            add_reply = await crud.add_rig(dbsession, data)
+
+            rigs = await crud.fetch_rigs(dbsession)
+            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
+            reply = {'success': (rigs['success'] & add_reply['success']),
+                     'data': rigs.get('data', [])}
+
         elif cmd == "edit-rig":
             logger.info(f'Editing rig, data: {data}')
             edit_reply = await crud.edit_rig(dbsession, data)

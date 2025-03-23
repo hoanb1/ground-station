@@ -484,18 +484,7 @@ async def fetch_rigs(session: AsyncSession, rig_id: Optional[Union[uuid.UUID | s
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
-
-async def add_rig(
-        session: AsyncSession,
-        name: str,
-        host: str,
-        port: int,
-        radiotype: str,
-        pttstatus: int,
-        vfotype: int,
-        lodown: int,
-        loup: int
-) -> dict:
+async def add_rig(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new rig record.
     """
@@ -506,14 +495,14 @@ async def add_rig(
             insert(Rigs)
             .values(
                 id=new_id,
-                name=name,
-                host=host,
-                port=port,
-                radiotype=radiotype,
-                pttstatus=pttstatus,
-                vfotype=vfotype,
-                lodown=lodown,
-                loup=loup,
+                name=data['name'],
+                host=data['host'],
+                port=data['port'],
+                radiotype=data['radiotype'],
+                pttstatus=data['pttstatus'],
+                vfotype=data['vfotype'],
+                lodown=data['lodown'],
+                loup=data['loup'],
                 added=now,
                 updated=now
             )
@@ -523,8 +512,11 @@ async def add_rig(
         await session.commit()
         new_rig = result.scalar_one()
         return {"success": True, "data": new_rig, "error": None}
+
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error adding rigs: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
