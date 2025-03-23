@@ -15,13 +15,13 @@ import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
 import createTerminatorLine from './terminator-line.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
-import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
+import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './common/icons.jsx';
 import SettingsIsland from "./map-settings.jsx";
 import {Box, Fab, Slider} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import {getTileLayerById} from "./tile-layers.jsx";
+import {getTileLayerById} from "./common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
     betterDateTimes, betterStatusValue,
@@ -31,13 +31,13 @@ import {
     MapTitleBar, renderCountryFlags,
     StyledIslandParent,
     StyledIslandParentScrollbar, ThemedLeafletTooltip
-} from "./common.jsx";
-import {TitleBar} from "./common.jsx";
+} from "./common/common.jsx";
+import {TitleBar} from "./common/common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
-import {HOME_LON, HOME_LAT} from "./common.jsx";
-import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "./tracking-logic.jsx";
+import {HOME_LON, HOME_LAT} from "./common/common.jsx";
+import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "./common/tracking-logic.jsx";
 import {enqueueSnackbar} from "notistack";
-import {useSocket} from "./socket.jsx";
+import {useSocket} from "./common/socket.jsx";
 import Typography from "@mui/material/Typography";
 import Stack from "@mui/material/Stack";
 import TableCell from "@mui/material/TableCell";

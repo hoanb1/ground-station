@@ -7,10 +7,10 @@ import {
     Select,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import {TitleBar} from "./common.jsx";
+import {TitleBar} from "./common/common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
 import * as React from "react";
-import {useSocket} from "./socket.jsx";
+import {useSocket} from "./common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 
 

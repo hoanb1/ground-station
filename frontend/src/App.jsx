@@ -9,16 +9,15 @@ import AddHomeIcon from '@mui/icons-material/AddHome';
 import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-react";
 import {Alert, Avatar, Button, Checkbox} from "@mui/material";
 import {useEffect, useMemo, useState} from "react";
-import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/icons.jsx";
+import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/common/icons.jsx";
 import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
-import LoginForm from "./components/login.jsx";
-import {closeSnackbar, enqueueSnackbar, SnackbarProvider, useSnackbar} from 'notistack';
+import {closeSnackbar, enqueueSnackbar, SnackbarProvider} from 'notistack';
 import PeopleIcon from '@mui/icons-material/People';
-import {useSocket} from "./components/socket.jsx";
-import {useAuth} from "./components/auth.jsx";
+import {useSocket} from "./components/common/socket.jsx";
+import {useAuth} from "./components/common/auth.jsx";
 
 
 const BRANDING = {
