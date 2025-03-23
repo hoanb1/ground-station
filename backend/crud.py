@@ -426,11 +426,12 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
     """
     try:
         # Extract rotator_id from data
-        rotator_id = data.pop('rotator_id', None)
-        if not rotator_id:
-            return {"success": False, "error": "rotator_id is required."}
+        rotator_id = data.pop('id', None)
+        rotator_id = uuid.UUID(rotator_id)
 
-        del data["id"]
+        if not rotator_id:
+            raise Exception("id is required.")
+
         del data["updated"]
         del data["added"]
 
@@ -457,28 +458,28 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
 
     except Exception as e:
         await session.rollback()
-        logger.error(f"Error editing rotators: {e}")
+        logger.error(f"Error editing rotator: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def delete_rotator(session: AsyncSession, rotator_id: Union[str, uuid.UUID] | dict) -> dict:
+async def delete_rotators(session: AsyncSession, rotator_ids: list[Union[str, uuid.UUID]]) -> dict:
     """
-    Delete a rotator record by its UUID or string representation of UUID.
+    Delete multiple rotator records by their UUIDs or string representations of UUIDs.
     """
     try:
-        if isinstance(rotator_id, str):
-            rotator_id = uuid.UUID(rotator_id)
+        rotator_ids = [uuid.UUID(rotator_id) if isinstance(rotator_id, str) else rotator_id for rotator_id in
+                       rotator_ids]
 
         stmt = (
             delete(Rotators)
-            .where(Rotators.id == rotator_id)
+            .where(Rotators.id.in_(rotator_ids))
             .returning(Rotators)
         )
         result = await session.execute(stmt)
-        deleted = result.scalar_one_or_none()
+        deleted = result.scalars().all()
         if not deleted:
-            return {"success": False, "error": f"Rotator with id {rotator_id} not found."}
+            return {"success": False, "error": "No rotators with the provided IDs were found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
 

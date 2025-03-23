@@ -267,15 +267,17 @@ async def data_submission_routing(sio, cmd, data, logger):
         elif cmd == "edit-rotator":
             logger.info(f'Editing rotator, data: {data}')
             edit_reply = await crud.edit_rotator(dbsession, data)
+            logger.info(f'Edit rotator reply: {edit_reply}')
 
             rotators = await crud.fetch_rotators(dbsession)
+            logger.info(f'Rotators: {rotators}')
             rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
             reply = {'success': (rotators['success'] & edit_reply['success']),
                      'data': rotators.get('data', [])}
 
         elif cmd == "delete-rotator":
             logger.info(f'Delete rotator, data: {data}')
-            delete_reply = await crud.delete_rotator(dbsession, data)
+            delete_reply = await crud.delete_rotators(dbsession, data)
 
             rotators = await crud.fetch_rotators(dbsession)
             rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))

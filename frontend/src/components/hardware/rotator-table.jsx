@@ -14,6 +14,18 @@ import {enqueueSnackbar} from "notistack";
 
 export default function AntennaRotatorTable() {
     const {socket} = useSocket();
+    const defaultRotator = {
+        id: null,
+        name: '',
+        host: 'localhost',
+        port: 4532,
+        minaz: 0,
+        maxaz: 360,
+        minel: 0,
+        maxel: 90,
+        aztype: 0,
+        azendstop: 0,
+    };
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openAddDialog, setOpenAddDialog] = useState(false);
     const [selected, setSelected] = useState([]);
@@ -21,6 +33,7 @@ export default function AntennaRotatorTable() {
     const [rows, setRows] = useState([]);
     const [selectionModel, setSelectionModel] = useState([]);
     const [pageSize, setPageSize] = useState(5);
+    const [formValues, setFormValues] = useState(defaultRotator)
 
     const columns = [
         { field: 'name', headerName: 'Name', flex: 1 },
@@ -53,6 +66,42 @@ export default function AntennaRotatorTable() {
 
         };
     }, []);
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormValues((prev) => ({ ...prev, [name]: value }));
+    };
+
+    const handleSubmit = () => {
+        const action = formValues.id ? 'edit-rotator' : 'submit-rotator';
+        socket.emit('data_submission', action, formValues, (response) => {
+            console.log(response);
+            if (response.success) {
+                setOpenAddDialog(false);
+                setRows(response.data);
+            } else {
+                enqueueSnackbar(`Failed to ${action === 'edit-rotator' ? 'edit' : 'add'} rotator`, {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+            }
+        });
+    }
+
+    const handleDelete = () => {
+        socket.emit('data_submission', 'delete-rotator', selected, (response) => {
+            console.log(response);
+            if (response.success) {
+                setOpenDeleteConfirm(false);
+                setRows(response.data);
+            } else {
+                enqueueSnackbar(`Failed to delete rotator`, {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+            }
+        })
+    };
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -90,15 +139,24 @@ export default function AntennaRotatorTable() {
                     <DialogTitle>Add Antenna Rotator</DialogTitle>
                     <DialogContent>
                         <Stack spacing={2}>
-                            <TextField label="Name" fullWidth variant="filled"/>
-                            <TextField label="Host" fullWidth variant="filled"/>
-                            <TextField label="Port" type="number" fullWidth variant="filled"/>
-                            <TextField label="Min Az" type="number" fullWidth variant="filled"/>
-                            <TextField label="Max Az" type="number" fullWidth variant="filled"/>
-                            <TextField label="Min El" type="number" fullWidth variant="filled"/>
-                            <TextField label="Max El" type="number" fullWidth variant="filled"/>
-                            <TextField label="Az Type" type="number" fullWidth variant="filled"/>
-                            <TextField label="Az Endstop" type="number" fullWidth variant="filled"/>
+                            <TextField name="name" label="Name" fullWidth variant="filled" onChange={handleChange}
+                                       value={formValues.name}/>
+                            <TextField name="host" label="Host" fullWidth variant="filled" onChange={handleChange}
+                                       value={formValues.host}/>
+                            <TextField name="port" label="Port" type="number" fullWidth variant="filled"
+                                       onChange={handleChange} value={formValues.port}/>
+                            <TextField name="minaz" label="Min Az" type="number" fullWidth variant="filled"
+                                       onChange={handleChange} value={formValues.minaz}/>
+                            <TextField name="maxaz" label="Max Az" type="number" fullWidth variant="filled"
+                                       onChange={handleChange} value={formValues.maxaz}/>
+                            <TextField name="minel" label="Min El" type="number" fullWidth variant="filled"
+                                       onChange={handleChange} value={formValues.minel}/>
+                            <TextField name="maxel" label="Max El" type="number" fullWidth variant="filled"
+                                       onChange={handleChange} value={formValues.maxel}/>
+                            <TextField name="aztype" label="Az Type" type="number" fullWidth variant="filled"
+                                       onChange={handleChange} value={formValues.aztype}/>
+                            <TextField name="azendstop" label="Az Endstop" type="number" fullWidth variant="filled"
+                                       onChange={handleChange} value={formValues.azendstop}/>
                         </Stack>
                     </DialogContent>
                     <DialogActions style={{padding: '0px 24px 20px 20px'}}>
@@ -108,16 +166,23 @@ export default function AntennaRotatorTable() {
                         <Button
                             color="success"
                             variant="contained"
-                            onClick={() => {
-                                // Perform add logic here
-                                setOpenAddDialog(false);
-                            }}
+                            onClick={handleSubmit}
                         >
                             Submit
                         </Button>
                     </DialogActions>
                 </Dialog>
-                <Button variant="contained" disabled={selected.length !== 1}>
+                <Button
+                    variant="contained"
+                    disabled={selected.length !== 1}
+                    onClick={() => {
+                        const selectedRow = rows.find(row => row.id === selected[0]);
+                        if (selectedRow) {
+                            setFormValues(selectedRow);
+                            setOpenAddDialog(true);
+                        }
+                    }}
+                >
                     Edit
                 </Button>
                 <Button
@@ -142,10 +207,7 @@ export default function AntennaRotatorTable() {
                         </Button>
                         <Button
                             variant="contained"
-                            onClick={() => {
-                                // Perform delete logic here
-                                setOpenDeleteConfirm(false);
-                            }}
+                            onClick={handleDelete}
                             color="error"
                         >
                             Delete
