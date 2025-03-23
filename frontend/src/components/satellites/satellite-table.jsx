@@ -3,9 +3,6 @@ import {Alert, AlertTitle, Box, FormControl, InputLabel, ListSubheader, MenuItem
 import {useEffect, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
-import Typography from "@mui/material/Typography";
-import Tooltip from "@mui/material/Tooltip";
-import {Chip} from "@mui/material"
 import Dialog from '@mui/material/Dialog';
 import DialogTitle from '@mui/material/DialogTitle';
 import DialogContent from '@mui/material/DialogContent';

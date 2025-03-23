@@ -16,9 +16,6 @@ import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target-sat
 import CheckIcon from '@mui/icons-material/Check';
 import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "./socket.jsx";
-import {enqueueSnackbar, SnackbarProvider, closeSnackbar} from "notistack";
-import CloseIcon from '@mui/icons-material/Close';
-import {useAuth} from "./auth.jsx";
 
 
 function DashboardEditor() {

@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
-import Typography from "@mui/material/Typography";
 import {
     Alert,
     AlertTitle,
