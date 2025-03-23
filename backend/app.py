@@ -12,8 +12,6 @@ from fastapi.staticfiles import StaticFiles
 # setup a logger
 logger = get_logger(arguments)
 
-
-
 # hold a list of sessions
 SESSIONS = {}
 
