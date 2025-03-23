@@ -282,8 +282,23 @@ export default function RigTable() {
     }
 
     function handleDelete() {
-        // Example delete action
-        enqueueSnackbar('Delete action triggered', { variant: 'info' });
+        setLoading(true);
+        socket.emit('data_submission', 'delete-rig', selected, (response) => {
+            console.info(response);
+            if (response.success) {
+                console.info(response.data);
+                setRigs(response.data);
+                enqueueSnackbar('Rig(s) deleted successfully', {
+                    variant: 'success',
+                    autoHideDuration: 5000,
+                });
+            } else {
+                enqueueSnackbar('Failed to delete rig(s)', {
+                    variant: 'error',
+                })
+            }
+            setLoading(false);
+        });
     }
 
     const handleChange = (e) => {
@@ -435,7 +450,6 @@ export default function RigTable() {
                     </Button>
                 </DialogActions>
             </Dialog>
-
             <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>
