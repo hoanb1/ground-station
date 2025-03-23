@@ -30,6 +30,7 @@ import DialogContent from "@mui/material/DialogContent";
 import {useEffect, useMemo, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
+import {DataGrid, gridClasses} from "@mui/x-data-grid";
 
 
 function descendingComparator(a, b, orderBy) {
@@ -214,316 +215,118 @@ EnhancedTableToolbar.propTypes = {
 export default function RigTable() {
     const { socket } = useSocket();
     const [rigs, setRigs] = useState([]);
-    const [order, setOrder] = useState('asc');
-    const [orderBy, setOrderBy] = useState('name');
     const [selected, setSelected] = useState([]);
-    const [page, setPage] = useState(0);
-    const [dense, setDense] = useState(false);
-    const [rowsPerPage, setRowsPerPage] = useState(5);
+    const [pageSize, setPageSize] = useState(5);
+    const [loading, setLoading] = useState(false);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openAddDialog, setOpenAddDialog] = useState(false);
     const [formValues, setFormValues] = useState({
-        name: "",
-        host: "localhost",
+        name: '',
+        host: 'localhost',
         port: 4532,
-        radiotype: "rx",
-        pttstatus: "normal",
-        vfotype: "normal",
+        radiotype: 'rx',
+        pttstatus: 'normal',
+        vfotype: 'normal',
         lodown: 0,
         loup: 0,
     });
 
-    const handleRequestSort = (event, property) => {
-        const isAsc = orderBy === property && order === 'asc';
-        setOrder(isAsc ? 'desc' : 'asc');
-        setOrderBy(property);
-    };
-
-    const handleSelectAllClick = (event) => {
-        if (event.target.checked) {
-            const newSelected = rigs.map((n) => n.id);
-            setSelected(newSelected);
-            return;
-        }
-        setSelected([]);
-    };
-
-    const handleClick = (event, id) => {
-        const selectedIndex = selected.indexOf(id);
-        let newSelected = [];
-
-        if (selectedIndex === -1) {
-            newSelected = newSelected.concat(selected, id);
-        } else if (selectedIndex === 0) {
-            newSelected = newSelected.concat(selected.slice(1));
-        } else if (selectedIndex === selected.length - 1) {
-            newSelected = newSelected.concat(selected.slice(0, -1));
-        } else if (selectedIndex > 0) {
-            newSelected = newSelected.concat(
-                selected.slice(0, selectedIndex),
-                selected.slice(selectedIndex + 1),
-            );
-        }
-        setSelected(newSelected);
-    };
-
-    const handleChangePage = (event, newPage) => {
-        setPage(newPage);
-    };
-
-    const handleChangeRowsPerPage = (event) => {
-        setRowsPerPage(parseInt(event.target.value, 10));
-        setPage(0);
-    };
-
-    // Avoid a layout jump when reaching the last page with empty rows.
-    const emptyRows =
-        page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rigs.length) : 0;
-
-    const visibleRows = useMemo(
-        () =>
-            [...rigs]
-                .sort(getComparator(order, orderBy))
-                .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
-        [order, orderBy, page, rowsPerPage],
-    );
-
-    function handleDelete() {
-
-    }
+    const columns = [
+        { field: 'name', headerName: 'Name', flex: 1 },
+        { field: 'host', headerName: 'Host', flex: 1 },
+        { field: 'port', headerName: 'Port', type: 'number', flex: 1 },
+        { field: 'radiotype', headerName: 'Radio Type', flex: 1 },
+        { field: 'pttstatus', headerName: 'PTT Status', flex: 1 },
+        { field: 'vfotype', headerName: 'VFO Type', flex: 1 },
+        { field: 'lodown', headerName: 'LO Down', type: 'number', flex: 1 },
+        { field: 'loup', headerName: 'LO Up', type: 'number', flex: 1 },
+    ];
 
     useEffect(() => {
+        setLoading(true);
         socket.emit('data_request', 'get-rigs', null, (response) => {
-            if (response.success === true) {
+            if (response.success) {
                 setRigs(response.data);
             } else {
-                enqueueSnackbar('Failed to add rig', {
+                enqueueSnackbar('Failed to fetch rigs', {
                     variant: 'error',
-                    autoHideDuration: 5000
+                    autoHideDuration: 5000,
                 });
             }
+            setLoading(false);
         });
 
         return () => {
-            // Cleanup logic goes here
+            // Cleanup if needed
         };
-    }, []);
+    }, [socket]);
 
     function handleAddNewRig() {
+        setLoading(true);
         socket.emit('data_submission', 'submit-rig', formValues, (response) => {
-            if (response.success === true) {
+            if (response.success) {
                 setOpenAddDialog(false);
                 setRigs(response.data);
                 enqueueSnackbar('Rig added successfully', {
                     variant: 'success',
-                    autoHideDuration: 5000
+                    autoHideDuration: 5000,
                 });
             } else {
                 enqueueSnackbar('Failed to add rig', {
                     variant: 'error',
-                    autoHideDuration: 5000
+                    autoHideDuration: 5000,
                 });
             }
+            setLoading(false);
         });
+    }
+
+    function handleDelete() {
+        // Example delete action
+        enqueueSnackbar('Delete action triggered', { variant: 'info' });
     }
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormValues({ ...formValues, [name]: value });
+        setFormValues((prev) => ({ ...prev, [name]: value }));
     };
 
     return (
         <Box sx={{ width: '100%' }}>
-            <Paper sx={{ width: '100%', mb: 2 }}>
-                <EnhancedTableToolbar numSelected={selected.length} />
-                <TableContainer>
-                    <Table
-                        sx={{ minWidth: 750 }}
-                        aria-labelledby="tableTitle"
-                        size={'medium'}
-                    >
-                        <EnhancedTableHead
-                            numSelected={selected.length}
-                            order={order}
-                            orderBy={orderBy}
-                            onSelectAllClick={handleSelectAllClick}
-                            onRequestSort={handleRequestSort}
-                            rowCount={rigs.length}
-                        />
-                        <TableBody>
-                            {visibleRows.map((row, index) => {
-                                const isItemSelected = selected.includes(row.id);
-                                const labelId = `enhanced-table-checkbox-${index}`;
+            <DataGrid
+                loading={loading}
+                rows={rigs}
+                columns={columns}
+                checkboxSelection
+                disableSelectionOnClick
+                selectionModel={selected}
+                onRowSelectionModelChange={(selected)=>{
+                    setSelected(selected);
+                }}
+                pageSize={pageSize}
+                onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
+                rowsPerPageOptions={[5, 10, 25]}
+                getRowId={(row) => row.id}
+                initialState={{
+                    pagination: { paginationModel: { pageSize: 5 } },
+                }}
+                sx={{
+                    border: 0,
+                    marginTop: 2,
+                    [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                        outline: 'none',
+                    },
+                    [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                        {
+                            outline: 'none',
+                        },
+                }}
+            />
 
-                                return (
-                                    <TableRow
-                                        hover
-                                        onClick={(event) => handleClick(event, row.id)}
-                                        role="checkbox"
-                                        aria-checked={isItemSelected}
-                                        tabIndex={-1}
-                                        key={row.id}
-                                        selected={isItemSelected}
-                                        sx={{ cursor: 'pointer' }}
-                                    >
-                                        <TableCell padding="checkbox">
-                                            <Checkbox
-                                                color="primary"
-                                                checked={isItemSelected}
-                                                inputProps={{
-                                                    'aria-labelledby': labelId,
-                                                }}
-                                            />
-                                        </TableCell>
-                                        <TableCell
-                                            component="th"
-                                            id={labelId}
-                                            scope="row"
-                                            padding="none"
-                                        >
-                                            {row.name}
-                                        </TableCell>
-                                        <TableCell align="left">{row.host}</TableCell>
-                                        <TableCell align="right">{row.port}</TableCell>
-                                        <TableCell align="left">{row.radiotype}</TableCell>
-                                        <TableCell align="right">{row.pttstatus}</TableCell>
-                                        <TableCell align="right">{row.vfotype}</TableCell>
-                                        <TableCell align="right">{row.lodown}</TableCell>
-                                        <TableCell align="right">{row.loup}</TableCell>
-                                    </TableRow>
-                                );
-                            })}
-                            {emptyRows > 0 && (
-                                <TableRow
-                                    style={{
-                                        height: (dense ? 33 : 53) * emptyRows,
-                                    }}
-                                >
-                                    <TableCell colSpan={6} />
-                                </TableRow>
-                            )}
-                        </TableBody>
-                    </Table>
-                </TableContainer>
-                <TablePagination
-                    rowsPerPageOptions={[5, 10, 25]}
-                    component="div"
-                    count={rigs.length}
-                    rowsPerPage={rowsPerPage}
-                    page={page}
-                    onPageChange={handleChangePage}
-                    onRowsPerPageChange={handleChangeRowsPerPage}
-                />
-            </Paper>
-            <Stack direction="row" spacing={2}>
+            <Stack direction="row" spacing={2} style={{marginTop: 15}}>
                 <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
                     Add
                 </Button>
-                <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
-                    <DialogTitle>Add Radio Rig</DialogTitle>
-                    <DialogContent>
-                        <TextField
-                            autoFocus
-                            name="name"
-                            margin="dense"
-                            id="name"
-                            label="Name"
-                            type="text"
-                            fullWidth
-                            variant="filled"
-                            value={formValues.name}
-                            onChange={handleChange}
-                        />
-                        <TextField
-                            name="host"
-                            margin="dense"
-                            id="host"
-                            label="Host"
-                            type="text"
-                            fullWidth
-                            value={formValues.host}
-                            variant="filled"
-                            onChange={handleChange}
-                        />
-                        <TextField
-                            name="port"
-                            margin="dense"
-                            id="port"
-                            label="Port"
-                            type="number"
-                            value={formValues.port}
-                            fullWidth
-                            variant="filled"
-                            onChange={handleChange}
-                        />
-                        <FormControl margin="dense" fullWidth variant="filled">
-                            <InputLabel htmlFor="radiotype">Radio Type</InputLabel>
-                            <Select
-                                name="radiotype"
-                                id="radiotype"
-                                label="Radio Type"
-                                value={formValues.radiotype}
-                                onChange={handleChange}
-                             variant={'filled'}>
-                                <MenuItem value="rx">RX</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <FormControl style={{marginTop: 5}} fullWidth variant="filled">
-                            <InputLabel htmlFor="grouped-select">PTT status</InputLabel>
-                            <Select
-                                id="pttstatus"
-                                label="PTT Status"
-                                name="pttstatus"
-                                value={'normal'}
-                                onChange={handleChange}
-                             variant={'filled'}>
-                                <MenuItem value={"normal"}>Normal</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <FormControl margin="dense" fullWidth variant="filled">
-                            <InputLabel htmlFor="vfotype">VFO Type</InputLabel>
-                            <Select
-                                id="vfotype"
-                                name="vfotype"
-                                value={formValues.vfotype}
-                                variant="filled"
-                                onChange={handleChange}
-                            >
-                                <MenuItem value="normal">Normal</MenuItem>
-                            </Select>
-                        </FormControl>
-                        <TextField
-                            margin="dense"
-                            id="lodown"
-                            name="lodown"
-                            label="Frequency of local oscillator on the downconverter if used"
-                            type="number"
-                            onChange={handleChange}
-                            fullWidth
-                            variant="filled"
-                            value={formValues.lodown}
-                        />
-                        <TextField
-                            name="loup"
-                            margin="dense"
-                            id="loup"
-                            label="Frequency of local oscillator on the upconverter if used"
-                            type="number"
-                            onChange={handleChange}
-                            fullWidth
-                            variant="filled"
-                            value={formValues.loup}
-                        />
-                    </DialogContent>
-                    <DialogActions style={{margin: '0px 20px 20px 0px'}}>
-                        <Button onClick={() => setOpenAddDialog(false)} color="primary">
-                            Cancel
-                        </Button>
-                        <Button onClick={() => handleAddNewRig()} color="primary" variant="contained">
-                            Submit
-                        </Button>
-                    </DialogActions>
-                </Dialog>
                 <Button variant="contained" disabled={selected.length !== 1}>
                     Edit
                 </Button>
@@ -535,32 +338,127 @@ export default function RigTable() {
                 >
                     Delete
                 </Button>
-                <Dialog
-                    open={openDeleteConfirm}
-                    onClose={() => setOpenDeleteConfirm(false)}
-                >
-                    <DialogTitle>{"Confirm Deletion"}</DialogTitle>
-                    <DialogContent>
-                        <DialogContentText>
-                            Are you sure you want to delete the selected rig(s)?
-                        </DialogContentText>
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setOpenDeleteConfirm(false)} color="primary">
-                            Cancel
-                        </Button>
-                        <Button
-                            onClick={() => {
-                                handleDelete();
-                                setOpenDeleteConfirm(false);
-                            }}
-                            color="error"
-                        >
-                            Confirm
-                        </Button>
-                    </DialogActions>
-                </Dialog>
             </Stack>
+
+            {/* Dialog for adding new rigs */}
+            <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
+                <DialogTitle>Add Radio Rig</DialogTitle>
+                <DialogContent>
+                    <TextField
+                        autoFocus
+                        name="name"
+                        margin="dense"
+                        label="Name"
+                        type="text"
+                        fullWidth
+                        variant="filled"
+                        value={formValues.name}
+                        onChange={handleChange}
+                    />
+                    <TextField
+                        name="host"
+                        margin="dense"
+                        label="Host"
+                        type="text"
+                        fullWidth
+                        variant="filled"
+                        value={formValues.host}
+                        onChange={handleChange}
+                    />
+                    <TextField
+                        name="port"
+                        margin="dense"
+                        label="Port"
+                        type="number"
+                        fullWidth
+                        variant="filled"
+                        value={formValues.port}
+                        onChange={handleChange}
+                    />
+                    <FormControl margin="dense" fullWidth variant="filled">
+                        <InputLabel>Radio Type</InputLabel>
+                        <Select
+                            name="radiotype"
+                            value={formValues.radiotype}
+                            onChange={handleChange}
+                         variant={'filled'}>
+                            <MenuItem value="rx">RX</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <FormControl margin="dense" fullWidth variant="filled">
+                        <InputLabel>PTT Status</InputLabel>
+                        <Select
+                            name="pttstatus"
+                            value={formValues.pttstatus}
+                            onChange={handleChange}
+                         variant={'filled'}>
+                            <MenuItem value="normal">Normal</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <FormControl margin="dense" fullWidth variant="filled">
+                        <InputLabel>VFO Type</InputLabel>
+                        <Select
+                            name="vfotype"
+                            value={formValues.vfotype}
+                            onChange={handleChange}
+                         variant={'filled'}>
+                            <MenuItem value="normal">Normal</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <TextField
+                        margin="dense"
+                        name="lodown"
+                        label="LO Down"
+                        type="number"
+                        fullWidth
+                        variant="filled"
+                        value={formValues.lodown}
+                        onChange={handleChange}
+                    />
+                    <TextField
+                        margin="dense"
+                        name="loup"
+                        label="LO Up"
+                        type="number"
+                        fullWidth
+                        variant="filled"
+                        value={formValues.loup}
+                        onChange={handleChange}
+                    />
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenAddDialog(false)} color="primary">
+                        Cancel
+                    </Button>
+                    <Button onClick={() => handleAddNewRig()} color="primary" variant="contained">
+                        Submit
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete the selected rig(s)?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setOpenDeleteConfirm(false)} color="primary">
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            handleDelete();
+                            setOpenDeleteConfirm(false);
+                        }}
+                        color="error"
+                    >
+                        Confirm
+                    </Button>
+                </DialogActions>
+            </Dialog>
         </Box>
     );
 }

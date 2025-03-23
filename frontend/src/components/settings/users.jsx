@@ -148,7 +148,7 @@ const UsersTable = () => {
                     checkboxSelection={true}
                     columns={columns}
                     rows={rows}
-                    pageSizeOptions={[5, 10]}
+                    pageSizeOptions={[5, 10, 25]}
                     onRowSelectionModelChange={(selected) => {
                         setSelectedRows(selected);
                     }}
@@ -169,7 +169,6 @@ const UsersTable = () => {
                 />
             </Box>
 
-            {/* Add, Edit, Delete Buttons */}
             <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
                 <Button variant="contained" onClick={handleClickOpen}>Add</Button>
                 <Button

@@ -293,17 +293,6 @@ const RotatorControlForm = () => {
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <AntennaRotatorTable/>
-                <Stack direction="row" spacing={2}>
-                    <Button variant="contained">
-                        Add
-                    </Button>
-                    <Button variant="contained">
-                        Edit
-                    </Button>
-                    <Button variant="contained" color="error">
-                        Delete
-                    </Button>
-                </Stack>
             </Box>
         </Paper>
     );
