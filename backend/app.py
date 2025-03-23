@@ -1,21 +1,9 @@
-import argparse
 import uvicorn
-import logging.config
-import yaml
-import logging
 import socketio
-import json
-from datetime import datetime
-import crud
-import asyncio
 from fastapi import FastAPI, WebSocket, Depends
 from models import Base
 from fastapi.middleware.cors import CORSMiddleware
-from sqlalchemy import create_engine, text
-from sqlalchemy.ext.declarative import declarative_base
-from sqlalchemy.orm import sessionmaker, declared_attr
 from logger import get_logger, get_logger_config
-from arguments import arguments
 from handlers import *
 from db import *
 from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
