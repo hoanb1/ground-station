@@ -75,7 +75,6 @@ export default function AntennaRotatorTable() {
     const handleSubmit = () => {
         const action = formValues.id ? 'edit-rotator' : 'submit-rotator';
         socket.emit('data_submission', action, formValues, (response) => {
-            console.log(response);
             if (response.success) {
                 setOpenAddDialog(false);
                 setRows(response.data);
@@ -90,7 +89,6 @@ export default function AntennaRotatorTable() {
 
     const handleDelete = () => {
         socket.emit('data_submission', 'delete-rotator', selected, (response) => {
-            console.log(response);
             if (response.success) {
                 setOpenDeleteConfirm(false);
                 setRows(response.data);
