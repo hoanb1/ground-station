@@ -13,7 +13,7 @@ import {
     SettingsTabAbout,
     SettingsTabSatelliteGroups,
     SettingsTabUsers
-} from "./components/settings.jsx";
+} from "./components/settings/settings.jsx";
 import GlobalSatelliteTrack from "./components/overview-sat-track.jsx";
 import App from "./App.jsx";
 import Layout from "./components/dashboard.jsx";

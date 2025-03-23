@@ -15,22 +15,22 @@ import {
 import { Link } from 'react-router';
 import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
-import {gridLayoutStoreName as overviewGridLayoutName} from './overview-sat-track.jsx';
-import {gridLayoutStoreName as targetGridLayoutName} from './target-sat-track.jsx';
+import {gridLayoutStoreName as overviewGridLayoutName} from '../overview-sat-track.jsx';
+import {gridLayoutStoreName as targetGridLayoutName} from '../target-sat-track.jsx';
 import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Grid from "@mui/material/Grid2";
-import {HOME_LON, HOME_LAT} from "./common.jsx";
-import {SimpleVectorCircle} from "./icons.jsx";
-import AntennaRotatorTable from "./rotator-table.jsx";
+import {HOME_LON, HOME_LAT} from "../common.jsx";
+import {SimpleVectorCircle} from "../icons.jsx";
+import AntennaRotatorTable from "../hardware/rotator-table.jsx";
 import Stack from "@mui/material/Stack";
-import RigTable from "./rig-table.jsx";
+import RigTable from "../hardware/rig-table.jsx";
 import {styled} from "@mui/material/styles";
-import TLESourcesTable from "./tle-sources-table.jsx";
-import SatelliteTable from "./satellite-table.jsx";
+import TLESourcesTable from "../satellites/tle-sources-table.jsx";
+import SatelliteTable from "../satellites/satellite-table.jsx";
 import AboutPage from "./about.jsx";
-import SatelliteGroupsTable from "./satellite-groups.jsx";
+import SatelliteGroupsTable from "../satellites/satellite-groups.jsx";
 import UsersTable from "./users.jsx";
 
 
