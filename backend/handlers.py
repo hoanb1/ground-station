@@ -24,6 +24,7 @@ async def data_request_routing(sio, cmd, data, logger):
                  processing. Not utilized in the current implementation.
     :type data: Any
     :param logger: Logging object used to log informational messages.
+    :param logger: Logging object used to log informational messages.
     :type logger: logging.Logger
     :return: Dictionary containing 'success' status and fetched 'data'. The
              structure of 'data' depends on the command executed.

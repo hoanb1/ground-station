@@ -489,6 +489,15 @@ async def add_rig(session: AsyncSession, data: dict) -> dict:
     Create and add a new rig record.
     """
     try:
+        assert data.get("name", "") != "", "name is required"
+        assert data.get("host", "") != "", "host is required"
+        assert data.get("port", "") != "", "port is required"
+        assert data.get("radiotype", "") != "", "radiotype is required"
+        assert data.get("pttstatus", "") != "", "pttstatus is required"
+        assert data.get("vfotype", "") != "", "vfotype is required"
+        assert data.get("lodown", "") != "", "lodown is required"
+        assert data.get("loup", "") != "", "loup is required"
+
         new_id = uuid.uuid4()
         now = datetime.now(UTC)
         stmt = (
@@ -554,29 +563,35 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error editing rig: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def delete_rig(session: AsyncSession, rig_id: Union[uuid.UUID, str, dict]) -> dict:
+async def delete_rig(session: AsyncSession, rig_ids: Union[list[uuid.UUID], list[str], dict]) -> dict:
     """
-    Delete a rig record by its UUID or string representation of UUID.
+    Delete multiple rig records by their UUIDs or string representations of UUIDs.
     """
     try:
-        if isinstance(rig_id, str):
-            rig_id = uuid.UUID(rig_id)
+        if isinstance(rig_ids, dict):
+            rig_ids = rig_ids.get("ids", [])
+        rig_ids = [uuid.UUID(rig_id) if isinstance(rig_id, str) else rig_id for rig_id in rig_ids]
+
         stmt = (
             delete(Rigs)
-            .where(Rigs.id == rig_id)
+            .where(Rigs.id.in_(rig_ids))
             .returning(Rigs)
         )
         result = await session.execute(stmt)
-        deleted = result.scalar_one_or_none()
+        deleted = result.scalars().all()
         if not deleted:
-            return {"success": False, "error": f"Rig with id {rig_id} not found."}
+            return {"success": False, "error": "No rigs with the provided IDs were found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error deleting rigs: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
