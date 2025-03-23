@@ -27,25 +27,10 @@ import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
-import {useState} from "react";
+import {useEffect, useMemo, useState} from "react";
+import {useSocket} from "../common/socket.jsx";
+import {enqueueSnackbar} from "notistack";
 
-function createData(id, name, host, port, radiotype, pttstatus, vfotype, lodown, loup) {
-    return {
-        id,
-        name,
-        host,
-        port,
-        radiotype,
-        pttstatus,
-        vfotype,
-        lodown,
-        loup
-    };
-}
-
-const rows = [
-    createData("asdfadgfdfasgfdgdfg", 'sdrcontrol', '192.168.60.34', 4533, "rx", 0, 0, 0, 0),
-];
 
 function descendingComparator(a, b, orderBy) {
     if (b[orderBy] < a[orderBy]) {
@@ -227,14 +212,26 @@ EnhancedTableToolbar.propTypes = {
 };
 
 export default function RigTable() {
+    const { socket } = useSocket();
+    const [rigs, setRigs] = useState([]);
     const [order, setOrder] = useState('asc');
-    const [orderBy, setOrderBy] = useState('calories');
+    const [orderBy, setOrderBy] = useState('name');
     const [selected, setSelected] = useState([]);
     const [page, setPage] = useState(0);
     const [dense, setDense] = useState(false);
     const [rowsPerPage, setRowsPerPage] = useState(5);
     const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
     const [openAddDialog, setOpenAddDialog] = useState(false);
+    const [formValues, setFormValues] = useState({
+        name: "",
+        host: "localhost",
+        port: 4532,
+        radiotype: "rx",
+        pttstatus: "normal",
+        vfotype: "normal",
+        lodown: 0,
+        loup: 0,
+    });
 
     const handleRequestSort = (event, property) => {
         const isAsc = orderBy === property && order === 'asc';
@@ -244,7 +241,7 @@ export default function RigTable() {
 
     const handleSelectAllClick = (event) => {
         if (event.target.checked) {
-            const newSelected = rows.map((n) => n.id);
+            const newSelected = rigs.map((n) => n.id);
             setSelected(newSelected);
             return;
         }
@@ -279,17 +276,13 @@ export default function RigTable() {
         setPage(0);
     };
 
-    const handleChangeDense = (event) => {
-        setDense(event.target.checked);
-    };
-
     // Avoid a layout jump when reaching the last page with empty rows.
     const emptyRows =
-        page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rows.length) : 0;
+        page > 0 ? Math.max(0, (1 + page) * rowsPerPage - rigs.length) : 0;
 
-    const visibleRows = React.useMemo(
+    const visibleRows = useMemo(
         () =>
-            [...rows]
+            [...rigs]
                 .sort(getComparator(order, orderBy))
                 .slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage),
         [order, orderBy, page, rowsPerPage],
@@ -299,9 +292,45 @@ export default function RigTable() {
 
     }
 
-    function handleAddNewRig() {
+    useEffect(() => {
+        socket.emit('data_request', 'get-rigs', null, (response) => {
+            if (response.success === true) {
+                setRigs(response.data);
+            } else {
+                enqueueSnackbar('Failed to add rig', {
+                    variant: 'error',
+                    autoHideDuration: 5000
+                });
+            }
+        });
 
+        return () => {
+            // Cleanup logic goes here
+        };
+    }, []);
+
+    function handleAddNewRig() {
+        socket.emit('data_submission', 'submit-rig', formValues, (response) => {
+            if (response.success === true) {
+                setOpenAddDialog(false);
+                setRigs(response.data);
+                enqueueSnackbar('Rig added successfully', {
+                    variant: 'success',
+                    autoHideDuration: 5000
+                });
+            } else {
+                enqueueSnackbar('Failed to add rig', {
+                    variant: 'error',
+                    autoHideDuration: 5000
+                });
+            }
+        });
     }
+
+    const handleChange = (e) => {
+        const { name, value } = e.target;
+        setFormValues({ ...formValues, [name]: value });
+    };
 
     return (
         <Box sx={{ width: '100%' }}>
@@ -311,7 +340,7 @@ export default function RigTable() {
                     <Table
                         sx={{ minWidth: 750 }}
                         aria-labelledby="tableTitle"
-                        size={dense ? 'small' : 'medium'}
+                        size={'medium'}
                     >
                         <EnhancedTableHead
                             numSelected={selected.length}
@@ -319,7 +348,7 @@ export default function RigTable() {
                             orderBy={orderBy}
                             onSelectAllClick={handleSelectAllClick}
                             onRequestSort={handleRequestSort}
-                            rowCount={rows.length}
+                            rowCount={rigs.length}
                         />
                         <TableBody>
                             {visibleRows.map((row, index) => {
@@ -379,17 +408,13 @@ export default function RigTable() {
                 <TablePagination
                     rowsPerPageOptions={[5, 10, 25]}
                     component="div"
-                    count={rows.length}
+                    count={rigs.length}
                     rowsPerPage={rowsPerPage}
                     page={page}
                     onPageChange={handleChangePage}
                     onRowsPerPageChange={handleChangeRowsPerPage}
                 />
             </Paper>
-            <FormControlLabel
-                control={<Switch checked={dense} onChange={handleChangeDense} />}
-                label="Dense padding"
-            />
             <Stack direction="row" spacing={2}>
                 <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
                     Add
@@ -399,83 +424,103 @@ export default function RigTable() {
                     <DialogContent>
                         <TextField
                             autoFocus
+                            name="name"
                             margin="dense"
                             id="name"
                             label="Name"
                             type="text"
                             fullWidth
                             variant="filled"
+                            value={formValues.name}
+                            onChange={handleChange}
                         />
                         <TextField
+                            name="host"
                             margin="dense"
                             id="host"
                             label="Host"
                             type="text"
                             fullWidth
-                            value={"localhost"}
+                            value={formValues.host}
                             variant="filled"
+                            onChange={handleChange}
                         />
                         <TextField
+                            name="port"
                             margin="dense"
                             id="port"
                             label="Port"
                             type="number"
-                            value={4532}
+                            value={formValues.port}
                             fullWidth
                             variant="filled"
+                            onChange={handleChange}
                         />
                         <FormControl margin="dense" fullWidth variant="filled">
                             <InputLabel htmlFor="radiotype">Radio Type</InputLabel>
                             <Select
+                                name="radiotype"
                                 id="radiotype"
                                 label="Radio Type"
-                                value={"rx"}
+                                value={formValues.radiotype}
+                                onChange={handleChange}
                              variant={'filled'}>
                                 <MenuItem value="rx">RX</MenuItem>
                             </Select>
                         </FormControl>
                         <FormControl style={{marginTop: 5}} fullWidth variant="filled">
-                            <InputLabel htmlFor="grouped-select">Group</InputLabel>
+                            <InputLabel htmlFor="grouped-select">PTT status</InputLabel>
                             <Select
                                 id="pttstatus"
                                 label="PTT Status"
                                 name="pttstatus"
                                 value={'normal'}
+                                onChange={handleChange}
                              variant={'filled'}>
                                 <MenuItem value={"normal"}>Normal</MenuItem>
                             </Select>
                         </FormControl>
-                        <TextField
-                            margin="dense"
-                            id="vfotype"
-                            label="VFO Type"
-                            type="text"
-                            fullWidth
-                            variant="filled"
-                        />
+                        <FormControl margin="dense" fullWidth variant="filled">
+                            <InputLabel htmlFor="vfotype">VFO Type</InputLabel>
+                            <Select
+                                id="vfotype"
+                                name="vfotype"
+                                value={formValues.vfotype}
+                                variant="filled"
+                                onChange={handleChange}
+                            >
+                                <MenuItem value="normal">Normal</MenuItem>
+                            </Select>
+                        </FormControl>
                         <TextField
                             margin="dense"
                             id="lodown"
-                            label="LO Down"
+                            name="lodown"
+                            label="Frequency of local oscillator on the downconverter if used"
                             type="number"
+                            onChange={handleChange}
                             fullWidth
                             variant="filled"
+                            value={formValues.lodown}
                         />
                         <TextField
+                            name="loup"
                             margin="dense"
                             id="loup"
-                            label="LO Up"
+                            label="Frequency of local oscillator on the upconverter if used"
                             type="number"
+                            onChange={handleChange}
                             fullWidth
                             variant="filled"
+                            value={formValues.loup}
                         />
                     </DialogContent>
-                    <DialogActions>
+                    <DialogActions style={{margin: '0px 20px 20px 0px'}}>
                         <Button onClick={() => setOpenAddDialog(false)} color="primary">
                             Cancel
                         </Button>
-                        <Button onClick={() => handleAddNewRig()} color="primary">
-                            Add
+                        <Button onClick={() => handleAddNewRig()} color="primary" variant="contained">
+                            Submit
                         </Button>
                     </DialogActions>
                 </Dialog>
