@@ -214,13 +214,8 @@ EnhancedTableToolbar.propTypes = {
 
 export default function RigTable() {
     const { socket } = useSocket();
-    const [rigs, setRigs] = useState([]);
-    const [selected, setSelected] = useState([]);
-    const [pageSize, setPageSize] = useState(5);
-    const [loading, setLoading] = useState(false);
-    const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
-    const [openAddDialog, setOpenAddDialog] = useState(false);
-    const [formValues, setFormValues] = useState({
+    const defaultRig = {
+        id: null,
         name: '',
         host: 'localhost',
         port: 4532,
@@ -229,7 +224,14 @@ export default function RigTable() {
         vfotype: 'normal',
         lodown: 0,
         loup: 0,
-    });
+    };
+    const [rigs, setRigs] = useState([]);
+    const [selected, setSelected] = useState([]);
+    const [pageSize, setPageSize] = useState(5);
+    const [loading, setLoading] = useState(false);
+    const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
+    const [openAddDialog, setOpenAddDialog] = useState(false);
+    const [formValues, setFormValues] = useState(defaultRig);
 
     const columns = [
         { field: 'name', headerName: 'Name', flex: 1 },
@@ -261,21 +263,28 @@ export default function RigTable() {
         };
     }, [socket]);
 
-    function handleAddNewRig() {
+    function handleFormSubmit() {
         setLoading(true);
-        socket.emit('data_submission', 'submit-rig', formValues, (response) => {
+        const command = formValues.id ? 'edit-rig' : 'submit-rig';
+        socket.emit('data_submission', command, formValues, (response) => {
             if (response.success) {
                 setOpenAddDialog(false);
                 setRigs(response.data);
-                enqueueSnackbar('Rig added successfully', {
-                    variant: 'success',
-                    autoHideDuration: 5000,
-                });
+                enqueueSnackbar(
+                    formValues.id ? 'Rig edited successfully' : 'Rig added successfully',
+                    {
+                        variant: 'success',
+                        autoHideDuration: 5000,
+                    }
+                );
             } else {
-                enqueueSnackbar('Failed to add rig', {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
+                enqueueSnackbar(
+                    formValues.id ? 'Failed to edit rig' : 'Failed to add rig',
+                    {
+                        variant: 'error',
+                        autoHideDuration: 5000,
+                    }
+                );
             }
             setLoading(false);
         });
@@ -284,9 +293,7 @@ export default function RigTable() {
     function handleDelete() {
         setLoading(true);
         socket.emit('data_submission', 'delete-rig', selected, (response) => {
-            console.info(response);
             if (response.success) {
-                console.info(response.data);
                 setRigs(response.data);
                 enqueueSnackbar('Rig(s) deleted successfully', {
                     variant: 'success',
@@ -322,9 +329,6 @@ export default function RigTable() {
                 onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                 rowsPerPageOptions={[5, 10, 25]}
                 getRowId={(row) => row.id}
-                initialState={{
-                    pagination: { paginationModel: { pageSize: 5 } },
-                }}
                 sx={{
                     border: 0,
                     marginTop: 2,
@@ -337,12 +341,20 @@ export default function RigTable() {
                         },
                 }}
             />
-
             <Stack direction="row" spacing={2} style={{marginTop: 15}}>
-                <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
+                <Button variant="contained" onClick={() => {
+                    setFormValues(defaultRig);
+                    setOpenAddDialog(true);
+                }}>
                     Add
                 </Button>
-                <Button variant="contained" disabled={selected.length !== 1}>
+                <Button variant="contained" disabled={selected.length !== 1} onClick={() => {
+                    const rigToEdit = rigs.find((rig) => rig.id === selected[0]);
+                    if (rigToEdit) {
+                        setFormValues(rigToEdit);
+                        setOpenAddDialog(true);
+                    }
+                }}>
                     Edit
                 </Button>
                 <Button
@@ -354,8 +366,6 @@ export default function RigTable() {
                     Delete
                 </Button>
             </Stack>
-
-            {/* Dialog for adding new rigs */}
             <Dialog open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
                 <DialogTitle>Add Radio Rig</DialogTitle>
                 <DialogContent>
@@ -445,7 +455,7 @@ export default function RigTable() {
                     <Button onClick={() => setOpenAddDialog(false)} color="primary">
                         Cancel
                     </Button>
-                    <Button onClick={() => handleAddNewRig()} color="primary" variant="contained">
+                    <Button onClick={() => handleFormSubmit()} color="primary" variant="contained">
                         Submit
                     </Button>
                 </DialogActions>

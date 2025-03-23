@@ -538,6 +538,8 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
         if isinstance(rig_id, str):
             rig_id = uuid.UUID(rig_id)
 
+        del data['added']
+        del data['updated']
         del data['id']
 
         # Optionally check if the record exists
@@ -1031,6 +1033,7 @@ async def edit_satellite_tle_source(
         await session.commit()
         await session.refresh(source)
         return {"success": True, "data": source}
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error editing satellite TLE source: {e}")

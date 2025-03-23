@@ -73,9 +73,6 @@ export default function AntennaRotatorTable() {
                 onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                 rowsPerPageOptions={[5, 10, 25]}
                 getRowId={(row) => row.id}
-                initialState={{
-                    pagination: { paginationModel: { pageSize: 5 } },
-                }}
                 sx={{
                     border: 0,
                     marginTop: 2,
