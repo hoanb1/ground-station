@@ -234,14 +234,14 @@ export default function RigTable() {
     const [formValues, setFormValues] = useState(defaultRig);
 
     const columns = [
-        { field: 'name', headerName: 'Name', flex: 1 },
-        { field: 'host', headerName: 'Host', flex: 1 },
-        { field: 'port', headerName: 'Port', type: 'number', flex: 1 },
-        { field: 'radiotype', headerName: 'Radio Type', flex: 1 },
-        { field: 'pttstatus', headerName: 'PTT Status', flex: 1 },
-        { field: 'vfotype', headerName: 'VFO Type', flex: 1 },
-        { field: 'lodown', headerName: 'LO Down', type: 'number', flex: 1 },
-        { field: 'loup', headerName: 'LO Up', type: 'number', flex: 1 },
+        { field: 'name', headerName: 'Name', flex: 1, minWidth: 150},
+        { field: 'host', headerName: 'Host', flex: 1, minWidth: 150 },
+        { field: 'port', headerName: 'Port', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'radiotype', headerName: 'Radio Type', flex: 1, minWidth: 150 },
+        { field: 'pttstatus', headerName: 'PTT Status', flex: 1, minWidth: 150 },
+        { field: 'vfotype', headerName: 'VFO Type', flex: 1, minWidth: 50 },
+        { field: 'lodown', headerName: 'LO Down', type: 'number', flex: 1, minWidth: 60 },
+        { field: 'loup', headerName: 'LO Up', type: 'number', flex: 1, minWidth: 60 },
     ];
 
     useEffect(() => {

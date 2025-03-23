@@ -179,7 +179,7 @@ const MapSlider = function ({handleSliderChange}) {
             bottom: 10,
             position: 'absolute',
             left: '0%',
-            zIndex: 999,
+            zIndex: 400,
             textAlign: 'center',
             opacity: 0.7,
         }}>

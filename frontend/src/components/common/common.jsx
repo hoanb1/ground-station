@@ -210,7 +210,7 @@ export const MapArrowControls = function ({mapObject}) {
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            zIndex: 400,
+            zIndex: 500,
             width: 115,
         }}>
             <Fab size={"small"} variant="contained" color="primary" style={{margin: 0}}

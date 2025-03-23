@@ -36,15 +36,15 @@ export default function AntennaRotatorTable() {
     const [formValues, setFormValues] = useState(defaultRotator)
 
     const columns = [
-        { field: 'name', headerName: 'Name', flex: 1 },
-        { field: 'host', headerName: 'Host', flex: 1 },
-        { field: 'port', headerName: 'Port', type: 'number', flex: 1 },
-        { field: 'minaz', headerName: 'Min Az', type: 'number', flex: 1 },
-        { field: 'maxaz', headerName: 'Max Az', type: 'number', flex: 1 },
-        { field: 'minel', headerName: 'Min El', type: 'number', flex: 1 },
-        { field: 'maxel', headerName: 'Max El', type: 'number', flex: 1 },
-        { field: 'aztype', headerName: 'Az Type', type: 'number', flex: 1 },
-        { field: 'azendstop', headerName: 'Az Endstop', type: 'number', flex: 1 },
+        { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
+        { field: 'host', headerName: 'Host', flex: 1, minWidth: 150 },
+        { field: 'port', headerName: 'Port', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'minaz', headerName: 'Min Az', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'maxaz', headerName: 'Max Az', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'minel', headerName: 'Min El', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'maxel', headerName: 'Max El', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'aztype', headerName: 'Az Type', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'azendstop', headerName: 'Az Endstop', type: 'number', flex: 1, minWidth: 80 },
     ];
 
     useEffect(() => {
