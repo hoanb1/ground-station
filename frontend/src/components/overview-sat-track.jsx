@@ -18,7 +18,6 @@ import {duration, styled} from "@mui/material/styles";
 import createTerminatorLine from './terminator-line.jsx';
 import {getSunMoonCoords} from "./sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './icons.jsx';
-import {getAllSatellites, HAMTLEs, MERIDIANTLEs, NOAATLEs} from './tles.jsx';
 import SettingsIsland from "./map-settings.jsx";
 import {Box, Button, Fab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
@@ -39,12 +38,6 @@ import {
 import { useLocalStorageState } from '@toolpad/core';
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from './tracking-logic.jsx';
 import {HOME_LON, HOME_LAT} from "./common.jsx";
-import ArrowUpwardIcon from '@mui/icons-material/ArrowUpward';
-import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
-import IconButton from "@mui/material/IconButton";
-import {enqueueSnackbar} from "notistack";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 

@@ -1,7 +1,7 @@
 import * as React from 'react';
 import {Alert, AlertTitle, Box, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {useEffect, useState} from "react";
-import {useSocket} from "./socket.jsx";
+import {useSocket} from "../socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import Typography from "@mui/material/Typography";
 import Tooltip from "@mui/material/Tooltip";
@@ -26,7 +26,7 @@ import {
     gridClasses
 } from '@mui/x-data-grid';
 import MuiPagination from '@mui/material/Pagination';
-import {betterDateTimes, humanizeDate, betterStatusValue, renderCountryFlags, humanizeFrequency} from './common.jsx';
+import {betterDateTimes, humanizeDate, betterStatusValue, renderCountryFlags, humanizeFrequency} from '../common.jsx';
 
 
 function Pagination({ page, onPageChange, className }) {

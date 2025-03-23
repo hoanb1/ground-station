@@ -14,9 +14,9 @@ import {
     DialogActions,
     TextField
 } from "@mui/material";
-import {useSocket} from "./socket.jsx";
+import {useSocket} from "../socket.jsx";
 import {enqueueSnackbar} from "notistack";
-import {betterDateTimes, humanizeDate} from "./common.jsx";
+import {betterDateTimes, humanizeDate} from "../common.jsx";
 
 const paginationModel = {page: 0, pageSize: 10};
 

@@ -8,7 +8,7 @@ import {
     ListItemText,
     Paper,
 } from "@mui/material";
-import { GroundStationLogoGreenBlue } from "./icons.jsx"; // adjust the path as needed
+import { GroundStationLogoGreenBlue } from "../icons.jsx"; // adjust the path as needed
 
 const AboutPage = () => {
     return (
