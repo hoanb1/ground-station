@@ -12,7 +12,7 @@ import {
     DialogContent,
     DialogActions,
     TextField,
-    Stack, Select, MenuItem,
+    Stack, Select, MenuItem, FormControl, InputLabel,
 } from "@mui/material";
 import {useSocket} from "../common/socket.jsx";
 import PropTypes from "prop-types";
@@ -372,15 +372,17 @@ export default function TLESourcesTable() {
                             onChange={handleInputChange}
                             fullWidth
                         />
-                        <Select
-                            label="Format"
-                            name="format"
-                            value={formDialogValues.format || ''}
-                            onChange={handleInputChange}
-                            fullWidth
-                         variant={"filled"}>
-                            <MenuItem value="3le">3LE</MenuItem>
-                        </Select>
+                        <FormControl fullWidth variant="filled">
+                            <InputLabel id="format-label">Format</InputLabel>
+                            <Select
+                                label="Format"
+                                name="format"
+                                value={formDialogValues.format || ''}
+                                onChange={handleInputChange}
+                             variant={'filled'}>
+                                <MenuItem value="3le">3LE</MenuItem>
+                            </Select>
+                        </FormControl>
                     </Stack>
                 </DialogContent>
                 <DialogActions>

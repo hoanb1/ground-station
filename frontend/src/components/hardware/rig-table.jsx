@@ -21,7 +21,7 @@ import Switch from '@mui/material/Switch';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
 import { visuallyHidden } from '@mui/utils';
-import {Button, DialogContentText, TextField} from "@mui/material";
+import {Button, DialogContentText, FormControl, InputLabel, MenuItem, Select, TextField} from "@mui/material";
 import Stack from "@mui/material/Stack";
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
@@ -137,6 +137,7 @@ function EnhancedTableHead(props) {
                 </TableCell>
                 {headCells.map((headCell) => (
                     <TableCell
+                        style={{ fontWeight: 'bold' }}
                         key={headCell.id}
                         align={headCell.numeric ? 'right' : 'left'}
                         padding={headCell.disablePadding ? 'none' : 'normal'}
@@ -411,6 +412,7 @@ export default function RigTable() {
                             label="Host"
                             type="text"
                             fullWidth
+                            value={"localhost"}
                             variant="filled"
                         />
                         <TextField
@@ -418,25 +420,31 @@ export default function RigTable() {
                             id="port"
                             label="Port"
                             type="number"
+                            value={4532}
                             fullWidth
                             variant="filled"
                         />
-                        <TextField
-                            margin="dense"
-                            id="radiotype"
-                            label="Radio Type"
-                            type="text"
-                            fullWidth
-                            variant="filled"
-                        />
-                        <TextField
-                            margin="dense"
-                            id="pttstatus"
-                            label="PTT Status"
-                            type="number"
-                            fullWidth
-                            variant="filled"
-                        />
+                        <FormControl margin="dense" fullWidth variant="filled">
+                            <InputLabel htmlFor="radiotype">Radio Type</InputLabel>
+                            <Select
+                                id="radiotype"
+                                label="Radio Type"
+                                value={"rx"}
+                             variant={'filled'}>
+                                <MenuItem value="rx">RX</MenuItem>
+                            </Select>
+                        </FormControl>
+                        <FormControl style={{marginTop: 5}} fullWidth variant="filled">
+                            <InputLabel htmlFor="grouped-select">Group</InputLabel>
+                            <Select
+                                id="pttstatus"
+                                label="PTT Status"
+                                name="pttstatus"
+                                value={'normal'}
+                             variant={'filled'}>
+                                <MenuItem value={"normal"}>Normal</MenuItem>
+                            </Select>
+                        </FormControl>
                         <TextField
                             margin="dense"
                             id="vfotype"
