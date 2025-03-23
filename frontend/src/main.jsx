@@ -100,7 +100,7 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
-        <SocketProvider>
+        <SocketProvider >
             <AuthProvider>
                 <RouterProvider router={router} />
             </AuthProvider>

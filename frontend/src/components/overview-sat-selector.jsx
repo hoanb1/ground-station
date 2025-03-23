@@ -13,7 +13,7 @@ import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
 
 const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection}) {
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [satGroups, setSatGroups] = useState([]);
     const [formGroupSelectError, setFormGroupSelectError] = useState(false);
     const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('overview-satellite-groupid', "");

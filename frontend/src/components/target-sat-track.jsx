@@ -208,7 +208,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                                   initialShowTerminatorLine=true, initialShowTooltip=true, initialTileLayerID="stadiadark",
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=240 }) {
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [satelliteName, setSatelliteName] = useState(null);
     const [satelliteLat, setSatelliteLat] = useState(null);
     const [satelliteLon, setSatelliteLon] = useState(null);

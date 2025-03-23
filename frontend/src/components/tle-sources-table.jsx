@@ -102,7 +102,7 @@ function LinearWithValueLabel({progress}) {
 }
 
 const SynchronizeTLEsCard = function () {
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
     const [progress, setProgress] = useLocalStorageState('tle-source-sync-progress', {});
 
@@ -186,7 +186,7 @@ const SynchronizeTLEsCard = function () {
 
 
 export default function TLESourcesTable() {
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [rows, setRows] = useState([]);
     const [formDialogOpen, setFormDialogOpen] = useState(false);
     const [selectedRows, setSelectedRows] = useState([]);

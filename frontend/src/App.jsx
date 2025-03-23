@@ -34,7 +34,7 @@ const BRANDING = {
 
 
 export default function App(props) {
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [loggedIn, setLoggedIn] = useState(false);
     const dashboardTheme = setupTheme();
     const { session, logIn, logOut } = useAuth();
@@ -191,12 +191,9 @@ export default function App(props) {
                 theme={dashboardTheme}
                 authentication={authentication}
                 session={session}
-                branding={BRANDING}>
-                    {session?.user?.token ? (
-                        <Outlet/>
-                    ) : (
-                        <LoginForm />
-                    )}
+                branding={BRANDING}
+            >
+                <Outlet/>
             </ReactRouterAppProvider>
         </SnackbarProvider>
     );

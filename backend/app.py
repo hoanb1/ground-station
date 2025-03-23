@@ -54,10 +54,11 @@ app.add_middleware(
 )
 
 @sio.event
-async def connect(sid, environ):
+async def connect(sid, environ, auth=None):
     client_ip = environ.get("REMOTE_ADDR")
-    logger.info(f'Client {sid} from {client_ip} connected')
+    logger.info(f'Client {sid} from {client_ip} connected, auth: {auth}')
     SESSIONS[sid] = environ
+
 
 @sio.event
 async def disconnect(sid, environ):

@@ -51,7 +51,7 @@ function SatelliteList({initialNoradId, groupOfSats, handleSelectSatelliteId}) {
 }
 
 const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelliteId }) => {
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [satGroups, setSatGroups] = useState([]);
     const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('target-satellite-groupid', "");
     const [groupOfSats, setGroupOfSats] = useState([]);

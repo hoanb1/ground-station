@@ -271,23 +271,29 @@ const createPreviewComponent = (mini) => {
 };
 
 export default function Layout() {
-    const socket = useSocket();
     const [ loading, setLoading ] = useState(true);
-    const user = useAuth();
-
-    const handleMainSpinningCircleClose = () => {
-        setLoading(false);
-    };
+    const { socket } = useSocket();
 
     useEffect(() => {
-        console.info('user from Layout', user);
+        if (socket) {
+            socket.on("connect", () => {
+                setLoading(false);
+            });
 
-        // Cleanup on unmount
+            socket.on("disconnect", () => {
+                setLoading(true);
+            });
+        }
+
         return () => {
+            if (socket) {
+                socket.off("connect");
+                socket.off("disconnect");
+            }
 
         };
-    }, [user]);
-
+    }, [socket]);
+    
     return (
             <DashboardLayout defaultSidebarCollapsed slots={{
                 appTitle: CustomAppTitle,
@@ -295,7 +301,13 @@ export default function Layout() {
                 toolbarAccount: () => {},
                 sidebarFooter: SidebarFooterAccount
             }}>
-                <Outlet />
+                {loading ? (
+                    <Backdrop open={loading}>
+                        <CircularProgress color="inherit"/>
+                    </Backdrop>
+                ) : (
+                    <Outlet/>
+                )}
             </DashboardLayout>
     );
 }

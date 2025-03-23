@@ -11,13 +11,13 @@ export const useAuth = () => {
 };
 
 export const AuthProvider = ({ children }) => {
-    const socket = useSocket();
+    const { socket, handleTokenChange } = useSocket();
     const [session, setSession] = useState({
         user: {
             name: null,
             email: null,
             image: null,
-            token: null,
+            token: true,
         }
     });
 
@@ -28,6 +28,7 @@ export const AuthProvider = ({ children }) => {
             if (response.success && response.token) {
                 console.log('auth success with token', response.token);
                 setSession({ user: {...response.user, token: response.token} });
+                handleTokenChange(response.token);
                 enqueueSnackbar('Logged in successfully', {
                     variant: 'success',
                     autoHideDuration: 5000,

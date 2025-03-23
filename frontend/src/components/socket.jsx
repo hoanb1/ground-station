@@ -1,9 +1,6 @@
-import React, { createContext, useContext, useEffect, useState } from 'react';
-import io from 'socket.io-client';
+import React, {createContext, useCallback, useContext, useEffect, useState} from 'react';
 import { useSnackbar } from 'notistack';
 import { Manager } from "socket.io-client";
-import {Backdrop} from "@mui/material";
-import CircularProgress from "@mui/material/CircularProgress";
 
 // Create the context
 const SocketContext = createContext();
@@ -12,7 +9,12 @@ const SocketContext = createContext();
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const { enqueueSnackbar } = useSnackbar();
+    const [token, setToken] = useState(null);
 
+    const handleTokenChange = useCallback((token) => {
+        setToken(token);
+    }, []);
+    
     useEffect(() => {
         // Initialize socket connection (replace URL with your server's URL)
         const host = window.location.hostname;
@@ -29,7 +31,7 @@ export const SocketProvider = ({ children }) => {
     }, []);
 
     return (
-        <SocketContext.Provider value={socket}>
+        <SocketContext.Provider value={{socket, handleTokenChange}}>
             {children}
         </SocketContext.Provider>
     );

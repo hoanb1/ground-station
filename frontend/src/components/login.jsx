@@ -8,7 +8,7 @@ import { useAuth } from "./auth.jsx";
 
 
 const LoginForm = ({handleSignedInCallback}) => {
-    const socket = useSocket();
+    const {socket, handleTokenChange} = useSocket();
     const { enqueueSnackbar } = useSnackbar();
     const [loading, setLoading] = useState(false);
     const { user, logIn, logOut } = useAuth();
@@ -16,7 +16,6 @@ const LoginForm = ({handleSignedInCallback}) => {
     const providers = [{ id: 'credentials', name: 'Email and password' }];
 
     const signIn = async (provider, formData) => {
-        console.info('signIn...', provider, formData);
         return new Promise((resolve) => {
             const email = formData?.get('email');
             const password = formData?.get('password');

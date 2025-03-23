@@ -5,7 +5,7 @@ import {useSocket} from "./socket.jsx";
 import {enqueueSnackbar} from "notistack";
 
 const UsersTable = () => {
-    const socket = useSocket();
+    const { socket } = useSocket();
     const [rows, setRows] = useState([]);
     const [selectedRows, setSelectedRows] = useState([]);
     const [loading, setLoading] = useState(false);
