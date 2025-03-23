@@ -112,6 +112,11 @@ export default function AntennaRotatorTable() {
                 onRowSelectionModelChange={(selected)=>{
                     setSelected(selected);
                 }}
+                initialState={{
+                    sorting: {
+                        sortModel: [{ field: 'name', sort: 'desc' }],
+                    },
+                }}
                 selectionModel={selected}
                 pageSize={pageSize}
                 onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}

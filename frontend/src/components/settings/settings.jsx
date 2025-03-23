@@ -32,6 +32,7 @@ import SatelliteTable from "../satellites/satellite-table.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "../satellites/satellite-groups.jsx";
 import UsersTable from "./users.jsx";
+import {enqueueSnackbar} from "notistack";
 
 
 export function SettingsTabSatellites() {
@@ -458,7 +459,7 @@ const PreferencesForm = () => {
 };
 
 const LocationPage = () => {
-    // cityValue holds either a string (free text) or an object (selected from the JSON).
+    const [locationLoading, setLocationLoading] = useState(false);
     const [cityValue, setCityValue] = useState('');
     const [location, setLocation] = useState({ lat: HOME_LAT, lng: HOME_LON });
     const [qth, setQth] = useState(getMaidenhead(51.505, -0.09));
@@ -496,6 +497,11 @@ const LocationPage = () => {
         return new Promise((resolve, reject) => {
             navigator.geolocation.getCurrentPosition(
                 (position) => {
+                    enqueueSnackbar("Your location has been retrieved successfully", {
+                        variant: 'success',
+                        autoHideDuration: 5000,
+                    });
+                    setLocationLoading(false);
                     resolve({
                         lat: position.coords.latitude,
                         lng: position.coords.longitude,
@@ -503,10 +509,15 @@ const LocationPage = () => {
                 },
                 (error) => {
                     reject(new Error('Unable to retrieve your location: ' + error.message));
+                    enqueueSnackbar("Unable to retrieve your location", {
+                        variant: 'filled',
+                        autoHideDuration: 5000,
+                    });
+                    setLocationLoading(false);
                 },
                 {
                     enableHighAccuracy: true,
-                    timeout: 10000,
+                    timeout: 5000,
                     maximumAge: 0,
                 }
             );
@@ -552,12 +563,15 @@ const LocationPage = () => {
                                 <Button
                                     variant="contained"
                                     color="secondary"
+                                    loading={locationLoading}
                                     onClick={async () => {
                                         try {
+                                            setLocationLoading(true);
                                             const currentLocation = await getCurrentLocation();
                                             setLocation(currentLocation);
                                         } catch (error) {
                                             console.error(error.message);
+                                            setLocationLoading(false);
                                         }
                                     }}
                                 >

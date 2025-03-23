@@ -325,6 +325,11 @@ export default function RigTable() {
                 onRowSelectionModelChange={(selected)=>{
                     setSelected(selected);
                 }}
+                initialState={{
+                    sorting: {
+                        sortModel: [{ field: 'name', sort: 'desc' }],
+                    },
+                }}
                 pageSize={pageSize}
                 onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                 rowsPerPageOptions={[5, 10, 25]}

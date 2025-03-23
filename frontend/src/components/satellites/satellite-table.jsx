@@ -162,8 +162,6 @@ const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
 };
 
 
-
-
 const SatelliteTable = React.memo(function () {
     const [page, setPage] = useState(0);
     const [satGroups, setSatGroups] = useState([]);
@@ -356,6 +354,9 @@ const SatelliteTable = React.memo(function () {
                     checkboxSelection={false}
                     initialState={{
                         pagination: { paginationModel: { pageSize: 10 } },
+                        sorting: {
+                            sortModel: [{ field: 'transmitters', sort: 'desc' }],
+                        },
                     }}
                     slots={{
                         pagination: CustomPagination,

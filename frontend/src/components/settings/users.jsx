@@ -154,6 +154,9 @@ const UsersTable = () => {
                     }}
                     initialState={{
                         pagination: { paginationModel: { pageSize: 5 } },
+                        sorting: {
+                            sortModel: [{ field: 'fullname', sort: 'desc' }],
+                        },
                     }}
                     sx={{
                         border: 0,
