@@ -82,9 +82,6 @@ export default function AntennaRotatorTable() {
                         },
                 }}
             />
-
-
-
             <Stack direction="row" spacing={2} style={{marginTop: 15}}>
                 <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
                     Add
