@@ -22,11 +22,8 @@ export const AuthProvider = ({ children }) => {
     });
 
     const logIn = (email, password, resolve) => {
-        console.info('logIn...', email, password);
         socket.emit('auth_request', 'login', {email, password}, (response) => {
-            console.log('auth_request', response);
             if (response.success && response.token) {
-                console.log('auth success with token', response.token);
                 setSession({ user: {...response.user, token: response.token} });
                 handleTokenChange(response.token);
                 enqueueSnackbar('Logged in successfully', {

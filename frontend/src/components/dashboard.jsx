@@ -280,6 +280,10 @@ export default function Layout() {
                 setLoading(false);
             });
 
+            socket.on("error", () => {
+                setLoading(true);
+            });
+
             socket.on("disconnect", () => {
                 setLoading(true);
             });
@@ -289,6 +293,7 @@ export default function Layout() {
             if (socket) {
                 socket.off("connect");
                 socket.off("disconnect");
+                socket.off("error");
             }
 
         };
