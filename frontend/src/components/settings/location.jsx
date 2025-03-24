@@ -165,6 +165,9 @@ const LocationPage = () => {
             {...location, name: "home", userid: null, id: locationId}, (response) => {
             console.info("Received location from backend", response);
             if (response['success']) {
+                enqueueSnackbar('Location set successfully', {
+                    variant: 'success',
+                })
             } else {
                 enqueueSnackbar('Failed to set location', {
                     variant: 'error',
