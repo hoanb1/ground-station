@@ -24,6 +24,7 @@ import {
 } from '@mui/x-data-grid';
 import MuiPagination from '@mui/material/Pagination';
 import {betterDateTimes, humanizeDate, betterStatusValue, renderCountryFlags, humanizeFrequency} from '../common/common.jsx';
+import SatelliteInfoModal from "./satellite-info.jsx";
 
 
 function Pagination({ page, onPageChange, className }) {
@@ -46,120 +47,6 @@ function Pagination({ page, onPageChange, className }) {
 function CustomPagination(props) {
     return <GridPagination ActionsComponent={Pagination} {...props} />;
 }
-
-const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
-    return (
-        <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
-            <DialogTitle>Satellite Information</DialogTitle>
-            <DialogContent>
-                {selectedSatellite ? (
-                    <Box>
-                        <TableContainer>
-                            <Table>
-                                <TableBody>
-                                    <TableRow>
-                                        <TableCell><strong>Name</strong></TableCell>
-                                        <TableCell>{selectedSatellite['name']}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>NORAD ID</strong></TableCell>
-                                        <TableCell>{selectedSatellite['norad_id']}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>Status</strong></TableCell>
-                                        <TableCell>{betterStatusValue(selectedSatellite['status'])}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>Countries</strong></TableCell>
-                                        <TableCell>{renderCountryFlags(selectedSatellite['countries'])}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>Operator</strong></TableCell>
-                                        <TableCell>{selectedSatellite['operator'] || '-'}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>Launched</strong></TableCell>
-                                        <TableCell>{betterDateTimes(selectedSatellite['launched'])}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>Deployed</strong></TableCell>
-                                        <TableCell>{betterDateTimes(selectedSatellite['deployed'])}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>Decayed</strong></TableCell>
-                                        <TableCell>{betterDateTimes(selectedSatellite['decayed'])}</TableCell>
-                                    </TableRow>
-                                    <TableRow>
-                                        <TableCell><strong>Updated</strong></TableCell>
-                                        <TableCell>{betterDateTimes(selectedSatellite['updated'])}</TableCell>
-                                    </TableRow>
-                                </TableBody>
-                            </Table>
-                        </TableContainer>
-
-                        {/* Existing transmitters table remains unchanged */}
-                        <Box mt={2}>
-                            <h3>Transmitters</h3>
-                            {selectedSatellite['transmitters'] && selectedSatellite['transmitters'].length ? (
-                                <TableContainer>
-                                    <Table>
-                                        <TableHead>
-                                            <TableRow style={{fontWeight: 'bold', backgroundColor: '#121212' }}>
-                                                <TableCell><strong>Description</strong></TableCell>
-                                                <TableCell><strong>Type</strong></TableCell>
-                                                <TableCell><strong>Status</strong></TableCell>
-                                                <TableCell><strong>Alive</strong></TableCell>
-                                                <TableCell><strong>Uplink low</strong></TableCell>
-                                                <TableCell><strong>Uplink high</strong></TableCell>
-                                                <TableCell><strong>Uplink drift</strong></TableCell>
-                                                <TableCell><strong>Downlink low</strong></TableCell>
-                                                <TableCell><strong>Downlink high</strong></TableCell>
-                                                <TableCell><strong>Downlink drift</strong></TableCell>
-                                                <TableCell><strong>Mode</strong></TableCell>
-                                                <TableCell><strong>Uplink mode</strong></TableCell>
-                                                <TableCell><strong>Invert</strong></TableCell>
-                                                <TableCell><strong>Baud</strong></TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {selectedSatellite['transmitters'].map((transmitter, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell>{transmitter['description']}</TableCell>
-                                                    <TableCell>{transmitter['type']}</TableCell>
-                                                    <TableCell>{transmitter['status']}</TableCell>
-                                                    <TableCell>{transmitter['alive'] || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['uplink_low']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['uplink_high']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['uplink_drift']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['downlink_low']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['downlink_high']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['downlink_drift']) || "-"}</TableCell>
-                                                    <TableCell>{transmitter['mode'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['uplink_mode'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['invert'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['baud'] || "-"}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
-                            ) : (
-                                <div style={{textAlign: 'center'}}>
-                                    <span>No Transmitters Available</span>
-                                </div>
-                            )}
-                        </Box>
-                    </Box>
-                ) : (
-                    <span>No Satellite Data Available</span>
-                )}
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={handleClose} color="primary">Close</Button>
-            </DialogActions>
-        </Dialog>
-    );
-};
 
 
 const SatelliteTable = React.memo(function () {
