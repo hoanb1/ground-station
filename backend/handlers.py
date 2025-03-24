@@ -301,7 +301,7 @@ async def data_submission_routing(sio, cmd, data, logger):
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data['userid'])
 
             # if there is a location for the user id then skip adding a location for now,
-            # if there are multiple users at some point then we change this login again
+            # if there are multiple users at some point then we change this logic again
             if not locations:
                 add_reply = await crud.add_location(dbsession, data)
                 reply = {'success': add_reply['success'], 'data': None}

@@ -88,11 +88,6 @@ const LocationPage = () => {
                     setLocationId(response['data']['id']);
                     setLocationUserId(response['data']['userid']);
                     reCenterMap(response['data']['lat'], response['data']['lon']);
-                    enqueueSnackbar('Location retrieved successfully', {
-                        variant: 'success',
-                        autoHideDuration: 5000,
-                    });
-
                     setQth(getMaidenhead(response['data']['lat'], response['data']['lon']));
 
                 } else {
@@ -170,10 +165,6 @@ const LocationPage = () => {
             {...location, name: "home", userid: null, id: locationId}, (response) => {
             console.info("Received location from backend", response);
             if (response['success']) {
-                enqueueSnackbar('Location set successfully', {
-                    variant: 'success',
-                    autoHideDuration: 5000,
-                })
             } else {
                 enqueueSnackbar('Failed to set location', {
                     variant: 'error',
