@@ -341,7 +341,8 @@ async def edit_location(session: AsyncSession, data: dict) -> dict:
         # Extract location_id from data
         location_id = data.pop("id", None)
         if not location_id:
-            return {"success": False, "error": "Location ID is required."}
+            raise Exception("id is required.")
+
         location_id = uuid.UUID(location_id)
 
         # Ensure the location exists first

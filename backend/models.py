@@ -65,17 +65,17 @@ class Satellites(Base):
     tle1 = Column(String, nullable=False)
     tle2 = Column(String, nullable=False)
     status = Column(String, nullable=True)
-    decayed = Column(DateTime, nullable=True)
-    launched = Column(DateTime, nullable=True)
-    deployed = Column(DateTime, nullable=True)
+    decayed = Column(DateTime(timezone=True), nullable=True)
+    launched = Column(DateTime(timezone=True), nullable=True)
+    deployed = Column(DateTime(timezone=True), nullable=True)
     website = Column(String, nullable=True)
     operator = Column(String, nullable=True)
     countries = Column(String, nullable=True)
     citation = Column(String, nullable=True)
     is_frequency_violator = Column(Boolean, nullable=True, default=False)
     associated_satellites = Column(String, nullable=True)
-    added = Column(DateTime, nullable=False,  default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False,  default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Transmitters(Base):
     __tablename__ = 'transmitters'
@@ -105,8 +105,8 @@ class Transmitters(Base):
     itu_notification = Column(JSON, nullable=True)
     frequency_violation = Column(Boolean, nullable=True, default=False)
     unconfirmed = Column(Boolean, nullable=True, default=False)
-    added = Column(DateTime, nullable=True, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=True, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Rigs(Base):
     __tablename__ = 'rigs'
@@ -119,8 +119,8 @@ class Rigs(Base):
     vfotype = Column(Integer, nullable=False)
     lodown = Column(Integer, nullable=False)
     loup = Column(Integer, nullable=False)
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Rotators(Base):
     __tablename__ = 'rotators'
@@ -134,8 +134,8 @@ class Rotators(Base):
     maxel = Column(Integer, nullable=False)
     aztype = Column(Integer, nullable=False)
     azendstop = Column(Integer, nullable=False)
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Locations(Base):
     __tablename__ = 'locations'
@@ -144,8 +144,8 @@ class Locations(Base):
     name = Column(String, nullable=False)
     lat = Column(String, nullable=False)
     lon = Column(String, nullable=False)
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Users(Base):
     __tablename__ = 'users'
@@ -154,8 +154,8 @@ class Users(Base):
     status = Column(Enum('active', 'inactive', name='user_status_enum'), nullable=False, default='active')
     password = Column(String, nullable=False)
     fullname = Column(String, nullable=False)
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class Preferences(Base):
     __tablename__ = 'preferences'
@@ -163,8 +163,8 @@ class Preferences(Base):
     userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
     name = Column(String, nullable=False)
     value = Column(String, nullable=False)
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 class SatelliteTLESources(Base):
     __tablename__ = 'satellite_tle_sources'
@@ -173,8 +173,8 @@ class SatelliteTLESources(Base):
     identifier = Column(String, nullable=False)
     url = Column(String, nullable=False)
     format = Column(String, nullable=False, default='3le')
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
 
 class SatelliteGroupType(str, PyEnum):
@@ -190,5 +190,5 @@ class SatelliteGroups(Base):
     userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
     type = Column(Enum(SatelliteGroupType), nullable=False, default=SatelliteGroupType.USER)
     satellite_ids = Column(JSON, nullable=True)
-    added = Column(DateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(DateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC))
+    updated = Column(DateTime(timezone=True), nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
