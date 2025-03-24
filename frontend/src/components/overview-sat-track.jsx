@@ -292,8 +292,9 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 positions={paths.past}
                 pathOptions={{
                     color: pastOrbitLineColor,
-                    weight:1,
-                    opacity:1
+                    weight: 1,
+                    opacity: 0.5,
+                    dashArray: "4 4"
                 }}
             />)
 

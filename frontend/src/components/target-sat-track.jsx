@@ -102,20 +102,20 @@ const MapSlider = function ({handleSliderChange}) {
             label: '0m',
         },
         {
-            value: 15,
-            label: '+15m',
-        },
-        {
-            value: -15,
-            label: '-15m',
-        },
-        {
             value: 30,
             label: '+30m',
         },
         {
             value: -30,
             label: '-30m',
+        },
+        {
+            value: 60,
+            label: '+60m',
+        },
+        {
+            value: -60,
+            label: '-60m',
         }
     ];
 
@@ -127,7 +127,7 @@ const MapSlider = function ({handleSliderChange}) {
             left: '0%',
             zIndex: 400,
             textAlign: 'center',
-            opacity: 0.7,
+            opacity: 0.8,
         }}>
             <Slider
                 marks={marks}
@@ -138,8 +138,8 @@ const MapSlider = function ({handleSliderChange}) {
                 onChange={(e, value) => {
                     handleSliderChange(value);
                 }}
-                min={-30}
-                max={30}
+                min={-60}
+                max={60}
                 sx={{
                     height: 20,
                     width: '70%',
@@ -177,7 +177,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [pastOrbitLineColor, setPastOrbitLineColor] = useState(initialPastOrbitLineColor);
     const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
-    const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
+    const [orbitProjectionDuration, setOrbitProjectionDuration] = useLocalStorageState('target-orbit-plot-duration', initialOrbitProjectionDuration);
     const [tileLayerID, setTileLayerID] = useLocalStorageState('target-tile-id', initialTileLayerID);
     const [noradId, setNoradId] = useLocalStorageState('target-satellite-noradid', initialNoradId);
     const [groupId, setGroupId] = useLocalStorageState('target-satellite-groupid', initialNoradId);
@@ -323,7 +323,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         }, 1000);
     };
 
-
     function CenterHomeButton() {
         const targetCoordinates = [location.lat, location.lon];
         const handleClick = () => {
@@ -418,7 +417,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 pathOptions={{
                     color: pastOrbitLineColor,
                     weight:1,
-                    opacity:1
+                    opacity:0.5,
+                    dashArray: "5 5"
                 }}
             />)
 
