@@ -37,7 +37,8 @@ import {
 } from "./common/common.jsx";
 import { useLocalStorageState } from '@toolpad/core';
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from './common/tracking-logic.jsx';
-import {HOME_LON, HOME_LAT} from "./common/common.jsx";
+import {enqueueSnackbar} from "notistack";
+import {useSocket} from "./common/socket.jsx";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
@@ -74,30 +75,8 @@ function saveLayoutsToLocalStorage(layouts) {
 }
 
 
-function CenterHomeButton() {
-    const targetCoordinates = [HOME_LAT, HOME_LON];
-    const map = useMap();
-    const handleClick = () => {
-        map.setView(targetCoordinates, map.getZoom());
-    };
 
-    return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
-        <HomeIcon />
-    </Fab>;
-}
 
-function CenterMapButton() {
-    const targetCoordinates = [0, 0];
-    const map = useMap();
-    const handleClick = () => {
-        console.info("centering...");
-        map.setView(targetCoordinates, map.getZoom());
-    };
-
-    return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
-        <FilterCenterFocusIcon />
-    </Fab>;
-}
 
 const ThemedDiv = styled('div')(({theme}) => ({
     backgroundColor: theme.palette.background.paper,
@@ -115,6 +94,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=60 }) {
 
+    const {socket} = useSocket();
     const [showPastOrbitPath, setShowPastOrbitPath] = useLocalStorageState('overview-show-past-orbit', initialShowPastOrbitPath, { codec: CODEC_BOOL });
     const [showFutureOrbitPath, setShowFutureOrbitPath] = useLocalStorageState('overview-show-future-orbit', initialShowFutureOrbitPath, { codec: CODEC_BOOL });
     const [showSatelliteCoverage, setShowSatelliteCoverage] = useLocalStorageState('overview-show-satellite-coverage', initialShowSatelliteCoverage, { codec: CODEC_BOOL });
@@ -139,6 +119,9 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const [mapObject, setMapObject] = useState(null);
     const [gridEditable, setGridEditable] = useState(false);
+    const [location, setLocation] = useState({lat: 0, lon: 0});
+    const [locationId, setLocationId] = useState(null);
+    const [locationUserId, setLocationUserId] = useState(null);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -251,10 +234,29 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         }, 1000);
     };
 
+    function CenterHomeButton() {
+        const targetCoordinates = [location.lat, location.lon];
+        const handleClick = () => {
+            MapObject.setView(targetCoordinates, MapObject.getZoom());
+        };
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
+            <HomeIcon />
+        </Fab>;
+    }
+
+    function CenterMapButton() {
+        const targetCoordinates = [0, 0];
+        const handleClick = () => {
+            MapObject.setView(targetCoordinates, MapObject.getZoom());
+        };
+
+        return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
+            <FilterCenterFocusIcon />
+        </Fab>;
+    }
+
     function FullscreenMapButton() {
         const handleMapFullscreen = () => {
-            console.info(MapObject);
-            console.info(mapObject);
             mapObject.toggleFullscreen();
         };
 
@@ -379,6 +381,32 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
         mapZoomLevel, showTooltip]);
 
+    useEffect(() => {
+        socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
+            if (response['success']) {
+                if (response['data']) {
+                    setLocation({
+                        lat: parseFloat(response['data']['lat']),
+                        lon: parseFloat(response['data']['lon']),
+                    });
+                    setLocationId(response['data']['id']);
+                    setLocationUserId(response['data']['userid']);
+                } else {
+                    enqueueSnackbar('No location found in the backend, please set one', {
+                        variant: 'info',
+                    })
+                }
+            } else {
+                enqueueSnackbar('Failed to get home location from backend', {
+                    variant: 'error',
+                })
+            }
+        });
+        return () => {
+
+        };
+    }, []);
+
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
         saveLayoutsToLocalStorage(allLayouts);
@@ -451,7 +479,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                     />
                 )}
                 {InternationalDateLinePolyline()}
-                <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
+                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.4}/>
                 {showPastOrbitPath? currentPastSatellitesPaths: null}
                 {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                 {currentSatellitesPosition}

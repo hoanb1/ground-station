@@ -120,6 +120,13 @@ async def data_request_routing(sio, cmd, data, logger):
             rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
             reply = {'success': rotators['success'], 'data': rotators.get('data', [])}
 
+        elif cmd == "get-location-for-user-id":
+            logger.info(f'Getting location for user id, data: {data}')
+            locations = await crud.fetch_location_for_userid(dbsession, user_id=data)
+            locations = json.loads(json.dumps(locations, cls=ModelEncoder))
+            logger.info(f'Locations: {locations}')
+            reply = {'success': locations['success'], 'data': locations.get('data', [])}
+
         else:
             logger.info(f'Unknown command: {cmd}')
 
@@ -283,6 +290,35 @@ async def data_submission_routing(sio, cmd, data, logger):
             rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
             reply = {'success': (rotators['success'] & delete_reply['success']),
                      'data': rotators.get('data', [])}
+
+        elif cmd == "submit-location":
+            logger.info(f'Adding location, data: {data}')
+            add_reply = await crud.add_location(dbsession, data)
+            reply = {'success': add_reply['success'], 'data': None}
+
+        elif cmd == "submit-location-for-user-id":
+            logger.info(f'Adding location for user id, data: {data}')
+            locations = await crud.fetch_location_for_userid(dbsession, user_id=data['userid'])
+
+            # if there is a location for the user id then skip adding a location for now,
+            # if there are multiple users at some point then we change this login again
+            if not locations:
+                add_reply = await crud.add_location(dbsession, data)
+                reply = {'success': add_reply['success'], 'data': None}
+            else:
+                # update the location
+                update_reply = await crud.edit_location(dbsession, data)
+                reply = {'success': update_reply['success'], 'data': None}
+
+        elif cmd == "edit-location":
+            logger.info(f'Editing location, data: {data}')
+            edit_reply = await crud.edit_location(dbsession, data)
+            reply = {'success': edit_reply['success'], 'data': None}
+
+        elif cmd == "delete-location":
+            logger.info(f'Delete location, data: {data}')
+            delete_reply = await crud.delete_location(dbsession, data)
+            reply = {'success': delete_reply['success'], 'data': None}
 
         else:
             logger.info(f'Unknown command: {cmd}')

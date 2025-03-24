@@ -34,7 +34,6 @@ import {
 } from "./common/common.jsx";
 import {TitleBar} from "./common/common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
-import {HOME_LON, HOME_LAT} from "./common/common.jsx";
 import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "./common/tracking-logic.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "./common/socket.jsx";
@@ -78,59 +77,6 @@ function saveLayoutsToLocalStorage(layouts) {
     localStorage.setItem(gridLayoutStoreName, JSON.stringify(layouts));
 }
 
-function CenterHomeButton() {
-    const targetCoordinates = [HOME_LAT, HOME_LON];
-    const handleClick = () => {
-        MapObject.setView(targetCoordinates, MapObject.getZoom());
-    };
-
-    return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
-        <HomeIcon />
-    </Fab>;
-}
-
-function CenterMapButton() {
-    const targetCoordinates = [0, 0];
-    const handleClick = () => {
-        MapObject.setView(targetCoordinates, MapObject.getZoom());
-    };
-
-    return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
-        <FilterCenterFocusIcon />
-    </Fab>;
-}
-
-function FullscreenMapButton() {
-    const handleMapFullscreen = () => {
-        const mapContainer = MapObject.getContainer();
-        if (!document.fullscreenElement) {
-            if (mapContainer.requestFullscreen) {
-                mapContainer.requestFullscreen();
-            } else if (mapContainer.mozRequestFullScreen) {
-                mapContainer.mozRequestFullScreen();
-            } else if (mapContainer.webkitRequestFullscreen) {
-                mapContainer.webkitRequestFullscreen();
-            } else if (mapContainer.msRequestFullscreen) {
-                mapContainer.msRequestFullscreen();
-            }
-        } else {
-            // Exit fullscreen if we're already in it
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.mozCancelFullScreen) {
-                document.mozCancelFullScreen();
-            } else if (document.webkitExitFullscreen) {
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) {
-                document.msExitFullscreen();
-            }
-        }
-    };
-
-    return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
-        <FullscreenIcon />
-    </Fab>;
-}
 
 function CenterSatelliteButton() {
     const targetCoordinates = [0, 0];
@@ -241,6 +187,9 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [gridEditable, setGridEditable] = useState(false);
     const [satelliteData, setSatelliteData] = useState({});
     const [sliderTimeOffset, setSliderTimeOffset] = useState(0);
+    const [location, setLocation] = useState({lat: 0, lon: 0});
+    const [locationId, setLocationId] = useState(null);
+    const [locationUserId, setLocationUserId] = useState(null);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -373,6 +322,61 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             map.target.invalidateSize();
         }, 1000);
     };
+
+
+    function CenterHomeButton() {
+        const targetCoordinates = [location.lat, location.lon];
+        const handleClick = () => {
+            MapObject.setView(targetCoordinates, MapObject.getZoom());
+        };
+
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
+            <HomeIcon />
+        </Fab>;
+    }
+
+    function CenterMapButton() {
+        const targetCoordinates = [0, 0];
+        const handleClick = () => {
+            MapObject.setView(targetCoordinates, MapObject.getZoom());
+        };
+
+        return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
+            <FilterCenterFocusIcon />
+        </Fab>;
+    }
+
+    function FullscreenMapButton() {
+        const handleMapFullscreen = () => {
+            const mapContainer = MapObject.getContainer();
+            if (!document.fullscreenElement) {
+                if (mapContainer.requestFullscreen) {
+                    mapContainer.requestFullscreen();
+                } else if (mapContainer.mozRequestFullScreen) {
+                    mapContainer.mozRequestFullScreen();
+                } else if (mapContainer.webkitRequestFullscreen) {
+                    mapContainer.webkitRequestFullscreen();
+                } else if (mapContainer.msRequestFullscreen) {
+                    mapContainer.msRequestFullscreen();
+                }
+            } else {
+                // Exit fullscreen if we're already in it
+                if (document.exitFullscreen) {
+                    document.exitFullscreen();
+                } else if (document.mozCancelFullScreen) {
+                    document.mozCancelFullScreen();
+                } else if (document.webkitExitFullscreen) {
+                    document.webkitExitFullscreen();
+                } else if (document.msExitFullscreen) {
+                    document.msExitFullscreen();
+                }
+            }
+        };
+
+        return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
+            <FullscreenIcon />
+        </Fab>;
+    }
 
     const satelliteUpdate = function (now) {
         if (Object.keys(satelliteData).length !== 0) {
@@ -533,6 +537,32 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor,
         satelliteCoverageColor, sliderTimeOffset, showTooltip, showPastOrbitPath, showFutureOrbitPath]);
 
+    useEffect(() => {
+        socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
+            if (response['success']) {
+                if (response['data']) {
+                    setLocation({
+                        lat: parseFloat(response['data']['lat']),
+                        lon: parseFloat(response['data']['lon']),
+                    });
+                    setLocationId(response['data']['id']);
+                    setLocationUserId(response['data']['userid']);
+                } else {
+                    enqueueSnackbar('No location found in the backend, please set one', {
+                        variant: 'info',
+                    })
+                }
+            } else {
+                enqueueSnackbar('Failed to get home location from backend', {
+                    variant: 'error',
+                })
+            }
+        });
+        return () => {
+
+        };
+    }, []);
+
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
@@ -589,7 +619,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 )}
 
                 {InternationalDateLinePolyline()}
-                <Marker position={[HOME_LAT, HOME_LON]} icon={homeIcon} opacity={0.4}/>
+                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.4}/>
                 {showPastOrbitPath? currentPastSatellitesPaths: null}
                 {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                 {currentSatellitesPosition}

@@ -9,9 +9,6 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
-export const HOME_LAT = 40.6293;
-export const HOME_LON = 22.9474;
-
 export const StyledIslandParent = styled("div")(({ theme }) => ({
     padding: '0rem',
     border: '1px solid #424242',

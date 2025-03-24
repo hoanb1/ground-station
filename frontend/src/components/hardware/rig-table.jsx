@@ -236,7 +236,11 @@ export default function RigTable() {
     const columns = [
         { field: 'name', headerName: 'Name', flex: 1, minWidth: 150},
         { field: 'host', headerName: 'Host', flex: 1, minWidth: 150 },
-        { field: 'port', headerName: 'Port', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'port', headerName: 'Port', type: 'number', flex: 1, minWidth: 80, align: 'right', headerAlign: 'right',
+            valueFormatter: (value) => {
+            return value;
+            }
+        },
         { field: 'radiotype', headerName: 'Radio Type', flex: 1, minWidth: 150 },
         { field: 'pttstatus', headerName: 'PTT Status', flex: 1, minWidth: 150 },
         { field: 'vfotype', headerName: 'VFO Type', flex: 1, minWidth: 50 },

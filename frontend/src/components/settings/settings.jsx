@@ -21,7 +21,6 @@ import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle} 
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Grid from "@mui/material/Grid2";
-import {HOME_LON, HOME_LAT} from "../common/common.jsx";
 import {SimpleVectorCircle} from "../common/icons.jsx";
 import AntennaRotatorTable from "../hardware/rotator-table.jsx";
 import Stack from "@mui/material/Stack";
@@ -33,6 +32,7 @@ import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "../satellites/satellite-groups.jsx";
 import UsersTable from "./users.jsx";
 import {enqueueSnackbar} from "notistack";
+import LocationPage from "./location.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -249,40 +249,6 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://unpkg.com/leaflet@1.7.1/dist/images/marker-shadow.png',
 });
 
-// Function to calculate the Maidenhead grid locator (QTH) from latitude and longitude.
-function getMaidenhead(lat, lon) {
-    let adjLon = lon + 180;
-    let adjLat = lat + 90;
-    // Field (first two letters)
-    const A = Math.floor(adjLon / 20);
-    const B = Math.floor(adjLat / 10);
-    const field = String.fromCharCode(65 + A) + String.fromCharCode(65 + B);
-    // Square (two digits)
-    adjLon = adjLon - A * 20;
-    adjLat = adjLat - B * 10;
-    const C = Math.floor(adjLon / 2);
-    const D = Math.floor(adjLat);
-    const square = C.toString() + D.toString();
-    // Subsquare (final two letters)
-    adjLon = adjLon - C * 2;
-    adjLat = adjLat - D;
-    const E = Math.floor(adjLon * 12);
-    const F = Math.floor(adjLat * 24);
-    const subsquare = String.fromCharCode(97 + E) + String.fromCharCode(97 + F);
-    return field + square + subsquare;
-}
-
-// A helper component that listens for click events on the map.
-function MapClickHandler({ onClick }) {
-    useMapEvents({
-        click: onClick,
-    });
-    return null;
-}
-
-function CloseRoundedIcon() {
-    return null;
-}
 
 const RotatorControlForm = () => {
 
@@ -456,186 +422,4 @@ const PreferencesForm = () => {
                 <Button variant="contained">Save Preferences</Button>
             </Box>
         </Paper>);
-};
-
-const LocationPage = () => {
-    const [locationLoading, setLocationLoading] = useState(false);
-    const [cityValue, setCityValue] = useState('');
-    const [location, setLocation] = useState({ lat: HOME_LAT, lng: HOME_LON });
-    const [qth, setQth] = useState(getMaidenhead(51.505, -0.09));
-    const [loading, setLoading] = useState(false);
-    const [polylines, setPolylines] = useState([]);
-
-    useEffect(() => {
-        const horizontalLine = [
-            [location.lat, -270], // Line spans horizontally across the map at fixed latitude
-            [location.lat, 270]
-        ];
-        const verticalLine = [
-            [-90, location.lng], // Line spans vertically across the map at fixed longitude
-            [90, location.lng]
-        ];
-        setPolylines([horizontalLine, verticalLine]);
-        setQth(getMaidenhead(location.lat, location.lng));
-        
-        return () => {
-            // Optional cleanup logic
-        };
-    }, [location]);
-
-    // Update location when the map is clicked.
-    const handleMapClick = (e) => {
-        const { lat, lng } = e.latlng;
-        setLocation({ lat, lng });
-        setQth(getMaidenhead(lat, lng));
-    };
-
-    const getCurrentLocation = async () => {
-        if (!navigator.geolocation) {
-            throw new Error('Geolocation is not supported by your browser.');
-        }
-        return new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    enqueueSnackbar("Your location has been retrieved successfully", {
-                        variant: 'success',
-                        autoHideDuration: 5000,
-                    });
-                    setLocationLoading(false);
-                    resolve({
-                        lat: position.coords.latitude,
-                        lng: position.coords.longitude,
-                    });
-                },
-                (error) => {
-                    reject(new Error('Unable to retrieve your location: ' + error.message));
-                    enqueueSnackbar("Unable to retrieve your location", {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                    });
-                    setLocationLoading(false);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0,
-                }
-            );
-        });
-    };
-
-    return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
-            <Alert severity="info">
-                <AlertTitle>Select location on map</AlertTitle>
-                Use the map below to set the ground station location
-            </Alert>
-            <Grid container spacing={1} columns={{ xs: 1, sm: 1, md: 1, lg: 1 }}>
-                <Grid>
-                    <Box mt={3}>
-                        <Grid container rowSpacing={3} columnSpacing={3} columns={{ xs: 2, sm: 2, md: 2, lg: 2 }}>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                <Typography variant="subtitle1">
-                                    <strong>Latitude:</strong>
-                                </Typography>
-                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {location.lat.toFixed(4)}
-                                </Typography>
-
-                            </Grid>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                    <Typography variant="subtitle1">
-                                        <strong>Longitude:</strong>
-                                    </Typography>
-                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {location.lng.toFixed(4)}
-                                </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                    <Typography variant="subtitle1">
-                                        <strong>QTH Locator:</strong>
-                                    </Typography>
-                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {qth}
-                                </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                <Button
-                                    variant="contained"
-                                    color="secondary"
-                                    loading={locationLoading}
-                                    onClick={async () => {
-                                        try {
-                                            setLocationLoading(true);
-                                            const currentLocation = await getCurrentLocation();
-                                            setLocation(currentLocation);
-                                        } catch (error) {
-                                            console.error(error.message);
-                                            setLocationLoading(false);
-                                        }
-                                    }}
-                                >
-                                    Query location
-                                </Button>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Grid>
-                <Grid size={{ xs: 1, md: 8 }}>
-                    <Box
-                        sx={{
-                            width: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },
-                            height: '500px',
-                            border: '1px solid #424242',
-                        }}
-                    >
-                        <MapContainer
-                            center={[HOME_LAT, HOME_LON]}
-                            zoom={2}
-                            maxZoom={12}
-                            minZoom={2}
-                            dragging={true}
-                            style={{ height: '100%', width: '100%' }}
-                        >
-                            <TileLayer
-                                attribution='© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors'
-                                url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
-                            />
-                            <MapClickHandler onClick={handleMapClick} />
-                            <Marker position={[location.lat, location.lng]}>
-                                <Popup>Your Selected Location</Popup>
-                            </Marker>
-                            {polylines.map((polyline, index) => (
-                                <Polyline
-                                    key={index}
-                                    positions={polyline}
-                                    color="grey"
-                                    opacity={0.7}
-                                    lineCap="round"
-                                    lineJoin="round"
-                                    dashArray="2, 2"
-                                    dashOffset="10"
-                                    interactive={false}
-                                    smoothFactor={1}
-                                    noClip={false}
-                                    className="leaflet-interactive"
-                                    weight={1}
-                                />
-                            ))}
-                            <Marker
-                                position={location}
-                                icon={SimpleVectorCircle}
-                            >
-                            </Marker>
-                        </MapContainer>
-                    </Box>
-                </Grid>
-                <Grid size={{ xs: 6, md: 8 }}>
-                    <Button variant="contained" color="primary">
-                        Set location
-                    </Button>
-                </Grid>
-            </Grid>
-        </Paper>
-    );
 };

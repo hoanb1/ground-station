@@ -105,6 +105,7 @@ const SynchronizeTLEsCard = function () {
     const { socket } = useSocket();
     const [confirmationDialogOpen, setConfirmationDialogOpen] = useState(false);
     const [progress, setProgress] = useLocalStorageState('tle-source-sync-progress', {});
+    const [message, setMessage] = useState('');
 
     const handleSynchronizeSatellites = function (event) {
         socket.emit("data_request", "sync-satellite-data", null, (response) => {
@@ -120,6 +121,7 @@ const SynchronizeTLEsCard = function () {
         socket.on("sat-sync-events", (data) => {
             console.log("Received data for sat-sync-events:", data);
             setProgress(data.progress);
+            setMessage(data.message);
 
             if (data.status === 'complete') {
                 enqueueSnackbar("Satellite data synchronization completed successfully", {
@@ -152,7 +154,12 @@ const SynchronizeTLEsCard = function () {
                 </Box>
             </Box>
             <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 2}}>
-                <LinearWithValueLabel progress={progress}/>
+                <Box sx={{ display: 'flex', flexDirection: 'column', width: '90%' }}>
+                    <LinearWithValueLabel progress={progress}/>
+                </Box>
+                <Box sx={{ display: 'flex', flexDirection: 'column', width: '90%', 'marginTop': 1 }}>
+                    {message}
+                </Box>
             </Box>
             <Dialog
                 open={confirmationDialogOpen}

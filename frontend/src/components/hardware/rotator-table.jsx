@@ -31,7 +31,6 @@ export default function AntennaRotatorTable() {
     const [selected, setSelected] = useState([]);
     const [loading, setLoading] = useState(false);
     const [rows, setRows] = useState([]);
-    const [selectionModel, setSelectionModel] = useState([]);
     const [pageSize, setPageSize] = useState(10);
     const [formValues, setFormValues] = useState(defaultRotator)
 
@@ -43,14 +42,13 @@ export default function AntennaRotatorTable() {
         { field: 'maxaz', headerName: 'Max Az', type: 'number', flex: 1, minWidth: 80 },
         { field: 'minel', headerName: 'Min El', type: 'number', flex: 1, minWidth: 80 },
         { field: 'maxel', headerName: 'Max El', type: 'number', flex: 1, minWidth: 80 },
-        { field: 'aztype', headerName: 'Az Type', type: 'number', flex: 1, minWidth: 80 },
-        { field: 'azendstop', headerName: 'Az Endstop', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'aztype', headerName: 'AZ Type', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'azendstop', headerName: 'AZ Endstop', type: 'number', flex: 1, minWidth: 80 },
     ];
 
     useEffect(() => {
         setLoading(true);
         socket.emit('data_request', 'get-rotators', null, (response) => {
-            console.log(response);
             if (response.success) {
                 setRows(response.data);
             } else {
