@@ -9,7 +9,7 @@ from models import ModelEncoder
 
 
 @async_timeit
-async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, step_minutes = 0.5):
+async def fetch_next_events(norad_id: int, hours: float = 12.0, above_el = 0, step_minutes = 0.5):
 
     reply = {'success': None, 'data': None}
     events = []

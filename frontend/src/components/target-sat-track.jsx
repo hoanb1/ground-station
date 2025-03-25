@@ -179,7 +179,7 @@ const NextPassesIsland = ({noradId}) => {
         };
     }, [noradId]);
 
-    const minHeight = 300;
+    const minHeight = 200;
     const maxHeight = 400;
 
     useEffect(() => {
@@ -230,27 +230,79 @@ const NextPassesIsland = ({noradId}) => {
                             },
                         }}
                         columns={[
-                            {field: 'event_start', minWidth: 200, headerName: 'Start', flex: 2, valueFormatter: (value) => {
-                                return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-                                }},
-                            {field: 'event_end', minWidth: 200, headerName: 'End', flex: 2, valueFormatter: (value) => {
-                                return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-                                }},
-                            {field: 'duration', minWidth: 100, headerName: 'Duration', flex: 1, valueFormatter: (value) => {
+                            {
+                                field: 'event_start',
+                                minWidth: 200,
+                                headerName: 'Start',
+                                flex: 2,
+                                valueFormatter: (value) => {
+                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+                                }
+                            },
+                            {
+                                field: 'event_end',
+                                minWidth: 200,
+                                headerName: 'End',
+                                flex: 2,
+                                valueFormatter: (value) => {
+                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+                                }
+                            },
+                            {
+                                field: 'duration',
+                                minWidth: 100,
+                                headerName: 'Duration',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
                                     return `${value}`;
-                                }},
-                            {field: 'distance_at_start', minWidth: 100, headerName: 'Distance at AOS', flex: 1, valueFormatter: (value) => {
+                                }
+                            },
+                            {
+                                field: 'distance_at_start',
+                                minWidth: 100,
+                                headerName: 'Distance at AOS',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
                                     return `${parseFloat(value).toFixed(2)} km`
-                                }},
-                            {field: 'distance_at_end', minWidth: 100, headerName: 'Distance at LOS', flex: 1, valueFormatter: (value) => {
+                                }
+                            },
+                            {
+                                field: 'distance_at_end',
+                                minWidth: 100,
+                                headerName: 'Distance at LOS',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
                                     return `${parseFloat(value).toFixed(2)} km`
-                                }},
-                            {field: 'distance_at_peak', minWidth: 100, headerName: 'Distance at peak', flex: 1, valueFormatter: (value) => {
+                                }
+                            },
+                            {
+                                field: 'distance_at_peak',
+                                minWidth: 100,
+                                headerName: 'Distance at peak',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
                                     return `${parseFloat(value).toFixed(2)} km`
-                                }},
-                            {field: 'peak_altitude', minWidth: 100, headerName: 'Max El', flex: 1, valueFormatter: (value) => {
-                                    return`${parseFloat(value).toFixed(2)}°`;
-                                }},
+                                }
+                            },
+                            {
+                                field: 'peak_altitude',
+                                minWidth: 100,
+                                headerName: 'Max El',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
+                                    return `${parseFloat(value).toFixed(2)}°`;
+                                }
+                            },
                         ]}
                         pageSize={10}
                         rowsPerPageOptions={[5, 10, 20]}
@@ -403,7 +455,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 y: 14,
                 w: 8,
                 h: 10,
-                minH: 9,
+                minH: 7,
                 resizeHandles: ['se','ne','nw','sw','n','s','e','w']
             },
 
