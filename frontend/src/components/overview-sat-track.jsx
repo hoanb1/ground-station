@@ -145,7 +145,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
             },
             {
-                i: 'settings',
+                i: 'map-settings',
                 x: 10,
                 y: 4,
                 w: 2,
@@ -489,7 +489,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 <MapArrowControls mapObject={mapObject}/>
             </MapContainer>
         </StyledIslandParent>,
-        <StyledIslandParentScrollbar key="settings">
+        <StyledIslandParentScrollbar key="map-settings">
             <SettingsIsland
                 initialShowPastOrbitPath={showPastOrbitPath}
                 initialShowFutureOrbitPath={showFutureOrbitPath}

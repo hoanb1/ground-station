@@ -12,26 +12,8 @@ import {
 } from '@mui/material';
 import {styled} from '@mui/material/styles';
 import {tileLayers, getTileLayerById} from './tile-layers.jsx';
-import {TitleBar} from './common.jsx';
+import {TitleBar, ThemedStackIsland, SettingItem, ThemedSettingsDiv} from './common.jsx';
 
-const ThemedStack = styled(Stack)(({theme}) => ({
-    color: theme.palette.text.secondary,
-    backgroundColor: "#1e1e1e",
-    borderRadius: theme.shape.borderRadius,
-    borderColor: theme.palette.background.paper,
-    padding: theme.spacing(0),
-}));
-
-const ThemedSettingsDiv = styled('div')(({theme}) => ({
-    backgroundColor: "#1e1e1e",
-    fontsize: '0.9rem !important',
-    height: "100%",
-}));
-
-const SettingItem = styled('div')(({theme}) => ({
-    padding: '0.2rem 0.1rem',
-    fontsize: '0.9rem !important',
-}));
 
 const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
@@ -68,7 +50,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
     return (
         <ThemedSettingsDiv>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Map settings</TitleBar>
-            <ThemedStack spacing={0}>
+            <ThemedStackIsland>
                 <SettingItem style={{padding: '0.5rem 0.5rem'}}>
                     <FormControl fullWidth size={"small"} variant={"filled"}>
                         <InputLabel id="orbit-time-label">Orbit Projection Time</InputLabel>
@@ -281,7 +263,7 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
                         label="Future orbit line color"
                     />
                 </SettingItem>
-            </ThemedStack>
+            </ThemedStackIsland>
         </ThemedSettingsDiv>
     );
 };

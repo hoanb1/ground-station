@@ -3,7 +3,7 @@ import Paper from "@mui/material/Paper";
 import {Polyline, Tooltip as LeafletTooltip} from "react-leaflet";
 import React from "react";
 import Tooltip from "@mui/material/Tooltip";
-import {Box, Chip, Fab} from "@mui/material";
+import {Box, Chip, Fab, Stack} from "@mui/material";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
@@ -23,7 +23,16 @@ export const StyledIslandParentScrollbar = styled("div")(({ theme }) => ({
     overflow: 'hidden',
     overflowY: 'hidden',
     overflowX: 'hidden',
+    display: 'grid',
+}));
 
+export const StyledIslandParentNoScrollbar = styled("div")(({ theme }) => ({
+    padding: '0rem',
+    border: '1px solid #424242',
+    backgroundColor: "#1e1e1e",
+    overflow: 'hidden',
+    overflowY: 'hidden',
+    overflowX: 'hidden',
 }));
 
 export const CODEC_JSON = {
@@ -97,6 +106,27 @@ export const ThemedLeafletTooltip = styled(LeafletTooltip)(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
     borderColor: theme.palette.background.paper,
+}));
+
+export const ThemedStackIsland = styled(Stack)(({theme}) => ({
+    color: theme.palette.text.secondary,
+    backgroundColor: "#1e1e1e",
+    borderRadius: theme.shape.borderRadius,
+    borderColor: theme.palette.background.paper,
+    padding: theme.spacing(0),
+    display: 'block',
+    overflow: 'auto',
+}));
+
+export const ThemedSettingsDiv = styled('div')(({theme}) => ({
+    backgroundColor: "#1e1e1e",
+    fontsize: '0.9rem !important',
+    height: "100%",
+}));
+
+export const SettingItem = styled('div')(({theme}) => ({
+    padding: '0.2rem 0.1rem',
+    fontsize: '0.9rem !important',
 }));
 
 export function InternationalDateLinePolyline() {

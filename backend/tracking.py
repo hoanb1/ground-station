@@ -1,14 +1,15 @@
 import json
-
 import numpy as np
 import crud
+from common import timeit, async_timeit
 from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
 from app import logger, SkyFieldLoader
 from models import ModelEncoder
 
 
-async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0):
+@async_timeit
+async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, step_minutes = 0.5):
 
     reply = {'success': None, 'data': None}
     events = []
@@ -35,14 +36,13 @@ async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0):
         # Coordinates can be in decimal degrees:
         observer = Topos(latitude_degrees=homelat, longitude_degrees=homelon)
 
-        # build a time range for pass calculation (e.g., from now for the next 12 hours)
+        # build a time range for pass calculation
         t0 = ts.now()
         t1 = ts.now().utc_jpl()  # Just for reference in printing
-        t_end = t0 + (hours / 24.0)  # 12 hours from now
+        t_end = t0 + (hours / 24.0)
 
         # step through times. Typically, you'll choose a reasonable step size (e.g., 1 minute):
-        step_minutes = 1
-        t_points = t0 + (np.arange(0, 12 * 60, step_minutes) / (24.0 * 60.0))
+        t_points = t0 + (np.arange(0, int(hours) * 60, step_minutes) / (24.0 * 60.0))
 
         # For each time, compute altitude above observer. We subtract the observer (Topos) from the satellite to
         # get the satellite's position relative to the observer, then do `.altaz()` to get altitude.
