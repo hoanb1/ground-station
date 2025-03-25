@@ -120,7 +120,6 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
             satellites = json.loads(json.dumps(satellites['data'], cls=ModelEncoder))
 
             for satellite in satellites:
-                logger.info(f'Fetching next passes for satellite: {satellite}')
                 events_reply = await fetch_next_events(satellite['norad_id'], hours=hours, above_el=above_el, step_minutes=step_minutes)
                 events_for_satellite = events_reply.get('data', None)
                 events.append({'name': satellite['name'], 'events': events_for_satellite})

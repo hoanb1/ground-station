@@ -136,7 +136,6 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "fetch-next-passes-for-group":
             logger.info(f'Fetching next passes for group, data: {data}')
             next_passes = await fetch_next_events_for_group(group_id=data)
-            logger.info(f'Next passes for group: {next_passes}')
             next_passes = json.loads(json.dumps(next_passes, cls=ModelEncoder))
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
