@@ -208,6 +208,7 @@ const NextPassesIsland = ({noradId}) => {
                     minHeight,
                 }}>
                     <DataGrid
+                        fullWidth={true}
                         loading={loading}
                         sx={{
                             border: 0,
@@ -229,25 +230,25 @@ const NextPassesIsland = ({noradId}) => {
                             },
                         }}
                         columns={[
-                            {field: 'event_start', headerName: 'Start', flex: 2, valueFormatter: (value) => {
+                            {field: 'event_start', minWidth: 200, headerName: 'Start', flex: 2, valueFormatter: (value) => {
                                 return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
                                 }},
-                            {field: 'event_end', headerName: 'End', flex: 2, valueFormatter: (value) => {
+                            {field: 'event_end', minWidth: 200, headerName: 'End', flex: 2, valueFormatter: (value) => {
                                 return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
                                 }},
-                            {field: 'duration', headerName: 'Duration', flex: 1, valueFormatter: (value) => {
+                            {field: 'duration', minWidth: 100, headerName: 'Duration', flex: 1, valueFormatter: (value) => {
                                     return `${value}`;
                                 }},
-                            {field: 'distance_at_start', headerName: 'Distance at AOS', flex: 1, valueFormatter: (value) => {
+                            {field: 'distance_at_start', minWidth: 100, headerName: 'Distance at AOS', flex: 1, valueFormatter: (value) => {
                                     return `${parseFloat(value).toFixed(2)} km`
                                 }},
-                            {field: 'distance_at_end', headerName: 'Distance at LOS', flex: 1, valueFormatter: (value) => {
+                            {field: 'distance_at_end', minWidth: 100, headerName: 'Distance at LOS', flex: 1, valueFormatter: (value) => {
                                     return `${parseFloat(value).toFixed(2)} km`
                                 }},
-                            {field: 'distance_at_peak', headerName: 'Distance at peak', flex: 1, valueFormatter: (value) => {
+                            {field: 'distance_at_peak', minWidth: 100, headerName: 'Distance at peak', flex: 1, valueFormatter: (value) => {
                                     return `${parseFloat(value).toFixed(2)} km`
                                 }},
-                            {field: 'peak_altitude', headerName: 'Max El', flex: 1, valueFormatter: (value) => {
+                            {field: 'peak_altitude', minWidth: 100, headerName: 'Max El', flex: 1, valueFormatter: (value) => {
                                     return`${parseFloat(value).toFixed(2)}°`;
                                 }},
                         ]}
@@ -385,9 +386,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 h: 12,
                 minW: 2,
                 maxW: 2,
-                minH: 10,
-                maxH: 15,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+                minH: 12,
+                maxH: 12,
             },
             {
                 i: 'info',

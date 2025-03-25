@@ -152,9 +152,8 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 h: 12,
                 minW: 2,
                 maxW: 2,
-                minH: 10,
-                maxH: 15,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+                minH: 12,
+                maxH: 12,
             }
         ]
     };
