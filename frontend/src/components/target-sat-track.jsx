@@ -104,12 +104,28 @@ const MapSlider = function ({handleSliderChange}) {
             label: '0m',
         },
         {
+            value: 15,
+            label: '+15',
+        },
+        {
+            value: -15,
+            label: '-15',
+        },
+        {
             value: 30,
             label: '+30m',
         },
         {
             value: -30,
             label: '-30m',
+        },
+        {
+            value: 45,
+            label: '+45',
+        },
+        {
+            value: -45,
+            label: '-45',
         },
         {
             value: 60,
@@ -458,7 +474,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 minH: 7,
                 resizeHandles: ['se','ne','nw','sw','n','s','e','w']
             },
-
         ]
     };
 
@@ -798,6 +813,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 whenReady={handleWhenReady}
                 zoomSnap={0.25}
                 zoomDelta={0.25}
+                boundsOptions={{padding: [300, 300]}}
+
             >
                 <MapTitleBar className={"react-grid-draggable window-title-bar"}>
                     Tracking {satelliteName || "-"} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s
@@ -848,7 +865,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                 <MapStatusBar/>
                 <MapArrowControls mapObject={MapObject}/>
                 <MapSlider handleSliderChange={handleSliderChange}/>
-
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="map-settings">

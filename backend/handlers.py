@@ -7,7 +7,7 @@ from sync import *
 from datetime import date, datetime
 from auth import *
 from models import ModelEncoder
-from tracking import fetch_next_events
+from tracking import fetch_next_events, fetch_next_events_for_group
 
 
 async def data_request_routing(sio, cmd, data, logger):
@@ -125,7 +125,6 @@ async def data_request_routing(sio, cmd, data, logger):
             logger.info(f'Getting location for user id, data: {data}')
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data)
             locations = json.loads(json.dumps(locations, cls=ModelEncoder))
-            logger.info(f'Locations: {locations}')
             reply = {'success': locations['success'], 'data': locations.get('data', [])}
 
         elif cmd == "fetch-next-passes":
@@ -134,6 +133,12 @@ async def data_request_routing(sio, cmd, data, logger):
             next_passes = json.loads(json.dumps(next_passes, cls=ModelEncoder))
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
+        elif cmd == "fetch-next-passes-for-group":
+            logger.info(f'Fetching next passes for group, data: {data}')
+            next_passes = await fetch_next_events_for_group(group_id=data)
+            logger.info(f'Next passes for group: {next_passes}')
+            next_passes = json.loads(json.dumps(next_passes, cls=ModelEncoder))
+            reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
         else:
             logger.info(f'Unknown command: {cmd}')

@@ -12,7 +12,7 @@ import {useSocket} from "./common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
 
-const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection}) {
+const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection, handleSatelliteGroupIdChange}) {
     const { socket } = useSocket();
     const [satGroups, setSatGroups] = useState([]);
     const [formGroupSelectError, setFormGroupSelectError] = useState(false);
@@ -28,7 +28,6 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
         socket.emit("data_request", "get-satellite-groups", null, (response) => {
             if (response['success']) {
                 setSatGroups(response.data);
-
             } else {
                 enqueueSnackbar('Failed to get satellite groups', {
                     variant: 'error',
@@ -50,6 +49,7 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
     useEffect(() => {
         if (selectedSatGroupId) {
             fetchSatellitesByGroupId(selectedSatGroupId);
+            handleSatelliteGroupIdChange(selectedSatGroupId);
         }
 
         return () => {

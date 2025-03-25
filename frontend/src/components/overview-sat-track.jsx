@@ -33,12 +33,22 @@ import {
     MapTitleBar,
     ThemedLeafletTooltip,
     MapStatusBar,
-    InternationalDateLinePolyline, MapArrowControls
+    InternationalDateLinePolyline,
+    MapArrowControls,
+    TitleBar,
+    getTimeFromISO,
+    humanizeFutureDateInMinutes,
+    ThemedStackIsland, betterStatusValue, betterDateTimes, renderCountryFlags, StyledIslandParentNoScrollbar
 } from "./common/common.jsx";
 import { useLocalStorageState } from '@toolpad/core';
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from './common/tracking-logic.jsx';
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "./common/socket.jsx";
+import {DataGrid, gridClasses} from "@mui/x-data-grid";
+import Table from "@mui/material/Table";
+import TableBody from "@mui/material/TableBody";
+import TableRow from "@mui/material/TableRow";
+import TableCell from "@mui/material/TableCell";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
@@ -74,10 +84,6 @@ function saveLayoutsToLocalStorage(layouts) {
     localStorage.setItem(gridLayoutStoreName, JSON.stringify(layouts));
 }
 
-
-
-
-
 const ThemedDiv = styled('div')(({theme}) => ({
     backgroundColor: theme.palette.background.paper,
 }));
@@ -87,6 +93,192 @@ function getMapZoomFromStorage() {
     return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
 
+const NextPassesGroupIsland = ({groupId}) => {
+    const [passes, setPasses] = useState([]);
+    const {socket} = useSocket();
+    const [loading, setLoading] = useState(false);
+    const [containerHeight, setContainerHeight] = useState(0);
+    const containerRef = useRef(null);
+
+    useEffect(() => {
+        if (groupId) {
+            setLoading(true);
+            socket.emit('data_request', 'fetch-next-passes-for-group', groupId, (response) => {
+                if (response.success) {
+                    setPasses(response.data);
+                } else {
+                    enqueueSnackbar("Failed getting next passes", {
+                        variant: 'error',
+                        autoHideDuration: 5000,
+                    });
+                }
+                setLoading(false);
+            });
+        }
+
+        return () => {
+
+        };
+    }, [groupId]);
+
+    const minHeight = 200;
+    const maxHeight = 400;
+
+    const getRows = () => {
+        const allEvents = [];
+        let idx = 0;
+        passes.forEach(pass => {
+            if (Array.isArray(pass.events)) {
+                pass.events.forEach(event => {
+                    event.name = pass.name;
+                    event.id = idx++;
+                });
+                allEvents.push(...pass.events);
+            }
+        });
+        return allEvents;
+    };
+
+    useEffect(() => {
+        const target = containerRef.current;
+        const observer = new ResizeObserver((entries) => {
+            setContainerHeight(entries[0].contentRect.height);
+            console.info(`new height is : ${entries[0].contentRect.height}`)
+        });
+        if (target) {
+            observer.observe(target);
+        }
+        return () => {
+            observer.disconnect();
+        };
+    }, [containerRef]);
+
+    return (
+        <>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
+            <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
+                <div style={{
+                    padding:'0rem 0rem 0rem 0rem',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    height: containerHeight - 25,
+                    minHeight,
+                }}>
+                    <DataGrid
+                        fullWidth={true}
+                        loading={loading}
+                        sx={{
+                            border: 0,
+                            marginTop: 0,
+                            [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                                outline: 'none',
+                            },
+                            [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                                {
+                                    outline: 'none',
+                                },
+                        }}
+                        density={"compact"}
+                        rows={getRows()}
+                        initialState={{
+                            pagination: { paginationModel: { pageSize: 15 } },
+                            sorting: {
+                                sortModel: [{ field: 'event_start', sort: 'asc' }],
+                            },
+                        }}
+                        columns={[
+                            {
+                                field: 'name',
+                                minWidth: 200,
+                                headerName: 'Name',
+                                flex: 2,
+                                valueFormatter: (value) => {
+                                    return `${value}`;
+                                }
+                            },
+                            {
+                                field: 'event_start',
+                                minWidth: 200,
+                                headerName: 'Start',
+                                flex: 2,
+                                valueFormatter: (value) => {
+                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+                                }
+                            },
+                            {
+                                field: 'event_end',
+                                minWidth: 200,
+                                headerName: 'End',
+                                flex: 2,
+                                valueFormatter: (value) => {
+                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+                                }
+                            },
+                            {
+                                field: 'duration',
+                                minWidth: 100,
+                                headerName: 'Duration',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
+                                    return `${value}`;
+                                }
+                            },
+                            {
+                                field: 'distance_at_start',
+                                minWidth: 100,
+                                headerName: 'Distance at AOS',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
+                                    return `${parseFloat(value).toFixed(2)} km`
+                                }
+                            },
+                            {
+                                field: 'distance_at_end',
+                                minWidth: 100,
+                                headerName: 'Distance at LOS',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
+                                    return `${parseFloat(value).toFixed(2)} km`
+                                }
+                            },
+                            {
+                                field: 'distance_at_peak',
+                                minWidth: 100,
+                                headerName: 'Distance at peak',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
+                                    return `${parseFloat(value).toFixed(2)} km`
+                                }
+                            },
+                            {
+                                field: 'peak_altitude',
+                                minWidth: 100,
+                                headerName: 'Max El',
+                                align: 'center',
+                                headerAlign: 'center',
+                                flex: 1,
+                                valueFormatter: (value) => {
+                                    return `${parseFloat(value).toFixed(2)}°`;
+                                }
+                            },
+                        ]}
+                        pageSize={10}
+                        rowsPerPageOptions={[5, 10, 20]}
+                        disableSelectionOnClick
+                    />
+                </div>
+            </div>
+        </>
+    );
+}
 
 function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutureOrbitPath=false,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
@@ -122,6 +314,7 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const [location, setLocation] = useState({lat: 0, lon: 0});
     const [locationId, setLocationId] = useState(null);
     const [locationUserId, setLocationUserId] = useState(null);
+    const [satelliteGroupId, setSatelliteGroupId] = useState(null);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -154,7 +347,16 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
                 maxW: 2,
                 minH: 12,
                 maxH: 12,
-            }
+            },
+            {
+                i: 'passes',
+                x: 0,
+                y: 14,
+                w: 8,
+                h: 10,
+                minH: 7,
+                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+            },
         ]
     };
 
@@ -218,7 +420,11 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
     const handleShowTooltip = useCallback((value) => {
         setShowTooltip(value);
     }, [showTooltip]);
-    
+
+    const handleSatelliteGroupIdChange = useCallback((groupid) => {
+        setSatelliteGroupId(groupid)
+    }, [selectedSatellites]);
+
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
@@ -519,8 +725,12 @@ function GlobalSatelliteTrack({ initialShowPastOrbitPath=false, initialShowFutur
         <StyledIslandParentScrollbar key={"satselector"}>
             <OverviewSatelliteGroupSelector
                 handleGroupSatelliteSelection={handleGroupSatelliteSelection}
+                handleSatelliteGroupIdChange={handleSatelliteGroupIdChange}
             />
-        </StyledIslandParentScrollbar>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentNoScrollbar key="passes">
+            <NextPassesGroupIsland groupId={satelliteGroupId}/>
+        </StyledIslandParentNoScrollbar>,
     ];
 
     let ResponsiveGridLayoutParent = null;

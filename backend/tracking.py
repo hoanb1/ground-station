@@ -9,7 +9,7 @@ from models import ModelEncoder
 
 
 @async_timeit
-async def fetch_next_events(norad_id: int, hours: float = 12.0, above_el = 0, step_minutes = 0.5):
+async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, step_minutes = 0.5) -> dict:
 
     reply = {'success': None, 'data': None}
     events = []
@@ -102,4 +102,37 @@ async def fetch_next_events(norad_id: int, hours: float = 12.0, above_el = 0, st
 
     reply['data'] = events
     reply['success'] = True
+    return reply
+
+
+async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el = 0, step_minutes = 1):
+
+    assert group_id, f"Group id is required ({group_id}, {type(group_id)})"
+
+    reply = {'success': None, 'data': None}
+    events = []
+
+    logger.info("Calculating satellite events for group id: " + str(group_id) + " for next " + str(hours) + " hours")
+
+    async with AsyncSessionLocal() as dbsession:
+        try:
+            satellites = await crud.fetch_satellites_for_group_id(dbsession, group_id)
+            satellites = json.loads(json.dumps(satellites['data'], cls=ModelEncoder))
+
+            for satellite in satellites:
+                logger.info(f'Fetching next passes for satellite: {satellite}')
+                events_reply = await fetch_next_events(satellite['norad_id'], hours=hours, above_el=above_el, step_minutes=step_minutes)
+                events_for_satellite = events_reply.get('data', None)
+                events.append({'name': satellite['name'], 'events': events_for_satellite})
+
+        except Exception as e:
+            logger.error(f'Error fetching next passes for group: {group_id}, error: {e}')
+            logger.exception(e)
+            reply['success'] = False
+            reply['data'] = []
+
+        finally:
+            reply['success'] = True
+            reply['data'] = events
+
     return reply
