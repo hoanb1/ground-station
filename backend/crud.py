@@ -719,7 +719,7 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
         return {"success": False, "error": str(e)}
 
 
-async def fetch_satellites(session: AsyncSession, satellite_id: str | None) -> dict:
+async def fetch_satellites(session: AsyncSession, satellite_id: str | int | None) -> dict:
     """
     Fetch satellite records.
 

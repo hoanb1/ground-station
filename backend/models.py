@@ -2,7 +2,7 @@ import uuid
 import json
 from datetime import date, datetime
 from sqlalchemy import Table, MetaData
-from datetime import datetime, UTC, timezone
+from datetime import datetime, UTC, timezone, timedelta
 from sqlalchemy import TypeDecorator, DateTime
 from sqlalchemy.orm import DeclarativeMeta
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON, Enum
@@ -23,6 +23,9 @@ class ModelEncoder(json.JSONEncoder):
 
         if isinstance(obj, (date, datetime)):
             return obj.isoformat()
+
+        if isinstance(obj, timedelta):
+            return str(obj)
 
         if isinstance(obj, uuid.UUID):
             return str(obj)

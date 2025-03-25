@@ -183,6 +183,21 @@ export const humanizeDate = (isoString) => {
     return "Just now";
 };
 
+
+export const humanizeFutureDateInMinutes = (isoString) => {
+    const now = new Date();
+    const futureDate = new Date(isoString);
+    const diffInSeconds = Math.floor((futureDate - now) / 1000);
+
+    if (diffInSeconds < 0) {
+        return "In the past"; // Handle cases where the date is not in the future
+    }
+
+    const diffInMinutes = Math.ceil(diffInSeconds / 60);
+
+    return `In ${diffInMinutes} minute${diffInMinutes > 1 ? "s" : ""}`;
+};
+
 export const betterDateTimes = (date) => {
     if (date) {
         return (
@@ -196,6 +211,40 @@ export const betterDateTimes = (date) => {
         return "-";
     }
 };
+
+
+export function formatLegibleDateTime(isoString) {
+    if (!isoString) return "-"; // Handle invalid or empty input
+
+    const date = new Date(isoString);
+
+    if (isNaN(date)) return "Invalid date"; // Handle invalid dates
+
+    const options = {
+        year: "numeric",
+        month: "long",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit",
+        second: "2-digit",
+        hour12: false, // Optional: Use 12-hour format with AM/PM
+    };
+
+    return date.toLocaleString(undefined, options);
+}
+
+export function getTimeFromISO(isoString) {
+    if (!isoString) return "-"; // Handle invalid or empty input
+
+    const date = new Date(isoString);
+    if (isNaN(date)) return "Invalid date"; // Handle invalid dates
+
+    const hours = date.getHours().toString().padStart(2, "0");
+    const minutes = date.getMinutes().toString().padStart(2, "0");
+    const seconds = date.getSeconds().toString().padStart(2, "0");
+
+    return `${hours}:${minutes}:${seconds}`;
+}
 
 export const MapArrowControls = function ({mapObject}) {
 

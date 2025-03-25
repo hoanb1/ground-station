@@ -8,12 +8,16 @@ from handlers import *
 from db import *
 from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
 from fastapi.staticfiles import StaticFiles
+from skyfield.api import Loader
 
 # setup a logger
 logger = get_logger(arguments)
 
 # hold a list of sessions
 SESSIONS = {}
+
+# set a temporary folder for the skyfield library to do its thing
+SkyFieldLoader = Loader('/tmp/skyfield-data')  # or any preferred path
 
 # Create a session factory
 AsyncSessionLocal = sessionmaker(

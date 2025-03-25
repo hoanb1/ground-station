@@ -7,6 +7,7 @@ from sync import *
 from datetime import date, datetime
 from auth import *
 from models import ModelEncoder
+from tracking import fetch_next_events
 
 
 async def data_request_routing(sio, cmd, data, logger):
@@ -126,6 +127,13 @@ async def data_request_routing(sio, cmd, data, logger):
             locations = json.loads(json.dumps(locations, cls=ModelEncoder))
             logger.info(f'Locations: {locations}')
             reply = {'success': locations['success'], 'data': locations.get('data', [])}
+
+        elif cmd == "fetch-next-passes":
+            logger.info(f'Fetching next passes, data: {data}')
+            next_passes = await fetch_next_events(norad_id=data)
+            next_passes = json.loads(json.dumps(next_passes, cls=ModelEncoder))
+            reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
+
 
         else:
             logger.info(f'Unknown command: {cmd}')

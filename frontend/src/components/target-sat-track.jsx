@@ -25,7 +25,7 @@ import {getTileLayerById} from "./common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
     betterDateTimes, betterStatusValue,
-    CODEC_BOOL,
+    CODEC_BOOL, formatLegibleDateTime, getTimeFromISO, humanizeDate, humanizeFutureDateInMinutes,
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
     MapTitleBar, renderCountryFlags,
@@ -43,6 +43,7 @@ import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
+import {DataGrid, gridClasses} from "@mui/x-data-grid";
 
 // global leaflet map object
 let MapObject = null;
@@ -148,6 +149,92 @@ const MapSlider = function ({handleSliderChange}) {
         </Box>
     );
 }
+
+
+const NextPassesIsland = ({noradId}) => {
+    const [passes, setPasses] = useState([]);
+    const {socket} = useSocket();
+    const [loading, setLoading] = useState(false);
+
+    useEffect(() => {
+        setLoading(true);
+        console.info("Fetching next passes for", noradId);
+        socket.emit('data_request', 'fetch-next-passes', noradId, (response) => {
+            console.info("Received next passes response", response);
+            if (response.success) {
+                setPasses(response.data);
+            } else {
+                enqueueSnackbar("Failed getting next passes", {
+                    variant: 'error',
+                    autoHideDuration: 5000,
+                });
+            }
+            setLoading(false);
+        });
+
+        return () => {
+
+        };
+    }, [noradId]);
+
+    return (
+        <>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
+            <div style={{ padding:'0rem 0rem 0rem 0rem' }}>
+                <DataGrid
+                    loading={loading}
+                    sx={{
+                        border: 0,
+                        marginTop: 0,
+                        [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                            outline: 'none',
+                        },
+                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                            {
+                                outline: 'none',
+                            },
+                    }}
+                    density={"compact"}
+                    rows={passes}
+                    initialState={{
+                        pagination: { paginationModel: { pageSize: 15 } },
+                        sorting: {
+                            sortModel: [{ field: 'event_start', sort: 'asc' }],
+                        },
+                    }}
+                    columns={[
+                        {field: 'event_start', headerName: 'Start', flex: 2, valueFormatter: (value) => {
+                            return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+                            }},
+                        {field: 'event_end', headerName: 'End', flex: 2, valueFormatter: (value) => {
+                            return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+                            }},
+                        {field: 'duration', headerName: 'Duration', flex: 1, valueFormatter: (value) => {
+                                return `${value}`;
+                            }},
+                        {field: 'distance_at_start', headerName: 'Distance at AOS', flex: 1, valueFormatter: (value) => {
+                                return `${parseFloat(value).toFixed(2)} km`
+                            }},
+                        {field: 'distance_at_end', headerName: 'Distance at LOS', flex: 1, valueFormatter: (value) => {
+                                return `${parseFloat(value).toFixed(2)} km`
+                            }},
+                        {field: 'distance_at_peak', headerName: 'Distance at peak', flex: 1, valueFormatter: (value) => {
+                                return `${parseFloat(value).toFixed(2)} km`
+                            }},
+                        {field: 'peak_altitude', headerName: 'Max El', flex: 1, valueFormatter: (value) => {
+                                return`${parseFloat(value).toFixed(2)}°`;
+                            }},
+                    ]}
+                    pageSize={10}
+                    rowsPerPageOptions={[5, 10, 20]}
+                    disableSelectionOnClick
+                />
+            </div>
+        </>
+    );
+}
+
+
 
 const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
@@ -703,11 +790,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="passes">
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
-            <div style={{ padding:'0rem 1rem 1rem 1rem' }}>
-                <h3>Next 24-hour Passes</h3>
-                <p>Pass data, etc.</p>
-            </div>
+            <NextPassesIsland noradId={noradId}/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId} handleSelectSatelliteId={handleSelectSatelliteId}/>

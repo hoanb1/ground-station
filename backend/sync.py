@@ -294,10 +294,9 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
     # emit an event
     progress += 5
-    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress,
-                                       'message': 'Finished fetching satellite and transmitter data from SATNOGS'})
+    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress, 'message': 'Updating satellite data in the database...'})
 
-    #  we now have everything, TLE from celestack sat info and transmitter info  from satnogs, lets put them in the db
+    #  we now have everything, TLE from celestrak sat info and transmitter info  from satnogs, lets put them in the db
     count_sats = 0
     count_transmitters = 0
     try:
