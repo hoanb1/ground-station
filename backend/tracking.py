@@ -106,7 +106,7 @@ async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, st
     return reply
 
 
-async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el = 0, step_minutes = 1):
+async def fetch_next_events_for_group(group_id: str, hours: float = 6.0, above_el = 0, step_minutes = 1):
 
     assert group_id, f"Group id is required ({group_id}, {type(group_id)})"
 

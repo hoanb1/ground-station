@@ -143,7 +143,6 @@ const NextPassesGroupIsland = ({groupId}) => {
         const target = containerRef.current;
         const observer = new ResizeObserver((entries) => {
             setContainerHeight(entries[0].contentRect.height);
-            console.info(`new height is : ${entries[0].contentRect.height}`)
         });
         if (target) {
             observer.observe(target);
@@ -165,6 +164,7 @@ const NextPassesGroupIsland = ({groupId}) => {
                     minHeight,
                 }}>
                     <DataGrid
+                        pageSizeOptions={[5, 10, 15, 20]}
                         fullWidth={true}
                         loading={loading}
                         sx={{
@@ -181,7 +181,7 @@ const NextPassesGroupIsland = ({groupId}) => {
                         density={"compact"}
                         rows={getRows()}
                         initialState={{
-                            pagination: { paginationModel: { pageSize: 15 } },
+                            pagination: { paginationModel: { pageSize: 20 } },
                             sorting: {
                                 sortModel: [{ field: 'event_start', sort: 'asc' }],
                             },
