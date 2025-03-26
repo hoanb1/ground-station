@@ -1,5 +1,5 @@
 import * as React from 'react';
-import {useEffect, useState} from 'react';
+import {useEffect, useState, Fragment, useCallback} from 'react';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
 import {
     Alert,
@@ -11,35 +11,41 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    TextField
 } from "@mui/material";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {betterDateTimes, humanizeDate} from "../common/common.jsx";
+import {AddEditDialog} from "./satellite-group-dialog.jsx";
 
-const paginationModel = {page: 0, pageSize: 10};
 
 const SatelliteGroupsTable = React.memo(function () {
-    const defaultFormValues = {id: null, name: ''};
     const [rows, setRows] = useState([]);
     const [dialogOpen, setDialogOpen] = useState(false);
     const { socket } = useSocket();
-    const [groups, setGroups] = useState([]);
     const [selectedRows, setSelectedRows] = useState([]);
-    const [formDialogOpen, setFormDialogOpen] = useState(false);
-    const [formDialogValues, setFormDialogValues] = useState(defaultFormValues);
     const [formErrorStatus, setFormErrorStatus] = useState(false);
+    const [formDialogOpen, setFormDialogOpen] = useState(false);
+    const [satGroup, setSatGroup] = useState({});
+    const paginationModel = {page: 0, pageSize: 10};
 
     const columns = [
         {
             field: 'name',
             headerName: 'Name',
-            width: 150
+            width: 150,
+            flex: 1,
+        },
+        {
+            field: 'satellite_ids',
+            headerName: 'Satellites',
+            width: 300,
+            flex: 3,
         },
         {
             field: 'added',
             headerName: 'Added',
             width: 200,
+            flex: 4,
             align: 'right',
             headerAlign: 'right',
             renderCell: (params) => {
@@ -48,19 +54,10 @@ const SatelliteGroupsTable = React.memo(function () {
         },
     ];
 
-    // form state
-    const [friendlyname, setFriendlyname] = useState('');
-    const [added, setAdded] = useState(() => {
-        // Format current date-time for datetime-local input
-        const now = new Date();
-        const offset = now.getTimezoneOffset();
-        const adjustedDate = new Date(now.getTime() - (offset * 60000));
-        return adjustedDate.toISOString().slice(0, 16);
-    });
-
     useEffect(() => {
         // fetch groups from backend
         socket.emit("data_request", "get-satellite-groups-user", (response) => {
+            console.info("Received data for get-satellite-groups-user:", response);
             setRows(response.data);
         });
 
@@ -70,56 +67,15 @@ const SatelliteGroupsTable = React.memo(function () {
     }, []);
 
     const handleAddClick = () => {
-        // Clear previous values
-        setFriendlyname('');
-        setAdded('');
         setFormDialogOpen(true);
     };
 
-    const handleDialogClose = () => {
-        setFormDialogOpen(false);
-    };
-
-    const handleFormSubmit = (event) => {
-        event.preventDefault();
-
-        let cmd = null;
-        let newRow = {};
-        if(formDialogValues.id === null) {
-            cmd = 'submit-satellite-group';
-            // create a new row based on input values
-            newRow = {
-                name: formDialogValues.name,
-            };
-        } else if (formDialogValues.id) {
-            newRow = {
-                id: formDialogValues.id,
-                name: formDialogValues.name,
-            };
-            cmd = 'edit-satellite-group';
-        }
-
-        socket.emit("data_submission", cmd, newRow, (response) => {
-            if (response.success === true) {
-                setRows(response.data)
-                setFormDialogOpen(false);
-            } else {
-                enqueueSnackbar("Error adding satellite group", {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-        });
-    };
-
-    const handleInputChange = (e) => {
-        const { name, value } = e.target;
-        setFormDialogValues(prev => ({ ...prev, [name]: value }));
-    };
-
     const handleEditGroup = function (event) {
+        console.info("selectedRows", selectedRows);
         const singleRowId = selectedRows[0];
-        setFormDialogValues({...rows.find(r => r.id === singleRowId), id: singleRowId});
+        const satGroup = rows.find(row => row.id === singleRowId);
+        console.info("satGroup", satGroup);
+        setSatGroup(satGroup);
         setFormDialogOpen(true);
     }
 
@@ -138,6 +94,14 @@ const SatelliteGroupsTable = React.memo(function () {
             }
         });
     }
+
+    const handleRowsCallback = useCallback((rows) => {
+        setRows(rows);
+    }, []);
+
+    const handleDialogOpenCallback = useCallback((value) => {
+        setFormDialogOpen(value)
+    }, []);
 
     return (
         <Box sx={{width: '100%', marginTop: 0}}>
@@ -164,7 +128,7 @@ const SatelliteGroupsTable = React.memo(function () {
                         {
                             outline: 'none',
                         },
-            }}
+                }}
             />
             <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
                 <Button variant="contained" onClick={handleAddClick}>
@@ -197,28 +161,12 @@ const SatelliteGroupsTable = React.memo(function () {
                     </DialogActions>
                 </Dialog>
             </Stack>
-            <Dialog open={formDialogOpen} onClose={handleDialogClose}>
-                <DialogTitle>Add a new satellite group</DialogTitle>
-                <form onSubmit={handleFormSubmit}>
-                    <DialogContent>
-                        <TextField
-                            error={formErrorStatus}
-                            name="name"
-                            margin="dense"
-                            label="Name"
-                            fullWidth
-                            variant={"filled"}
-                            value={formDialogValues.name}
-                            onChange={handleInputChange}
-                            required
-                        />
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={handleDialogClose}>Cancel</Button>
-                        <Button type="submit" variant="contained">Add</Button>
-                    </DialogActions>
-                </form>
-            </Dialog>
+            <AddEditDialog
+                formDialogOpen={formDialogOpen}
+                handleRowsCallback={handleRowsCallback}
+                handleDialogOpenCallback={handleDialogOpenCallback}
+                satGroup={satGroup}
+            />
         </Box>
     );
 });

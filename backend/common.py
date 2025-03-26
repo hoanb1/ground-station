@@ -1,6 +1,8 @@
 import time
+import math
 import functools
 from app import logger
+from skyfield.api import EarthSatellite, load, wgs84
 
 
 def timeit(func):
@@ -82,3 +84,47 @@ def is_geostationary(tle):
     is_eccentricity_ok = (eccentricity <= ECCENTRICITY_MAX)
 
     return is_mean_motion_ok and is_inclination_ok and is_eccentricity_ok
+
+
+def is_satellite_over_location(tle, date, target_lat, target_lon, threshold_km=500):
+    """
+    Determines if a satellite (from its TLE) is "over" a given lat/lon at a specified time.
+    Uses Skyfield to compute the satellite subpoint and checks if that point is
+    within `threshold_km` distance of the target location.
+
+    :param tle: A list or tuple of two strings: [line1, line2] containing the satellite's TLE.
+    :param date: A Python datetime (UTC) for when to check.
+    :param target_lat: Target latitude in degrees (negative for south).
+    :param target_lon: Target longitude in degrees (negative for west).
+    :param threshold_km: Distance threshold in kilometers. If the satellite’s subpoint
+                         is within this distance, we consider it "over" the location.
+    :return: True if the satellite is within threshold_km of the target location; False otherwise.
+    """
+    if not isinstance(tle, (list, tuple)) or len(tle) < 2:
+        raise ValueError("TLE must be a list or tuple with two lines of data.")
+
+    line1, line2 = tle
+
+    # create a Skyfield Timescale and convert Python datetime to a Skyfield Time object
+    ts = load.timescale()
+    # If `date` is a naive datetime, treat it as UTC. If it's timezone-aware, .utc_datetime() might be needed.
+    t = ts.from_datetime(date)
+
+    # construct the EarthSatellite object from the TLE lines
+    satellite = EarthSatellite(line1, line2, name='Sat', ts=ts)
+
+    # compute the satellite's position at the given time
+    difference = satellite.at(t)
+
+    # compute the subpoint (geodetic point directly below the satellite)
+    subpoint = difference.subpoint()
+    sat_lat = subpoint.latitude.degrees
+    sat_lon = subpoint.longitude.degrees
+
+    # use Skyfield's built-in geometry to compute distance to the target location
+    target_location = wgs84.latlon(target_lat, target_lon)
+    sat_position = wgs84.latlon(sat_lat, sat_lon)
+    distance_km = target_location.distance_to(sat_position).km
+
+    # check if the satellite’s subpoint is within `threshold_km` of target lat/lon
+    return distance_km <= threshold_km

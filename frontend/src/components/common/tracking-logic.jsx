@@ -240,3 +240,125 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
     }
 }
 
+/**
+ * Determines whether a satellite is geostationary based on its TLE.
+ * @param {string[]} tle - An array of two TLE lines [line1, line2].
+ * @returns {boolean} - True if the orbit is approximately geostationary, false otherwise.
+ */
+function isGeostationary(tle) {
+    if (!Array.isArray(tle) || tle.length < 2) {
+        throw new Error("TLE must be an array containing two lines of valid TLE data.");
+    }
+
+    const line2 = tle[1];
+
+    // Each field in Line 2 has a fixed position (character index). Refer to the TLE format.
+    // - Inclination (degrees):    columns 8-15
+    // - RA of ascending node:     columns 17-24
+    // - Eccentricity:            columns 26-32 (decimal point is implied at the start)
+    // - Argument of perigee:     columns 34-41
+    // - Mean anomaly:            columns 43-50
+    // - Mean motion (rev/day):   columns 52-62
+    // - Revolution number:       columns 63-68 (not used here)
+
+    const inclinationDeg = parseFloat(line2.substring(8, 16));
+    // Eccentricity is typically given as an integer with an implied decimal point at the beginning.
+    // For example, "0000457" means 0.0000457
+    const eccentricityStr = line2.substring(26, 33);
+    const eccentricity = parseFloat(`0.${eccentricityStr}`);
+    const meanMotion = parseFloat(line2.substring(52, 63));
+
+    // Typical checks for geostationary orbit:
+    // 1. Mean motion ~ 1 revolution per sidereal day ≈ 1.0027 rev/day
+    //    Here we allow a small range around 1.0–1.0027 for tolerance.
+    // 2. Inclination close to 0° (must be near the equator)
+    // 3. Eccentricity near 0 (circular orbit)
+
+    // Define thresholds (can be tweaked depending on desired strictness)
+    const meanMotionLower = 0.995;    // Lower bound on mean motion
+    const meanMotionUpper = 1.005;    // Upper bound on mean motion
+    const inclinationMax   = 3.0;     // Degrees (allow small inclination for station-keeping)
+    const eccentricityMax  = 0.01;    // Allow small eccentricity
+
+    const isMeanMotionOK   = meanMotion >= meanMotionLower && meanMotion <= meanMotionUpper;
+    const isInclinationOK  = inclinationDeg <= inclinationMax;
+    const isEccentricityOK = eccentricity <= eccentricityMax;
+
+    return isMeanMotionOK && isInclinationOK && isEccentricityOK;
+}
+
+
+/**
+ * Checks if the satellite (from its TLE) is over a given latitude/longitude at a specified time.
+ *
+ * @param {string[]} tle - Array of two lines [line1, line2] containing the satellite's TLE.
+ * @param {Date} date - The date/time at which to check the satellite's position.
+ * @param {number} targetLat - Target latitude in degrees (negative for south).
+ * @param {number} targetLon - Target longitude in degrees (negative for west).
+ * @param {number} thresholdKm - Distance threshold in kilometers (default=500).
+ *                              The satellite is considered "over" the location if
+ *                              it is within this distance on Earth's surface.
+ * @returns {boolean} True if the satellite is within thresholdKm of the specified location.
+ */
+function isSatelliteOverLocation(tle, date, targetLat, targetLon, thresholdKm = 500) {
+    if (!Array.isArray(tle) || tle.length < 2) {
+        throw new Error("TLE must be an array with two lines of data.");
+    }
+
+    // 1) Parse TLE with satellite.js => satrec object
+    const satrec = satellite.twoline2satrec(tle[0], tle[1]);
+
+    // 2) Propagate orbit to given date/time
+    const positionAndVelocity = satellite.propagate(satrec, date);
+    const positionEci = positionAndVelocity.position; // { x, y, z } in km
+
+    if (!positionEci) {
+        // If propagation failed (e.g., TLE out of date), positionEci might be undefined
+        return false;
+    }
+
+    // 3) Get GMST (Greenwich Mean Sidereal Time) for coordinate transforms
+    const gmst = satellite.gstime(date);
+
+    // 4) Convert ECI position to geodetic coordinates (lat/long/height)
+    const geodeticCoords = satellite.eciToGeodetic(positionEci, gmst);
+    const satLat = satellite.degreesLat(geodeticCoords.latitude);
+    const satLon = satellite.degreesLong(geodeticCoords.longitude);
+
+    // 5) Calculate the ground distance between (satLat, satLon) and (targetLat, targetLon)
+    const distance = calculateGreatCircleDistance(satLat, satLon, targetLat, targetLon);
+
+    // 6) Compare distance with threshold
+    return distance <= thresholdKm;
+}
+
+/**
+ * Calculate the great-circle distance between two lat/lon points on Earth (in km).
+ * Uses the haversine formula.
+ *
+ * @param {number} lat1 - Latitude of point 1 (in degrees).
+ * @param {number} lon1 - Longitude of point 1 (in degrees).
+ * @param {number} lat2 - Latitude of point 2 (in degrees).
+ * @param {number} lon2 - Longitude of point 2 (in degrees).
+ * @returns {number} Distance in kilometers.
+ */
+function calculateGreatCircleDistance(lat1, lon1, lat2, lon2) {
+    const R = 6371; // Approx Earth radius in km
+
+    // Convert degrees to radians
+    const dLat = toRadians(lat2 - lat1);
+    const dLon = toRadians(lon2 - lon1);
+    const radLat1 = toRadians(lat1);
+    const radLat2 = toRadians(lat2);
+
+    // Haversine formula
+    const a = Math.sin(dLat / 2) * Math.sin(dLat / 2)
+        + Math.cos(radLat1) * Math.cos(radLat2)
+        * Math.sin(dLon / 2) * Math.sin(dLon / 2);
+    const c = 2 * Math.atan2(Math.sqrt(a), Math.sqrt(1 - a));
+    return R * c;
+}
+
+function toRadians(deg) {
+    return deg * (Math.PI / 180);
+}

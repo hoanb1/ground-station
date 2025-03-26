@@ -82,6 +82,32 @@ class AwareDateTime(TypeDecorator):
         return value
 
 
+class JsonField(TypeDecorator):
+    """
+    A type for handling JSON data by serializing/deserializing
+    it during storage and retrieval.
+    """
+    impl = JSON
+
+    def process_result_value(self, value, dialect):
+        """
+        When reading from DB, deserialize JSON string to Python object.
+        """
+        if value is not None:
+            return json.loads(value)
+        return value
+
+    def process_bind_param(self, value, dialect):
+        """
+        When writing to DB, serialize Python object to JSON string.
+        """
+        if value is not None:
+            return json.dumps(value)
+        return value
+
+
+
+
 class Satellites(Base):
     __tablename__ = 'satellites'
     norad_id = Column(Integer, primary_key=True, nullable=False, unique=True)
@@ -217,6 +243,6 @@ class SatelliteGroups(Base):
     identifier = Column(String, nullable=True)
     userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
     type = Column(Enum(SatelliteGroupType), nullable=False, default=SatelliteGroupType.USER)
-    satellite_ids = Column(JSON, nullable=True)
+    satellite_ids = Column(JsonField, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))

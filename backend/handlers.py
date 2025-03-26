@@ -8,6 +8,7 @@ from datetime import date, datetime
 from auth import *
 from models import ModelEncoder
 from tracking import fetch_next_events, fetch_next_events_for_group
+from common import is_geostationary
 
 
 async def data_request_routing(sio, cmd, data, logger):
@@ -44,7 +45,7 @@ async def data_request_routing(sio, cmd, data, logger):
 
         elif cmd == "get-satellites":
             logger.info(f'Getting satellites, data: {data}')
-            satellites = await crud.fetch_satellites(dbsession, None)
+            satellites = await crud.fetch_satellites(dbsession, data)
             satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
@@ -58,6 +59,9 @@ async def data_request_routing(sio, cmd, data, logger):
             satellite_data = satellite.get('data', [])[0]
             transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite_data['norad_id'])
             satellite_data['transmitters'] = json.loads(json.dumps(transmitters['data'], cls=ModelEncoder))
+
+            # add in the result if the satellite is geostationary
+            satellite_data['is_geostationary'] = is_geostationary([satellite_data['tle1'], satellite_data['tle2']])
 
             reply = {'success': (satellite['success'] & transmitters['success']), 'data': [satellite_data]}
 
@@ -81,6 +85,7 @@ async def data_request_routing(sio, cmd, data, logger):
             # only return the user groups
             filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
                                         if satellite_group['type'] == SatelliteGroupType.USER]
+
             reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups-system":
@@ -138,6 +143,12 @@ async def data_request_routing(sio, cmd, data, logger):
             next_passes = await fetch_next_events_for_group(group_id=data)
             next_passes = json.loads(json.dumps(next_passes, cls=ModelEncoder))
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
+
+        elif cmd == "get-satellite-search":
+            logger.info(f'Searching satellites, data: {data}')
+            satellites = await crud.search_satellites(dbsession, keyword=data)
+            satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
+            reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         else:
             logger.info(f'Unknown command: {cmd}')

@@ -223,7 +223,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             group = group.get('data', None)
 
             if group:
-                group.satellite_ids = json.dumps(group_assignments[tle_source_identifier])
+                group.satellite_ids = group_assignments[tle_source_identifier]
                 await dbsession.commit()
 
             else:
@@ -232,7 +232,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     name=tle_source.get('name', None),
                     identifier=tle_source.get('identifier', None),
                     userid=None,
-                    satellite_ids=json.dumps(group_assignments[tle_source_identifier]),
+                    satellite_ids=group_assignments[tle_source_identifier],
                     type=SatelliteGroupType.SYSTEM,
                 )
 

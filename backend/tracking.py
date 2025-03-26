@@ -101,6 +101,7 @@ async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, st
         events = json.loads(json.dumps(events, cls=ModelEncoder))
 
     reply['data'] = events
+    reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el, 'step_minutes': step_minutes}
     reply['success'] = True
     return reply
 
@@ -132,6 +133,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
 
         finally:
             reply['success'] = True
+            reply['parameters'] = {'group_id': group_id, 'hours': hours, 'above_el': above_el, 'step_minutes': step_minutes}
             reply['data'] = events
 
     return reply

@@ -202,7 +202,6 @@ const NextPassesIsland = ({noradId}) => {
         const target = containerRef.current;
         const observer = new ResizeObserver((entries) => {
             setContainerHeight(entries[0].contentRect.height);
-            console.info(`new height is : ${entries[0].contentRect.height}`)
         });
         if (target) {
             observer.observe(target);
@@ -370,6 +369,10 @@ const SatelliteInfoIsland = ({satelliteData, satellitePos}) => {
                             <TableCell>{satelliteData['countries']? renderCountryFlags(satelliteData['countries']): "n/a"}</TableCell>
                         </TableRow>
                         <TableRow>
+                            <TableCell><strong>Geostationary:</strong></TableCell>
+                            <TableCell>{satelliteData['is_geostationary']? "Yes": "No"}</TableCell>
+                        </TableRow>
+                        <TableRow>
                             <TableCell><strong>Transmitters:</strong></TableCell>
                             <TableCell>{satelliteData['transmitters'] ? satelliteData['transmitters'].length : "n/a"}</TableCell>
                         </TableRow>
@@ -379,9 +382,6 @@ const SatelliteInfoIsland = ({satelliteData, satellitePos}) => {
         </>
     );
 }
-
-
-
 
 const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
