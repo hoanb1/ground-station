@@ -23,8 +23,6 @@ export const deleteRigs = createAsyncThunk(
     'rigs/deleteRigs',
     async ({socket, selectedIds}, {rejectWithValue}) => {
         try {
-            console.info("deleteing", selectedIds);
-
             return await new Promise((resolve, reject) => {
                 socket.emit('data_submission', 'delete-rig', selectedIds, (response) => {
                     if (response.success) {
@@ -66,12 +64,11 @@ const defaultRig = {
     name: '',
     host: 'localhost',
     port: 4532,
-    minaz: 0,
-    maxaz: 360,
-    minel: 0,
-    maxel: 90,
-    aztype: 0,
-    azendstop: 0,
+    radiotype: 'rx',
+    pttstatus: 'normal',
+    vfotype: 'normal',
+    lodown: 0,
+    loup: 0,
 };
 
 const rigsSlice = createSlice({
