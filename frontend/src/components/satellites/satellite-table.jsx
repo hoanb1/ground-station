@@ -1,19 +1,8 @@
 import * as React from 'react';
 import {Alert, AlertTitle, Box, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import {useEffect, useState} from "react";
-import {useSocket} from "../common/socket.jsx";
+import {useEffect} from "react";
+import {useDispatch, useSelector} from "react-redux";
 import {enqueueSnackbar} from "notistack";
-import Dialog from '@mui/material/Dialog';
-import DialogTitle from '@mui/material/DialogTitle';
-import DialogContent from '@mui/material/DialogContent';
-import DialogActions from '@mui/material/DialogActions';
-import Button from '@mui/material/Button';
-import Table from '@mui/material/Table';
-import TableBody from '@mui/material/TableBody';
-import TableCell from '@mui/material/TableCell';
-import TableContainer from '@mui/material/TableContainer';
-import TableHead from '@mui/material/TableHead';
-import TableRow from '@mui/material/TableRow';
 import {
     DataGrid,
     gridPageCountSelector,
@@ -23,11 +12,24 @@ import {
     gridClasses
 } from '@mui/x-data-grid';
 import MuiPagination from '@mui/material/Pagination';
-import {betterDateTimes, humanizeDate, betterStatusValue, renderCountryFlags, humanizeFrequency} from '../common/common.jsx';
+import {
+    betterDateTimes,
+    humanizeDate,
+    betterStatusValue,
+    renderCountryFlags,
+    humanizeFrequency
+} from '../common/common.jsx';
 import SatelliteInfoModal from "./satellite-info.jsx";
+import {
+    fetchSatelliteGroups,
+    fetchSatellites,
+    setSatGroupId,
+    setOpenSatelliteInfoDialog,
+    setClickedSatellite,
+} from "./satellite-slice.jsx";
+import {useSocket} from "../common/socket.jsx";
 
-
-function Pagination({ page, onPageChange, className }) {
+function Pagination({page, onPageChange, className}) {
     const apiRef = useGridApiContext();
     const pageCount = useGridSelector(apiRef, gridPageCountSelector);
 
@@ -48,17 +50,17 @@ function CustomPagination(props) {
     return <GridPagination ActionsComponent={Pagination} {...props} />;
 }
 
-
 const SatelliteTable = React.memo(function () {
-    const [page, setPage] = useState(0);
-    const [satGroups, setSatGroups] = useState([]);
-    const [satellites, setSatellites] = useState([]);
-    const [satGroupId, setSatGroupId] = useState("");
-    const [selectedRows, setSelectedRows] = useState([]);
-    const { socket } = useSocket();
-    const [loading, setLoading] = useState(false);
-    const [satelliteInfoDialogOpen, setSatelliteInfoDialogOpen] = useState(false);
-    const [clickedSatellite, setClickedSatellite] = useState({});
+    const dispatch = useDispatch();
+    const {socket} = useSocket();
+    const {
+        satellites,
+        satellitesGroups,
+        satGroupId,
+        loading,
+        clickedSatellite,
+        openSatelliteInfoDialog
+    } = useSelector((state) => state.satellites);
 
     const columns = [
         {
@@ -147,81 +149,56 @@ const SatelliteTable = React.memo(function () {
         },
     ];
 
-    function fetchSatelliteGroups() {
-        setLoading(true);
-        socket.emit("data_request", "get-satellite-groups", null, (response) => {
-            if (response['success']) {
-                setSatGroups(response.data);
-                setSatGroupId(response.data[0].id);
-                fetchSatellites(response.data[0].id);
-            } else {
-                enqueueSnackbar('Failed to get satellites groups', {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                })
-            }
-            setLoading(false);
-        });
-    }
-
     useEffect(() => {
-        fetchSatelliteGroups();
-        return () => {
+        dispatch(fetchSatelliteGroups({socket}));
+    }, [dispatch]);
 
-        };
-    }, []);
-
-    function fetchSatellites(groupId) {
-        setLoading(true);
-        socket.emit("data_request", "get-satellites-for-group-id", groupId, (response) => {
-            if (response['success']) {
-                setSatellites(response.data);
-            } else {
-                enqueueSnackbar('Failed to set satellites for group id: ' + groupId + '', {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-            setLoading(false);
-        });
-    }
-
-    function handleOnGroupChange (event) {
+    const handleOnGroupChange = (event) => {
         const groupId = event.target.value;
-        setSatGroupId(groupId);
-        if (groupId === null) {
-            return null;
-        } else {
-            fetchSatellites(groupId);
+        dispatch(setSatGroupId(groupId));
+        if (groupId !== null) {
+            dispatch(fetchSatellites({socket, satGroupId: groupId}))
+                .unwrap()
+                .then(() => {
+                    enqueueSnackbar('Satellites loaded successfully', {
+                        variant: 'success'
+                    });
+                })
+                .catch((err) => {
+                    enqueueSnackbar("Failed to load satellites: " + err.message, {
+                        variant: 'error'
+                    })
+                });
         }
-    }
+    };
 
     const handleRowClick = (params) => {
-        setSatelliteInfoDialogOpen(true);
-        setClickedSatellite(params.row)
+        dispatch(setClickedSatellite(params.row));
+        dispatch(setOpenSatelliteInfoDialog(true));
     };
 
     const handleDialogClose = function () {
-        setSatelliteInfoDialogOpen(false);
-    }
-    
+        dispatch(setOpenSatelliteInfoDialog(false));
+    };
+
     return (
-        <Box elevation={3} sx={{ width: '100%', marginTop: 0 }}>
+        <Box elevation={3} sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">
                 <AlertTitle>Satellites</AlertTitle>
                 Select one satellite group to see the satellites in it
             </Alert>
-            <FormControl sx={{ minWidth: 200, marginTop: 2, marginBottom: 1 }} fullWidth variant={"filled"}>
+            <FormControl sx={{minWidth: 200, marginTop: 2, marginBottom: 1}} fullWidth variant={"filled"}>
                 <InputLabel htmlFor="grouped-select">Select one of the satellite groups</InputLabel>
-                <Select disabled={loading} value={satGroupId} id="grouped-select" label="Grouping" variant={"filled"} onChange={handleOnGroupChange}>
+                <Select disabled={loading} value={satGroupId} id="grouped-select" label="Grouping" variant={"filled"}
+                        onChange={handleOnGroupChange}>
                     <ListSubheader>User defined satellite groups</ListSubheader>
-                    {satGroups.map((group, index) => {
+                    {satellitesGroups.map((group, index) => {
                         if (group.type === "user") {
                             return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
                         }
                     })}
                     <ListSubheader>Build-in satellite groups</ListSubheader>
-                    {satGroups.map((group, index) => {
+                    {satellitesGroups.map((group, index) => {
                         if (group.type === "system") {
                             return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
                         }
@@ -240,16 +217,13 @@ const SatelliteTable = React.memo(function () {
                     pageSizeOptions={[5, 10, 20, 50, 100]}
                     checkboxSelection={false}
                     initialState={{
-                        pagination: { paginationModel: { pageSize: 10 } },
+                        pagination: {paginationModel: {pageSize: 10}},
                         sorting: {
-                            sortModel: [{ field: 'transmitters', sort: 'desc' }],
+                            sortModel: [{field: 'transmitters', sort: 'desc'}],
                         },
                     }}
                     slots={{
                         pagination: CustomPagination,
-                    }}
-                    onRowSelectionModelChange={(selected) => {
-                        setSelectedRows(selected);
                     }}
                     sx={{
                         border: 0,
@@ -267,11 +241,11 @@ const SatelliteTable = React.memo(function () {
                         }
                     }}
                 />
-                <SatelliteInfoModal open={satelliteInfoDialogOpen} handleClose={handleDialogClose} selectedSatellite={clickedSatellite}/>
+                <SatelliteInfoModal open={openSatelliteInfoDialog} handleClose={handleDialogClose}
+                                    selectedSatellite={clickedSatellite}/>
             </div>
         </Box>
     );
 });
-
 
 export default SatelliteTable;
