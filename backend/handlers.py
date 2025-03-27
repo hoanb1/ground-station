@@ -46,19 +46,17 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-satellites":
             logger.info(f'Getting satellites, data: {data}')
             satellites = await crud.fetch_satellites(dbsession, data)
-            satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite":
             logger.info(f'Getting satellite data for norad id, data: {data}')
             satellite = await crud.fetch_satellites(dbsession, data)
-            satellite = json.loads(json.dumps(satellite, cls=ModelEncoder))
 
             # get transmitters
             satellite_data = satellite.get('data', [])[0]
             transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite_data['norad_id'])
-            satellite_data['transmitters'] = json.loads(json.dumps(transmitters['data'], cls=ModelEncoder))
+            satellite_data['transmitters'] = transmitters['data']
 
             # add in the result if the satellite is geostationary
             satellite_data['is_geostationary'] = is_geostationary([satellite_data['tle1'], satellite_data['tle2']])
@@ -68,19 +66,17 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-satellites-for-group-id":
             logger.info(f'Getting satellites for group id, data: {data}')
             satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
-            satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
 
             # get transmitters
             for satellite in satellites.get('data', []):
                 transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
-                satellite['transmitters'] = json.loads(json.dumps(transmitters['data'], cls=ModelEncoder))
+                satellite['transmitters'] = transmitters['data']
 
             reply = {'success': (satellites['success'] & transmitters['success']), 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite-groups-user":
             logger.info(f'Getting user satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
-            satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
 
             # only return the user groups
             filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
@@ -91,7 +87,6 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-satellite-groups-system":
             logger.info(f'Getting system satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
-            satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
 
             # only return the system groups
             filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
@@ -101,7 +96,6 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-satellite-groups":
             logger.info(f'Getting satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
-            satellite_groups = json.loads(json.dumps(satellite_groups, cls=ModelEncoder))
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "sync-satellite-data":
@@ -111,19 +105,16 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-users":
             logger.info(f'Getting users, data: {data}')
             users = await crud.fetch_users(dbsession, user_id=None)
-            users = json.loads(json.dumps(users, cls=ModelEncoder))
             reply = {'success': users['success'], 'data': users.get('data', [])}
 
         elif cmd == "get-rigs":
             logger.info(f'Getting radio rigs, data: {data}')
             rigs = await crud.fetch_rigs(dbsession)
-            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
             reply = {'success': rigs['success'], 'data': rigs.get('data', [])}
 
         elif cmd == "get-rotators":
             logger.info(f'Getting antenna rotators, data: {data}')
             rotators = await crud.fetch_rotators(dbsession)
-            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
             reply = {'success': rotators['success'], 'data': rotators.get('data', [])}
 
         elif cmd == "get-location-for-user-id":
@@ -134,19 +125,16 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "fetch-next-passes":
             logger.info(f'Fetching next passes, data: {data}')
             next_passes = await fetch_next_events(norad_id=data)
-            next_passes = json.loads(json.dumps(next_passes, cls=ModelEncoder))
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
         elif cmd == "fetch-next-passes-for-group":
             logger.info(f'Fetching next passes for group, data: {data}')
             next_passes = await fetch_next_events_for_group(group_id=data)
-            next_passes = json.loads(json.dumps(next_passes, cls=ModelEncoder))
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
         elif cmd == "get-satellite-search":
             logger.info(f'Searching satellites, data: {data}')
             satellites = await crud.search_satellites(dbsession, keyword=data)
-            satellites = json.loads(json.dumps(satellites, cls=ModelEncoder))
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         else:
@@ -235,7 +223,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             add_reply = await crud.add_user(dbsession, data)
 
             users = await crud.fetch_users(dbsession, user_id=None)
-            users = json.loads(json.dumps(users, cls=ModelEncoder))
             reply = {'success': (users['success'] & add_reply['success']),
                      'data': users.get('data', [])}
 
@@ -244,7 +231,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             edit_reply = await crud.edit_user(dbsession, data)
 
             users = await crud.fetch_users(dbsession, user_id=None)
-            users = json.loads(json.dumps(users, cls=ModelEncoder))
             reply = {'success': (users['success'] & edit_reply['success']),
                      'data': users.get('data', [])}
 
@@ -253,7 +239,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             delete_reply = await crud.delete_user(dbsession, data)
 
             users = await crud.fetch_users(dbsession, user_id=None)
-            users = json.loads(json.dumps(users, cls=ModelEncoder))
             reply = {'success': (users['success'] & delete_reply['success']),
                      'data': users.get('data', [])}
 
@@ -262,7 +247,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             add_reply = await crud.add_rig(dbsession, data)
 
             rigs = await crud.fetch_rigs(dbsession)
-            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
             reply = {'success': (rigs['success'] & add_reply['success']),
                      'data': rigs.get('data', [])}
 
@@ -271,7 +255,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             edit_reply = await crud.edit_rig(dbsession, data)
 
             rigs = await crud.fetch_rigs(dbsession)
-            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
             reply = {'success': (rigs['success'] & edit_reply['success']),
                      'data': rigs.get('data', [])}
 
@@ -280,7 +263,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             delete_reply = await crud.delete_rig(dbsession, data)
 
             rigs = await crud.fetch_rigs(dbsession)
-            rigs = json.loads(json.dumps(rigs, cls=ModelEncoder))
             reply = {'success': (rigs['success'] & delete_reply['success']),
                      'data': rigs.get('data', [])}
 
@@ -289,7 +271,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             add_reply = await crud.add_rotator(dbsession, data)
 
             rotators = await crud.fetch_rotators(dbsession)
-            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
             reply = {'success': (rotators['success'] & add_reply['success']),
                      'data': rotators.get('data', [])}
 
@@ -300,7 +281,6 @@ async def data_submission_routing(sio, cmd, data, logger):
 
             rotators = await crud.fetch_rotators(dbsession)
             logger.info(f'Rotators: {rotators}')
-            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
             reply = {'success': (rotators['success'] & edit_reply['success']),
                      'data': rotators.get('data', [])}
 
@@ -309,7 +289,6 @@ async def data_submission_routing(sio, cmd, data, logger):
             delete_reply = await crud.delete_rotators(dbsession, data)
 
             rotators = await crud.fetch_rotators(dbsession)
-            rotators = json.loads(json.dumps(rotators, cls=ModelEncoder))
             reply = {'success': (rotators['success'] & delete_reply['success']),
                      'data': rotators.get('data', [])}
 

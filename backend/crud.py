@@ -45,6 +45,8 @@ async def fetch_users(session: AsyncSession, user_id: Optional[Union[uuid.UUID, 
             if not include_password:
                 for user in users:
                     user.password = None
+
+            users = serialize_object(users)
             return {"success": True, "data": users, "error": None}
 
     except Exception as e:
@@ -90,7 +92,7 @@ async def add_user(session: AsyncSession, data: dict) -> dict:
         result = await session.execute(stmt)
         await session.commit()
         new_user = result.scalar_one()
-
+        new_user = serialize_object(new_user)
         return {"success": True, "data": new_user, "error": None}
 
     except Exception as e:
@@ -144,6 +146,7 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_user = upd_result.scalar_one_or_none()
+        updated_user = serialize_object(updated_user)
         return {"success": True, "data": updated_user, "error": None}
 
     except Exception as e:
@@ -186,8 +189,11 @@ async def fetch_preference(session: AsyncSession, preference_id: uuid.UUID) -> d
         stmt = select(Preferences).filter(Preferences.id == preference_id)
         result = await session.execute(stmt)
         preference = result.scalar_one_or_none()
+        preference = serialize_object(preference)
         return {"success": True, "data": preference, "error": None}
     except Exception as e:
+        logger.error(f"Error fetching a preference users: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
@@ -213,7 +219,9 @@ async def add_preference(session: AsyncSession, userid: uuid.UUID, name: str, va
         result = await session.execute(stmt)
         await session.commit()
         new_preference = result.scalar_one()
+        new_preference = serialize_object(new_preference)
         return {"success": True, "data": new_preference, "error": None}
+
     except Exception as e:
         await session.rollback()
         return {"success": False, "error": str(e)}
@@ -243,7 +251,9 @@ async def edit_preference(session: AsyncSession, preference_id: uuid.UUID, **kwa
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_preference = upd_result.scalar_one_or_none()
+        updated_preference = serialize_object(updated_preference)
         return {"success": True, "data": updated_preference, "error": None}
+
     except Exception as e:
         await session.rollback()
         return {"success": False, "error": str(e)}
@@ -265,6 +275,7 @@ async def delete_preference(session: AsyncSession, preference_id: uuid.UUID) -> 
             return {"success": False, "error": f"Preference with id {preference_id} not found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
+
     except Exception as e:
         await session.rollback()
         return {"success": False, "error": str(e)}
@@ -281,6 +292,7 @@ async def fetch_location(session: AsyncSession, location_id: Union[uuid.UUID, st
         stmt = select(Locations).filter(Locations.id == location_id)
         result = await session.execute(stmt)
         location = result.scalar_one_or_none()
+        location = serialize_object(location)
         return {"success": True, "data": location, "error": None}
 
     except Exception as e:
@@ -419,6 +431,7 @@ async def fetch_rotators(session: AsyncSession, rotator_id: Optional[Union[uuid.
             result = await session.execute(stmt)
             rotators = result.scalars().all()
 
+        rotators = serialize_object(rotators)
         return {"success": True, "data": rotators, "error": None}
 
     except Exception as e:
@@ -455,6 +468,7 @@ async def add_rotator(session: AsyncSession, data: dict) -> dict:
         result = await session.execute(stmt)
         await session.commit()
         new_rotator = result.scalar_one()
+        new_rotator = serialize_object(new_rotator)
         return {"success": True, "data": new_rotator, "error": None}
 
     except Exception as e:
@@ -498,6 +512,7 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_rotator = upd_result.scalar_one_or_none()
+        updated_rotator = serialize_object(updated_rotator)
         return {"success": True, "data": updated_rotator, "error": None}
 
     except Exception as e:
@@ -545,6 +560,7 @@ async def fetch_rigs(session: AsyncSession, rig_id: Optional[Union[uuid.UUID | s
             stmt = select(Rigs).filter(Rigs.id == rig_id)
         result = await session.execute(stmt)
         rigs = result.scalars().all() if rig_id is None else result.scalar_one_or_none()
+        rigs = serialize_object(rigs)
         return {"success": True, "data": rigs, "error": None}
 
     except Exception as e:
@@ -588,6 +604,7 @@ async def add_rig(session: AsyncSession, data: dict) -> dict:
         result = await session.execute(stmt)
         await session.commit()
         new_rig = result.scalar_one()
+        new_rig = serialize_object(new_rig)
         return {"success": True, "data": new_rig, "error": None}
 
     except Exception as e:
@@ -630,6 +647,7 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_rig = upd_result.scalar_one_or_none()
+        updated_rig = serialize_object(updated_rig)
         return {"success": True, "data": updated_rig, "error": None}
 
     except Exception as e:
@@ -659,6 +677,7 @@ async def delete_rig(session: AsyncSession, rig_ids: Union[list[uuid.UUID], list
             return {"success": False, "error": "No rigs with the provided IDs were found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error deleting rigs: {e}")
@@ -685,7 +704,7 @@ async def fetch_system_satellite_group_by_identifier(session: AsyncSession, grou
 
         if not group:
             return {"success": False, "error": "Satellite group (type=system) not found"}
-
+        group = serialize_object(group)
         return {"success": True, "data": group, "error": None}
 
     except Exception as e:
@@ -711,6 +730,7 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
         stmt = select(Satellites).filter(Satellites.norad_id.in_(satellite_ids))
         result = await session.execute(stmt)
         satellites = result.scalars().all()
+        satellites = serialize_object(satellites)
 
         return {"success": True, "data": satellites, "error": None}
 
@@ -741,7 +761,7 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
             )
         result = await session.execute(stmt)
         satellites = result.scalars().all()
-
+        satellites = serialize_object(satellites)
         return {"success": True, "data": satellites, "error": None}
 
     except Exception as e:
@@ -777,6 +797,7 @@ async def fetch_satellites(session: AsyncSession, satellite_id: Union[str, int, 
             satellite = result.scalar_one_or_none()
             satellites = [satellite] if satellite else []
 
+        satellites = serialize_object(satellites)
         return {"success": True, "data": satellites, "error": None}
 
     except Exception as e:
@@ -841,6 +862,7 @@ async def add_satellite(
         result = await session.execute(stmt)
         await session.commit()
         new_satellite = result.scalar_one()
+        new_satellite = serialize_object(new_satellite)
         return {"success": True, "data": new_satellite, "error": None}
 
     except Exception as e:
@@ -874,6 +896,7 @@ async def edit_satellite(session: AsyncSession, satellite_id: uuid.UUID, **kwarg
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_satellite = upd_result.scalar_one_or_none()
+        updated_satellite = serialize_object(updated_satellite)
         return {"success": True, "data": updated_satellite, "error": None}
 
     except Exception as e:
@@ -915,6 +938,7 @@ async def fetch_transmitters_for_satellite(session: AsyncSession, norad_id: int)
         stmt = select(Transmitters).filter(Transmitters.norad_cat_id == norad_id)
         result = await session.execute(stmt)
         transmitters = result.scalars().all()
+        transmitters = serialize_object(transmitters)
         return {"success": True, "data": transmitters, "error": None}
 
     except Exception as e:
@@ -1005,6 +1029,7 @@ async def add_transmitter(
         result = await session.execute(stmt)
         await session.commit()
         new_transmitter = result.scalar_one()
+        new_transmitter = serialize_object(new_transmitter)
         return {"success": True, "data": new_transmitter, "error": None}
 
     except Exception as e:
@@ -1036,7 +1061,9 @@ async def edit_transmitter(session: AsyncSession, transmitter_id: uuid.UUID, **k
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_transmitter = upd_result.scalar_one_or_none()
+        updated_transmitter = serialize_object(updated_transmitter)
         return {"success": True, "data": updated_transmitter, "error": None}
+
     except Exception as e:
         await session.rollback()
         return {"success": False, "error": str(e)}
@@ -1058,6 +1085,7 @@ async def delete_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) -
             return {"success": False, "error": f"Transmitter with id {transmitter_id} not found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
+
     except Exception as e:
         await session.rollback()
         return {"success": False, "error": str(e)}
@@ -1073,15 +1101,20 @@ async def fetch_satellite_tle_source(session: AsyncSession, satellite_tle_source
             result = await session.execute(select(SatelliteTLESources))
             sources = result.scalars().all()
             sources = json.loads(json.dumps(sources, default=serialize_object))
+            sources = serialize_object(sources)
             return {"success": True, "data": sources}
+
         else:
             result = await session.execute(
                 select(SatelliteTLESources).filter(SatelliteTLESources.id == satellite_tle_source_id)
             )
             source = result.scalars().first()
             if source:
+                source = serialize_object(source)
                 return {"success": True, "data": source}
+
             return {"success": False, "error": "Satellite TLE source not found"}
+
     except Exception as e:
         logger.error(f"Error fetching satellite TLE source: {e}")
         logger.error(traceback.format_exc())
@@ -1104,6 +1137,7 @@ async def add_satellite_tle_source(session: AsyncSession, payload: dict) -> dict
         session.add(new_source)
         await session.commit()
         await session.refresh(new_source)
+        new_source = serialize_object(new_source)
         return {"success": True, "data": new_source}
 
     except Exception as e:
@@ -1139,6 +1173,7 @@ async def edit_satellite_tle_source(
 
         await session.commit()
         await session.refresh(source)
+        source = serialize_object(source)
         return {"success": True, "data": source}
 
     except Exception as e:
@@ -1182,6 +1217,7 @@ async def delete_satellite_tle_sources(
             message += f" The following IDs were not found: {not_found_ids}."
 
         return {"success": True, "data": message}
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error deleting satellite TLE sources: {e}")
@@ -1242,7 +1278,8 @@ async def add_satellite_group(session: AsyncSession, data: dict) -> dict:
         group = SatelliteGroups(**data)
         session.add(group)
         await session.commit()
-        return {"success": True, "data": serialize_object(group), "error": None}
+        group = serialize_object(group)
+        return {"success": True, "data": group, "error": None}
 
     except Exception as e:
         await session.rollback()
@@ -1274,7 +1311,9 @@ async def edit_satellite_group(
             setattr(group, key, value)
 
         await session.commit()
-        return {"success": True, "data": serialize_object(group), "error": None}
+        group = serialize_object(group)
+        return {"success": True, "data": group, "error": None}
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error editing satellite groups: {e}")
