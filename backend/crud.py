@@ -704,6 +704,7 @@ async def fetch_system_satellite_group_by_identifier(session: AsyncSession, grou
 
         if not group:
             return {"success": False, "error": "Satellite group (type=system) not found"}
+
         group = serialize_object(group)
         return {"success": True, "data": group, "error": None}
 
