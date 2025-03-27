@@ -17,10 +17,10 @@ import Grid from "@mui/material/Grid2";
 import AntennaRotatorTable from "../hardware/rotator-table.jsx";
 import RigTable from "../hardware/rig-table.jsx";
 import {styled} from "@mui/material/styles";
-import TLESourcesTable from "../satellites/tle-sources-table.jsx";
+import SourcesTable from "../satellites/sources-table.jsx";
 import SatelliteTable from "../satellites/satellite-table.jsx";
 import AboutPage from "./about.jsx";
-import SatelliteGroupsTable from "../satellites/satellite-groups.jsx";
+import SatelliteGroupsTable from "../satellites/groups-table.jsx";
 import Users from "./users.jsx";
 import LocationPage from "./location.jsx";
 import PreferencesForm from "./preferences.jsx";
@@ -303,7 +303,7 @@ const TLESourcesForm = () => {
 
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
-            <TLESourcesTable/>
+            <SourcesTable/>
         </Paper>);
 };
 

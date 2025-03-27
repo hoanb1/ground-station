@@ -1,4 +1,4 @@
-// SatelliteGroupsTable.jsx
+// GroupsTable.jsx
 import React, { useEffect, useCallback } from 'react';
 import {
     Box,
@@ -15,7 +15,7 @@ import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { enqueueSnackbar } from 'notistack';
 import { useSocket } from '../common/socket.jsx';
 import { betterDateTimes } from '../common/common.jsx';
-import { AddEditDialog } from './satellite-group-dialog.jsx';
+import { AddEditDialog } from './groups-dialog.jsx';
 
 // Redux
 import { useSelector, useDispatch } from 'react-redux';
@@ -28,10 +28,10 @@ import {
     setFormErrorStatus,
     setGroups,
     setDeleteConfirmDialogOpen,
-} from './satellite-groups-slice.jsx';
+} from './groups-slice.jsx';
 import {setOpenDeleteConfirm} from "../hardware/rig-slice.jsx";
 
-const SatelliteGroupsTable = () => {
+const GroupsTable = () => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
 
@@ -225,4 +225,4 @@ const SatelliteGroupsTable = () => {
     );
 };
 
-export default React.memo(SatelliteGroupsTable);
+export default React.memo(GroupsTable);

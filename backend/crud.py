@@ -319,16 +319,17 @@ async def add_location(session: AsyncSession, data: dict) -> dict:
         new_id = uuid.uuid4()
         now = datetime.now(UTC)
         data["id"] = new_id
-        data["added"] = now
-        data["updated"] = now
+
         stmt = (
             insert(Locations)
             .values(**data)
             .returning(Locations)
         )
+
         result = await session.execute(stmt)
         await session.commit()
         new_location = result.scalar_one()
+        new_location = serialize_object(new_location)
         return {"success": True, "data": new_location, "error": None}
 
     except Exception as e:
@@ -357,9 +358,6 @@ async def edit_location(session: AsyncSession, data: dict) -> dict:
         if not location:
             return {"success": False, "error": f"Location with id {location_id} not found."}
 
-        # Update the updated timestamp
-        data["updated"] = datetime.now(UTC)
-
         upd_stmt = (
             update(Locations)
             .where(Locations.id == location_id)
@@ -369,6 +367,7 @@ async def edit_location(session: AsyncSession, data: dict) -> dict:
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_location = upd_result.scalar_one_or_none()
+        updated_location = serialize_object(updated_location)
         return {"success": True, "data": updated_location, "error": None}
 
     except Exception as e:

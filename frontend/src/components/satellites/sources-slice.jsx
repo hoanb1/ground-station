@@ -69,7 +69,7 @@ export const submitOrEditTLESource = createAsyncThunk(
 );
 
 // Create the slice, mirroring rig-slice structure:
-const tleSourcesSlice = createSlice({
+const sourcesSlice = createSlice({
     name: 'tleSources',
     initialState: {
         tleSources: [],
@@ -175,6 +175,6 @@ export const {
     resetFormValues,
     setError,
     setStatus,
-} = tleSourcesSlice.actions;
+} = sourcesSlice.actions;
 
-export default tleSourcesSlice.reducer;
+export default sourcesSlice.reducer;

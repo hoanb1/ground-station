@@ -15,7 +15,7 @@ import {
     Stack, Select, MenuItem, FormControl, InputLabel,
 } from "@mui/material";
 import {useDispatch, useSelector} from 'react-redux';
-import {fetchTLESources,  submitOrEditTLESource, deleteTLESources} from './tle-sources-slice.jsx';
+import {fetchTLESources,  submitOrEditTLESource, deleteTLESources} from './sources-slice.jsx';
 import PropTypes from "prop-types";
 import Card from '@mui/material/Card';
 import CardContent from '@mui/material/CardContent';
@@ -24,7 +24,7 @@ import LinearProgress, {linearProgressClasses} from '@mui/material/LinearProgres
 import {betterDateTimes} from "../common/common.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
-import {setFormValues, setOpenAddDialog, setOpenDeleteConfirm, setSelected} from "./tle-sources-slice.jsx"
+import {setFormValues, setOpenAddDialog, setOpenDeleteConfirm, setSelected} from "./sources-slice.jsx"
 
 const columns = [
     {field: 'name', headerName: 'Name', width: 150},
@@ -166,7 +166,7 @@ const SynchronizeTLEsCard = function () {
     );
 }
 
-export default function TLESourcesTable() {
+export default function SourcesTable() {
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const {tleSources, loading, formValues, openDeleteConfirm, openAddDialog, selected} = useSelector((state) => state.tleSources);

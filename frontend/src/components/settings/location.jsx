@@ -1,180 +1,128 @@
-import React, {useEffect, useState} from 'react';
+// location.jsx
+import React, { useEffect } from 'react';
 import {
     Box,
     Button,
     Typography,
-    Alert, AlertTitle
+    Alert,
+    AlertTitle,
+    Paper
 } from '@mui/material';
-import Paper from "@mui/material/Paper";
-import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle, useMap} from 'react-leaflet';
-import 'leaflet/dist/leaflet.css';
-import Grid from "@mui/material/Grid2";
-import {SimpleVectorCircle} from "../common/icons.jsx";
-import {enqueueSnackbar} from "notistack";
-import {useSocket} from "../common/socket.jsx";
+import {MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMapEvents} from 'react-leaflet';
+import Grid from '@mui/material/Grid2';
+import { SimpleVectorCircle } from '../common/icons.jsx';
+import { enqueueSnackbar } from 'notistack';
+import { useSocket } from '../common/socket.jsx';
+import { getMaidenhead } from '../common/common.jsx';
+
+// Redux
+import { useDispatch, useSelector } from 'react-redux';
+import {
+    fetchLocationForUserId,
+    setLocation,
+    setPolylines,
+    setQth,
+    setLocationLoading,
+    storeLocation
+} from './location-slice.jsx'; // or correct path
 
 let MapObject = null;
 
-function getMaidenhead(lat, lon) {
-    let adjLon = lon + 180;
-    let adjLat = lat + 90;
-    // Field (first two letters)
-    const A = Math.floor(adjLon / 20);
-    const B = Math.floor(adjLat / 10);
-    const field = String.fromCharCode(65 + A) + String.fromCharCode(65 + B);
-    // Square (two digits)
-    adjLon = adjLon - A * 20;
-    adjLat = adjLat - B * 10;
-    const C = Math.floor(adjLon / 2);
-    const D = Math.floor(adjLat);
-    const square = C.toString() + D.toString();
-    // Subsquare (final two letters)
-    adjLon = adjLon - C * 2;
-    adjLat = adjLat - D;
-    const E = Math.floor(adjLon * 12);
-    const F = Math.floor(adjLat * 24);
-    const subsquare = String.fromCharCode(97 + E) + String.fromCharCode(97 + F);
-    return field + square + subsquare;
-}
-
-// A helper component that listens for click events on the map.
 function MapClickHandler({ onClick }) {
+    // Listen for map clicks
     useMapEvents({
         click: onClick,
     });
     return null;
 }
 
-function CloseRoundedIcon() {
-    return null;
-}
-
 const LocationPage = () => {
-    const {socket} = useSocket();
-    const [locationLoading, setLocationLoading] = useState(false);
-    const [location, setLocation] = useState({ lat: 0, lon: 0 });
-    const [locationId, setLocationId] = useState(null);
-    const [locationUserId, setLocationUserId] = useState(null);
-    const [qth, setQth] = useState(getMaidenhead(parseFloat(0), parseFloat(0)));
-    const [polylines, setPolylines] = useState([]);
+    const { socket } = useSocket();
+    const dispatch = useDispatch();
 
+    // Grab data from Redux
+    const {
+        locationLoading,
+        location,
+        locationId,
+        locationUserId,
+        qth,
+        polylines,
+    } = useSelector((state) => state.location);
+
+    // On mount, fetch the location
+    useEffect(() => {
+        dispatch(fetchLocationForUserId({ socket }));
+    }, [dispatch, socket]);
+
+    // Recompute polylines when location changes. Alternatively, you can handle this in the slice.
     useEffect(() => {
         const horizontalLine = [
-            [location.lat, -270], // Line spans horizontally across the map at fixed latitude
-            [location.lat, 270]
+            [location.lat, -270],
+            [location.lat, 270],
         ];
         const verticalLine = [
-            [-90, location.lon], // Line spans vertically across the map at fixed longitude
-            [90, location.lon]
+            [-90, location.lon],
+            [90, location.lon],
         ];
-        setPolylines([horizontalLine, verticalLine]);
-        setQth(getMaidenhead(location.lat, location.lon));
+        dispatch(setPolylines([horizontalLine, verticalLine]));
+        dispatch(setQth(getMaidenhead(location.lat, location.lon)));
+    }, [location, dispatch]);
 
-        return () => {
-            // Optional cleanup logic
-        };
-    }, [location]);
-
-    useEffect(() => {
-        console.info("Getting location from backend");
-        socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
-            console.info("Received location from backend", response);
-            if (response['success']) {
-                if (response['data']) {
-                    setLocation({
-                        lat: parseFloat(response['data']['lat']),
-                        lon: parseFloat(response['data']['lon']),
-                    });
-                    setLocationId(response['data']['id']);
-                    setLocationUserId(response['data']['userid']);
-                    reCenterMap(response['data']['lat'], response['data']['lon']);
-                    setQth(getMaidenhead(response['data']['lat'], response['data']['lon']));
-
-                } else {
-                    enqueueSnackbar('No location found in the backend, please set one', {
-                        variant: 'info',
-                    })
-                }
-            } else {
-                enqueueSnackbar('Failed to get location from backend', {
-                    variant: 'error',
-                })
-            }
-        });
-        return () => {
-
-        };
-    }, []);
-
-    // Update location when the map is clicked.
+    // Example function to handle map clicks
     const handleMapClick = (e) => {
         const { lat, lng } = e.latlng;
-        setLocation({ lat: lat, lon: lng });
-        setQth(getMaidenhead(lat, lng));
+        dispatch(setLocation({ lat, lon: lng }));
+        dispatch(setQth(getMaidenhead(lat, lng)));
         reCenterMap(lat, lng);
     };
 
+    // Example map ready callback
     const handleWhenReady = (map) => {
-        // map is ready
         MapObject = map.target;
-        setInterval(()=>{
+        setInterval(() => {
             map.target.invalidateSize();
         }, 1000);
     };
 
+    // Helper for re-centering the map
     const reCenterMap = (lat, lon) => {
-        MapObject.setView([lat, lon], MapObject.getZoom());
+        if (MapObject) {
+            MapObject.setView([lat, lon], MapObject.getZoom());
+        }
     };
 
+    // Example button to get the user's current location via browser
     const getCurrentLocation = async () => {
         if (!navigator.geolocation) {
-            throw new Error('Geolocation is not supported by your browser.');
+            enqueueSnackbar('Geolocation is not supported by your browser.', {
+                variant: 'warning',
+            });
+            return;
         }
-        return new Promise((resolve, reject) => {
-            navigator.geolocation.getCurrentPosition(
-                (position) => {
-                    enqueueSnackbar("Your location has been retrieved successfully", {
-                        variant: 'success',
-                        autoHideDuration: 5000,
-                    });
-                    setLocationLoading(false);
-                    resolve({
-                        lat: position.coords.latitude,
-                        lon: position.coords.longitude,
-                    });
-                },
-                (error) => {
-                    reject(new Error('Unable to retrieve your location: ' + error.message));
-                    enqueueSnackbar("Unable to retrieve your location", {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                    });
-                    setLocationLoading(false);
-                },
-                {
-                    enableHighAccuracy: true,
-                    timeout: 5000,
-                    maximumAge: 0,
-                }
-            );
-        });
+        navigator.geolocation.getCurrentPosition(
+            (position) => {
+                enqueueSnackbar('Your location has been retrieved successfully', {
+                    variant: 'success',
+                });
+                const { latitude, longitude } = position.coords;
+                dispatch(setLocation({ lat: latitude, lon: longitude }));
+                dispatch(setQth(getMaidenhead(latitude, longitude)));
+                reCenterMap(latitude, longitude);
+                dispatch(setLocationLoading(false));
+            },
+            (error) => {
+                enqueueSnackbar('Failed to get your current location', {
+                    variant: 'error',
+                });
+                dispatch(setLocationLoading(false));
+            }
+        );
     };
 
     const handleSetLocation = () => {
-        socket.emit('data_submission', 'submit-location-for-user-id',
-            {...location, name: "home", userid: null, id: locationId}, (response) => {
-            console.info("Received location from backend", response);
-            if (response['success']) {
-                enqueueSnackbar('Location set successfully', {
-                    variant: 'success',
-                })
-            } else {
-                enqueueSnackbar('Failed to set location', {
-                    variant: 'error',
-                })
-            }
-        });
-    };
+        dispatch(storeLocation({socket, location, locationId}));
+    }
 
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
@@ -218,12 +166,12 @@ const LocationPage = () => {
                                     loading={locationLoading}
                                     onClick={async () => {
                                         try {
-                                            setLocationLoading(true);
+                                            dispatch(setLocationLoading(true));
                                             const currentLocation = await getCurrentLocation();
                                             setLocation(currentLocation);
                                         } catch (error) {
                                             console.error(error.message);
-                                            setLocationLoading(false);
+                                            dispatch(setLocationLoading(false));
                                         }
                                     }}
                                 >
@@ -285,7 +233,7 @@ const LocationPage = () => {
                 </Grid>
                 <Grid size={{ xs: 6, md: 8 }}>
                     <Button variant="contained" color="primary" onClick={() => handleSetLocation()}>
-                        Set location
+                        Save location
                     </Button>
                 </Grid>
             </Grid>

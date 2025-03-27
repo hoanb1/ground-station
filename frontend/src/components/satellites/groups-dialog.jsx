@@ -18,7 +18,6 @@ export function AutocompleteAsync({setSelectedSatelliteCallback}) {
         (async () => {
             setLoading(true);
             socket.emit("data_request", "get-satellite-search", keyword, (response) => {
-                console.log("Received data for get-satellite-search:", response);
                 if (response.success) {
                     setOptions(response.data);
                 } else {

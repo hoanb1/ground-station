@@ -334,6 +334,30 @@ export const betterStatusValue = (status) => {
     }
 };
 
+
+export function getMaidenhead(lat, lon) {
+    let adjLon = lon + 180;
+    let adjLat = lat + 90;
+    // Field (first two letters)
+    const A = Math.floor(adjLon / 20);
+    const B = Math.floor(adjLat / 10);
+    const field = String.fromCharCode(65 + A) + String.fromCharCode(65 + B);
+    // Square (two digits)
+    adjLon = adjLon - A * 20;
+    adjLat = adjLat - B * 10;
+    const C = Math.floor(adjLon / 2);
+    const D = Math.floor(adjLat);
+    const square = C.toString() + D.toString();
+    // Subsquare (final two letters)
+    adjLon = adjLon - C * 2;
+    adjLat = adjLat - D;
+    const E = Math.floor(adjLon * 12);
+    const F = Math.floor(adjLat * 24);
+    const subsquare = String.fromCharCode(97 + E) + String.fromCharCode(97 + F);
+    return field + square + subsquare;
+}
+
+
 export const renderCountryFlags = (csvCodes) => {
     if (!csvCodes) return "-";
 

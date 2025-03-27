@@ -74,7 +74,7 @@ export const AddOrEditSatelliteGroup = createAsyncThunk(
 );
 
 
-const satelliteGroupsSlice = createSlice({
+const groupsSlice = createSlice({
     name: 'satelliteGroups',
     initialState: {
         groups: [],
@@ -155,6 +155,6 @@ export const {
     setFormErrorStatus,
     setGroups,
     setDeleteConfirmDialogOpen
-} = satelliteGroupsSlice.actions;
+} = groupsSlice.actions;
 
-export default satelliteGroupsSlice.reducer;
+export default groupsSlice.reducer;

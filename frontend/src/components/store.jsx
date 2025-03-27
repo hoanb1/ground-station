@@ -1,10 +1,11 @@
 import { configureStore } from '@reduxjs/toolkit';
 import rigsReducer from './hardware/rig-slice.jsx';
 import rotatorsReducer from './hardware/rotaror-slice.jsx';
-import tleSourcesReducer from './satellites/tle-sources-slice.jsx';
+import tleSourcesReducer from './satellites/sources-slice.jsx';
 import satellitesReducer from './satellites/satellite-slice.jsx';
 import usersReducer from './settings/users-slice.jsx';
-import satelliteGroupReducer from './satellites/satellite-groups-slice.jsx';
+import satelliteGroupReducer from './satellites/groups-slice.jsx';
+import locationReducer from './settings/location-slice.jsx';
 
 export const store = configureStore({
     reducer: {
@@ -14,6 +15,7 @@ export const store = configureStore({
         satellites: satellitesReducer,
         satelliteGroups: satelliteGroupReducer,
         users: usersReducer,
+        location: locationReducer,
     },
 });
 

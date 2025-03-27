@@ -323,15 +323,15 @@ async def data_submission_routing(sio, cmd, data, logger):
             logger.info(f'Adding location for user id, data: {data}')
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data['userid'])
 
-            # if there is a location for the user id then skip adding a location for now,
+            # if there is a location for the user id then don't add, update the location,
             # if there are multiple users at some point then we change this logic again
             if not locations['data']:
                 add_reply = await crud.add_location(dbsession, data)
-                reply = {'success': add_reply['success'], 'data': None, 'error': add_reply.get('error', None)}
+                reply = {'success': add_reply['success'], 'data': add_reply['data'], 'error': add_reply.get('error', None)}
             else:
                 # update the location
                 update_reply = await crud.edit_location(dbsession, data)
-                reply = {'success': update_reply['success'], 'data': None, 'error': update_reply.get('error', None)}
+                reply = {'success': update_reply['success'], 'data': update_reply['data'], 'error': update_reply.get('error', None)}
 
         elif cmd == "edit-location":
             logger.info(f'Editing location, data: {data}')
