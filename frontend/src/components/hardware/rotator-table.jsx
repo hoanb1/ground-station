@@ -18,15 +18,14 @@ import {
     setOpenDeleteConfirm,
     setOpenAddDialog,
     setFormValues,
-    setLoading
 } from './rotaror-slice.jsx';
 
 
 export default function AntennaRotatorTable() {
     const {socket} = useSocket();
+    const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
-    const dispatch = useDispatch();
     const { loading, rotators, status, error, openAddDialog, openDeleteConfirm, formValues } = useSelector((state) => state.rotators);
 
     const columns = [

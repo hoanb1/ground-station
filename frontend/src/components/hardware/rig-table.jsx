@@ -1,6 +1,6 @@
 import * as React from 'react';
 import PropTypes from 'prop-types';
-import { alpha } from '@mui/material/styles';
+import {alpha} from '@mui/material/styles';
 import Box from '@mui/material/Box';
 import TableCell from '@mui/material/TableCell';
 import TableHead from '@mui/material/TableHead';
@@ -13,18 +13,24 @@ import IconButton from '@mui/material/IconButton';
 import Tooltip from '@mui/material/Tooltip';
 import DeleteIcon from '@mui/icons-material/Delete';
 import FilterListIcon from '@mui/icons-material/FilterList';
-import { visuallyHidden } from '@mui/utils';
+import {visuallyHidden} from '@mui/utils';
 import {Button, DialogContentText, FormControl, InputLabel, MenuItem, Select, TextField} from "@mui/material";
 import Stack from "@mui/material/Stack";
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
 import DialogActions from "@mui/material/DialogActions";
 import DialogContent from "@mui/material/DialogContent";
-import {useEffect, useMemo, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
+import {useDispatch, useSelector} from 'react-redux';
+import {
+    fetchRigs,
+    deleteRigs,
+    setSelected,
+    submitOrEditRig,
+    setOpenDeleteConfirm,
+} from './rig-slice.jsx';
 import {enqueueSnackbar} from "notistack";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
-import rigTableSlice from "./rig-slice.jsx"
 
 
 function descendingComparator(a, b, orderBy) {
@@ -95,7 +101,7 @@ const headCells = [
 ];
 
 function EnhancedTableHead(props) {
-    const { onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort } =
+    const {onSelectAllClick, order, orderBy, numSelected, rowCount, onRequestSort} =
         props;
     const createSortHandler = (property) => (event) => {
         onRequestSort(event, property);
@@ -117,7 +123,7 @@ function EnhancedTableHead(props) {
                 </TableCell>
                 {headCells.map((headCell) => (
                     <TableCell
-                        style={{ fontWeight: 'bold' }}
+                        style={{fontWeight: 'bold'}}
                         key={headCell.id}
                         align={headCell.numeric ? 'right' : 'left'}
                         padding={headCell.disablePadding ? 'none' : 'normal'}
@@ -152,13 +158,13 @@ EnhancedTableHead.propTypes = {
 };
 
 function EnhancedTableToolbar(props) {
-    const { numSelected } = props;
+    const {numSelected} = props;
     return (
         <Toolbar
             sx={[
                 {
-                    pl: { sm: 2 },
-                    pr: { xs: 1, sm: 1 },
+                    pl: {sm: 2},
+                    pr: {xs: 1, sm: 1},
                 },
                 numSelected > 0 && {
                     bgcolor: (theme) =>
@@ -168,7 +174,7 @@ function EnhancedTableToolbar(props) {
         >
             {numSelected > 0 ? (
                 <Typography
-                    sx={{ flex: '1 1 100%' }}
+                    sx={{flex: '1 1 100%'}}
                     color="inherit"
                     variant="subtitle1"
                     component="div"
@@ -177,7 +183,7 @@ function EnhancedTableToolbar(props) {
                 </Typography>
             ) : (
                 <Typography
-                    sx={{ flex: '1 1 100%' }}
+                    sx={{flex: '1 1 100%'}}
                     variant="h6"
                     id="tableTitle"
                     component="div"
@@ -188,13 +194,13 @@ function EnhancedTableToolbar(props) {
             {numSelected > 0 ? (
                 <Tooltip title="Delete">
                     <IconButton>
-                        <DeleteIcon />
+                        <DeleteIcon/>
                     </IconButton>
                 </Tooltip>
             ) : (
                 <Tooltip title="Filter list">
                     <IconButton>
-                        <FilterListIcon />
+                        <FilterListIcon/>
                     </IconButton>
                 </Tooltip>
             )}
@@ -207,7 +213,10 @@ EnhancedTableToolbar.propTypes = {
 };
 
 export default function RigTable() {
-    const { socket } = useSocket();
+    const dispatch = useDispatch();
+    const {socket} = useSocket();
+    const {rigs, loading, selected, openDeleteConfirm} = useSelector((state) => state.rigs);
+
     const defaultRig = {
         id: null,
         name: '',
@@ -219,100 +228,61 @@ export default function RigTable() {
         lodown: 0,
         loup: 0,
     };
-    const [rigs, setRigs] = useState([]);
-    const [selected, setSelected] = useState([]);
-    const [pageSize, setPageSize] = useState(10);
-    const [loading, setLoading] = useState(false);
-    const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
-    const [openAddDialog, setOpenAddDialog] = useState(false);
-    const [formValues, setFormValues] = useState(defaultRig);
+    const [pageSize, setPageSize] = React.useState(10);
+    const [openAddDialog, setOpenAddDialog] = React.useState(false);
+    const [formValues, setFormValues] = React.useState(defaultRig);
 
     const columns = [
-        { field: 'name', headerName: 'Name', flex: 1, minWidth: 150},
-        { field: 'host', headerName: 'Host', flex: 1, minWidth: 150 },
-        { field: 'port', headerName: 'Port', type: 'number', flex: 1, minWidth: 80, align: 'right', headerAlign: 'right',
+        {field: 'name', headerName: 'Name', flex: 1, minWidth: 150},
+        {field: 'host', headerName: 'Host', flex: 1, minWidth: 150},
+        {
+            field: 'port',
+            headerName: 'Port',
+            type: 'number',
+            flex: 1,
+            minWidth: 80,
+            align: 'right',
+            headerAlign: 'right',
             valueFormatter: (value) => {
-            return value;
+                return value;
             }
         },
-        { field: 'radiotype', headerName: 'Radio Type', flex: 1, minWidth: 150 },
-        { field: 'pttstatus', headerName: 'PTT Status', flex: 1, minWidth: 150 },
-        { field: 'vfotype', headerName: 'VFO Type', flex: 1, minWidth: 50 },
-        { field: 'lodown', headerName: 'LO Down', type: 'number', flex: 1, minWidth: 60 },
-        { field: 'loup', headerName: 'LO Up', type: 'number', flex: 1, minWidth: 60 },
+        {field: 'radiotype', headerName: 'Radio Type', flex: 1, minWidth: 150},
+        {field: 'pttstatus', headerName: 'PTT Status', flex: 1, minWidth: 150},
+        {field: 'vfotype', headerName: 'VFO Type', flex: 1, minWidth: 50},
+        {field: 'lodown', headerName: 'LO Down', type: 'number', flex: 1, minWidth: 60},
+        {field: 'loup', headerName: 'LO Up', type: 'number', flex: 1, minWidth: 60},
     ];
 
-    useEffect(() => {
-        setLoading(true);
-        socket.emit('data_request', 'get-rigs', null, (response) => {
-            if (response.success) {
-                setRigs(response.data);
-            } else {
-                enqueueSnackbar('Failed to fetch rigs', {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-            setLoading(false);
-        });
-
-        return () => {
-            // Cleanup if needed
-        };
-    }, [socket]);
+    React.useEffect(() => {
+        dispatch(fetchRigs({socket}));
+    }, [dispatch]);
 
     function handleFormSubmit() {
-        setLoading(true);
-        const command = formValues.id ? 'edit-rig' : 'submit-rig';
-        socket.emit('data_submission', command, formValues, (response) => {
-            if (response.success) {
-                setOpenAddDialog(false);
-                setRigs(response.data);
-                enqueueSnackbar(
-                    formValues.id ? 'Rig edited successfully' : 'Rig added successfully',
-                    {
-                        variant: 'success',
-                        autoHideDuration: 5000,
-                    }
-                );
-            } else {
-                enqueueSnackbar(
-                    formValues.id ? 'Failed to edit rig' : 'Failed to add rig',
-                    {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                    }
-                );
-            }
-            setLoading(false);
-        });
+        if (formValues.id) {
+            dispatch(submitOrEditRig({socket, formValues}));
+            enqueueSnackbar('Rig edited successfully', {variant: 'success', autoHideDuration: 5000});
+        } else {
+            dispatch(submitOrEditRig({socket, formValues}));
+            enqueueSnackbar('Rig added successfully', {variant: 'success', autoHideDuration: 5000});
+        }
+        setOpenAddDialog(false);
     }
 
     function handleDelete() {
-        setLoading(true);
-        socket.emit('data_submission', 'delete-rig', selected, (response) => {
-            if (response.success) {
-                setRigs(response.data);
-                enqueueSnackbar('Rig(s) deleted successfully', {
-                    variant: 'success',
-                    autoHideDuration: 5000,
-                });
-            } else {
-                enqueueSnackbar('Failed to delete rig(s)', {
-                    variant: 'error',
-                })
-            }
-            setLoading(false);
-        });
+        console.info("about to delete rigs:", selected);
+        dispatch(deleteRigs({socket, selectedIds: selected}));
+        dispatch(setOpenDeleteConfirm(false));
+        enqueueSnackbar('Rig(s) deleted successfully', {variant: 'success', autoHideDuration: 5000});
     }
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        setFormValues((prev) => ({ ...prev, [name]: value }));
+        const {name, value} = e.target;
+        setFormValues((prev) => ({...prev, [name]: value}));
     };
 
     return (
-        <Box sx={{ width: '100%' }}>
+        <Box sx={{width: '100%'}}>
             <DataGrid
                 loading={loading}
                 rows={rigs}
@@ -320,17 +290,17 @@ export default function RigTable() {
                 checkboxSelection
                 disableSelectionOnClick
                 selectionModel={selected}
-                onRowSelectionModelChange={(selected)=>{
-                    setSelected(selected);
+                onRowSelectionModelChange={(selected) => {
+                    dispatch(setSelected(selected));
                 }}
                 initialState={{
-                    pagination: { paginationModel: { pageSize: 5 } },
+                    pagination: {paginationModel: {pageSize: 5}},
                     sorting: {
-                        sortModel: [{ field: 'name', sort: 'desc' }],
+                        sortModel: [{field: 'name', sort: 'desc'}],
                     },
                 }}
                 pageSize={pageSize}
-                pageSizeOptions={[5, 10, 25, { value: -1, label: 'All' }]}
+                pageSizeOptions={[5, 10, 25, {value: -1, label: 'All'}]}
                 onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                 rowsPerPageOptions={[5, 10, 25]}
                 getRowId={(row) => row.id}
@@ -366,7 +336,7 @@ export default function RigTable() {
                     variant="contained"
                     disabled={selected.length < 1}
                     color="error"
-                    onClick={() => setOpenDeleteConfirm(true)}
+                    onClick={() => dispatch(setOpenDeleteConfirm(true))}
                 >
                     Delete
                 </Button>
@@ -411,7 +381,7 @@ export default function RigTable() {
                             name="radiotype"
                             value={formValues.radiotype}
                             onChange={handleChange}
-                         variant={'filled'}>
+                            variant={'filled'}>
                             <MenuItem value="rx">RX</MenuItem>
                         </Select>
                     </FormControl>
@@ -421,7 +391,7 @@ export default function RigTable() {
                             name="pttstatus"
                             value={formValues.pttstatus}
                             onChange={handleChange}
-                         variant={'filled'}>
+                            variant={'filled'}>
                             <MenuItem value="normal">Normal</MenuItem>
                         </Select>
                     </FormControl>
@@ -431,7 +401,7 @@ export default function RigTable() {
                             name="vfotype"
                             value={formValues.vfotype}
                             onChange={handleChange}
-                         variant={'filled'}>
+                            variant={'filled'}>
                             <MenuItem value="normal">Normal</MenuItem>
                         </Select>
                     </FormControl>
@@ -465,7 +435,7 @@ export default function RigTable() {
                     </Button>
                 </DialogActions>
             </Dialog>
-            <Dialog open={openDeleteConfirm} onClose={() => setOpenDeleteConfirm(false)}>
+            <Dialog open={openDeleteConfirm} onClose={() => dispatch(setOpenDeleteConfirm(false))}>
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
@@ -473,14 +443,13 @@ export default function RigTable() {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setOpenDeleteConfirm(false)} color="error" variant="outlined">
+                    <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error" variant="outlined">
                         Cancel
                     </Button>
                     <Button
                         variant="contained"
                         onClick={() => {
                             handleDelete();
-                            setOpenDeleteConfirm(false);
                         }}
                         color="error"
                     >

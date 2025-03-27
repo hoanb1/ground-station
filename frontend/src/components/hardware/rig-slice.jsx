@@ -1,77 +1,190 @@
-import { createSlice } from '@reduxjs/toolkit';
+import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 
-const rigTableSlice = createSlice({
-    name: 'rigTable',
+export const fetchRigs = createAsyncThunk(
+    'rigs/fetchAll',
+    async ({socket}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-rigs', null, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to fetch rigs'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const deleteRigs = createAsyncThunk(
+    'rigs/deleteRigs',
+    async ({socket, selectedIds}, {rejectWithValue}) => {
+        try {
+            console.info("deleteing", selectedIds);
+
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'delete-rig', selectedIds, (response) => {
+                    if (response.success) {
+                        resolve(response.data);
+                    } else {
+                        reject(new Error('Failed to delete rigs'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const submitOrEditRig = createAsyncThunk(
+    'rigs/submitOrEdit',
+    async ({socket, formValues}, {rejectWithValue, dispatch}) => {
+        const action = formValues.id ? 'edit-rig' : 'submit-rig';
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', action, formValues, (response) => {
+                    if (response.success) {
+                        dispatch(setOpenAddDialog(false));
+                        resolve(response.data);
+                    } else {
+                        reject(new Error(`Failed to ${action === 'edit-rig' ? 'edit' : 'add'} rig`));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+const defaultRig = {
+    id: null,
+    name: '',
+    host: 'localhost',
+    port: 4532,
+    minaz: 0,
+    maxaz: 360,
+    minel: 0,
+    maxel: 90,
+    aztype: 0,
+    azendstop: 0,
+};
+
+const rigsSlice = createSlice({
+    name: 'rigs',
     initialState: {
         rigs: [],
         status: 'idle', // 'idle' | 'loading' | 'succeeded' | 'failed'
         error: null,
-        // Table-related states:
-        order: 'asc',
-        orderBy: 'name',
+        openDeleteConfirm: false,
+        openAddDialog: false,
         selected: [],
-        page: 0,
-        rowsPerPage: 5,
+        loading: false,
+        pageSize: 10,
+        formValues: defaultRig,
     },
     reducers: {
         setRigs: (state, action) => {
             state.rigs = action.payload;
         },
-        addRig: (state, action) => {
-            state.rigs.push(action.payload);
+        setLoading: (state, action) => {
+            state.loading = action.payload;
         },
-        removeRig: (state, action) => {
-            const idToRemove = action.payload;
-            state.rigs = state.rigs.filter((rig) => rig.id !== idToRemove);
+        setPageSize: (state, action) => {
+            state.pageSize = action.payload;
         },
-        updateRig: (state, action) => {
-            const { id, updates } = action.payload;
-            const index = state.rigs.findIndex((rig) => rig.id === id);
-            if (index !== -1) {
-                state.rigs[index] = { ...state.rigs[index], ...updates };
-            }
+        setOpenDeleteConfirm: (state, action) => {
+            state.openDeleteConfirm = action.payload;
         },
-        // New table-related reducers:
-        setOrder: (state, action) => {
-            state.order = action.payload;
-        },
-        setOrderBy: (state, action) => {
-            state.orderBy = action.payload;
+        setOpenAddDialog: (state, action) => {
+            state.openAddDialog = action.payload;
         },
         setSelected: (state, action) => {
             state.selected = action.payload;
         },
-        toggleSelected: (state, action) => {
-            const id = action.payload;
-            if (state.selected.includes(id)) {
-                state.selected = state.selected.filter((sid) => sid !== id);
-            } else {
-                state.selected.push(id);
-            }
+        setFormValues: (state, action) => {
+            state.formValues = {
+                ...state.formValues,
+                ...action.payload,
+            };
         },
-        setPage: (state, action) => {
-            state.page = action.payload;
+        resetFormValues: (state) => {
+            state.formValues = defaultRig;
         },
-        setRowsPerPage: (state, action) => {
-            state.rowsPerPage = action.payload;
+        setError: (state, action) => {
+            state.error = action.payload;
+        },
+        setStatus: (state, action) => {
+            state.status = action.payload;
         },
     },
     extraReducers: (builder) => {
-
+        builder
+            .addCase(fetchRigs.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchRigs.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+                state.rigs = action.payload;
+            })
+            .addCase(fetchRigs.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(deleteRigs.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(deleteRigs.fulfilled, (state, action) => {
+                state.loading = false;
+                state.status = 'succeeded';
+                state.rigs = action.payload;
+                state.openDeleteConfirm = false;
+            })
+            .addCase(deleteRigs.rejected, (state, action) => {
+                state.loading = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            })
+            .addCase(submitOrEditRig.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(submitOrEditRig.fulfilled, (state, action) => {
+                state.loading = false;
+                state.status = 'succeeded';
+                state.rigs = action.payload;
+                state.formValues = defaultRig;
+            })
+            .addCase(submitOrEditRig.rejected, (state, action) => {
+                state.loading = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            })
     },
 });
 
 export const {
     setRigs,
-    addRig,
-    removeRig,
-    updateRig,
-    setOrder,
-    setOrderBy,
+    setLoading,
+    setPageSize,
+    setOpenDeleteConfirm,
+    setOpenAddDialog,
     setSelected,
-    toggleSelected,
-    setPage,
-    setRowsPerPage,
-} = rigTableSlice.actions;
+    setFormValues,
+    resetFormValues,
+    setError,
+    setStatus,
+} = rigsSlice.actions;
 
-export default rigTableSlice.reducer;
+export default rigsSlice.reducer;
