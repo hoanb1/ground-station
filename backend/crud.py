@@ -1092,11 +1092,15 @@ async def add_satellite_tle_source(session: AsyncSession, payload: dict) -> dict
         assert payload['url']
         assert payload['identifier']
 
+        del payload['added']
+        del payload['updated']
+
         new_source = SatelliteTLESources(**payload)
         session.add(new_source)
         await session.commit()
         await session.refresh(new_source)
         return {"success": True, "data": new_source}
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error adding satellite TLE source: {e}")
@@ -1146,6 +1150,8 @@ async def delete_satellite_tle_sources(
     Deletes multiple satellite TLE source records using their IDs.
     """
     try:
+        assert isinstance(satellite_tle_source_ids, list), "TLE source list must be a list"
+
         satellite_tle_source_ids = convert_strings_to_uuids(satellite_tle_source_ids)
 
         # Fetch sources that match the provided IDs
