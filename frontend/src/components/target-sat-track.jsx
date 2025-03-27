@@ -213,7 +213,7 @@ const NextPassesIsland = ({noradId}) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {noradId}</TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',

@@ -10,6 +10,15 @@ import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
+import { useDispatch, useSelector } from 'react-redux';
+import {
+    deleteRotators,
+    fetchRotators,
+    submitOrEditRotator,
+    setOpenDeleteConfirm,
+    setOpenAddDialog,
+    setFormValues
+} from './rotaror-slice.jsx';
 
 
 export default function AntennaRotatorTable() {
@@ -26,13 +35,11 @@ export default function AntennaRotatorTable() {
         aztype: 0,
         azendstop: 0,
     };
-    const [openDeleteConfirm, setOpenDeleteConfirm] = useState(false);
-    const [openAddDialog, setOpenAddDialog] = useState(false);
     const [selected, setSelected] = useState([]);
     const [loading, setLoading] = useState(false);
-    const [rows, setRows] = useState([]);
     const [pageSize, setPageSize] = useState(10);
-    const [formValues, setFormValues] = useState(defaultRotator)
+    const dispatch = useDispatch();
+    const { rotators, status, error, openAddDialog, openDeleteConfirm, formValues } = useSelector((state) => state.rotators);
 
     const columns = [
         { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
@@ -47,63 +54,46 @@ export default function AntennaRotatorTable() {
     ];
 
     useEffect(() => {
-        setLoading(true);
-        socket.emit('data_request', 'get-rotators', null, (response) => {
-            if (response.success) {
-                setRows(response.data);
-            } else {
-                enqueueSnackbar("Failed to fetch rotators", {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-            setLoading(false);
-        })
-
-        return () => {
-
-        };
-    }, []);
+        // Only dispatch if the socket is ready
+        if (socket) {
+            dispatch(fetchRotators({socket}));
+        }
+    }, [dispatch, socket]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormValues((prev) => ({ ...prev, [name]: value }));
+        dispatch(setFormValues({...formValues, [name]: value}));
     };
 
     const handleSubmit = () => {
-        const action = formValues.id ? 'edit-rotator' : 'submit-rotator';
-        socket.emit('data_submission', action, formValues, (response) => {
-            if (response.success) {
+        dispatch(submitOrEditRotator({socket, formValues}))
+            .unwrap()
+            .then(() => {
+                enqueueSnackbar('Rotator saved successfully', { variant: 'success' });
                 setOpenAddDialog(false);
-                setRows(response.data);
-            } else {
-                enqueueSnackbar(`Failed to ${action === 'edit-rotator' ? 'edit' : 'add'} rotator`, {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-        });
+            })
+            .catch((err) => {
+                enqueueSnackbar(err.message, { variant: 'error' });
+            });
     }
 
     const handleDelete = () => {
-        socket.emit('data_submission', 'delete-rotator', selected, (response) => {
-            if (response.success) {
-                setOpenDeleteConfirm(false);
-                setRows(response.data);
-            } else {
-                enqueueSnackbar(`Failed to delete rotator`, {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-        })
+        dispatch(deleteRotators({ socket, selectedIds: selected }))
+            .unwrap()
+            .then(() => {
+                enqueueSnackbar('Rotator(s) deleted successfully', { variant: 'success' });
+                dispatch(setOpenDeleteConfirm(false));
+            })
+            .catch((err) => {
+                enqueueSnackbar(err.message, { variant: 'error' });
+            });
     };
 
     return (
         <Box sx={{ width: '100%' }}>
             <DataGrid
                 loading={loading}
-                rows={rows}
+                rows={rotators}
                 columns={columns}
                 checkboxSelection
                 disableSelectionOnClick
@@ -135,10 +125,10 @@ export default function AntennaRotatorTable() {
                 }}
             />
             <Stack direction="row" spacing={2} style={{marginTop: 15}}>
-                <Button variant="contained" onClick={() => setOpenAddDialog(true)}>
+                <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
                     Add
                 </Button>
-                <Dialog fullWidth={true} open={openAddDialog} onClose={() => setOpenAddDialog(false)}>
+                <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
                     <DialogTitle>Add Antenna Rotator</DialogTitle>
                     <DialogContent>
                         <Stack spacing={2}>
@@ -163,7 +153,7 @@ export default function AntennaRotatorTable() {
                         </Stack>
                     </DialogContent>
                     <DialogActions style={{padding: '0px 24px 20px 20px'}}>
-                        <Button onClick={() => setOpenAddDialog(false)} color="error" variant="outlined">
+                        <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error" variant="outlined">
                             Cancel
                         </Button>
                         <Button
@@ -179,10 +169,10 @@ export default function AntennaRotatorTable() {
                     variant="contained"
                     disabled={selected.length !== 1}
                     onClick={() => {
-                        const selectedRow = rows.find(row => row.id === selected[0]);
+                        const selectedRow = rotators.find(row => row.id === selected[0]);
                         if (selectedRow) {
-                            setFormValues(selectedRow);
-                            setOpenAddDialog(true);
+                            dispatch(setFormValues(selectedRow));
+                            dispatch(setOpenAddDialog(true));
                         }
                     }}
                 >
@@ -192,20 +182,20 @@ export default function AntennaRotatorTable() {
                     variant="contained"
                     disabled={selected.length < 1}
                     color="error"
-                    onClick={() => setOpenDeleteConfirm(true)}
+                    onClick={() => dispatch(setOpenDeleteConfirm(true))}
                 >
                     Delete
                 </Button>
                 <Dialog
                     open={openDeleteConfirm}
-                    onClose={() => setOpenDeleteConfirm(false)}
+                    onClose={() => dispatch(setOpenDeleteConfirm(false))}
                 >
                     <DialogTitle>Confirm Deletion</DialogTitle>
                     <DialogContent>
                         Are you sure you want to delete the selected item(s)?
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setOpenDeleteConfirm(false)} color="error" variant="outlined">
+                        <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error" variant="outlined">
                             Cancel
                         </Button>
                         <Button

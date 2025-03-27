@@ -20,6 +20,10 @@ import Layout from "./components/common/dashboard.jsx";
 import TargetSatelliteTrack from "./components/target-sat-track.jsx";
 import {SocketProvider, useSocket} from './components/common/socket.jsx';
 import {AuthProvider} from "./components/common/auth.jsx";
+import { Provider as ReduxProvider} from 'react-redux';
+import { store } from './components/store.jsx';
+
+
 
 const router = createBrowserRouter([
     {
@@ -100,10 +104,12 @@ const router = createBrowserRouter([
 
 createRoot(document.getElementById('root')).render(
     <StrictMode>
-        <SocketProvider >
+        <ReduxProvider store={store}>
+        <SocketProvider>
             <AuthProvider>
                 <RouterProvider router={router} />
             </AuthProvider>
         </SocketProvider>
+        </ReduxProvider>
     </StrictMode>
 );

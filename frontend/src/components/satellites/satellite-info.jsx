@@ -70,7 +70,7 @@ const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
                             <Grid sx={{ mb: 2, textAlign: 'center' }} style={{minHeight: '300px', width: '38%' }} >
                                 <Box sx={{ mb: 2, textAlign: 'right' }}>
                                     <img
-                                        src={`http://localhost:5000/public/satimages/${selectedSatellite['norad_id']}.jpg`}
+                                        src={`http://192.168.60.99:5000/public/satimages/${selectedSatellite['norad_id']}.jpg`}
                                         alt={`Satellite ${selectedSatellite['norad_id']}`}
                                         style={{ maxWidth: '100%', height: 'auto' }}
                                     />
