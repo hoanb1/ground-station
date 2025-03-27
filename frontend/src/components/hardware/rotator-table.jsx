@@ -17,29 +17,17 @@ import {
     submitOrEditRotator,
     setOpenDeleteConfirm,
     setOpenAddDialog,
-    setFormValues
+    setFormValues,
+    setLoading
 } from './rotaror-slice.jsx';
 
 
 export default function AntennaRotatorTable() {
     const {socket} = useSocket();
-    const defaultRotator = {
-        id: null,
-        name: '',
-        host: 'localhost',
-        port: 4532,
-        minaz: 0,
-        maxaz: 360,
-        minel: 0,
-        maxel: 90,
-        aztype: 0,
-        azendstop: 0,
-    };
     const [selected, setSelected] = useState([]);
-    const [loading, setLoading] = useState(false);
     const [pageSize, setPageSize] = useState(10);
     const dispatch = useDispatch();
-    const { rotators, status, error, openAddDialog, openDeleteConfirm, formValues } = useSelector((state) => state.rotators);
+    const { loading, rotators, status, error, openAddDialog, openDeleteConfirm, formValues } = useSelector((state) => state.rotators);
 
     const columns = [
         { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
