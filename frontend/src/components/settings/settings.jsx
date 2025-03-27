@@ -144,7 +144,7 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             tabsList = [
                 <AntTab key="preferences" value="preferences" label="Preferences" to="/settings/preferences" component={Link} />,
                 <AntTab key="location" value="location" label="Location" to="/settings/location" component={Link} />,
-                <AntTab key="users" value="users" label="UsersTable" to="/settings/users" component={Link} />,
+                <AntTab key="users" value="users" label="Users" to="/settings/users" component={Link} />,
                 <AntTab key="maintenance" value="maintenance" label="Maintenance" to="/settings/maintenance" component={Link} />,
                 <AntTab key="about" value="about" label="About" to="/settings/about" component={Link} />,
             ];
@@ -284,7 +284,7 @@ const UsersForm = () => {
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
             <Alert severity="info">
-                <AlertTitle>UsersTable</AlertTitle>
+                <AlertTitle>Users</AlertTitle>
                 Manage add and remove users here
             </Alert>
             <UsersTable/>
