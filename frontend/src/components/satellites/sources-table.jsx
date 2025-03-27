@@ -17,14 +17,13 @@ import {
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchTLESources,  submitOrEditTLESource, deleteTLESources} from './sources-slice.jsx';
 import PropTypes from "prop-types";
-import Card from '@mui/material/Card';
-import CardContent from '@mui/material/CardContent';
 import Typography from '@mui/material/Typography';
 import LinearProgress, {linearProgressClasses} from '@mui/material/LinearProgress';
 import {betterDateTimes} from "../common/common.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {setFormValues, setOpenAddDialog, setOpenDeleteConfirm, setSelected} from "./sources-slice.jsx"
+import SynchronizeTLEsCard from "./sychronize-card.jsx";
 
 const columns = [
     {field: 'name', headerName: 'Name', width: 150},
@@ -43,128 +42,7 @@ const columns = [
 
 const paginationModel = {page: 0, pageSize: 10};
 
-function LinearProgressWithLabel(props) {
-    return (
-        <Box sx={{display: 'flex', alignItems: 'center'}}>
-            <Box sx={{width: '100%', mr: 1}}>
-                <LinearProgress variant="determinate" {...props} />
-            </Box>
-            <Box sx={{minWidth: 35}}>
-                <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                    {`${Math.round(props.value)}%`}
-                </Typography>
-            </Box>
-        </Box>
-    );
-}
 
-LinearProgressWithLabel.propTypes = {
-    /**
-     * The value of the progress indicator for the determinate and buffer variants.
-     * Value between 0 and 100.
-     */
-    value: PropTypes.number.isRequired,
-};
-
-function LinearWithValueLabel({progress}) {
-
-    const BorderLinearProgress = styled(LinearProgress)(({theme}) => ({
-        height: 20,
-        borderRadius: 5,
-        [`&.${linearProgressClasses.colorPrimary}`]: {
-            backgroundColor: theme.palette.grey[200],
-            ...theme.applyStyles('dark', {
-                backgroundColor: theme.palette.grey[800],
-            }),
-        },
-        [`& .${linearProgressClasses.bar}`]: {
-            borderRadius: 5,
-            backgroundColor: '#1a90ff',
-            ...theme.applyStyles('dark', {
-                backgroundColor: '#308fe8',
-            }),
-        },
-    }));
-
-    return (
-        <Box sx={{display: 'flex', alignItems: 'left', width: '100%'}}>
-            <Box sx={{width: '100%', mr: 1}}>
-                <BorderLinearProgress
-                    value={progress}
-                    variant="determinate"
-                />
-            </Box>
-            <Box sx={{minWidth: 35}}>
-                <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                    {`${Math.round(progress)}%`}
-                </Typography>
-            </Box>
-        </Box>
-    );
-}
-
-const SynchronizeTLEsCard = function () {
-    const { socket } = useSocket();
-    const [progress, setProgress] = useState({});
-    const [message, setMessage] = useState('');
-
-    const handleSynchronizeSatellites = function (event) {
-        socket.emit("data_request", "sync-satellite-data", null, (response) => {
-            if (response.success === true) {
-                console.log("Satellite data synchronization completed successfully", response);
-            } else {
-                console.error(response.error);
-            }
-        });
-    }
-
-    useEffect(() => {
-        socket.on("sat-sync-events", (data) => {
-            console.log("Received data for sat-sync-events:", data);
-            setProgress(data.progress);
-            setMessage(data.message);
-
-            if (data.status === 'complete') {
-                enqueueSnackbar("Satellite data synchronization completed successfully", {
-                    variant: 'success',
-                    autoHideDuration: 4000,
-                });
-            }
-        });
-
-        return () => {
-            socket.off("sat-sync-events");
-        };
-    }, []);
-
-    return (
-        <Card sx={{display: 'flex', marginTop: 2, marginBottom: 0}}>
-            <Box sx={{display: 'flex', flexDirection: 'column', width: '40%'}}>
-                <CardContent sx={{flexGrow: 1, display: 'flex', flexDirection: 'column'}}>
-                    <Typography component="div" variant="h6">
-                        Fetch data from TLE sources
-                    </Typography>
-                    <Typography variant="subtitle1" component="div" sx={{color: 'text.secondary'}}>
-                        click to start
-                    </Typography>
-                </CardContent>
-                <Box sx={{ display: 'flex', alignItems: 'center', pl: 1, pb: 1, padding: 2}}>
-                    <Button variant="contained" color="primary" onClick={handleSynchronizeSatellites}>
-                        Synchronize
-                    </Button>
-                </Box>
-            </Box>
-            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column', justifyContent: 'center', alignItems: 'center', paddingRight: 2}}>
-                <Box sx={{ display: 'flex', flexDirection: 'column', width: '90%' }}>
-                    <LinearWithValueLabel progress={progress}/>
-                </Box>
-                <Box sx={{ display: 'flex', flexDirection: 'column', width: '90%', 'marginTop': 1 }}>
-                    {message}
-                </Box>
-            </Box>
-        </Card>
-    );
-}
 
 export default function SourcesTable() {
     const dispatch = useDispatch();
