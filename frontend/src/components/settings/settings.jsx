@@ -2,36 +2,26 @@ import React, {useEffect, useState} from 'react';
 import {
     Box,
     Tab,
-    TextField,
     Button,
-    Typography,
-    Grid2,
-    Container,
     Alert,
-    FormControl,
-    InputLabel,
-    Select, FormHelperText, MenuItem, AlertTitle, Divider, ButtonGroup
+    AlertTitle
 } from '@mui/material';
 import { Link } from 'react-router';
 import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 import {gridLayoutStoreName as overviewGridLayoutName} from '../overview-sat-track.jsx';
 import {gridLayoutStoreName as targetGridLayoutName} from '../target-sat-track.jsx';
-import {MapContainer, TileLayer, Marker, Popup, useMapEvents, Polyline, Circle} from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Grid from "@mui/material/Grid2";
-import {SimpleVectorCircle} from "../common/icons.jsx";
 import AntennaRotatorTable from "../hardware/rotator-table.jsx";
-import Stack from "@mui/material/Stack";
 import RigTable from "../hardware/rig-table.jsx";
 import {styled} from "@mui/material/styles";
 import TLESourcesTable from "../satellites/tle-sources-table.jsx";
 import SatelliteTable from "../satellites/satellite-table.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "../satellites/satellite-groups.jsx";
-import UsersTable from "./users.jsx";
-import {enqueueSnackbar} from "notistack";
+import Users from "./users.jsx";
 import LocationPage from "./location.jsx";
 import PreferencesForm from "./preferences.jsx";
 
@@ -297,7 +287,7 @@ const UsersForm = () => {
                 <AlertTitle>Users</AlertTitle>
                 Manage add and remove users here
             </Alert>
-            <UsersTable/>
+            <Users/>
         </Paper>);
 };
 

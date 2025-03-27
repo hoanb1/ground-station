@@ -1,4 +1,5 @@
-import React, {useEffect, useState} from 'react';
+// Users.jsx
+import React, { useEffect } from 'react';
 import {
     Box,
     Button,
@@ -8,286 +9,250 @@ import {
     DialogTitle,
     Stack,
     TextField,
-    MenuItem,
+    FormControl,
+    InputLabel,
     Select,
-    FormControl, InputLabel
+    MenuItem, DialogContentText
 } from '@mui/material';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
-import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
+import { useSelector, useDispatch } from 'react-redux';
+import { enqueueSnackbar } from 'notistack';
 
-const UsersTable = () => {
+// Import slice actions and thunks
+import {
+    setOpenConfirmDialog,
+    setOpenUserDialog,
+    setSelected,
+    setFormValues,
+    resetFormValues,
+    fetchUsers,
+    deleteUsers,
+    submitOrEditUser,
+} from './users-slice';
+import { useSocket } from '../common/socket.jsx';
+import {setOpenDeleteConfirm} from "../hardware/rig-slice.jsx";
+
+const Users = () => {
+    const dispatch = useDispatch();
     const { socket } = useSocket();
-    const [rows, setRows] = useState([]);
-    const [selectedRows, setSelectedRows] = useState([]);
-    const [loading, setLoading] = useState(false);
-    const [openConfirmDialog, setOpenConfirmDialog] = useState(false);
 
-    // Columns definition for DataGrid
+    // Redux state
+    const {
+        data: rows,
+        loading,
+        error,
+        openConfirmDialog,
+        openUserDialog,
+        selected,
+        formValues,
+    } = useSelector((state) => state.users);
+
+    // DataGrid columns
     const columns = [
         { field: 'fullname', headerName: 'Full Name', flex: 1 },
         { field: 'email', headerName: 'Email', flex: 1 },
         { field: 'status', headerName: 'Status', flex: 1 },
-        {
-            field: 'added',
-            headerName: 'Added',
-            flex: 1,
-        },
+        { field: 'added', headerName: 'Added', flex: 1 },
     ];
 
-    // State to control dialog visibility
-    const [open, setOpen] = useState(false);
+    // Fetch initial data
+    useEffect(() => {
+        dispatch(fetchUsers({ socket }))
+            .unwrap()
+            .catch(() => {
+                enqueueSnackbar('Failed to get users', { variant: 'error' });
+            });
+    }, [dispatch, socket]);
 
-    // Form state
-    const [formValues, setFormValues] = useState({
-        fullname: '',
-        email: '',
-        password: '',
-        status: 'active',
-    });
-
+    // Handlers
     const handleClickOpen = () => {
-        setOpen(true);
+        dispatch(setOpenUserDialog(true));
+        dispatch(resetFormValues());
     };
 
     const handleClose = () => {
-        setOpen(false);
-        setFormValues({
-            fullname: '',
-            email: '',
-            password: '',
-            status: '',
-        });
+        dispatch(setOpenUserDialog(false));
+        dispatch(resetFormValues());
     };
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        setFormValues({ ...formValues, [name]: value });
+        dispatch(setFormValues({ [name]: value }));
     };
 
-    const handleDelete = (e) => {
-        socket.emit("data_submission", "delete-user", selectedRows, (response) => {
-            if (response['success']) {
-                enqueueSnackbar('User deleted successfully', {
-                    variant: 'success',
-                    autoHideDuration: 5000,
-                })
-                setRows(response['data']);
-            } else {
-                enqueueSnackbar('Failed to delete user', {})
-            }
-        })
-    };
-
-    const handleSubmit = (e) => {
+    const handleSubmit = async (e) => {
         e.preventDefault();
-        setLoading(true);
-
-        if (formValues.id) {
-            socket.emit("data_submission", 'edit-user', formValues, (response) => {
-                if (response['success']) {
-                    enqueueSnackbar('User edited successfully', {
-                        variant: 'success',
-                        autoHideDuration: 5000,
-                    })
-                    setRows(response['data']);
-                    handleClose();
-                } else {
-                    enqueueSnackbar('Failed to edited user', {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                    })
-                }
-                setLoading(false);
+        await dispatch(submitOrEditUser({ socket, formValues }))
+            .unwrap()
+            .then(() => {
+                enqueueSnackbar(
+                    formValues.id ? 'User edited successfully' : 'User added successfully',
+                    { variant: 'success' }
+                );
+            })
+            .catch((err) => {
+                enqueueSnackbar(err.message, { variant: 'error' });
             });
+    }
 
-        } else {
-            socket.emit("data_submission", 'submit-user', formValues, (response) => {
-                if (response['success']) {
-                    enqueueSnackbar('User added successfully', {
-                        variant: 'success',
-                        autoHideDuration: 5000,
-                    })
-                    setRows(response['data']);
-                    handleClose();
-                } else {
-                    enqueueSnackbar('Failed to added user', {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                    })
-                }
-                setLoading(false);
-            });
+    const handleDeleteConfirm = () => {
+        dispatch(setOpenConfirmDialog(true));
+    };
+
+    const handleDelete = async () => {
+        dispatch(setOpenConfirmDialog(false));
+        try {
+            await dispatch(deleteUsers({ socket, selectedIds: selected }))
+                .unwrap()
+                .then(()=>{
+                    enqueueSnackbar('User(s) deleted successfully', { variant: 'success' });
+                })
+                .catch((err) => {
+                    enqueueSnackbar('Failed to delete users(s)', { variant: 'error' });
+                });
+
+        } catch (err) {
+            enqueueSnackbar('Failed to delete user(s)', { variant: 'error' });
         }
     };
 
-    useEffect(() => {
-        setLoading(true);
-        socket.emit("data_request", "get-users", null, (response) => {
-            if (response['success']) {
-                console.log("Received users data", response);
-                setRows(response['data']);
-            } else {
-                enqueueSnackbar('Failed to get users', {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                })
-            }
-            setLoading(false);
-        });
-        return () => {
-            // Cleanup logic (optional)
-        };
-    }, []);
-
     return (
-        <Box sx={{ width: '100%' }}>
-            <Box sx={{ height: 400, width: '100%' }}>
-                <DataGrid
-                    loading={loading}
-                    checkboxSelection={true}
-                    columns={columns}
-                    rows={rows}
-                    pageSizeOptions={[5, 10, 25]}
-                    onRowSelectionModelChange={(selected) => {
-                        setSelectedRows(selected);
-                    }}
-                    initialState={{
-                        pagination: { paginationModel: { pageSize: 5 } },
-                        sorting: {
-                            sortModel: [{ field: 'fullname', sort: 'desc' }],
-                        },
-                    }}
-                    sx={{
-                        border: 0,
-                        marginTop: 2,
-                        [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+        <Box>
+            <DataGrid
+                rows={rows}
+                columns={columns}
+                loading={loading}
+                autoHeight
+                getRowId={(row) => row.id}
+                checkboxSelection
+                disableSelectionOnClick
+                onRowSelectionModelChange={(ids) => {
+                    dispatch(setSelected(ids));
+                }}
+                selectionModel={selected}
+                sx={{
+                    border: 0,
+                    marginTop: 2,
+                    [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                        outline: 'none',
+                    },
+                    [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                        {
                             outline: 'none',
                         },
-                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                            {
-                                outline: 'none',
-                            },
-                    }}
-                />
-            </Box>
-
-            <Stack direction="row" spacing={2} sx={{ mt: 2 }}>
-                <Button variant="contained" onClick={handleClickOpen}>Add</Button>
+                }}
+            />
+            <Stack direction="row" spacing={2} style={{marginTop: 15}}>
+                <Button variant="contained" onClick={handleClickOpen}>
+                    Add
+                </Button>
                 <Button
-                    disabled={selectedRows.length !== 1}
+                    disabled={selected.length !== 1}
                     variant="contained"
                     onClick={() => {
-                        const userToEdit = rows.find(row => row.id === selectedRows[0]);
+                        const userToEdit = rows.find(row => row.id === selected[0]);
                         if (userToEdit) {
-                            setFormValues({
+                            dispatch(setFormValues({
                                 id: userToEdit.id,
                                 fullname: userToEdit.fullname,
                                 email: userToEdit.email,
                                 password: '', // Password should typically not be pre-filled for security reasons
                                 status: userToEdit.status,
-                            });
-                            setOpen(true);
+                            }));
+                            dispatch(setOpenUserDialog(true));
                         }
                     }}
                 >
                     Edit
                 </Button>
                 <Button
-                    disabled={selectedRows.length < 1}
                     variant="contained"
                     color="error"
-                    onClick={() => setOpenConfirmDialog(true)}
+                    onClick={handleDeleteConfirm}
+                    disabled={!selected.length}
+                    sx={{ ml: 2 }}
                 >
                     Delete
                 </Button>
-                <Dialog
-                    open={openConfirmDialog}
-                    onClose={() => setOpenConfirmDialog(false)}
-                >
-                    <DialogTitle>Confirm Delete</DialogTitle>
-                    <DialogContent>
-                        Are you sure you want to delete the selected users?
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => setOpenConfirmDialog(false)}>Cancel</Button>
-                        <Button
-                            onClick={() => {
-                                handleDelete();
-                                setOpenConfirmDialog(false);
-                            }}
-                            color="error"
-                            variant="contained"
-                        >
-                            Delete
-                        </Button>
-                    </DialogActions>
-                </Dialog>
             </Stack>
 
-            {/* Dialog for Adding and Editing User */}
-            <Dialog open={open} onClose={handleClose} maxWidth="sm" fullWidth>
-                <DialogTitle>Add New User</DialogTitle>
-                <form onSubmit={handleSubmit}>
-                    <DialogContent>
-                        <Stack spacing={2} sx={{ marginTop: 1 }}>
-                            <TextField
-                                autoComplete="new-password"
-                                margin="dense"
-                                name="fullname"
-                                label="Full Name"
-                                type="text"
-                                fullWidth
-                                value={formValues.fullname}
+            <Dialog open={openConfirmDialog} onClose={() => dispatch(setOpenConfirmDialog(false))}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete the selected rig(s)?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => dispatch(setOpenConfirmDialog(false))} color="error" variant="outlined">
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            handleDelete();
+                        }}
+                        color="error"
+                    >
+                        Confirm
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog open={openUserDialog} onClose={handleClose} fullWidth maxWidth="sm">
+                <DialogTitle>{formValues.id ? 'Edit' : 'Add'} User</DialogTitle>
+                <DialogContent>
+                    <Stack spacing={2} sx={{ mt: 2 }}>
+                        <TextField
+                            variant="filled"
+                            label="Fullname"
+                            name="fullname"
+                            value={formValues.fullname || ''}
+                            onChange={handleChange}
+                            fullWidth
+                        />
+                        <TextField
+                            variant="filled"
+                            autoComplete="new-password"
+                            label="Email"
+                            name="email"
+                            value={formValues.email || ''}
+                            onChange={handleChange}
+                            fullWidth
+                        />
+                        <TextField
+                            variant="filled"
+                            autoComplete="new-password"
+                            label="Password"
+                            name="password"
+                            type="password"
+                            value={formValues.password || ''}
+                            onChange={handleChange}
+                            fullWidth
+                        />
+                        <FormControl fullWidth variant="filled" sx={{ mt: 2 }}>
+                            <InputLabel>Status</InputLabel>
+                            <Select
+                                label="Status"
+                                name="status"
+                                value={formValues.status || ''}
                                 onChange={handleChange}
-                                variant={"filled"}
-                            />
-                            <TextField
-                                autoComplete="new-password"
-                                margin="dense"
-                                name="email"
-                                label="Email"
-                                type="email"
-                                fullWidth
-                                value={formValues.email}
-                                onChange={handleChange}
-                                variant={"filled"}
-                            />
-                            <TextField
-                                autoComplete="new-password"
-                                margin="dense"
-                                name="password"
-                                label="Password"
-                                type="password"
-                                fullWidth
-                                value={formValues.password}
-                                onChange={handleChange}
-                                variant={"filled"}
-                            />
-                            <FormControl fullWidth variant="filled">
-                                <InputLabel id="status-label">Status</InputLabel>
-                                <Select
-                                    label="Status"
-                                    name="status"
-                                    value={formValues.status || ''}
-                                    onChange={handleChange}
-                                 variant={'filled'}>
-                                    <MenuItem value="active">Active</MenuItem>
-                                    <MenuItem value="inactive">Inactive</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Stack>
-                    </DialogContent>
-                    <DialogActions style={{padding: '0px 24px 20px 20px'}}>
-                        <Button onClick={handleClose}>Cancel</Button>
-                        <Button type="submit" variant="contained" color="primary"  disabled={loading}>
-                            Submit
-                        </Button>
-                    </DialogActions>
-                </form>
+                             variant={'filled'}>
+                                <MenuItem value="active">Active</MenuItem>
+                                <MenuItem value="disabled">Disabled</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Stack>
+                </DialogContent>
+                <DialogActions sx={{ padding: '0px 24px 20px 20px' }}>
+                    <Button onClick={handleClose}>Cancel</Button>
+                    <Button variant="contained" onClick={handleSubmit}>
+                        {formValues.id ? 'Save Changes' : 'Add User'}
+                    </Button>
+                </DialogActions>
             </Dialog>
         </Box>
     );
 };
 
-export default UsersTable;
+export default Users;

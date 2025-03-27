@@ -63,6 +63,7 @@ class AwareDateTime(TypeDecorator):
     attaching UTC if the datetime is naive.
     """
     impl = DateTime(timezone=False)  # or True, but SQLite doesn't honor tz anyway
+    cache_ok = False
 
     def process_result_value(self, value, dialect):
         """

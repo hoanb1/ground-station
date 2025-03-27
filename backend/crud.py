@@ -113,6 +113,10 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
             user_id = uuid.UUID(user_id)
 
         del data['id']
+        if data.get('updated', None) is not None:
+            del data['updated']
+        if data.get('added', None) is not None:
+            del data['added']
 
         # hash the password
         if data.get("password", "") != "":
@@ -122,14 +126,14 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
             password_hash = bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
             data["password"] = password_hash
 
-    # Check if the user exists
+        # check if the user exists
         stmt = select(Users).filter(Users.id == user_id)
         result = await session.execute(stmt)
         user = result.scalar_one_or_none()
         if not user:
             return {"success": False, "error": f"User with id {user_id} not found."}
 
-        # Update provided fields; also update the timestamp
+        # update provided fields; also update the timestamp
         data["updated"] = datetime.now(UTC)
         upd_stmt = (
             update(Users)
@@ -141,6 +145,7 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
         await session.commit()
         updated_user = upd_result.scalar_one_or_none()
         return {"success": True, "data": updated_user, "error": None}
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error editing user: {e}")
