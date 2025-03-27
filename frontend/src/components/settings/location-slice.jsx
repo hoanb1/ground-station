@@ -98,18 +98,13 @@ const locationSlice = createSlice({
             })
             .addCase(fetchLocationForUserId.fulfilled, (state, action) => {
                 state.locationLoading = false;
-                if (!action.payload) {
-                    // If no data was found, you can decide how to handle that:
-                    return;
+                if (action.payload) {
+                    const payload = action.payload;
+                    state.location = action.payload;
+                    state.locationId = action.payload.id;
+                    state.locationUserId = action.payload.userid;
+                    state.qth = getMaidenhead(parseFloat(payload.lat), parseFloat(payload.lon));
                 }
-                const data = action.payload;
-                state.location = {
-                    lat: parseFloat(data.lat),
-                    lon: parseFloat(data.lon),
-                };
-                state.locationId = data.id;
-                state.locationUserId = data.userid;
-                state.qth = getMaidenhead(parseFloat(data.lat), parseFloat(data.lon));
             })
             .addCase(fetchLocationForUserId.rejected, (state, action) => {
                 state.locationLoading = false;
@@ -121,11 +116,13 @@ const locationSlice = createSlice({
             })
             .addCase(storeLocation.fulfilled, (state, action) => {
                 state.locationLoading = false;
-                const payload = action.payload;
-                state.location = action.payload;
-                state.locationId = action.payload.id;
-                state.locationUserId = action.payload.userid;
-                state.qth = getMaidenhead(parseFloat(payload.lat), parseFloat(payload.lon));
+                if (action.payload) {
+                    const payload = action.payload;
+                    state.location = action.payload;
+                    state.locationId = action.payload.id;
+                    state.locationUserId = action.payload.userid;
+                    state.qth = getMaidenhead(parseFloat(payload.lat), parseFloat(payload.lon));
+                }
             })
             .addCase(storeLocation.rejected, (state, action) => {
                 state.locationLoading = false;

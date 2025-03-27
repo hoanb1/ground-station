@@ -303,6 +303,7 @@ async def fetch_location_for_userid(session: AsyncSession, user_id: Optional[uui
 
         result = await session.execute(stmt)
         locations = result.scalars().all() if user_id else result.scalar_one_or_none()
+        locations = serialize_object(locations)
         return {"success": True, "data": locations, "error": None}
 
     except Exception as e:

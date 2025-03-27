@@ -69,7 +69,6 @@ const LocationPage = () => {
         dispatch(setQth(getMaidenhead(location.lat, location.lon)));
     }, [location, dispatch]);
 
-    // Example function to handle map clicks
     const handleMapClick = (e) => {
         const { lat, lng } = e.latlng;
         dispatch(setLocation({ lat, lon: lng }));
@@ -77,23 +76,29 @@ const LocationPage = () => {
         reCenterMap(lat, lng);
     };
 
-    // Example map ready callback
-    const handleWhenReady = (map) => {
-        MapObject = map.target;
-        setInterval(() => {
-            map.target.invalidateSize();
+    useEffect(() => {
+        const intervalUpdate = setInterval(() => {
+            MapObject.invalidateSize();
+            reCenterMap(location.lat, location.lon);
         }, 1000);
+        return () => {
+            clearInterval(intervalUpdate);
+        };
+    }, [location]);
+    
+    const handleWhenReady = (map) => {
+        // set global variable
+        MapObject = map.target;
     };
 
-    // Helper for re-centering the map
     const reCenterMap = (lat, lon) => {
         if (MapObject) {
             MapObject.setView([lat, lon], MapObject.getZoom());
         }
     };
 
-    // Example button to get the user's current location via browser
     const getCurrentLocation = async () => {
+        dispatch(setLocationLoading(true));
         if (!navigator.geolocation) {
             enqueueSnackbar('Geolocation is not supported by your browser.', {
                 variant: 'warning',
@@ -106,6 +111,7 @@ const LocationPage = () => {
                     variant: 'success',
                 });
                 const { latitude, longitude } = position.coords;
+                console.info("getCurrentLocation", latitude, longitude);
                 dispatch(setLocation({ lat: latitude, lon: longitude }));
                 dispatch(setQth(getMaidenhead(latitude, longitude)));
                 reCenterMap(latitude, longitude);
@@ -139,7 +145,7 @@ const LocationPage = () => {
                                     <strong>Latitude:</strong>
                                 </Typography>
                                 <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {location.lat.toFixed(4)}
+                                    {location.lat?.toFixed(4)}
                                 </Typography>
 
                             </Grid>
@@ -148,7 +154,7 @@ const LocationPage = () => {
                                     <strong>Longitude:</strong>
                                 </Typography>
                                 <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {location.lon.toFixed(4)}
+                                    {location.lon?.toFixed(4)}
                                 </Typography>
                             </Grid>
                             <Grid size={{ xs: 1, md: 1 }}>
@@ -166,12 +172,13 @@ const LocationPage = () => {
                                     loading={locationLoading}
                                     onClick={async () => {
                                         try {
-                                            dispatch(setLocationLoading(true));
-                                            const currentLocation = await getCurrentLocation();
-                                            setLocation(currentLocation);
+
+                                            await getCurrentLocation();
                                         } catch (error) {
                                             console.error(error.message);
-                                            dispatch(setLocationLoading(false));
+                                            enqueueSnackbar('Failed to get current location', {
+                                                variant: 'error',
+                                            });
                                         }
                                     }}
                                 >
@@ -192,9 +199,9 @@ const LocationPage = () => {
                         <MapContainer
                             center={[location.lat, location.lon]}
                             zoom={2}
-                            maxZoom={12}
+                            maxZoom={10}
                             whenReady={handleWhenReady}
-                            minZoom={2}
+                            minZoom={3}
                             dragging={true}
                             style={{ height: '100%', width: '100%' }}
                         >

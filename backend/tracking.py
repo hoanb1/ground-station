@@ -29,7 +29,6 @@ async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, st
 
         # get home location
         home = await crud.fetch_location_for_userid(dbsession, user_id=None)
-        home = json.loads(json.dumps(home, cls=ModelEncoder))
         homelat = float(home['data']['lat'])
         homelon = float(home['data']['lon'])
 

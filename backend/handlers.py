@@ -129,7 +129,6 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-location-for-user-id":
             logger.info(f'Getting location for user id, data: {data}')
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data)
-            locations = json.loads(json.dumps(locations, cls=ModelEncoder))
             reply = {'success': locations['success'], 'data': locations.get('data', [])}
 
         elif cmd == "fetch-next-passes":

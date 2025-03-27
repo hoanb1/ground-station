@@ -1,10 +1,13 @@
 import uuid
 import json
 from datetime import date, datetime
-from sqlalchemy import Table, MetaData
+from sqlalchemy.exc import NoInspectionAvailable
+from sqlalchemy import Table, MetaData, Float
 from datetime import datetime, UTC, timezone, timedelta
 from sqlalchemy import TypeDecorator, DateTime
 from sqlalchemy.orm import DeclarativeMeta
+from datetime import date, datetime
+from sqlalchemy.inspection import inspect
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON, Enum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
@@ -41,21 +44,24 @@ class ModelEncoder(json.JSONEncoder):
             # If the object is not a SQLAlchemy model row, fallback
             return super().default(obj)
 
-
-# Assuming serialize_sqla_object has been defined as before:
 def serialize_object(obj):
-    from datetime import date, datetime
-    from sqlalchemy.inspection import inspect
+    """
+    Serializes a Python object into a JSON-compatible format and then
+    deserializes it back to a Python object. The serialization utilizes
+    a custom JSON encoder, `ModelEncoder`, to handle potentially
+    non-standard object types. The function ensures that the resulting
+    object is JSON-compatible but has been reconstructed into its
+    Python representation.
 
-    serialized = {}
-    for column in inspect(obj).mapper.column_attrs:
-        value = getattr(obj, column.key)
-        if isinstance(value, (datetime, date)):
-            value = value.isoformat()
-        elif isinstance(value, uuid.UUID):
-            value = str(value)
-        serialized[column.key] = value
-    return serialized
+    :param obj: The Python object to be serialized and deserialized.
+        This may include custom objects that require a specific
+        JSON encoder, as well as built-in Python data structures.
+    :return: The deserialized Python object resulting from the
+        serialization and deserialization process. The output is a
+        JSON-compatible Python object reconstructed to mimic the
+        original input structure.
+    """
+    return json.loads(json.dumps(obj, cls=ModelEncoder))
 
 class AwareDateTime(TypeDecorator):
     """
@@ -197,8 +203,8 @@ class Locations(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
     name = Column(String, nullable=False)
-    lat = Column(String, nullable=False)
-    lon = Column(String, nullable=False)
+    lat = Column(Float, nullable=False)
+    lon = Column(Float, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
