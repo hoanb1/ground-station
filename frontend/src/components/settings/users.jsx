@@ -99,10 +99,10 @@ const Users = () => {
         dispatch(setOpenConfirmDialog(true));
     };
 
-    const handleDelete = async () => {
+    const handleDelete = () => {
         dispatch(setOpenConfirmDialog(false));
         try {
-            await dispatch(deleteUsers({ socket, selectedIds: selected }))
+            dispatch(deleteUsers({ socket, selectedIds: selected }))
                 .unwrap()
                 .then(()=>{
                     enqueueSnackbar('User(s) deleted successfully', { variant: 'success' });
