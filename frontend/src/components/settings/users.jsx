@@ -122,7 +122,6 @@ const Users = () => {
                 rows={rows}
                 columns={columns}
                 loading={loading}
-                autoHeight
                 getRowId={(row) => row.id}
                 checkboxSelection
                 disableSelectionOnClick
@@ -156,7 +155,7 @@ const Users = () => {
                                 id: userToEdit.id,
                                 fullname: userToEdit.fullname,
                                 email: userToEdit.email,
-                                password: '', // Password should typically not be pre-filled for security reasons
+                                password: '',
                                 status: userToEdit.status,
                             }));
                             dispatch(setOpenUserDialog(true));

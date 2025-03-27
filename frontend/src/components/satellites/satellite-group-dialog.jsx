@@ -94,7 +94,6 @@ export function AutocompleteAsync({setSelectedSatelliteCallback}) {
     );
 }
 
-
 export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogOpenCallback, satGroup}) {
     const { socket } = useSocket();
     const defaultFormValues = {
@@ -122,7 +121,6 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
 
     useEffect(() => {
         setLoading(true);
-        console.log("Selected group:", satGroup);
         if (satGroup) {
             // fetch the satellites for the satellite_id set in the satGroup
             if (satGroup.satellite_ids && satGroup.satellite_ids.length > 0) {
@@ -140,7 +138,11 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
                 name: satGroup.name,
                 satellite_ids: satGroup.satellite_ids,
             });
-            setSelectionModel(satGroup.satellite_ids);
+            if (satGroup.satellite_ids) {
+                setSelectionModel(satGroup.satellite_ids);
+            } else {
+                setSelectionModel([]);
+            }
 
             setLoading(false);
         }
@@ -153,8 +155,8 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
     const handleFormSubmit = (event) => {
         event.preventDefault();
 
-        let cmd = null;
-        let newRow = {};
+        let cmd;
+        let newRow;
         let successMessage = "Satellite group added successfully";
         if(formDialogValues.id) {
             cmd = 'edit-satellite-group';
@@ -174,7 +176,6 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
             successMessage = "Satellite group added successfully";
         }
         socket.emit("data_submission", cmd, newRow, (response) => {
-            console.info("Received data for " + cmd + ":", response);
             if (response.success === true) {
                 handleRowsCallback(response.data)
                 handleDialogOpenCallback(false);
@@ -192,14 +193,7 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
     };
 
     const setSelectedSatelliteCallback = useCallback((satellite) => {
-        // setFormDialogValues(prevValues => ({
-        //     ...prevValues,
-        //     satellite_ids: [...prevValues.satellite_ids, satellite],
-        // }));
-
         setSatellites(prevSatellites => [...prevSatellites, satellite]);
-
-        //setSelectionModel([...selectionModel, satellite.id]);
         setSelectionModel(prevSelectionModel => [...prevSelectionModel, satellite.id]);
 
     }, []);

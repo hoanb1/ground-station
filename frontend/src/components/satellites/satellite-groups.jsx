@@ -1,32 +1,51 @@
-import * as React from 'react';
-import {useEffect, useState, Fragment, useCallback} from 'react';
-import {DataGrid, gridClasses} from '@mui/x-data-grid';
+// SatelliteGroupsTable.jsx
+import React, { useEffect, useCallback } from 'react';
 import {
-    Alert,
-    AlertTitle,
     Box,
     Button,
-    Stack,
+    Alert,
+    AlertTitle,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogActions,
-} from "@mui/material";
-import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
-import {betterDateTimes, humanizeDate} from "../common/common.jsx";
-import {AddEditDialog} from "./satellite-group-dialog.jsx";
+    Stack, DialogContentText,
+} from '@mui/material';
+import { DataGrid, gridClasses } from '@mui/x-data-grid';
+import { enqueueSnackbar } from 'notistack';
+import { useSocket } from '../common/socket.jsx';
+import { betterDateTimes } from '../common/common.jsx';
+import { AddEditDialog } from './satellite-group-dialog.jsx';
 
+// Redux
+import { useSelector, useDispatch } from 'react-redux';
+import {
+    fetchSatelliteGroups,
+    deleteSatelliteGroups,
+    setSelected,
+    setSatGroup,
+    setFormDialogOpen,
+    setFormErrorStatus,
+    setGroups,
+    setDeleteConfirmDialogOpen,
+} from './satellite-groups-slice.jsx';
+import {setOpenDeleteConfirm} from "../hardware/rig-slice.jsx";
 
-const SatelliteGroupsTable = React.memo(function () {
-    const [rows, setRows] = useState([]);
-    const [dialogOpen, setDialogOpen] = useState(false);
+const SatelliteGroupsTable = () => {
+    const dispatch = useDispatch();
     const { socket } = useSocket();
-    const [selectedRows, setSelectedRows] = useState([]);
-    const [formErrorStatus, setFormErrorStatus] = useState(false);
-    const [formDialogOpen, setFormDialogOpen] = useState(false);
-    const [satGroup, setSatGroup] = useState({});
-    const paginationModel = {page: 0, pageSize: 10};
+
+    // Redux state
+    const {
+        groups,
+        selected,
+        formDialogOpen,
+        deleteConfirmDialogOpen,
+        satGroup,
+        formErrorStatus,
+        loading,
+        error,
+    } = useSelector((state) => state.satelliteGroups);
 
     const columns = [
         {
@@ -48,127 +67,162 @@ const SatelliteGroupsTable = React.memo(function () {
             flex: 4,
             align: 'right',
             headerAlign: 'right',
-            renderCell: (params) => {
-                return betterDateTimes(params.value);
-            }
+            renderCell: (params) => betterDateTimes(params.value),
         },
     ];
 
+    // Fetch data
     useEffect(() => {
-        // fetch groups from backend
-        socket.emit("data_request", "get-satellite-groups-user", (response) => {
-            console.info("Received data for get-satellite-groups-user:", response);
-            setRows(response.data);
-        });
+        dispatch(fetchSatelliteGroups({ socket }));
+    }, [dispatch, socket]);
 
-        return () => {
-
-        };
-    }, []);
-
+    // Handle Add
     const handleAddClick = () => {
-        setFormDialogOpen(true);
+        dispatch(setSatGroup({})); // if you want to clear previous selections
+        dispatch(setFormDialogOpen(true));
     };
 
-    const handleEditGroup = function (event) {
-        console.info("selectedRows", selectedRows);
-        const singleRowId = selectedRows[0];
-        const satGroup = rows.find(row => row.id === singleRowId);
-        console.info("satGroup", satGroup);
-        setSatGroup(satGroup);
-        setFormDialogOpen(true);
-    }
+    // Handle Edit
+    const handleEditGroup = () => {
+        if (selected.length !== 1) return;
+        const singleRowId = selected[0];
+        const rowData = groups.find((row) => row.id === singleRowId);
+        console.info("selected", rowData);
+        if (rowData) {
+            dispatch(setSatGroup(rowData));
+            dispatch(setFormDialogOpen(true));
+        }
+    };
 
-    const handleDeleteGroup = function (event) {
-        socket.emit("data_submission", "delete-satellite-group", selectedRows, (response) => {
-            if (response.success === true) {
-                setRows(response.data);
-                setFormErrorStatus(false);
-            } else {
-                console.error(response.error);
-                enqueueSnackbar("Failed to delete group: " + response.error, {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-                setFormErrorStatus(true);
-            }
-        });
-    }
+    const handleDeleteGroup = () => {
+        dispatch(deleteSatelliteGroups({socket, groupIds: selected}))
+            .unwrap()
+            .then(()=>{
+                dispatch(setDeleteConfirmDialogOpen(false));
+                enqueueSnackbar('Group(s) deleted successfully', { variant: 'success' });
+            })
+            .catch((err) => {
+                enqueueSnackbar('Failed to delete group(s)', { variant: 'error' });
+            });
+    };
 
-    const handleRowsCallback = useCallback((rows) => {
-        setRows(rows);
+    const paginationModel = { page: 0, pageSize: 10 };
+
+    const handleRowsCallback = useCallback((groups) => {
+        dispatch(setGroups(groups));
     }, []);
 
     const handleDialogOpenCallback = useCallback((value) => {
-        setFormDialogOpen(value)
+        dispatch(setFormDialogOpen(value));
     }, []);
 
     return (
-        <Box sx={{width: '100%', marginTop: 0}}>
+        <Box sx={{ width: '100%', marginTop: 0 }}>
             <Alert severity="info">
                 <AlertTitle>Satellite groups</AlertTitle>
                 Manage satellite groups
             </Alert>
+
             <DataGrid
-                rows={rows}
+                rows={groups}
                 columns={columns}
-                initialState={{pagination: {paginationModel}}}
+                loading={loading}
+                initialState={{ pagination: { paginationModel } }}
                 pageSizeOptions={[5, 10]}
                 checkboxSelection
-                onRowSelectionModelChange={(selected) => {
-                    setSelectedRows(selected);
+                onRowSelectionModelChange={(ids) => {
+                    dispatch(setSelected(ids));
                 }}
+                selectionModel={selected}
                 sx={{
                     border: 0,
                     marginTop: 2,
                     [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                         outline: 'none',
                     },
-                    [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                        {
-                            outline: 'none',
-                        },
                 }}
             />
-            <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
+
+            <Stack spacing={2} direction="row" sx={{ my: 2 }}>
                 <Button variant="contained" onClick={handleAddClick}>
                     Add
                 </Button>
-                <Button variant="contained" disabled={selectedRows.length !== 1} onClick={handleEditGroup}>
+                <Button
+                    variant="contained"
+                    onClick={handleEditGroup}
+                    disabled={selected.length !== 1}
+                >
                     Edit
                 </Button>
-                <Button variant="contained" color="error" disabled={selectedRows.length < 1}
-                        onClick={() => setDialogOpen(true)}>
+                <Button
+                    variant="contained"
+                    color="error"
+                    onClick={() => dispatch(setDeleteConfirmDialogOpen(true))}
+                    disabled={selected.length === 0}
+                >
                     Delete
                 </Button>
-                <Dialog open={dialogOpen} onClose={() => setDialogOpen(false)}>
-                    <DialogTitle>Confirm Delete</DialogTitle>
+            </Stack>
+
+            {/* Example usage of Dialog */}
+            {formDialogOpen && (
+                <Dialog
+                    open={formDialogOpen}
+                    onClose={() => dispatch(setFormDialogOpen(false))}
+                >
+                    <DialogTitle>{satGroup.id ? 'Edit Group' : 'Add Group'}</DialogTitle>
                     <DialogContent>
-                        Are you sure you want to delete the selected group(s)?
+                        <AddEditDialog
+                            formDialogOpen={formDialogOpen}
+                            handleRowsCallback={handleRowsCallback}
+                            handleDialogOpenCallback={handleDialogOpenCallback}
+                            satGroup={satGroup}
+                        />
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setDialogOpen(false)}>Cancel</Button>
-                        <Button
-                            onClick={() => {
-                                handleDeleteGroup();
-                                setDialogOpen(false);
-                            }}
-                            color="error"
-                            variant="contained"
-                        >
-                            Confirm
+                        <Button onClick={() => dispatch(setFormDialogOpen(false))}>
+                            Close
                         </Button>
                     </DialogActions>
                 </Dialog>
-            </Stack>
-            <AddEditDialog
-                formDialogOpen={formDialogOpen}
-                handleRowsCallback={handleRowsCallback}
-                handleDialogOpenCallback={handleDialogOpenCallback}
-                satGroup={satGroup}
-            />
+            )}
+
+            <Dialog open={deleteConfirmDialogOpen} onClose={() => dispatch(setDeleteConfirmDialogOpen(false))}>
+                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogContent>
+                    <DialogContentText>
+                        Are you sure you want to delete the selected rig(s)?
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => dispatch(setDeleteConfirmDialogOpen(false))} color="error" variant="outlined">
+                        Cancel
+                    </Button>
+                    <Button
+                        variant="contained"
+                        onClick={() => {
+                            handleDeleteGroup();
+                        }}
+                        color="error"
+                    >
+                        Confirm
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Example of an error alert */}
+            {error && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                    {error}
+                </Alert>
+            )}
+            {formErrorStatus && (
+                <Alert severity="error" sx={{ mt: 2 }}>
+                    Some action failed. Check console or logs.
+                </Alert>
+            )}
         </Box>
     );
-});
+};
 
-export default SatelliteGroupsTable;
+export default React.memo(SatelliteGroupsTable);
