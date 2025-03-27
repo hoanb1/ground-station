@@ -1,7 +1,6 @@
 import * as React from 'react';
 import {useEffect, useState} from 'react';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
-import {styled, useTheme} from '@mui/material/styles';
 import {
     Alert,
     AlertTitle,
@@ -16,9 +15,6 @@ import {
 } from "@mui/material";
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchTLESources,  submitOrEditTLESource, deleteTLESources} from './sources-slice.jsx';
-import PropTypes from "prop-types";
-import Typography from '@mui/material/Typography';
-import LinearProgress, {linearProgressClasses} from '@mui/material/LinearProgress';
 import {betterDateTimes} from "../common/common.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
@@ -41,8 +37,6 @@ const columns = [
 ];
 
 const paginationModel = {page: 0, pageSize: 10};
-
-
 
 export default function SourcesTable() {
     const dispatch = useDispatch();
