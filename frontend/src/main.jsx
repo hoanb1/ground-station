@@ -21,7 +21,7 @@ import TargetSatelliteTrack from "./components/target-sat-track.jsx";
 import {SocketProvider, useSocket} from './components/common/socket.jsx';
 import {AuthProvider} from "./components/common/auth.jsx";
 import { Provider as ReduxProvider} from 'react-redux';
-import { store } from './components/store.jsx';
+import { store } from './components/common/store.jsx';
 
 
 
