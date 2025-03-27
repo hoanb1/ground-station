@@ -19,6 +19,7 @@ import {
 } from './rig-slice.jsx';
 import {enqueueSnackbar} from "notistack";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
+import {humanizeFrequency} from "../common/common.jsx";
 
 
 export default function RigTable() {
@@ -57,8 +58,14 @@ export default function RigTable() {
         {field: 'radiotype', headerName: 'Radio Type', flex: 1, minWidth: 150},
         {field: 'pttstatus', headerName: 'PTT Status', flex: 1, minWidth: 150},
         {field: 'vfotype', headerName: 'VFO Type', flex: 1, minWidth: 50},
-        {field: 'lodown', headerName: 'LO Down', type: 'number', flex: 1, minWidth: 60},
-        {field: 'loup', headerName: 'LO Up', type: 'number', flex: 1, minWidth: 60},
+        {field: 'lodown', headerName: 'LO Down', type: 'string', flex: 1, minWidth: 60,
+            valueFormatter: (value) => {
+                return humanizeFrequency(value);
+        }},
+        {field: 'loup', headerName: 'LO Up', type: 'string', flex: 1, minWidth: 60,
+            valueFormatter: (value) => {
+                return humanizeFrequency(value);
+        }},
     ];
 
     React.useEffect(() => {
@@ -118,7 +125,12 @@ export default function RigTable() {
 
     const handleChange = (e) => {
         const {name, value} = e.target;
-        dispatch(setFormValues({...formValues, [name]: value}));
+        if(e.target.type === "number") {
+            dispatch(setFormValues({...formValues, [name]: parseInt(value)}));
+        } else {
+            dispatch(setFormValues({...formValues, [name]: value}));
+        }
+
     };
 
     return (

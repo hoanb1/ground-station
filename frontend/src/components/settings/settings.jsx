@@ -21,8 +21,8 @@ import SourcesTable from "../satellites/sources-table.jsx";
 import SatelliteTable from "../satellites/satellite-table.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "../satellites/groups-table.jsx";
-import Users from "./users.jsx";
-import LocationPage from "./location.jsx";
+import UsersTable from "./users-table.jsx";
+import LocationPage from "./location-form.jsx";
 import PreferencesForm from "./preferences.jsx";
 
 
@@ -144,7 +144,7 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             tabsList = [
                 <AntTab key="preferences" value="preferences" label="Preferences" to="/settings/preferences" component={Link} />,
                 <AntTab key="location" value="location" label="Location" to="/settings/location" component={Link} />,
-                <AntTab key="users" value="users" label="Users" to="/settings/users" component={Link} />,
+                <AntTab key="users" value="users" label="UsersTable" to="/settings/users" component={Link} />,
                 <AntTab key="maintenance" value="maintenance" label="Maintenance" to="/settings/maintenance" component={Link} />,
                 <AntTab key="about" value="about" label="About" to="/settings/about" component={Link} />,
             ];
@@ -284,10 +284,10 @@ const UsersForm = () => {
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
             <Alert severity="info">
-                <AlertTitle>Users</AlertTitle>
+                <AlertTitle>UsersTable</AlertTitle>
                 Manage add and remove users here
             </Alert>
-            <Users/>
+            <UsersTable/>
         </Paper>);
 };
 

@@ -5,9 +5,10 @@ export const fetchRigs = createAsyncThunk(
     async ({socket}, {rejectWithValue}) => {
         try {
             return await new Promise((resolve, reject) => {
-                socket.emit('data_request', 'get-rigs', null, (res) => {
-                    if (res.success) {
-                        resolve(res.data);
+                socket.emit('data_request', 'get-rigs', null, (response) => {
+                    console.info(response);
+                    if (response.success) {
+                        resolve(response.data);
                     } else {
                         reject(new Error('Failed to fetch rigs'));
                     }

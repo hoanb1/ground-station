@@ -1,4 +1,4 @@
-// Users.jsx
+// UsersTable.jsx
 import React, { useEffect } from 'react';
 import {
     Box,
@@ -32,7 +32,7 @@ import {
 import { useSocket } from '../common/socket.jsx';
 import {setOpenDeleteConfirm} from "../hardware/rig-slice.jsx";
 
-const Users = () => {
+const UsersTable = () => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
 
@@ -254,4 +254,4 @@ const Users = () => {
     );
 };
 
-export default Users;
+export default UsersTable;
