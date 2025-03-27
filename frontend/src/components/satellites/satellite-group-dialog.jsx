@@ -136,13 +136,9 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
             setFormDialogValues({
                 id: satGroup.id,
                 name: satGroup.name,
-                satellite_ids: satGroup.satellite_ids,
+                satellite_ids: satGroup.satellite_ids || [],
             });
-            if (satGroup.satellite_ids) {
-                setSelectionModel(satGroup.satellite_ids);
-            } else {
-                setSelectionModel([]);
-            }
+            setSelectionModel(satGroup.satellite_ids || []);
 
             setLoading(false);
         }
