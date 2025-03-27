@@ -327,10 +327,10 @@ export const betterStatusValue = (status) => {
                 <Chip label="Dead" size="small" color="error" variant="outlined" />
             );
         } else {
-            return (status);
+            return (<Chip label={status} size="small" color="info" variant="outlined" />);
         }
     } else {
-        return "-";
+        return <Chip label={"n/a"} size="small" color="info" variant="outlined" />;
     }
 };
 
@@ -356,7 +356,6 @@ export function getMaidenhead(lat, lon) {
     const subsquare = String.fromCharCode(97 + E) + String.fromCharCode(97 + F);
     return field + square + subsquare;
 }
-
 
 export const renderCountryFlags = (csvCodes) => {
     if (!csvCodes) return "-";

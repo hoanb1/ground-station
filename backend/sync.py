@@ -220,7 +220,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
             # fetch group by identifier
             group = await crud.fetch_system_satellite_group_by_identifier(dbsession, tle_source_identifier)
-            group = group.get('data', None)
+            group = group.get('data', {})
 
             if group:
                 group['satellite_ids'] = group_assignments[tle_source_identifier]

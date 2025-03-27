@@ -21,7 +21,6 @@ const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
             <DialogContent>
                 {selectedSatellite ? (
                     <Box>
-
                         <Grid container spacing={2}>
                             <Grid sx={{ mb: 2, textAlign: 'center' }} style={{minHeight: '300px', width: '60%' }} >
                                 <TableContainer>
