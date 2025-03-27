@@ -26,7 +26,15 @@ export default function AntennaRotatorTable() {
     const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
-    const { loading, rotators, status, error, openAddDialog, openDeleteConfirm, formValues } = useSelector((state) => state.rotators);
+    const {
+        loading,
+        rotators,
+        status,
+        error,
+        openAddDialog,
+        openDeleteConfirm,
+        formValues
+    } = useSelector((state) => state.rotators);
 
     const columns = [
         { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
