@@ -18,7 +18,9 @@ import {closeSnackbar, enqueueSnackbar, SnackbarProvider} from 'notistack';
 import PeopleIcon from '@mui/icons-material/People';
 import {useSocket} from "./components/common/socket.jsx";
 import {useAuth} from "./components/common/auth.jsx";
-
+import store from './components/common/store.jsx';
+import { fetchPreferences } from './components/settings/preferences-slice.jsx';
+import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
 
 const BRANDING = {
     logo: (
@@ -31,6 +33,11 @@ const BRANDING = {
     title: 'Ground Station',
 };
 
+function uponConnectionToBackEnd(socket) {
+    // called when the connection to backend has been established to fill in the local state with information
+    store.dispatch(fetchPreferences({socket}));
+    store.dispatch(fetchLocationForUserId({socket}));
+}
 
 export default function App(props) {
     const { socket } = useSocket();
@@ -141,6 +148,7 @@ export default function App(props) {
             socket.on('connect', () => {
                 console.log('Socket connected with ID:', socket.id);
                 enqueueSnackbar("Connected to backend!", {variant: 'success'});
+                uponConnectionToBackEnd(socket);
             });
 
             socket.on("reconnect_attempt", (attempt) => {

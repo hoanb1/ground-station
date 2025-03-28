@@ -2,6 +2,9 @@ import json
 import numpy as np
 import crud
 import asyncio
+from datetime import datetime, UTC
+from typing import Tuple
+from skyfield.api import load, wgs84
 from contextlib import asynccontextmanager
 from fastapi import FastAPI
 from common import timeit, async_timeit
@@ -144,16 +147,92 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 6.0, above_e
     return reply
 
 
+def get_satellite_az_el(home_lat: float, home_lon: float, satellite_tle_line1: str, satellite_tle_line2: str,
+                        observation_time: datetime) -> Tuple[float, float]:
+    """
+    Given a home location (latitude, longitude), a satellite TLE (two-line element),
+    and a specific observation time, this function returns the
+    azimuth and elevation of the satellite in degrees.
+
+    Parameters:
+    - home_lat: Latitude of the home location in degrees
+    - home_lon: Longitude of the home location in degrees
+    - satellite_tle_line1: First line of the satellite's TLE
+    - satellite_tle_line2: Second line of the satellite's TLE
+    - observation_time: A Python datetime representing the observation time (UTC)
+
+    Returns:
+    - (azimuth, elevation): Tuple (in degrees)
+    """
+    # Create a timescale and convert the observation time to a Skyfield time object
+    ts = load.timescale()
+    t = ts.from_datetime(observation_time)
+
+    # Create the EarthSatellite object directly from the TLE strings
+    satellite = EarthSatellite(satellite_tle_line1, satellite_tle_line2)
+
+    # Define the observer's location
+    observer = wgs84.latlon(home_lat, home_lon)
+
+    # Compute the difference vector between satellite and observer
+    difference = satellite - observer
+
+    # Get the altitude (elevation) and azimuth in degrees
+    alt, az, _ = difference.at(t).altaz()
+
+    return az.degrees, alt.degrees
+
+
+
 async def satellite_tracking_task(sio, logger):
     """
     This task will continuously run in the background.
-    Fill in your satellite tracking and antenna rotator logic below.
     """
 
-    async with AsyncSessionLocal() as dbsession:
-
+    async with (AsyncSessionLocal() as dbsession):
         while True:
-            tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
-            logger.info(f"Tracking state: {tracking_state}")
+            try:
+                tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+                logger.info(f"Tracking state: {tracking_state}")
+                if tracking_state.get('success', False) is False:
+                    raise Exception(f"No satellite tracking information found in the db for name satellite-tracking")
 
-            await asyncio.sleep(1)
+                norad_id = tracking_state['data']['value'].get('norad_id', None)
+                state = tracking_state['data']['value'].get('state', None)
+
+                #logger.info(f"Norad id: {norad_id}, state: {state}")
+                satellite = await crud.fetch_satellites(dbsession, satellite_id=norad_id)
+
+                if satellite.get('success', False) is False:
+                    raise Exception(f"No satellite found in the db for norad id {norad_id}")
+
+                if len(satellite.get('data', [])) != 1:
+                    raise Exception(f"Expected exactly one satellite in the result for norad id {norad_id} got"
+                                    f" {len(satellite.get('data', []))}")
+
+                #logger.info(f"Satellites: {satellite}")
+
+                location = await crud.fetch_location_for_userid(dbsession, user_id=None)
+                if location.get('success', False) is False:
+                    raise Exception(f"No location found in the db for user id None, please set one")
+
+                #logger.info(f"location {location}")
+
+                home_lat = location['data']['lat']
+                home_lon = location['data']['lon']
+
+                sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
+                                                satellite['data'][0]['tle2'], datetime.now(UTC))
+
+                logger.info(f"Sky point: az: {sky_point[0]} el: {sky_point[1]}")
+
+
+
+
+            except Exception as e:
+                logger.error(f"Error in satellite tracking task: {e}")
+                logger.exception(e)
+
+            finally:
+                await asyncio.sleep(1)
+
