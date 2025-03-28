@@ -388,11 +388,13 @@ export function humanizeFrequency(hertz, decimals = 2) {
 
     const units = ["Hz", "kHz", "MHz", "GHz", "THz", "PHz"];
     let unitIndex = 0;
+    let preciseHertz = hertz;
 
-    while (hertz >= 1000 && unitIndex < units.length - 1) {
-        hertz /= 1000;
+    while (preciseHertz >= 1000 && unitIndex < units.length - 1) {
+        preciseHertz /= 1000;
         unitIndex++;
     }
 
-    return `${hertz.toFixed(decimals)} ${units[unitIndex]}`;
+    return `${preciseHertz.toFixed(decimals)} ${units[unitIndex]}`;
 }
+
