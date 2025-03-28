@@ -8,7 +8,7 @@ from sqlalchemy import select, insert, update, delete, String
 from utils import *
 from datetime import datetime, UTC
 from models import Users
-from models import Locations
+from models import Locations, SatelliteTrackingState
 from models import Preferences
 from models import Rotators
 from models import Rigs
@@ -16,7 +16,7 @@ from models import Satellites
 from models import Transmitters
 from models import SatelliteTLESources
 from models import SatelliteGroups
-from app import logger
+from logger import logger
 from models import serialize_object
 from typing import Optional
 
@@ -1473,3 +1473,69 @@ async def delete_satellite_group(session: AsyncSession, satellite_group_ids: Uni
         logger.error(f"Error deleting satellite groups: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "data": None, "error": str(e)}
+
+async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dict:
+    """
+    Upserts a record in the satellite_tracking_state table
+    based on the provided data dictionary via SQLAlchemy's merge operation.
+    """
+    try:
+        assert data.get('name', None) is not None, "name is required when setting tracking state"
+        assert data.get('value', None) is not None, "value is required when setting tracking state"
+
+        now = datetime.now(UTC)
+        data["updated"] = now
+
+        existing_record = await session.execute(
+            select(SatelliteTrackingState).where(SatelliteTrackingState.name == data['name'])
+        )
+        existing_record = existing_record.scalar_one_or_none()
+
+        if existing_record:
+            for key, value in data.items():
+                setattr(existing_record, key, value)
+            new_record = existing_record
+        else:
+            new_record = SatelliteTrackingState(**data)
+
+        await session.merge(new_record)
+        await session.commit()
+        new_record = serialize_object(new_record)
+        return {"success": True, "data": new_record, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error storing satellite tracking state: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def get_satellite_tracking_state(session: AsyncSession, name: str) -> dict:
+    """
+    Fetches a SatelliteTrackingState row based on the provided key (name).
+    Returns a dictionary with the data or an error message if not found.
+    """
+    try:
+        assert name is not None, "name is required when fetching tracking state"
+
+        stmt = select(SatelliteTrackingState).filter(SatelliteTrackingState.name == name)
+        result = await session.execute(stmt)
+        state = result.scalar_one_or_none()
+
+        if not state:
+            return {"success": False, "data": None, "error": f"Tracking state with name '{name}' not found."}
+
+        state = serialize_object(state)
+        return {"success": True, "data": state, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching satellite tracking state for key '{name}': {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "data": None, "error": str(e)}
+
+
+
+
+
+
+

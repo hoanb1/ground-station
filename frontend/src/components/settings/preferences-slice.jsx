@@ -36,6 +36,7 @@ export const updatePreferences = createAsyncThunk(
 const preferencesSlice = createSlice({
     name: 'preferences',
     initialState: {
+        loading: false,
         preferences: [
             {
                 id: null,
@@ -64,6 +65,9 @@ const preferencesSlice = createSlice({
             if (preference) {
                 preference.value = value;
             }
+        },
+        setLoading: (state, action) => {
+            state.loading = action.payload;
         },
     },
     extraReducers: (builder) => {

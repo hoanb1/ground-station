@@ -1,18 +1,12 @@
 import crud
 import requests
-import os
 import json
 import asyncio
-import urllib.parse
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 from models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
 from typing import List, Optional
-from logger import get_logger
-from arguments import arguments
 from exceptions import *
-from uuid import uuid4
-from sqlalchemy.ext.asyncio import AsyncSession
 
 
 def parse_date(date_str: str) -> datetime:

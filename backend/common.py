@@ -1,7 +1,7 @@
 import time
 import math
 import functools
-from app import logger
+from logger import logger
 from skyfield.api import EarthSatellite, load, wgs84
 
 

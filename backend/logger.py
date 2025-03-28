@@ -1,6 +1,8 @@
 import logging.config
 import logging
 import yaml
+from arguments import arguments
+
 
 def get_logger_config(args):
     """
@@ -44,6 +46,9 @@ def get_logger(args):
     """
     logging_config = get_logger_config(args)
     logging.config.dictConfig(logging_config)
-    logger = logging.getLogger("ground-station")
 
-    return logger
+    return  logging.getLogger("ground-station")
+
+
+# setup a logger
+logger = get_logger(arguments)

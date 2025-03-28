@@ -330,7 +330,12 @@ async def data_submission_routing(sio, cmd, data, logger):
             logger.info(f'Updating preferences, data: {data}')
             update_reply = await crud.set_preferences(dbsession, list(data))
             reply = {'success': update_reply['success'], 'data': update_reply.get('data', [])}
-            
+
+        elif cmd == "set-tracking-state":
+            logger.info(f'Updating satellite tracking state, data: {data}')
+            set_reply = await crud.set_satellite_tracking_state(dbsession, data)
+            reply = {'success': set_reply['success'], 'data': set_reply.get('data', [])}
+
         else:
             logger.info(f'Unknown command: {cmd}')
 

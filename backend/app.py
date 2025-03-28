@@ -1,5 +1,7 @@
 import uvicorn
 import socketio
+from contextlib import asynccontextmanager
+from tracking import satellite_tracking_task
 from fastapi import FastAPI, WebSocket, Depends
 from models import Base
 from fastapi.middleware.cors import CORSMiddleware
@@ -8,16 +10,11 @@ from handlers import *
 from db import *
 from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
 from fastapi.staticfiles import StaticFiles
-from skyfield.api import Loader
+from logger import logger
 
-# setup a logger
-logger = get_logger(arguments)
 
 # hold a list of sessions
 SESSIONS = {}
-
-# set a temporary folder for the skyfield library to do its thing
-SkyFieldLoader = Loader('/tmp/skyfield-data')  # or any preferred path
 
 # Create a session factory
 AsyncSessionLocal = sessionmaker(
@@ -26,9 +23,30 @@ AsyncSessionLocal = sessionmaker(
     class_=AsyncSession
 )
 
+@asynccontextmanager
+async def lifespan(fastapiapp: FastAPI):
+    """
+    Custom lifespan for FastAPI.
+    Create and cleanup background tasks or other
+    resources in this context manager.
+    """
+    # Start the background task
+    tracking_task = asyncio.create_task(satellite_tracking_task(sio, logger))
+
+    try:
+        yield
+    finally:
+        # Cancel the background task on shutdown
+        tracking_task.cancel()
+        try:
+            await tracking_task
+        except asyncio.CancelledError:
+            pass
+
+
 # Create an asynchronous Socket.IO server using ASGI mode.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True)
-app = FastAPI()
+app = FastAPI(lifespan=lifespan)
 
 # Wrap the Socket.IO server with an ASGI application.
 # This allows non-Socket.IO routes (like the FastAPI endpoints) to be served as well.
@@ -96,12 +114,9 @@ async def init_db():
 
 app.mount("/public", StaticFiles(directory="public"), name="public")
 
+
 # Command-line argument parsing
 if __name__ == "__main__":
-
-    # setup a logger
-    logger = get_logger(arguments)
-
     logger.info("Configuring database connection...")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_db())

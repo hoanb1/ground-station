@@ -2,7 +2,6 @@
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchPreferences, updatePreferences, setPreference } from './preferences-slice.jsx';
-
 import { tz } from 'moment-timezone';
 import Paper from '@mui/material/Paper';
 import {
@@ -22,7 +21,7 @@ import {enqueueSnackbar} from "notistack";
 const PreferencesForm = () => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
-    const { preferences } = useSelector((state) => state.preferences);
+    const { preferences, status } = useSelector((state) => state.preferences);
 
     const getPreferenceValue = (preferences, name) => {
         const preference = preferences.find((pref) => pref.name === name);
@@ -84,7 +83,7 @@ const PreferencesForm = () => {
                         Timezone
                     </Grid>
                     <Grid size={8}>
-                        <FormControl variant="filled" sx={{m: 1, minWidth: 120}}>
+                        <FormControl disabled={status==='loading'} variant="filled" sx={{m: 1, minWidth: 120}}>
                             <InputLabel id="demo-simple-select-filled-label">Timezone</InputLabel>
                             <Select
                                 fullWidth={true}
@@ -103,7 +102,7 @@ const PreferencesForm = () => {
                         Language
                     </Grid>
                     <Grid size={8}>
-                        <FormControl variant="filled" sx={{ m: 1, minWidth: 120 }}>
+                        <FormControl disabled={status==='loading'} variant="filled" sx={{ m: 1, minWidth: 120 }}>
                             <InputLabel id="demo-simple-select-filled-label">Language</InputLabel>
                             <Select
                                 fullWidth={true}
@@ -122,7 +121,7 @@ const PreferencesForm = () => {
                         Theme
                     </Grid>
                     <Grid size={8}>
-                        <FormControl variant="filled" sx={{ m: 1, minWidth: 120 }}>
+                        <FormControl disabled={status==='loading'} variant="filled" sx={{ m: 1, minWidth: 120 }}>
                             <InputLabel id="demo-simple-select-filled-label">Theme</InputLabel>
                             <Select
                                 fullWidth={true}
@@ -138,7 +137,7 @@ const PreferencesForm = () => {
                         </FormControl>
                     </Grid>
                 </Grid>
-                <Button variant="contained" onClick={()=>{handleSavePreferences()}}>Save Preferences</Button>
+                <Button disabled={status==='loading'} variant="contained" onClick={()=>{handleSavePreferences()}}>Save Preferences</Button>
             </Box>
         </Paper>);
 };

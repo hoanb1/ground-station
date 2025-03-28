@@ -1,10 +1,13 @@
 import json
 import numpy as np
 import crud
+import asyncio
+from contextlib import asynccontextmanager
+from fastapi import FastAPI
 from common import timeit, async_timeit
 from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
-from app import logger, SkyFieldLoader
+from logger import logger
 from models import ModelEncoder
 
 
@@ -17,7 +20,10 @@ async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, st
     logger.info("Calculating satellite events for norad id: " + str(norad_id) + " for next " + str(hours) + " hours.")
 
     async with AsyncSessionLocal() as dbsession:
-        ts = SkyFieldLoader.timescale()
+        # set a temporary folder for the skyfield library to do its thing
+        skyfieldloader = Loader('/tmp/skyfield-data')  # or any preferred path
+
+        ts = skyfieldloader.timescale()
         satellite_data = await crud.fetch_satellites(dbsession, norad_id)
         satellite_data = json.loads(json.dumps(satellite_data, cls=ModelEncoder))
 
@@ -136,3 +142,18 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 6.0, above_e
             reply['data'] = events
 
     return reply
+
+
+async def satellite_tracking_task(sio, logger):
+    """
+    This task will continuously run in the background.
+    Fill in your satellite tracking and antenna rotator logic below.
+    """
+
+    async with AsyncSessionLocal() as dbsession:
+
+        while True:
+            tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+            logger.info(f"Tracking state: {tracking_state}")
+
+            await asyncio.sleep(1)

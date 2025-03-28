@@ -477,6 +477,14 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         ]
     };
 
+    const setTrackingStateBackend = (noradId) => {
+        console.log("setTrackingStateBackend: ", noradId);
+        const data = {'name': 'satellite-tracking', 'value': {'norad_id': noradId, 'state': 'tracking' }};
+        socket.emit('data_submission', 'set-tracking-state', data, (response) => {
+            console.log("set-tracking-state response: ", response);
+        });
+    }
+
     // globalize the callback
     handleSetGridEditableTarget = useCallback((value) => {
         setGridEditable(value);
@@ -529,6 +537,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const handleSelectSatelliteId = useCallback((noradId) => {
         setNoradId(noradId);
         fetchSatelliteData(noradId);
+        setTrackingStateBackend(noradId);
     }, [noradId]);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {

@@ -113,8 +113,6 @@ class JsonField(TypeDecorator):
         return value
 
 
-
-
 class Satellites(Base):
     __tablename__ = 'satellites'
     norad_id = Column(Integer, primary_key=True, nullable=False, unique=True)
@@ -237,11 +235,9 @@ class SatelliteTLESources(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-
 class SatelliteGroupType(str, PyEnum):
     USER = "user"
     SYSTEM = "system"
-
 
 class SatelliteGroups(Base):
     __tablename__ = 'satellite_groups'
@@ -253,3 +249,14 @@ class SatelliteGroups(Base):
     satellite_ids = Column(JsonField, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
+
+class SatelliteTrackingState(Base):
+    __tablename__ = "satellite_tracking_state"
+
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    name = Column(String, index=True, unique=True)
+    value = Column(JSON, index=True)
+    added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
