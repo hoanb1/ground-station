@@ -17,6 +17,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import {useSocket} from "../common/socket.jsx";
+import {enqueueSnackbar} from "notistack";
 
 const PreferencesForm = () => {
     const { socket } = useSocket();
@@ -61,7 +62,14 @@ const PreferencesForm = () => {
     };
 
     function handleSavePreferences() {
-        dispatch(updatePreferences({socket}));
+        dispatch(updatePreferences({socket}))
+            .unwrap()
+            .then(() => {
+                enqueueSnackbar('Preferences saved successfully', { variant: 'success' });
+            })
+            .catch((err) => {
+                enqueueSnackbar('Failed to save preferences', { variant: 'error' });
+            });
     }
 
     return (
