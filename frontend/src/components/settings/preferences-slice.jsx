@@ -22,7 +22,6 @@ export const updatePreferences = createAsyncThunk(
         return new Promise((resolve, reject) => {
             const preferences = getState().preferences;
             socket.emit('data_submission', 'update-preferences', [...preferences.preferences], (response) => {
-                console.info("response", response);
                 if (response['success']) {
                     resolve(response.data);
                 } else {
@@ -91,7 +90,6 @@ const preferencesSlice = createSlice({
             })
             .addCase(updatePreferences.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                console.info("action", action);
                 state.preferences = action.payload;
             })
             .addCase(updatePreferences.rejected, (state, action) => {

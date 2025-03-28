@@ -202,7 +202,15 @@ async def fetch_preference(session: AsyncSession, preference_id: uuid.UUID) -> d
 async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[uuid.UUID] = None) -> dict:
     """
     Fetch all preferences for a given user ID or all preferences if user_id is None.
+    If a preference does not exist for a key in the defaults, use the default value.
     """
+
+    defaults = {
+        'timezone': 'Europe/Athens',
+        'language': 'en_US',
+        'theme': 'dark'
+    }
+
     try:
         stmt = select(Preferences)
         if user_id is not None:
@@ -212,9 +220,16 @@ async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[u
 
         result = await session.execute(stmt)
         preferences = result.scalars().all()
-        preferences = serialize_object(preferences)
+        preferences_dict = {pref.name: pref.value for pref in preferences}
 
-        return {"success": True, "data": preferences, "error": None}
+        # Combine defaults with existing preferences
+        combined_preferences = [
+            {"name": key, "value": preferences_dict.get(key, value)}
+            for key, value in defaults.items()
+        ]
+
+        combined_preferences = serialize_object(combined_preferences)
+        return {"success": True, "data": combined_preferences, "error": None}
 
     except Exception as e:
         logger.error(f"Error fetching preferences for user: {e}")

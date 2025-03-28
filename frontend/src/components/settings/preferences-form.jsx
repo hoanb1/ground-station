@@ -61,7 +61,6 @@ const PreferencesForm = () => {
     };
 
     function handleSavePreferences() {
-        console.log("handleSavePreferences");
         dispatch(updatePreferences({socket}));
     }
 
