@@ -7,6 +7,7 @@ import usersReducer from '../settings/users-slice.jsx';
 import satelliteGroupReducer from '../satellites/groups-slice.jsx';
 import locationReducer from '../settings/location-slice.jsx';
 import synchronizeReducer from '../satellites/synchronize-slice.jsx';
+import preferencesReducer from '../settings/preferences-slice.jsx';
 
 export const store = configureStore({
     reducer: {
@@ -18,6 +19,8 @@ export const store = configureStore({
         users: usersReducer,
         location: locationReducer,
         syncSatellite: synchronizeReducer,
+        preferences: preferencesReducer,
+
     },
 });
 

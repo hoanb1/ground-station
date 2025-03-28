@@ -155,6 +155,7 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
+
 async def delete_user(session: AsyncSession, user_ids: Union[list[uuid.UUID], list[str], dict]) -> dict:
     """
     Delete multiple users by their UUIDs.
@@ -191,13 +192,37 @@ async def fetch_preference(session: AsyncSession, preference_id: uuid.UUID) -> d
         preference = result.scalar_one_or_none()
         preference = serialize_object(preference)
         return {"success": True, "data": preference, "error": None}
+
     except Exception as e:
         logger.error(f"Error fetching a preference users: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def add_preference(session: AsyncSession, userid: uuid.UUID, name: str, value: str) -> dict:
+async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[uuid.UUID] = None) -> dict:
+    """
+    Fetch all preferences for a given user ID or all preferences if user_id is None.
+    """
+    try:
+        stmt = select(Preferences)
+        if user_id is not None:
+            stmt = stmt.filter(Preferences.userid == user_id)
+        else:
+            stmt = stmt.filter(Preferences.userid == None)
+
+        result = await session.execute(stmt)
+        preferences = result.scalars().all()
+        preferences = serialize_object(preferences)
+
+        return {"success": True, "data": preferences, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching preferences for user: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def add_preference(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new preference record.
     """
@@ -208,9 +233,9 @@ async def add_preference(session: AsyncSession, userid: uuid.UUID, name: str, va
             insert(Preferences)
             .values(
                 id=new_id,
-                userid=userid,
-                name=name,
-                value=value,
+                userid=data["userid"],
+                name=data["name"],
+                value=data["value"],
                 added=now,
                 updated=now
             )
@@ -224,14 +249,24 @@ async def add_preference(session: AsyncSession, userid: uuid.UUID, name: str, va
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error adding a preference: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def edit_preference(session: AsyncSession, preference_id: uuid.UUID, **kwargs) -> dict:
+async def edit_preference(session: AsyncSession, data: dict) -> dict:
     """
     Edit an existing preference record by updating provided fields.
     """
     try:
+        # extract preference_id from data
+        preference_id = data.pop("id", None)
+        if not preference_id:
+            raise ValueError("Preference id cannot be empty.")
+
+        if isinstance(preference_id, str):
+            preference_id = uuid.UUID(preference_id)
+
         # Confirm the preference exists first
         stmt = select(Preferences).filter(Preferences.id == preference_id)
         result = await session.execute(stmt)
@@ -240,12 +275,12 @@ async def edit_preference(session: AsyncSession, preference_id: uuid.UUID, **kwa
             return {"success": False, "error": f"Preference with id {preference_id} not found."}
 
         # Update the timestamp
-        kwargs["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(UTC)
 
         upd_stmt = (
             update(Preferences)
             .where(Preferences.id == preference_id)
-            .values(**kwargs)
+            .values(**data)
             .returning(Preferences)
         )
         upd_result = await session.execute(upd_stmt)
@@ -256,10 +291,84 @@ async def edit_preference(session: AsyncSession, preference_id: uuid.UUID, **kwa
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error editing a preference: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def delete_preference(session: AsyncSession, preference_id: uuid.UUID) -> dict:
+async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dict:
+    """
+    Edit or upsert preference records for provided fields.
+    """
+    try:
+        updated_preferences = []
+
+        for data in preferences:
+            preference_id = data.pop("id", None)
+            if preference_id:
+                if isinstance(preference_id, str):
+                    preference_id = uuid.UUID(preference_id)
+
+                # Confirm the preference exists
+                stmt = select(Preferences).filter(Preferences.id == preference_id)
+                result = await session.execute(stmt)
+                preference = result.scalar_one_or_none()
+
+                if preference:
+                    # Update existing preference
+                    del data['added']
+                    data["updated"] = datetime.now(UTC)
+                    upd_stmt = (
+                        update(Preferences)
+                        .where(Preferences.id == preference_id)
+                        .values(**data)
+                        .returning(Preferences)
+                    )
+                    upd_result = await session.execute(upd_stmt)
+                    updated_preferences.append(upd_result.scalar_one_or_none())
+
+                else:
+                    # Insert a new preference (upsert case)
+                    new_id = uuid.uuid4()
+                    now = datetime.now(UTC)
+                    data["id"] = preference_id
+                    data["added"] = now
+                    data["updated"] = now
+                    stmt = (
+                        insert(Preferences)
+                        .values(**data)
+                        .returning(Preferences)
+                    )
+                    result = await session.execute(stmt)
+                    updated_preferences.append(result.scalar_one())
+
+            else:
+                # Insert a new preference if no ID is provided
+                new_id = uuid.uuid4()
+                now = datetime.now(UTC)
+                data["id"] = new_id
+                data["added"] = now
+                data["updated"] = now
+                stmt = (
+                    insert(Preferences)
+                    .values(**data)
+                    .returning(Preferences)
+                )
+                result = await session.execute(stmt)
+                updated_preferences.append(result.scalar_one())
+
+        await session.commit()
+        updated_preferences = serialize_object(updated_preferences)
+        return {"success": True, "data": updated_preferences, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error setting multiple preferences: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def delete_preference(session: AsyncSession, preference_id: Union[uuid.UUID, str]) -> dict:
     """
     Delete a preference record by its UUID.
     """
@@ -278,6 +387,8 @@ async def delete_preference(session: AsyncSession, preference_id: uuid.UUID) -> 
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error deleting a preference: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 

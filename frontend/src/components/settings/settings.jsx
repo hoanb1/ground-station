@@ -23,7 +23,7 @@ import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "../satellites/groups-table.jsx";
 import UsersTable from "./users-table.jsx";
 import LocationPage from "./location-form.jsx";
-import PreferencesForm from "./preferences.jsx";
+import PreferencesForm from "./preferences-form.jsx";
 
 
 export function SettingsTabSatellites() {

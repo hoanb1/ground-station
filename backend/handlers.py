@@ -137,6 +137,11 @@ async def data_request_routing(sio, cmd, data, logger):
             satellites = await crud.search_satellites(dbsession, keyword=data)
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
+        elif cmd == "fetch-preferences":
+            logger.info(f'Fetching preferences for user id, data: {data}')
+            preferences = await crud.fetch_preference_for_userid(dbsession, user_id=None)
+            reply = {'success': preferences['success'], 'data': preferences.get('data', [])}
+
         else:
             logger.info(f'Unknown command: {cmd}')
 
@@ -321,6 +326,11 @@ async def data_submission_routing(sio, cmd, data, logger):
             delete_reply = await crud.delete_location(dbsession, data)
             reply = {'success': delete_reply['success'], 'data': None}
 
+        elif cmd == "update-preferences":
+            logger.info(f'Updating preferences, data: {data}')
+            update_reply = await crud.set_preferences(dbsession, list(data))
+            reply = {'success': update_reply['success'], 'data': update_reply.get('data', [])}
+            
         else:
             logger.info(f'Unknown command: {cmd}')
 

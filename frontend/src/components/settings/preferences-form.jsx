@@ -1,31 +1,68 @@
-import {tz} from "moment-timezone";
-import React, {useState} from "react";
-import Paper from "@mui/material/Paper";
-import {Alert, AlertTitle, Box, Button, FormControl, InputLabel, MenuItem, Select} from "@mui/material";
-import Grid from "@mui/material/Grid2";
+// PreferencesForm.jsx
+import React, { useEffect } from 'react';
+import { useSelector, useDispatch } from 'react-redux';
+import { fetchPreferences, updatePreferences, setPreference } from './preferences-slice.jsx';
+
+import { tz } from 'moment-timezone';
+import Paper from '@mui/material/Paper';
+import {
+    Alert,
+    AlertTitle,
+    Box,
+    Button,
+    FormControl,
+    InputLabel,
+    MenuItem,
+    Select
+} from '@mui/material';
+import Grid from '@mui/material/Grid2';
+import {useSocket} from "../common/socket.jsx";
 
 const PreferencesForm = () => {
-    const [language, setLanguage] = useState('en');
-    const [themes, setThemes] = useState('dark');
-    const [timezone, setTimezone] = useState('Europe/Athens');
+    const { socket } = useSocket();
+    const dispatch = useDispatch();
+    const { preferences } = useSelector((state) => state.preferences);
 
-    const timezoneOptions = tz.names().map((zone) => {
-        return {name: zone.replace("_", " "), value: zone};
-    });
+    const getPreferenceValue = (preferences, name) => {
+        const preference = preferences.find((pref) => pref.name === name);
+        return preference ? preference.value : null;
+    };
 
-    const handleLanguageChange = function (e) {
-        setLanguage(e.target.value);
-    }
+    // Fetch preferences when the component mounts (if needed)
+    useEffect(() => {
+        dispatch(fetchPreferences({socket}));
+    }, []);
 
-    const handleThemeChange = function (e) {
-        setThemes(e.target.value);
-    }
+    const timezoneOptions = tz.names().map((zone) => ({
+        name: zone.replace('_', ' '),
+        value: zone,
+    }));
 
-    const languageOptions = [{name: 'English', value: 'en'}, {name: 'Deutsch', value: 'de'}];
-    const themesOptions = [{name: 'Dark', value: 'dark'}, {name: 'Light', value: 'light'}];
+    const languageOptions = [
+        { name: 'English', value: 'en_US' },
+        { name: 'Deutsch', value: 'de_DE' },
+    ];
 
-    function handleTimezoneChange() {
+    const themesOptions = [
+        { name: 'Dark', value: 'dark' },
+        { name: 'Light', value: 'light' },
+    ];
 
+    const handleTimezoneChange = (e) => {
+        dispatch(setPreference({'name': 'timezone', 'value': e.target.value}));
+    };
+
+    const handleLanguageChange = (e) => {
+        dispatch(setPreference({'name': 'language', 'value': e.target.value}));
+    };
+
+    const handleThemeChange = (e) => {
+        dispatch(setPreference({'name': 'theme', 'value': e.target.value}));
+    };
+
+    function handleSavePreferences() {
+        console.log("handleSavePreferences");
+        dispatch(updatePreferences({socket}));
     }
 
     return (
@@ -46,7 +83,7 @@ const PreferencesForm = () => {
                                 fullWidth={true}
                                 labelId="demo-simple-select-filled-label"
                                 id="demo-simple-select-filled"
-                                value={timezone}
+                                value={getPreferenceValue(preferences, 'timezone')}
                                 onChange={handleTimezoneChange}
                                 variant={"filled"}>
                                 {timezoneOptions.map((option) => (
@@ -65,7 +102,7 @@ const PreferencesForm = () => {
                                 fullWidth={true}
                                 labelId="demo-simple-select-filled-label"
                                 id="demo-simple-select-filled"
-                                value={language}
+                                value={getPreferenceValue(preferences, 'language')}
                                 onChange={handleLanguageChange}
                                 variant={"filled"}>
                                 {languageOptions.map((option) => (
@@ -84,7 +121,7 @@ const PreferencesForm = () => {
                                 fullWidth={true}
                                 labelId=""
                                 id=""
-                                value={themes}
+                                value={getPreferenceValue(preferences, 'theme')}
                                 onChange={handleThemeChange}
                                 variant={"filled"}>
                                 {themesOptions.map((option) => (
@@ -94,7 +131,7 @@ const PreferencesForm = () => {
                         </FormControl>
                     </Grid>
                 </Grid>
-                <Button variant="contained">Save Preferences</Button>
+                <Button variant="contained" onClick={()=>{handleSavePreferences()}}>Save Preferences</Button>
             </Box>
         </Paper>);
 };
