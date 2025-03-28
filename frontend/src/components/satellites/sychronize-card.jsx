@@ -87,28 +87,6 @@ const SynchronizeTLEsCard = function () {
         dispatch(startSatelliteSync({ socket }));
     };
 
-    // Listen for socket events
-    useEffect(() => {
-        const listener = (data) => {
-            console.log('Received data for sat-sync-events:', data);
-            dispatch(setProgress(data.progress));
-            dispatch(setMessage(data.message));
-
-            if (data.status === 'complete') {
-                enqueueSnackbar('Satellite data synchronization completed successfully', {
-                    variant: 'success',
-                    autoHideDuration: 4000,
-                });
-            }
-        };
-
-        socket.on('sat-sync-events', listener);
-
-        return () => {
-            socket.off('sat-sync-events', listener);
-        };
-    }, [socket, dispatch]);
-
     return (
         <Card sx={{ display: 'flex', marginTop: 2, marginBottom: 0 }}>
             <Box sx={{ display: 'flex', flexDirection: 'column', width: '40%' }}>

@@ -21,6 +21,9 @@ import {useAuth} from "./components/common/auth.jsx";
 import store from './components/common/store.jsx';
 import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
+import {setMessage, setProgress} from './components/satellites/synchronize-slice.jsx';
+import {setStatus} from "./components/hardware/rig-slice.jsx";
+
 
 const BRANDING = {
     logo: (
@@ -165,6 +168,10 @@ export default function App(props) {
 
             socket.on("sat-sync-events", (data) => {
                 console.log("Received data for sat-sync-events:", data);
+                store.dispatch(setProgress(data.progress));
+                store.dispatch(setMessage(data.message));
+                store.dispatch(setStatus(data.status));
+
                 if (data.status === 'complete') {
                     enqueueSnackbar("Satellite data synchronization completed successfully", {
                         variant: 'success',

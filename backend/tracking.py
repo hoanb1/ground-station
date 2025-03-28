@@ -5,8 +5,6 @@ import asyncio
 from datetime import datetime, UTC
 from typing import Tuple
 from skyfield.api import load, wgs84
-from contextlib import asynccontextmanager
-from fastapi import FastAPI
 from common import timeit, async_timeit
 from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
@@ -192,15 +190,15 @@ async def satellite_tracking_task(sio, logger):
     async with (AsyncSessionLocal() as dbsession):
         while True:
             try:
-                tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
-                logger.info(f"Tracking state: {tracking_state}")
-                if tracking_state.get('success', False) is False:
+                tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+                #logger.info(f"Tracking state: {tracking_state_reply}")
+                if tracking_state_reply.get('success', False) is False:
                     raise Exception(f"No satellite tracking information found in the db for name satellite-tracking")
 
-                norad_id = tracking_state['data']['value'].get('norad_id', None)
-                state = tracking_state['data']['value'].get('state', None)
+                norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
+                tracking_state = tracking_state_reply['data']['value']
 
-                #logger.info(f"Norad id: {norad_id}, state: {state}")
+                logger.info(f"Norad id: {norad_id}, state: {tracking_state}")
                 satellite = await crud.fetch_satellites(dbsession, satellite_id=norad_id)
 
                 if satellite.get('success', False) is False:
