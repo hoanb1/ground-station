@@ -143,7 +143,6 @@ const targetSatTrackSlice = createSlice({
             .addCase(setTrackingStateBackend.fulfilled, (state, action) => {
                 state.loading = false;
                 state.trackingState = action.payload['data'];
-                state.groupId = action.payload['data']['value']['group_id'];
                 state.satelliteId = action.payload['data']['value']['norad_id'];
                 state.error = null;
             })
