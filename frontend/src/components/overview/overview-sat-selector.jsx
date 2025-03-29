@@ -7,8 +7,8 @@ import {
 import { useTheme, styled } from '@mui/material/styles';
 import React, {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
-import {TitleBar} from "./common/common.jsx";
-import {useSocket} from "./common/socket.jsx";
+import {TitleBar} from "../common/common.jsx";
+import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
 

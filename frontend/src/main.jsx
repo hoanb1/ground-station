@@ -14,10 +14,10 @@ import {
     SettingsTabSatelliteGroups,
     SettingsTabUsers
 } from "./components/settings/settings.jsx";
-import GlobalSatelliteTrack from "./components/overview-sat-track.jsx";
+import GlobalSatelliteTrack from "./components/overview/overview-sat-track.jsx";
 import App from "./App.jsx";
 import Layout from "./components/common/dashboard.jsx";
-import TargetSatelliteTrack from "./components/target-sat-track.jsx";
+import TargetSatelliteTrack from "./components/target/target-sat-track.jsx";
 import {SocketProvider, useSocket} from './components/common/socket.jsx';
 import {AuthProvider} from "./components/common/auth.jsx";
 import { Provider as ReduxProvider} from 'react-redux';

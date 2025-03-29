@@ -13,15 +13,15 @@ import L from 'leaflet';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
-import createTerminatorLine from './common/terminator-line.jsx';
-import {getSunMoonCoords} from "./common/sunmoon.jsx";
-import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './common/icons.jsx';
-import SettingsIsland from "./common/map-settings.jsx";
+import createTerminatorLine from '../common/terminator-line.jsx';
+import {getSunMoonCoords} from "../common/sunmoon.jsx";
+import {moonIcon, sunIcon, homeIcon, satelliteIcon} from '../common/icons.jsx';
+import SettingsIsland from "../common/map-settings.jsx";
 import {Box, Fab, Slider} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import {getTileLayerById} from "./common/tile-layers.jsx";
+import {getTileLayerById} from "../common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
     betterDateTimes, betterStatusValue,
@@ -32,18 +32,16 @@ import {
     StyledIslandParent, StyledIslandParentNoScrollbar,
     StyledIslandParentScrollbar, ThemedLeafletTooltip,
     ThemedStackIsland,
-} from "./common/common.jsx";
-import {TitleBar} from "./common/common.jsx";
+} from "../common/common.jsx";
+import {TitleBar} from "../common/common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
-import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "./common/tracking-logic.jsx";
+import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "../common/tracking-logic.jsx";
 import {enqueueSnackbar} from "notistack";
-import {useSocket} from "./common/socket.jsx";
-import TableCell from "@mui/material/TableCell";
-import TableRow from "@mui/material/TableRow";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import {DataGrid, gridClasses} from "@mui/x-data-grid";
-import {useSelector} from "react-redux";
+import {useSocket} from "../common/socket.jsx";
+import {useDispatch, useSelector} from "react-redux";
+import { setSatGroupId, setTrackingStateBackend } from './target-sat-slice.jsx'
+import SatelliteInfoIsland from "./target-sat-info.jsx";
+import NextPassesIsland from "./target-next-passes.jsx";
 
 
 // global leaflet map object
@@ -169,221 +167,6 @@ const MapSlider = function ({handleSliderChange}) {
 }
 
 
-const NextPassesIsland = ({noradId}) => {
-    const [passes, setPasses] = useState([]);
-    const {socket} = useSocket();
-    const [loading, setLoading] = useState(false);
-    const [containerHeight, setContainerHeight] = useState(0);
-    const containerRef = useRef(null);
-
-    useEffect(() => {
-        setLoading(true);
-        socket.emit('data_request', 'fetch-next-passes', noradId, (response) => {
-            if (response.success) {
-                setPasses(response.data);
-            } else {
-                enqueueSnackbar("Failed getting next passes", {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-            setLoading(false);
-        });
-
-        return () => {
-
-        };
-    }, [noradId]);
-
-    const minHeight = 200;
-    const maxHeight = 400;
-
-    useEffect(() => {
-        const target = containerRef.current;
-        const observer = new ResizeObserver((entries) => {
-            setContainerHeight(entries[0].contentRect.height);
-        });
-        if (target) {
-            observer.observe(target);
-        }
-        return () => {
-            observer.disconnect();
-        };
-    }, [containerRef]);
-
-    return (
-        <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {noradId}</TitleBar>
-            <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
-                <div style={{
-                    padding:'0rem 0rem 0rem 0rem',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    height: containerHeight - 25,
-                    minHeight,
-                }}>
-                    <DataGrid
-                        fullWidth={true}
-                        loading={loading}
-                        sx={{
-                            border: 0,
-                            marginTop: 0,
-                            [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                                outline: 'none',
-                            },
-                            [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                                {
-                                    outline: 'none',
-                                },
-                        }}
-                        density={"compact"}
-                        rows={passes}
-                        initialState={{
-                            pagination: { paginationModel: { pageSize: 15 } },
-                            sorting: {
-                                sortModel: [{ field: 'event_start', sort: 'asc' }],
-                            },
-                        }}
-                        columns={[
-                            {
-                                field: 'event_start',
-                                minWidth: 200,
-                                headerName: 'Start',
-                                flex: 2,
-                                valueFormatter: (value) => {
-                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-                                }
-                            },
-                            {
-                                field: 'event_end',
-                                minWidth: 200,
-                                headerName: 'End',
-                                flex: 2,
-                                valueFormatter: (value) => {
-                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-                                }
-                            },
-                            {
-                                field: 'duration',
-                                minWidth: 100,
-                                headerName: 'Duration',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${value}`;
-                                }
-                            },
-                            {
-                                field: 'distance_at_start',
-                                minWidth: 100,
-                                headerName: 'Distance at AOS',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)} km`
-                                }
-                            },
-                            {
-                                field: 'distance_at_end',
-                                minWidth: 100,
-                                headerName: 'Distance at LOS',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)} km`
-                                }
-                            },
-                            {
-                                field: 'distance_at_peak',
-                                minWidth: 100,
-                                headerName: 'Distance at peak',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)} km`
-                                }
-                            },
-                            {
-                                field: 'peak_altitude',
-                                minWidth: 100,
-                                headerName: 'Max El',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)}°`;
-                                }
-                            },
-                        ]}
-                        pageSize={10}
-                        rowsPerPageOptions={[5, 10, 20]}
-                        disableSelectionOnClick
-                    />
-                </div>
-            </div>
-        </>
-    );
-}
-
-const SatelliteInfoIsland = () => {
-    const {satelliteData} = useSelector((state) => state.targetSatTrack);
-
-    return (
-        <>
-            <TitleBar className={"react-grid-draggable"}>Satellite info</TitleBar>
-            <ThemedStackIsland>
-                <Table size="small" style={{ width: '100%' }}>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><strong>Name:</strong></TableCell>
-                            <TableCell>{satelliteData['details']['name'] || "n/a"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Latitude:</strong></TableCell>
-                            <TableCell>{satelliteData['position']['lat'] ? satelliteData['position']['lat'].toFixed(4) : "n/a"}°</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Longitude:</strong></TableCell>
-                            <TableCell>{satelliteData['position']['lon'] ? satelliteData['position']['lon'].toFixed(4) : "n/a"}°</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Altitude:</strong></TableCell>
-                            <TableCell>{satelliteData['position']['alt'] ? satelliteData['position']['alt'].toFixed(2) : "n/a"} km</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Velocity:</strong></TableCell>
-                            <TableCell>{satelliteData['position']['vel'] ? satelliteData['position']['vel'].toFixed(2) : "n/a"} km/s</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Status:</strong></TableCell>
-                            <TableCell>{satelliteData['details']['status']? betterStatusValue(satelliteData['details']['status']): "n/a"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Launch Date:</strong></TableCell>
-                            <TableCell>{satelliteData['details']['launched']? betterDateTimes(satelliteData['details']['launched']) :"n/a"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Countries:</strong></TableCell>
-                            <TableCell>{satelliteData['details']['countries']? renderCountryFlagsCSV(satelliteData['details']['countries']): "n/a"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Geostationary:</strong></TableCell>
-                            <TableCell>{satelliteData['details']['is_geostationary']? "Yes": "No"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Transmitters:</strong></TableCell>
-                            <TableCell>{satelliteData['transmitters'] ? satelliteData['transmitters'].length : "n/a"}</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
-            </ThemedStackIsland>
-        </>
-    );
-}
 
 const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
                                   initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
@@ -391,9 +174,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                                   initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=240 }) {
     const { socket } = useSocket();
-    const [satelliteName, setSatelliteName] = useState(null);
-    const [satelliteAltitude, setSatelliteAltitude] = useState(0.0);
-    const [satelliteVelocity, setSatelliteVelocity] = useState(0.0);
+    const dispatch = useDispatch();
     const [showPastOrbitPath, setShowPastOrbitPath] = useLocalStorageState('target-show-past-orbit-path', initialShowPastOrbitPath, { codec: CODEC_BOOL });
     const [showFutureOrbitPath, setShowFutureOrbitPath] = useLocalStorageState('target-show-future-path', initialShowFutureOrbitPath, { codec: CODEC_BOOL });
     const [showSatelliteCoverage, setShowSatelliteCoverage] = useLocalStorageState('target-show-coverage', initialShowSatelliteCoverage, { codec: CODEC_BOOL });
@@ -418,12 +199,9 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
     const [gridEditable, setGridEditable] = useState(false);
-    const [satelliteData, setSatelliteData] = useState({});
     const [sliderTimeOffset, setSliderTimeOffset] = useState(0);
     const [location, setLocation] = useState({lat: 0, lon: 0});
-    const [locationId, setLocationId] = useState(null);
-    const [locationUserId, setLocationUserId] = useState(null);
-    const [satellitePos, setSatellitePos] = useState({lat: 0, lon: 0, alt: 0, vel: 0});
+    const { satelliteData } = useSelector(state => state.targetSatTrack);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -477,13 +255,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         ]
     };
 
-    const setTrackingStateBackend = (noradId) => {
-        const data = {'name': 'satellite-tracking', 'value': {'norad_id': noradId, 'state': 'tracking' }};
-        socket.emit('data_submission', 'set-tracking-state', data, (response) => {
-            console.log("set-tracking-state response: ", response);
-        });
-    }
-
     // globalize the callback
     handleSetGridEditableTarget = useCallback((value) => {
         setGridEditable(value);
@@ -535,8 +306,12 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
     const handleSelectSatelliteId = useCallback((noradId) => {
         setNoradId(noradId);
-        fetchSatelliteData(noradId);
-        setTrackingStateBackend(noradId);
+        //fetchSatelliteData(noradId);
+        const data = { 'noradId': noradId, 'state': 'tracking', 'groupId': groupId };
+        dispatch(setTrackingStateBackend({
+            socket,
+            data,
+        }));
     }, [noradId]);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
@@ -620,7 +395,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     }
 
     const satelliteUpdate = function (now) {
-        if (Object.keys(satelliteData).length !== 0) {
+        if (Object.keys(satelliteData['details']['name']).length !== 0) {
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
@@ -630,13 +405,10 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             let now = new Date();
             now.setMinutes(now.getMinutes() + sliderTimeOffset);
             let [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
-                satelliteData['tle1'],
-                satelliteData['tle2'],
+                satelliteData['details']['tle1'],
+                satelliteData['details']['tle2'],
                 now
             );
-
-            // set satellite data
-            setSatellitePos({'lat': latitude, 'lon': longitude, 'alt': altitude, 'vel': velocity});
 
             // focus map on satellite, center on latitude only
             let mapCoords = MapObject.getCenter();
@@ -644,8 +416,8 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
             // calculate paths
             let paths = getSatellitePaths([
-                satelliteData['tle1'],
-                satelliteData['tle2']
+                satelliteData['details']['tle1'],
+                satelliteData['details']['tle2']
             ], orbitProjectionDuration);
 
             // past path
@@ -672,14 +444,14 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             />)
 
             if (showTooltip) {
-                currentPos.push(<Marker key={"marker-"+satelliteData['norad_id']} position={[latitude, longitude]}
+                currentPos.push(<Marker key={"marker-"+satelliteData['details']['norad_id']} position={[latitude, longitude]}
                                         icon={satelliteIcon}>
                     <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
-                        {satelliteData['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                        {satelliteData['details']['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(0) + " km/s"}
                     </ThemedLeafletTooltip>
                 </Marker>);
             } else {
-                currentPos.push(<Marker key={"marker-"+satelliteData['norad_id']} position={[latitude, longitude]}
+                currentPos.push(<Marker key={"marker-"+satelliteData['details']['norad_id']} position={[latitude, longitude]}
                                         icon={satelliteIcon}>
                 </Marker>);
             }
@@ -688,7 +460,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
             currentCoverage.push(<Polyline
                 noClip={true}
-                key={"coverage-"+satelliteData['name']}
+                key={"coverage-"+satelliteData['details']['name']}
                 pathOptions={{
                     color: satelliteCoverageColor,
                     weight: 1,
@@ -739,22 +511,9 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         return null;
     }
 
-    const fetchSatelliteData = function(noradId) {
-        socket.emit("data_request", "get-satellite", noradId, (response) => {
-            if (response['success'] && response.data[0]) {
-                setSatelliteData(response.data[0]);
-            } else {
-                enqueueSnackbar(`Failed to get satellite data for norad id: ${noradId} (${response.message})`, {
-                    variant: 'error',
-                    autoHideDuration: 5000,
-                });
-            }
-        });
-    }
-
     useEffect(() => {
         if (noradId) {
-            fetchSatelliteData(noradId);
+            //fetchSatelliteData(noradId);
         }
 
         return () => {
@@ -784,8 +543,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                         lat: parseFloat(response['data']['lat']),
                         lon: parseFloat(response['data']['lon']),
                     });
-                    setLocationId(response['data']['id']);
-                    setLocationUserId(response['data']['userid']);
                 } else {
                     enqueueSnackbar('No location found in the backend, please set one', {
                         variant: 'info',
@@ -820,7 +577,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
             >
                 <MapTitleBar className={"react-grid-draggable window-title-bar"}>
-                    Tracking {satelliteData['name'] || "-"} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s
+                    Tracking {satelliteData['details']['name'] || "-"} {(satelliteData['position']['alt']/1000).toFixed(2)} km, {satelliteData['position']['vel'].toFixed(2)} km/s
                 </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer
@@ -899,7 +656,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             />
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="info">
-            <SatelliteInfoIsland satelliteData={satelliteData} satellitePos={satellitePos}/>
+            <SatelliteInfoIsland/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesIsland noradId={noradId}/>

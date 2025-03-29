@@ -7,10 +7,10 @@ import {
     Select,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import {TitleBar} from "./common/common.jsx";
+import {TitleBar} from "../common/common.jsx";
 import {useLocalStorageState} from "@toolpad/core";
 import * as React from "react";
-import {useSocket} from "./common/socket.jsx";
+import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 
 
@@ -57,6 +57,8 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
     const [groupOfSats, setGroupOfSats] = useState([]);
     const [formGroupSelectError, setFormGroupSelectError] = useState(false);
     const [loading, setLoading] = useState(false);
+
+
 
     useEffect(() => {
         fetchSatelliteGroups();
@@ -108,7 +110,6 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
                         handleSelectSatelliteId(initialNoradId);
                     }
                 }
-                
             } else {
                 setFormGroupSelectError(true);
                 enqueueSnackbar('Failed to set satellites for group id: ' + satGroupId + '', {

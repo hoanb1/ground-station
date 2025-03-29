@@ -1,4 +1,3 @@
-// location-form.jsx
 import React, { useEffect } from 'react';
 import {
     Box,
@@ -14,8 +13,6 @@ import { SimpleVectorCircle } from '../common/icons.jsx';
 import { enqueueSnackbar } from 'notistack';
 import { useSocket } from '../common/socket.jsx';
 import { getMaidenhead } from '../common/common.jsx';
-
-// Redux
 import { useDispatch, useSelector } from 'react-redux';
 import {
     fetchLocationForUserId,

@@ -14,16 +14,22 @@ import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
-import {closeSnackbar, enqueueSnackbar, SnackbarProvider} from 'notistack';
+import { closeSnackbar, enqueueSnackbar, SnackbarProvider } from 'notistack';
 import PeopleIcon from '@mui/icons-material/People';
-import {useSocket} from "./components/common/socket.jsx";
-import {useAuth} from "./components/common/auth.jsx";
+import { useSocket } from "./components/common/socket.jsx";
+import { useAuth } from "./components/common/auth.jsx";
 import store from './components/common/store.jsx';
 import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
-import {setMessage, setProgress} from './components/satellites/synchronize-slice.jsx';
-import {setStatus} from "./components/hardware/rig-slice.jsx";
-import { setSatelliteData } from './components/target-sat-slice.jsx';
+import { setMessage, setProgress } from './components/satellites/synchronize-slice.jsx';
+import { setStatus } from "./components/hardware/rig-slice.jsx";
+import { setSatelliteData } from './components/target/target-sat-slice.jsx';
+import { fetchRigs } from './components/hardware/rig-slice.jsx'
+import { fetchRotators } from './components/hardware/rotaror-slice.jsx'
+import { fetchTLESources } from './components/satellites/sources-slice.jsx'
+import { fetchSatelliteGroups } from './components/satellites/groups-slice.jsx';
+import { fetchUsers } from './components/settings/users-slice.jsx';
+
 
 const BRANDING = {
     logo: (
@@ -40,6 +46,11 @@ function uponConnectionToBackEnd(socket) {
     // called when the connection to backend has been established to fill in the local state with information
     store.dispatch(fetchPreferences({socket}));
     store.dispatch(fetchLocationForUserId({socket}));
+    store.dispatch(fetchRigs({socket}));
+    store.dispatch(fetchRotators({socket}));
+    store.dispatch(fetchTLESources({socket}));
+    store.dispatch(fetchSatelliteGroups({socket}));
+    store.dispatch(fetchUsers({socket}));
 }
 
 export default function App(props) {
@@ -180,7 +191,6 @@ export default function App(props) {
             });
 
             socket.on("satellite-tracking", (data) => {
-                console.log("Received data for tracking data for satellite:", data);
                 store.dispatch(setSatelliteData(data));
             });
 

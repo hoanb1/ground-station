@@ -6,7 +6,6 @@ export const fetchRigs = createAsyncThunk(
         try {
             return await new Promise((resolve, reject) => {
                 socket.emit('data_request', 'get-rigs', null, (response) => {
-                    console.info(response);
                     if (response.success) {
                         resolve(response.data);
                     } else {

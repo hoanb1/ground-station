@@ -15,15 +15,15 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
 import {duration, styled} from "@mui/material/styles";
-import createTerminatorLine from './common/terminator-line.jsx';
-import {getSunMoonCoords} from "./common/sunmoon.jsx";
-import {moonIcon, sunIcon, homeIcon, satelliteIcon} from './common/icons.jsx';
-import SettingsIsland from "./common/map-settings.jsx";
+import createTerminatorLine from '../common/terminator-line.jsx';
+import {getSunMoonCoords} from "../common/sunmoon.jsx";
+import {moonIcon, sunIcon, homeIcon, satelliteIcon} from '../common/icons.jsx';
+import SettingsIsland from "../common/map-settings.jsx";
 import {Box, Button, Fab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import {getTileLayerById, tileLayers} from "./common/tile-layers.jsx";
+import {getTileLayerById, tileLayers} from "../common/tile-layers.jsx";
 import OverviewSatelliteGroupSelector from "./overview-sat-selector.jsx";
 import {
     CODEC_BOOL,
@@ -39,11 +39,11 @@ import {
     getTimeFromISO,
     humanizeFutureDateInMinutes,
     ThemedStackIsland, betterStatusValue, betterDateTimes, renderCountryFlagsCSV, StyledIslandParentNoScrollbar
-} from "./common/common.jsx";
+} from "../common/common.jsx";
 import { useLocalStorageState } from '@toolpad/core';
-import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from './common/tracking-logic.jsx';
+import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from '../common/tracking-logic.jsx';
 import {enqueueSnackbar} from "notistack";
-import {useSocket} from "./common/socket.jsx";
+import {useSocket} from "../common/socket.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";

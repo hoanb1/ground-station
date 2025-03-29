@@ -7,7 +7,7 @@ import socketio
 from datetime import datetime, UTC
 from typing import Tuple
 from skyfield.api import load, wgs84
-from common import timeit, async_timeit
+from common import timeit, async_timeit, is_geostationary
 from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
 from logger import logger
@@ -307,6 +307,10 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                                     f" {len(satellite.get('data', []))}")
 
                 satellite_data['details'] = satellite['data'][0]
+                satellite_data['details']['is_geostationary'] = is_geostationary([
+                    satellite_data['details']['tle1'],
+                    satellite_data['details']['tle2']
+                ])
 
                 # fetch transmitters
                 transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
@@ -334,7 +338,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 position['el'] = sky_point[1]
 
                 logger.info(f"Sky point: az: {sky_point[0]} el: {sky_point[1]}, position: {position}")
-                logger.info(f"Satellite data: {satellite_data}")
 
                 # transmit data to the browser
                 await sio.emit('satellite-tracking', satellite_data)
