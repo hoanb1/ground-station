@@ -47,10 +47,10 @@ const LocationPage = () => {
         polylines,
     } = useSelector((state) => state.location);
 
-    // On mount, fetch the location
-    useEffect(() => {
-        dispatch(fetchLocationForUserId({ socket }));
-    }, [dispatch, socket]);
+    // // On mount, fetch the location
+    // useEffect(() => {
+    //     dispatch(fetchLocationForUserId({ socket }));
+    // }, [dispatch, socket]);
 
     // Recompute polylines when location changes. Alternatively, you can handle this in the slice.
     useEffect(() => {

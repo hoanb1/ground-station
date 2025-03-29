@@ -55,14 +55,14 @@ const UsersTable = () => {
         { field: 'added', headerName: 'Added', flex: 1 },
     ];
 
-    // Fetch initial data
-    useEffect(() => {
-        dispatch(fetchUsers({ socket }))
-            .unwrap()
-            .catch(() => {
-                enqueueSnackbar('Failed to get users', { variant: 'error' });
-            });
-    }, [dispatch, socket]);
+    // // Fetch initial data
+    // useEffect(() => {
+    //     dispatch(fetchUsers({ socket }))
+    //         .unwrap()
+    //         .catch(() => {
+    //             enqueueSnackbar('Failed to get users', { variant: 'error' });
+    //         });
+    // }, [dispatch, socket]);
 
     // Handlers
     const handleClickOpen = () => {

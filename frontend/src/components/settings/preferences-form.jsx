@@ -28,10 +28,10 @@ const PreferencesForm = () => {
         return preference ? preference.value : null;
     };
 
-    // Fetch preferences when the component mounts (if needed)
-    useEffect(() => {
-        dispatch(fetchPreferences({socket}));
-    }, []);
+    // // Fetch preferences when the component mounts (if needed)
+    // useEffect(() => {
+    //     dispatch(fetchPreferences({socket}));
+    // }, []);
 
     const timezoneOptions = tz.names().map((zone) => ({
         name: zone.replace('_', ' '),

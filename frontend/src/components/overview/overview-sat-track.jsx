@@ -327,7 +327,6 @@ function GlobalSatelliteTrack() {
                     color: pastOrbitLineColor,
                     weight: 1,
                     opacity: 0.5,
-                    dashArray: "4 4"
                 }}
             />)
 
@@ -338,7 +337,8 @@ function GlobalSatelliteTrack() {
                 pathOptions={{
                     color: futureOrbitLineColor,
                     weight:1,
-                    opacity:1
+                    opacity:1,
+                    dashArray: "4 4"
                 }}
             />)
 

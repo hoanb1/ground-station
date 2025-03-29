@@ -451,7 +451,6 @@ const TargetSatelliteTrack = React.memo(function () {
                     color: pastOrbitLineColor,
                     weight:1,
                     opacity:0.5,
-                    dashArray: "5 5"
                 }}
             />)
 
@@ -462,7 +461,8 @@ const TargetSatelliteTrack = React.memo(function () {
                 pathOptions={{
                     color: futureOrbitLineColor,
                     weight:1,
-                    opacity:1
+                    opacity:1,
+                    dashArray: "5 5"
                 }}
             />)
 

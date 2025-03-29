@@ -48,12 +48,12 @@ export default function AntennaRotatorTable() {
         { field: 'azendstop', headerName: 'AZ Endstop', type: 'number', flex: 1, minWidth: 80 },
     ];
 
-    useEffect(() => {
-        // Only dispatch if the socket is ready
-        if (socket) {
-            dispatch(fetchRotators({socket}));
-        }
-    }, [dispatch, socket]);
+    // useEffect(() => {
+    //     // Only dispatch if the socket is ready
+    //     if (socket) {
+    //         dispatch(fetchRotators({socket}));
+    //     }
+    // }, [dispatch, socket]);
 
     const handleChange = (e) => {
         const { name, value } = e.target;

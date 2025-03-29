@@ -20,6 +20,7 @@ import {
 import {enqueueSnackbar} from "notistack";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {humanizeFrequency} from "../common/common.jsx";
+import {useEffect} from "react";
 
 
 export default function RigTable() {
@@ -68,9 +69,9 @@ export default function RigTable() {
         }},
     ];
 
-    React.useEffect(() => {
-        dispatch(fetchRigs({socket}));
-    }, [dispatch]);
+    // useEffect(() => {
+    //     dispatch(fetchRigs({socket}));
+    // }, [dispatch]);
 
     function handleFormSubmit() {
         if (formValues.id) {

@@ -71,10 +71,10 @@ const GroupsTable = () => {
         },
     ];
 
-    // Fetch data
-    useEffect(() => {
-        dispatch(fetchSatelliteGroups({ socket }));
-    }, [dispatch, socket]);
+    // // Fetch data
+    // useEffect(() => {
+    //     dispatch(fetchSatelliteGroups({ socket }));
+    // }, [dispatch, socket]);
 
     // Handle Add
     const handleAddClick = () => {

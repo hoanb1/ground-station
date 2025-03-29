@@ -119,9 +119,9 @@ export default function SourcesTable() {
         dispatch(setOpenAddDialog(false));
     };
 
-    useEffect(() => {
-        dispatch(fetchTLESources({socket}));
-    }, [dispatch]);
+    // useEffect(() => {
+    //     dispatch(fetchTLESources({socket}));
+    // }, [dispatch]);
 
     return (
         <Box sx={{width: '100%', marginTop: 0}}>
