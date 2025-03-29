@@ -345,7 +345,7 @@ async def compiled_satellite_data(dbsession, tracking_state) -> dict:
     position['az'] = sky_point[0]
     position['el'] = sky_point[1]
 
-    logger.info(f"Sky point: az: {sky_point[0]} el: {sky_point[1]}, position: {position}")
+    #logger.info(f"Sky point: az: {sky_point[0]} el: {sky_point[1]}, position: {position}")
 
     return satellite_data
 
@@ -380,6 +380,5 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.exception(e)
 
             finally:
-
                 await asyncio.sleep(2)
 

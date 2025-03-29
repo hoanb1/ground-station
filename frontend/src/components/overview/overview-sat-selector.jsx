@@ -18,7 +18,7 @@ import {
     setFormGroupSelectError,
     setSelectedSatGroupId,
     setSelectedSatellites,
-    fetchSatellitesByGroupId
+    fetchSatellitesByGroupId,
 } from "./overview-sat-slice.jsx";
 
 
@@ -33,7 +33,6 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
     }));
 
     useEffect(() => {
-        console.info("OverviewSatelliteGroupSelector: useEffect");
         dispatch(fetchSatelliteGroups({socket}));
 
         return () => {
@@ -41,20 +40,10 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
         };
     }, []);
 
-    useEffect(() => {
-        if (selectedSatGroupId) {
-            dispatch(fetchSatellitesByGroupId({socket, selectedSatGroupId}));
-            handleSatelliteGroupIdChange(selectedSatGroupId);
-        }
-
-        return () => {
-
-        };
-    }, [selectedSatGroupId]);
-
     function handleOnGroupChange(event) {
         // let get a list of satellites for the selected group
         const satGroupId = event.target.value;
+        dispatch(setSelectedSatGroupId(satGroupId));
         dispatch(fetchSatellitesByGroupId({socket, satGroupId}));
     }
 

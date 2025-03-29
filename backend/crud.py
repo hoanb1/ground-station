@@ -848,10 +848,16 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
     Otherwise, return all satellite records.
     """
     try:
+        assert group_id is not None, "group_id is required"
+
         if isinstance(group_id, str):
             group_id = uuid.UUID(group_id)
 
+        logger.info(f"group_id: {group_id}")
+
         group = await fetch_satellite_group(session, group_id)
+
+        logger.info(f"group {group}")
 
         satellite_ids = group['data']['satellite_ids']
         stmt = select(Satellites).filter(Satellites.norad_id.in_(satellite_ids))

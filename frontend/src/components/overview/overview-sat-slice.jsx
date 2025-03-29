@@ -22,9 +22,9 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
     async ({ socket, satGroupId }, { rejectWithValue }) => {
         return new Promise((resolve, reject) => {
             socket.emit('data_request', 'get-satellites-for-group-id', satGroupId, (response) => {
+                console.info("get-satellites-for-group-id, response: ", response);
                 if (response.success) {
-                    // Returning both the group ID and data:
-                    resolve({ groupId: satGroupId, satellites: response.data });
+                    resolve(response.data);
                 } else {
                     reject(
                         rejectWithValue(`Failed to set satellites for group id: ${satGroupId}`)
@@ -36,43 +36,58 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
 );
 
 
-const initialState = {
-    showPastOrbitPath: false,
-    showFutureOrbitPath: false,
-    showSatelliteCoverage: true,
-    showSunIcon: true,
-    showMoonIcon: true,
-    showTerminatorLine: true,
-    showTooltip: true,
-    gridEditable: false,
-    selectedSatellites: [],
-    currentPastSatellitesPaths: [],
-    currentFutureSatellitesPaths: [],
-    currentSatellitesPosition: [],
-    currentSatellitesCoverage: [],
-    terminatorLine: [],
-    daySidePolygon: [],
-    pastOrbitLineColor: '#ffb344',
-    futureOrbitLineColor: '#42b642',
-    satelliteCoverageColor: '#c432ff',
-    orbitProjectionDuration: 60,
-    tileLayerID: 'stadiadark',
-    sunPos: null,
-    moonPos: null,
-    mapZoomLevel: 2,
-    location: { lat: 0, lon: 0 },
-    locationId: null,
-    locationUserId: null,
-    satelliteGroupId: null,
-    satGroups: [],
-    formGroupSelectError: false,
-    selectedSatGroupId: "",
+export const fetchNextPassesForGroup = createAsyncThunk(
+    'overviewPasses/fetchNextPassesForGroup',
+    async ({ socket, groupId }, { rejectWithValue }) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_request', 'fetch-next-passes-for-group', groupId, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue('Failed getting next passes'));
+                }
+            });
+        });
+    }
+);
 
-};
 
 const overviewSlice = createSlice({
     name: 'overviewSatTrack',
-    initialState,
+    initialState: {
+        showPastOrbitPath: false,
+        showFutureOrbitPath: false,
+        showSatelliteCoverage: true,
+        showSunIcon: true,
+        showMoonIcon: true,
+        showTerminatorLine: true,
+        showTooltip: true,
+        gridEditable: false,
+        selectedSatellites: [],
+        currentPastSatellitesPaths: [],
+        currentFutureSatellitesPaths: [],
+        currentSatellitesPosition: [],
+        currentSatellitesCoverage: [],
+        terminatorLine: [],
+        daySidePolygon: [],
+        pastOrbitLineColor: '#ffb344',
+        futureOrbitLineColor: '#42b642',
+        satelliteCoverageColor: '#c432ff',
+        orbitProjectionDuration: 60,
+        tileLayerID: 'stadiadark',
+        sunPos: null,
+        moonPos: null,
+        mapZoomLevel: 2,
+        location: { lat: 0, lon: 0 },
+        locationId: null,
+        locationUserId: null,
+        satelliteGroupId: null,
+        satGroups: [],
+        formGroupSelectError: false,
+        selectedSatGroupId: "",
+        passes: [],
+        passesLoading: false,
+    },
     reducers: {
         setShowPastOrbitPath(state, action) {
             state.showPastOrbitPath = action.payload;
@@ -152,6 +167,12 @@ const overviewSlice = createSlice({
         setSelectedSatGroupId(state, action) {
             state.selectedSatGroupId = action.payload;
         },
+        setPasses(state, action) {
+            state.passes = action.payload;
+        },
+        setPassesLoading(state, action) {
+            state.loading = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -168,11 +189,20 @@ const overviewSlice = createSlice({
                 state.formGroupSelectError = false;
             })
             .addCase(fetchSatellitesByGroupId.fulfilled, (state, action) => {
-                const {groupId, satellites} = action.payload;
-                state.selectedSatGroupId = groupId;
-                state.selectedSatellites = satellites;
+                state.selectedSatellites = action.payload;
             })
             .addCase(fetchSatellitesByGroupId.rejected, (state, action) => {
+                state.formGroupSelectError = true;
+            })
+            .addCase(fetchNextPassesForGroup.pending, (state) => {
+                state.passesLoading = true;
+            })
+            .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
+                state.passes = action.payload;
+                state.passesLoading = false;
+            })
+            .addCase(fetchNextPassesForGroup.rejected, (state, action) => {
+                state.passesLoading = false;
                 state.formGroupSelectError = true;
             });
     }
@@ -201,6 +231,8 @@ export const {
     setSatGroups,
     setFormGroupSelectError,
     setSelectedSatGroupId,
+    setPasses,
+    setPassesLoading,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;

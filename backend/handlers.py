@@ -72,6 +72,8 @@ async def data_request_routing(sio, cmd, data, logger):
             for satellite in satellites.get('data', []):
                 transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
                 satellite['transmitters'] = transmitters['data']
+            else:
+                logger.info(f'No satellites found for group id: {data}')
 
             reply = {'success': (satellites['success'] & transmitters['success']), 'data': satellites.get('data', [])}
 
