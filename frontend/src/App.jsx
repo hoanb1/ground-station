@@ -18,7 +18,7 @@ import { closeSnackbar, enqueueSnackbar, SnackbarProvider } from 'notistack';
 import PeopleIcon from '@mui/icons-material/People';
 import { useSocket } from "./components/common/socket.jsx";
 import { useAuth } from "./components/common/auth.jsx";
-import store from './components/common/store.jsx';
+import { store, persistor } from './components/common/store.jsx';
 import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
 import { setMessage, setProgress } from './components/satellites/synchronize-slice.jsx';

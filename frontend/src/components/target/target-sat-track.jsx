@@ -35,7 +35,8 @@ import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from 
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
-import { setSatGroupId, setTrackingStateBackend,   setShowPastOrbitPath,
+import {
+    setSatGroupId, setTrackingStateBackend, setShowPastOrbitPath,
     setShowFutureOrbitPath,
     setShowSatelliteCoverage,
     setShowSunIcon,
@@ -55,7 +56,7 @@ import { setSatGroupId, setTrackingStateBackend,   setShowPastOrbitPath,
     setGridEditable,
     setSliderTimeOffset,
     setLocation,
-    setLoading,
+    setLoading, setSatelliteData,
 
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
@@ -323,10 +324,17 @@ const TargetSatelliteTrack = React.memo(function () {
     const handleSelectSatelliteId = useCallback((noradId) => {
         const data = { 'noradId': noradId, 'state': 'tracking', 'groupId': groupId };
         setLoading(true);
-        dispatch(setTrackingStateBackend({
-            socket,
-            data,
-        }));
+        dispatch(setTrackingStateBackend({ socket, data, }))
+            .unwrap()
+            .then((response) => {
+                const satelliteData = response['satellite_data'];
+                dispatch(setSatelliteData(satelliteData));
+            })
+            .catch((error) => {
+                enqueueSnackbar(error, {
+                    variant: 'error',
+                });
+            });
     }, [noradId]);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {

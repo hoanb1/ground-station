@@ -19,7 +19,6 @@ export const setTrackingStateBackend = createAsyncThunk(
                 if (response.success) {
                     resolve(response);
                 } else {
-                    console.log("set-tracking-state failed: ", response);
                     reject(rejectWithValue(response));
                 }
             });
@@ -289,10 +288,6 @@ export const {
     setShowMoonIcon,
     setShowTerminatorLine,
     setShowTooltip,
-    setCurrentPastSatellitesPaths,
-    setCurrentFutureSatellitesPaths,
-    setCurrentSatellitesPosition,
-    setCurrentSatellitesCoverage,
     setTerminatorLine,
     setDaySidePolygon,
     setPastOrbitLineColor,

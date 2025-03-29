@@ -11,7 +11,7 @@ const NextPassesIsland = ({noradId}) => {
     const dispatch = useDispatch();
     const [containerHeight, setContainerHeight] = useState(0);
     const containerRef = useRef(null);
-    const { passesLoading, satellitePasses } = useSelector(state => state.targetSatTrack);
+    const { passesLoading, satellitePasses, satelliteData } = useSelector(state => state.targetSatTrack);
 
     useEffect(() => {
         dispatch(fetchNextPasses({socket, noradId}))
@@ -48,7 +48,7 @@ const NextPassesIsland = ({noradId}) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {noradId}</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {satelliteData['details']['name']}</TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',

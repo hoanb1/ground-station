@@ -21,8 +21,8 @@ import TargetSatelliteTrack from "./components/target/target-sat-track.jsx";
 import {SocketProvider, useSocket} from './components/common/socket.jsx';
 import {AuthProvider} from "./components/common/auth.jsx";
 import { Provider as ReduxProvider} from 'react-redux';
-import { store } from './components/common/store.jsx';
-
+import { PersistGate } from 'redux-persist/integration/react';
+import { store, persistor } from './components/common/store.jsx';
 
 
 const router = createBrowserRouter([
@@ -105,11 +105,13 @@ const router = createBrowserRouter([
 createRoot(document.getElementById('root')).render(
     <StrictMode>
         <ReduxProvider store={store}>
-        <SocketProvider>
-            <AuthProvider>
-                <RouterProvider router={router} />
-            </AuthProvider>
-        </SocketProvider>
+            <PersistGate loading={null} persistor={persistor}>
+                <SocketProvider>
+                    <AuthProvider>
+                        <RouterProvider router={router} />
+                    </AuthProvider>
+                </SocketProvider>
+            </PersistGate>
         </ReduxProvider>
     </StrictMode>
 );

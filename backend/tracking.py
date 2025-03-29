@@ -267,6 +267,89 @@ def get_satellite_position_from_tle(tle_lines):
     }
 
 
+async def compiled_satellite_data(dbsession, tracking_state) -> dict:
+    """
+    Compiles satellite data by fetching satellite information, transmitters,
+    position, and sky-point (azimuth and elevation) using the provided database
+    session and satellite tracking state.
+
+    :param dbsession: An asynchronous database session used for fetching satellite
+        and location data.
+    :type dbsession: Any
+    :param tracking_state: A dictionary containing the tracking state data used to
+        identify the satellite. Must include a 'success' flag and nested data with
+        key 'norad_id'.
+    :type tracking_state: dict
+    :raises Exception: If no satellite tracking information is found for the name
+        `satellite-tracking`.
+    :raises Exception: If no satellite is found in the database for the specified
+        NORAD ID.
+    :raises Exception: If more than one satellite is found in the result for the
+        specified NORAD ID.
+    :raises Exception: If no location is found in the database for the user ID
+        `None`.
+    :return: A dictionary containing compiled satellite data, which includes
+        detailed satellite information (`details`), current position (`position`),
+        and a list of satellite transmitters (`transmitters`).
+    :rtype: dict
+    """
+
+    satellite_data = {
+        'details': {},
+        'position': {},
+        'transmitters': [],
+    }
+
+    if tracking_state.get('success', False) is False:
+        raise Exception(f"No satellite tracking information found in the db for name satellite-tracking")
+
+    norad_id = tracking_state['data']['value'].get('norad_id', None)
+
+    satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
+
+    if satellite.get('success', False) is False:
+        raise Exception(f"No satellite found in the db for norad id {norad_id}")
+
+    if len(satellite.get('data', [])) != 1:
+        raise Exception(f"Expected exactly one satellite in the result for norad id {norad_id} got"
+                        f" {len(satellite.get('data', []))}")
+
+    satellite_data['details'] = satellite['data'][0]
+    satellite_data['details']['is_geostationary'] = is_geostationary([
+        satellite_data['details']['tle1'],
+        satellite_data['details']['tle2']
+    ])
+
+    # fetch transmitters
+    transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
+    satellite_data['transmitters'] = transmitters['data']
+
+    location = await crud.fetch_location_for_userid(dbsession, user_id=None)
+    if location.get('success', False) is False:
+        raise Exception(f"No location found in the db for user id None, please set one")
+
+    # get current position
+    position = get_satellite_position_from_tle([
+        satellite_data['details']['name'],
+        satellite_data['details']['tle1'],
+        satellite_data['details']['tle2']
+    ])
+
+    # get position in the sky
+    home_lat = location['data']['lat']
+    home_lon = location['data']['lon']
+    sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
+                                    satellite['data'][0]['tle2'], datetime.now(UTC))
+
+    satellite_data['position'] = position
+    position['az'] = sky_point[0]
+    position['el'] = sky_point[1]
+
+    logger.info(f"Sky point: az: {sky_point[0]} el: {sky_point[1]}, position: {position}")
+
+    return satellite_data
+
+
 async def satellite_tracking_task(sio: socketio.AsyncServer):
     """
     Periodically tracks and transmits satellite position and details along with user location data
@@ -281,63 +364,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     :type sio: socketio.AsyncServer
     :return: None
     """
-    satellite_data = {
-        'details': {},
-        'position': {},
-        'transmitters': [],
-    }
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
             try:
                 tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
 
-                if tracking_state_reply.get('success', False) is False:
-                    raise Exception(f"No satellite tracking information found in the db for name satellite-tracking")
-
-                norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
-
-                satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
-
-                if satellite.get('success', False) is False:
-                    raise Exception(f"No satellite found in the db for norad id {norad_id}")
-
-                if len(satellite.get('data', [])) != 1:
-                    raise Exception(f"Expected exactly one satellite in the result for norad id {norad_id} got"
-                                    f" {len(satellite.get('data', []))}")
-
-                satellite_data['details'] = satellite['data'][0]
-                satellite_data['details']['is_geostationary'] = is_geostationary([
-                    satellite_data['details']['tle1'],
-                    satellite_data['details']['tle2']
-                ])
-
-                # fetch transmitters
-                transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
-                satellite_data['transmitters'] = transmitters['data']
-
-                location = await crud.fetch_location_for_userid(dbsession, user_id=None)
-                if location.get('success', False) is False:
-                    raise Exception(f"No location found in the db for user id None, please set one")
-
-                # get current position
-                position = get_satellite_position_from_tle([
-                    satellite_data['details']['name'],
-                    satellite_data['details']['tle1'],
-                    satellite_data['details']['tle2']
-                ])
-
-                # get position in the sky
-                home_lat = location['data']['lat']
-                home_lon = location['data']['lon']
-                sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
-                                                satellite['data'][0]['tle2'], datetime.now(UTC))
-
-                satellite_data['position'] = position
-                position['az'] = sky_point[0]
-                position['el'] = sky_point[1]
-
-                logger.info(f"Sky point: az: {sky_point[0]} el: {sky_point[1]}, position: {position}")
+                satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
 
                 # transmit data to the browser
                 await sio.emit('satellite-tracking', satellite_data)

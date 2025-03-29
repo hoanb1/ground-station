@@ -11,35 +11,30 @@ import {TitleBar} from "../common/common.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
+import {useDispatch, useSelector} from "react-redux";
+import {
+    fetchSatelliteGroups,
+    setSatGroups,
+    setFormGroupSelectError,
+    setSelectedSatGroupId,
+    setSelectedSatellites,
+    fetchSatellitesByGroupId
+} from "./overview-sat-slice.jsx";
+
 
 const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection, handleSatelliteGroupIdChange}) {
     const { socket } = useSocket();
-    const [satGroups, setSatGroups] = useState([]);
-    const [formGroupSelectError, setFormGroupSelectError] = useState(false);
-    const [selectedSatGroupId, setSelectedSatGroupId] = useLocalStorageState('overview-satellite-groupid', "");
-    const [selectedSatellites, setSelectedSatellites] = useState([]);
+    const dispatch = useDispatch();
+    const { satelliteGroupId, satGroups, formGroupSelectError, selectedSatGroupId } = useSelector(state => state.overviewSatTrack);
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
         backgroundColor: "#1e1e1e",
         fontsize: '0.9rem !important',
     }));
 
-    const fetchSatelliteGroups = function() {
-        socket.emit("data_request", "get-satellite-groups", null, (response) => {
-            if (response['success']) {
-                setSatGroups(response.data);
-            } else {
-                enqueueSnackbar('Failed to get satellite groups', {
-                    variant: 'error',
-                    autoHideDuration: 5000
-                });
-                setFormGroupSelectError(true);
-            }
-        });
-    }
-
     useEffect(() => {
-        fetchSatelliteGroups();
+        console.info("OverviewSatelliteGroupSelector: useEffect");
+        dispatch(fetchSatelliteGroups({socket}));
 
         return () => {
 
@@ -48,7 +43,7 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
 
     useEffect(() => {
         if (selectedSatGroupId) {
-            fetchSatellitesByGroupId(selectedSatGroupId);
+            dispatch(fetchSatellitesByGroupId({socket, selectedSatGroupId}));
             handleSatelliteGroupIdChange(selectedSatGroupId);
         }
 
@@ -57,29 +52,10 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
         };
     }, [selectedSatGroupId]);
 
-    function fetchSatellitesByGroupId(satGroupId) {
-        socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
-            if (response['success']) {
-                setSelectedSatellites(response.data);
-                setSelectedSatGroupId(satGroupId);
-                handleGroupSatelliteSelection(response.data);
-                setFormGroupSelectError(false);
-
-            } else {
-                enqueueSnackbar('Failed to set satellites for group id: ' + satGroupId + '', {
-                    variant: 'error',
-                    autoHideDuration: 5000
-                });
-                setFormGroupSelectError(true);
-
-            }
-        });
-    }
-
     function handleOnGroupChange(event) {
         // let get a list of satellites for the selected group
         const satGroupId = event.target.value;
-        fetchSatellitesByGroupId(satGroupId);
+        dispatch(fetchSatellitesByGroupId({socket, satGroupId}));
     }
 
     return (

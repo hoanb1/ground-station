@@ -9,6 +9,7 @@ from auth import *
 from models import ModelEncoder
 from tracking import fetch_next_events, fetch_next_events_for_group
 from common import is_geostationary
+from tracking import compiled_satellite_data
 
 
 async def data_request_routing(sio, cmd, data, logger):
@@ -333,8 +334,13 @@ async def data_submission_routing(sio, cmd, data, logger):
 
         elif cmd == "set-tracking-state":
             logger.info(f'Updating satellite tracking state, data: {data}')
-            set_reply = await crud.set_satellite_tracking_state(dbsession, data)
-            reply = {'success': set_reply['success'], 'data': set_reply.get('data', [])}
+            tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
+            satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
+            reply = {
+                'success': tracking_state_reply['success'],
+                'data': tracking_state_reply.get('data', []),
+                'satellite_data': satellite_data
+            }
 
         else:
             logger.info(f'Unknown command: {cmd}')
