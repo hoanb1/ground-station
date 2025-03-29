@@ -25,8 +25,6 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { satGroups, groupId, loading, error } = useSelector((state) => state.targetSatTrack);
-    const [groupOfSats, setGroupOfSats] = useState([]);
-    const [formGroupSelectError, setFormGroupSelectError] = useState(false);
 
     useEffect(() => {
         // Fetch satellite groups from Redux
@@ -62,62 +60,22 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
         }
     }, [satGroups, initialGroupId, initialNoradId, dispatch, socket, handleSelectSatelliteId]);
 
-    //
-    //
-    // const  fetchSatellitesByGroupId = function(satGroupId) {
-    //     // call the backend to get the satellites for that group
-    //     socket.emit("data_request", "get-satellites-for-group-id", satGroupId, (response) => {
-    //         if (response['success']) {
-    //             let satGroup = response.data;
-    //             satGroup.sort((a, b) => a.name.localeCompare(b.name));
-    //             setGroupOfSats(satGroup);
-    //
-    //             // check if the initial norad id value is in the set of returned satellites
-    //             if (initialNoradId) {
-    //                 const selectedSatellite = response.data.find((satellite) => satellite['norad_id'] === initialNoradId);
-    //                 if (selectedSatellite) {
-    //                     handleSelectSatelliteId(initialNoradId);
-    //                 }
-    //             }
-    //         } else {
-    //             setFormGroupSelectError(true);
-    //             enqueueSnackbar('Failed to set satellites for group id: ' + satGroupId + '', {
-    //                 variant: 'error',
-    //                 autoHideDuration: 5000,
-    //             });
-    //         }
-    //     });
-    // }
-
-
     const handleGroupChange = (e) => {
         const newGroupId = e.target.value;
         dispatch(setSatGroupId(newGroupId));
         dispatch(fetchSatellitesByGroupId({ socket, groupId: newGroupId }));
         dispatch(setSatelliteId(''));
-        //handleSelectSatelliteId('');
     };
-
-    //
-    //
-    // const handleOnGroupChange = function (event) {
-    //     // set the group id
-    //     const satGroupId = event.target.value;
-    //     setSelectedSatGroupId(satGroupId);
-    //
-    //     // fetch satellite groups
-    //     fetchSatellitesByGroupId(satGroupId);
-    // };
 
     return (
         <div>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
-                    <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                    <FormControl disabled={loading} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                                  size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
-                        <Select disabled={loading} error={formGroupSelectError}
+                        <Select disabled={loading}
                                 value={groupId}
                                 id="grouped-select" label="Grouping" variant={"filled"}
                                 size={"small"} onChange={handleGroupChange}>

@@ -183,12 +183,8 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(fetchSatellitesByGroupId.fulfilled, (state, action) => {
                 state.loading = false;
-                const { satGroup, initialNoradId } = action.payload;
+                const { satGroup } = action.payload;
                 state.groupOfSats = satGroup;
-                // Optionally update the selected satellite if initialNoradId is present
-                if (initialNoradId) {
-                    state.satelliteId = initialNoradId;
-                }
             })
             .addCase(fetchSatellitesByGroupId.rejected, (state, action) => {
                 state.loading = false;
