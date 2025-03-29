@@ -16,7 +16,7 @@ import {
     betterDateTimes,
     humanizeDate,
     betterStatusValue,
-    renderCountryFlags,
+    renderCountryFlagsCSV,
     humanizeFrequency
 } from '../common/common.jsx';
 import SatelliteInfoModal from "./satellite-info.jsx";
@@ -90,7 +90,7 @@ const SatelliteTable = React.memo(function () {
             headerAlign: 'center',
             align: 'center',
             renderCell: (params) => {
-                return renderCountryFlags(params.value);
+                return renderCountryFlagsCSV(params.value);
             },
         },
         {

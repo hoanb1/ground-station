@@ -31,7 +31,7 @@ async def lifespan(fastapiapp: FastAPI):
     resources in this context manager.
     """
     # Start the background task
-    tracking_task = asyncio.create_task(satellite_tracking_task(sio, logger))
+    tracking_task = asyncio.create_task(satellite_tracking_task(sio))
 
     try:
         yield

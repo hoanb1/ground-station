@@ -23,7 +23,7 @@ import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
 import {setMessage, setProgress} from './components/satellites/synchronize-slice.jsx';
 import {setStatus} from "./components/hardware/rig-slice.jsx";
-
+import { setSatelliteData } from './components/target-sat-slice.jsx';
 
 const BRANDING = {
     logo: (
@@ -167,7 +167,6 @@ export default function App(props) {
             });
 
             socket.on("sat-sync-events", (data) => {
-                console.log("Received data for sat-sync-events:", data);
                 store.dispatch(setProgress(data.progress));
                 store.dispatch(setMessage(data.message));
                 store.dispatch(setStatus(data.status));
@@ -180,12 +179,18 @@ export default function App(props) {
                 }
             });
 
+            socket.on("satellite-tracking", (data) => {
+                console.log("Received data for tracking data for satellite:", data);
+                store.dispatch(setSatelliteData(data));
+            });
+
             return () => {
                 socket.off('connect');
                 socket.off('reconnect_attempt');
                 socket.off('error');
                 socket.off('disconnect');
                 socket.off("sat-sync-events");
+                socket.off("satellite-tracking");
             };
         }
     }, [socket]);

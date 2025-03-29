@@ -896,7 +896,7 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
-async def fetch_satellites(session: AsyncSession, satellite_id: Union[str, int, list[int], None]) -> dict:
+async def fetch_satellites(session: AsyncSession, norad_id: Union[str, int, list[int], None]) -> dict:
     """
     Fetch satellite records.
 
@@ -905,21 +905,21 @@ async def fetch_satellites(session: AsyncSession, satellite_id: Union[str, int, 
     Otherwise, return all satellite records.
     """
     try:
-        if satellite_id is None:
+        if norad_id is None:
             # return all
             stmt = select(Satellites)
             result = await session.execute(stmt)
             satellites = result.scalars().all()
 
-        elif isinstance(satellite_id, list):
+        elif isinstance(norad_id, list):
             # return all in list
-            stmt = select(Satellites).filter(Satellites.norad_id.in_(satellite_id))
+            stmt = select(Satellites).filter(Satellites.norad_id.in_(norad_id))
             result = await session.execute(stmt)
             satellites = result.scalars().all()
 
         else:
             # return only the one
-            stmt = select(Satellites).filter(Satellites.norad_id == satellite_id)
+            stmt = select(Satellites).filter(Satellites.norad_id == norad_id)
             result = await session.execute(stmt)
             satellite = result.scalar_one_or_none()
             satellites = [satellite] if satellite else []

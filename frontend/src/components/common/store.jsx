@@ -8,6 +8,7 @@ import satelliteGroupReducer from '../satellites/groups-slice.jsx';
 import locationReducer from '../settings/location-slice.jsx';
 import synchronizeReducer from '../satellites/synchronize-slice.jsx';
 import preferencesReducer from '../settings/preferences-slice.jsx';
+import targetSatTrackReducer from '../target-sat-slice.jsx'
 
 export const store = configureStore({
     reducer: {
@@ -20,7 +21,7 @@ export const store = configureStore({
         location: locationReducer,
         syncSatellite: synchronizeReducer,
         preferences: preferencesReducer,
-
+        targetSatTrack: targetSatTrackReducer,
     },
 });
 

@@ -28,7 +28,7 @@ import {
     CODEC_BOOL, formatLegibleDateTime, getTimeFromISO, humanizeDate, humanizeFutureDateInMinutes,
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
-    MapTitleBar, renderCountryFlags,
+    MapTitleBar, renderCountryFlagsCSV,
     StyledIslandParent, StyledIslandParentNoScrollbar,
     StyledIslandParentScrollbar, ThemedLeafletTooltip,
     ThemedStackIsland,
@@ -38,13 +38,13 @@ import {useLocalStorageState} from "@toolpad/core";
 import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "./common/tracking-logic.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "./common/socket.jsx";
-import Typography from "@mui/material/Typography";
-import Stack from "@mui/material/Stack";
 import TableCell from "@mui/material/TableCell";
 import TableRow from "@mui/material/TableRow";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
+import {useSelector} from "react-redux";
+
 
 // global leaflet map object
 let MapObject = null;
@@ -329,7 +329,9 @@ const NextPassesIsland = ({noradId}) => {
     );
 }
 
-const SatelliteInfoIsland = ({satelliteData, satellitePos}) => {
+const SatelliteInfoIsland = () => {
+    const {satelliteData} = useSelector((state) => state.targetSatTrack);
+
     return (
         <>
             <TitleBar className={"react-grid-draggable"}>Satellite info</TitleBar>
@@ -338,39 +340,39 @@ const SatelliteInfoIsland = ({satelliteData, satellitePos}) => {
                     <TableBody>
                         <TableRow>
                             <TableCell><strong>Name:</strong></TableCell>
-                            <TableCell>{satelliteData['name'] || "n/a"}</TableCell>
+                            <TableCell>{satelliteData['details']['name'] || "n/a"}</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Latitude:</strong></TableCell>
-                            <TableCell>{satellitePos['lat'] ? satellitePos['lat'].toFixed(4) : "n/a"}°</TableCell>
+                            <TableCell>{satelliteData['position']['lat'] ? satelliteData['position']['lat'].toFixed(4) : "n/a"}°</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Longitude:</strong></TableCell>
-                            <TableCell>{satellitePos['lon'] ? satellitePos['lon'].toFixed(4) : "n/a"}°</TableCell>
+                            <TableCell>{satelliteData['position']['lon'] ? satelliteData['position']['lon'].toFixed(4) : "n/a"}°</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Altitude:</strong></TableCell>
-                            <TableCell>{satellitePos['alt'] ? satellitePos['alt'].toFixed(2) : "n/a"} km</TableCell>
+                            <TableCell>{satelliteData['position']['alt'] ? satelliteData['position']['alt'].toFixed(2) : "n/a"} km</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Velocity:</strong></TableCell>
-                            <TableCell>{satellitePos['vel'] ? satellitePos['vel'].toFixed(2) : "n/a"} km/s</TableCell>
+                            <TableCell>{satelliteData['position']['vel'] ? satelliteData['position']['vel'].toFixed(2) : "n/a"} km/s</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Status:</strong></TableCell>
-                            <TableCell>{satelliteData['status']? betterStatusValue(satelliteData['status']): "n/a"}</TableCell>
+                            <TableCell>{satelliteData['details']['status']? betterStatusValue(satelliteData['details']['status']): "n/a"}</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Launch Date:</strong></TableCell>
-                            <TableCell>{satelliteData['launched']? betterDateTimes(satelliteData['launched']) :"n/a"}</TableCell>
+                            <TableCell>{satelliteData['details']['launched']? betterDateTimes(satelliteData['details']['launched']) :"n/a"}</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Countries:</strong></TableCell>
-                            <TableCell>{satelliteData['countries']? renderCountryFlags(satelliteData['countries']): "n/a"}</TableCell>
+                            <TableCell>{satelliteData['details']['countries']? renderCountryFlagsCSV(satelliteData['details']['countries']): "n/a"}</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Geostationary:</strong></TableCell>
-                            <TableCell>{satelliteData['is_geostationary']? "Yes": "No"}</TableCell>
+                            <TableCell>{satelliteData['details']['is_geostationary']? "Yes": "No"}</TableCell>
                         </TableRow>
                         <TableRow>
                             <TableCell><strong>Transmitters:</strong></TableCell>
@@ -390,8 +392,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
                                   initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=240 }) {
     const { socket } = useSocket();
     const [satelliteName, setSatelliteName] = useState(null);
-    const [satelliteLat, setSatelliteLat] = useState(null);
-    const [satelliteLon, setSatelliteLon] = useState(null);
     const [satelliteAltitude, setSatelliteAltitude] = useState(0.0);
     const [satelliteVelocity, setSatelliteVelocity] = useState(0.0);
     const [showPastOrbitPath, setShowPastOrbitPath] = useLocalStorageState('target-show-past-orbit-path', initialShowPastOrbitPath, { codec: CODEC_BOOL });
@@ -401,7 +401,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [showMoonIcon, setShowMoonIcon] = useLocalStorageState('target-show-moon', initialShowMoonIcon, { codec: CODEC_BOOL });
     const [showTerminatorLine, setShowTerminatorLine] = useLocalStorageState('target-show-terminator', initialShowTerminatorLine, { codec: CODEC_BOOL });
     const [showTooltip, setShowTooltip] = useLocalStorageState('target-show-tooltip', initialShowTooltip, { codec: CODEC_BOOL });
-    const [groupSatellites, setGroupSatellites] = useState({});
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -425,6 +424,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [locationId, setLocationId] = useState(null);
     const [locationUserId, setLocationUserId] = useState(null);
     const [satellitePos, setSatellitePos] = useState({lat: 0, lon: 0, alt: 0, vel: 0});
+
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
     // default layout if none in localStorage
@@ -478,7 +478,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     };
 
     const setTrackingStateBackend = (noradId) => {
-        console.log("setTrackingStateBackend: ", noradId);
         const data = {'name': 'satellite-tracking', 'value': {'norad_id': noradId, 'state': 'tracking' }};
         socket.emit('data_submission', 'set-tracking-state', data, (response) => {
             console.log("set-tracking-state response: ", response);
@@ -637,11 +636,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
             );
 
             // set satellite data
-            setSatelliteName(satelliteData['name']);
-            setSatelliteLat(latitude);
-            setSatelliteLon(longitude);
-            setSatelliteAltitude(altitude);
-            setSatelliteVelocity(velocity);
             setSatellitePos({'lat': latitude, 'lon': longitude, 'alt': altitude, 'vel': velocity});
 
             // focus map on satellite, center on latitude only
@@ -826,7 +820,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
             >
                 <MapTitleBar className={"react-grid-draggable window-title-bar"}>
-                    Tracking {satelliteName || "-"} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s
+                    Tracking {satelliteData['name'] || "-"} {satelliteAltitude.toFixed(2)} km, {satelliteVelocity.toFixed(2)} km/s
                 </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer

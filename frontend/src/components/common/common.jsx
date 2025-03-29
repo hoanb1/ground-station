@@ -357,14 +357,13 @@ export function getMaidenhead(lat, lon) {
     return field + square + subsquare;
 }
 
-export const renderCountryFlags = (csvCodes) => {
+export const renderCountryFlagsCSV = (csvCodes) => {
     if (!csvCodes) return "-";
 
     const countryCodes = csvCodes.split(',').map(code => code.trim());
     return (
         <div style={{
             height: 19,
-
         }}>
             {countryCodes.map((countryCode, index) => (
                 <Tooltip key={index} title={countryCode.toUpperCase()} arrow style={{paddingTop: 0,  height: 18}}>

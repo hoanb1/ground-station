@@ -7,7 +7,7 @@ import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableRow from "@mui/material/TableRow";
 import TableCell from "@mui/material/TableCell";
-import {betterDateTimes, betterStatusValue, humanizeFrequency, renderCountryFlags} from "../common/common.jsx";
+import {betterDateTimes, betterStatusValue, humanizeFrequency, renderCountryFlagsCSV} from "../common/common.jsx";
 import TableHead from "@mui/material/TableHead";
 import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
@@ -40,7 +40,7 @@ const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
                                             </TableRow>
                                             <TableRow>
                                                 <TableCell><strong>Countries</strong></TableCell>
-                                                <TableCell>{renderCountryFlags(selectedSatellite['countries'])}</TableCell>
+                                                <TableCell>{renderCountryFlagsCSV(selectedSatellite['countries'])}</TableCell>
                                             </TableRow>
                                             <TableRow>
                                                 <TableCell><strong>Operator</strong></TableCell>
