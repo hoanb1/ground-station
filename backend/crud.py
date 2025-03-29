@@ -1480,8 +1480,6 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
     based on the provided data dictionary via SQLAlchemy's merge operation.
     """
     try:
-        logger.info(f"*********************************Setting satellite tracking state: {data}")
-
         assert data.get('name', None) is not None, "name is required when setting tracking state"
         assert data.get('value', None) is not None, "value is required when setting tracking state"
 

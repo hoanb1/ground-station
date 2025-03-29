@@ -24,8 +24,6 @@ import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
-    betterDateTimes, betterStatusValue,
-    CODEC_BOOL, formatLegibleDateTime, getTimeFromISO, humanizeDate, humanizeFutureDateInMinutes,
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
     MapTitleBar, renderCountryFlagsCSV,
@@ -33,13 +31,33 @@ import {
     StyledIslandParentScrollbar, ThemedLeafletTooltip,
     ThemedStackIsland,
 } from "../common/common.jsx";
-import {TitleBar} from "../common/common.jsx";
-import {useLocalStorageState} from "@toolpad/core";
 import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "../common/tracking-logic.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
-import { setSatGroupId, setTrackingStateBackend } from './target-sat-slice.jsx'
+import { setSatGroupId, setTrackingStateBackend,   setShowPastOrbitPath,
+    setShowFutureOrbitPath,
+    setShowSatelliteCoverage,
+    setShowSunIcon,
+    setShowMoonIcon,
+    setShowTerminatorLine,
+    setShowTooltip,
+    setTerminatorLine,
+    setDaySidePolygon,
+    setPastOrbitLineColor,
+    setFutureOrbitLineColor,
+    setSatelliteCoverageColor,
+    setOrbitProjectionDuration,
+    setTileLayerID,
+    setMapZoomLevel,
+    setSunPos,
+    setMoonPos,
+    setGridEditable,
+    setSliderTimeOffset,
+    setLocation,
+    setLoading,
+
+} from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
 
@@ -167,39 +185,39 @@ const MapSlider = function ({handleSliderChange}) {
 }
 
 
-
-const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialShowPastOrbitPath=true, initialShowFutureOrbitPath=true,
-                                  initialShowSatelliteCoverage=true, initialShowSunIcon=true, initialShowMoonIcon=true,
-                                  initialShowTerminatorLine=true, initialShowTooltip=true, initialTileLayerID="stadiadark",
-                                  initialPastOrbitLineColor="#ed840c", initialFutureOrbitLineColor="#08bd5f",
-                                  initialSatelliteCoverageColor="#8700db", initialOrbitProjectionDuration=240 }) {
+const TargetSatelliteTrack = React.memo(function () {
     const { socket } = useSocket();
     const dispatch = useDispatch();
-    const [showPastOrbitPath, setShowPastOrbitPath] = useLocalStorageState('target-show-past-orbit-path', initialShowPastOrbitPath, { codec: CODEC_BOOL });
-    const [showFutureOrbitPath, setShowFutureOrbitPath] = useLocalStorageState('target-show-future-path', initialShowFutureOrbitPath, { codec: CODEC_BOOL });
-    const [showSatelliteCoverage, setShowSatelliteCoverage] = useLocalStorageState('target-show-coverage', initialShowSatelliteCoverage, { codec: CODEC_BOOL });
-    const [showSunIcon, setShowSunIcon] = useLocalStorageState('target-show-sun', initialShowSunIcon, { codec: CODEC_BOOL });
-    const [showMoonIcon, setShowMoonIcon] = useLocalStorageState('target-show-moon', initialShowMoonIcon, { codec: CODEC_BOOL });
-    const [showTerminatorLine, setShowTerminatorLine] = useLocalStorageState('target-show-terminator', initialShowTerminatorLine, { codec: CODEC_BOOL });
-    const [showTooltip, setShowTooltip] = useLocalStorageState('target-show-tooltip', initialShowTooltip, { codec: CODEC_BOOL });
+    const {
+        satelliteData,
+        groupId,
+        satelliteId: noradId,
+        showPastOrbitPath,
+        showFutureOrbitPath,
+        showSatelliteCoverage,
+        showSunIcon,
+        showMoonIcon,
+        showTerminatorLine,
+        showTooltip,
+        terminatorLine,
+        daySidePolygon,
+        pastOrbitLineColor,
+        futureOrbitLineColor,
+        satelliteCoverageColor,
+        orbitProjectionDuration,
+        tileLayerID,
+        mapZoomLevel,
+        sunPos,
+        moonPos,
+        gridEditable,
+        sliderTimeOffset,
+        location,
+    } = useSelector(state => state.targetSatTrack);
+
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
-    const [terminatorLine, setTerminatorLine] = useState([]);
-    const [daySidePolygon, setDaySidePolygon] = useState([]);
-    const [pastOrbitLineColor, setPastOrbitLineColor] = useState(initialPastOrbitLineColor);
-    const [futureOrbitLineColor, setFutureOrbitLineColor] = useState(initialFutureOrbitLineColor);
-    const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
-    const [orbitProjectionDuration, setOrbitProjectionDuration] = useLocalStorageState('target-orbit-plot-duration', initialOrbitProjectionDuration);
-    const [tileLayerID, setTileLayerID] = useLocalStorageState('target-tile-id', initialTileLayerID);
-    const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
-    const [sunPos, setSunPos] = useState(null);
-    const [moonPos, setMoonPos] = useState(null);
-    const [gridEditable, setGridEditable] = useState(false);
-    const [sliderTimeOffset, setSliderTimeOffset] = useState(0);
-    const [location, setLocation] = useState({lat: 0, lon: 0});
-    const { satelliteData, groupId, satelliteId: noradId } = useSelector(state => state.targetSatTrack);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -255,55 +273,56 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
     // globalize the callback
     handleSetGridEditableTarget = useCallback((value) => {
-        setGridEditable(value);
+        dispatch(setGridEditable(value));
     }, [gridEditable]);
 
     const handleShowPastOrbitPath = useCallback((value) => {
-        setShowPastOrbitPath(value);
+        dispatch(setShowPastOrbitPath(value));
     }, [showPastOrbitPath]);
 
     const handleShowFutureOrbitPath = useCallback((value) => {
-        setShowFutureOrbitPath(value);
+        dispatch(setShowFutureOrbitPath(value));
     }, [showFutureOrbitPath]);
 
     const handleShowSatelliteCoverage = useCallback((value) => {
-        setShowSatelliteCoverage(value);
+        dispatch(setShowSatelliteCoverage(value));
     }, [showSatelliteCoverage]);
 
     const handleSetShowSunIcon = useCallback((value) => {
-        setShowSunIcon(value);
+        dispatch(setShowSunIcon(value));
     }, [showSunIcon]);
 
     const handleSetShowMoonIcon = useCallback((value) => {
-        setShowMoonIcon(value);
+        dispatch(setShowMoonIcon(value));
     }, [showMoonIcon]);
 
     const handleShowTerminatorLine = useCallback((value) => {
-        setShowTerminatorLine(value);
+        dispatch(setShowTerminatorLine(value));
     }, [showTerminatorLine]);
 
     const handlePastOrbitLineColor = useCallback((color) => {
-        setPastOrbitLineColor(color);
+        dispatch(setPastOrbitLineColor(color));
     }, [pastOrbitLineColor]);
 
     const handleFutureOrbitLineColor = useCallback((color) => {
-        setFutureOrbitLineColor(color);
+        dispatch(setFutureOrbitLineColor(color));
     }, [futureOrbitLineColor]);
 
     const handleSatelliteCoverageColor = useCallback((color) => {
-        setSatelliteCoverageColor(color);
+        dispatch(setSatelliteCoverageColor(color));
     }, [satelliteCoverageColor]);
 
     const handleOrbitProjectionDuration = useCallback((minutes) => {
-        setOrbitProjectionDuration(minutes);
+        dispatch(setOrbitProjectionDuration(minutes));
     }, [orbitProjectionDuration]);
 
     const handleTileLayerID = useCallback((id) => {
-        setTileLayerID(id);
+        dispatch(setTileLayerID(id));
     }, [tileLayerID]);
 
     const handleSelectSatelliteId = useCallback((noradId) => {
         const data = { 'noradId': noradId, 'state': 'tracking', 'groupId': groupId };
+        setLoading(true);
         dispatch(setTrackingStateBackend({
             socket,
             data,
@@ -311,15 +330,15 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     }, [noradId]);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
-        setMapZoomLevel(zoomLevel);
+        (setMapZoomLevel(zoomLevel));
     }, [mapZoomLevel]);
 
     const handleSliderChange = useCallback((value) => {
-        setSliderTimeOffset(value);
+        dispatch(setSliderTimeOffset(value));
     }, []);
 
     const handleShowTooltip = useCallback((value) => {
-        setShowTooltip(value);
+        dispatch(setShowTooltip(value));
     }, [showTooltip]);
 
     // we load any stored layouts from localStorage or fallback to default
@@ -418,7 +437,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
             // past path
             currentPastPaths.push(<Polyline
-                key={`past-path-${initialNoradId}`}
+                key={`past-path-${noradId}`}
                 positions={paths.past}
                 pathOptions={{
                     color: pastOrbitLineColor,
@@ -430,7 +449,7 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
             // future path
             currentFuturePaths.push(<Polyline
-                key={`future-path-${initialNoradId}`}
+                key={`future-path-${noradId}`}
                 positions={paths.future}
                 pathOptions={{
                     color: futureOrbitLineColor,
@@ -477,17 +496,17 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
 
         // Day/night boundary
         const terminatorLine = createTerminatorLine().reverse();
-        setTerminatorLine(terminatorLine);
+        dispatch(setTerminatorLine(terminatorLine));
 
         // Day side polygon
         const dayPoly = [...terminatorLine];
         dayPoly.push(dayPoly[dayPoly.length - 1]);
-        setDaySidePolygon(dayPoly);
+        dispatch(setDaySidePolygon(dayPoly));
 
         // sun and moon position
         const [sunPos, moonPos] = getSunMoonCoords();
-        setSunPos(sunPos);
-        setMoonPos(moonPos);
+        dispatch(setSunPos(sunPos));
+        dispatch(setMoonPos(moonPos));
     }
 
     function handleLayoutsChange(currentLayout, allLayouts){
@@ -507,25 +526,10 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         return null;
     }
 
-    useEffect(() => {
-        if (noradId) {
-            //fetchSatelliteData(noradId);
-        }
-
-        return () => {
-
-        };
-    }, []);
-
     useEffect(()=>{
         satelliteUpdate(new Date());
-        let timer = setInterval(()=>{
-            let now = new Date();
-            satelliteUpdate(now);
-        }, 1000);
 
         return ()=> {
-            clearInterval(timer);
         };
 
     },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor,
@@ -535,10 +539,10 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
         socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
             if (response['success']) {
                 if (response['data']) {
-                    setLocation({
+                    dispatch(setLocation({
                         lat: parseFloat(response['data']['lat']),
                         lon: parseFloat(response['data']['lon']),
-                    });
+                    }));
                 } else {
                     enqueueSnackbar('No location found in the backend, please set one', {
                         variant: 'info',

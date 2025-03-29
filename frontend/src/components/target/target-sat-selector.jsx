@@ -49,7 +49,6 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
                 fetchSatellitesByGroupId({
                     socket,
                     groupId: initialGroupId,
-                    initialNoradId,
                 })
             );
             // Optionally set it in Redux right away

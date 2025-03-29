@@ -119,10 +119,36 @@ const targetSatTrackSlice = createSlice({
         passesError: null,
         loading: false,
         error: null,
+        showPastOrbitPath: true,
+        showFutureOrbitPath: true,
+        showSatelliteCoverage: true,
+        showSunIcon: true,
+        showMoonIcon: true,
+        showTerminatorLine: true,
+        showTooltip: true,
+        currentSatellitesPosition: [],
+        currentSatellitesCoverage: [],
+        terminatorLine: [],
+        daySidePolygon: [],
+        pastOrbitLineColor: '#e4971e',
+        futureOrbitLineColor: '#33c833',
+        satelliteCoverageColor: '#7e00ca',
+        orbitProjectionDuration: 240,
+        tileLayerID: 'stadiadark',
+        mapZoomLevel: 2,
+        sunPos: null,
+        moonPos: null,
+        gridEditable: false,
+        sliderTimeOffset: 0,
+        location: { lat: 0, lon: 0 },
     },
     reducers: {
+        setLoading(state, action) {
+            state.loading = action.payload;
+        },
         setSatelliteData(state, action) {
             state.satelliteData = action.payload;
+            state.loading = false;
         },
         setSatellitePasses(state, action) {
             state.satellitePasses = action.payload;
@@ -132,6 +158,66 @@ const targetSatTrackSlice = createSlice({
         },
         setSatelliteId(state, action) {
             state.satelliteId = action.payload;
+        },
+        setShowPastOrbitPath(state, action) {
+            state.showPastOrbitPath = action.payload;
+        },
+        setShowFutureOrbitPath(state, action) {
+            state.showFutureOrbitPath = action.payload;
+        },
+        setShowSatelliteCoverage(state, action) {
+            state.showSatelliteCoverage = action.payload;
+        },
+        setShowSunIcon(state, action) {
+            state.showSunIcon = action.payload;
+        },
+        setShowMoonIcon(state, action) {
+            state.showMoonIcon = action.payload;
+        },
+        setShowTerminatorLine(state, action) {
+            state.showTerminatorLine = action.payload;
+        },
+        setShowTooltip(state, action) {
+            state.showTooltip = action.payload;
+        },
+        setTerminatorLine(state, action) {
+            state.terminatorLine = action.payload;
+        },
+        setDaySidePolygon(state, action) {
+            state.daySidePolygon = action.payload;
+        },
+        setPastOrbitLineColor(state, action) {
+            state.pastOrbitLineColor = action.payload;
+        },
+        setFutureOrbitLineColor(state, action) {
+            state.futureOrbitLineColor = action.payload;
+        },
+        setSatelliteCoverageColor(state, action) {
+            state.satelliteCoverageColor = action.payload;
+        },
+        setOrbitProjectionDuration(state, action) {
+            state.orbitProjectionDuration = action.payload;
+        },
+        setTileLayerID(state, action) {
+            state.tileLayerID = action.payload;
+        },
+        setMapZoomLevel(state, action) {
+            state.mapZoomLevel = action.payload;
+        },
+        setSunPos(state, action) {
+            state.sunPos = action.payload;
+        },
+        setMoonPos(state, action) {
+            state.moonPos = action.payload;
+        },
+        setGridEditable(state, action) {
+            state.gridEditable = action.payload;
+        },
+        setSliderTimeOffset(state, action) {
+            state.sliderTimeOffset = action.payload;
+        },
+        setLocation(state, action) {
+            state.location = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -175,7 +261,6 @@ const targetSatTrackSlice = createSlice({
                 state.loading = false;
                 state.error = action.payload;
             })
-            // fetchSatellitesByGroupId
             .addCase(fetchSatellitesByGroupId.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -196,7 +281,32 @@ export const {
     setSatelliteData,
     setSatellitePasses,
     setSatelliteId,
-    setSatGroupId
+    setSatGroupId,
+    setShowPastOrbitPath,
+    setShowFutureOrbitPath,
+    setShowSatelliteCoverage,
+    setShowSunIcon,
+    setShowMoonIcon,
+    setShowTerminatorLine,
+    setShowTooltip,
+    setCurrentPastSatellitesPaths,
+    setCurrentFutureSatellitesPaths,
+    setCurrentSatellitesPosition,
+    setCurrentSatellitesCoverage,
+    setTerminatorLine,
+    setDaySidePolygon,
+    setPastOrbitLineColor,
+    setFutureOrbitLineColor,
+    setSatelliteCoverageColor,
+    setOrbitProjectionDuration,
+    setTileLayerID,
+    setMapZoomLevel,
+    setSunPos,
+    setMoonPos,
+    setGridEditable,
+    setSliderTimeOffset,
+    setLocation,
+    setLoading,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;
