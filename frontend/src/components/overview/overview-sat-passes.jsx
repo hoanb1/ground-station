@@ -11,14 +11,14 @@ const NextPassesGroupIsland = () => {
     const dispatch = useDispatch();
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
-    const { groupId, passes, passesLoading } = useSelector(state => state.overviewSatTrack);
+    const { selectedSatGroupId, passes, passesLoading } = useSelector(state => state.overviewSatTrack);
 
     useEffect(() => {
-        dispatch(fetchNextPassesForGroup({socket, groupId}))
+        dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId}))
         return () => {
 
         };
-    }, [groupId]);
+    }, [selectedSatGroupId]);
 
     const minHeight = 200;
     const maxHeight = 400;

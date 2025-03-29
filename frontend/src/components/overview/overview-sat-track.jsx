@@ -343,7 +343,7 @@ function GlobalSatelliteTrack() {
             />)
 
             const onMarkerMouseOver = (event, noradId) => {
-                console.log(noradId, event);
+                //console.log(noradId, event);
             };
 
             const markerEventHandlers = {

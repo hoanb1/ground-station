@@ -151,6 +151,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 6.0, above_e
         and the list of satellite events for the group.
     :rtype: dict
     """
+
     assert group_id, f"Group id is required ({group_id}, {type(group_id)})"
 
     reply = {'success': None, 'data': None}

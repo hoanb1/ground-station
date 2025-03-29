@@ -22,7 +22,6 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
     async ({ socket, satGroupId }, { rejectWithValue }) => {
         return new Promise((resolve, reject) => {
             socket.emit('data_request', 'get-satellites-for-group-id', satGroupId, (response) => {
-                console.info("get-satellites-for-group-id, response: ", response);
                 if (response.success) {
                     resolve(response.data);
                 } else {
@@ -38,9 +37,9 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
 
 export const fetchNextPassesForGroup = createAsyncThunk(
     'overviewPasses/fetchNextPassesForGroup',
-    async ({ socket, groupId }, { rejectWithValue }) => {
+    async ({ socket, selectedSatGroupId }, { rejectWithValue }) => {
         return new Promise((resolve, reject) => {
-            socket.emit('data_request', 'fetch-next-passes-for-group', groupId, (response) => {
+            socket.emit('data_request', 'fetch-next-passes-for-group', selectedSatGroupId, (response) => {
                 if (response.success) {
                     resolve(response.data);
                 } else {
