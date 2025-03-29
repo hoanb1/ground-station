@@ -193,15 +193,13 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     const [satelliteCoverageColor, setSatelliteCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useLocalStorageState('target-orbit-plot-duration', initialOrbitProjectionDuration);
     const [tileLayerID, setTileLayerID] = useLocalStorageState('target-tile-id', initialTileLayerID);
-    const [noradId, setNoradId] = useLocalStorageState('target-satellite-noradid', initialNoradId);
-    const [groupId, setGroupId] = useLocalStorageState('target-satellite-groupid', initialNoradId);
     const [mapZoomLevel, setMapZoomLevel] = useState(getMapZoomFromStorage());
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
     const [gridEditable, setGridEditable] = useState(false);
     const [sliderTimeOffset, setSliderTimeOffset] = useState(0);
     const [location, setLocation] = useState({lat: 0, lon: 0});
-    const { satelliteData } = useSelector(state => state.targetSatTrack);
+    const { satelliteData, groupId, satelliteId: noradId } = useSelector(state => state.targetSatTrack);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -305,8 +303,6 @@ const TargetSatelliteTrack = React.memo(function ({ initialNoradId=0, initialSho
     }, [tileLayerID]);
 
     const handleSelectSatelliteId = useCallback((noradId) => {
-        setNoradId(noradId);
-        //fetchSatelliteData(noradId);
         const data = { 'noradId': noradId, 'state': 'tracking', 'groupId': groupId };
         dispatch(setTrackingStateBackend({
             socket,

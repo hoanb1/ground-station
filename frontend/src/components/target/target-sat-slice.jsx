@@ -1,9 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
-
-
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import {useEffect} from "react";
-import {enqueueSnackbar} from "notistack";
 
 export const setTrackingStateBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
@@ -48,11 +44,47 @@ export const fetchNextPasses = createAsyncThunk(
 );
 
 
+export const fetchSatelliteGroups = createAsyncThunk(
+    'targetSatTrack/fetchSatelliteGroups',
+    async ({ socket }, { rejectWithValue }) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-satellite-groups', null, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue(response.message));
+                }
+            });
+        });
+    }
+);
+
+
+export const fetchSatellitesByGroupId = createAsyncThunk(
+    'targetSatTrack/fetchSatellitesByGroupId',
+    async ({ socket, groupId }, { rejectWithValue }) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-satellites-for-group-id', groupId, (response) => {
+                if (response.success) {
+                    const satGroup = response.data;
+                    satGroup.sort((a, b) => a.name.localeCompare(b.name));
+                    resolve({ satGroup });
+                } else {
+                    reject(rejectWithValue(response.message));
+                }
+            });
+        });
+    }
+);
+
+
 const targetSatTrackSlice = createSlice({
     name: 'targetSatTrack',
     initialState: {
-        groupId: null,
-        satelliteId: null,
+        groupId: "",
+        satelliteId: "",
+        satGroups: [],
+        groupOfSats: [],
         trackingState: {},
         satelliteData: {
             position: {
@@ -100,7 +132,7 @@ const targetSatTrackSlice = createSlice({
         },
         setSatelliteId(state, action) {
             state.satelliteId = action.payload;
-        }
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -131,6 +163,36 @@ const targetSatTrackSlice = createSlice({
             .addCase(fetchNextPasses.rejected, (state, action) => {
                 state.passesLoading = false;
                 state.passesError = action.payload;
+            })
+            .addCase(fetchSatelliteGroups.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchSatelliteGroups.fulfilled, (state, action) => {
+                state.loading = false;
+                state.satGroups = action.payload;
+            })
+            .addCase(fetchSatelliteGroups.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            // fetchSatellitesByGroupId
+            .addCase(fetchSatellitesByGroupId.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchSatellitesByGroupId.fulfilled, (state, action) => {
+                state.loading = false;
+                const { satGroup, initialNoradId } = action.payload;
+                state.groupOfSats = satGroup;
+                // Optionally update the selected satellite if initialNoradId is present
+                if (initialNoradId) {
+                    state.satelliteId = initialNoradId;
+                }
+            })
+            .addCase(fetchSatellitesByGroupId.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             });
     }
 });
