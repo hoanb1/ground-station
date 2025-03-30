@@ -1260,8 +1260,11 @@ async def add_satellite_tle_source(session: AsyncSession, payload: dict) -> dict
         assert payload['url']
         assert payload['identifier']
 
-        del payload['added']
-        del payload['updated']
+        if payload.get('added', None) is not None:
+            del payload['added']
+
+        if payload.get('updated', None) is not None:
+            del payload['updated']
 
         new_source = SatelliteTLESources(**payload)
         session.add(new_source)

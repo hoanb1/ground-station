@@ -541,11 +541,11 @@ const TargetSatelliteTrack = React.memo(function () {
         if (coverageRef.current) {
             // Fit the map to the polygon's bounds
             MapObject.fitBounds(coverageRef.current.getBounds(), {
-                    padding: [50, 50],
+                    padding: [60, 60],
                 }
             );
         }
-    }, [MapObject, satelliteData]);
+    }, [MapObject, satelliteData, sliderTimeOffset]);
 
     useEffect(() => {
         // we do this here once onmount,

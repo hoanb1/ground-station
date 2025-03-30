@@ -32,9 +32,6 @@ import {
     MapStatusBar,
     InternationalDateLinePolyline,
     MapArrowControls,
-    TitleBar,
-    getTimeFromISO,
-    humanizeFutureDateInMinutes,
     ThemedStackIsland, betterStatusValue, betterDateTimes, renderCountryFlagsCSV, StyledIslandParentNoScrollbar
 } from "../common/common.jsx";
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from '../common/tracking-logic.jsx';
@@ -129,7 +126,6 @@ function GlobalSatelliteTrack() {
         orbitProjectionDuration,
         tileLayerID,
         mapZoomLevel,
-        mapObject,
         satelliteGroupId,
     } = useSelector(state => state.overviewSatTrack);
     const { location, } = useSelector((state) => state.location);
@@ -282,7 +278,6 @@ function GlobalSatelliteTrack() {
         const handleClick = () => {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
-
         return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
             <FilterCenterFocusIcon />
         </Fab>;
@@ -290,9 +285,8 @@ function GlobalSatelliteTrack() {
 
     function FullscreenMapButton() {
         const handleMapFullscreen = () => {
-            mapObject.toggleFullscreen();
+            MapObject.toggleFullscreen();
         };
-
         return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
             <FullscreenIcon />
         </Fab>;
@@ -526,7 +520,7 @@ function GlobalSatelliteTrack() {
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapStatusBar/>
-                <MapArrowControls mapObject={mapObject}/>
+                <MapArrowControls mapObject={MapObject}/>
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="map-settings">
