@@ -21,7 +21,8 @@ import {
     setSatelliteSelectOpen,
     setSatelliteGroupSelectOpen,
     setTrackingStateInBackend,
-    setGroupOfSats
+    setGroupOfSats, setLoading,
+    setUITrackerDisabled
 } from './target-sat-slice.jsx';
 import SatelliteList from "./target-sat-list.jsx";
 
@@ -39,6 +40,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         groupOfSats,
         trackingState,
         satelliteId,
+        uiTrackerDisabled,
     } = useSelector((state) => state.targetSatTrack);
 
     useEffect(() => {
@@ -94,10 +96,12 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, state: "idle"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
+        //dispatch(setUITrackerDisabled(false));
     };
 
     const handleTrackingStart = () => {
         const newTrackingState = {'norad_id': satelliteId, 'group_id': groupId, state: "tracking"};
+        //dispatch(setUITrackerDisabled(true));
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
@@ -112,7 +116,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                         <Select onClose={handleSelectCloseEvent}
                                 onOpen={handleSelectOpenEvent}
                                 onChange={handleGroupChange}
-                                value={groupId}
+                                value={satGroups.length > 0? groupId: ""}
                                 id="grouped-select" label="Grouping" variant={"filled"}
                                 size={"small"}>
                             <ListSubheader>User defined satellite groups</ListSubheader>

@@ -355,15 +355,16 @@ async def data_submission_routing(sio, cmd, data, logger):
             tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
             satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
             tracker_state = await get_ui_tracker_state(data['value']['group_id'], data['value']['norad_id'])
-            await sio.emit('satellite-tracking', {
+            data = {
                 'satellite_data': satellite_data,
                 'ui_tracker_state': tracker_state['data'],
-                'tracking_state':tracking_state_reply['data'],
-            })
+                'tracking_state':tracking_state_reply['data']['value'],
+            }
+            await sio.emit('satellite-tracking', data)
 
             reply = {
                 'success': tracking_state_reply['success'],
-                'data': None,
+                'data': tracking_state_reply['data']['value'],
             }
 
         else:

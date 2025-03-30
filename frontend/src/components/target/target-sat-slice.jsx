@@ -33,7 +33,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
         return new Promise((resolve, reject) => {
             socket.emit('data_submission', 'set-tracking-state', trackState, (response) => {
                 if (response.success) {
-                    resolve(response);
+                    resolve(response.data);
                 } else {
                     reject(rejectWithValue(response));
                 }
@@ -121,7 +121,11 @@ const targetSatTrackSlice = createSlice({
         satelliteId: "",
         satGroups: [],
         groupOfSats: [],
-        trackingState: {},
+        trackingState: {
+            'norad_id': '',
+            'state': 'idle',
+            'group_id': '',
+        },
         satelliteData: {
             position: {
                 lat: 0,
@@ -166,8 +170,8 @@ const targetSatTrackSlice = createSlice({
         currentSatellitesCoverage: [],
         terminatorLine: [],
         daySidePolygon: [],
-        pastOrbitLineColor: '#e4971e',
-        futureOrbitLineColor: '#33c833',
+        pastOrbitLineColor: '#33c833',
+        futureOrbitLineColor: '#e4971e',
         satelliteCoverageColor: '#7e00ca',
         orbitProjectionDuration: 240,
         tileLayerID: 'stadiadark',
@@ -179,6 +183,7 @@ const targetSatTrackSlice = createSlice({
         location: { lat: 0, lon: 0 },
         satelliteSelectOpen: false,
         satelliteGroupSelectOpen: false,
+        uiTrackerDisabled: false,
     },
     reducers: {
         setLoading(state, action) {
@@ -291,7 +296,10 @@ const targetSatTrackSlice = createSlice({
         },
         setGroupOfSats(state, action) {
             state.groupOfSats = action.payload;
-        }
+        },
+        setUITrackerDisabled(state, action) {
+            state.uiTrackerDisabled = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -301,7 +309,7 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(setTrackingStateInBackend.fulfilled, (state, action) => {
                 state.loading = false;
-                //state.trackingState = action.payload['data']['value'];
+                state.trackingState = action.payload;
                 //state.satelliteId = action.payload['data']['value']['norad_id'];
                 state.error = null;
             })
@@ -404,7 +412,8 @@ export const {
     setLoading,
     setSatelliteSelectOpen,
     setSatelliteGroupSelectOpen,
-    setGroupOfSats
+    setGroupOfSats,
+    setUITrackerDisabled,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

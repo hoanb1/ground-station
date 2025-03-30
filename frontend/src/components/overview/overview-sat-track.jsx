@@ -338,7 +338,7 @@ function GlobalSatelliteTrack() {
                     color: futureOrbitLineColor,
                     weight:1,
                     opacity:1,
-                    dashArray: "4 4"
+                    dashArray: "3 3"
                 }}
             />)
 
