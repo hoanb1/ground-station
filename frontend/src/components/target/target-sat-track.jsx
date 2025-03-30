@@ -36,7 +36,7 @@ import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {
-    setSatGroupId, setTrackingStateBackend, setShowPastOrbitPath,
+    setSatGroupId, setTrackingStateInBackend, setShowPastOrbitPath,
     setShowFutureOrbitPath,
     setShowSatelliteCoverage,
     setShowSunIcon,
@@ -56,7 +56,7 @@ import {
     setGridEditable,
     setSliderTimeOffset,
     setLocation,
-    setLoading, setSatelliteData,
+    setLoading, setSatelliteData, fetchSatellite, getTrackingStateFromBackend, setSatelliteId,
 
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
@@ -212,8 +212,9 @@ const TargetSatelliteTrack = React.memo(function () {
         moonPos,
         gridEditable,
         sliderTimeOffset,
-        location,
     } = useSelector(state => state.targetSatTrack);
+
+    const { location } = useSelector(state => state.location);
 
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
@@ -324,7 +325,7 @@ const TargetSatelliteTrack = React.memo(function () {
     const handleSelectSatelliteId = useCallback((noradId) => {
         const data = { 'norad_id': noradId, 'state': 'tracking', 'group_id': groupId };
         setLoading(true);
-        dispatch(setTrackingStateBackend({ socket, data, }))
+        dispatch(setTrackingStateInBackend({ socket, data, }))
             .unwrap()
             .then((response) => {
                 const satelliteData = response['satellite_data'];
@@ -534,14 +535,44 @@ const TargetSatelliteTrack = React.memo(function () {
         return null;
     }
 
+    useEffect(() => {
+        // we do this here once onmount,
+        // we set the norad id and group id, once only here
+        dispatch(getTrackingStateFromBackend({ socket }))
+            .unwrap()
+            .then((response) => {
+                    const noradId = response['value']['norad_id'];
+                    const groupId = response['value']['group_id'];
+                    dispatch(setSatelliteId(noradId));
+                    dispatch(setSatGroupId(groupId))
+            })
+            .catch((error) => {
+                enqueueSnackbar(`Failed to get tracking state: ${error}`, {
+                    variant: 'error',
+                });
+            });
+
+        return () => {
+        };
+    }, []);
+
+    useEffect(() => {
+        if (noradId) {
+            dispatch(fetchSatellite({socket, noradId: noradId}));
+        }
+
+        return () => {
+
+        };
+    }, [noradId]);
+
     useEffect(()=>{
         satelliteUpdate(new Date());
 
         return ()=> {
         };
 
-    },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor,
-        satelliteCoverageColor, sliderTimeOffset, showTooltip, showPastOrbitPath, showFutureOrbitPath]);
+    },[satelliteData, sliderTimeOffset]);
 
     // pre-make the components
     let gridContents = [

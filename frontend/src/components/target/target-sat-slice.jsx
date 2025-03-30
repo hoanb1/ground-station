@@ -1,9 +1,23 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import {useSocket} from '../common/socket.jsx';
 
 
-export const setTrackingStateBackend = createAsyncThunk(
+export const getTrackingStateFromBackend = createAsyncThunk(
+    'targetSatTrack/getTrackingStateBackend',
+    async ({socket}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-tracking-state', null, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue("Failed getting next passes"));
+                }
+            });
+        });
+    }
+);
+
+export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {rejectWithValue}) => {
         const {norad_id, state, group_id} = data;
@@ -79,6 +93,27 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
 );
 
 
+export const fetchSatellite = createAsyncThunk(
+    'satellites/fetchSatellite',
+    async ({ socket, noradId }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-satellite', noradId, (response) => {
+                    if (response.success) {
+                        resolve(response.data);
+                    } else {
+                        reject(new Error('Failed to fetch satellites'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+
+
 const targetSatTrackSlice = createSlice({
     name: 'targetSatTrack',
     initialState: {
@@ -150,8 +185,6 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
-            console.info("***** action.payload", action.payload);
-
             if (state.satelliteSelectOpen === true || state.satelliteGroupSelectOpen === true) {
                 //console.info("select is open, NOT updating tracking state");
             } else {
@@ -255,21 +288,24 @@ const targetSatTrackSlice = createSlice({
         },
         setSatelliteGroupSelectOpen(state, action) {
             state.satelliteGroupSelectOpen = action.payload;
+        },
+        setGroupOfSats(state, action) {
+            state.groupOfSats = action.payload;
         }
     },
     extraReducers: (builder) => {
         builder
-            .addCase(setTrackingStateBackend.pending, (state) => {
+            .addCase(setTrackingStateInBackend.pending, (state) => {
                 state.loading = true;
                 state.error = null;
             })
-            .addCase(setTrackingStateBackend.fulfilled, (state, action) => {
+            .addCase(setTrackingStateInBackend.fulfilled, (state, action) => {
                 state.loading = false;
                 //state.trackingState = action.payload['data']['value'];
                 //state.satelliteId = action.payload['data']['value']['norad_id'];
                 state.error = null;
             })
-            .addCase(setTrackingStateBackend.rejected, (state, action) => {
+            .addCase(setTrackingStateInBackend.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             })
@@ -310,6 +346,32 @@ const targetSatTrackSlice = createSlice({
             .addCase(fetchSatellitesByGroupId.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
+            })
+            .addCase(fetchSatellite.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchSatellite.fulfilled, (state, action) => {
+                state.loading = false;
+                state.satelliteData = action.payload;
+                state.error = null;
+            })
+            .addCase(fetchSatellite.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(getTrackingStateFromBackend.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(getTrackingStateFromBackend.fulfilled, (state, action) => {
+                state.loading = false;
+                state.trackingState = action.payload;
+                state.error = null;
+            })
+            .addCase(getTrackingStateFromBackend.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             });
     }
 });
@@ -342,6 +404,7 @@ export const {
     setLoading,
     setSatelliteSelectOpen,
     setSatelliteGroupSelectOpen,
+    setGroupOfSats
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

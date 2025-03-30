@@ -16,7 +16,6 @@ const defaultSatellite = {
     updated: null,
 };
 
-// 1) Fetch satellites:
 export const fetchSatellites = createAsyncThunk(
     'satellites/fetchAll',
     async ({ socket, satGroupId }, { rejectWithValue }) => {

@@ -7,7 +7,7 @@ from sync import *
 from datetime import date, datetime
 from auth import *
 from models import ModelEncoder
-from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state
+from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state, get_satellite_position_from_tle
 from common import is_geostationary
 from tracking import compiled_satellite_data
 
@@ -57,12 +57,22 @@ async def data_request_routing(sio, cmd, data, logger):
             # get transmitters
             satellite_data = satellite.get('data', [])[0]
             transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite_data['norad_id'])
-            satellite_data['transmitters'] = transmitters['data']
 
             # add in the result if the satellite is geostationary
             satellite_data['is_geostationary'] = is_geostationary([satellite_data['tle1'], satellite_data['tle2']])
 
-            reply = {'success': (satellite['success'] & transmitters['success']), 'data': [satellite_data]}
+            # get position
+            position = get_satellite_position_from_tle([
+                satellite_data['name'],
+                satellite_data['tle1'],
+                satellite_data['tle2']
+            ])
+
+            reply = {'success': (satellite['success'] & transmitters['success']), 'data': {
+                'details': satellite_data,
+                'position': position,
+                'transmitters': transmitters
+            }}
 
         elif cmd == "get-satellites-for-group-id":
             logger.info(f'Getting satellites for group id, data: {data}')
@@ -145,6 +155,11 @@ async def data_request_routing(sio, cmd, data, logger):
             logger.info(f'Fetching preferences for user id, data: {data}')
             preferences = await crud.fetch_preference_for_userid(dbsession, user_id=None)
             reply = {'success': preferences['success'], 'data': preferences.get('data', [])}
+
+        elif cmd == "get-tracking-state":
+            logger.info(f'Fetching tracking state, data: {data}')
+            tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+            reply = {'success': tracking_state['success'], 'data': tracking_state.get('data', [])}
 
         else:
             logger.info(f'Unknown command: {cmd}')

@@ -19,8 +19,10 @@ import {
     setSatGroupId,
     setSatelliteId,
     setSatelliteSelectOpen,
-    setSatelliteGroupSelectOpen, setTrackingStateBackend,
-} from './target-sat-slice';
+    setSatelliteGroupSelectOpen,
+    setTrackingStateInBackend,
+    setGroupOfSats
+} from './target-sat-slice.jsx';
 import SatelliteList from "./target-sat-list.jsx";
 
 
@@ -34,6 +36,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         error,
         satelliteSelectOpen,
         satelliteGroupSelectOpen,
+        groupOfSats,
         trackingState,
         satelliteId,
     } = useSelector((state) => state.targetSatTrack);
@@ -75,6 +78,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         dispatch(setSatGroupId(newGroupId));
         dispatch(fetchSatellitesByGroupId({ socket, groupId: newGroupId }));
         dispatch(setSatelliteId(''));
+        dispatch(setGroupOfSats([]));
     };
 
     const handleSelectOpenEvent = (event) => {
@@ -89,12 +93,12 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
 
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, state: "idle"};
-        dispatch(setTrackingStateBackend({socket, data: newTrackingState}));
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
     const handleTrackingStart = () => {
         const newTrackingState = {'norad_id': satelliteId, 'group_id': groupId, state: "tracking"};
-        dispatch(setTrackingStateBackend({socket, data: newTrackingState}));
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
     return (

@@ -1522,6 +1522,8 @@ async def get_satellite_tracking_state(session: AsyncSession, name: str) -> dict
     Fetches a SatelliteTrackingState row based on the provided key (name).
     Returns a dictionary with the data or an error message if not found.
     """
+
+    reply = {"success": None, "data": None, "error": None}
     try:
         assert name is not None, "name is required when fetching tracking state"
 
@@ -1533,12 +1535,17 @@ async def get_satellite_tracking_state(session: AsyncSession, name: str) -> dict
             return {"success": False, "data": None, "error": f"Tracking state with name '{name}' not found."}
 
         state = serialize_object(state)
-        return {"success": True, "data": state, "error": None}
+        reply["success"] = True
+        reply["data"] = state
 
     except Exception as e:
         logger.error(f"Error fetching satellite tracking state for key '{name}': {e}")
         logger.error(traceback.format_exc())
-        return {"success": False, "data": None, "error": str(e)}
+        reply["success"] = False
+        reply["error"] = str(e)
+
+    finally:
+        return reply
 
 
 
