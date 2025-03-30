@@ -7,7 +7,7 @@ from sync import *
 from datetime import date, datetime
 from auth import *
 from models import ModelEncoder
-from tracking import fetch_next_events, fetch_next_events_for_group
+from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state
 from common import is_geostationary
 from tracking import compiled_satellite_data
 
@@ -69,13 +69,14 @@ async def data_request_routing(sio, cmd, data, logger):
             satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
 
             # get transmitters
-            for satellite in satellites.get('data', []):
-                transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
-                satellite['transmitters'] = transmitters['data']
+            if satellites:
+                for satellite in satellites.get('data', []):
+                    transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
+                    satellite['transmitters'] = transmitters['data']
             else:
                 logger.info(f'No satellites found for group id: {data}')
 
-            reply = {'success': (satellites['success'] & transmitters['success']), 'data': satellites.get('data', [])}
+            reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite-groups-user":
             logger.info(f'Getting user satellite groups, data: {data}')
@@ -338,10 +339,16 @@ async def data_submission_routing(sio, cmd, data, logger):
             logger.info(f'Updating satellite tracking state, data: {data}')
             tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
             satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
+            tracker_state = await get_ui_tracker_state(data['value']['group_id'], data['value']['norad_id'])
+            await sio.emit('satellite-tracking', {
+                'satellite_data': satellite_data,
+                'ui_tracker_state': tracker_state['data'],
+                'tracking_state':tracking_state_reply['data'],
+            })
+
             reply = {
                 'success': tracking_state_reply['success'],
-                'data': tracking_state_reply.get('data', []),
-                'satellite_data': satellite_data
+                'data': None,
             }
 
         else:

@@ -1,16 +1,18 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
+import {useSocket} from '../common/socket.jsx';
+
 
 export const setTrackingStateBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {rejectWithValue}) => {
-        const {noradId, state, groupId} = data;
+        const {norad_id, state, group_id} = data;
         const trackState = {
             'name': 'satellite-tracking',
             'value': {
-                'norad_id': noradId,
+                'norad_id': norad_id,
                 'state': state,
-                'group_id': groupId
+                'group_id': group_id
             }
         };
 
@@ -65,9 +67,9 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
         return new Promise((resolve, reject) => {
             socket.emit('data_request', 'get-satellites-for-group-id', groupId, (response) => {
                 if (response.success) {
-                    const satGroup = response.data;
-                    satGroup.sort((a, b) => a.name.localeCompare(b.name));
-                    resolve({ satGroup });
+                    const satellites = response.data;
+                    satellites.sort((a, b) => a.name.localeCompare(b.name));
+                    resolve({ satellites });
                 } else {
                     reject(rejectWithValue(response.message));
                 }
@@ -140,14 +142,44 @@ const targetSatTrackSlice = createSlice({
         gridEditable: false,
         sliderTimeOffset: 0,
         location: { lat: 0, lon: 0 },
+        satelliteSelectOpen: false,
+        satelliteGroupSelectOpen: false,
     },
     reducers: {
         setLoading(state, action) {
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
-            state.satelliteData = action.payload;
-            state.loading = false;
+            console.info("***** action.payload", action.payload);
+
+            if (state.satelliteSelectOpen === true || state.satelliteGroupSelectOpen === true) {
+                //console.info("select is open, NOT updating tracking state");
+            } else {
+                //console.info("select is close, updating tracking state");
+                //state.groupId = action.payload['tracking_state']['group_id'];
+                //state.satelliteId = action.payload['tracking_state']['norad_id'];
+            }
+
+            if (action.payload['tracking_state']) {
+                state.trackingState = action.payload['tracking_state'];
+                //state.groupId = action.payload['tracking_state']['group_id'];
+                //state.satelliteId = action.payload['tracking_state']['norad_id'];
+            }
+
+            if (action.payload['ui_tracker_state']) {
+                state.satGroups = action.payload['ui_tracker_state']['groups'];
+                state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
+                state.satelliteId = action.payload['ui_tracker_state']['norad_id'];
+                state.groupId = action.payload['ui_tracker_state']['group_id'];
+            }
+
+            if (action.payload['satellite_data']) {
+                state.satelliteData = {
+                    details: action.payload['satellite_data']['details'],
+                    position: action.payload['satellite_data']['position'],
+                    transmitters: action.payload['satellite_data']['transmitters'],
+                };
+            }
         },
         setSatellitePasses(state, action) {
             state.satellitePasses = action.payload;
@@ -218,6 +250,12 @@ const targetSatTrackSlice = createSlice({
         setLocation(state, action) {
             state.location = action.payload;
         },
+        setSatelliteSelectOpen(state, action) {
+            state.satelliteSelectOpen = action.payload;
+        },
+        setSatelliteGroupSelectOpen(state, action) {
+            state.satelliteGroupSelectOpen = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -227,8 +265,8 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(setTrackingStateBackend.fulfilled, (state, action) => {
                 state.loading = false;
-                state.trackingState = action.payload['data'];
-                state.satelliteId = action.payload['data']['value']['norad_id'];
+                //state.trackingState = action.payload['data']['value'];
+                //state.satelliteId = action.payload['data']['value']['norad_id'];
                 state.error = null;
             })
             .addCase(setTrackingStateBackend.rejected, (state, action) => {
@@ -266,8 +304,8 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(fetchSatellitesByGroupId.fulfilled, (state, action) => {
                 state.loading = false;
-                const { satGroup } = action.payload;
-                state.groupOfSats = satGroup;
+                const { satellites } = action.payload;
+                state.groupOfSats = satellites;
             })
             .addCase(fetchSatellitesByGroupId.rejected, (state, action) => {
                 state.loading = false;
@@ -302,6 +340,8 @@ export const {
     setSliderTimeOffset,
     setLocation,
     setLoading,
+    setSatelliteSelectOpen,
+    setSatelliteGroupSelectOpen,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

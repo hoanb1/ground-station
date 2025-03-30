@@ -24,6 +24,7 @@ import SatelliteGroupsTable from "../satellites/groups-table.jsx";
 import UsersTable from "./users-table.jsx";
 import LocationPage from "./location-form.jsx";
 import PreferencesForm from "./preferences-form.jsx";
+import MaintenanceForm from "./maintenance-form.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -305,45 +306,4 @@ const TLESourcesForm = () => {
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant={"elevation"}>
             <SourcesTable/>
         </Paper>);
-};
-
-const MaintenanceForm = () => {
-    const clearLayoutLocalStorage = () => {
-        localStorage.setItem(overviewGridLayoutName, null);
-        localStorage.setItem(targetGridLayoutName, null);
-    }
-
-    const clearSatelliteDataLocalStorage = () => {
-        localStorage.setItem('target-satellite-noradid', null);
-        localStorage.setItem('overview-selected-satellites', null);
-    }
-
-    return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0  }}>
-            <Alert severity="info">
-                <AlertTitle>Maintenance</AlertTitle>
-                Maintenance related functions
-           </Alert>
-            <Box component="form" sx={{mt: 2}}>
-                <Grid container spacing={2} columns={16}>
-                    <Grid size={8}>
-                        Clear local browser layout data
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="contained" color="warning" onClick={clearLayoutLocalStorage}>
-                            clear layout
-                        </Button>
-                    </Grid>
-                    <Grid size={8}>
-                        Clear local browser satellite data
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="contained" color="warning" onClick={clearSatelliteDataLocalStorage}>
-                            clear satellite data
-                        </Button>
-                    </Grid>
-                </Grid>
-            </Box>
-        </Paper>
-    );
 };

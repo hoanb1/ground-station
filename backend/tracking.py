@@ -38,96 +38,105 @@ async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, st
 
     logger.info("Calculating satellite events for norad id: " + str(norad_id) + " for next " + str(hours) + " hours.")
 
-    async with AsyncSessionLocal() as dbsession:
-        # set a temporary folder for the skyfield library to do its thing
-        skyfieldloader = Loader('/tmp/skyfield-data')  # or any preferred path
+    try:
+        assert norad_id, f"norad_id is required ({norad_id}, {type(norad_id)})"
 
-        ts = skyfieldloader.timescale()
-        satellite_data = await crud.fetch_satellites(dbsession, norad_id)
-        satellite_data = json.loads(json.dumps(satellite_data, cls=ModelEncoder))
+        async with AsyncSessionLocal() as dbsession:
+            # set a temporary folder for the skyfield library to do its thing
+            skyfieldloader = Loader('/tmp/skyfield-data')  # or any preferred path
 
-        satellite = EarthSatellite(
-            satellite_data['data'][0]['tle1'],
-            satellite_data['data'][0]['tle2'],
-            name=satellite_data['data'][0]['name']
-        )
+            ts = skyfieldloader.timescale()
+            satellite_data = await crud.fetch_satellites(dbsession, norad_id)
+            satellite_data = json.loads(json.dumps(satellite_data, cls=ModelEncoder))
 
-        # get home location
-        home = await crud.fetch_location_for_userid(dbsession, user_id=None)
-        homelat = float(home['data']['lat'])
-        homelon = float(home['data']['lon'])
+            satellite = EarthSatellite(
+                satellite_data['data'][0]['tle1'],
+                satellite_data['data'][0]['tle2'],
+                name=satellite_data['data'][0]['name']
+            )
 
-        # Coordinates can be in decimal degrees:
-        observer = Topos(latitude_degrees=homelat, longitude_degrees=homelon)
+            # get home location
+            home = await crud.fetch_location_for_userid(dbsession, user_id=None)
+            homelat = float(home['data']['lat'])
+            homelon = float(home['data']['lon'])
 
-        # build a time range for pass calculation
-        t0 = ts.now()
-        t1 = ts.now().utc_jpl()  # Just for reference in printing
-        t_end = t0 + (hours / 24.0)
+            # Coordinates can be in decimal degrees:
+            observer = Topos(latitude_degrees=homelat, longitude_degrees=homelon)
 
-        # step through times. Typically, you'll choose a reasonable step size (e.g., 1 minute):
-        t_points = t0 + (np.arange(0, int(hours) * 60, step_minutes) / (24.0 * 60.0))
+            # build a time range for pass calculation
+            t0 = ts.now()
+            t1 = ts.now().utc_jpl()  # Just for reference in printing
+            t_end = t0 + (hours / 24.0)
 
-        # For each time, compute altitude above observer. We subtract the observer (Topos) from the satellite to
-        # get the satellite's position relative to the observer, then do `.altaz()` to get altitude.
-        difference = satellite - observer
-        altitudes = []
-        distances = []
-        for t in t_points:
-            topocentric = difference.at(t)
-            alt, az, distance = topocentric.altaz()
-            altitudes.append(alt.degrees)
-            distances.append(distance.km)
+            # step through times. Typically, you'll choose a reasonable step size (e.g., 1 minute):
+            t_points = t0 + (np.arange(0, int(hours) * 60, step_minutes) / (24.0 * 60.0))
 
-        # Now we can find "passes" by looking for intervals where alt > 0
-        above_horizon = np.array(altitudes) > above_el
+            # For each time, compute altitude above observer. We subtract the observer (Topos) from the satellite to
+            # get the satellite's position relative to the observer, then do `.altaz()` to get altitude.
+            difference = satellite - observer
+            altitudes = []
+            distances = []
+            for t in t_points:
+                topocentric = difference.at(t)
+                alt, az, distance = topocentric.altaz()
+                altitudes.append(alt.degrees)
+                distances.append(distance.km)
 
-        # For a simple pass report, find start/end indices of each pass
-        passes = []
-        in_pass = False
-        pass_start_index = None
+            # Now we can find "passes" by looking for intervals where alt > 0
+            above_horizon = np.array(altitudes) > above_el
 
-        for i in range(len(above_horizon)):
-            if above_horizon[i] and not in_pass:
-                # we are just now rising above the horizon
-                in_pass = True
-                pass_start_index = i
+            # For a simple pass report, find start/end indices of each pass
+            passes = []
+            in_pass = False
+            pass_start_index = None
 
-            elif not above_horizon[i] and in_pass:
-                # we just fell below the horizon
-                in_pass = False
-                pass_end_index = i - 1  # last index when above horizon
-                passes.append((pass_start_index, pass_end_index))
+            for i in range(len(above_horizon)):
+                if above_horizon[i] and not in_pass:
+                    # we are just now rising above the horizon
+                    in_pass = True
+                    pass_start_index = i
 
-        # If the last pass goes until the end of the array, close it out
-        if in_pass:
-            passes.append((pass_start_index, len(above_horizon) - 1))
+                elif not above_horizon[i] and in_pass:
+                    # we just fell below the horizon
+                    in_pass = False
+                    pass_end_index = i - 1  # last index when above horizon
+                    passes.append((pass_start_index, pass_end_index))
 
-        # Print out pass start/end times
-        for idx, (start_i, end_i) in enumerate(passes, 1):
-            start_time = t_points[start_i]
-            end_time = t_points[end_i]
-            dist_start = distances[start_i]
-            dist_end = distances[end_i]
-            duration = end_time.utc_datetime() - start_time.utc_datetime()
+            # If the last pass goes until the end of the array, close it out
+            if in_pass:
+                passes.append((pass_start_index, len(above_horizon) - 1))
 
-            events.append({
-                'id': idx,
-                'event_start': start_time.utc_iso(),
-                'event_end': end_time.utc_iso(),
-                'duration': duration,
-                'distance_at_start': dist_start,
-                'distance_at_end': dist_end,
-                'distance_at_peak': max(distances[start_i:end_i+1]),
-                'peak_altitude': max(altitudes[start_i:end_i+1])
-            })
+            # Print out pass start/end times
+            for idx, (start_i, end_i) in enumerate(passes, 1):
+                start_time = t_points[start_i]
+                end_time = t_points[end_i]
+                dist_start = distances[start_i]
+                dist_end = distances[end_i]
+                duration = end_time.utc_datetime() - start_time.utc_datetime()
 
-        events = json.loads(json.dumps(events, cls=ModelEncoder))
+                events.append({
+                    'id': idx,
+                    'event_start': start_time.utc_iso(),
+                    'event_end': end_time.utc_iso(),
+                    'duration': duration,
+                    'distance_at_start': dist_start,
+                    'distance_at_end': dist_end,
+                    'distance_at_peak': max(distances[start_i:end_i+1]),
+                    'peak_altitude': max(altitudes[start_i:end_i+1])
+                })
 
-    reply['data'] = events
-    reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el, 'step_minutes': step_minutes}
-    reply['success'] = True
-    return reply
+            events = json.loads(json.dumps(events, cls=ModelEncoder))
+
+        reply['data'] = events
+        reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el, 'step_minutes': step_minutes}
+        reply['success'] = True
+
+    except Exception as e:
+        logger.error(f"Failed to calculate satellite events for norad id: {norad_id}, error: {e}")
+        logger.exception(e)
+
+    finally:
+        return reply
 
 
 async def fetch_next_events_for_group(group_id: str, hours: float = 6.0, above_el = 0, step_minutes = 1):
@@ -267,32 +276,60 @@ def get_satellite_position_from_tle(tle_lines):
         "vel": float(velocity_km_s)
     }
 
+async def get_ui_tracker_state(group_id: str, norad_id: int):
+    """
+    Fetches the current tracker state for a specified group ID and satellite ID. This function
+    interacts with the tracking database using asynchronous functions to retrieve data related
+    to the specified identifiers. The response contains the success status and fetched data,
+    or an error on failure.
+
+    :param group_id: The unique identifier for the group whose satellites are to be fetched.
+    :type group_id: int
+    :param norad_id: The unique identifier for the satellite whose state is to be fetched.
+    :type norad_id: int
+    :return: A dictionary containing the success status and the tracker state data, or None
+        if the operation fails.
+    :rtype: dict
+    """
+    reply = {'success': False, 'data': None}
+    data = {
+        'groups': [],
+        'satellites': [],
+        'group_id': None,
+        'norad_id': None,
+    }
+    try:
+        async with (AsyncSessionLocal() as dbsession):
+            groups = await crud.fetch_satellite_group(dbsession)
+            satellites = await crud.fetch_satellites_for_group_id(dbsession, group_id=group_id)
+            data['groups'] = groups['data']
+            data['satellites'] = satellites['data']
+            data['group_id'] = group_id
+            data['norad_id'] = norad_id
+            reply['success'] = True
+            reply['data'] = data
+
+    except Exception as e:
+        logger.error(f"Failed to get tracker state for group id: {group_id}, satellite id: {norad_id}, error: {e}")
+        logger.exception(e)
+
+    finally:
+        return reply
+
 
 async def compiled_satellite_data(dbsession, tracking_state) -> dict:
     """
-    Compiles satellite data by fetching satellite information, transmitters,
-    position, and sky-point (azimuth and elevation) using the provided database
-    session and satellite tracking state.
+    Compiles detailed information about a satellite, including its orbital details,
+    transmitters, and sky position based on tracking data and user's location.
 
-    :param dbsession: An asynchronous database session used for fetching satellite
-        and location data.
-    :type dbsession: Any
-    :param tracking_state: A dictionary containing the tracking state data used to
-        identify the satellite. Must include a 'success' flag and nested data with
-        key 'norad_id'.
-    :type tracking_state: dict
-    :raises Exception: If no satellite tracking information is found for the name
-        `satellite-tracking`.
-    :raises Exception: If no satellite is found in the database for the specified
-        NORAD ID.
-    :raises Exception: If more than one satellite is found in the result for the
-        specified NORAD ID.
-    :raises Exception: If no location is found in the database for the user ID
-        `None`.
-    :return: A dictionary containing compiled satellite data, which includes
-        detailed satellite information (`details`), current position (`position`),
-        and a list of satellite transmitters (`transmitters`).
+    :param dbsession: Database session object used to interact with the database
+    :param tracking_state: Tracking state dictionary containing satellite tracking data
+    :return: Dictionary containing satellite details, transmitters, and position
     :rtype: dict
+    :raises Exception: If satellite tracking data is unavailable or incomplete
+    :raises Exception: If no satellite matches the provided NORAD ID
+    :raises Exception: If more than one satellite is found for the same NORAD ID
+    :raises Exception: If user location is not found in the database
     """
 
     satellite_data = {
@@ -370,16 +407,28 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         while True:
             try:
                 tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+                assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
+                assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
+                assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
+                group_id = tracking_state_reply['data']['value']['group_id']
+                norad_id = tracking_state_reply['data']['value']['norad_id']
 
                 satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
 
-                # transmit data to the browser
-                await sio.emit('satellite-tracking', satellite_data)
+                tracking_state = tracking_state_reply['data']['value']
+
+                logger.info("Sending satellite tracking data to the browser")
+                ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
+                await sio.emit('satellite-tracking', {
+                    'satellite_data': satellite_data,
+                    'tracking_state': tracking_state,
+                    #'ui_tracker_state': ui_tracker_state['data']
+                })
 
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")
                 logger.exception(e)
 
             finally:
-                await asyncio.sleep(2)
+                await asyncio.sleep(3)
 

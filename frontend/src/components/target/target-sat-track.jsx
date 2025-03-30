@@ -322,7 +322,7 @@ const TargetSatelliteTrack = React.memo(function () {
     }, [tileLayerID]);
 
     const handleSelectSatelliteId = useCallback((noradId) => {
-        const data = { 'noradId': noradId, 'state': 'tracking', 'groupId': groupId };
+        const data = { 'norad_id': noradId, 'state': 'tracking', 'group_id': groupId };
         setLoading(true);
         dispatch(setTrackingStateBackend({ socket, data, }))
             .unwrap()
@@ -543,30 +543,6 @@ const TargetSatelliteTrack = React.memo(function () {
     },[noradId, satelliteData, orbitProjectionDuration, pastOrbitLineColor, futureOrbitLineColor,
         satelliteCoverageColor, sliderTimeOffset, showTooltip, showPastOrbitPath, showFutureOrbitPath]);
 
-    useEffect(() => {
-        socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
-            if (response['success']) {
-                if (response['data']) {
-                    dispatch(setLocation({
-                        lat: parseFloat(response['data']['lat']),
-                        lon: parseFloat(response['data']['lon']),
-                    }));
-                } else {
-                    enqueueSnackbar('No location found in the backend, please set one', {
-                        variant: 'info',
-                    })
-                }
-            } else {
-                enqueueSnackbar('Failed to get home location from backend', {
-                    variant: 'error',
-                })
-            }
-        });
-        return () => {
-
-        };
-    }, []);
-
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
@@ -670,7 +646,7 @@ const TargetSatelliteTrack = React.memo(function () {
             <NextPassesIsland noradId={noradId}/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
-            <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId} handleSelectSatelliteId={handleSelectSatelliteId}/>
+            <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
         </StyledIslandParentScrollbar>
     ];
 

@@ -853,13 +853,10 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
         if isinstance(group_id, str):
             group_id = uuid.UUID(group_id)
 
-        logger.info(f"group_id: {group_id}")
-
         group = await fetch_satellite_group(session, group_id)
 
-        logger.info(f"group {group}")
-
         satellite_ids = group['data']['satellite_ids']
+
         stmt = select(Satellites).filter(Satellites.norad_id.in_(satellite_ids))
         result = await session.execute(stmt)
         satellites = result.scalars().all()
@@ -1369,7 +1366,7 @@ async def fetch_satellite_group(session: AsyncSession, group_id: Optional[Union[
     """
 
     try:
-        # 1. If no group_id is given, return all groups (possibly filtered by group_type).
+        # if no group_id is given, return all groups (possibly filtered by group_type)
         if group_id is None:
             if group_type is not None:
                 stmt = select(SatelliteGroups).where(SatelliteGroups.type == group_type)
@@ -1488,6 +1485,10 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
     try:
         assert data.get('name', None) is not None, "name is required when setting tracking state"
         assert data.get('value', None) is not None, "value is required when setting tracking state"
+        value = data.get('value')
+        assert value.get('norad_id', None) is not None, "norad_id is required when setting tracking state"
+        assert value.get('group_id', None) is not None, "group_id is required when setting tracking state"
+        assert value.get('state', None) is not None, "state is required when setting tracking state"
 
         now = datetime.now(UTC)
         data["updated"] = now

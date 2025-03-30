@@ -1,5 +1,6 @@
 import { useEffect, useState} from "react";
 import {
+    Button,
     FormControl,
     InputLabel,
     ListSubheader,
@@ -17,14 +18,25 @@ import {
     fetchSatellitesByGroupId,
     setSatGroupId,
     setSatelliteId,
+    setSatelliteSelectOpen,
+    setSatelliteGroupSelectOpen, setTrackingStateBackend,
 } from './target-sat-slice';
 import SatelliteList from "./target-sat-list.jsx";
 
 
-const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelliteId }) => {
-    const dispatch = useDispatch();
+const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
     const { socket } = useSocket();
-    const { satGroups, groupId, loading, error } = useSelector((state) => state.targetSatTrack);
+    const dispatch = useDispatch();
+    const {
+        satGroups,
+        groupId,
+        loading,
+        error,
+        satelliteSelectOpen,
+        satelliteGroupSelectOpen,
+        trackingState,
+        satelliteId,
+    } = useSelector((state) => state.targetSatTrack);
 
     useEffect(() => {
         // Fetch satellite groups from Redux
@@ -48,16 +60,15 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
             dispatch(
                 fetchSatellitesByGroupId({
                     socket,
-                    groupId: initialGroupId,
+                    groupId: groupId,
                 })
             );
             // Optionally set it in Redux right away
             if (initialNoradId) {
                 dispatch(setSatelliteId(initialNoradId));
-                handleSelectSatelliteId(initialNoradId);
             }
         }
-    }, [satGroups, initialGroupId, initialNoradId, dispatch, socket, handleSelectSatelliteId]);
+    }, [satGroups, initialGroupId, initialNoradId, dispatch, socket]);
 
     const handleGroupChange = (e) => {
         const newGroupId = e.target.value;
@@ -66,18 +77,40 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
         dispatch(setSatelliteId(''));
     };
 
+    const handleSelectOpenEvent = (event) => {
+        //console.info("Group select onOpen");
+        dispatch(setSatelliteGroupSelectOpen(true));
+    };
+
+    const handleSelectCloseEvent = (event) => {
+        //console.info("Group select onClose");
+        dispatch(setSatelliteGroupSelectOpen(false));
+    };
+
+    const handleTrackingStop = () => {
+        const newTrackingState = {...trackingState, state: "idle"};
+        dispatch(setTrackingStateBackend({socket, data: newTrackingState}));
+    };
+
+    const handleTrackingStart = () => {
+        const newTrackingState = {'norad_id': satelliteId, 'group_id': groupId, state: "tracking"};
+        dispatch(setTrackingStateBackend({socket, data: newTrackingState}));
+    };
+
     return (
-        <div>
+        <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
-                    <FormControl disabled={loading} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                    <FormControl disabled={trackingState['state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                                  size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
-                        <Select disabled={loading}
+                        <Select onClose={handleSelectCloseEvent}
+                                onOpen={handleSelectOpenEvent}
+                                onChange={handleGroupChange}
                                 value={groupId}
                                 id="grouped-select" label="Grouping" variant={"filled"}
-                                size={"small"} onChange={handleGroupChange}>
+                                size={"small"}>
                             <ListSubheader>User defined satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "user") {
@@ -94,11 +127,31 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId, handleSelectSatelli
                     </FormControl>
                 </Grid>
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
-                    <SatelliteList
-                        handleSelectSatelliteId={handleSelectSatelliteId}/>
+                    <SatelliteList/>
+                </Grid>
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
+                    <Grid container direction="row" sx={{
+                            justifyContent: "space-between",
+                            alignItems: "stretch",
+                        }}>
+                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
+                            <Button fullWidth={true} disabled={trackingState['state'] === "tracking"}
+                                    variant="contained" color="success" style={{height: '70px'}}
+                                    onClick={()=>{handleTrackingStart()}}
+                            >
+                                TRACK
+                            </Button>
+                        </Grid>
+                        <Grid size="grow">
+                            <Button fullWidth={true} variant="contained" color="error" style={{height: '70px'}}
+                                    onClick={() => {handleTrackingStop()}}>
+                                STOP
+                            </Button>
+                        </Grid>
+                    </Grid>
                 </Grid>
             </Grid>
-        </div>
+        </>
     );
 };
 

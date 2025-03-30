@@ -14,17 +14,19 @@ const NextPassesIsland = ({noradId}) => {
     const { passesLoading, satellitePasses, satelliteData } = useSelector(state => state.targetSatTrack);
 
     useEffect(() => {
-        dispatch(fetchNextPasses({socket, noradId}))
-            .unwrap()
-            .then(response => {
+        if (noradId) {
+            dispatch(fetchNextPasses({socket, noradId}))
+                .unwrap()
+                .then(response => {
 
-            })
-            .catch(error => {
-                enqueueSnackbar("Failed fetching next passes", {
-                    variant: 'error',
-                    autoHideDuration: 5000,
                 })
-            });
+                .catch(error => {
+                    enqueueSnackbar("Failed fetching next passes", {
+                        variant: 'error',
+                        autoHideDuration: 5000,
+                    })
+                });
+        }
         return () => {
 
         };
