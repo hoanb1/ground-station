@@ -220,6 +220,7 @@ const TargetSatelliteTrack = React.memo(function () {
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
+    const coverageRef = useRef(null);
 
     const ResponsiveReactGridLayout = useMemo(() => WidthProvider(Responsive), [gridEditable]);
 
@@ -435,8 +436,8 @@ const TargetSatelliteTrack = React.memo(function () {
             );
 
             // focus map on satellite, center on latitude only
-            let mapCoords = MapObject.getCenter();
-            MapObject.setView([latitude, longitude], MapObject.getZoom());
+            //let mapCoords = MapObject.getCenter();
+            //MapObject.setView([latitude, longitude], MapObject.getZoom());
 
             // calculate paths
             let paths = getSatellitePaths([
@@ -483,6 +484,7 @@ const TargetSatelliteTrack = React.memo(function () {
             let coverage = [];
             coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
             currentCoverage.push(<Polyline
+                ref={coverageRef}
                 noClip={true}
                 key={"coverage-"+satelliteData['details']['name']}
                 pathOptions={{
@@ -534,6 +536,16 @@ const TargetSatelliteTrack = React.memo(function () {
         });
         return null;
     }
+
+    useEffect(() => {
+        if (coverageRef.current) {
+            // Fit the map to the polygon's bounds
+            MapObject.fitBounds(coverageRef.current.getBounds(), {
+                    padding: [50, 50],
+                }
+            );
+        }
+    }, [MapObject, satelliteData]);
 
     useEffect(() => {
         // we do this here once onmount,
