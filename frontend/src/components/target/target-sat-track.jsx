@@ -453,6 +453,7 @@ const TargetSatelliteTrack = React.memo(function () {
                     color: pastOrbitLineColor,
                     weight:1,
                     opacity:0.9,
+                    smoothFactor: 1,
                 }}
             />)
 
@@ -464,7 +465,8 @@ const TargetSatelliteTrack = React.memo(function () {
                     color: futureOrbitLineColor,
                     weight:1,
                     opacity:0.6,
-                    dashArray: "3 3"
+                    dashArray: "3 3",
+                    smoothFactor: 1,
                 }}
             />)
 
@@ -541,7 +543,7 @@ const TargetSatelliteTrack = React.memo(function () {
         if (coverageRef.current) {
             // Fit the map to the polygon's bounds
             MapObject.fitBounds(coverageRef.current.getBounds(), {
-                    padding: [60, 60],
+                    padding: [30, 30],
                 }
             );
         }
@@ -636,9 +638,9 @@ const TargetSatelliteTrack = React.memo(function () {
                     <Polyline
                         positions={terminatorLine}
                         pathOptions={{
-                            color:'white',
-                            weight:1,
-                            opacity:0.2,
+                            color: 'white',
+                            weight: 1,
+                            opacity: 0.2,
                         }}
                     />
                 )}

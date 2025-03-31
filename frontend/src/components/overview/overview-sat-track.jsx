@@ -321,6 +321,7 @@ function GlobalSatelliteTrack() {
                     color: pastOrbitLineColor,
                     weight: 1,
                     opacity: 0.5,
+                    smoothFactor: 1,
                 }}
             />)
 
@@ -332,7 +333,8 @@ function GlobalSatelliteTrack() {
                     color: futureOrbitLineColor,
                     weight:1,
                     opacity:1,
-                    dashArray: "3 3"
+                    dashArray: "3 3",
+                    smoothFactor: 1,
                 }}
             />)
 
@@ -495,10 +497,12 @@ function GlobalSatelliteTrack() {
                     <Polygon
                         positions={daySidePolygon}
                         pathOptions={{
-                            fillColor:'black',
-                            fillOpacity:0.4,
-                            color:'white',
-                            weight: 0
+                            fillColor: 'black',
+                            fillOpacity: 0.4,
+                            color: 'white',
+                            opacity: 0.5,
+                            weight: 0,
+                            smoothFactor: 1,
                         }}
                     />
                 )}
@@ -508,8 +512,8 @@ function GlobalSatelliteTrack() {
                         positions={terminatorLine}
                         pathOptions={{
                             color:'white',
-                            weight:1,
-                            opacity: 0.2,
+                            weight: 1,
+                            opacity: 0.1,
                         }}
                     />
                 )}
