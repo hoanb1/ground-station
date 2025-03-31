@@ -628,10 +628,11 @@ const TargetSatelliteTrack = React.memo(function () {
                     <Polygon
                         positions={daySidePolygon}
                         pathOptions={{
-                            fillColor:'black',
-                            fillOpacity:0.4,
-                            color:'white',
-                            weight:0
+                            fillColor: 'black',
+                            fillOpacity: 0.4,
+                            color: 'white',
+                            weight: 0,
+                            smoothed: true,
                         }}
                     />
                 )}
@@ -643,6 +644,7 @@ const TargetSatelliteTrack = React.memo(function () {
                             color: 'white',
                             weight: 1,
                             opacity: 0.2,
+                            smoothFactor: 1,
                         }}
                     />
                 )}

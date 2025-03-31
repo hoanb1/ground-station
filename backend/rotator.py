@@ -233,8 +233,14 @@ class RotatorController:
         self.logger.warning(f"Timed out waiting for position after {timeout_s}s")
         return False
 
+    async def park(self) -> bool:
+        # Park the rotator
+        loop = asyncio.get_event_loop()
+        await loop.run_in_executor(None, self._park)
 
-    def park(self) -> bool:
+        return True
+
+    def _park(self) -> bool:
 
         self.check_connection()
 
@@ -344,15 +350,13 @@ async def main():
             az, el = await rotator.get_position()
             print(f"Current position: Azimuth = {az}°, Elevation = {el}°")
 
-            await rotator.set_position(azimuth=0.0, elevation=45.0, wait_complete=True)
+            await rotator.set_position(azimuth=0.0, elevation=70.0, wait_complete=True)
 
             # Get position again to confirm
             az, el = await rotator.get_position()
             print(f"New position: Azimuth = {az}°, Elevation = {el}°")
 
-            # Park the rotator
-            print("Parking rotator...")
-            await loop.run_in_executor(None, rotator.park)
+            await rotator.park()
 
     except Exception as e:
         print(f"Error: {e}")
