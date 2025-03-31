@@ -20,6 +20,7 @@ import {
     setSelectedSatellites,
     fetchSatellitesByGroupId,
 } from "./overview-sat-slice.jsx";
+import Typography from "@mui/material/Typography";
 
 
 const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection, handleSatelliteGroupIdChange}) {
@@ -59,13 +60,13 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
                             <ListSubheader>User defined satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "user") {
-                                    return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                                    return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
                             <ListSubheader>Build-in satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "system") {
-                                    return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                                    return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
                         </Select>

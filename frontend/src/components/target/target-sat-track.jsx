@@ -451,8 +451,8 @@ const TargetSatelliteTrack = React.memo(function () {
                 positions={paths.past}
                 pathOptions={{
                     color: pastOrbitLineColor,
-                    weight:1,
-                    opacity:0.9,
+                    weight: 1,
+                    opacity: 1,
                     smoothFactor: 1,
                 }}
             />)
@@ -463,8 +463,8 @@ const TargetSatelliteTrack = React.memo(function () {
                 positions={paths.future}
                 pathOptions={{
                     color: futureOrbitLineColor,
-                    weight:1,
-                    opacity:0.6,
+                    weight: 1,
+                    opacity: 0.8,
                     dashArray: "3 3",
                     smoothFactor: 1,
                 }}
@@ -473,7 +473,7 @@ const TargetSatelliteTrack = React.memo(function () {
             if (showTooltip) {
                 currentPos.push(<Marker key={"marker-"+satelliteData['details']['norad_id']} position={[latitude, longitude]}
                                         icon={satelliteIcon}>
-                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent>
+                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={1} permanent>
                         {satelliteData['details']['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(0) + " km/s"}
                     </ThemedLeafletTooltip>
                 </Marker>);
@@ -493,7 +493,7 @@ const TargetSatelliteTrack = React.memo(function () {
                     color: satelliteCoverageColor,
                     weight: 1,
                     fill: true,
-                    fillOpacity: 0.05,
+                    fillOpacity: 0.2,
                 }}
                 positions={coverage}
             />);
@@ -543,11 +543,11 @@ const TargetSatelliteTrack = React.memo(function () {
         if (coverageRef.current) {
             // Fit the map to the polygon's bounds
             MapObject.fitBounds(coverageRef.current.getBounds(), {
-                    padding: [30, 30],
+                    padding: [35, 35],
                 }
             );
         }
-    }, [MapObject, satelliteData, sliderTimeOffset]);
+    }, [MapObject, satelliteData, sliderTimeOffset, noradId]);
 
     useEffect(() => {
         // we do this here once onmount,
@@ -586,7 +586,9 @@ const TargetSatelliteTrack = React.memo(function () {
         return ()=> {
         };
 
-    },[satelliteData, sliderTimeOffset]);
+    },[satelliteData, sliderTimeOffset, showTooltip, orbitProjectionDuration, tileLayerID, showPastOrbitPath,
+        showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor,
+        futureOrbitLineColor, satelliteCoverageColor]);
 
     // pre-make the components
     let gridContents = [
@@ -646,7 +648,7 @@ const TargetSatelliteTrack = React.memo(function () {
                 )}
 
                 {InternationalDateLinePolyline()}
-                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.4}/>
+                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
                 {showPastOrbitPath? currentPastSatellitesPaths: null}
                 {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                 {currentSatellitesPosition}

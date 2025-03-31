@@ -12,6 +12,7 @@ from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
 from logger import logger
 from models import ModelEncoder
+from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds
 
 
 @async_timeit
@@ -414,16 +415,45 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 norad_id = tracking_state_reply['data']['value']['norad_id']
 
                 satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
-
+                satellite_name = satellite_data['details']['name']
                 tracking_state = tracking_state_reply['data']['value']
-
-                logger.info("Sending satellite tracking data to the browser")
-                ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
-                await sio.emit('satellite-tracking', {
+                #ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
+                data = {
                     'satellite_data': satellite_data,
                     'tracking_state': tracking_state,
                     #'ui_tracker_state': ui_tracker_state['data']
-                })
+                }
+
+                logger.debug(f"Sending satellite tracking data to the browser: {data}")
+                await sio.emit('satellite-tracking', data)
+
+                if tracking_state['state'] == "tracking":
+                    logger.info("we are tracking now")
+
+                    skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
+
+                    # first we check if the az end el values in the skypoint tuple are reachable
+                    azimuthrange = (0, 360)
+                    elevationrange = (0, 180)
+                    if skypoint[0] > azimuthrange[1] or skypoint[0] < azimuthrange[0]:
+                        logger.debug("azimuth is out of range, skipping...")
+                        raise AzimuthOutOfBounds(f"azimuth {skypoint[0]} is out of range (range: {azimuthrange})")
+
+                    if skypoint[1] < elevationrange[0] or skypoint[1] > elevationrange[1]:
+                        logger.debug("elevation is out of range, skipping...")
+                        raise ElevationOutOfBounds(f"elevation {skypoint[1]} is out of range (range: {elevationrange})")
+
+                    logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]} ")
+
+
+                else:
+                    logger.info("we are not tracking now")
+
+            except AzimuthOutOfBounds as e:
+                logger.warning(f"Azimuth out of bounds for satellite #{norad_id} {satellite_name}: {e}")
+
+            except ElevationOutOfBounds as e:
+                logger.warning(f"Elevation out of bounds for satellite #{norad_id} {satellite_name}: {e}")
 
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")
