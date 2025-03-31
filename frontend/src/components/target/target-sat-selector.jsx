@@ -22,7 +22,8 @@ import {
     setSatelliteGroupSelectOpen,
     setTrackingStateInBackend,
     setGroupOfSats, setLoading,
-    setUITrackerDisabled
+    setUITrackerDisabled,
+    setStarting,
 } from './target-sat-slice.jsx';
 import SatelliteList from "./target-sat-list.jsx";
 import Typography from "@mui/material/Typography";
@@ -42,6 +43,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         trackingState,
         satelliteId,
         uiTrackerDisabled,
+        starting,
     } = useSelector((state) => state.targetSatTrack);
 
     useEffect(() => {
@@ -76,6 +78,13 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         }
     }, [satGroups, initialGroupId, initialNoradId, dispatch, socket]);
 
+    useEffect(() => {
+        dispatch(setStarting(false));
+        return () => {
+
+        };
+    }, []);
+    
     const handleGroupChange = (e) => {
         const newGroupId = e.target.value;
         dispatch(setSatGroupId(newGroupId));

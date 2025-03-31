@@ -25,6 +25,7 @@ function SatelliteList() {
         satelliteGroupSelectOpen,
         trackingState,
         uiTrackerDisabled,
+        starting,
     } = useSelector((state) => state.targetSatTrack);
 
     function handleChange(event) {

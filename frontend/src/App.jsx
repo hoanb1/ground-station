@@ -29,6 +29,7 @@ import { fetchRotators } from './components/hardware/rotaror-slice.jsx'
 import { fetchTLESources } from './components/satellites/sources-slice.jsx'
 import { fetchSatelliteGroups } from './components/satellites/groups-slice.jsx';
 import { fetchUsers } from './components/settings/users-slice.jsx';
+import { getTrackingStateFromBackend } from './components/target/target-sat-slice.jsx';
 
 
 const BRANDING = {
@@ -51,6 +52,7 @@ function uponConnectionToBackEnd(socket) {
     store.dispatch(fetchTLESources({socket}));
     store.dispatch(fetchSatelliteGroups({socket}));
     store.dispatch(fetchUsers({socket}));
+    store.dispatch(getTrackingStateFromBackend({socket}));
 }
 
 export default function App(props) {

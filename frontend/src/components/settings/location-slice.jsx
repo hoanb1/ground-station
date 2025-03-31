@@ -62,6 +62,7 @@ export const storeLocation = createAsyncThunk(
 const locationSlice = createSlice({
     name: 'location',
     initialState: {
+        locationSaving: false,
         locationLoading: false,
         location: {lat: 0, lon: 0},
         locationId: null,
@@ -89,6 +90,9 @@ const locationSlice = createSlice({
         setLocationLoading: (state, action) => {
             state.locationLoading = action.payload;
         },
+        setLocationSaving: (state, action) => {
+            state.locationSaving = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -111,8 +115,8 @@ const locationSlice = createSlice({
                 state.error = action.payload;
             })
             .addCase(storeLocation.pending, (state) => {
-                state.locationLoading = true;
                 state.error = null;
+                state.locationSaving = true;
             })
             .addCase(storeLocation.fulfilled, (state, action) => {
                 state.locationLoading = false;
@@ -122,11 +126,13 @@ const locationSlice = createSlice({
                     state.locationId = action.payload.id;
                     state.locationUserId = action.payload.userid;
                     state.qth = getMaidenhead(parseFloat(payload.lat), parseFloat(payload.lon));
+                    state.locationSaving = false;
                 }
             })
             .addCase(storeLocation.rejected, (state, action) => {
                 state.locationLoading = false;
                 state.error = action.payload;
+                state.locationSaving = false;
             });
     },
 });

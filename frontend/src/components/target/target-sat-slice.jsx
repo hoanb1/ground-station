@@ -184,6 +184,7 @@ const targetSatTrackSlice = createSlice({
         satelliteSelectOpen: false,
         satelliteGroupSelectOpen: false,
         uiTrackerDisabled: false,
+        starting: true,
     },
     reducers: {
         setLoading(state, action) {
@@ -300,6 +301,9 @@ const targetSatTrackSlice = createSlice({
         setUITrackerDisabled(state, action) {
             state.uiTrackerDisabled = action.payload;
         },
+        setStarting(state, action) {
+            state.c = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -374,7 +378,7 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(getTrackingStateFromBackend.fulfilled, (state, action) => {
                 state.loading = false;
-                state.trackingState = action.payload;
+                state.trackingState = action.payload['value'];
                 state.error = null;
             })
             .addCase(getTrackingStateFromBackend.rejected, (state, action) => {
@@ -414,6 +418,7 @@ export const {
     setSatelliteGroupSelectOpen,
     setGroupOfSats,
     setUITrackerDisabled,
+    setStarting,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;
