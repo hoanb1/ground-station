@@ -1480,6 +1480,7 @@ async def delete_satellite_group(session: AsyncSession, satellite_group_ids: Uni
         logger.error(traceback.format_exc())
         return {"success": False, "data": None, "error": str(e)}
 
+
 async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dict:
     """
     Upserts a record in the satellite_tracking_state table
@@ -1488,7 +1489,7 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
     try:
         assert data.get('name', None) is not None, "name is required when setting tracking state"
         assert data.get('value', None) is not None, "value is required when setting tracking state"
-        value = data.get('value')
+        value = data.get('value', {})
         assert value.get('norad_id', None) is not None, "norad_id is required when setting tracking state"
         assert value.get('group_id', None) is not None, "group_id is required when setting tracking state"
         assert value.get('tracking_state', None) is not None, "state is required when setting tracking state"
@@ -1536,14 +1537,14 @@ async def get_satellite_tracking_state(session: AsyncSession, name: str) -> dict
 
         stmt = select(SatelliteTrackingState).filter(SatelliteTrackingState.name == name)
         result = await session.execute(stmt)
-        state = result.scalar_one_or_none()
+        tracking_state = result.scalar_one_or_none()
 
-        if not state:
+        if not tracking_state:
             return {"success": False, "data": None, "error": f"Tracking state with name '{name}' not found."}
 
-        state = serialize_object(state)
+        tracking_state = serialize_object(tracking_state)
         reply["success"] = True
-        reply["data"] = state
+        reply["data"] = tracking_state
 
     except Exception as e:
         logger.error(f"Error fetching satellite tracking state for key '{name}': {e}")

@@ -17,6 +17,7 @@ export const getTrackingStateFromBackend = createAsyncThunk(
     }
 );
 
+
 export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {getState, dispatch, rejectWithValue}) => {
@@ -116,7 +117,6 @@ export const fetchSatellite = createAsyncThunk(
 );
 
 
-
 const targetSatTrackSlice = createSlice({
     name: 'targetSatTrack',
     initialState: {
@@ -128,8 +128,8 @@ const targetSatTrackSlice = createSlice({
             'norad_id': '',
             'tracking_state': 'idle',
             'group_id': '',
-            'rig_id': '',
-            'rotator_id': ''
+            'rig_id': 'none',
+            'rotator_id': 'none'
         },
         satelliteData: {
             position: {

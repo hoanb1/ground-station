@@ -455,7 +455,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]} ")
 
 
-
                 else:
                     logger.info("we are not tracking now")
 
