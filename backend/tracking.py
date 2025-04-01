@@ -390,8 +390,6 @@ async def compiled_satellite_data(dbsession, tracking_state) -> dict:
     position['az'] = sky_point[0]
     position['el'] = sky_point[1]
 
-    #logger.info(f"Sky point: az: {sky_point[0]} el: {sky_point[1]}, position: {position}")
-
     return satellite_data
 
 
@@ -410,8 +408,10 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     :return: None
     """
 
-    rotator = RotatorController(device_path="127.0.0.1:4533")
-
+    azimuthlimits = (0, 360)
+    eleveationlimits = (0, 180)
+    previous_tracking_state = None
+    rotator = None
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
@@ -425,38 +425,79 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                 satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
                 satellite_name = satellite_data['details']['name']
-                tracking_state = tracking_state_reply['data']['value']
-                #ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
+                tracker = tracking_state_reply['data']['value']
+                selected_rotator_id = tracker.get('rotator_id', None)
+                selected_rig_id = tracker.get('rig_id', None)
+                current_tracking_state = tracker.get('tracking_state')
+
+                # detect tracker state change
+                if current_tracking_state != previous_tracking_state:
+                    logger.info(f"Tracking state changed from {previous_tracking_state} to {current_tracking_state}")
+
+                    # check if the new state is not tracking
+                    if current_tracking_state == "tracking":
+                        # check what hardware was chosen and set it up
+                        if selected_rotator_id is not None and rotator is None:
+                            # rotator was selected, and a rotator is not setup, set it up now
+                            try:
+                                rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=selected_rotator_id)
+                                rotator_details = rotator_details_reply['data']
+                                rotator_path = f"{rotator_details['host']}:{rotator_details['port']}"
+                                rotator = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
+                                await rotator.connect()
+
+                            except Exception as e:
+                                logger.error(f"Failed to connect to rotator: {e}")
+                                logger.exception(e)
+                                rotator = None  # Reset to None if connection fails
+
+                    elif current_tracking_state == "idle":
+
+                        if rotator is not None:
+                            logger.info(f"Disconnecting from rotator at {rotator_path}...")
+                            try:
+                                rotator.disconnect()  # Assuming disconnect method exists
+                                logger.info(f"Successfully disconnected from rotator at {rotator_path}")
+
+                            except Exception as e:
+                                logger.error(f"Error disconnecting from rotator: {e}")
+                                logger.exception(e)
+
+                            finally:
+                                # Set to None regardless of disconnect success
+                                rotator = None
+
+                    else:
+                        logger.error(f"unknown tracking state: {tracker['tracking_state']}")
+
+                else:
+                    # no tracker state change detected, move on
+                    pass
+
+                # set this to the current value so that the above logic works
+                previous_tracking_state = current_tracking_state
+
+                # work on our sky coordinates
+                skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
+
+                # first we check if the az end el values in the skypoint tuple are reachable
+                if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:
+                    raise AzimuthOutOfBounds(f"azimuth {skypoint[0]} is out of range (range: {azimuthlimits})")
+
+                if skypoint[1] < eleveationlimits[0] or skypoint[1] > eleveationlimits[1]:
+                    raise ElevationOutOfBounds(f"elevation {skypoint[1]} is out of range (range: {eleveationlimits})")
+
+                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]} ")
+
                 data = {
                     'satellite_data': satellite_data,
-                    'tracking_state': tracking_state,
+                    'tracking_state': tracker,
                     #'ui_tracker_state': ui_tracker_state['data']
                 }
 
                 logger.debug(f"Sending satellite tracking data to the browser: {data}")
                 await sio.emit('satellite-tracking', data)
 
-                if tracking_state['tracking_state'] == "tracking":
-                    logger.info("we are tracking now")
-
-                    skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
-
-                    # first we check if the az end el values in the skypoint tuple are reachable
-                    azimuthrange = (0, 360)
-                    elevationrange = (0, 180)
-                    if skypoint[0] > azimuthrange[1] or skypoint[0] < azimuthrange[0]:
-                        logger.debug("azimuth is out of range, skipping...")
-                        raise AzimuthOutOfBounds(f"azimuth {skypoint[0]} is out of range (range: {azimuthrange})")
-
-                    if skypoint[1] < elevationrange[0] or skypoint[1] > elevationrange[1]:
-                        logger.debug("elevation is out of range, skipping...")
-                        raise ElevationOutOfBounds(f"elevation {skypoint[1]} is out of range (range: {elevationrange})")
-
-                    logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]} ")
-
-
-                else:
-                    logger.info("we are not tracking now")
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{norad_id} {satellite_name}: {e}")

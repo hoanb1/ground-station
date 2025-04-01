@@ -1504,8 +1504,6 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
         )
         existing_record = existing_record.scalar_one_or_none()
 
-        logger.info(data)
-
         if existing_record:
             for key, value in data.items():
                 setattr(existing_record, key, value)

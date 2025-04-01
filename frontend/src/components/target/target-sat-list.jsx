@@ -43,9 +43,6 @@ function SatelliteList() {
             rig_id: selectedRadioRig,
             rotator_id: selectedRotator,
         };
-
-        console.info("Setting tracking state to: ", data);
-
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
 
