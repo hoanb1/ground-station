@@ -27,7 +27,7 @@ function SatelliteList() {
         uiTrackerDisabled,
         starting,
         selectedRadioRig,
-        selectRotator,
+        selectedRotator,
     } = useSelector((state) => state.targetSatTrack);
 
     function handleUIElementChange(event) {
@@ -40,9 +40,11 @@ function SatelliteList() {
             norad_id: satelliteId,
             tracking_state: "idle",
             group_id: groupId,
-            rig: selectedRadioRig,
-            rotator: selectRotator,
+            rig_id: selectedRadioRig,
+            rotator_id: selectedRotator,
         };
+
+        console.info("Setting tracking state to: ", data);
 
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }

@@ -298,6 +298,8 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         'satellites': [],
         'group_id': None,
         'norad_id': None,
+        'rotator_id': '',
+        'rig_id': ''
     }
 
     try:
@@ -309,8 +311,8 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
             data['satellites'] = satellites['data']
             data['group_id'] = group_id
             data['norad_id'] = norad_id
-            data['rig_id'] = tracking_state['data']['value'].get('rig', "")
-            data['rotator_id'] = tracking_state['data']['value'].get('rotator', "")
+            data['rig_id'] = tracking_state['data']['value'].get('rig_id', "")
+            data['rotator_id'] = tracking_state['data']['value'].get('rotator_id', "")
             reply['success'] = True
             reply['data'] = data
 

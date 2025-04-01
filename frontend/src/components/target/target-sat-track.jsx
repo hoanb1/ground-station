@@ -327,21 +327,21 @@ const TargetSatelliteTrack = React.memo(function () {
         dispatch(setTileLayerID(id));
     }, [tileLayerID]);
 
-    const handleSelectSatelliteId = useCallback((noradId) => {
-        const data = { 'norad_id': noradId, 'tracking_state': 'tracking', 'group_id': groupId };
-        setLoading(true);
-        dispatch(setTrackingStateInBackend({ socket, data }))
-            .unwrap()
-            .then((response) => {
-                const satelliteData = response['satellite_data'];
-                dispatch(setSatelliteData(satelliteData));
-            })
-            .catch((error) => {
-                enqueueSnackbar(error, {
-                    variant: 'error',
-                });
-            });
-    }, [noradId]);
+    // const handleSelectSatelliteId = useCallback((noradId) => {
+    //     const data = { 'norad_id': noradId, 'tracking_state': 'tracking', 'group_id': groupId };
+    //     setLoading(true);
+    //     dispatch(setTrackingStateInBackend({ socket, data }))
+    //         .unwrap()
+    //         .then((response) => {
+    //             const satelliteData = response['satellite_data'];
+    //             dispatch(setSatelliteData(satelliteData));
+    //         })
+    //         .catch((error) => {
+    //             enqueueSnackbar(error, {
+    //                 variant: 'error',
+    //             });
+    //         });
+    // }, [noradId]);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
         (setMapZoomLevel(zoomLevel));

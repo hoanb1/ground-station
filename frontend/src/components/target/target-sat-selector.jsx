@@ -116,7 +116,13 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
     };
 
     const handleTrackingStart = () => {
-        const newTrackingState = {'norad_id': satelliteId, 'group_id': groupId, 'tracking_state': "tracking"};
+        const newTrackingState = {
+            'norad_id': satelliteId,
+            'group_id': groupId,
+            'tracking_state': "tracking",
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+        };
         //dispatch(setUITrackerDisabled(true));
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
@@ -177,7 +183,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                         <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
                         <Select
                             id="radiorig-select"
-                            value={rigs.length > 0? selectedRadioRig: ""} // Set the current value here
+                            value={rigs.length > 0? selectedRadioRig: "none"} // Set the current value here
                             onChange={(event) => {
                                 handleRigChange(event);
                             }}
@@ -196,12 +202,12 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"}sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
                         <Select
                             id="rotator-select"
-                            value={rotators.length > 0? selectedRotator: ""} // Set the current value here
+                            value={rotators.length > 0? selectedRotator: "none"} // Set the current value here
                             onChange={(event) => {
                                 handleRotatorChange(event);
                             }}

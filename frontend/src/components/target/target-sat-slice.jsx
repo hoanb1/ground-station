@@ -21,15 +21,15 @@ export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {getState, dispatch, rejectWithValue}) => {
         const state = getState();
-        const {norad_id, tracking_state, group_id} = data;
+        const {norad_id, tracking_state, group_id, rig_id, rotator_id} = data;
         const trackState = {
             'name': 'satellite-tracking',
             'value': {
                 'norad_id': norad_id,
                 'tracking_state': tracking_state,
                 'group_id': group_id,
-                'rotator': state.targetSatTrack.selectedRotator,
-                'rig': state.targetSatTrack.selectedRadioRig,
+                'rotator_id': rotator_id,
+                'rig_id': rig_id,
             }
         };
 
@@ -128,8 +128,8 @@ const targetSatTrackSlice = createSlice({
             'norad_id': '',
             'tracking_state': 'idle',
             'group_id': '',
-            'rig': '',
-            'rotator': ''
+            'rig_id': '',
+            'rotator_id': ''
         },
         satelliteData: {
             position: {
@@ -210,8 +210,8 @@ const targetSatTrackSlice = createSlice({
                 state.trackingState = action.payload['tracking_state'];
                 //state.groupId = action.payload['tracking_state']['group_id'];
                 //state.satelliteId = action.payload['tracking_state']['norad_id'];
-                //state.selectedRadioRig = action.payload['tracking_state']['rig'];
-                //state.selectedRotator = action.payload['tracking_state']['rotator'];
+                //state.selectedRadioRig = action.payload['tracking_state']['rig_id'];
+                //state.selectedRotator = action.payload['tracking_state']['rotator_id'];
             }
 
             if (action.payload['ui_tracker_state']) {
@@ -396,6 +396,8 @@ const targetSatTrackSlice = createSlice({
             .addCase(getTrackingStateFromBackend.fulfilled, (state, action) => {
                 state.loading = false;
                 state.trackingState = action.payload['value'];
+                state.selectedRadioRig = action.payload['value']['rig_id'];
+                state.selectedRotator = action.payload['value']['rotator_id'];
                 state.error = null;
             })
             .addCase(getTrackingStateFromBackend.rejected, (state, action) => {
