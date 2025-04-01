@@ -9,6 +9,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 
+export const SATELLITE_NUMBER_LIMIT = 50;
+
 export const StyledIslandParent = styled("div")(({ theme }) => ({
     padding: '0rem',
     border: '1px solid #424242',

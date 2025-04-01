@@ -19,14 +19,17 @@ export const getTrackingStateFromBackend = createAsyncThunk(
 
 export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
-    async ({socket, data}, {rejectWithValue}) => {
-        const {norad_id, state, group_id} = data;
+    async ({socket, data}, {getState, dispatch, rejectWithValue}) => {
+        const state = getState();
+        const {norad_id, tracking_state, group_id} = data;
         const trackState = {
             'name': 'satellite-tracking',
             'value': {
                 'norad_id': norad_id,
-                'state': state,
-                'group_id': group_id
+                'tracking_state': tracking_state,
+                'group_id': group_id,
+                'rotator': state.targetSatTrack.selectedRotator,
+                'rig': state.targetSatTrack.selectedRadioRig,
             }
         };
 
@@ -123,8 +126,10 @@ const targetSatTrackSlice = createSlice({
         groupOfSats: [],
         trackingState: {
             'norad_id': '',
-            'state': 'idle',
+            'tracking_state': 'idle',
             'group_id': '',
+            'rig': '',
+            'rotator': ''
         },
         satelliteData: {
             position: {
@@ -185,6 +190,8 @@ const targetSatTrackSlice = createSlice({
         satelliteGroupSelectOpen: false,
         uiTrackerDisabled: false,
         starting: true,
+        selectedRadioRig: "",
+        selectedRotator: "",
     },
     reducers: {
         setLoading(state, action) {
@@ -203,6 +210,8 @@ const targetSatTrackSlice = createSlice({
                 state.trackingState = action.payload['tracking_state'];
                 //state.groupId = action.payload['tracking_state']['group_id'];
                 //state.satelliteId = action.payload['tracking_state']['norad_id'];
+                //state.selectedRadioRig = action.payload['tracking_state']['rig'];
+                //state.selectedRotator = action.payload['tracking_state']['rotator'];
             }
 
             if (action.payload['ui_tracker_state']) {
@@ -210,6 +219,8 @@ const targetSatTrackSlice = createSlice({
                 state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
                 state.satelliteId = action.payload['ui_tracker_state']['norad_id'];
                 state.groupId = action.payload['ui_tracker_state']['group_id'];
+                state.selectedRadioRig = action.payload['ui_tracker_state']['rig_id'];
+                state.selectedRotator = action.payload['ui_tracker_state']['rotator_id'];
             }
 
             if (action.payload['satellite_data']) {
@@ -303,6 +314,12 @@ const targetSatTrackSlice = createSlice({
         },
         setStarting(state, action) {
             state.c = action.payload;
+        },
+        setRadioRig(state, action) {
+            state.selectedRadioRig = action.payload;
+        },
+        setRotator(state, action) {
+            state.selectedRotator = action.payload;
         }
     },
     extraReducers: (builder) => {
@@ -419,6 +436,8 @@ export const {
     setGroupOfSats,
     setUITrackerDisabled,
     setStarting,
+    setRadioRig,
+    setRotator,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

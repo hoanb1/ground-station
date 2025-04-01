@@ -7,7 +7,7 @@ import {
 import { useTheme, styled } from '@mui/material/styles';
 import React, {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
-import {TitleBar} from "../common/common.jsx";
+import {SATELLITE_NUMBER_LIMIT, TitleBar} from "../common/common.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
@@ -23,7 +23,7 @@ import {
 import Typography from "@mui/material/Typography";
 
 
-const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatelliteSelection, handleSatelliteGroupIdChange}) {
+const OverviewSatelliteGroupSelector = React.memo(function () {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const { satelliteGroupId, satGroups, formGroupSelectError, selectedSatGroupId } = useSelector(state => state.overviewSatTrack);
@@ -60,13 +60,13 @@ const OverviewSatelliteGroupSelector = React.memo(function ({handleGroupSatellit
                             <ListSubheader>User defined satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "user") {
-                                    return <MenuItem disabled={group.satellite_ids.length>99} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
                             <ListSubheader>Build-in satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "system") {
-                                    return <MenuItem disabled={group.satellite_ids.length>99} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
                         </Select>

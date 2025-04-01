@@ -8,8 +8,7 @@ import {
     Select,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import {TitleBar} from "../common/common.jsx";
-import {useLocalStorageState} from "@toolpad/core";
+import {SATELLITE_NUMBER_LIMIT, TitleBar} from "../common/common.jsx";
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
@@ -24,9 +23,11 @@ import {
     setGroupOfSats, setLoading,
     setUITrackerDisabled,
     setStarting,
+    setRadioRig,
+    setRotator,
 } from './target-sat-slice.jsx';
 import SatelliteList from "./target-sat-list.jsx";
-import Typography from "@mui/material/Typography";
+import {enqueueSnackbar} from "notistack";
 
 
 const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
@@ -44,7 +45,12 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         satelliteId,
         uiTrackerDisabled,
         starting,
+        selectedRadioRig,
+        selectedRotator,
     } = useSelector((state) => state.targetSatTrack);
+
+    const { rigs } = useSelector((state) => state.rigs);
+    const { rotators } = useSelector((state) => state.rotators);
 
     useEffect(() => {
         // Fetch satellite groups from Redux
@@ -104,23 +110,40 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
     };
 
     const handleTrackingStop = () => {
-        const newTrackingState = {...trackingState, state: "idle"};
+        const newTrackingState = {...trackingState, 'tracking_state': "idle"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
         //dispatch(setUITrackerDisabled(false));
     };
 
     const handleTrackingStart = () => {
-        const newTrackingState = {'norad_id': satelliteId, 'group_id': groupId, state: "tracking"};
+        const newTrackingState = {'norad_id': satelliteId, 'group_id': groupId, 'tracking_state': "tracking"};
         //dispatch(setUITrackerDisabled(true));
-        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
+            .unwrap()
+            .then((response) => {
+
+            })
+            .catch((error) => {
+                enqueueSnackbar(`Failed to start tracking: ${error.message}`, {
+                    variant: "error"
+                });
+            });
     };
+
+    function handleRotatorChange(event) {
+        dispatch(setRotator(event.target.value));
+    }
+
+    function handleRigChange(event) {
+        dispatch(setRadioRig(event.target.value));
+    }
 
     return (
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                                  size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
                         <Select onClose={handleSelectCloseEvent}
@@ -132,13 +155,13 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                             <ListSubheader>User defined satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "user") {
-                                    return <MenuItem disabled={group.satellite_ids.length>99} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
                             <ListSubheader>Build-in satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "system") {
-                                    return <MenuItem disabled={group.satellite_ids.length>99} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
                         </Select>
@@ -147,13 +170,62 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
                     <SatelliteList/>
                 </Grid>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 1, marginBottom: 1}} fullWidth variant="filled"
+                                 size="small">
+                        <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
+                        <Select
+                            id="radiorig-select"
+                            value={rigs.length > 0? selectedRadioRig: ""} // Set the current value here
+                            onChange={(event) => {
+                                handleRigChange(event);
+                            }}
+                            variant={'filled'}>
+                            <MenuItem value="none">
+                                [no radio rig control]
+                            </MenuItem>
+                            <MenuItem value="" disabled>
+                                <em>select a radio</em>
+                            </MenuItem>
+                            {rigs.map((rig, index) => {
+                                return <MenuItem value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
+                            })}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"}sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                 size="small">
+                        <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
+                        <Select
+                            id="rotator-select"
+                            value={rotators.length > 0? selectedRotator: ""} // Set the current value here
+                            onChange={(event) => {
+                                handleRotatorChange(event);
+                            }}
+                         variant={'filled'}>
+                            <MenuItem value="none">
+                                [no rotator control]
+                            </MenuItem>
+                            <MenuItem value="" disabled>
+                                <em>select a rotator</em>
+                            </MenuItem>
+                            {rotators.map((rotators, index) => {
+                                return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;
+                            })}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
                             justifyContent: "space-between",
                             alignItems: "stretch",
                         }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button fullWidth={true} disabled={trackingState['state'] === "tracking"}
+                            <Button fullWidth={true} disabled={trackingState['tracking_state'] === "tracking"}
                                     variant="contained" color="success" style={{height: '70px'}}
                                     onClick={()=>{handleTrackingStart()}}
                             >

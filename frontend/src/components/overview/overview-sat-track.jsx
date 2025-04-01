@@ -369,7 +369,7 @@ function GlobalSatelliteTrack() {
                     weight: 1,
                     fill: true,
                     opacity: 0.75,
-                    fillOpacity: 0.05,
+                    fillOpacity: 0.15,
                 }}
                 positions={coverage}
             />);
@@ -556,10 +556,7 @@ function GlobalSatelliteTrack() {
             />
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key={"satselector"}>
-            <OverviewSatelliteGroupSelector
-                handleGroupSatelliteSelection={handleGroupSatelliteSelection}
-                handleSatelliteGroupIdChange={handleSatelliteGroupIdChange}
-            />
+            <OverviewSatelliteGroupSelector />
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesGroupIsland groupId={satelliteGroupId}/>

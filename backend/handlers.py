@@ -39,19 +39,19 @@ async def data_request_routing(sio, cmd, data, logger):
         reply = {'success': None, 'data': None}
 
         if cmd == "get-tle-sources":
-            logger.info(f'Getting TLE sources')
+            logger.debug(f'Getting TLE sources')
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
 
             reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
         elif cmd == "get-satellites":
-            logger.info(f'Getting satellites, data: {data}')
+            logger.debug(f'Getting satellites, data: {data}')
             satellites = await crud.fetch_satellites(dbsession, data)
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite":
-            logger.info(f'Getting satellite data for norad id, data: {data}')
+            logger.debug(f'Getting satellite data for norad id, data: {data}')
             satellite = await crud.fetch_satellites(dbsession, data)
 
             # get transmitters
@@ -75,7 +75,7 @@ async def data_request_routing(sio, cmd, data, logger):
             }}
 
         elif cmd == "get-satellites-for-group-id":
-            logger.info(f'Getting satellites for group id, data: {data}')
+            logger.debug(f'Getting satellites for group id, data: {data}')
             satellites = await crud.fetch_satellites_for_group_id(dbsession, data)
 
             # get transmitters
@@ -84,12 +84,12 @@ async def data_request_routing(sio, cmd, data, logger):
                     transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
                     satellite['transmitters'] = transmitters['data']
             else:
-                logger.info(f'No satellites found for group id: {data}')
+                logger.debug(f'No satellites found for group id: {data}')
 
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "get-satellite-groups-user":
-            logger.info(f'Getting user satellite groups, data: {data}')
+            logger.debug(f'Getting user satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
 
             # only return the user groups
@@ -99,7 +99,7 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups-system":
-            logger.info(f'Getting system satellite groups, data: {data}')
+            logger.debug(f'Getting system satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
 
             # only return the system groups
@@ -108,61 +108,61 @@ async def data_request_routing(sio, cmd, data, logger):
             reply = {'success': satellite_groups['success'], 'data': filtered_groups}
 
         elif cmd == "get-satellite-groups":
-            logger.info(f'Getting satellite groups, data: {data}')
+            logger.debug(f'Getting satellite groups, data: {data}')
             satellite_groups = await crud.fetch_satellite_group(dbsession)
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "sync-satellite-data":
-            logger.info(f'Syncing satellite data with known TLE sources')
+            logger.debug(f'Syncing satellite data with known TLE sources')
             await synchronize_satellite_data(dbsession, logger, sio)
 
         elif cmd == "get-users":
-            logger.info(f'Getting users, data: {data}')
+            logger.debug(f'Getting users, data: {data}')
             users = await crud.fetch_users(dbsession, user_id=None)
             reply = {'success': users['success'], 'data': users.get('data', [])}
 
         elif cmd == "get-rigs":
-            logger.info(f'Getting radio rigs, data: {data}')
+            logger.debug(f'Getting radio rigs, data: {data}')
             rigs = await crud.fetch_rigs(dbsession)
             reply = {'success': rigs['success'], 'data': rigs.get('data', [])}
 
         elif cmd == "get-rotators":
-            logger.info(f'Getting antenna rotators, data: {data}')
+            logger.debug(f'Getting antenna rotators, data: {data}')
             rotators = await crud.fetch_rotators(dbsession)
             reply = {'success': rotators['success'], 'data': rotators.get('data', [])}
 
         elif cmd == "get-location-for-user-id":
-            logger.info(f'Getting location for user id, data: {data}')
+            logger.debug(f'Getting location for user id, data: {data}')
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data)
             reply = {'success': locations['success'], 'data': locations.get('data', [])}
 
         elif cmd == "fetch-next-passes":
-            logger.info(f'Fetching next passes, data: {data}')
+            logger.debug(f'Fetching next passes, data: {data}')
             next_passes = await fetch_next_events(norad_id=data)
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
         elif cmd == "fetch-next-passes-for-group":
-            logger.info(f'Fetching next passes for group, data: {data}')
+            logger.debug(f'Fetching next passes for group, data: {data}')
             next_passes = await fetch_next_events_for_group(group_id=data)
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
         elif cmd == "get-satellite-search":
-            logger.info(f'Searching satellites, data: {data}')
+            logger.debug(f'Searching satellites, data: {data}')
             satellites = await crud.search_satellites(dbsession, keyword=data)
             reply = {'success': satellites['success'], 'data': satellites.get('data', [])}
 
         elif cmd == "fetch-preferences":
-            logger.info(f'Fetching preferences for user id, data: {data}')
+            logger.debug(f'Fetching preferences for user id, data: {data}')
             preferences = await crud.fetch_preference_for_userid(dbsession, user_id=None)
             reply = {'success': preferences['success'], 'data': preferences.get('data', [])}
 
         elif cmd == "get-tracking-state":
-            logger.info(f'Fetching tracking state, data: {data}')
+            logger.debug(f'Fetching tracking state, data: {data}')
             tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
             reply = {'success': tracking_state['success'], 'data': tracking_state.get('data', [])}
 
         else:
-            logger.info(f'Unknown command: {cmd}')
+            logger.error(f'Unknown command: {cmd}')
 
     return reply
 
@@ -195,7 +195,7 @@ async def data_submission_routing(sio, cmd, data, logger):
     async with AsyncSessionLocal() as dbsession:
 
         if cmd == "submit-tle-sources":
-            logger.info(f'Adding TLE source, data: {data}')
+            logger.debug(f'Adding TLE source, data: {data}')
             submit_reply = await crud.add_satellite_tle_source(dbsession, data)
 
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
@@ -203,7 +203,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': tle_sources.get('data', [])}
 
         elif cmd == "delete-tle-sources":
-            logger.info(f'Deleting TLE source, data: {data}')
+            logger.debug(f'Deleting TLE source, data: {data}')
             delete_reply = await crud.delete_satellite_tle_sources(dbsession, data)
 
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
@@ -211,7 +211,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': tle_sources.get('data', [])}
 
         elif cmd == "edit-tle-source":
-            logger.info(f'Editing TLE source, data: {data}')
+            logger.debug(f'Editing TLE source, data: {data}')
             edit_reply = await crud.edit_satellite_tle_source(dbsession, data['id'], data)
 
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
@@ -219,7 +219,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': tle_sources.get('data', [])}
 
         elif cmd == "submit-satellite-group":
-            logger.info(f'Adding satellite group, data: {data}')
+            logger.debug(f'Adding satellite group, data: {data}')
             submit_reply = await crud.add_satellite_group(dbsession, data)
 
             satellite_groups = await crud.fetch_satellite_group(dbsession, group_type='user')
@@ -227,7 +227,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': satellite_groups.get('data', [])}
 
         elif cmd == "delete-satellite-group":
-            logger.info(f'Deleting satellite groups, data: {data}')
+            logger.debug(f'Deleting satellite groups, data: {data}')
             delete_reply = await crud.delete_satellite_group(dbsession, data)
 
             satellite_groups = await crud.fetch_satellite_group(dbsession, group_type="user")
@@ -235,7 +235,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': satellite_groups.get('data', [])}
 
         elif cmd == "edit-satellite-group":
-            logger.info(f'Editing satellite group, data: {data}')
+            logger.debug(f'Editing satellite group, data: {data}')
             edit_reply = await crud.edit_satellite_group(dbsession, data['id'], data)
 
             satellite_groups = await crud.fetch_satellite_group(dbsession, group_type="user")
@@ -243,7 +243,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': satellite_groups.get('data', [])}
 
         elif cmd == "submit-user":
-            logger.info(f'Adding user, data: {data}')
+            logger.debug(f'Adding user, data: {data}')
             add_reply = await crud.add_user(dbsession, data)
 
             users = await crud.fetch_users(dbsession, user_id=None)
@@ -251,7 +251,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': users.get('data', [])}
 
         elif cmd == "edit-user":
-            logger.info(f'Editing user, data: {data}')
+            logger.debug(f'Editing user, data: {data}')
             edit_reply = await crud.edit_user(dbsession, data)
 
             users = await crud.fetch_users(dbsession, user_id=None)
@@ -259,7 +259,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': users.get('data', [])}
 
         elif cmd == "delete-user":
-            logger.info(f'Delete user, data: {data}')
+            logger.debug(f'Delete user, data: {data}')
             delete_reply = await crud.delete_user(dbsession, data)
 
             users = await crud.fetch_users(dbsession, user_id=None)
@@ -267,7 +267,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': users.get('data', [])}
 
         elif cmd == "submit-rig":
-            logger.info(f'Adding rig, data: {data}')
+            logger.debug(f'Adding rig, data: {data}')
             add_reply = await crud.add_rig(dbsession, data)
 
             rigs = await crud.fetch_rigs(dbsession)
@@ -275,7 +275,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': rigs.get('data', [])}
 
         elif cmd == "edit-rig":
-            logger.info(f'Editing rig, data: {data}')
+            logger.debug(f'Editing rig, data: {data}')
             edit_reply = await crud.edit_rig(dbsession, data)
 
             rigs = await crud.fetch_rigs(dbsession)
@@ -283,7 +283,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': rigs.get('data', [])}
 
         elif cmd == "delete-rig":
-            logger.info(f'Delete rig, data: {data}')
+            logger.debug(f'Delete rig, data: {data}')
             delete_reply = await crud.delete_rig(dbsession, data)
 
             rigs = await crud.fetch_rigs(dbsession)
@@ -291,7 +291,7 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': rigs.get('data', [])}
 
         elif cmd == "submit-rotator":
-            logger.info(f'Adding rotator, data: {data}')
+            logger.debug(f'Adding rotator, data: {data}')
             add_reply = await crud.add_rotator(dbsession, data)
 
             rotators = await crud.fetch_rotators(dbsession)
@@ -299,17 +299,17 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': rotators.get('data', [])}
 
         elif cmd == "edit-rotator":
-            logger.info(f'Editing rotator, data: {data}')
+            logger.debug(f'Editing rotator, data: {data}')
             edit_reply = await crud.edit_rotator(dbsession, data)
-            logger.info(f'Edit rotator reply: {edit_reply}')
+            logger.debug(f'Edit rotator reply: {edit_reply}')
 
             rotators = await crud.fetch_rotators(dbsession)
-            logger.info(f'Rotators: {rotators}')
+            logger.debug(f'Rotators: {rotators}')
             reply = {'success': (rotators['success'] & edit_reply['success']),
                      'data': rotators.get('data', [])}
 
         elif cmd == "delete-rotator":
-            logger.info(f'Delete rotator, data: {data}')
+            logger.debug(f'Delete rotator, data: {data}')
             delete_reply = await crud.delete_rotators(dbsession, data)
 
             rotators = await crud.fetch_rotators(dbsession)
@@ -317,12 +317,12 @@ async def data_submission_routing(sio, cmd, data, logger):
                      'data': rotators.get('data', [])}
 
         elif cmd == "submit-location":
-            logger.info(f'Adding location, data: {data}')
+            logger.debug(f'Adding location, data: {data}')
             add_reply = await crud.add_location(dbsession, data)
             reply = {'success': add_reply['success'], 'data': None}
 
         elif cmd == "submit-location-for-user-id":
-            logger.info(f'Adding location for user id, data: {data}')
+            logger.debug(f'Adding location for user id, data: {data}')
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data['userid'])
 
             # if there is a location for the user id then don't add, update the location,
@@ -336,28 +336,28 @@ async def data_submission_routing(sio, cmd, data, logger):
                 reply = {'success': update_reply['success'], 'data': update_reply['data'], 'error': update_reply.get('error', None)}
 
         elif cmd == "edit-location":
-            logger.info(f'Editing location, data: {data}')
+            logger.debug(f'Editing location, data: {data}')
             edit_reply = await crud.edit_location(dbsession, data)
             reply = {'success': edit_reply['success'], 'data': None}
 
         elif cmd == "delete-location":
-            logger.info(f'Delete location, data: {data}')
+            logger.debug(f'Delete location, data: {data}')
             delete_reply = await crud.delete_location(dbsession, data)
             reply = {'success': delete_reply['success'], 'data': None}
 
         elif cmd == "update-preferences":
-            logger.info(f'Updating preferences, data: {data}')
+            logger.debug(f'Updating preferences, data: {data}')
             update_reply = await crud.set_preferences(dbsession, list(data))
             reply = {'success': update_reply['success'], 'data': update_reply.get('data', [])}
 
         elif cmd == "set-tracking-state":
-            logger.info(f'Updating satellite tracking state, data: {data}')
+            logger.debug(f'Updating satellite tracking state, data: {data}')
             tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
             satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
-            tracker_state = await get_ui_tracker_state(data['value']['group_id'], data['value']['norad_id'])
+            ui_tracker_state = await get_ui_tracker_state(data['value']['group_id'], data['value']['norad_id'])
             data = {
                 'satellite_data': satellite_data,
-                'ui_tracker_state': tracker_state['data'],
+                'ui_tracker_state': ui_tracker_state['data'],
                 'tracking_state':tracking_state_reply['data']['value'],
             }
             await sio.emit('satellite-tracking', data)
@@ -368,7 +368,7 @@ async def data_submission_routing(sio, cmd, data, logger):
             }
 
         else:
-            logger.info(f'Unknown command: {cmd}')
+            logger.error(f'Unknown command: {cmd}')
 
     return reply
 
@@ -396,7 +396,7 @@ async def auth_request_routing(sio, cmd, data, logger):
     reply = {'success': None, 'user': None, 'token': None}
     async with AsyncSessionLocal() as dbsession:
 
-        logger.info(f'Auth request, cmd: {cmd}, data: {data}')
+        logger.debug(f'Auth request, cmd: {cmd}, data: {data}')
         auth_reply = await authenticate_user(dbsession, data['email'], data['password'])
 
         if auth_reply is not None:

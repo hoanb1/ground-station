@@ -328,7 +328,6 @@ class RotatorController:
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
 
-# Example async usage
 async def main():
     """
     Example of how to use the async context manager.
@@ -346,7 +345,6 @@ async def main():
 
             # Get current position (would need an async version in a real implementation)
             # For this example, we'll run the blocking method in a thread pool
-            loop = asyncio.get_event_loop()
             az, el = await rotator.get_position()
             print(f"Current position: Azimuth = {az}°, Elevation = {el}°")
 
@@ -362,7 +360,6 @@ async def main():
         print(f"Error: {e}")
 
 
-# Example usage with async
 if __name__ == "__main__":
     import asyncio
 

@@ -9,7 +9,7 @@ import {
     setTrackingStateInBackend
 
 } from './target-sat-slice.jsx';
-import {useSocket} from "../common/socket.jsx";
+import { useSocket } from "../common/socket.jsx";
 
 
 function SatelliteList() {
@@ -26,9 +26,11 @@ function SatelliteList() {
         trackingState,
         uiTrackerDisabled,
         starting,
+        selectedRadioRig,
+        selectRotator,
     } = useSelector((state) => state.targetSatTrack);
 
-    function handleChange(event) {
+    function handleUIElementChange(event) {
         const satelliteId = event.target.value;
         dispatch(setSatelliteId(satelliteId));
 
@@ -36,8 +38,10 @@ function SatelliteList() {
         const data = {
             ...trackingState,
             norad_id: satelliteId,
-            state: "idle",
+            tracking_state: "idle",
             group_id: groupId,
+            rig: selectedRadioRig,
+            rotator: selectRotator,
         };
 
         dispatch(setTrackingStateInBackend({ socket, data: data}));
@@ -54,10 +58,10 @@ function SatelliteList() {
     };
 
     return (
-        <FormControl disabled={trackingState['state'] === "tracking"} fullWidth={true} variant={"filled"} size={"small"}>
+        <FormControl disabled={trackingState['tracking_state'] === "tracking"} fullWidth={true} variant={"filled"} size={"small"}>
             <InputLabel htmlFor="satellite-select">Satellite</InputLabel>
             <Select onClose={handleSelectCloseEvent} onOpen={handleSelectOpenEvent}  value={groupOfSats.length > 0? satelliteId: ""}
-                    id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleChange}>
+                    id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleUIElementChange}>
                 {groupOfSats.map((satellite, index) => {
                     return <MenuItem value={satellite['norad_id']} key={index}>#{satellite['norad_id']} {satellite['name']}</MenuItem>;
                 })}

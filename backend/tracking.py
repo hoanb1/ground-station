@@ -13,7 +13,7 @@ from db import engine, AsyncSessionLocal
 from logger import logger
 from models import ModelEncoder
 from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds
-
+from rotator import RotatorController
 
 @async_timeit
 async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, step_minutes = 0.5) -> dict:
@@ -299,14 +299,18 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         'group_id': None,
         'norad_id': None,
     }
+
     try:
         async with (AsyncSessionLocal() as dbsession):
             groups = await crud.fetch_satellite_group(dbsession)
             satellites = await crud.fetch_satellites_for_group_id(dbsession, group_id=group_id)
+            tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
             data['groups'] = groups['data']
             data['satellites'] = satellites['data']
             data['group_id'] = group_id
             data['norad_id'] = norad_id
+            data['rig_id'] = tracking_state['data']['value'].get('rig', "")
+            data['rotator_id'] = tracking_state['data']['value'].get('rotator', "")
             reply['success'] = True
             reply['data'] = data
 
@@ -404,6 +408,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     :return: None
     """
 
+    rotator = RotatorController(device_path="127.0.0.1:4533")
+
+
     async with (AsyncSessionLocal() as dbsession):
         while True:
             try:
@@ -427,7 +434,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.debug(f"Sending satellite tracking data to the browser: {data}")
                 await sio.emit('satellite-tracking', data)
 
-                if tracking_state['state'] == "tracking":
+                if tracking_state['tracking_state'] == "tracking":
                     logger.info("we are tracking now")
 
                     skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
@@ -444,6 +451,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         raise ElevationOutOfBounds(f"elevation {skypoint[1]} is out of range (range: {elevationrange})")
 
                     logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]} ")
+
 
 
                 else:

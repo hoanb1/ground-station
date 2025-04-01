@@ -36,7 +36,9 @@ import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {
-    setSatGroupId, setTrackingStateInBackend, setShowPastOrbitPath,
+    setSatGroupId,
+    setTrackingStateInBackend,
+    setShowPastOrbitPath,
     setShowFutureOrbitPath,
     setShowSatelliteCoverage,
     setShowSunIcon,
@@ -55,9 +57,11 @@ import {
     setMoonPos,
     setGridEditable,
     setSliderTimeOffset,
-    setLocation,
-    setLoading, setSatelliteData, fetchSatellite, getTrackingStateFromBackend, setSatelliteId,
-
+    setLoading,
+    setSatelliteData,
+    fetchSatellite,
+    getTrackingStateFromBackend,
+    setSatelliteId,
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
@@ -324,9 +328,9 @@ const TargetSatelliteTrack = React.memo(function () {
     }, [tileLayerID]);
 
     const handleSelectSatelliteId = useCallback((noradId) => {
-        const data = { 'norad_id': noradId, 'state': 'tracking', 'group_id': groupId };
+        const data = { 'norad_id': noradId, 'tracking_state': 'tracking', 'group_id': groupId };
         setLoading(true);
-        dispatch(setTrackingStateInBackend({ socket, data, }))
+        dispatch(setTrackingStateInBackend({ socket, data }))
             .unwrap()
             .then((response) => {
                 const satelliteData = response['satellite_data'];

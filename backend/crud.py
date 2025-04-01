@@ -1491,7 +1491,7 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
         value = data.get('value')
         assert value.get('norad_id', None) is not None, "norad_id is required when setting tracking state"
         assert value.get('group_id', None) is not None, "group_id is required when setting tracking state"
-        assert value.get('state', None) is not None, "state is required when setting tracking state"
+        assert value.get('tracking_state', None) is not None, "state is required when setting tracking state"
 
         now = datetime.now(UTC)
         data["updated"] = now
@@ -1500,6 +1500,8 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
             select(SatelliteTrackingState).where(SatelliteTrackingState.name == data['name'])
         )
         existing_record = existing_record.scalar_one_or_none()
+
+        logger.info(data)
 
         if existing_record:
             for key, value in data.items():
