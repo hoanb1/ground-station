@@ -23,7 +23,7 @@ import {AuthProvider} from "./components/common/auth.jsx";
 import { Provider as ReduxProvider} from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './components/common/store.jsx';
-
+import ErrorPage from './components/common/error-page.jsx';
 
 const router = createBrowserRouter([
     {
@@ -35,6 +35,7 @@ const router = createBrowserRouter([
                 children: [
                     {
                         path: "",
+                        errorElement: <ErrorPage />,
                         Component: GlobalSatelliteTrack,
                     },
                     {

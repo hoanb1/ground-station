@@ -169,7 +169,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     progress = 0
 
     try:
-        increment = 30 / len(tle_sources)
+        increment = 10 / len(tle_sources)
     except ZeroDivisionError:
         increment = 1
 

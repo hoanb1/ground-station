@@ -1,7 +1,7 @@
 import time
 import asyncio
 import socket
-from typing import Optional, Tuple, Dict, Any, Union
+from typing import Optional, Tuple, Dict, Any, Union, AsyncGenerator
 import logging
 from arguments import arguments as args
 from contextlib import asynccontextmanager
@@ -20,7 +20,7 @@ class RotatorController:
 
         # Set up logging
         device_path = f"{host}:{port}"
-        self.logger = logging.getLogger(__name__)
+        self.logger = logging.getLogger("rotator-control")
         self.logger.setLevel(args.log_level)
         self.logger.info(f"Initializing RotatorController with model={model}, device={device_path}")
 
@@ -234,92 +234,6 @@ class RotatorController:
             self.logger.error(f"Error getting position: {e}")
             raise RuntimeError(f"Error getting position: {e}")
 
-    async def set_position(self, azimuth: float, elevation: Optional[float] = None, wait_complete: bool = False,
-                           timeout_s: float = 30.0):
-
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(
-            None,
-            lambda: self._set_position(
-                azimuth=azimuth,
-                elevation=elevation,
-                wait_complete=wait_complete,
-                timeout_s=timeout_s
-            )
-        )
-
-    def _set_position(self, azimuth: float, elevation: Optional[float] = None, wait_complete: bool = False,
-                     timeout_s: float = 30.0) -> bool:
-
-        self.check_connection()
-
-        # Validate azimuth
-        if not 0 <= azimuth <= 360:
-            error_msg = f"Azimuth out of range (0-360): {azimuth}"
-            self.logger.error(error_msg)
-            raise ValueError(error_msg)
-
-        # Get current elevation if not specified
-        if elevation is None:
-            _, el = self._get_position()
-            elevation = el
-
-        elif not 0 <= elevation <= 90:
-            error_msg = f"Elevation out of range (0-90): {elevation}"
-            self.logger.error(error_msg)
-            raise ValueError(error_msg)
-
-        try:
-            self.logger.info(f"Setting position to az={azimuth}, el={elevation}")
-            status = self.rotator.set_position(azimuth, elevation)
-            self.logger.debug(f"Set position: status={status}")
-
-            #if status != Hamlib.RIG_OK:
-            #    error_msg = f"Failed to set position: {self.get_error_message(status)}"
-            #    self.logger.error(error_msg)
-            #    raise RuntimeError(error_msg)
-
-            if wait_complete:
-                return self._wait_for_position(azimuth, elevation, tolerance=2.0, timeout_s=timeout_s)
-
-            return True
-
-        except Exception as e:
-            self.logger.error(f"Error setting position: {e}")
-            raise RuntimeError(f"Error setting position: {e}")
-
-    def _wait_for_position(self, target_az: float, target_el: float, tolerance: float = 2.0, timeout_s: float = 30.0,
-            check_interval_s: float = 0.5) -> bool:
-
-        self.logger.info(f"Waiting for rotator to reach az={target_az}, el={target_el}")
-        start_time = time.time()
-
-        while time.time() - start_time < timeout_s:
-            try:
-                current_az, current_el = self._get_position()
-
-                # Check if we're within tolerance
-                az_diff = abs((current_az - target_az + 180) % 360 - 180)
-                el_diff = abs(current_el - target_el)
-
-                if az_diff <= tolerance and el_diff <= tolerance:
-                    self.logger.info(f"Target position reached: az={current_az}, el={current_el}")
-                    return True
-
-                self.logger.debug(f"Current: az={current_az}, el={current_el}, "
-                                  f"Target: az={target_az}, el={target_el}, "
-                                  f"Diff: az={az_diff}, el={el_diff}")
-
-                # Sleep before checking again
-                time.sleep(check_interval_s)
-
-            except Exception as e:
-                self.logger.error(f"Error while waiting for position: {e}")
-                return False
-
-        self.logger.warning(f"Timed out waiting for position after {timeout_s}s")
-        return False
-
     async def park(self) -> bool:
         # Park the rotator
         loop = asyncio.get_event_loop()
@@ -415,6 +329,88 @@ class RotatorController:
 
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
+    async def set_position(self, target_az: float, target_el: float, update_interval: float = 2) -> AsyncGenerator[
+        Tuple[float, float, bool], None]:
+        """
+        Generator function that sets the rotator position and yields progress updates.
+
+        Args:
+            target_az: Target azimuth in degrees
+            target_el: Target elevation in degrees
+            update_interval: How often to yield position updates in seconds
+
+        Yields:
+            Tuple[float, float, bool]: Current (azimuth, elevation, is_complete)
+            - When is_complete is True, the rotator has reached the target position
+        """
+        self.check_connection()
+
+        # Start the position set in a separate thread
+        loop = asyncio.get_event_loop()
+        self.logger.info(f"Slewing rotator to position: az={target_az}, el={target_el}")
+        set_task = loop.run_in_executor(None, self._set_position_start, target_az, target_el)
+
+        # Get the starting position
+        current_az, current_el = await self.get_position()
+
+        # Define what "reached target" means (within 1 degree tolerance)
+        def is_at_target(az, el):
+            az_diff = min(abs(az - target_az), 360 - abs(az - target_az))
+            el_diff = abs(el - target_el)
+            return az_diff < 1.0 and el_diff < 1.0
+
+        # Keep yielding the position until we're done
+        complete = False
+        while not complete:
+            # Yield the current position and status
+            yield current_az, current_el, complete
+
+            # Wait a bit before checking again
+            await asyncio.sleep(update_interval)
+
+            # Get updated position
+            current_az, current_el = await self.get_position()
+
+            # Check if we've reached the target
+            complete = is_at_target(current_az, current_el)
+
+        # Wait for the set_position task to complete
+        await set_task
+
+        # Final yield with completed status
+        yield current_az, current_el, True
+
+
+    def _set_position_start(self, az: float, el: float) -> bool:
+        """
+        Starts the rotator slewing to the specified position.
+        This is meant to be run in a separate thread.
+
+        Args:
+            az: Target azimuth in degrees
+            el: Target elevation in degrees
+
+        Returns:
+            bool: True if command was sent successfully
+        """
+        try:
+            self.logger.info(f"Setting rotator position to az={az}, el={el}")
+            status = self.rotator.set_position(az, el)
+            self.logger.debug(f"Set position command: status={status}")
+
+            #if status != Hamlib.RIG_OK:
+            #    error_msg = f"Failed to set rotator position: {self.get_error_message(status)}"
+            #    self.logger.error(error_msg)
+            #    raise RuntimeError(error_msg)
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error setting rotator position: {e}")
+            self.logger.exception(e)
+            raise RuntimeError(f"Error setting rotator position: {e}")
+
+
 
 async def main():
     """
@@ -436,7 +432,10 @@ async def main():
             az, el = await rotator.get_position()
             print(f"Current position: Azimuth = {az}°, Elevation = {el}°")
 
-            await rotator.set_position(azimuth=0.0, elevation=70.0, wait_complete=True)
+            async for current_az, current_el, is_complete in rotator.set_position(180, 45):
+                print(f"Position: AZ={current_az:.1f}° EL={current_el:.1f}°")
+                if is_complete:
+                    print("Target position reached!")
 
             # Get position again to confirm
             az, el = await rotator.get_position()

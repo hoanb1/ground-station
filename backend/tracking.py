@@ -412,6 +412,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     eleveationlimits = (0, 180)
     previous_tracking_state = None
     rotator = None
+    slew_complete = False
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
@@ -436,14 +437,17 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                     # check if the new state is not tracking
                     if current_tracking_state == "tracking":
+
                         # check what hardware was chosen and set it up
                         if selected_rotator_id is not None and rotator is None:
+
                             # rotator was selected, and a rotator is not setup, set it up now
                             try:
                                 rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=selected_rotator_id)
                                 rotator_details = rotator_details_reply['data']
                                 rotator_path = f"{rotator_details['host']}:{rotator_details['port']}"
                                 rotator = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
+                                slew_complete = False
                                 await rotator.connect()
 
                             except Exception as e:
@@ -487,7 +491,15 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 if skypoint[1] < eleveationlimits[0] or skypoint[1] > eleveationlimits[1]:
                     raise ElevationOutOfBounds(f"elevation {skypoint[1]} is out of range (range: {eleveationlimits})")
 
-                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]} ")
+                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]}")
+
+                if rotator:
+                    if slew_complete is False:
+                        async for current_az, current_el, slew_complete in rotator.set_position(skypoint[0], skypoint[1]):
+                            logger.info(f"Position: AZ={current_az:.1f}° EL={current_el:.1f}°")
+                            if slew_complete:
+                                logger.info("Target position reached!")
+                                #slew_complete = False
 
                 data = {
                     'satellite_data': satellite_data,
