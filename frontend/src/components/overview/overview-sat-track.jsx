@@ -17,7 +17,7 @@ import {duration, styled} from "@mui/material/styles";
 import createTerminatorLine from '../common/terminator-line.jsx';
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from '../common/icons.jsx';
-import SettingsIsland from "../common/map-settings.jsx";
+import MapSettingsIsland from "../common/map-settings.jsx";
 import {Box, Button, Fab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
@@ -58,9 +58,15 @@ import {
     setLocation,
     setLocationId,
     setLocationUserId,
-    setSatelliteGroupId
+    setSatelliteGroupId,
+    setOpenMapSettingsDialog,
 } from './overview-sat-slice.jsx';
 import NextPassesGroupIsland from "./overview-sat-passes.jsx";
+import DialogTitle from "@mui/material/DialogTitle";
+import DialogContent from "@mui/material/DialogContent";
+import Dialog from "@mui/material/Dialog";
+import DialogActions from "@mui/material/DialogActions";
+import SettingsIcon from "@mui/icons-material/Settings";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
@@ -127,6 +133,7 @@ function GlobalSatelliteTrack() {
         tileLayerID,
         mapZoomLevel,
         satelliteGroupId,
+        openMapSettingsDialog,
     } = useSelector(state => state.overviewSatTrack);
     const { location, } = useSelector((state) => state.location);
 
@@ -151,7 +158,7 @@ function GlobalSatelliteTrack() {
                 y: 4,
                 w: 10,
                 h: 18,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+                resizeHandles: ['se','ne','nw','sw','s','e','w'],
             },
             {
                 i: 'satselector',
@@ -159,7 +166,7 @@ function GlobalSatelliteTrack() {
                 y: 0,
                 w: 2,
                 h: 3,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+                resizeHandles: ['se','ne','nw','sw','s','e','w'],
             },
             {
                 i: 'map-settings',
@@ -179,7 +186,7 @@ function GlobalSatelliteTrack() {
                 w: 8,
                 h: 10,
                 minH: 7,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
         ]
     };
@@ -462,6 +469,66 @@ function GlobalSatelliteTrack() {
         return null;
     }
 
+    function MapSettingsButton() {
+        const dispatch = useDispatch();
+        const handleClick = () => {
+            dispatch(setOpenMapSettingsDialog(true));
+        };
+
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
+            <SettingsIcon />
+        </Fab>;
+    }
+
+    function MapSettingsIslandDialog() {
+
+        const {openMapSettingsDialog} = useSelector(state => state.overviewSatTrack);
+        const dispatch = useDispatch();
+
+        const handleCloseDialog = () => {
+            dispatch(setOpenMapSettingsDialog(false));
+        };
+
+        return (
+            <>
+                <Dialog open={openMapSettingsDialog} onClose={handleCloseDialog} fullWidth maxWidth="sm">
+                    <DialogTitle>Map Settings</DialogTitle>
+                    <DialogContent>
+                        <MapSettingsIsland
+                            initialShowPastOrbitPath={showPastOrbitPath}
+                            initialShowFutureOrbitPath={showFutureOrbitPath}
+                            initialShowSatelliteCoverage={showSatelliteCoverage}
+                            initialShowSunIcon={showSunIcon}
+                            initialShowMoonIcon={showMoonIcon}
+                            initialPastOrbitLineColor={pastOrbitLineColor}
+                            initialFutureOrbitLineColor={futureOrbitLineColor}
+                            initialSatelliteCoverageColor={satelliteCoverageColor}
+                            initialOrbitProjectionDuration={orbitProjectionDuration}
+                            initialTileLayerID={tileLayerID}
+                            initialShowTooltip={showTooltip}
+                            initialShowTerminatorLine={showTerminatorLine}
+                            handleShowPastOrbitPath={handleShowPastOrbitPath}
+                            handleShowFutureOrbitPath={handleShowFutureOrbitPath}
+                            handleShowSatelliteCoverage={handleShowSatelliteCoverage}
+                            handleSetShowSunIcon={handleSetShowSunIcon}
+                            handleSetShowMoonIcon={handleSetShowMoonIcon}
+                            handleShowTerminatorLine={handleShowTerminatorLine}
+                            handlePastOrbitLineColor={handlePastOrbitLineColor}
+                            handleFutureOrbitLineColor={handleFutureOrbitLineColor}
+                            handleSatelliteCoverageColor={handleSatelliteCoverageColor}
+                            handleOrbitProjectionDuration={handleOrbitProjectionDuration}
+                            handleShowTooltip={handleShowTooltip}
+                            handleTileLayerID={handleTileLayerID}
+                        />
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={handleCloseDialog}>Close</Button>
+                    </DialogActions>
+                </Dialog>
+            </>
+        );
+    }
+
     // pre-made ResponsiveGridLayout
     let gridContents = [
         <StyledIslandParent key="map">
@@ -485,11 +552,12 @@ function GlobalSatelliteTrack() {
                     attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                 />
                 <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 5, top: 30, position: 'absolute'}}>
+                    <MapSettingsButton/>
                     <CenterHomeButton/>
                     <CenterMapButton/>
                     <FullscreenMapButton/>
                 </Box>
-
+                <MapSettingsIslandDialog open={openMapSettingsDialog}/>
                 {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
                 {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
 
@@ -528,7 +596,7 @@ function GlobalSatelliteTrack() {
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="map-settings">
-            <SettingsIsland
+            <MapSettingsIsland
                 initialShowPastOrbitPath={showPastOrbitPath}
                 initialShowFutureOrbitPath={showFutureOrbitPath}
                 initialShowSatelliteCoverage={showSatelliteCoverage}

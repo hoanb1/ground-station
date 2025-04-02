@@ -227,19 +227,42 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
+                        justifyContent: "space-between",
+                        alignItems: "stretch",
+                    }}>
+                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
+                            <Button fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}>
+                                A
+                            </Button>
+                        </Grid>
+                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
+                            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
+                                B
+                            </Button>
+                        </Grid>
+                        <Grid size="grow" style={{paddingRight: '0rem'}}>
+                            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
+                                C
+                            </Button>
+                        </Grid>
+                    </Grid>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
+                    <Grid container direction="row" sx={{
                             justifyContent: "space-between",
                             alignItems: "stretch",
                         }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
                             <Button fullWidth={true} disabled={trackingState['tracking_state'] === "tracking"}
-                                    variant="contained" color="success" style={{height: '70px'}}
+                                    variant="contained" color="success" style={{height: '60px'}}
                                     onClick={()=>{handleTrackingStart()}}
                             >
                                 TRACK
                             </Button>
                         </Grid>
                         <Grid size="grow">
-                            <Button fullWidth={true} variant="contained" color="error" style={{height: '70px'}}
+                            <Button fullWidth={true} variant="contained" color="error" style={{height: '60px'}}
                                     onClick={() => {handleTrackingStop()}}>
                                 STOP
                             </Button>

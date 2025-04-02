@@ -16,11 +16,12 @@ import 'leaflet/dist/leaflet.css';
 import createTerminatorLine from '../common/terminator-line.jsx';
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon} from '../common/icons.jsx';
-import SettingsIsland from "../common/map-settings.jsx";
+import MapSettingsIsland from "../common/map-settings.jsx";
 import {Box, Fab, Slider} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
@@ -65,7 +66,7 @@ import {
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
-
+import VideoPlayer from '../common/video.jsx';
 
 // global leaflet map object
 let MapObject = null;
@@ -237,7 +238,7 @@ const TargetSatelliteTrack = React.memo(function () {
                 y: 3,
                 w: 8,
                 h: 15,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
             {
                 i: 'satselector',
@@ -245,7 +246,7 @@ const TargetSatelliteTrack = React.memo(function () {
                 y: 0,
                 w: 2,
                 h: 4,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w'],
+                resizeHandles: ['se','ne','nw','sw','s','e','w'],
             },
             {
                 i: 'map-settings',
@@ -264,7 +265,7 @@ const TargetSatelliteTrack = React.memo(function () {
                 y: 11,
                 w: 2,
                 h: 8,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
             {
                 i: 'passes',
@@ -273,7 +274,16 @@ const TargetSatelliteTrack = React.memo(function () {
                 w: 8,
                 h: 10,
                 minH: 7,
-                resizeHandles: ['se','ne','nw','sw','n','s','e','w']
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
+            },
+            {
+                i: 'video',
+                x: 10,
+                y: 14,
+                w: 8,
+                h: 10,
+                minH: 7,
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
         ]
     };
@@ -368,6 +378,16 @@ const TargetSatelliteTrack = React.memo(function () {
             map.target.invalidateSize();
         }, 1000);
     };
+
+    function MapSettingsButton() {
+        const handleClick = () => {
+
+        };
+
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
+            <SettingsIcon />
+        </Fab>;
+    }
 
     function CenterHomeButton() {
         const targetCoordinates = [location.lat, location.lon];
@@ -620,6 +640,7 @@ const TargetSatelliteTrack = React.memo(function () {
                     attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                 />
                 <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 30, position: 'absolute'}}>
+                    <MapSettingsButton/>
                     <CenterHomeButton/>
                     <CenterMapButton/>
                     <FullscreenMapButton/>
@@ -665,7 +686,7 @@ const TargetSatelliteTrack = React.memo(function () {
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="map-settings">
-            <SettingsIsland
+            <MapSettingsIsland
                 initialShowPastOrbitPath={showPastOrbitPath}
                 initialShowFutureOrbitPath={showFutureOrbitPath}
                 initialShowSatelliteCoverage={showSatelliteCoverage}
@@ -700,6 +721,9 @@ const TargetSatelliteTrack = React.memo(function () {
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="video">
+            <VideoPlayer src={"http://192.168.60.47:1984/api/stream.m3u8?src=roofcamera2_sub&mp4=flac"}/>
         </StyledIslandParentScrollbar>
     ];
 

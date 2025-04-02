@@ -20,8 +20,9 @@ const ErrorPage = () => {
             }}
         >
             <Box>
-                <Typography variant="h3" color="error">
-                    Error {error?.status || 'Unknown'}
+                <Typography variant="h3" color="error" style={{display: 'flex', alignItems: 'center', gap: '8px'}}>
+                    <span>Error {error?.status || 'Unknown'}</span>
+                    <span role="img" aria-label="error-icon">❌</span>
                 </Typography>
                 <Typography variant="h5" color="textSecondary" gutterBottom>
                     {error?.statusText || 'Something went wrong'}

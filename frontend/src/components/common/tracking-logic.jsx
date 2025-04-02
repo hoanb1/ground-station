@@ -11,7 +11,12 @@ import {enqueueSnackbar} from "notistack";
  *                       Returns null if the satellite's position or velocity cannot be determined.
  */
 export function getSatelliteLatLon(tleLine1, tleLine2, date) {
+
     try {
+        if (!tleLine1 || !tleLine2 || !date) {
+            return [0, 0, 0, 0];
+        }
+
         const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
         const pv = satellite.propagate(satrec, date);
         if (!pv.position || !pv.velocity) return null;
@@ -25,6 +30,7 @@ export function getSatelliteLatLon(tleLine1, tleLine2, date) {
 
         const {x, y, z} = pv.velocity;
         const velocity = Math.sqrt(x * x + y * y + z * z);
+
         return [lat, lon, altitude, velocity];
 
     } catch (error) {

@@ -18,7 +18,7 @@ from arguments import arguments as args
 
 
 @async_timeit
-async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, step_minutes = 0.5) -> dict:
+async def fetch_next_events(norad_id: int, hours: float = 6.0, above_el = 0, step_minutes = 0.5) -> dict:
     """
     Calculates upcoming satellite observation events based on NORAD id, observation
     duration, elevation threshold, and time step. The function computes satellite
@@ -142,7 +142,7 @@ async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, st
         return reply
 
 
-async def fetch_next_events_for_group(group_id: str, hours: float = 6.0, above_el = 0, step_minutes = 1):
+async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el = 0, step_minutes = 1):
     """
     Fetches the next satellite events for a given group of satellites within a specified
     time frame. This function calculates the satellite events for a group identifier over
@@ -496,11 +496,25 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {round(skypoint[0], 2)} el: {round(skypoint[1], 2)}")
 
                 if rotator:
-                    async for current_az, current_el, slew_complete in rotator.set_position(skypoint[0], skypoint[1]):
-                        logger.info(f"Current position of rotator: AZ={current_az:.3f}° EL={current_el:.3f}°")
-                        if slew_complete:
-                            logger.info(f"Target position AZ: {round(skypoint[0], 2)} EL: {round(skypoint[1], 2)} reached!")
-                            #slew_complete = False
+                    position_gen = rotator.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
+
+                    try:
+                        az, el, is_slewing = await anext(position_gen)
+                        logger.info(f"Current position: Az={round(az, 3)}°, El={round(el, 3)}°, Moving={is_slewing}")
+
+                    except StopAsyncIteration:
+                        # Generator is done (slewing complete)
+                        logger.info("Slewing complete")
+
+                # lastly send updates to the UI
+                data = {
+                    'satellite_data': satellite_data,
+                    'tracking_state': tracker,
+                    #'ui_tracker_state': ui_tracker_state['data']
+                }
+
+                logger.debug(f"Sending satellite tracking data to the browser: {data}")
+                await sio.emit('satellite-tracking', data)
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{norad_id} {satellite_name}: {e}")
@@ -513,14 +527,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.exception(e)
 
             finally:
-                data = {
-                    'satellite_data': satellite_data,
-                    'tracking_state': tracker,
-                    #'ui_tracker_state': ui_tracker_state['data']
-                }
-
-                logger.debug(f"Sending satellite tracking data to the browser: {data}")
-                await sio.emit('satellite-tracking', data)
 
                 logger.info(f"Waiting for {args.track_interval} seconds before next update...")
                 await asyncio.sleep(args.track_interval)

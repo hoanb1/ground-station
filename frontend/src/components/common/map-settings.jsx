@@ -15,7 +15,7 @@ import {tileLayers, getTileLayerById} from './tile-layers.jsx';
 import {TitleBar, ThemedStackIsland, SettingItem, ThemedSettingsDiv} from './common.jsx';
 
 
-const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
+const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
                             initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
                             initialOrbitProjectionDuration, initialTileLayerID, initialShowTooltip, handleShowFutureOrbitPath, handleShowPastOrbitPath,
@@ -268,4 +268,4 @@ const SettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, 
     );
 };
 
-export default SettingsIsland;
+export default MapSettingsIsland;

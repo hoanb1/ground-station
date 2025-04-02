@@ -86,6 +86,7 @@ const overviewSlice = createSlice({
         selectedSatGroupId: "",
         passes: [],
         passesLoading: false,
+        openMapSettingsDialog: false,
     },
     reducers: {
         setShowPastOrbitPath(state, action) {
@@ -172,6 +173,9 @@ const overviewSlice = createSlice({
         setPassesLoading(state, action) {
             state.loading = action.payload;
         },
+        setOpenMapSettingsDialog(state, action) {
+            state.openMapSettingsDialog = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -232,6 +236,7 @@ export const {
     setSelectedSatGroupId,
     setPasses,
     setPassesLoading,
+    setOpenMapSettingsDialog,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;

@@ -1,7 +1,7 @@
 import time
 import asyncio
 import socket
-from typing import Optional, Tuple, Dict, Any, Union, AsyncGenerator
+from typing import Optional, Tuple, Dict, Any, Union, AsyncGenerator, Generator
 import logging
 from arguments import arguments as args
 from contextlib import asynccontextmanager
@@ -75,11 +75,10 @@ class RotatorController:
             return True
 
         # Run the synchronous connect method in a thread pool
-        loop = asyncio.get_event_loop()
         try:
-            return await loop.run_in_executor(
-                None, lambda: self.connect(timeout_s)
-            )
+            connected = await asyncio.to_thread(self.connect)
+            return connected
+
         except Exception as e:
             self.logger.error(f"Error in async connection: {e}")
             raise
@@ -116,7 +115,8 @@ class RotatorController:
         # Run the synchronous disconnect method in a thread pool
         loop = asyncio.get_event_loop()
         try:
-            return await loop.run_in_executor(None, self.disconnect)
+            return await asyncio.to_thread(self.disconnect)
+
         except Exception as e:
             self.logger.error(f"Error in async disconnection: {e}")
             return False
@@ -229,12 +229,11 @@ class RotatorController:
 
         self.check_connection()
 
-        loop = asyncio.get_event_loop()
-        az, el = await loop.run_in_executor(None, self._get_position)
+        az, el = await asyncio.to_thread(self._get_position)
 
         return az, el
 
-    def _get_position(self) -> Tuple[float, float]:
+    async def _get_position(self) -> Tuple[float, float]:
         """
         Obtains the current position of the rotator (azimuth and elevation) and logs it.
 
@@ -249,7 +248,7 @@ class RotatorController:
             there is an unexpected issue in accessing the data.
         """
         try:
-            az, el = self.rotator.get_position()
+            az, el = await asyncio.to_thread(self.rotator.get_position)
             assert az is not None, "Azimuth is None"
             assert el is not None, "Elevation is None"
 
@@ -262,18 +261,17 @@ class RotatorController:
 
     async def park(self) -> bool:
         """
-        Parks the rotator by delegating the operation to a separate thread
-        using `run_in_executor`. This method ensures that the rotator
-        stopping operation does not block the main asyncio event loop
-        and handles it asynchronously.
+        Asynchronously parks the rotator device.
 
-        :return: Returns True if the park operation was initiated
-                 successfully and handed over for execution.
+        This method calls an internal function to perform the park operation
+        in a background thread. It ensures that the device is secured and
+        safely parked to prevent unintended movement or usage.
+
+        :return: Indicates whether the operation to park was successful.
         :rtype: bool
         """
         # Park the rotator
-        loop = asyncio.get_event_loop()
-        await loop.run_in_executor(None, self._park)
+        await asyncio.to_thread(self._park)
 
         return True
 
@@ -394,80 +392,62 @@ class RotatorController:
 
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
-    async def set_position(self, target_az: float, target_el: float, update_interval: float = 2) -> AsyncGenerator[
+    async def set_position(self, target_az: float, target_el: float, update_interval: float = 2,
+                           az_tolerance: float = 1.0, el_tolerance: float = 1.0) -> AsyncGenerator[
         Tuple[float, float, bool], None]:
         """
-        Starts and monitors the process of slewing a rotator to a specified position in azimuth
-        and elevation. The function continuously checks the rotator's current position and yields
-        it until the target position is reached within a specified tolerance. The progress updates
-        are provided at regular intervals defined by the user.
+        Set the position of the system to the target azimuth and elevation levels. This is
+        an asynchronous generator method that periodically checks and updates the
+        position until it reaches the specified target or remains within the given
+        tolerances.
 
-        The target azimuth and elevation are considered reached if the differences are within 1 degree
-        tolerance. The function uses an asynchronous mechanism to monitor and report the rotator’s position.
+        The generator yields the current azimuth, elevation, and slewing status during
+        execution. If the target is reached within the tolerances, the status will indicate
+        the completion of the slewing operation.
 
-        :param target_az: Target azimuth position to rotate the rotator towards, in degrees.
+        :param target_az: The target azimuth level to reach.
         :type target_az: float
-        :param target_el: Target elevation position to rotate the rotator towards, in degrees.
+        :param target_el: The target elevation level to reach.
         :type target_el: float
-        :param update_interval: Interval, in seconds, to wait between consecutive position updates.
-        Defaults to 2 seconds if not specified.
-        :type update_interval: float, optional
-
-        :return: An asynchronous generator that yields a tuple containing the current azimuth,
-        current elevation, and a boolean indicating whether the target position has been reached.
+        :param update_interval: The time interval, in seconds, between status updates.
+        :type update_interval: float
+        :param az_tolerance: The tolerance within which the target azimuth is considered reached.
+        :type az_tolerance: float
+        :param el_tolerance: The tolerance within which the target elevation is considered reached.
+        :type el_tolerance: float
+        :yield: A tuple of the current azimuth, current elevation, and a boolean indicating
+                if the system is still slewing.
         :rtype: AsyncGenerator[Tuple[float, float, bool], None]
         """
+        # Start the slew operation
+        await self._set_position_start(target_az, target_el)
 
-        # Define what "reached target" means (within 1 degree tolerance)
-        def is_at_target(az, el):
-            az_diff = min(abs(az - target_az), 360 - abs(az - target_az))
-            el_diff = abs(el - target_el)
-            check = az_diff < 1.0 and el_diff < 1.0
-            self.logger.info(f"comparing az={round(az, 3)}, el={round(el, 3)} with target az={round(target_az, 3)}, el={round(target_el, 3)} = {check}")
-            return check
+        # Initial status
+        current_az, current_el = await self._get_position()
+        az_reached = abs(current_az - target_az) <= az_tolerance
+        el_reached = abs(current_el - target_el) <= el_tolerance
+        is_slewing = not (az_reached and el_reached)
 
-        self.check_connection()
+        # First yield with initial position
+        yield current_az, current_el, is_slewing
 
-        # Get the current position
-        current_az, current_el = await self.get_position()
-
-        # check if we are already there
-        at_target = is_at_target(current_az, current_el)
-        yield current_az, current_el, at_target
-
-        # Start the position set in a separate thread
-        loop = asyncio.get_event_loop()
-        self.logger.info(f"Slewing rotator to position: az={round(target_az, 3)}, el={round(target_el, 3)}")
-        set_task = loop.run_in_executor(None, self._set_position_start, target_az, target_el)
-
-        # Keep yielding the position until we're done
-        complete = False
-        while not complete:
-
-            self.logger.info("here!")
-
-            # Yield the current position and status
-            yield current_az, current_el, complete
-
-            # Wait a bit before checking again
+        # Keep checking position when consumer requests an update
+        while is_slewing:
+            # Wait for the update interval
             await asyncio.sleep(update_interval)
 
-            # Get updated position
-            current_az, current_el = await self.get_position()
+            # Get current position
+            current_az, current_el = await self._get_position()
 
             # Check if we've reached the target
-            complete = is_at_target(current_az, current_el)
-            self.logger.info(f"complete={complete}")
+            az_reached = abs(current_az - target_az) <= az_tolerance
+            el_reached = abs(current_el - target_el) <= el_tolerance
+            is_slewing = not (az_reached and el_reached)
 
+            # Yield the current position and slewing status
+            yield current_az, current_el, is_slewing
 
-        # Wait for the set_position task to complete
-        await set_task
-
-        # Final yield with completed status
-        yield current_az, current_el, True
-
-
-    def _set_position_start(self, az: float, el: float) -> bool:
+    async def _set_position_start(self, az: float, el: float) -> bool:
         """
         Sets the start position of the rotator by defining azimuth and elevation values.
 
@@ -489,13 +469,8 @@ class RotatorController:
         """
         try:
             self.logger.info(f"Setting rotator position to az={az}, el={el}")
-            status = self.rotator.set_position(az, el)
+            status = await asyncio.to_thread(self.rotator.set_position, az, el)
             self.logger.debug(f"Set position command: status={status}")
-
-            #if status != Hamlib.RIG_OK:
-            #    error_msg = f"Failed to set rotator position: {self.get_error_message(status)}"
-            #    self.logger.error(error_msg)
-            #    raise RuntimeError(error_msg)
 
             return True
 
