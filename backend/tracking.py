@@ -410,11 +410,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     :return: None
     """
 
+    # check interval value, should be between 2 and 5 (including)
+    assert 1 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
+
     azimuthlimits = (0, 360)
     eleveationlimits = (0, 180)
     previous_tracking_state = None
     rotator = None
-    slew_complete = False
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
@@ -527,7 +529,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.exception(e)
 
             finally:
-
                 logger.info(f"Waiting for {args.track_interval} seconds before next update...")
                 await asyncio.sleep(args.track_interval)
 
