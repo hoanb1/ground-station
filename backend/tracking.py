@@ -14,6 +14,8 @@ from logger import logger
 from models import ModelEncoder
 from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds
 from rotator import RotatorController
+from arguments import arguments as args
+
 
 @async_timeit
 async def fetch_next_events(norad_id: int, hours: float = 24.0, above_el = 0, step_minutes = 0.5) -> dict:
@@ -486,30 +488,19 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                 # first we check if the az end el values in the skypoint tuple are reachable
                 if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:
-                    raise AzimuthOutOfBounds(f"azimuth {skypoint[0]} is out of range (range: {azimuthlimits})")
+                    raise AzimuthOutOfBounds(f"azimuth {round(skypoint[0], 2)} is out of range (range: {azimuthlimits})")
 
                 if skypoint[1] < eleveationlimits[0] or skypoint[1] > eleveationlimits[1]:
-                    raise ElevationOutOfBounds(f"elevation {skypoint[1]} is out of range (range: {eleveationlimits})")
+                    raise ElevationOutOfBounds(f"elevation {round(skypoint[1], 2)} is out of range (range: {eleveationlimits})")
 
-                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {skypoint[0]} el: {skypoint[1]}")
+                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {round(skypoint[0], 2)} el: {round(skypoint[1], 2)}")
 
                 if rotator:
-                    if slew_complete is False:
-                        async for current_az, current_el, slew_complete in rotator.set_position(skypoint[0], skypoint[1]):
-                            logger.info(f"Position: AZ={current_az:.1f}° EL={current_el:.1f}°")
-                            if slew_complete:
-                                logger.info("Target position reached!")
-                                #slew_complete = False
-
-                data = {
-                    'satellite_data': satellite_data,
-                    'tracking_state': tracker,
-                    #'ui_tracker_state': ui_tracker_state['data']
-                }
-
-                logger.debug(f"Sending satellite tracking data to the browser: {data}")
-                await sio.emit('satellite-tracking', data)
-
+                    async for current_az, current_el, slew_complete in rotator.set_position(skypoint[0], skypoint[1]):
+                        logger.info(f"Current position of rotator: AZ={current_az:.3f}° EL={current_el:.3f}°")
+                        if slew_complete:
+                            logger.info(f"Target position AZ: {round(skypoint[0], 2)} EL: {round(skypoint[1], 2)} reached!")
+                            #slew_complete = False
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{norad_id} {satellite_name}: {e}")
@@ -522,5 +513,15 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.exception(e)
 
             finally:
-                await asyncio.sleep(3)
+                data = {
+                    'satellite_data': satellite_data,
+                    'tracking_state': tracker,
+                    #'ui_tracker_state': ui_tracker_state['data']
+                }
+
+                logger.debug(f"Sending satellite tracking data to the browser: {data}")
+                await sio.emit('satellite-tracking', data)
+
+                logger.info(f"Waiting for {args.track_interval} seconds before next update...")
+                await asyncio.sleep(args.track_interval)
 

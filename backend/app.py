@@ -11,6 +11,9 @@ from db import *
 from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
 from fastapi.staticfiles import StaticFiles
 from logger import logger
+from engineio.payload import Payload
+
+Payload.max_decode_packets = 50
 
 
 # hold a list of sessions

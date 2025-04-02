@@ -17,7 +17,7 @@ import overviewSatTrackReducer from '../overview/overview-sat-slice.jsx'
 const persistConfig = {
     key: "root",
     storage,
-    whitelist: ['preferences', 'targetSatTrack', 'tleSources'],
+    whitelist: ['preferences', 'targetSatTrack', 'tleSources', 'overviewSatTrack'],
 };
 
 const rootReducer = combineReducers({

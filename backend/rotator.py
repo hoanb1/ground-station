@@ -124,8 +124,17 @@ class RotatorController:
     @asynccontextmanager
     async def _create_connection(self):
         """
-        Async context manager for creating and cleaning up a connection.
-        Uses native asyncio TCP connection handling.
+        An asynchronous context manager to create and manage a connection.
+
+        This method establishes a connection to the specified host and port using
+        asyncio's open_connection function, with the ability to set a timeout for
+        connection attempts. Upon exiting the context, it ensures the connection is
+        closed properly, handling potential exceptions during cleanup to maintain
+        robustness.
+
+        :param self: The instance of the class invoking this function.
+        :yield: A tuple containing the asyncio StreamReader and StreamWriter
+                objects for the established connection.
         """
         reader = writer = None
         try:
@@ -149,11 +158,16 @@ class RotatorController:
 
     async def ping(self):
         """
-        Ping the rotator controller to check if it's responsive.
+        Send a ping command to the device and validate the response to determine
+        if the ping was successful. The method communicates using an asynchronous
+        connection manager to send a position query command, read the response, and
+        parse it for ensuring the expected format or values. Various error responses
+        and exceptions are handled to ensure robust execution.
 
-        Returns:
-            bool: True if a valid position can be obtained, False otherwise
+        :return: A boolean indicating whether the ping was successful or not
+        :rtype: bool
         """
+
         try:
             # Use the async connection manager
             async with self._create_connection() as (reader, writer):
@@ -221,7 +235,19 @@ class RotatorController:
         return az, el
 
     def _get_position(self) -> Tuple[float, float]:
+        """
+        Obtains the current position of the rotator (azimuth and elevation) and logs it.
 
+        This method queries the rotator device for its current position, ensuring both azimuth
+        and elevation are not `None`. If successful, it logs the values and returns them as a tuple.
+        In case of an error during the retrieval process, a runtime exception is raised after logging.
+
+        :returns: A tuple containing the azimuth and elevation as floating-point values.
+        :rtype: Tuple[float, float]
+
+        :raises RuntimeError: If an error occurs while retrieving the position from the rotator or if
+            there is an unexpected issue in accessing the data.
+        """
         try:
             az, el = self.rotator.get_position()
             assert az is not None, "Azimuth is None"
@@ -235,6 +261,16 @@ class RotatorController:
             raise RuntimeError(f"Error getting position: {e}")
 
     async def park(self) -> bool:
+        """
+        Parks the rotator by delegating the operation to a separate thread
+        using `run_in_executor`. This method ensures that the rotator
+        stopping operation does not block the main asyncio event loop
+        and handles it asynchronously.
+
+        :return: Returns True if the park operation was initiated
+                 successfully and handed over for execution.
+        :rtype: bool
+        """
         # Park the rotator
         loop = asyncio.get_event_loop()
         await loop.run_in_executor(None, self._park)
@@ -242,7 +278,20 @@ class RotatorController:
         return True
 
     def _park(self) -> bool:
+        """
+        Attempts to park the rotator by sending a command to the rotator system and
+        logging the operation status.
 
+        This method first checks the current connection status before attempting
+        to park the rotator. It logs messages to indicate the progress and status
+        of the parking operation. If an error occurs during this process, the
+        method will log the error details and raise a `RuntimeError` with the
+        appropriate message.
+
+        :raises RuntimeError: If any exception occurs during the parking process.
+        :return: A boolean indicating whether the parking of the rotator was initiated successfully.
+        :rtype: bool
+        """
         self.check_connection()
 
         try:
@@ -263,7 +312,18 @@ class RotatorController:
 
 
     def check_connection(self) -> bool:
+        """
+        Checks the connection status of the rotator.
 
+        This method verifies if the object is connected to the rotator and if the rotator
+        instance exists. If either of these conditions is not met, it logs an error message
+        and raises a RuntimeError. Otherwise, it confirms the connection by returning True.
+
+        :return: Indicates successful connection to the rotator.
+        :rtype: bool
+
+        :raises RuntimeError: If the object is not connected or the rotator instance is None.
+        """
         if not self.connected or self.rotator is None:
             error_msg = f"Not connected to rotator (connected: {self.connected}, rotator: {self.rotator})"
             self.logger.error(error_msg)
@@ -298,14 +358,19 @@ class RotatorController:
     @staticmethod
     def get_error_message(error_code: int) -> str:
         """
-        Convert a Hamlib error code to a readable message.
+        Retrieves the error message corresponding to a given error code. This static
+        method takes an error code as input and returns a string describing the error
+        associated with the provided code. If the error code is not recognized, a
+        default message indicating the unrecognized code is returned.
 
-        Args:
-            error_code: Hamlib error code
-
-        Returns:
-            str: Human-readable error message
+        :param error_code: An integer representing the error code for which the error
+            message is to be fetched.
+        :type error_code: int
+        :return: A string containing the error message corresponding to the provided
+            error code, or a default message if the error code is not recognized.
+        :rtype: str
         """
+
         error_messages = {
             Hamlib.RIG_OK: "No error",
             Hamlib.RIG_EINVAL: "Invalid parameter",
@@ -332,36 +397,55 @@ class RotatorController:
     async def set_position(self, target_az: float, target_el: float, update_interval: float = 2) -> AsyncGenerator[
         Tuple[float, float, bool], None]:
         """
-        Generator function that sets the rotator position and yields progress updates.
+        Starts and monitors the process of slewing a rotator to a specified position in azimuth
+        and elevation. The function continuously checks the rotator's current position and yields
+        it until the target position is reached within a specified tolerance. The progress updates
+        are provided at regular intervals defined by the user.
 
-        Args:
-            target_az: Target azimuth in degrees
-            target_el: Target elevation in degrees
-            update_interval: How often to yield position updates in seconds
+        The target azimuth and elevation are considered reached if the differences are within 1 degree
+        tolerance. The function uses an asynchronous mechanism to monitor and report the rotator’s position.
 
-        Yields:
-            Tuple[float, float, bool]: Current (azimuth, elevation, is_complete)
-            - When is_complete is True, the rotator has reached the target position
+        :param target_az: Target azimuth position to rotate the rotator towards, in degrees.
+        :type target_az: float
+        :param target_el: Target elevation position to rotate the rotator towards, in degrees.
+        :type target_el: float
+        :param update_interval: Interval, in seconds, to wait between consecutive position updates.
+        Defaults to 2 seconds if not specified.
+        :type update_interval: float, optional
+
+        :return: An asynchronous generator that yields a tuple containing the current azimuth,
+        current elevation, and a boolean indicating whether the target position has been reached.
+        :rtype: AsyncGenerator[Tuple[float, float, bool], None]
         """
-        self.check_connection()
-
-        # Start the position set in a separate thread
-        loop = asyncio.get_event_loop()
-        self.logger.info(f"Slewing rotator to position: az={target_az}, el={target_el}")
-        set_task = loop.run_in_executor(None, self._set_position_start, target_az, target_el)
-
-        # Get the starting position
-        current_az, current_el = await self.get_position()
 
         # Define what "reached target" means (within 1 degree tolerance)
         def is_at_target(az, el):
             az_diff = min(abs(az - target_az), 360 - abs(az - target_az))
             el_diff = abs(el - target_el)
-            return az_diff < 1.0 and el_diff < 1.0
+            check = az_diff < 1.0 and el_diff < 1.0
+            self.logger.info(f"comparing az={round(az, 3)}, el={round(el, 3)} with target az={round(target_az, 3)}, el={round(target_el, 3)} = {check}")
+            return check
+
+        self.check_connection()
+
+        # Get the current position
+        current_az, current_el = await self.get_position()
+
+        # check if we are already there
+        at_target = is_at_target(current_az, current_el)
+        yield current_az, current_el, at_target
+
+        # Start the position set in a separate thread
+        loop = asyncio.get_event_loop()
+        self.logger.info(f"Slewing rotator to position: az={round(target_az, 3)}, el={round(target_el, 3)}")
+        set_task = loop.run_in_executor(None, self._set_position_start, target_az, target_el)
 
         # Keep yielding the position until we're done
         complete = False
         while not complete:
+
+            self.logger.info("here!")
+
             # Yield the current position and status
             yield current_az, current_el, complete
 
@@ -373,6 +457,8 @@ class RotatorController:
 
             # Check if we've reached the target
             complete = is_at_target(current_az, current_el)
+            self.logger.info(f"complete={complete}")
+
 
         # Wait for the set_position task to complete
         await set_task
@@ -383,15 +469,23 @@ class RotatorController:
 
     def _set_position_start(self, az: float, el: float) -> bool:
         """
-        Starts the rotator slewing to the specified position.
-        This is meant to be run in a separate thread.
+        Sets the start position of the rotator by defining azimuth and elevation values.
 
-        Args:
-            az: Target azimuth in degrees
-            el: Target elevation in degrees
+        This method attempts to configure the rotator with the given azimuth and
+        elevation. Upon invocation, it logs the target values, sends a command to
+        update the rotator's position, and logs the status of the operation. If an
+        exception occurs during the process, an error message is logged, and a
+        RuntimeError is raised.
 
-        Returns:
-            bool: True if command was sent successfully
+        :param az: The azimuth angle that the rotator should be set to.
+        :type az: float
+        :param el: The elevation angle that the rotator should be set to.
+        :type el: float
+        :return: True if the rotator position is successfully set.
+        :rtype: bool
+        :raises RuntimeError: If the rotator encounters an error when attempting
+            to set the position.
+
         """
         try:
             self.logger.info(f"Setting rotator position to az={az}, el={el}")
