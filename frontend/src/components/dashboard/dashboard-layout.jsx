@@ -6,8 +6,8 @@ import * as React from "react";
 import {Outlet} from "react-router";
 import {Avatar, Backdrop, Box, Button, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GroundStationLogoGreenBlue, GSRetroLogo} from "./icons.jsx";
-import {stringAvatar} from "./common.jsx";
+import {GroundStationLogoGreenBlue, GSRetroLogo} from "../common/icons.jsx";
+import {stringAvatar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
 import {useCallback, useEffect, useState} from "react";
@@ -15,20 +15,23 @@ import {handleSetGridEditableOverview as OverviewModeSetEditing} from '../overvi
 import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target/target-sat-track.jsx'
 import CheckIcon from '@mui/icons-material/Check';
 import CircularProgress from "@mui/material/CircularProgress";
-import {useSocket} from "./socket.jsx";
+import {useSocket} from "../common/socket.jsx";
+import {useDispatch, useSelector} from "react-redux";
+import {setIsEditing} from "./dashboard-slice.jsx";
 
 
 function DashboardEditor() {
-    const [isEditing, setIsEditing] = React.useState(false);
+    const dispatch = useDispatch();
+    const {isEditing} = useSelector(state => state.dashboard);
 
     const handleEditClick = () => {
-        setIsEditing(true);
+        dispatch(setIsEditing(true));
         OverviewModeSetEditing(true);
         TargetModeSetEditing(true);
     };
 
     const handleSaveClick = () => {
-        setIsEditing(false);
+        dispatch(setIsEditing(false));
         OverviewModeSetEditing(false);
         TargetModeSetEditing(false);
     };

@@ -49,9 +49,9 @@ export const setTrackingStateInBackend = createAsyncThunk(
 
 export const fetchNextPasses = createAsyncThunk(
     'targetSatTrack/fetchNextPasses',
-    async ({socket, noradId}, {rejectWithValue}) => {
+    async ({socket, noradId, hours}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
-            socket.emit('data_request', 'fetch-next-passes', noradId, (response) => {
+            socket.emit('data_request', 'fetch-next-passes', {'norad_id': noradId, 'hours': hours}, (response) => {
                 if (response.success) {
                     resolve(response.data);
                 } else {
@@ -185,7 +185,6 @@ const targetSatTrackSlice = createSlice({
         moonPos: null,
         gridEditable: false,
         sliderTimeOffset: 0,
-        location: { lat: 0, lon: 0 },
         satelliteSelectOpen: false,
         satelliteGroupSelectOpen: false,
         uiTrackerDisabled: false,
@@ -193,6 +192,7 @@ const targetSatTrackSlice = createSlice({
         selectedRadioRig: "",
         selectedRotator: "",
         openMapSettingsDialog: false,
+        nextPassesHours: 6.0,
     },
     reducers: {
         setLoading(state, action) {
@@ -325,6 +325,9 @@ const targetSatTrackSlice = createSlice({
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
         },
+        setNextPassesHours(state, action) {
+            state.nextPassesHours = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -445,6 +448,7 @@ export const {
     setRadioRig,
     setRotator,
     setOpenMapSettingsDialog,
+    setNextPassesHours,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

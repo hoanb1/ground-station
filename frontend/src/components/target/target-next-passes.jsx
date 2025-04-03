@@ -6,16 +6,17 @@ import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {fetchNextPasses, setSatellitePasses} from './target-sat-slice.jsx';
 
+
 const NextPassesIsland = ({noradId}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const [containerHeight, setContainerHeight] = useState(0);
     const containerRef = useRef(null);
-    const { passesLoading, satellitePasses, satelliteData } = useSelector(state => state.targetSatTrack);
+    const { passesLoading, satellitePasses, satelliteData, nextPassesHours } = useSelector(state => state.targetSatTrack);
 
     useEffect(() => {
         if (noradId) {
-            dispatch(fetchNextPasses({socket, noradId}))
+            dispatch(fetchNextPasses({socket, noradId, hours: nextPassesHours}))
                 .unwrap()
                 .then(response => {
 
@@ -50,7 +51,7 @@ const NextPassesIsland = ({noradId}) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {satelliteData['details']['name']}</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {satelliteData['details']['name']} in the next {nextPassesHours} hours</TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',

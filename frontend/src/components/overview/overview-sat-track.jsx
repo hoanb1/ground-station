@@ -40,20 +40,8 @@ import {useSocket} from "../common/socket.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";
 import {
-    setShowPastOrbitPath,
-    setShowFutureOrbitPath,
-    setShowSatelliteCoverage,
-    setShowSunIcon,
-    setShowMoonIcon,
-    setShowTerminatorLine,
     setShowTooltip,
     setGridEditable,
-    setSelectedSatellites,
-    setPastOrbitLineColor,
-    setFutureOrbitLineColor,
-    setSatelliteCoverageColor,
-    setOrbitProjectionDuration,
-    setTileLayerID,
     setMapZoomLevel,
     setLocation,
     setLocationId,

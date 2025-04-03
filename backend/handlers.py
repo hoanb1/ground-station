@@ -138,7 +138,7 @@ async def data_request_routing(sio, cmd, data, logger):
 
         elif cmd == "fetch-next-passes":
             logger.debug(f'Fetching next passes, data: {data}')
-            next_passes = await fetch_next_events(norad_id=data)
+            next_passes = await fetch_next_events(norad_id=data.get('norad_id', None), hours=data.get('hours', 6.0))
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
         elif cmd == "fetch-next-passes-for-group":

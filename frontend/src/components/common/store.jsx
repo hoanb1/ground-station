@@ -11,7 +11,8 @@ import locationReducer from '../settings/location-slice.jsx';
 import synchronizeReducer from '../satellites/synchronize-slice.jsx';
 import preferencesReducer from '../settings/preferences-slice.jsx';
 import targetSatTrackReducer from '../target/target-sat-slice.jsx'
-import overviewSatTrackReducer from '../overview/overview-sat-slice.jsx'
+import overviewSatTrackReducer from '../overview/overview-sat-slice.jsx';
+import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 
 
 const persistConfig = {
@@ -21,6 +22,7 @@ const persistConfig = {
 };
 
 const rootReducer = combineReducers({
+    dashboard: dashboardReducer,
     rigs: rigsReducer,
     rotators: rotatorsReducer,
     tleSources: tleSourcesReducer,

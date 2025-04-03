@@ -16,7 +16,7 @@ import {
 } from "./components/settings/settings.jsx";
 import GlobalSatelliteTrack from "./components/overview/overview-sat-track.jsx";
 import App from "./App.jsx";
-import Layout from "./components/common/dashboard.jsx";
+import Layout from "./components/dashboard/dashboard-layout.jsx";
 import TargetSatelliteTrack from "./components/target/target-sat-track.jsx";
 import {SocketProvider, useSocket} from './components/common/socket.jsx';
 import {AuthProvider} from "./components/common/auth.jsx";

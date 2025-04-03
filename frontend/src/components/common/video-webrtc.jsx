@@ -182,7 +182,7 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
             <TitleBar className={"react-grid-draggable window-title-bar"}>WebRTC Video</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
+                    <FormControl sx={{ marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
                         <InputLabel htmlFor="camera-select">Camera</InputLabel>
                         <Select value={selectedCamera} id="camera-select" label="Grouping"
                                 variant={"filled"} size={"small"} onChange={handleOnCameraChange}>
@@ -198,7 +198,7 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
                             {error}
                         </div>
                     )}
-                    <div style={{ position: 'relative', width: '100%', height: '300px', border: '1px solid #424242' }}>
+                    <div style={{ position: 'relative', height: '300px', width: '100%', border: '1px solid #424242' }}>
                         <video
                             ref={videoRef}
                             autoPlay
