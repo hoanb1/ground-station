@@ -6,15 +6,20 @@ import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";
 import { fetchNextPassesForGroup, fetchSatelliteGroups, fetchSatellitesByGroupId } from './overview-sat-slice.jsx';
 
+
 const NextPassesGroupIsland = () => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
-    const { selectedSatGroupId, passes, passesLoading } = useSelector(state => state.overviewSatTrack);
+    const { selectedSatGroupId, passes, passesLoading, nextPassesHours } = useSelector(state => state.overviewSatTrack);
 
     useEffect(() => {
-        dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId}))
+        if (selectedSatGroupId) {
+            console.info("selectedSatGroupId", selectedSatGroupId);
+            dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId}));
+        }
+
         return () => {
 
         };
@@ -51,7 +56,7 @@ const NextPassesGroupIsland = () => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes</TitleBar>
+            <TitleBar className={"react-grid-draggable window-title-bar"}>Passes for the next {nextPassesHours} hours</TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',

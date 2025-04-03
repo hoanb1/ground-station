@@ -40,7 +40,6 @@ export const storeLocation = createAsyncThunk(
         return new Promise((resolve, reject) => {
             socket.emit('data_submission', 'submit-location-for-user-id',
                 {...location, name: "home", userid: null, id: locationId}, (response) => {
-                console.info("response", response);
                     if (response['success']) {
                         enqueueSnackbar('Location set successfully', {
                             variant: 'success',

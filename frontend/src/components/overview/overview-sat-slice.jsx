@@ -8,7 +8,6 @@ export const fetchSatelliteGroups = createAsyncThunk(
                 if (response.success) {
                     resolve(response.data);
                 } else {
-                    // Here, you might use the error message directly, or a fallback string
                     reject(rejectWithValue('Failed to get satellite groups'));
                 }
             });
@@ -37,9 +36,9 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
 
 export const fetchNextPassesForGroup = createAsyncThunk(
     'overviewPasses/fetchNextPassesForGroup',
-    async ({ socket, selectedSatGroupId }, { rejectWithValue }) => {
+    async ({ socket, selectedSatGroupId, hours }, { rejectWithValue }) => {
         return new Promise((resolve, reject) => {
-            socket.emit('data_request', 'fetch-next-passes-for-group', selectedSatGroupId, (response) => {
+            socket.emit('data_request', 'fetch-next-passes-for-group', {group_id: selectedSatGroupId, hours: hours}, (response) => {
                 if (response.success) {
                     resolve(response.data);
                 } else {
@@ -87,6 +86,7 @@ const overviewSlice = createSlice({
         passes: [],
         passesLoading: false,
         openMapSettingsDialog: false,
+        nextPassesHours: 2.0,
     },
     reducers: {
         setShowPastOrbitPath(state, action) {
@@ -176,6 +176,9 @@ const overviewSlice = createSlice({
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
         },
+        setNextPassesHours(state, action) {
+            state.nextPassesHours = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -237,6 +240,7 @@ export const {
     setPasses,
     setPassesLoading,
     setOpenMapSettingsDialog,
+    setNextPassesHours,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;

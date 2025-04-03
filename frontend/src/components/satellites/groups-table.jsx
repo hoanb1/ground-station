@@ -58,13 +58,22 @@ const GroupsTable = () => {
             field: 'satellite_ids',
             headerName: 'Satellites',
             width: 300,
-            flex: 3,
+            flex: 5,
         },
         {
             field: 'added',
             headerName: 'Added',
             width: 200,
-            flex: 4,
+            flex: 1,
+            align: 'right',
+            headerAlign: 'right',
+            renderCell: (params) => betterDateTimes(params.value),
+        },
+        {
+            field: 'updated',
+            headerName: 'Updated',
+            width: 200,
+            flex: 1,
             align: 'right',
             headerAlign: 'right',
             renderCell: (params) => betterDateTimes(params.value),
@@ -87,7 +96,6 @@ const GroupsTable = () => {
         if (selected.length !== 1) return;
         const singleRowId = selected[0];
         const rowData = groups.find((row) => row.id === singleRowId);
-        console.info("selected", rowData);
         if (rowData) {
             dispatch(setSatGroup(rowData));
             dispatch(setFormDialogOpen(true));

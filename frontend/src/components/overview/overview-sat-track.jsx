@@ -48,6 +48,7 @@ import {
     setLocationUserId,
     setSatelliteGroupId,
     setOpenMapSettingsDialog,
+    setNextPassesHours,
 } from './overview-sat-slice.jsx';
 import NextPassesGroupIsland from "./overview-sat-passes.jsx";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -120,6 +121,7 @@ function GlobalSatelliteTrack() {
         mapZoomLevel,
         satelliteGroupId,
         openMapSettingsDialog,
+        nextPassesHours,
     } = useSelector(state => state.overviewSatTrack);
     const { location, } = useSelector((state) => state.location);
 
@@ -175,14 +177,6 @@ function GlobalSatelliteTrack() {
         dispatch(setMapZoomLevel(zoomLevel));
     }, [mapZoomLevel]);
 
-    const handleShowTooltip = useCallback((value) => {
-        dispatch(setShowTooltip(value));
-    }, [showTooltip]);
-
-    const handleSatelliteGroupIdChange = useCallback((groupid) => {
-        dispatch(setSatelliteGroupId(groupid));
-    }, [selectedSatellites]);
-
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
@@ -227,7 +221,6 @@ function GlobalSatelliteTrack() {
     }
 
     function satelliteUpdate(now) {
-        // generate current positions for the group of satellites
         let currentPos = [];
         let currentCoverage = [];
         let currentFuturePaths = [];

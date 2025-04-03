@@ -159,8 +159,8 @@ const SatelliteTable = React.memo(function () {
         if (groupId !== null) {
             dispatch(fetchSatellites({socket, satGroupId: groupId}))
                 .unwrap()
-                .then(() => {
-                    enqueueSnackbar('Satellites loaded successfully', {
+                .then((data) => {
+                    enqueueSnackbar(`Successfully loaded ${data.length} satellites`, {
                         variant: 'success'
                     });
                 })
@@ -194,13 +194,13 @@ const SatelliteTable = React.memo(function () {
                     <ListSubheader>User defined satellite groups</ListSubheader>
                     {satellitesGroups.map((group, index) => {
                         if (group.type === "user") {
-                            return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                            return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                         }
                     })}
                     <ListSubheader>Build-in satellite groups</ListSubheader>
                     {satellitesGroups.map((group, index) => {
                         if (group.type === "system") {
-                            return <MenuItem value={group.id} key={index}>{group.name}</MenuItem>;
+                            return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                         }
                     })}
                 </Select>
