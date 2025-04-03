@@ -15,7 +15,7 @@ import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
 import createTerminatorLine from '../common/terminator-line.jsx';
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
-import {moonIcon, sunIcon, homeIcon, satelliteIcon} from '../common/icons.jsx';
+import {moonIcon, sunIcon, homeIcon, satelliteIcon, satelliteIcon2} from '../common/icons.jsx';
 import MapSettingsIsland from "../common/map-settings.jsx";
 import {Box, Fab, Slider} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
@@ -66,7 +66,12 @@ import {
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
-import VideoPlayer from '../common/video.jsx';
+import VideoPlayer from '../common/video-hls.jsx';
+import VideoMJPEGPlayer from "../common/video-mjpeg.jsx";
+import VideoWebRTCPlayer from "../common/video-webrtc.jsx";
+import {setOpenMapSettingsDialog} from "./target-sat-slice.jsx";
+import MapSettingsIslandDialog from './map-settings-dialog.jsx';
+
 
 // global leaflet map object
 let MapObject = null;
@@ -217,6 +222,7 @@ const TargetSatelliteTrack = React.memo(function () {
         moonPos,
         gridEditable,
         sliderTimeOffset,
+        openMapSettingsDialog,
     } = useSelector(state => state.targetSatTrack);
 
     const { location } = useSelector(state => state.location);
@@ -249,17 +255,6 @@ const TargetSatelliteTrack = React.memo(function () {
                 resizeHandles: ['se','ne','nw','sw','s','e','w'],
             },
             {
-                i: 'map-settings',
-                x: 8,
-                y: 9,
-                w: 2,
-                h: 12,
-                minW: 2,
-                maxW: 2,
-                minH: 12,
-                maxH: 12,
-            },
-            {
                 i: 'info',
                 x: 10,
                 y: 11,
@@ -273,14 +268,14 @@ const TargetSatelliteTrack = React.memo(function () {
                 y: 14,
                 w: 8,
                 h: 10,
-                minH: 7,
+                minH: 6,
                 resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
             {
                 i: 'video',
                 x: 10,
                 y: 14,
-                w: 8,
+                w: 2,
                 h: 10,
                 minH: 7,
                 resizeHandles: ['se','ne','nw','sw','s','e','w']
@@ -293,68 +288,8 @@ const TargetSatelliteTrack = React.memo(function () {
         dispatch(setGridEditable(value));
     }, [gridEditable]);
 
-    const handleShowPastOrbitPath = useCallback((value) => {
-        dispatch(setShowPastOrbitPath(value));
-    }, [showPastOrbitPath]);
-
-    const handleShowFutureOrbitPath = useCallback((value) => {
-        dispatch(setShowFutureOrbitPath(value));
-    }, [showFutureOrbitPath]);
-
-    const handleShowSatelliteCoverage = useCallback((value) => {
-        dispatch(setShowSatelliteCoverage(value));
-    }, [showSatelliteCoverage]);
-
-    const handleSetShowSunIcon = useCallback((value) => {
-        dispatch(setShowSunIcon(value));
-    }, [showSunIcon]);
-
-    const handleSetShowMoonIcon = useCallback((value) => {
-        dispatch(setShowMoonIcon(value));
-    }, [showMoonIcon]);
-
-    const handleShowTerminatorLine = useCallback((value) => {
-        dispatch(setShowTerminatorLine(value));
-    }, [showTerminatorLine]);
-
-    const handlePastOrbitLineColor = useCallback((color) => {
-        dispatch(setPastOrbitLineColor(color));
-    }, [pastOrbitLineColor]);
-
-    const handleFutureOrbitLineColor = useCallback((color) => {
-        dispatch(setFutureOrbitLineColor(color));
-    }, [futureOrbitLineColor]);
-
-    const handleSatelliteCoverageColor = useCallback((color) => {
-        dispatch(setSatelliteCoverageColor(color));
-    }, [satelliteCoverageColor]);
-
-    const handleOrbitProjectionDuration = useCallback((minutes) => {
-        dispatch(setOrbitProjectionDuration(minutes));
-    }, [orbitProjectionDuration]);
-
-    const handleTileLayerID = useCallback((id) => {
-        dispatch(setTileLayerID(id));
-    }, [tileLayerID]);
-
-    // const handleSelectSatelliteId = useCallback((noradId) => {
-    //     const data = { 'norad_id': noradId, 'tracking_state': 'tracking', 'group_id': groupId };
-    //     setLoading(true);
-    //     dispatch(setTrackingStateInBackend({ socket, data }))
-    //         .unwrap()
-    //         .then((response) => {
-    //             const satelliteData = response['satellite_data'];
-    //             dispatch(setSatelliteData(satelliteData));
-    //         })
-    //         .catch((error) => {
-    //             enqueueSnackbar(error, {
-    //                 variant: 'error',
-    //             });
-    //         });
-    // }, [noradId]);
-
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
-        (setMapZoomLevel(zoomLevel));
+        dispatch(setMapZoomLevel(zoomLevel));
     }, [mapZoomLevel]);
 
     const handleSliderChange = useCallback((value) => {
@@ -380,8 +315,9 @@ const TargetSatelliteTrack = React.memo(function () {
     };
 
     function MapSettingsButton() {
+        const dispatch = useDispatch();
         const handleClick = () => {
-
+            dispatch(setOpenMapSettingsDialog(true));
         };
 
         return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
@@ -496,14 +432,14 @@ const TargetSatelliteTrack = React.memo(function () {
 
             if (showTooltip) {
                 currentPos.push(<Marker key={"marker-"+satelliteData['details']['norad_id']} position={[latitude, longitude]}
-                                        icon={satelliteIcon}>
+                                        icon={satelliteIcon2}>
                     <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={1} permanent>
                         {satelliteData['details']['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(0) + " km/s"}
                     </ThemedLeafletTooltip>
                 </Marker>);
             } else {
                 currentPos.push(<Marker key={"marker-"+satelliteData['details']['norad_id']} position={[latitude, longitude]}
-                                        icon={satelliteIcon}>
+                                        icon={satelliteIcon2}>
                 </Marker>);
             }
 
@@ -567,7 +503,7 @@ const TargetSatelliteTrack = React.memo(function () {
         if (coverageRef.current) {
             // Fit the map to the polygon's bounds
             MapObject.fitBounds(coverageRef.current.getBounds(), {
-                    padding: [35, 35],
+                    padding: [30, 15],
                 }
             );
         }
@@ -680,39 +616,12 @@ const TargetSatelliteTrack = React.memo(function () {
                 {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
+                <MapSettingsIslandDialog open={openMapSettingsDialog}/>
                 <MapStatusBar/>
                 <MapArrowControls mapObject={MapObject}/>
                 <MapSlider handleSliderChange={handleSliderChange}/>
             </MapContainer>
         </StyledIslandParent>,
-        <StyledIslandParentScrollbar key="map-settings">
-            <MapSettingsIsland
-                initialShowPastOrbitPath={showPastOrbitPath}
-                initialShowFutureOrbitPath={showFutureOrbitPath}
-                initialShowSatelliteCoverage={showSatelliteCoverage}
-                initialShowSunIcon={showSunIcon}
-                initialShowMoonIcon={showMoonIcon}
-                initialShowTerminatorLine={showTerminatorLine}
-                initialPastOrbitLineColor={pastOrbitLineColor}
-                initialFutureOrbitLineColor={futureOrbitLineColor}
-                initialSatelliteCoverageColor={satelliteCoverageColor}
-                initialOrbitProjectionDuration={orbitProjectionDuration}
-                initialTileLayerID={tileLayerID}
-                initialShowTooltip={showTooltip}
-                handleShowTooltip={handleShowTooltip}
-                handleShowPastOrbitPath={handleShowPastOrbitPath}
-                handleShowFutureOrbitPath={handleShowFutureOrbitPath}
-                handleShowSatelliteCoverage={handleShowSatelliteCoverage}
-                handleSetShowSunIcon={handleSetShowSunIcon}
-                handleSetShowMoonIcon={handleSetShowMoonIcon}
-                handleShowTerminatorLine={handleShowTerminatorLine}
-                handlePastOrbitLineColor={handlePastOrbitLineColor}
-                handleFutureOrbitLineColor={handleFutureOrbitLineColor}
-                handleSatelliteCoverageColor={handleSatelliteCoverageColor}
-                handleOrbitProjectionDuration={handleOrbitProjectionDuration}
-                handleTileLayerID={handleTileLayerID}
-            />
-        </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="info">
             <SatelliteInfoIsland/>
         </StyledIslandParentScrollbar>,
@@ -723,7 +632,7 @@ const TargetSatelliteTrack = React.memo(function () {
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="video">
-            <VideoPlayer src={"http://192.168.60.47:1984/api/stream.m3u8?src=roofcamera2_sub&mp4=flac"}/>
+            <VideoWebRTCPlayer src={"http://192.168.60.47:1984/stream.html?src=roofcamera2_sub"}/>
         </StyledIslandParentScrollbar>
     ];
 

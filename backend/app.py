@@ -111,7 +111,6 @@ async def init_db():
     logger.info("Initializing database...")
     async with engine.begin() as conn:
         # Create tables
-        #await conn.run_sync(Base.metadata.drop_all)
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized.")
 

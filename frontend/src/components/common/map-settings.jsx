@@ -48,9 +48,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
     const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
 
     return (
-        <ThemedSettingsDiv>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Map settings</TitleBar>
-            <ThemedStackIsland>
+            <Stack>
                 <SettingItem style={{padding: '0.5rem 0.5rem'}}>
                     <FormControl fullWidth size={"small"} variant={"filled"}>
                         <InputLabel id="orbit-time-label">Orbit Projection Time</InputLabel>
@@ -263,8 +261,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                         label="Future orbit line color"
                     />
                 </SettingItem>
-            </ThemedStackIsland>
-        </ThemedSettingsDiv>
+            </Stack>
     );
 };
 

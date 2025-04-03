@@ -1,16 +1,18 @@
 import React, { useEffect, useRef } from 'react';
 import Hls from 'hls.js';
-import {SATELLITE_NUMBER_LIMIT, TitleBar} from "./common.jsx";
-import {FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
+import {TitleBar} from "./common.jsx";
+import {FormControl, InputLabel, MenuItem, Select} from "@mui/material";
 import Grid from "@mui/material/Grid2";
 
-const VideoPlayer = ({ src }) => {
+const VideoHLSPlayer = ({ src }) => {
     const videoRef = useRef(null);
 
     let cameras = [];
     let selectedCamera = "";
 
     useEffect(() => {
+        if (!videoRef.current || !src) return;
+
         let hls;
 
         if (Hls.isSupported()) {
@@ -38,8 +40,8 @@ const VideoPlayer = ({ src }) => {
         };
     }, [src]);
 
-    function handleOnCameraChange() {
-
+    function handleOnCameraChange(event) {
+        // Implement camera change logic here
     }
 
     return (
@@ -69,4 +71,4 @@ const VideoPlayer = ({ src }) => {
     );
 };
 
-export default VideoPlayer;
+export default VideoHLSPlayer;

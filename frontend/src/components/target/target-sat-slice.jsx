@@ -192,6 +192,7 @@ const targetSatTrackSlice = createSlice({
         starting: true,
         selectedRadioRig: "",
         selectedRotator: "",
+        openMapSettingsDialog: false,
     },
     reducers: {
         setLoading(state, action) {
@@ -320,7 +321,10 @@ const targetSatTrackSlice = createSlice({
         },
         setRotator(state, action) {
             state.selectedRotator = action.payload;
-        }
+        },
+        setOpenMapSettingsDialog(state, action) {
+            state.openMapSettingsDialog = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -440,6 +444,7 @@ export const {
     setStarting,
     setRadioRig,
     setRotator,
+    setOpenMapSettingsDialog,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;
