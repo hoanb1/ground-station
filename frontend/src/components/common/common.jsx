@@ -1,13 +1,14 @@
 import {styled} from "@mui/material/styles";
 import Paper from "@mui/material/Paper";
 import {Polyline, Tooltip as LeafletTooltip} from "react-leaflet";
-import React from "react";
+import React, {useEffect, useRef, useState} from "react";
 import Tooltip from "@mui/material/Tooltip";
 import {Box, Chip, Fab, Stack} from "@mui/material";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import {useResizeDetector} from "react-resize-detector";
 
 export const SATELLITE_NUMBER_LIMIT = 50;
 
@@ -83,7 +84,7 @@ export const MapStatusBar = styled(Paper)(({ theme }) => ({
     position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
     borderTop: '1px solid #494949',
-    zIndex: 400,
+    zIndex: 450,
     bottom: -1,
     textAlign: 'left',
     fontWeight: 'normal',
@@ -399,3 +400,37 @@ export function humanizeFrequency(hertz, decimals = 2) {
     return `${preciseHertz.toFixed(decimals)} ${units[unitIndex]}`;
 }
 
+
+export function ResponsiveTruncatedText({ text, className }) {
+    const { width, ref } = useResizeDetector();
+    const [displayText, setDisplayText] = useState(text);
+    const textRef = useRef(null);
+
+    useEffect(() => {
+        if (textRef.current && width) {
+            if (textRef.current.scrollWidth > width) {
+                setDisplayText(text.substring(0, Math.floor(width / 8)) + '...');
+            } else {
+                setDisplayText(text);
+            }
+        }
+    }, [width, text]);
+
+    return (
+        <div ref={ref} style={{ width: '100%' }}>
+      <span
+          className={className}
+          ref={textRef}
+          style={{
+              whiteSpace: 'nowrap',
+              overflow: 'hidden',
+              textOverflow: 'ellipsis',
+              display: 'inline-block',
+              maxWidth: '100%'
+          }}
+      >
+        {displayText}
+      </span>
+        </div>
+    );
+}
