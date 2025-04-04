@@ -24,12 +24,26 @@ import SynchronizeTLEsCard from "./sychronize-card.jsx";
 const columns = [
     {field: 'name', headerName: 'Name', width: 150},
     {field: 'identifier', headerName: 'ID', width: 150},
-    {field: 'url', headerName: 'URL', width: 600},
-    {field: 'format', headerName: 'Format', width: 80},
+    {field: 'url', headerName: 'URL', flex: 2},
+    {field: 'format', headerName: 'Format', width: 90},
     {
         field: 'added',
         headerName: 'Added',
-        width: 400,
+        flex: 1,
+        align: 'right',
+        headerAlign: 'right',
+        width: 100,
+        renderCell: (params) => {
+            return betterDateTimes(params.value);
+        }
+    },
+    {
+        field: 'updated',
+        headerName: 'Updated',
+        flex: 1,
+        width: 100,
+        align: 'right',
+        headerAlign: 'right',
         renderCell: (params) => {
             return betterDateTimes(params.value);
         }

@@ -8,7 +8,7 @@ import {
     Select,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import {SATELLITE_NUMBER_LIMIT, TitleBar} from "../common/common.jsx";
+import {TitleBar} from "../common/common.jsx";
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
@@ -28,6 +28,9 @@ import {
 } from './target-sat-slice.jsx';
 import SatelliteList from "./target-sat-list.jsx";
 import {enqueueSnackbar} from "notistack";
+
+
+const SATELLITE_NUMBER_LIMIT = 500;
 
 
 const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {

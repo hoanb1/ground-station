@@ -7,7 +7,7 @@ import {
 import { useTheme, styled } from '@mui/material/styles';
 import React, {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
-import {SATELLITE_NUMBER_LIMIT, TitleBar} from "../common/common.jsx";
+import {TitleBar} from "../common/common.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
@@ -21,6 +21,8 @@ import {
     fetchSatellitesByGroupId,
 } from "./overview-sat-slice.jsx";
 import Typography from "@mui/material/Typography";
+
+const SATELLITE_NUMBER_LIMIT = 50;
 
 
 const OverviewSatelliteGroupSelector = React.memo(function () {

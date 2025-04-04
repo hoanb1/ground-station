@@ -65,25 +65,13 @@ function LinearWithValueLabel({progress}) {
     );
 }
 
-LinearProgressWithLabel.propTypes = {
-    /**
-     * The value of the progress indicator for the determinate and buffer variants.
-     * Value between 0 and 100.
-     */
-    value: PropTypes.number.isRequired,
-};
-
 
 const SynchronizeTLEsCard = function () {
     const dispatch = useDispatch();
     const { socket } = useSocket();
-
-    // Redux state
     const { progress, message, status } = useSelector((state) => state.syncSatellite);
 
-    // When user clicks "Synchronize" button
     const handleSynchronizeSatellites = async () => {
-        // Dispatch async thunk to initiate sync
         dispatch(startSatelliteSync({ socket }));
     };
 

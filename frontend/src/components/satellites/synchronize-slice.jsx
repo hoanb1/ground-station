@@ -1,11 +1,9 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { enqueueSnackbar } from 'notistack';
 
 export const startSatelliteSync = createAsyncThunk(
     'syncSatellite/start',
     async ({ socket }, { rejectWithValue }) => {
         try {
-            // Emitting the socket event for synchronization
             return await new Promise((resolve, reject) => {
                 socket.emit('data_request', 'sync-satellite-data', null, (response) => {
                     if (response.success === true) {
@@ -24,7 +22,7 @@ export const startSatelliteSync = createAsyncThunk(
 const syncSatelliteSlice = createSlice({
     name: 'syncSatellite',
     initialState: {
-        progress: {},
+        progress: 0,
         message: '',
         status: 'idle', // "idle", "loading", "succeeded", "failed"
         error: null,
@@ -48,7 +46,6 @@ const syncSatelliteSlice = createSlice({
             })
             .addCase(startSatelliteSync.fulfilled, (state, action) => {
                 state.status = 'succeeded';
-                // Optionally store a message or other data
             })
             .addCase(startSatelliteSync.rejected, (state, action) => {
                 state.status = 'failed';

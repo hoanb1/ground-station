@@ -83,12 +83,12 @@ export default function App(props) {
         },
         {
             segment: '',
-            title: 'Overview',
+            title: 'Birds eye view',
             icon: <PublicIcon/>,
         },
         {
             segment: 'track',
-            title: 'Track single satellite',
+            title: 'Tracking console',
             icon: <GpsFixedIcon/>,
         },
         {kind: 'divider'},

@@ -31,4 +31,14 @@ class ElevationOutOfBounds(Exception):
         return base_str
 
 
+class MinimumElevationError(Exception):
+
+    def __init__(self, message: str):
+        super().__init__(message)
+        self.message = message
+
+    def __str__(self):
+        base_str = f"MinimumElevationError: {self.message}"
+        return base_str
+
 

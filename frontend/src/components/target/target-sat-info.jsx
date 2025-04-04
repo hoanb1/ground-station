@@ -19,14 +19,10 @@ const SatelliteInfoIsland = () => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable"}>Satellite info</TitleBar>
+            <TitleBar className={"react-grid-draggable"}>{satelliteData['details']['name']}</TitleBar>
             <ThemedStackIsland>
                 <Table size="small" style={{ width: '100%' }}>
                     <TableBody>
-                        <TableRow>
-                            <TableCell><strong>Name:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['details']['name'] || "n/a"}</TableCell>
-                        </TableRow>
                         <TableRow>
                             <TableCell><strong>Latitude:</strong></TableCell>
                             <TableCell style={fixedWidthFont}>{satelliteData['position']['lat'] ? satelliteData['position']['lat'].toFixed(4) : "n/a"}°</TableCell>

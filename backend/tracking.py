@@ -12,7 +12,7 @@ from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
 from logger import logger
 from models import ModelEncoder
-from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds
+from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevationError
 from rotator import RotatorController
 from arguments import arguments as args
 
@@ -415,6 +415,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
     azimuthlimits = (0, 360)
     eleveationlimits = (0, 180)
+    minelevation = 10.0
     previous_tracking_state = None
     rotator = None
 
@@ -451,7 +452,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                                 rotator_details = rotator_details_reply['data']
                                 rotator_path = f"{rotator_details['host']}:{rotator_details['port']}"
                                 rotator = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
-                                slew_complete = False
                                 await rotator.connect()
 
                             except Exception as e:
@@ -490,19 +490,23 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                 # first we check if the az end el values in the skypoint tuple are reachable
                 if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:
-                    raise AzimuthOutOfBounds(f"azimuth {round(skypoint[0], 3)} is out of range (range: {azimuthlimits})")
+                    raise AzimuthOutOfBounds(f"azimuth {round(skypoint[0], 3)}° is out of range (range: {azimuthlimits})")
 
                 if skypoint[1] < eleveationlimits[0] or skypoint[1] > eleveationlimits[1]:
-                    raise ElevationOutOfBounds(f"elevation {round(skypoint[1], 3)} is out of range (range: {eleveationlimits})")
+                    raise ElevationOutOfBounds(f"elevation {round(skypoint[1], 3)}° is out of range (range: {eleveationlimits})")
 
-                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {round(skypoint[0], 3)} el: {round(skypoint[1], 3)}")
+                # check if satellite is over a specific elevation limit
+                if skypoint[1] < minelevation:
+                    raise MinimumElevationError(f"target has not reached minimum elevation {minelevation}° degrees")
+
+                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {round(skypoint[0], 3)}° el: {round(skypoint[1], 3)}°")
 
                 if rotator:
                     position_gen = rotator.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
 
                     try:
                         az, el, is_slewing = await anext(position_gen)
-                        logger.info(f"Current position: Az={round(az, 3)}°, El={round(el, 3)}°, Moving={is_slewing}")
+                        logger.info(f"Current position: AZ={round(az, 3)}°, EL={round(el, 3)}°, slewing={is_slewing}")
 
                     except StopAsyncIteration:
                         # Generator is done (slewing complete)
@@ -514,20 +518,27 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
             except ElevationOutOfBounds as e:
                 logger.warning(f"Elevation out of bounds for satellite #{norad_id} {satellite_name}: {e}")
 
+            except MinimumElevationError as e:
+                logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{norad_id} {satellite_name}: {e}")
+
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")
                 logger.exception(e)
 
             finally:
                 # lastly send updates to the UI
-                data = {
-                    'satellite_data': satellite_data,
-                    'tracking_state': tracker,
-                    #'ui_tracker_state': ui_tracker_state['data']
-                }
+                try:
+                    data = {
+                        'satellite_data': satellite_data,
+                        'tracking_state': tracker,
+                    }
 
-                logger.debug(f"Sending satellite tracking data to the browser: {data}")
-                await sio.emit('satellite-tracking', data)
+                    logger.debug(f"Sending satellite tracking data to the browser: {data}")
+                    await sio.emit('satellite-tracking', data)
+
+                except Exception as e:
+                    logger.critical(f"Error sending satellite tracking data to the browser: {e}")
+                    logger.exception(e)
 
                 logger.info(f"Waiting for {args.track_interval} seconds before next update...")
                 await asyncio.sleep(args.track_interval)

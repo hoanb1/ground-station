@@ -174,7 +174,10 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         increment = 1
 
     # emit an event
-    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress})
+    await sio.emit('sat-sync-events', {
+        'status': 'inprogress',
+        'progress': progress
+    })
 
     # Use a single ThreadPoolExecutor for all async_fetch calls
     with ThreadPoolExecutor(max_workers=1) as pool:
@@ -201,14 +204,28 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
             except SynchronizationErrorMainTLESource as e:
                 logger.error(f'Failed to fetch data from {tle_source["url"]}: {e.message}')
-                await sio.emit('sat-sync-events', {'success': False, 'status': 'inprogress', 'progress': 0, 'message': e.message})
+                await sio.emit('sat-sync-events', {
+                    'success': False,
+                    'status': 'inprogress',
+                    'progress': 0,
+                    'message': e.message
+                })
 
             except requests.exceptions.RequestException as e:
                 logger.error(f'Failed to fetch data from {tle_source["url"]}: {e}')
-                await sio.emit('sat-sync-events', {'success': False, 'status': 'inprogress', 'progress': 0, 'message': e})
+                await sio.emit('sat-sync-events', {
+                    'success': False,
+                    'status': 'inprogress',
+                    'progress': 0,
+                    'message': e
+                })
 
             progress += increment
-            await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress, 'message': f'Fetched {tle_source_url}'})
+            await sio.emit('sat-sync-events', {
+                'status': 'inprogress',
+                'progress': progress,
+                'message': f'Fetched {tle_source_url}'
+            })
 
             logger.info(f"Group {tle_source_identifier} has {len(group_assignments[tle_source_identifier])} members")
 
@@ -235,11 +252,19 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 await dbsession.commit()
 
             progress += 5
-            await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress, 'message': f'Group {tle_source.get('name', None)} created/updated'})
+            await sio.emit('sat-sync-events', {
+                'status': 'inprogress',
+                'progress': progress,
+                'message': f'Group {tle_source.get('name', None)} created/updated'
+            })
 
         # for complete
         progress += 5
-        await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress, 'message': 'Finished fetching TLE sources'})
+        await sio.emit('sat-sync-events', {
+            'status': 'inprogress',
+            'progress': progress,
+            'message': 'Finished fetching TLE sources, fetching data from SATNOGS...'
+        })
 
     if not celestrak_list:
         logger.error("No TLEs were fetched from any TLE source, aborting!")
@@ -248,7 +273,11 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
     # emit an event
     progress += 5
-    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress, 'message': 'Fetching satellite data from SATNOGS'})
+    await sio.emit('sat-sync-events', {
+        'status': 'inprogress',
+        'progress': progress,
+        'message': 'Fetching satellite data from SATNOGS'
+    })
 
     # get a complete list of satellite data (no TLEs) from Satnogs
     logger.info(f'Fetching satellite data from SATNOGS ({satnogs_satellites_url})')
@@ -268,7 +297,11 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
     # emit an event
     progress += 5
-    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress, 'message': 'Fetching transmitter data from SATNOGS'})
+    await sio.emit('sat-sync-events', {
+        'status': 'inprogress',
+        'progress': progress,
+        'message': 'Fetching transmitter data from SATNOGS'
+    })
 
     # get transmitters from satnogs
     logger.info(f'Fetching transmitter data from SATNOGS ({satnogs_transmitters_url})')
@@ -288,7 +321,11 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
     # emit an event
     progress += 5
-    await sio.emit('sat-sync-events', {'status': 'inprogress', 'progress': progress, 'message': 'Updating satellite data in the database...'})
+    await sio.emit('sat-sync-events', {
+        'status': 'inprogress',
+        'progress': progress,
+        'message': 'Updating satellite data in the database...'
+    })
 
     #  we now have everything, TLE from celestrak sat info and transmitter info  from satnogs, lets put them in the db
     count_sats = 0
@@ -383,19 +420,29 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 # commit session
                 await dbsession.commit()
 
+        logger.info(f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters")
+
+        # emit an event
+        await sio.emit('sat-sync-events', {
+            'success': True,
+            'status': 'complete',
+            'progress': 100,
+            'message': f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'
+        })
+
     except Exception as e:
         await dbsession.rollback()  # Rollback in case of error
         logger.error(f"Error while synchronizing satellite data in the db: {e}")
         logger.exception(e)
 
         # emit an event
-        await sio.emit('sat-sync-events', {'success': False, 'status': 'complete', 'progress': 100, 'error': str(e)})
+        await sio.emit('sat-sync-events', {
+            'success': False,
+            'status': 'complete',
+            'progress': 100, 'error': str(e)
+        })
 
     finally:
         # Always close the session when you're done
         await dbsession.close()
 
-        logger.info(f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters")
-
-        # emit an event
-        await sio.emit('sat-sync-events', {'success': True, 'status': 'complete', 'progress': 100, 'message': f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'})
