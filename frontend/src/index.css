@@ -36,3 +36,12 @@
 .window-title-bar {
     background-color: #1e1e1e;
 }
+
+.attribution {
+    padding-right: 5px;
+    right: 0;
+    position: absolute;
+    font-size: 12px;
+    line-height: 24px;
+    color: #959595;
+}

@@ -546,6 +546,22 @@ const TargetSatelliteTrack = React.memo(function () {
         showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor,
         futureOrbitLineColor, satelliteCoverageColor]);
 
+    useEffect(() => {
+        // zoom in and out a bit to fix the zoom factor issue
+        const zoomLevel = MapObject.getZoom();
+        const loc = MapObject.getCenter();
+        setTimeout(() => {
+            MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
+            setTimeout(() => {
+                MapObject.setView([loc.lat, loc.lng], zoomLevel);
+            }, 500);
+        }, 0);
+
+        return () => {
+
+        };
+    }, [tileLayerID]);
+
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
@@ -561,7 +577,6 @@ const TargetSatelliteTrack = React.memo(function () {
                 zoomSnap={0.25}
                 zoomDelta={0.25}
                 boundsOptions={{padding: [300, 300]}}
-
             >
                 <MapTitleBar className={"react-grid-draggable window-title-bar"}>
                     Tracking {satelliteData['details']['name'] || "-"} {(satelliteData['position']['alt']/1000).toFixed(2)} km, {satelliteData['position']['vel'].toFixed(2)} km/s
@@ -613,7 +628,10 @@ const TargetSatelliteTrack = React.memo(function () {
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapSettingsIslandDialog open={openMapSettingsDialog}/>
-                <MapStatusBar/>
+                <MapStatusBar>
+                    <a href="https://leafletjs.com" title="A JavaScript library for interactive maps">Leaflet</a>
+                    <span dangerouslySetInnerHTML={{ __html: getTileLayerById(tileLayerID)['attribution'] }} className={"attribution"}>{}</span>
+                </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
                 <MapSlider handleSliderChange={handleSliderChange}/>
             </MapContainer>
@@ -622,7 +640,7 @@ const TargetSatelliteTrack = React.memo(function () {
             <SatelliteInfoIsland/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
-            <NextPassesIsland noradId={noradId}/>
+        <NextPassesIsland noradId={noradId}/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>

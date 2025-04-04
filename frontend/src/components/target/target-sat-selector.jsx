@@ -151,7 +151,8 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                                  size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
@@ -167,7 +168,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                                     return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
-                            <ListSubheader>Build-in satellite groups</ListSubheader>
+                            <ListSubheader>TLE source groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "system") {
                                     return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
@@ -176,12 +177,37 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                         </Select>
                     </FormControl>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <SatelliteList/>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 1, marginBottom: 1}} fullWidth variant="filled"
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                 size="small">
+                        <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
+                        <Select
+                            id="rotator-select"
+                            value={rotators.length > 0? selectedRotator: "none"} // Set the current value here
+                            onChange={(event) => {
+                                handleRotatorChange(event);
+                            }}
+                            variant={'filled'}>
+                            <MenuItem value="none">
+                                [no rotator control]
+                            </MenuItem>
+                            <MenuItem value="" disabled>
+                                <em>select a rotator</em>
+                            </MenuItem>
+                            {rotators.map((rotators, index) => {
+                                return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;
+                            })}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0.5rem 0.5rem'}}>
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
                         <Select
@@ -204,31 +230,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                     </FormControl>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                 size="small">
-                        <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
-                        <Select
-                            id="rotator-select"
-                            value={rotators.length > 0? selectedRotator: "none"} // Set the current value here
-                            onChange={(event) => {
-                                handleRotatorChange(event);
-                            }}
-                         variant={'filled'}>
-                            <MenuItem value="none">
-                                [no rotator control]
-                            </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>select a rotator</em>
-                            </MenuItem>
-                            {rotators.map((rotators, index) => {
-                                return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;
-                            })}
-                        </Select>
-                    </FormControl>
-                </Grid>
-
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
                         justifyContent: "space-between",
                         alignItems: "stretch",
@@ -251,7 +253,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                     </Grid>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '1rem 0.5rem 0.5rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
                             justifyContent: "space-between",
                             alignItems: "stretch",

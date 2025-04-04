@@ -81,6 +81,18 @@ export function setupTheme() {
                 styleOverrides: {
                     root: {
                         backgroundColor: "#121212",
+                        //fontFamily: "Monospace, monospace",
+                        //fontSize: "0.8rem",
+                        //fontSpacing: "0.05rem",
+                    }
+                },
+            },
+            MuiMenuItem: {
+                styleOverrides: {
+                    root: {
+                        //fontFamily: "Monospace, monospace",
+                        //fontSize: "0.8rem",
+                        //fontSpacing: "0.05rem",
                     }
                 },
             },

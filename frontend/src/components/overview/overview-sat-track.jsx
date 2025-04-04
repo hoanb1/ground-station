@@ -400,6 +400,22 @@ function GlobalSatelliteTrack() {
         </Fab>;
     }
 
+    useEffect(() => {
+        // zoom in and out a bit to fix the zoom factor issue
+        const zoomLevel = MapObject.getZoom();
+        const loc = MapObject.getCenter();
+        setTimeout(() => {
+            MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
+            setTimeout(() => {
+                MapObject.setView([loc.lat, loc.lng], zoomLevel);
+            }, 500);
+        }, 0);
+
+        return () => {
+
+        };
+    }, [tileLayerID]);
+
     // pre-made ResponsiveGridLayout
     let gridContents = [
         <StyledIslandParent key="map">
@@ -457,12 +473,15 @@ function GlobalSatelliteTrack() {
                     />
                 )}
                 {InternationalDateLinePolyline()}
-                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.4}/>
+                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
                 {showPastOrbitPath? currentPastSatellitesPaths: null}
                 {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
-                <MapStatusBar/>
+                <MapStatusBar>
+                    <a href="https://leafletjs.com" title="A JavaScript library for interactive maps">Leaflet</a>
+                    <span dangerouslySetInnerHTML={{ __html: getTileLayerById(tileLayerID)['attribution'] }} className={"attribution"}>{}</span>
+                </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
             </MapContainer>
         </StyledIslandParent>,

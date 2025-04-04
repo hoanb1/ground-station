@@ -322,17 +322,17 @@ export const betterStatusValue = (status) => {
     if (status) {
         if (status === "alive") {
             return (
-                <Chip label="Alive" size="small" color="success" variant="outlined" />
+                <Chip sx={{ height: '18px' }} label="Alive" size="small" color="success" variant="outlined" />
             );
         } else if (status === "dead") {
             return (
-                <Chip label="Dead" size="small" color="error" variant="outlined" />
+                <Chip sx={{ height: '18px' }} label="Dead" size="small" color="error" variant="outlined" />
             );
         } else {
-            return (<Chip label={status} size="small" color="info" variant="outlined" />);
+            return (<Chip sx={{ height: '18px' }} label={status} size="small" color="info" variant="outlined" />);
         }
     } else {
-        return <Chip label={"n/a"} size="small" color="info" variant="outlined" />;
+        return <Chip sx={{ height: '18px' }} label={"n/a"} size="small" color="info" variant="outlined" />;
     }
 };
 
@@ -365,14 +365,14 @@ export const renderCountryFlagsCSV = (csvCodes) => {
     const countryCodes = csvCodes.split(',').map(code => code.trim());
     return (
         <div style={{
-            height: 19,
+            height: 17,
         }}>
             {countryCodes.map((countryCode, index) => (
                 <Tooltip key={index} title={countryCode.toUpperCase()} arrow style={{paddingTop: 0,  height: 18}}>
                     <img
                         src={`https://flagcdn.com/w40/${countryCode.toLowerCase()}.png`}
                         alt={countryCode}
-                        style={{width: 30, height: 19, border: '1px #8a8a8a solid',  marginRight: 4,}}
+                        style={{width: 28, height: 17, border: '1px #8a8a8a solid',  marginRight: 4,}}
                     />
                 </Tooltip>
             ))}
