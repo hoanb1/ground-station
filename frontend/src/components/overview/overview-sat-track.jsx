@@ -53,6 +53,7 @@ import {
 import NextPassesGroupIsland from "./overview-sat-passes.jsx";
 import SettingsIcon from "@mui/icons-material/Settings";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
+import Typography from "@mui/material/Typography";
 
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
@@ -479,8 +480,17 @@ function GlobalSatelliteTrack() {
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapStatusBar>
-                    <a href="https://leafletjs.com" title="A JavaScript library for interactive maps">Leaflet</a>
-                    <span dangerouslySetInnerHTML={{ __html: getTileLayerById(tileLayerID)['attribution'] }} className={"attribution"}>{}</span>
+                    <Typography sized="small" variant="body2">
+                        <a className={"leaflet-link"} href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
+                           rel="noopener noreferrer">Leaflet</a>
+                    </Typography>
+                    <Typography sized="small" variant="body2" noWrap sx={{
+                            maxWidth: 800,
+                            display: 'block',
+                        }}
+                        dangerouslySetInnerHTML={{ __html: getTileLayerById(tileLayerID)['attribution'] }} className={"attribution"}>
+                        {}
+                    </Typography>
                 </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
             </MapContainer>
