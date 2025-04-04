@@ -418,10 +418,18 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     minelevation = 10.0
     previous_tracking_state = None
     rotator = None
+    notified = {}
+
+    def in_tracking_state():
+        if current_tracking_state == "tracking":
+            return True
+        else:
+            return False
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
             try:
+                events = []
                 tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
                 assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
@@ -453,6 +461,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                                 rotator_path = f"{rotator_details['host']}:{rotator_details['port']}"
                                 rotator = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
                                 await rotator.connect()
+                                await sio.emit('satellite-tracking', {'events': [
+                                    {'name': "rotator_connected"}
+                                ]})
 
                             except Exception as e:
                                 logger.error(f"Failed to connect to rotator: {e}")
@@ -465,6 +476,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                             logger.info(f"Disconnecting from rotator at {rotator_path}...")
                             try:
                                 rotator.disconnect()  # Assuming disconnect method exists
+                                await sio.emit('satellite-tracking', {'events': [
+                                    {'name': "rotator_disconnected"}
+                                ]})
                                 logger.info(f"Successfully disconnected from rotator at {rotator_path}")
 
                             except Exception as e:
@@ -510,16 +524,31 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                     except StopAsyncIteration:
                         # Generator is done (slewing complete)
-                        logger.info("Slewing complete")
+                        logger.info(f"Slewing to AZ={round(az, 3)}° EL={round(el, 3)}° complete")
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{norad_id} {satellite_name}: {e}")
+                if in_tracking_state() and notified.get('azimuth_out_of_bounds', False) is not True:
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "azimuth_out_of_bounds"}
+                    ]})
+                    notified['azimuth_out_of_bounds'] = True
 
             except ElevationOutOfBounds as e:
                 logger.warning(f"Elevation out of bounds for satellite #{norad_id} {satellite_name}: {e}")
+                if in_tracking_state() and notified.get('elevation_out_of_bounds', False) is not True:
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "elevation_out_of_bounds"}
+                    ]})
+                    notified['elevation_out_of_bounds'] = True
 
             except MinimumElevationError as e:
                 logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{norad_id} {satellite_name}: {e}")
+                if in_tracking_state() and notified.get('minelevation_error', False) is not True:
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "minelevation_error"}
+                    ]})
+                    notified['minelevation_error'] = True
 
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")
@@ -531,6 +560,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     data = {
                         'satellite_data': satellite_data,
                         'tracking_state': tracker,
+                        'events': events,
                     }
 
                     logger.debug(f"Sending satellite tracking data to the browser: {data}")

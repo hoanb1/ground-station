@@ -1,5 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
+import {enqueueSnackbar} from "notistack";
 
 
 export const getTrackingStateFromBackend = createAsyncThunk(
@@ -222,6 +223,28 @@ const targetSatTrackSlice = createSlice({
                 state.groupId = action.payload['ui_tracker_state']['group_id'];
                 state.selectedRadioRig = action.payload['ui_tracker_state']['rig_id'];
                 state.selectedRotator = action.payload['ui_tracker_state']['rotator_id'];
+            }
+            
+            if (action.payload['events']) {
+                if (action.payload['events']) {
+                    action.payload['events'].forEach(event => {
+                        if (event.name === 'rotator_connected') {
+                            enqueueSnackbar("Rotator connected!", {variant: 'success'});
+                        } else if (event.name === 'rotator_disconnected') {
+                            enqueueSnackbar("Rotator disconnected!", {variant: 'warning'});
+                        } else if (event.name === 'rig_connected') {
+                            enqueueSnackbar("Rig connected!", {variant: 'success'});
+                        } else if (event.name === 'rig_disconnected') {
+                            enqueueSnackbar("Rig disconnected!", {variant: 'warning'});
+                        } else if (event.name === 'elevation_out_of_bounds') {
+                            enqueueSnackbar("Elevation of target is not reachable!", {variant: 'warning'});
+                        } else if (event.name === 'azimuth_out_of_bounds') {
+                            enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
+                        } else if (event.name === 'minelevation_error') {
+                            enqueueSnackbar("Minimum elevation limit reached!", {variant: 'warning'});
+                        }
+                    });
+                }
             }
 
             if (action.payload['satellite_data']) {

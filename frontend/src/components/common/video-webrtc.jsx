@@ -78,7 +78,7 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
 
                 // Create and set local description
                 const offer = await peerConnection.createOffer({
-                    offerToReceiveAudio: true,
+                    offerToReceiveAudio: false,
                     offerToReceiveVideo: true
                 });
                 await peerConnection.setLocalDescription(offer);

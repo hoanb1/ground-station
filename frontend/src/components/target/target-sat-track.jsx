@@ -296,10 +296,6 @@ const TargetSatelliteTrack = React.memo(function () {
         dispatch(setSliderTimeOffset(value));
     }, []);
 
-    const handleShowTooltip = useCallback((value) => {
-        dispatch(setShowTooltip(value));
-    }, [showTooltip]);
-
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
