@@ -14,6 +14,7 @@ import {
     setShowSatelliteCoverage,
     setShowSunIcon, setShowTerminatorLine, setShowTooltip, setTileLayerID,
     setOpenMapSettingsDialog,
+    setShowGrid,
 } from "./overview-sat-slice.jsx";
 
 function MapSettingsIslandDialog() {
@@ -26,6 +27,7 @@ function MapSettingsIslandDialog() {
         showMoonIcon,
         showTerminatorLine,
         showTooltip,
+        showGrid,
         pastOrbitLineColor,
         futureOrbitLineColor,
         satelliteCoverageColor,
@@ -56,6 +58,7 @@ function MapSettingsIslandDialog() {
                         initialTileLayerID={tileLayerID}
                         initialShowTooltip={showTooltip}
                         initialShowTerminatorLine={showTerminatorLine}
+                        initialShowGrid={showGrid}
                         handleShowPastOrbitPath={(value)=>{dispatch(setShowPastOrbitPath(value))}}
                         handleShowFutureOrbitPath={(value)=>{dispatch(setShowFutureOrbitPath(value))}}
                         handleShowSatelliteCoverage={(value)=>{dispatch(setShowSatelliteCoverage(value))}}
@@ -67,6 +70,7 @@ function MapSettingsIslandDialog() {
                         handleSatelliteCoverageColor={(value)=>{dispatch(setSatelliteCoverageColor(value))}}
                         handleOrbitProjectionDuration={(value)=>{dispatch(setOrbitProjectionDuration(value))}}
                         handleShowTooltip={(value)=>{dispatch(setShowTooltip(value))}}
+                        handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
                         handleTileLayerID={(value)=>{dispatch(setTileLayerID(value))}}
                     />
                 </DialogContent>

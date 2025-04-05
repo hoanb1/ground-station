@@ -59,6 +59,7 @@ import NextPassesGroupIsland from "./overview-sat-passes.jsx";
 import SettingsIcon from "@mui/icons-material/Settings";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import Typography from "@mui/material/Typography";
+import CoordinateGrid from "../common/mercator-grid.jsx";
 
 
 
@@ -128,6 +129,7 @@ function GlobalSatelliteTrack() {
         satelliteGroupId,
         openMapSettingsDialog,
         nextPassesHours,
+        showGrid,
     } = useSelector(state => state.overviewSatTrack);
     const { location, } = useSelector((state) => state.location);
 
@@ -489,6 +491,17 @@ function GlobalSatelliteTrack() {
                        rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}/>
                 </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
+                {showGrid && (
+                    <CoordinateGrid
+                        latInterval={15}
+                        lngInterval={15}
+                        latColor="#4a4a4a"
+                        lngColor="#4a4a4a"
+                        weight={1}
+                        opacity={0.5}
+                        showLabels={false}
+                    />
+                )}
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key={"satselector"}>

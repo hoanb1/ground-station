@@ -173,6 +173,7 @@ const targetSatTrackSlice = createSlice({
         showMoonIcon: true,
         showTerminatorLine: true,
         showTooltip: true,
+        showGrid: false,
         currentSatellitesPosition: [],
         currentSatellitesCoverage: [],
         terminatorLine: [],
@@ -362,6 +363,9 @@ const targetSatTrackSlice = createSlice({
         setAvailableTransmitters(state, action) {
             state.availableTransmitters = action.payload;
         },
+        setShowGrid(state, action) {
+            state.showGrid = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -484,6 +488,7 @@ export const {
     setNextPassesHours,
     setSelectedTransmitter,
     setAvailableTransmitters,
+    setShowGrid,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

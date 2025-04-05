@@ -18,10 +18,11 @@ import {TitleBar, ThemedStackIsland, SettingItem, ThemedSettingsDiv} from './com
 const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
                             initialShowSunIcon, initialShowMoonIcon, initialShowTerminatorLine,
                             initialSatelliteCoverageColor, initialPastOrbitLineColor, initialFutureOrbitLineColor,
-                            initialOrbitProjectionDuration, initialTileLayerID, initialShowTooltip, handleShowFutureOrbitPath, handleShowPastOrbitPath,
+                            initialOrbitProjectionDuration, initialTileLayerID, initialShowTooltip, initialShowGrid,
+                               handleShowFutureOrbitPath, handleShowPastOrbitPath,
                             handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
                             handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
-                            handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip, handleTileLayerID}) => {
+                            handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip, handleTileLayerID, handleShowGrid}) => {
 
     // Example options for orbit projection time range
     const timeOptions = [
@@ -46,6 +47,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
     const [coverageColor, setCoverageColor] = useState(initialSatelliteCoverageColor);
     const [orbitProjectionDuration, setOrbitProjectionDuration] = useState(initialOrbitProjectionDuration);
     const [tileLayerID, setTileLayerID] = useState(initialTileLayerID);
+    const [showGrid, setShowGrid] = useState(initialShowGrid);
 
     return (
             <Stack>
@@ -193,6 +195,21 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                             />
                         }
                         label="Satellite tooltip"
+                    />
+                </SettingItem>
+                <SettingItem>
+                    <FormControlLabel style={{padding: '0rem 0rem 0rem 1rem'}}
+                          control={
+                              <Switch
+                                  size={"small"}
+                                  checked={showGrid}
+                                  onChange={(e) => {
+                                      handleShowGrid(e.target.checked);
+                                      setShowGrid(e.target.checked);
+                                  }}
+                              />
+                          }
+                          label="Coordinate grid"
                     />
                 </SettingItem>
                 <SettingItem>

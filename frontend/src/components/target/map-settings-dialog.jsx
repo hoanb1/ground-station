@@ -13,7 +13,7 @@ import {
     setShowPastOrbitPath,
     setShowSatelliteCoverage,
     setShowSunIcon, setShowTerminatorLine, setShowTooltip, setTileLayerID,
-    setOpenMapSettingsDialog,
+    setOpenMapSettingsDialog, setShowGrid,
 } from "./target-sat-slice.jsx";
 
 function MapSettingsIslandDialog() {
@@ -32,6 +32,7 @@ function MapSettingsIslandDialog() {
         orbitProjectionDuration,
         tileLayerID,
         openMapSettingsDialog,
+        showGrid,
     } = useSelector(state => state.targetSatTrack);
 
     const handleCloseDialog = () => {
@@ -55,6 +56,7 @@ function MapSettingsIslandDialog() {
                         initialOrbitProjectionDuration={orbitProjectionDuration}
                         initialTileLayerID={tileLayerID}
                         initialShowTooltip={showTooltip}
+                        initialShowGrid={showGrid}
                         initialShowTerminatorLine={showTerminatorLine}
                         handleShowPastOrbitPath={(value)=>{dispatch(setShowPastOrbitPath(value))}}
                         handleShowFutureOrbitPath={(value)=>{dispatch(setShowFutureOrbitPath(value))}}
@@ -68,6 +70,7 @@ function MapSettingsIslandDialog() {
                         handleOrbitProjectionDuration={(value)=>{dispatch(setOrbitProjectionDuration(value))}}
                         handleShowTooltip={(value)=>{dispatch(setShowTooltip(value))}}
                         handleTileLayerID={(value)=>{dispatch(setTileLayerID(value))}}
+                        handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
                     />
                 </DialogContent>
                 <DialogActions>

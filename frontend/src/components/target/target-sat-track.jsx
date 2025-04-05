@@ -38,14 +38,6 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {
     setSatGroupId,
-    setTrackingStateInBackend,
-    setShowPastOrbitPath,
-    setShowFutureOrbitPath,
-    setShowSatelliteCoverage,
-    setShowSunIcon,
-    setShowMoonIcon,
-    setShowTerminatorLine,
-    setShowTooltip,
     setTerminatorLine,
     setDaySidePolygon,
     setPastOrbitLineColor,
@@ -66,14 +58,11 @@ import {
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
-import VideoPlayer from '../common/video-hls.jsx';
-import VideoMJPEGPlayer from "../common/video-mjpeg.jsx";
 import VideoWebRTCPlayer from "../common/video-webrtc.jsx";
 import {setOpenMapSettingsDialog} from "./target-sat-slice.jsx";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
-import Typography from "@mui/material/Typography";
 import {SimpleTruncatedHtml} from '../common/common.jsx';
-import Grid from "@mui/material/Grid2";
+import CoordinateGrid from "../common/mercator-grid.jsx";
 
 
 // global leaflet map object
@@ -226,6 +215,7 @@ const TargetSatelliteTrack = React.memo(function () {
         gridEditable,
         sliderTimeOffset,
         openMapSettingsDialog,
+        showGrid,
     } = useSelector(state => state.targetSatTrack);
 
     const { location } = useSelector(state => state.location);
@@ -637,6 +627,17 @@ const TargetSatelliteTrack = React.memo(function () {
                 </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
                 <MapSlider handleSliderChange={handleSliderChange}/>
+                {showGrid && (
+                    <CoordinateGrid
+                        latInterval={15}
+                        lngInterval={15}
+                        latColor="#FFFFFF"
+                        lngColor="#FFFFFF"
+                        weight={1}
+                        opacity={0.5}
+                        showLabels={false}
+                    />
+                )}
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="info">

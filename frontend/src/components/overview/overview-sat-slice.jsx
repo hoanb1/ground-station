@@ -60,6 +60,7 @@ const overviewSlice = createSlice({
         showMoonIcon: true,
         showTerminatorLine: true,
         showTooltip: true,
+        showGrid: false,
         gridEditable: false,
         selectedSatellites: [],
         currentPastSatellitesPaths: [],
@@ -179,6 +180,9 @@ const overviewSlice = createSlice({
         setNextPassesHours(state, action) {
             state.nextPassesHours = action.payload;
         },
+        setShowGrid(state, action) {
+            state.showGrid = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -241,6 +245,7 @@ export const {
     setPassesLoading,
     setOpenMapSettingsDialog,
     setNextPassesHours,
+    setShowGrid,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;
