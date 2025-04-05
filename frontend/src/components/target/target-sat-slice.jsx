@@ -173,7 +173,7 @@ const targetSatTrackSlice = createSlice({
         showMoonIcon: true,
         showTerminatorLine: true,
         showTooltip: true,
-        showGrid: false,
+        showGrid: true,
         currentSatellitesPosition: [],
         currentSatellitesCoverage: [],
         terminatorLine: [],

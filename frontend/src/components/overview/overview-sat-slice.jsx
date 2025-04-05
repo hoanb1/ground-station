@@ -60,7 +60,7 @@ const overviewSlice = createSlice({
         showMoonIcon: true,
         showTerminatorLine: true,
         showTooltip: true,
-        showGrid: false,
+        showGrid: true,
         gridEditable: false,
         selectedSatellites: [],
         currentPastSatellitesPaths: [],
