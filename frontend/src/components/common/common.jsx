@@ -9,6 +9,8 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import {useResizeDetector} from "react-resize-detector";
+import DOMPurify from "dompurify";
+import parse from "html-react-parser";
 
 export const SATELLITE_NUMBER_LIMIT = 50;
 
@@ -400,37 +402,16 @@ export function humanizeFrequency(hertz, decimals = 2) {
     return `${preciseHertz.toFixed(decimals)} ${units[unitIndex]}`;
 }
 
-
-export function ResponsiveTruncatedText({ text, className }) {
-    const { width, ref } = useResizeDetector();
-    const [displayText, setDisplayText] = useState(text);
-    const textRef = useRef(null);
-
-    useEffect(() => {
-        if (textRef.current && width) {
-            if (textRef.current.scrollWidth > width) {
-                setDisplayText(text.substring(0, Math.floor(width / 8)) + '...');
-            } else {
-                setDisplayText(text);
-            }
-        }
-    }, [width, text]);
-
+export function SimpleTruncatedHtml({ htmlString, className }) {
     return (
-        <div ref={ref} style={{ width: '100%' }}>
-      <span
-          className={className}
-          ref={textRef}
-          style={{
-              whiteSpace: 'nowrap',
-              overflow: 'hidden',
-              textOverflow: 'ellipsis',
-              display: 'inline-block',
-              maxWidth: '100%'
-          }}
-      >
-        {displayText}
-      </span>
-        </div>
+        <Tooltip
+            title={<div dangerouslySetInnerHTML={{ __html: htmlString }} />}
+            arrow
+        >
+            <div
+                className={`truncate ${className || ""}`}
+                dangerouslySetInnerHTML={{ __html: htmlString }}
+            />
+        </Tooltip>
     );
 }

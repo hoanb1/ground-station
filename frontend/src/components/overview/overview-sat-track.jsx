@@ -37,7 +37,7 @@ import {
     betterDateTimes,
     renderCountryFlagsCSV,
     StyledIslandParentNoScrollbar,
-    ResponsiveTruncatedText
+    SimpleTruncatedHtml,
 } from "../common/common.jsx";
 import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from '../common/tracking-logic.jsx';
 import {enqueueSnackbar} from "notistack";
@@ -105,7 +105,6 @@ function getMapZoomFromStorage() {
     const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
     return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
-
 
 function GlobalSatelliteTrack() {
 
@@ -487,11 +486,8 @@ function GlobalSatelliteTrack() {
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapStatusBar>
-                    <Typography sized="small" variant="body2">
-                        <a className={"leaflet-link"} href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
-                           rel="noopener noreferrer">Leaflet</a>
-                    </Typography>
-                    <ResponsiveTruncatedText text={parse(getTileLayerById(tileLayerID)['attribution'])} className={"attribution"}/>
+                    <SimpleTruncatedHtml className={"attribution"} htmlString={`<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
+                       rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}/>
                 </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
             </MapContainer>

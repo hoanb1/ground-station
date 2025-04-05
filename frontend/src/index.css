@@ -39,9 +39,21 @@
 
 .attribution {
     color: #959595;
+    font-size: 12px;
+    line-height: 20px;
+
 }
 
 .leaflet-link {
     right: 8px;
     position: absolute;
 }
+
+.truncate {
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+    max-width: 1000px;
+    display: block;
+}
+

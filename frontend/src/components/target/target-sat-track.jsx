@@ -27,7 +27,7 @@ import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
-    MapTitleBar, renderCountryFlagsCSV, ResponsiveTruncatedText,
+    MapTitleBar, renderCountryFlagsCSV,
     StyledIslandParent, StyledIslandParentNoScrollbar,
     StyledIslandParentScrollbar, ThemedLeafletTooltip,
     ThemedStackIsland,
@@ -72,7 +72,10 @@ import VideoWebRTCPlayer from "../common/video-webrtc.jsx";
 import {setOpenMapSettingsDialog} from "./target-sat-slice.jsx";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import Typography from "@mui/material/Typography";
+import {SimpleTruncatedHtml} from '../common/common.jsx';
 import parse from "html-react-parser";
+import DOMPurify from 'dompurify';
+import Grid from "@mui/material/Grid2";
 
 
 // global leaflet map object
@@ -631,11 +634,8 @@ const TargetSatelliteTrack = React.memo(function () {
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
                 <MapSettingsIslandDialog open={openMapSettingsDialog}/>
                 <MapStatusBar>
-                    <Typography sized="small" variant="body2">
-                        <a className={"leaflet-link"} href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
-                           rel="noopener noreferrer">Leaflet</a>
-                    </Typography>
-                    <ResponsiveTruncatedText text={parse(getTileLayerById(tileLayerID)['attribution'])} className={"attribution"}/>
+                    <SimpleTruncatedHtml className={"attribution"} htmlString={`<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
+                       rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}/>
                 </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
                 <MapSlider handleSliderChange={handleSliderChange}/>

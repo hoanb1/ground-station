@@ -16,7 +16,6 @@ const NextPassesGroupIsland = () => {
 
     useEffect(() => {
         if (selectedSatGroupId) {
-            console.info("selectedSatGroupId", selectedSatGroupId);
             dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId}));
         }
 
