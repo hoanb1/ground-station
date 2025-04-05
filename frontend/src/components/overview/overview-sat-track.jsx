@@ -62,7 +62,6 @@ import Typography from "@mui/material/Typography";
 import CoordinateGrid from "../common/mercator-grid.jsx";
 
 
-
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
 let MapObject = null;
@@ -233,8 +232,14 @@ function GlobalSatelliteTrack() {
         let currentCoverage = [];
         let currentFuturePaths = [];
         let currentPastPaths = [];
+        const satLimit = 50;
+        let satIndex = 0;
 
         selectedSatellites.forEach(satellite => {
+            if (satIndex++ >= satLimit) {
+                return;
+            }
+
             let noradid = satellite['norad_id'];
             let [lat, lon, altitude, velocity] = getSatelliteLatLon(
                 satellite['tle1'],
@@ -495,8 +500,8 @@ function GlobalSatelliteTrack() {
                     <CoordinateGrid
                         latInterval={15}
                         lngInterval={15}
-                        latColor="#4a4a4a"
-                        lngColor="#4a4a4a"
+                        latColor="#FFFFFF"
+                        lngColor="#FFFFFF"
                         weight={1}
                         opacity={0.5}
                         showLabels={false}

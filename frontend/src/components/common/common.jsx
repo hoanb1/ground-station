@@ -147,20 +147,20 @@ export function InternationalDateLinePolyline() {
             key={'first-date-line'}
             positions={dateLineCoordinates1}
             pathOptions={{
-                opacity: 0.5,
-                color: 'grey', // Customize the color
-                weight: 1,    // Line thickness
-                dashArray: '5, 5', // Dashed line effect
+                opacity: 0.9,
+                color: 'grey',
+                weight: 1,
+                dashArray: '5, 5',
             }}
         />,
         <Polyline
             key={'second-date-line'}
             positions={dateLineCoordinates2}
             pathOptions={{
-                opacity: 0.5,
-                color: 'grey', // Customize the color
-                weight: 1,    // Line thickness
-                dashArray: '5, 5', // Dashed line effect
+                opacity: 0.9,
+                color: 'grey',
+                weight: 1,
+                dashArray: '5, 5',
             }}
         />
     ];
