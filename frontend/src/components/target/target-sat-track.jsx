@@ -73,8 +73,6 @@ import {setOpenMapSettingsDialog} from "./target-sat-slice.jsx";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import Typography from "@mui/material/Typography";
 import {SimpleTruncatedHtml} from '../common/common.jsx';
-import parse from "html-react-parser";
-import DOMPurify from 'dompurify';
 import Grid from "@mui/material/Grid2";
 
 

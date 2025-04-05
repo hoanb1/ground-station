@@ -8,9 +8,6 @@ import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
-import {useResizeDetector} from "react-resize-detector";
-import DOMPurify from "dompurify";
-import parse from "html-react-parser";
 
 export const SATELLITE_NUMBER_LIMIT = 50;
 

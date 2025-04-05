@@ -59,7 +59,6 @@ import NextPassesGroupIsland from "./overview-sat-passes.jsx";
 import SettingsIcon from "@mui/icons-material/Settings";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import Typography from "@mui/material/Typography";
-import parse from 'html-react-parser';
 
 
 
