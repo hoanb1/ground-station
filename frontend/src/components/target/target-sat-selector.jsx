@@ -51,13 +51,13 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         selectedRadioRig,
         selectedRotator,
         selectedTransmitter,
+        availableTransmitters,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
     const { rotators } = useSelector((state) => state.rotators);
 
     useEffect(() => {
-        // Fetch satellite groups from Redux
         dispatch(fetchSatelliteGroups({ socket }));
     }, [dispatch, socket]);
 
@@ -116,7 +116,6 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, 'tracking_state': "idle"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
-        //dispatch(setUITrackerDisabled(false));
     };
 
     const handleTrackingStart = () => {
@@ -128,7 +127,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
             'rotator_id': selectedRotator,
             'transmitter_id': selectedTransmitter,
         };
-        //dispatch(setUITrackerDisabled(true));
+
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
@@ -151,18 +150,16 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
 
     function handleTransmitterChange(event) {
         dispatch(setSelectedTransmitter(event.target.value));
-    }
-
-    function getTransmittersForSatelliteId(satelliteId) {
-        if (satelliteId && groupOfSats.length > 0) {
-            const satellite = groupOfSats.find(s => s.norad_id === satelliteId);
-            if (satellite) {
-                return satellite.transmitters || [];
-            } else {
-                return [];
-            }
-        }
-        return [];
+        const data = {
+            ...trackingState,
+            norad_id: satelliteId,
+            tracking_state: "idle",
+            group_id: groupId,
+            rig_id: selectedRadioRig,
+            rotator_id: selectedRotator,
+            transmitter_id: event.target.value,
+        };
+        dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
 
     return (
@@ -207,18 +204,18 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                         <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
                         <Select
                             id="transmitter-select"
-                            value={getTransmittersForSatelliteId(satelliteId).length > 0 ? selectedTransmitter : "none"}
+                            value={availableTransmitters.length > 0 ? selectedTransmitter : "none"}
                             onChange={(event) => {
                                 handleTransmitterChange(event);
                             }}
                             variant={'filled'}>
                             <MenuItem value="none">
-                                [no transmitter control]
+                                [no frequency control]
                             </MenuItem>
                             <MenuItem value="" disabled>
                                 <em>select a transmitter</em>
                             </MenuItem>
-                            {getTransmittersForSatelliteId(satelliteId).map((transmitter, index) => {
+                            {availableTransmitters.map((transmitter, index) => {
                                 return <MenuItem value={transmitter.id} key={transmitter.id}>
                                     {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
                                 </MenuItem>;

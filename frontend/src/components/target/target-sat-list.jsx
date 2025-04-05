@@ -6,8 +6,8 @@ import {
     setSatelliteGroupSelectOpen,
     setSatelliteSelectOpen,
     setSatelliteId,
-    setTrackingStateInBackend
-
+    setTrackingStateInBackend,
+    setAvailableTransmitters,
 } from './target-sat-slice.jsx';
 import { useSocket } from "../common/socket.jsx";
 
@@ -29,11 +29,25 @@ function SatelliteList() {
         selectedRadioRig,
         selectedRotator,
         selectedTransmitter,
+        availableTransmitters,
     } = useSelector((state) => state.targetSatTrack);
+
+    function getTransmittersForSatelliteId(satelliteId) {
+        if (satelliteId && groupOfSats.length > 0) {
+            const satellite = groupOfSats.find(s => s.norad_id === satelliteId);
+            if (satellite) {
+                return satellite.transmitters || [];
+            } else {
+                return [];
+            }
+        }
+        return [];
+    }
 
     function handleUIElementChange(event) {
         const satelliteId = event.target.value;
         dispatch(setSatelliteId(satelliteId));
+        dispatch(setAvailableTransmitters(getTransmittersForSatelliteId(satelliteId)));
 
         // set the tracking state in the backend to the new norad id and leave the state as idle
         const data = {

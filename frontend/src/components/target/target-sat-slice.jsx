@@ -88,7 +88,6 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
                 socket.emit('data_request', 'get-satellites-for-group-id', groupId, (response) => {
                 if (response.success) {
                     const satellites = response.data;
-                    satellites.sort((a, b) => a.name.localeCompare(b.name));
                     resolve({ satellites });
                 } else {
                     reject(rejectWithValue(response.message));
@@ -197,6 +196,7 @@ const targetSatTrackSlice = createSlice({
         openMapSettingsDialog: false,
         nextPassesHours: 6.0,
         selectedTransmitter: "",
+        availableTransmitters: [],
     },
     reducers: {
         setLoading(state, action) {
@@ -220,8 +220,10 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['ui_tracker_state']) {
+                console.info("UI tracker", action.payload['ui_tracker_state']);
                 state.satGroups = action.payload['ui_tracker_state']['groups'];
                 state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
+                state.availableTransmitters = action.payload['ui_tracker_state']['transmitters'];
                 state.satelliteId = action.payload['ui_tracker_state']['norad_id'];
                 state.groupId = action.payload['ui_tracker_state']['group_id'];
                 state.selectedRadioRig = action.payload['ui_tracker_state']['rig_id'];
@@ -358,6 +360,9 @@ const targetSatTrackSlice = createSlice({
         setSelectedTransmitter(state, action) {
             state.selectedTransmitter = action.payload;
         },
+        setAvailableTransmitters(state, action) {
+            state.availableTransmitters = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -368,7 +373,6 @@ const targetSatTrackSlice = createSlice({
             .addCase(setTrackingStateInBackend.fulfilled, (state, action) => {
                 state.loading = false;
                 state.trackingState = action.payload;
-                //state.satelliteId = action.payload['data']['value']['norad_id'];
                 state.error = null;
             })
             .addCase(setTrackingStateInBackend.rejected, (state, action) => {
@@ -480,6 +484,7 @@ export const {
     setOpenMapSettingsDialog,
     setNextPassesHours,
     setSelectedTransmitter,
+    setAvailableTransmitters,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

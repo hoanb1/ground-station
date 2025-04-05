@@ -159,6 +159,7 @@ async def data_request_routing(sio, cmd, data, logger):
         elif cmd == "get-tracking-state":
             logger.debug(f'Fetching tracking state, data: {data}')
             tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+            await emit_tracker_data(dbsession, sio, logger)
             reply = {'success': tracking_state['success'], 'data': tracking_state.get('data', [])}
 
         else:
@@ -353,14 +354,7 @@ async def data_submission_routing(sio, cmd, data, logger):
         elif cmd == "set-tracking-state":
             logger.debug(f'Updating satellite tracking state, data: {data}')
             tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
-            satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
-            ui_tracker_state = await get_ui_tracker_state(data['value']['group_id'], data['value']['norad_id'])
-            data = {
-                'satellite_data': satellite_data,
-                'ui_tracker_state': ui_tracker_state['data'],
-                'tracking_state':tracking_state_reply['data']['value'],
-            }
-            await sio.emit('satellite-tracking', data)
+            await emit_tracker_data(dbsession, sio, logger)
 
             reply = {
                 'success': tracking_state_reply['success'],
@@ -371,6 +365,41 @@ async def data_submission_routing(sio, cmd, data, logger):
             logger.error(f'Unknown command: {cmd}')
 
     return reply
+
+async def emit_tracker_data(dbsession, sio, logger):
+    """
+    Emits satellite tracking data to the provided Socket.IO instance. This function retrieves the
+    current state of satellite tracking from the database, processes the relevant satellite data,
+    fetches the UI tracker state, and emits the resulting combined data to a specific event on
+    the Socket.IO instance. Errors during data retrieval, processing, or emitting are logged.
+
+    :param dbsession: Database session object used to access and query the database.
+    :type dbsession: Any
+    :param sio: Socket.IO server instance for emitting events.
+    :type sio: AsyncServer
+    :param logger: Logger object for logging errors or exceptions.
+    :type logger: Any
+    :return: This function does not return any value as it emits data asynchronously.
+    :rtype: None
+    """
+    try:
+        tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+        group_id = tracking_state_reply['data']['value'].get('group_id', None)
+        norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
+        satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
+        ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
+        data = {
+            'satellite_data': satellite_data,
+            'ui_tracker_state': ui_tracker_state['data'],
+            'tracking_state':tracking_state_reply['data']['value'],
+        }
+        await sio.emit('satellite-tracking', data)
+
+    except Exception as e:
+        logger.error(f'Error emitting tracker data: {e}')
+        logger.exception(e)
+
+
 
 
 async def auth_request_routing(sio, cmd, data, logger):
