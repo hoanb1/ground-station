@@ -2,9 +2,8 @@ import uvicorn
 import socketio
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task
-from fastapi import FastAPI, WebSocket, Depends
+from fastapi import FastAPI, WebSocket, Request, HTTPException
 from models import Base
-from fastapi.middleware.cors import CORSMiddleware
 from logger import get_logger, get_logger_config
 from handlers import *
 from db import *
@@ -12,9 +11,37 @@ from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
 from fastapi.staticfiles import StaticFiles
 from logger import logger
 from engineio.payload import Payload
+from fastapi.responses import JSONResponse
+from fastapi.middleware.cors import CORSMiddleware
+import httpx
+from pydantic import BaseModel
+from typing import Optional, Dict, Any, Union
+
 
 Payload.max_decode_packets = 50
 
+# Models for request/response
+class RTCSessionDescription(BaseModel):
+    type: str
+    sdp: str
+
+class IceCandidate(BaseModel):
+    candidate: str
+    sdpMid: str
+    sdpMLineIndex: int
+
+class CameraSource(BaseModel):
+    source_url: str
+    camera_id: Optional[str] = None
+
+class WebRTCRequest(BaseModel):
+    source_url: str
+    camera_id: Optional[str] = None
+    type: str
+    sdp: str
+
+# Store active connections
+active_connections: Dict[str, WebSocket] = {}
 
 # hold a list of sessions
 SESSIONS = {}
@@ -97,11 +124,73 @@ async def handle_frontend_auth_requests(sid, cmd, data):
     return {'success': reply['success'], 'token': reply['token'], 'user': reply['user']}
 
 
-# Example route
+@app.post("/api/webrtc/offer")
+async def create_webrtc_session(request: WebRTCRequest):
+    """Relay WebRTC offer to go2rtc and return answer"""
+    try:
+        # Extract base URL from the provided stream URL
+        base_url = request.source_url.split('/stream.html')[0]
+        webrtc_url = f"{base_url}/api/webrtc"
+
+        # Extract camera ID from URL query parameter if not provided
+        camera_id = request.camera_id
+        if not camera_id and "src=" in request.source_url:
+            camera_id = request.source_url.split("src=")[1].split("&")[0]
+
+        logger.info(f"Creating WebRTC session for camera: {camera_id}")
+
+        # Forward the offer to go2rtc WebRTC API
+        async with httpx.AsyncClient() as client:
+            response = await client.post(
+                webrtc_url,
+                json={"type": request.type, "sdp": request.sdp},
+                params={"src": camera_id} if camera_id else None
+            )
+
+            if response.status_code != 200:
+                logger.error(f"Error from go2rtc: {response.status_code} - {response.text}")
+                raise HTTPException(status_code=response.status_code, detail="Failed to create WebRTC session")
+
+            # Return the SDP answer from go2rtc
+            answer_data = response.json()
+            return RTCSessionDescription(type=answer_data["type"], sdp=answer_data["sdp"])
+
+    except Exception as e:
+        logger.error(f"Error creating WebRTC session: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Error creating WebRTC session: {str(e)}")
+
+
+@app.websocket("/ws/webrtc/{client_id}")
+async def webrtc_websocket(websocket: WebSocket, client_id: str):
+    """WebSocket endpoint for ICE candidate exchange"""
+    await websocket.accept()
+    active_connections[client_id] = websocket
+
+    try:
+        while True:
+            data = await websocket.receive_text()
+            message = json.loads(data)
+
+            # Handle different message types
+            if message.get("type") == "ice-candidate":
+                # Forward ICE candidate to go2rtc
+                # You would implement this if go2rtc supports WebSocket-based ICE candidate exchange
+                pass
+
+            # Echo back for testing
+            await websocket.send_text(json.dumps({"type": "echo", "data": message}))
+
+    except Exception as e:
+        logger.error(f"WebSocket error: {str(e)}")
+    finally:
+        if client_id in active_connections:
+            del active_connections[client_id]
+
+
+# Root route
 @app.get("/")
 def read_root():
-    logger.info("Root endpoint accessed")
-    return {"message": "Welcome to the FastAPI app!"}
+    return {"message": "Ground Station root endpoint accessed, nothing to see here"}
 
 # Function to check and create tables
 async def init_db():

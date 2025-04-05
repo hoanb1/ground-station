@@ -220,7 +220,6 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['ui_tracker_state']) {
-                console.info("UI tracker", action.payload['ui_tracker_state']);
                 state.satGroups = action.payload['ui_tracker_state']['groups'];
                 state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
                 state.availableTransmitters = action.payload['ui_tracker_state']['transmitters'];

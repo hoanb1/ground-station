@@ -71,6 +71,25 @@ loggers:
       - default
     propagate: no
 
+  httpx:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  httpcore.http11:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
+
+  httpcore.connection:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
+
+
 root:
   level: DEBUG
   handlers:

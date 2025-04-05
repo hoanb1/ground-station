@@ -280,7 +280,7 @@ const TargetSatelliteTrack = React.memo(function () {
                 y: 14,
                 w: 2,
                 h: 10,
-                minH: 7,
+                minH: 4,
                 resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
         ]
@@ -649,7 +649,7 @@ const TargetSatelliteTrack = React.memo(function () {
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="video">
-            <VideoWebRTCPlayer src={"http://192.168.60.47:1984/stream.html?src=roofcamera2_sub"}/>
+            <VideoWebRTCPlayer webRTCSrc={"http://192.168.60.47:1984/stream.html?src=roofcamera2_sub"}/>
         </StyledIslandParentScrollbar>
     ];
 
