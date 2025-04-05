@@ -57,3 +57,6 @@
     display: block;
 }
 
+.vsc-controller {
+    display: none !important;
+}

@@ -1,11 +1,19 @@
 import React, { useEffect, useRef, useState } from 'react';
 import { TitleBar } from "./common.jsx";
-import { FormControl, InputLabel, MenuItem, Select, Button, CircularProgress } from "@mui/material";
+import { FormControl, InputLabel, MenuItem, Select, Button, CircularProgress, Slider, Stack, IconButton, Box, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { v4 as uuidv4 } from 'uuid';
+// Import necessary MUI icons
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import PauseIcon from '@mui/icons-material/Pause';
+import VolumeUpIcon from '@mui/icons-material/VolumeUp';
+import VolumeOffIcon from '@mui/icons-material/VolumeOff';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import ReplayIcon from '@mui/icons-material/Replay';
 
 const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
     const videoRef = useRef(null);
+    const videoContainerRef = useRef(null);
     const peerConnectionRef = useRef(null);
     const clientIdRef = useRef(uuidv4());
     const [error, setError] = useState(null);
@@ -13,6 +21,12 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState("");
+
+    // Video control states
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [volume, setVolume] = useState(1);
+    const [isMuted, setIsMuted] = useState(false);
+    const [showControls, setShowControls] = useState(false);
 
     // Define the relay server URL
     const RELAY_SERVER = "http://192.168.60.99:5000"; // Adjust this to your backend URL
@@ -29,7 +43,6 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
         };
     }, []);
 
-
     useEffect(() => {
         connect();
 
@@ -37,7 +50,70 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
             disconnect();
         };
     }, []);
-    
+
+    // Add event listeners for playing and pausing
+    useEffect(() => {
+        const videoElement = videoRef.current;
+        if (!videoElement) return;
+
+        const handlePlay = () => setIsPlaying(true);
+        const handlePause = () => setIsPlaying(false);
+
+        videoElement.addEventListener('play', handlePlay);
+        videoElement.addEventListener('pause', handlePause);
+
+        return () => {
+            videoElement.removeEventListener('play', handlePlay);
+            videoElement.removeEventListener('pause', handlePause);
+        };
+    }, [videoRef.current]);
+
+    // Handle video playback control
+    const handlePlayPause = () => {
+        if (!videoRef.current) return;
+
+        if (isPlaying) {
+            videoRef.current.pause();
+        } else {
+            videoRef.current.play();
+        }
+        setIsPlaying(!isPlaying);
+    };
+
+    // Handle volume control
+    const handleVolumeChange = (event, newValue) => {
+        if (!videoRef.current) return;
+
+        setVolume(newValue);
+        videoRef.current.volume = newValue;
+        setIsMuted(newValue === 0);
+    };
+
+    // Handle mute toggle
+    const handleMuteToggle = () => {
+        if (!videoRef.current) return;
+
+        const newMutedState = !isMuted;
+        setIsMuted(newMutedState);
+        videoRef.current.muted = newMutedState;
+    };
+
+    // Handle fullscreen
+    const handleFullscreen = () => {
+        if (!videoContainerRef.current) return;
+
+        if (document.fullscreenElement) {
+            document.exitFullscreen();
+        } else {
+            videoContainerRef.current.requestFullscreen();
+        }
+    };
+
+    // Handle reconnect/replay
+    const handleReconnect = () => {
+        connect();
+    };
+
     const connect = async () => {
         try {
             setError(null);
@@ -119,19 +195,17 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
             });
 
             if (!response.ok) {
-                throw new Error(`Server error: ${response.status}`);
+                throw new Error(`Server responded with ${response.status}: ${response.statusText}`);
             }
 
-            // Apply the answer from the server
-            const answer = await response.json();
-            await peerConnection.setRemoteDescription(new RTCSessionDescription({
-                type: answer.type,
-                sdp: answer.sdp
-            }));
+            const answerData = await response.json();
+
+            // Set remote description
+            await peerConnection.setRemoteDescription(new RTCSessionDescription(answerData));
 
         } catch (err) {
             console.error("WebRTC connection error:", err);
-            setError(err.message || "Failed to establish WebRTC connection");
+            setError(err.message || "Failed to connect to WebRTC stream");
             setIsLoading(false);
         }
     };
@@ -141,65 +215,98 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
             peerConnectionRef.current.close();
             peerConnectionRef.current = null;
         }
-        if (videoRef.current) {
-            videoRef.current.srcObject = null;
-        }
         setIsConnected(false);
     };
 
     return (
-        <div style={{ width: '100%', height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>WebRTC Video</TitleBar>
-            <div style={{ padding: '8px', display: 'flex', flexDirection: 'column', flex: 1 }}>
-                {cameras.length > 0 && (
-                    <Grid container spacing={1} sx={{ mb: 1 }}>
-                        <Grid>
-                            <FormControl fullWidth size="small">
-                                <InputLabel id="camera-select-label">Camera</InputLabel>
-                                <Select
-                                    labelId="camera-select-label"
-                                    value={selectedCamera}
-                                    label="Camera"
-                                    onChange={(e) => setSelectedCamera(e.target.value)}
-                                 variant={'filled'}>
-                                    {cameras.map(camera => (
-                                        <MenuItem key={camera} value={camera}>{camera}</MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                        </Grid>
-                    </Grid>
-                )}
+            <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
+                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                    <FormControl size="small" fullWidth={true}>
+                        <InputLabel id="dropdown-label">select camera</InputLabel>
+                        <Select
+                            labelId="dropdown-label"
+                            value={""}
+                            onChange={(e) => {
 
-                    <div style={{ position: 'relative', flex: 1, backgroundColor: '#000' }}>
-                    <video
-                        ref={videoRef}
-                        autoPlay
-                        playsInline
-                        style={{
-                            width: '100%',
-                            height: '100%',
-                            objectFit: 'contain'
-                        }}
-                    />
-                    {error && (
-                        <div style={{
-                            position: 'absolute',
-                            top: '50%',
-                            left: '50%',
-                            transform: 'translate(-50%, -50%)',
-                            color: 'white',
-                            backgroundColor: 'rgba(0,0,0,0.6)',
-                            padding: '10px',
-                            borderRadius: '4px',
-                            textAlign: 'center'
-                        }}>
-                            {error}
-                        </div>
+                            }}
+                            label="select camera"
+                            variant={'filled'}>
+                            <MenuItem value="option1">Option 1</MenuItem>
+                            <MenuItem value="option2">Option 2</MenuItem>
+                            <MenuItem value="option3">Option 3</MenuItem>
+                        </Select>
+                    </FormControl>
+                    </Grid>
+                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}
+                    container
+                    direction="column"
+                    ref={videoContainerRef}
+                    sx={{
+                        position: 'relative',
+                        width: '100%',
+                            '&:hover .video-controls': {
+                            opacity: 1,
+                        },
+                    }}
+                    onMouseEnter={() => setShowControls(true)}
+                    onMouseLeave={() => setShowControls(false)}
+                >
+                    {isLoading && (
+                        <Grid
+                            item
+                            sx={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                zIndex: 10
+                            }}
+                        >
+                            <CircularProgress />
+                        </Grid>
                     )}
-                </div>
-            </div>
-        </div>
+
+                    {error && (
+                        <Grid
+                            item
+                            sx={{
+                                position: 'absolute',
+                                top: '50%',
+                                left: '50%',
+                                transform: 'translate(-50%, -50%)',
+                                color: 'error.main',
+                                textAlign: 'center',
+                                zIndex: 10
+                            }}
+                        >
+                            <Typography variant="body1" color="error">
+                                {error}
+                            </Typography>
+                            <Button
+                                startIcon={<ReplayIcon />}
+                                variant="contained"
+                                color="primary"
+                                onClick={handleReconnect}
+                                sx={{ mt: 2 }}
+                            >
+                                Reconnect
+                            </Button>
+                        </Grid>
+                    )}
+
+                    <Grid item>
+                        <video
+                            ref={videoRef}
+                            autoPlay
+                            playsInline
+                            style={{ width: '100%', display: 'block' }}
+                        />
+                    </Grid>
+                </Grid>
+            </Grid>
+        </>
     );
 };
 
