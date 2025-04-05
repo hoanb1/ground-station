@@ -84,7 +84,7 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
     'targetSatTrack/fetchSatellitesByGroupId',
     async ({ socket, groupId }, { rejectWithValue }) => {
         return new Promise((resolve, reject) => {
-            socket.emit('data_request', 'get-satellites-for-group-id', groupId, (response) => {
+                socket.emit('data_request', 'get-satellites-for-group-id', groupId, (response) => {
                 if (response.success) {
                     const satellites = response.data;
                     satellites.sort((a, b) => a.name.localeCompare(b.name));
@@ -194,6 +194,7 @@ const targetSatTrackSlice = createSlice({
         selectedRotator: "",
         openMapSettingsDialog: false,
         nextPassesHours: 6.0,
+        selectedTransmitter: "",
     },
     reducers: {
         setLoading(state, action) {
@@ -350,7 +351,10 @@ const targetSatTrackSlice = createSlice({
         },
         setNextPassesHours(state, action) {
             state.nextPassesHours = action.payload;
-        }
+        },
+        setSelectedTransmitter(state, action) {
+            state.selectedTransmitter = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -472,6 +476,7 @@ export const {
     setRotator,
     setOpenMapSettingsDialog,
     setNextPassesHours,
+    setSelectedTransmitter,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

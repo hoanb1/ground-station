@@ -8,7 +8,7 @@ import {
     Select,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import {TitleBar} from "../common/common.jsx";
+import {humanizeFrequency, TitleBar} from "../common/common.jsx";
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
@@ -17,17 +17,17 @@ import {
     fetchSatellitesByGroupId,
     setSatGroupId,
     setSatelliteId,
-    setSatelliteSelectOpen,
     setSatelliteGroupSelectOpen,
     setTrackingStateInBackend,
     setGroupOfSats, setLoading,
-    setUITrackerDisabled,
     setStarting,
     setRadioRig,
-    setRotator,
+    setRotator, setSelectedTransmitter,
 } from './target-sat-slice.jsx';
 import SatelliteList from "./target-sat-list.jsx";
 import {enqueueSnackbar} from "notistack";
+
+
 
 
 const SATELLITE_NUMBER_LIMIT = 500;
@@ -50,6 +50,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         starting,
         selectedRadioRig,
         selectedRotator,
+        selectedTransmitter,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -147,6 +148,22 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
         dispatch(setRadioRig(event.target.value));
     }
 
+    function handleTransmitterChange(event) {
+        dispatch(setSelectedTransmitter(event.target.value));
+    }
+
+    function getTransmittersForSatelliteId(satelliteId) {
+        if (satelliteId && groupOfSats.length > 0) {
+            const satellite = groupOfSats.find(s => s.norad_id === satelliteId);
+            if (satellite) {
+                return satellite.transmitters || [];
+            } else {
+                return [];
+            }
+        }
+        return [];
+    }
+
     return (
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
@@ -182,8 +199,36 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
                     <SatelliteList/>
                 </Grid>
 
+                <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"}
+                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
+                                 size="small">
+                        <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
+                        <Select
+                            id="transmitter-select"
+                            value={getTransmittersForSatelliteId(satelliteId).length > 0 ? selectedTransmitter : "none"}
+                            onChange={(event) => {
+                                handleTransmitterChange(event);
+                            }}
+                            variant={'filled'}>
+                            <MenuItem value="none">
+                                [no transmitter control]
+                            </MenuItem>
+                            <MenuItem value="" disabled>
+                                <em>select a transmitter</em>
+                            </MenuItem>
+                            {getTransmittersForSatelliteId(satelliteId).map((transmitter, index) => {
+                                return <MenuItem value={transmitter.id} key={transmitter.id}>
+                                    {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
+                                </MenuItem>;
+                            })}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                    <FormControl disabled={trackingState['tracking_state'] === "tracking"}
+                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
                         <Select
