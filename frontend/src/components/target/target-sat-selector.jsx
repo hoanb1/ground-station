@@ -126,6 +126,7 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
             'tracking_state': "tracking",
             'rig_id': selectedRadioRig,
             'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
         };
         //dispatch(setUITrackerDisabled(true));
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))

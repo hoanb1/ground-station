@@ -23,7 +23,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {getState, dispatch, rejectWithValue}) => {
         const state = getState();
-        const {norad_id, tracking_state, group_id, rig_id, rotator_id} = data;
+        const {norad_id, tracking_state, group_id, rig_id, rotator_id, transmitter_id} = data;
         const trackState = {
             'name': 'satellite-tracking',
             'value': {
@@ -32,6 +32,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
                 'group_id': group_id,
                 'rotator_id': rotator_id,
                 'rig_id': rig_id,
+                'transmitter_id': transmitter_id,
             }
         };
 
@@ -130,7 +131,8 @@ const targetSatTrackSlice = createSlice({
             'tracking_state': 'idle',
             'group_id': '',
             'rig_id': 'none',
-            'rotator_id': 'none'
+            'rotator_id': 'none',
+            'transmitter_id': 'none'
         },
         satelliteData: {
             position: {
@@ -224,6 +226,7 @@ const targetSatTrackSlice = createSlice({
                 state.groupId = action.payload['ui_tracker_state']['group_id'];
                 state.selectedRadioRig = action.payload['ui_tracker_state']['rig_id'];
                 state.selectedRotator = action.payload['ui_tracker_state']['rotator_id'];
+                state.selectedTransmitter = action.payload['ui_tracker_state']['transmitter_id'];
             }
             
             if (action.payload['events']) {

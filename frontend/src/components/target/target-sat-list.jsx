@@ -28,6 +28,7 @@ function SatelliteList() {
         starting,
         selectedRadioRig,
         selectedRotator,
+        selectedTransmitter,
     } = useSelector((state) => state.targetSatTrack);
 
     function handleUIElementChange(event) {
@@ -42,6 +43,7 @@ function SatelliteList() {
             group_id: groupId,
             rig_id: selectedRadioRig,
             rotator_id: selectedRotator,
+            transmitter_id: selectedTransmitter,
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
