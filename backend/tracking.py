@@ -15,6 +15,7 @@ from models import ModelEncoder
 from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevationError
 from rotator import RotatorController
 from arguments import arguments as args
+from typing import Callable, Any, List, Union, Coroutine, Optional
 
 
 @async_timeit
@@ -400,6 +401,53 @@ async def compiled_satellite_data(dbsession, tracking_state) -> dict:
     return satellite_data
 
 
+class StateTracker:
+    def __init__(self, initial_state: Any = None):
+        self.state = initial_state
+        self.sync_callbacks: List[Callable[[Any, Any], None]] = []
+        self.async_callbacks: List[Callable[[Any, Any], Coroutine[Any, Any, None]]] = []
+
+    def register_callback(self, callback: Callable[[Any, Any], None]) -> None:
+        """Register a synchronous callback function."""
+        self.sync_callbacks.append(callback)
+
+    def register_async_callback(self, callback: Callable[[Any, Any], Coroutine[Any, Any, None]]) -> None:
+        """Register an asynchronous callback function."""
+        self.async_callbacks.append(callback)
+
+    async def update_state(self, new_state: Any) -> bool:
+        """
+        Update the state and trigger callbacks if the state has changed.
+        Returns True if state changed, False otherwise.
+        """
+        if new_state != self.state:
+            old_state = self.state
+            self.state = new_state
+
+            # Handle synchronous callbacks
+            for callback in self.sync_callbacks:
+                callback(old_state, new_state)
+
+            # Handle asynchronous callbacks
+            if self.async_callbacks:
+                # Create tasks for all async callbacks
+                tasks = [
+                    asyncio.create_task(callback(old_state, new_state))
+                    for callback in self.async_callbacks
+                ]
+
+                # Wait for all async callbacks to complete
+                if tasks:
+                    await asyncio.gather(*tasks)
+
+            return True
+        return False
+
+    def get_state(self) -> Any:
+        """Get the current state."""
+        return self.state
+
+
 async def satellite_tracking_task(sio: socketio.AsyncServer):
     """
     Periodically tracks and transmits satellite position and details along with user location data
@@ -431,6 +479,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         else:
             return False
 
+    # state change check
+    norad_id_change_tracker = StateTracker(initial_state="")
+    norad_id_change_tracker.register_callback(callback=lambda old, new: logger.info("norad_id changed"))
+
+
     async with (AsyncSessionLocal() as dbsession):
         while True:
             try:
@@ -441,6 +494,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
                 group_id = tracking_state_reply['data']['value']['group_id']
                 norad_id = tracking_state_reply['data']['value']['norad_id']
+
+                # check norad_id and detect change
+                await norad_id_change_tracker.update_state(norad_id)
 
                 satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
                 satellite_name = satellite_data['details']['name']

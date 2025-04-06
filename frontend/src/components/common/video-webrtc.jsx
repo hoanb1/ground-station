@@ -3,12 +3,6 @@ import { TitleBar } from "./common.jsx";
 import { FormControl, InputLabel, MenuItem, Select, Button, CircularProgress, Slider, Stack, IconButton, Box, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { v4 as uuidv4 } from 'uuid';
-// Import necessary MUI icons
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import PauseIcon from '@mui/icons-material/Pause';
-import VolumeUpIcon from '@mui/icons-material/VolumeUp';
-import VolumeOffIcon from '@mui/icons-material/VolumeOff';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import ReplayIcon from '@mui/icons-material/Replay';
 
 const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
@@ -21,12 +15,6 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState("");
-
-    // Video control states
-    const [isPlaying, setIsPlaying] = useState(true);
-    const [volume, setVolume] = useState(1);
-    const [isMuted, setIsMuted] = useState(false);
-    const [showControls, setShowControls] = useState(false);
 
     // Define the relay server URL
     const RELAY_SERVER = "http://192.168.60.99:5000"; // Adjust this to your backend URL
@@ -67,47 +55,6 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
             videoElement.removeEventListener('pause', handlePause);
         };
     }, [videoRef.current]);
-
-    // Handle video playback control
-    const handlePlayPause = () => {
-        if (!videoRef.current) return;
-
-        if (isPlaying) {
-            videoRef.current.pause();
-        } else {
-            videoRef.current.play();
-        }
-        setIsPlaying(!isPlaying);
-    };
-
-    // Handle volume control
-    const handleVolumeChange = (event, newValue) => {
-        if (!videoRef.current) return;
-
-        setVolume(newValue);
-        videoRef.current.volume = newValue;
-        setIsMuted(newValue === 0);
-    };
-
-    // Handle mute toggle
-    const handleMuteToggle = () => {
-        if (!videoRef.current) return;
-
-        const newMutedState = !isMuted;
-        setIsMuted(newMutedState);
-        videoRef.current.muted = newMutedState;
-    };
-
-    // Handle fullscreen
-    const handleFullscreen = () => {
-        if (!videoContainerRef.current) return;
-
-        if (document.fullscreenElement) {
-            document.exitFullscreen();
-        } else {
-            videoContainerRef.current.requestFullscreen();
-        }
-    };
 
     // Handle reconnect/replay
     const handleReconnect = () => {
@@ -254,16 +201,13 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
                     onMouseLeave={() => setShowControls(false)}
                 >
                     {isLoading && (
-                        <Grid
-                            item
-                            sx={{
+                        <Grid sx={{
                                 position: 'absolute',
                                 top: '50%',
                                 left: '50%',
                                 transform: 'translate(-50%, -50%)',
                                 zIndex: 10
-                            }}
-                        >
+                            }}>
                             <CircularProgress />
                         </Grid>
                     )}
@@ -295,14 +239,8 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
                             </Button>
                         </Grid>
                     )}
-
-                    <Grid item>
-                        <video
-                            ref={videoRef}
-                            autoPlay
-                            playsInline
-                            style={{ width: '100%', display: 'block' }}
-                        />
+                    <Grid>
+                        <video ref={videoRef} autoPlay playsInline style={{ width: '100%', display: 'block' }} />
                     </Grid>
                 </Grid>
             </Grid>
