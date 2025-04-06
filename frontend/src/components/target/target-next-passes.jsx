@@ -8,22 +8,37 @@ import {fetchNextPasses, setSatellitePasses} from './target-sat-slice.jsx';
 import {darken, lighten, styled} from "@mui/material/styles";
 
 
-const NextPassesIsland = React.memo(({noradId}) => {
+const TimeFormatter = React.memo(({ value }) => {
+    const [, setForceUpdate] = useState(0);
+
+    // Force component to update regularly
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setForceUpdate(prev => prev + 1);
+        }, 2000); // Every minute
+        return () => clearInterval(interval);
+    }, []);
+
+    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+});
+
+
+const NextPassesIsland = React.memo(() => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const [containerHeight, setContainerHeight] = useState(0);
     const containerRef = useRef(null);
-    const { passesLoading, satellitePasses, satelliteData, nextPassesHours } = useSelector(state => state.targetSatTrack);
+    const { passesLoading, satellitePasses, satelliteData, nextPassesHours, satelliteId } = useSelector(state => state.targetSatTrack);
 
     useEffect(() => {
-        if (noradId) {
-            dispatch(fetchNextPasses({socket, noradId, hours: nextPassesHours}))
+        if (satelliteId) {
+            dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
                 .unwrap()
-                .then(response => {
+                .then(data => {
 
                 })
                 .catch(error => {
-                    enqueueSnackbar("Failed fetching next passes", {
+                    enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
                         variant: 'error',
                         autoHideDuration: 5000,
                     })
@@ -32,7 +47,7 @@ const NextPassesIsland = React.memo(({noradId}) => {
         return () => {
 
         };
-    }, [noradId]);
+    }, [satelliteId]);
 
     const minHeight = 200;
     const maxHeight = 400;
@@ -81,6 +96,7 @@ const NextPassesIsland = React.memo(({noradId}) => {
                     ...getBackgroundColor(theme.palette.info.main, theme, 0.4),
                 },
             },
+            textDecoration: 'line-through',
         },
         '& .passes-cell-warning': {
             color: theme.palette.error.main,
@@ -99,18 +115,20 @@ const NextPassesIsland = React.memo(({noradId}) => {
             minWidth: 200,
             headerName: 'Start',
             flex: 2,
-            valueFormatter: (value) => {
-                return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-            }
+            renderCell: (params) => <TimeFormatter value={params.value} />
+            // valueFormatter: (value) => {
+            //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+            // }
         },
         {
             field: 'event_end',
             minWidth: 200,
             headerName: 'End',
             flex: 2,
-            valueFormatter: (value) => {
-                return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-            }
+            renderCell: (params) => <TimeFormatter value={params.value} />
+            // valueFormatter: (value) => {
+            //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+            // }
         },
         {
             field: 'duration',
@@ -221,7 +239,7 @@ const NextPassesIsland = React.memo(({noradId}) => {
                         }}
                         columns={columns}
                         pageSize={10}
-                        rowsPerPageOptions={[5, 10, 20]}
+                        rowsPerPageOptions={[5, 10, 15, 20]}
                         disableSelectionOnClick
                     />
                 </div>

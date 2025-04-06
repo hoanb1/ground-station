@@ -18,7 +18,7 @@ import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 const persistConfig = {
     key: "root",
     storage,
-    whitelist: ['preferences', 'tleSources', 'overviewSatTrack'],
+    whitelist: ['preferences', 'tleSources'],
 };
 
 const rootReducer = combineReducers({

@@ -215,7 +215,7 @@ export const humanizeDate = (isoString) => {
 };
 
 
-export const humanizeFutureDateInMinutes = (isoString) => {
+export const humanizeFutureDateInMinutes = (isoString, zeroPadding=2) => {
     const now = new Date();
     const futureDate = new Date(isoString);
     const diffInSeconds = Math.floor((futureDate - now) / 1000);
@@ -224,9 +224,10 @@ export const humanizeFutureDateInMinutes = (isoString) => {
         return "In the past"; // Handle cases where the date is not in the future
     }
 
-    const diffInMinutes = Math.ceil(diffInSeconds / 60);
+    const diffInMinutes = Math.floor(diffInSeconds / 60);
+    const remainingSeconds = diffInSeconds % 60;
 
-    return `In ${diffInMinutes} minute${diffInMinutes > 1 ? "s" : ""}`;
+    return `in ${formatWithZeros(diffInMinutes, zeroPadding)}:${formatWithZeros(remainingSeconds, zeroPadding)}`;
 };
 
 export const betterDateTimes = (date) => {
@@ -412,3 +413,7 @@ export function SimpleTruncatedHtml({ htmlString, className }) {
         </Tooltip>
     );
 }
+
+export const formatWithZeros = (num, length) => {
+    return String(num).padStart(length, '0');
+};

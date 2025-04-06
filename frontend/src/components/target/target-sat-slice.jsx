@@ -209,7 +209,7 @@ const targetSatTrackSlice = createSlice({
         selectedRadioRig: "",
         selectedRotator: "",
         openMapSettingsDialog: false,
-        nextPassesHours: 6.0,
+        nextPassesHours: 12.0,
         cachedPasses: {},
         selectedTransmitter: "",
         availableTransmitters: [],

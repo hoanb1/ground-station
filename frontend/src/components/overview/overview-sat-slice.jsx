@@ -97,7 +97,7 @@ const overviewSlice = createSlice({
         cachedPasses: {},
         passesLoading: false,
         openMapSettingsDialog: false,
-        nextPassesHours: 2.0,
+        nextPassesHours: 4.0,
     },
     reducers: {
         setShowPastOrbitPath(state, action) {

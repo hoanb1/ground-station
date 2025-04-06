@@ -39,7 +39,12 @@ import {
     StyledIslandParentNoScrollbar,
     SimpleTruncatedHtml,
 } from "../common/common.jsx";
-import {getSatellitePaths, getSatelliteCoverageCircle, getSatelliteLatLon} from '../common/tracking-logic.jsx';
+import {
+    getSatellitePaths,
+    getSatelliteCoverageCircle,
+    getSatelliteLatLon,
+    isSatelliteVisible
+} from '../common/tracking-logic.jsx';
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
@@ -59,6 +64,8 @@ import CoordinateGrid from "../common/mercator-grid.jsx";
 
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
+
+const viewSatelliteLimit = 100;
 
 let MapObject = null;
 
@@ -101,7 +108,7 @@ function getMapZoomFromStorage() {
     return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
 
-function GlobalSatelliteTrack() {
+const GlobalSatelliteTrack = React.memo(function () {
 
     const {socket} = useSocket();
     const dispatch = useDispatch();
@@ -226,11 +233,10 @@ function GlobalSatelliteTrack() {
         let currentCoverage = [];
         let currentFuturePaths = [];
         let currentPastPaths = [];
-        const satLimit = 50;
         let satIndex = 0;
 
         selectedSatellites.forEach(satellite => {
-            if (satIndex++ >= satLimit) {
+            if (satIndex++ >= viewSatelliteLimit) {
                 return;
             }
 
@@ -280,10 +286,28 @@ function GlobalSatelliteTrack() {
                 mouseover: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
             }
 
+            const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);
+
+            if (isVisible) {
+                let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                currentCoverage.push(<Polyline
+                    noClip={true}
+                    key={"coverage-"+satellite['name']}
+                    pathOptions={{
+                        color: satelliteCoverageColor,
+                        weight: 1,
+                        fill: true,
+                        opacity: 0.75,
+                        fillOpacity: 0.15,
+                    }}
+                    positions={coverage}
+                />);
+            }
+
             if (showTooltip) {
                 currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]} icon={satelliteIcon2}
                                         eventHandlers={markerEventHandlers}>
-                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={0.9} permanent={true}>
+                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} permanent={isVisible}>
                         {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
                     </ThemedLeafletTooltip>
                 </Marker>);
@@ -292,21 +316,6 @@ function GlobalSatelliteTrack() {
                                         eventHandlers={markerEventHandlers}>
                 </Marker>);
             }
-
-            let coverage = [];
-            coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
-            currentCoverage.push(<Polyline
-                noClip={true}
-                key={"coverage-"+satellite['name']}
-                pathOptions={{
-                    color: satelliteCoverageColor,
-                    weight: 1,
-                    fill: true,
-                    opacity: 0.75,
-                    fillOpacity: 0.15,
-                }}
-                positions={coverage}
-            />);
         });
 
         setCurrentPastSatellitesPaths(currentPastPaths);
@@ -342,12 +351,12 @@ function GlobalSatelliteTrack() {
     // update the satellites position, day/night terminator every 3 seconds
     useEffect(()=>{
         satelliteUpdate(new Date());
-        const timer = setInterval(()=>{
+        const satelliteUpdateTimer = setInterval(()=>{
             satelliteUpdate(new Date())
         }, 3000);
 
         return ()=> {
-            clearInterval(timer);
+            clearInterval(satelliteUpdateTimer);
         };
     },[selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
@@ -522,6 +531,6 @@ function GlobalSatelliteTrack() {
     }
 
     return ResponsiveGridLayoutParent;
-}
+});
 
 export default GlobalSatelliteTrack;

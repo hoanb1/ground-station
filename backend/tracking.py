@@ -181,8 +181,11 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
 
             for satellite in satellites:
                 events_reply = await fetch_next_events(satellite['norad_id'], hours=hours, above_el=above_el, step_minutes=step_minutes)
-                events_for_satellite = events_reply.get('data', None)
-                events.append({'name': satellite['name'], 'events': events_for_satellite})
+                events_for_satellite = events_reply.get('data', [])
+                for event in events_for_satellite:
+                    event['name'] = satellite['name']
+                    event['id'] = f"{satellite['norad_id']}_{event['event_start']}"
+                    events.append(event)
 
         except Exception as e:
             logger.error(f'Error fetching next passes for group: {group_id}, error: {e}')

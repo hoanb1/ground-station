@@ -295,47 +295,65 @@ function isGeostationary(tle) {
 
 
 /**
- * Checks if the satellite (from its TLE) is over a given latitude/longitude at a specified time.
+ * Determines if a satellite is visible from a specific location on Earth,
+ * considering line of sight with an elevation angle as low as 1 degree.
  *
- * @param {string[]} tle - Array of two lines [line1, line2] containing the satellite's TLE.
- * @param {Date} date - The date/time at which to check the satellite's position.
- * @param {number} targetLat - Target latitude in degrees (negative for south).
- * @param {number} targetLon - Target longitude in degrees (negative for west).
- * @param {number} thresholdKm - Distance threshold in kilometers (default=500).
- *                              The satellite is considered "over" the location if
- *                              it is within this distance on Earth's surface.
- * @returns {boolean} True if the satellite is within thresholdKm of the specified location.
+ * @param {string} tleLine1 - The first line of the TLE data.
+ * @param {string} tleLine2 - The second line of the TLE data.
+ * @param {Date} date - The date and time to check visibility.
+ * @param {Object} observerCoords - The observer's coordinates.
+ * @param {number} observerCoords.lat - The observer's latitude in degrees.
+ * @param {number} observerCoords.lon - The observer's longitude in degrees.
+ * @param {number} observerCoords.alt - The observer's altitude in meters (default: 0).
+ * @param {number} minElevation - Minimum elevation angle in degrees for visibility (default: 1).
+ * @return {boolean} True if the satellite is visible from the observer's location, false otherwise.
  */
-function isSatelliteOverLocation(tle, date, targetLat, targetLon, thresholdKm = 500) {
-    if (!Array.isArray(tle) || tle.length < 2) {
-        throw new Error("TLE must be an array with two lines of data.");
-    }
+export function isSatelliteVisible(tleLine1, tleLine2, date, observerCoords, minElevation = 0) {
+    try {
+        if (!tleLine1 || !tleLine2 || !date || !observerCoords) {
+            return false;
+        }
 
-    // 1) Parse TLE with satellite.js => satrec object
-    const satrec = satellite.twoline2satrec(tle[0], tle[1]);
+        // Extract observer coordinates and set defaults
+        const { lat, lon, alt = 0 } = observerCoords;
 
-    // 2) Propagate orbit to given date/time
-    const positionAndVelocity = satellite.propagate(satrec, date);
-    const positionEci = positionAndVelocity.position; // { x, y, z } in km
+        // Initialize satellite record from TLE data
+        const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
 
-    if (!positionEci) {
-        // If propagation failed (e.g., TLE out of date), positionEci might be undefined
+        // Get satellite position in ECI coordinates
+        const positionAndVelocity = satellite.propagate(satrec, date);
+        if (!positionAndVelocity.position) {
+            return false;
+        }
+
+        // Get observer's position in ECEF coordinates
+        const observerGd = {
+            longitude: satellite.degreesToRadians(lon),
+            latitude: satellite.degreesToRadians(lat),
+            height: alt / 1000 // Convert meters to kilometers
+        };
+
+        const observerEcf = satellite.geodeticToEcf(observerGd);
+
+        // Get current Greenwich Mean Sidereal Time
+        const gmst = satellite.gstime(date);
+
+        // Convert satellite position from ECI to ECEF coordinates
+        const positionEcf = satellite.eciToEcf(positionAndVelocity.position, gmst);
+
+        // Calculate look angles (azimuth, elevation, range) from observer to satellite
+        const lookAngles = satellite.ecfToLookAngles(observerGd, positionEcf);
+
+        // Convert elevation from radians to degrees
+        const elevationDeg = satellite.degreesLat(lookAngles.elevation);
+
+        // Satellite is visible if elevation is greater than or equal to the minimum required
+        return elevationDeg >= minElevation;
+
+    } catch (error) {
+        console.error("Error calculating satellite visibility:", error);
         return false;
     }
-
-    // 3) Get GMST (Greenwich Mean Sidereal Time) for coordinate transforms
-    const gmst = satellite.gstime(date);
-
-    // 4) Convert ECI position to geodetic coordinates (lat/long/height)
-    const geodeticCoords = satellite.eciToGeodetic(positionEci, gmst);
-    const satLat = satellite.degreesLat(geodeticCoords.latitude);
-    const satLon = satellite.degreesLong(geodeticCoords.longitude);
-
-    // 5) Calculate the ground distance between (satLat, satLon) and (targetLat, targetLon)
-    const distance = calculateGreatCircleDistance(satLat, satLon, targetLat, targetLon);
-
-    // 6) Compare distance with threshold
-    return distance <= thresholdKm;
 }
 
 /**

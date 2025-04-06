@@ -370,6 +370,7 @@ const TargetSatelliteTrack = React.memo(function () {
 
     const satelliteUpdate = function (now) {
         if (Object.keys(satelliteData['details']['name']).length !== 0) {
+
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
@@ -644,7 +645,7 @@ const TargetSatelliteTrack = React.memo(function () {
             <SatelliteInfoIsland/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
-        <NextPassesIsland noradId={noradId}/>
+        <NextPassesIsland/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
