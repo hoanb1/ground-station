@@ -517,6 +517,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                             except Exception as e:
                                 logger.error(f"Failed to connect to rotator: {e}")
                                 logger.exception(e)
+                                await sio.emit('satellite-tracking', {'events': [
+                                    {'name': "rotator_error", "error": str(e)}
+                                ]})
                                 rotator = None  # Reset to None if connection fails
 
                     elif current_tracking_state == "idle":
@@ -524,7 +527,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         if rotator is not None:
                             logger.info(f"Disconnecting from rotator at {rotator.host}:{rotator.port}...")
                             try:
-                                rotator.disconnect()  # Assuming disconnect method exists
+                                rotator.disconnect()
                                 await sio.emit('satellite-tracking', {'events': [
                                     {'name': "rotator_disconnected"}
                                 ]})

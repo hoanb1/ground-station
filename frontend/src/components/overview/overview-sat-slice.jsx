@@ -1,5 +1,11 @@
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 
+
+function getCacheKeyForGroupId(groupId) {
+    return `${groupId}_${Math.floor(Date.now() / (2 * 60 * 60 * 1000))}`;
+}
+
+
 export const fetchSatelliteGroups = createAsyncThunk(
     'overviewGroups/fetchSatelliteGroupsOverview',
     async ({ socket }, { rejectWithValue }) => {
@@ -36,8 +42,16 @@ export const fetchSatellitesByGroupId = createAsyncThunk(
 
 export const fetchNextPassesForGroup = createAsyncThunk(
     'overviewPasses/fetchNextPassesForGroup',
-    async ({ socket, selectedSatGroupId, hours }, { rejectWithValue }) => {
+    async ({ socket, selectedSatGroupId, hours }, { getState, rejectWithValue }) => {
         return new Promise((resolve, reject) => {
+
+            // lets check first if we have something cached
+            const state = getState();
+            const cacheKey = getCacheKeyForGroupId(selectedSatGroupId);
+            if (cacheKey in state.overviewSatTrack.cachedPasses) {
+                resolve(state.overviewSatTrack.cachedPasses[cacheKey]);
+            }
+
             socket.emit('data_request', 'fetch-next-passes-for-group', {group_id: selectedSatGroupId, hours: hours}, (response) => {
                 if (response.success) {
                     resolve(response.data);
@@ -77,14 +91,12 @@ const overviewSlice = createSlice({
         sunPos: null,
         moonPos: null,
         mapZoomLevel: 2,
-        location: { lat: 0, lon: 0 },
-        locationId: null,
-        locationUserId: null,
         satelliteGroupId: null,
         satGroups: [],
         formGroupSelectError: false,
         selectedSatGroupId: "",
         passes: [],
+        cachedPasses: {},
         passesLoading: false,
         openMapSettingsDialog: false,
         nextPassesHours: 2.0,
@@ -147,15 +159,6 @@ const overviewSlice = createSlice({
         setMapZoomLevel(state, action) {
             state.mapZoomLevel = action.payload;
         },
-        setLocation(state, action) {
-            state.location = action.payload;
-        },
-        setLocationId(state, action) {
-            state.locationId = action.payload;
-        },
-        setLocationUserId(state, action) {
-            state.locationUserId = action.payload;
-        },
         setSatelliteGroupId(state, action) {
             state.satelliteGroupId = action.payload;
         },
@@ -208,6 +211,8 @@ const overviewSlice = createSlice({
                 state.passesLoading = true;
             })
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
+                // cache the result for a few hours
+                state.cachedPasses[getCacheKeyForGroupId(state.selectedSatGroupId)] = action.payload;
                 state.passes = action.payload;
                 state.passesLoading = false;
             })
@@ -234,9 +239,6 @@ export const {
     setOrbitProjectionDuration,
     setTileLayerID,
     setMapZoomLevel,
-    setLocation,
-    setLocationId,
-    setLocationUserId,
     setSatelliteGroupId,
     setSatGroups,
     setFormGroupSelectError,

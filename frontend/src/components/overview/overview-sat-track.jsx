@@ -48,10 +48,6 @@ import {
     setShowTooltip,
     setGridEditable,
     setMapZoomLevel,
-    setLocation,
-    setLocationId,
-    setLocationUserId,
-    setSatelliteGroupId,
     setOpenMapSettingsDialog,
     setNextPassesHours,
 } from './overview-sat-slice.jsx';
@@ -131,12 +127,10 @@ function GlobalSatelliteTrack() {
         showGrid,
     } = useSelector(state => state.overviewSatTrack);
     const { location, } = useSelector((state) => state.location);
-
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
-
     const [terminatorLine, setTerminatorLine] = useState([]);
     const [daySidePolygon, setDaySidePolygon] = useState([]);
     const [sunPos, setSunPos] = useState(null);
@@ -359,31 +353,31 @@ function GlobalSatelliteTrack() {
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
         mapZoomLevel, showTooltip]);
 
-    useEffect(() => {
-        socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
-            if (response['success']) {
-                if (response['data']) {
-                    dispatch(setLocation({
-                        lat: parseFloat(response['data']['lat']),
-                        lon: parseFloat(response['data']['lon']),
-                    }));
-                    dispatch(setLocationId(response['data']['id']));
-                    dispatch(setLocationUserId(response['data']['userid']));
-                } else {
-                    enqueueSnackbar('No location found in the backend, please set one', {
-                        variant: 'info',
-                    })
-                }
-            } else {
-                enqueueSnackbar('Failed to get home location from backend', {
-                    variant: 'error',
-                })
-            }
-        });
-        return () => {
-
-        };
-    }, []);
+    // useEffect(() => {
+    //     socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
+    //         if (response['success']) {
+    //             if (response['data']) {
+    //                 dispatch(setLocation({
+    //                     lat: parseFloat(response['data']['lat']),
+    //                     lon: parseFloat(response['data']['lon']),
+    //                 }));
+    //                 dispatch(setLocationId(response['data']['id']));
+    //                 dispatch(setLocationUserId(response['data']['userid']));
+    //             } else {
+    //                 enqueueSnackbar('No location found in the backend, please set one', {
+    //                     variant: 'info',
+    //                 })
+    //             }
+    //         } else {
+    //             enqueueSnackbar('Failed to get home location from backend', {
+    //                 variant: 'error',
+    //             })
+    //         }
+    //     });
+    //     return () => {
+    //
+    //     };
+    // }, []);
 
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
@@ -445,7 +439,7 @@ function GlobalSatelliteTrack() {
                 zoomSnap={0.25}
                 zoomDelta={0.25}
             >
-                <MapTitleBar className={"react-grid-draggable window-title-bar"}>Global map</MapTitleBar>
+                <MapTitleBar className={"react-grid-draggable window-title-bar"}>Birds eye view</MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer
                     url={getTileLayerById(tileLayerID)['url']}

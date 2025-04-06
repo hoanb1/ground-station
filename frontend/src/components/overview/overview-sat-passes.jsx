@@ -4,7 +4,7 @@ import {enqueueSnackbar} from "notistack";
 import {getTimeFromISO, humanizeFutureDateInMinutes, TitleBar} from "../common/common.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";
-import { fetchNextPassesForGroup, fetchSatelliteGroups, fetchSatellitesByGroupId } from './overview-sat-slice.jsx';
+import { fetchNextPassesForGroup, fetchSatelliteGroups, fetchSatellitesByGroupId, } from './overview-sat-slice.jsx';
 
 
 const NextPassesGroupIsland = () => {

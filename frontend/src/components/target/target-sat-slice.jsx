@@ -247,7 +247,11 @@ const targetSatTrackSlice = createSlice({
                         } else if (event.name === 'azimuth_out_of_bounds') {
                             enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
                         } else if (event.name === 'minelevation_error') {
-                            enqueueSnackbar("Minimum elevation limit reached!", {variant: 'warning'});
+                            enqueueSnackbar("Target is at minimum elevation limit", {variant: 'warning'});
+                        } else if (event.name === 'norad_id_change') {
+                            enqueueSnackbar("Target satellite changed!", {variant: 'warning'});
+                        } else if (event.name === 'rotator_error') {
+                            enqueueSnackbar(event.error, {variant: 'error'});
                         }
                     });
                 }
