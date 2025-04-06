@@ -586,8 +586,8 @@ const TargetSatelliteTrack = React.memo(function () {
                     <FullscreenMapButton/>
                 </Box>
 
-                {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.3}></Marker>: null}
-                {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.3}></Marker>: null}
+                {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.5}></Marker>: null}
+                {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.5}></Marker>: null}
 
                 {daySidePolygon.length>1 && showTerminatorLine && (
                     <Polygon

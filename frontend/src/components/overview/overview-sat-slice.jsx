@@ -88,8 +88,6 @@ const overviewSlice = createSlice({
         satelliteCoverageColor: '#FFFFFF',
         orbitProjectionDuration: 60,
         tileLayerID: 'satellite',
-        sunPos: null,
-        moonPos: null,
         mapZoomLevel: 2,
         satelliteGroupId: null,
         satGroups: [],
@@ -149,12 +147,6 @@ const overviewSlice = createSlice({
         },
         setTileLayerID(state, action) {
             state.tileLayerID = action.payload;
-        },
-        setSunPos(state, action) {
-            state.sunPos = action.payload;
-        },
-        setMoonPos(state, action) {
-            state.moonPos = action.payload;
         },
         setMapZoomLevel(state, action) {
             state.mapZoomLevel = action.payload;
