@@ -5,9 +5,10 @@ import {getTimeFromISO, humanizeFutureDateInMinutes, TitleBar} from "../common/c
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {fetchNextPasses, setSatellitePasses} from './target-sat-slice.jsx';
+import {darken, lighten, styled} from "@mui/material/styles";
 
 
-const NextPassesIsland = ({noradId}) => {
+const NextPassesIsland = React.memo(({noradId}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const [containerHeight, setContainerHeight] = useState(0);
@@ -49,6 +50,126 @@ const NextPassesIsland = ({noradId}) => {
         };
     }, [containerRef]);
 
+    const getBackgroundColor = (color, theme, coefficient) => ({
+        backgroundColor: darken(color, coefficient),
+        ...theme.applyStyles('light', {
+            backgroundColor: lighten(color, coefficient),
+        }),
+    });
+
+    const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
+        '& .passes-cell-passing': {
+            ...getBackgroundColor(theme.palette.success.main, theme, 0.7),
+            '&:hover': {
+                ...getBackgroundColor(theme.palette.success.main, theme, 0.6),
+            },
+            '&.Mui-selected': {
+                ...getBackgroundColor(theme.palette.success.main, theme, 0.5),
+                '&:hover': {
+                    ...getBackgroundColor(theme.palette.success.main, theme, 0.4),
+                },
+            },
+        },
+        '& .passes-cell-passed': {
+            ...getBackgroundColor(theme.palette.info.main, theme, 0.7),
+            '&:hover': {
+                ...getBackgroundColor(theme.palette.info.main, theme, 0.6),
+            },
+            '&.Mui-selected': {
+                ...getBackgroundColor(theme.palette.info.main, theme, 0.5),
+                '&:hover': {
+                    ...getBackgroundColor(theme.palette.info.main, theme, 0.4),
+                },
+            },
+        },
+        '& .passes-cell-warning': {
+            color: theme.palette.error.main,
+        }
+    }));
+
+    const columns = [
+        {
+            field: 'event_start',
+            minWidth: 200,
+            headerName: 'Start',
+            flex: 2,
+            valueFormatter: (value) => {
+                return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+            }
+        },
+        {
+            field: 'event_end',
+            minWidth: 200,
+            headerName: 'End',
+            flex: 2,
+            valueFormatter: (value) => {
+                return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+            }
+        },
+        {
+            field: 'duration',
+            minWidth: 100,
+            headerName: 'Duration',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return `${value}`;
+            }
+        },
+        {
+            field: 'distance_at_start',
+            minWidth: 100,
+            headerName: 'Distance at AOS',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return `${parseFloat(value).toFixed(2)} km`
+            }
+        },
+        {
+            field: 'distance_at_end',
+            minWidth: 100,
+            headerName: 'Distance at LOS',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return `${parseFloat(value).toFixed(2)} km`
+            }
+        },
+        {
+            field: 'distance_at_peak',
+            minWidth: 100,
+            headerName: 'Distance at peak',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return `${parseFloat(value).toFixed(2)} km`
+            }
+        },
+        {
+            field: 'peak_altitude',
+            minWidth: 100,
+            headerName: 'Max El',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return `${parseFloat(value).toFixed(2)}°`;
+            },
+            cellClassName: (params) => {
+                if (params.value < 10.0) {
+                    console.log(params);
+                    return "passes-cell-warning";
+                }
+                return "";
+            }
+        },
+    ];
+
     return (
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {satelliteData['details']['name']} in the next {nextPassesHours} hours</TitleBar>
@@ -60,7 +181,7 @@ const NextPassesIsland = ({noradId}) => {
                     height: containerHeight - 25,
                     minHeight,
                 }}>
-                    <DataGrid
+                    <StyledDataGrid
                         fullWidth={true}
                         loading={passesLoading}
                         sx={{
@@ -74,6 +195,15 @@ const NextPassesIsland = ({noradId}) => {
                                     outline: 'none',
                                 },
                         }}
+                        getRowClassName={(param) => {
+                            if (param.row) {
+                                if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+                                    return "passes-cell-passed";
+                                } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
+                                    return "passes-cell-passing";
+                                }
+                            }
+                        }}
                         density={"compact"}
                         rows={satellitePasses}
                         pageSizeOptions={[5, 10, 15, 20]}
@@ -83,81 +213,7 @@ const NextPassesIsland = ({noradId}) => {
                                 sortModel: [{ field: 'event_start', sort: 'asc' }],
                             },
                         }}
-                        columns={[
-                            {
-                                field: 'event_start',
-                                minWidth: 200,
-                                headerName: 'Start',
-                                flex: 2,
-                                valueFormatter: (value) => {
-                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-                                }
-                            },
-                            {
-                                field: 'event_end',
-                                minWidth: 200,
-                                headerName: 'End',
-                                flex: 2,
-                                valueFormatter: (value) => {
-                                    return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-                                }
-                            },
-                            {
-                                field: 'duration',
-                                minWidth: 100,
-                                headerName: 'Duration',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${value}`;
-                                }
-                            },
-                            {
-                                field: 'distance_at_start',
-                                minWidth: 100,
-                                headerName: 'Distance at AOS',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)} km`
-                                }
-                            },
-                            {
-                                field: 'distance_at_end',
-                                minWidth: 100,
-                                headerName: 'Distance at LOS',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)} km`
-                                }
-                            },
-                            {
-                                field: 'distance_at_peak',
-                                minWidth: 100,
-                                headerName: 'Distance at peak',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)} km`
-                                }
-                            },
-                            {
-                                field: 'peak_altitude',
-                                minWidth: 100,
-                                headerName: 'Max El',
-                                align: 'center',
-                                headerAlign: 'center',
-                                flex: 1,
-                                valueFormatter: (value) => {
-                                    return `${parseFloat(value).toFixed(2)}°`;
-                                }
-                            },
-                        ]}
+                        columns={columns}
                         pageSize={10}
                         rowsPerPageOptions={[5, 10, 20]}
                         disableSelectionOnClick
@@ -166,6 +222,6 @@ const NextPassesIsland = ({noradId}) => {
             </div>
         </>
     );
-}
+});
 
 export default NextPassesIsland;

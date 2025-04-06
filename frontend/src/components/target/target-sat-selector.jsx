@@ -28,12 +28,10 @@ import SatelliteList from "./target-sat-list.jsx";
 import {enqueueSnackbar} from "notistack";
 
 
-
-
 const SATELLITE_NUMBER_LIMIT = 500;
 
 
-const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
+const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {
@@ -320,6 +318,6 @@ const SatSelectorIsland = ({ initialNoradId, initialGroupId }) => {
             </Grid>
         </>
     );
-};
+});
 
 export default SatSelectorIsland;

@@ -189,7 +189,7 @@ function GlobalSatelliteTrack() {
         MapObject = map.target;
         setInterval(()=>{
             MapObject.invalidateSize();
-        }, 2000);
+        }, 1000);
     };
 
     function CenterHomeButton() {
@@ -339,12 +339,12 @@ function GlobalSatelliteTrack() {
         };
     }, []);
 
-    // update the satellites position, day/night terminator every second
+    // update the satellites position, day/night terminator every 3 seconds
     useEffect(()=>{
         satelliteUpdate(new Date());
         const timer = setInterval(()=>{
             satelliteUpdate(new Date())
-        }, 2000);
+        }, 3000);
 
         return ()=> {
             clearInterval(timer);
@@ -352,32 +352,6 @@ function GlobalSatelliteTrack() {
     },[selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
         mapZoomLevel, showTooltip]);
-
-    // useEffect(() => {
-    //     socket.emit('data_request', 'get-location-for-user-id', null, (response) => {
-    //         if (response['success']) {
-    //             if (response['data']) {
-    //                 dispatch(setLocation({
-    //                     lat: parseFloat(response['data']['lat']),
-    //                     lon: parseFloat(response['data']['lon']),
-    //                 }));
-    //                 dispatch(setLocationId(response['data']['id']));
-    //                 dispatch(setLocationUserId(response['data']['userid']));
-    //             } else {
-    //                 enqueueSnackbar('No location found in the backend, please set one', {
-    //                     variant: 'info',
-    //                 })
-    //             }
-    //         } else {
-    //             enqueueSnackbar('Failed to get home location from backend', {
-    //                 variant: 'error',
-    //             })
-    //         }
-    //     });
-    //     return () => {
-    //
-    //     };
-    // }, []);
 
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);
@@ -507,7 +481,7 @@ function GlobalSatelliteTrack() {
             <OverviewSatelliteGroupSelector />
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
-            <NextPassesGroupIsland groupId={satelliteGroupId}/>
+            <NextPassesGroupIsland/>
         </StyledIslandParentNoScrollbar>,
     ];
 
