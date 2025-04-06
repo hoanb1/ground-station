@@ -84,6 +84,12 @@ const NextPassesIsland = React.memo(({noradId}) => {
         },
         '& .passes-cell-warning': {
             color: theme.palette.error.main,
+            textDecoration: 'line-through',
+        },
+        '& .passes-cell-success': {
+            color: theme.palette.success.main,
+            fontWeight: 'bold',
+            textDecoration: 'underline',
         }
     }));
 
@@ -162,10 +168,10 @@ const NextPassesIsland = React.memo(({noradId}) => {
             },
             cellClassName: (params) => {
                 if (params.value < 10.0) {
-                    console.log(params);
                     return "passes-cell-warning";
+                } else if (params.value > 45.0) {
+                    return "passes-cell-success";
                 }
-                return "";
             }
         },
     ];
