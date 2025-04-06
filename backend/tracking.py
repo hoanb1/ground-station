@@ -16,6 +16,8 @@ from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevatio
 from rotator import RotatorController
 from arguments import arguments as args
 from typing import Callable, Any, List, Union, Coroutine, Optional
+from statetracker import StateTracker
+
 
 
 @async_timeit
@@ -401,53 +403,6 @@ async def compiled_satellite_data(dbsession, tracking_state) -> dict:
     return satellite_data
 
 
-class StateTracker:
-    def __init__(self, initial_state: Any = None):
-        self.state = initial_state
-        self.sync_callbacks: List[Callable[[Any, Any], None]] = []
-        self.async_callbacks: List[Callable[[Any, Any], Coroutine[Any, Any, None]]] = []
-
-    def register_callback(self, callback: Callable[[Any, Any], None]) -> None:
-        """Register a synchronous callback function."""
-        self.sync_callbacks.append(callback)
-
-    def register_async_callback(self, callback: Callable[[Any, Any], Coroutine[Any, Any, None]]) -> None:
-        """Register an asynchronous callback function."""
-        self.async_callbacks.append(callback)
-
-    async def update_state(self, new_state: Any) -> bool:
-        """
-        Update the state and trigger callbacks if the state has changed.
-        Returns True if state changed, False otherwise.
-        """
-        if new_state != self.state:
-            old_state = self.state
-            self.state = new_state
-
-            # Handle synchronous callbacks
-            for callback in self.sync_callbacks:
-                callback(old_state, new_state)
-
-            # Handle asynchronous callbacks
-            if self.async_callbacks:
-                # Create tasks for all async callbacks
-                tasks = [
-                    asyncio.create_task(callback(old_state, new_state))
-                    for callback in self.async_callbacks
-                ]
-
-                # Wait for all async callbacks to complete
-                if tasks:
-                    await asyncio.gather(*tasks)
-
-            return True
-        return False
-
-    def get_state(self) -> Any:
-        """Get the current state."""
-        return self.state
-
-
 async def satellite_tracking_task(sio: socketio.AsyncServer):
     """
     Periodically tracks and transmits satellite position and details along with user location data
@@ -479,9 +434,40 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         else:
             return False
 
-    # state change check
+    async def handle_satellite_change(old, new):
+        """
+        Callback called when the user has selected a different satellite.
+
+        :param old: The previous state or value associated with the satellite.
+        :param new: The updated state or value associated with the satellite.
+        :return: None
+        """
+        nonlocal notified
+
+        logger.info(f"Target satellite change detected from {old} to {new}")
+
+        notified = {}
+        await sio.emit('satellite-tracking', {'events': [
+            {'name': "norad_id_change", 'old': old, 'new': new},
+        ]})
+
+    async def handle_tracker_state_change(old, new):
+        """
+        Callback called when the user has changed the tracking state.
+
+        :param str old: Represents the previous state of the tracker.
+        :param str new: Represents the new state of the tracker.
+        :return: None
+        """
+        logger.info(f"Tracker state change detected from {old} to {new}")
+
+    # check if satellite was changed in the UI and send a message/event
     norad_id_change_tracker = StateTracker(initial_state="")
-    norad_id_change_tracker.register_callback(callback=lambda old, new: logger.info("norad_id changed"))
+    norad_id_change_tracker.register_async_callback(handle_satellite_change)
+
+    # check if the tracking state changed, do stuff if it has
+    tracking_state_tracker = StateTracker(initial_state="")
+    tracking_state_tracker.register_async_callback(handle_tracker_state_change)
 
 
     async with (AsyncSessionLocal() as dbsession):
@@ -495,15 +481,18 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 group_id = tracking_state_reply['data']['value']['group_id']
                 norad_id = tracking_state_reply['data']['value']['norad_id']
 
-                # check norad_id and detect change
-                await norad_id_change_tracker.update_state(norad_id)
-
                 satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
                 satellite_name = satellite_data['details']['name']
                 tracker = tracking_state_reply['data']['value']
                 selected_rotator_id = tracker.get('rotator_id', None)
                 selected_rig_id = tracker.get('rig_id', None)
                 current_tracking_state = tracker.get('tracking_state')
+
+                # check norad_id and detect change
+                await norad_id_change_tracker.update_state(norad_id)
+
+                # check tracking state change
+                await tracking_state_tracker.update_state(current_tracking_state)
 
                 # detect tracker state change
                 if current_tracking_state != previous_tracking_state:
@@ -519,7 +508,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                             try:
                                 rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=selected_rotator_id)
                                 rotator_details = rotator_details_reply['data']
-                                rotator_path = f"{rotator_details['host']}:{rotator_details['port']}"
                                 rotator = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
                                 await rotator.connect()
                                 await sio.emit('satellite-tracking', {'events': [
@@ -534,13 +522,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     elif current_tracking_state == "idle":
 
                         if rotator is not None:
-                            logger.info(f"Disconnecting from rotator at {rotator_path}...")
+                            logger.info(f"Disconnecting from rotator at {rotator.host}:{rotator.port}...")
                             try:
                                 rotator.disconnect()  # Assuming disconnect method exists
                                 await sio.emit('satellite-tracking', {'events': [
                                     {'name': "rotator_disconnected"}
                                 ]})
-                                logger.info(f"Successfully disconnected from rotator at {rotator_path}")
+                                logger.info(f"Successfully disconnected from rotator at {rotator.host}:{rotator.port}")
 
                             except Exception as e:
                                 logger.error(f"Error disconnecting from rotator: {e}")
