@@ -3,6 +3,11 @@ import {createAsyncThunk} from '@reduxjs/toolkit';
 import {enqueueSnackbar} from "notistack";
 
 
+function getCacheKeyForSatelliteId(satelliteId) {
+    return `${satelliteId}_${Math.floor(Date.now() / (2 * 60 * 60 * 1000))}`;
+}
+
+
 export const getTrackingStateFromBackend = createAsyncThunk(
     'targetSatTrack/getTrackingStateBackend',
     async ({socket}, {rejectWithValue}) => {
@@ -11,7 +16,7 @@ export const getTrackingStateFromBackend = createAsyncThunk(
                 if (response.success) {
                     resolve(response.data);
                 } else {
-                    reject(rejectWithValue("Failed getting next passes"));
+                    reject(rejectWithValue("Failed getting tracking state from backend"));
                 }
             });
         });
@@ -51,8 +56,17 @@ export const setTrackingStateInBackend = createAsyncThunk(
 
 export const fetchNextPasses = createAsyncThunk(
     'targetSatTrack/fetchNextPasses',
-    async ({socket, noradId, hours}, {rejectWithValue}) => {
+    async ({socket, noradId, hours}, {getState, rejectWithValue}) => {
         return new Promise((resolve, reject) => {
+
+            // lets check first if we have something cached
+            const state = getState();
+            const cacheKey = getCacheKeyForSatelliteId(noradId);
+            if (cacheKey in state.targetSatTrack.cachedPasses) {
+                console.info(`Using cached passes for ${noradId}`);
+                resolve(state.targetSatTrack.cachedPasses[cacheKey]);
+            }
+
             socket.emit('data_request', 'fetch-next-passes', {'norad_id': noradId, 'hours': hours}, (response) => {
                 if (response.success) {
                     resolve(response.data);
@@ -196,6 +210,7 @@ const targetSatTrackSlice = createSlice({
         selectedRotator: "",
         openMapSettingsDialog: false,
         nextPassesHours: 6.0,
+        cachedPasses: {},
         selectedTransmitter: "",
         availableTransmitters: [],
     },
@@ -247,7 +262,7 @@ const targetSatTrackSlice = createSlice({
                         } else if (event.name === 'azimuth_out_of_bounds') {
                             enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
                         } else if (event.name === 'minelevation_error') {
-                            enqueueSnackbar("Target is at minimum elevation limit", {variant: 'warning'});
+                            enqueueSnackbar("Target is beyond the minimum elevation limit", {variant: 'warning'});
                         } else if (event.name === 'norad_id_change') {
                             enqueueSnackbar("Target satellite changed!", {variant: 'warning'});
                         } else if (event.name === 'rotator_error') {
@@ -391,6 +406,8 @@ const targetSatTrackSlice = createSlice({
                 state.passesError = null;
             })
             .addCase(fetchNextPasses.fulfilled, (state, action) => {
+                // cache the result for a few hours
+                state.cachedPasses[getCacheKeyForSatelliteId(state.satelliteId)] = action.payload;
                 state.passesLoading = false;
                 state.satellitePasses = action.payload;
                 state.passesError = null;

@@ -44,8 +44,11 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
         const videoElement = videoRef.current;
         if (!videoElement) return;
 
-        const handlePlay = () => setIsPlaying(true);
-        const handlePause = () => setIsPlaying(false);
+        const handlePlay = () => {
+        };
+        const handlePause = () => {
+
+        };
 
         videoElement.addEventListener('play', handlePlay);
         videoElement.addEventListener('pause', handlePause);
@@ -197,8 +200,8 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
                             opacity: 1,
                         },
                     }}
-                    onMouseEnter={() => setShowControls(true)}
-                    onMouseLeave={() => setShowControls(false)}
+                    onMouseEnter={() => {}}
+                    onMouseLeave={() => {}}
                 >
                     {isLoading && (
                         <Grid sx={{
