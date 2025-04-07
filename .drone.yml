@@ -1,0 +1,17 @@
+steps:
+  - name: build
+    image: docker:dind
+    volumes:
+      - name: dockersock
+        path: /var/run/docker.sock
+    commands:
+      - docker build -t ground-station:latest .
+      - docker run -p 0.0.0.0:6969:6969 --rm ground-station:latest ground-station
+
+volumes:
+  - name: dockersock
+    host:
+      path: /var/run/docker.sock
+
+kind: signature
+hmac:
