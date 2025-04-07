@@ -298,10 +298,19 @@ const TargetSatelliteTrack = React.memo(function () {
     const handleWhenReady = (map) => {
         // map is ready
         MapObject = map.target;
-        setInterval(()=>{
-            map.target.invalidateSize();
-        }, 1000);
     };
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            if (MapObject) {
+                MapObject.invalidateSize();
+            }
+        }, 1000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, []);
 
     function MapSettingsButton() {
         const dispatch = useDispatch();
@@ -543,15 +552,16 @@ const TargetSatelliteTrack = React.memo(function () {
 
     useEffect(() => {
         // zoom in and out a bit to fix the zoom factor issue
-        const zoomLevel = MapObject.getZoom();
-        const loc = MapObject.getCenter();
-        setTimeout(() => {
-            MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
+        if (MapObject) {
+            const zoomLevel = MapObject.getZoom();
+            const loc = MapObject.getCenter();
             setTimeout(() => {
-                MapObject.setView([loc.lat, loc.lng], zoomLevel);
-            }, 500);
-        }, 0);
-
+                MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
+                setTimeout(() => {
+                    MapObject.setView([loc.lat, loc.lng], zoomLevel);
+                }, 500);
+            }, 0);
+        }
         return () => {
 
         };
@@ -561,7 +571,7 @@ const TargetSatelliteTrack = React.memo(function () {
     let gridContents = [
         <StyledIslandParent key="map">
             <MapContainer
-                center={[0, 0]}
+                center={[satelliteData['position']['lat'] || 0, satelliteData['position']['lon'] || 0]}
                 zoom={mapZoomLevel}
                 style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
                 dragging={false}
@@ -617,7 +627,8 @@ const TargetSatelliteTrack = React.memo(function () {
                 )}
 
                 {InternationalDateLinePolyline()}
-                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
+                {location.lat && location.lon ?
+                    <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/> : null}
                 {showPastOrbitPath? currentPastSatellitesPaths: null}
                 {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                 {currentSatellitesPosition}

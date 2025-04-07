@@ -96,11 +96,11 @@ export function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints
     }
 
     // Adjust the polygon if it should include a pole.
-    // Condition for north pole inclusion: the spherical cap extends beyond the north pole.
-    // (That is, if d > (π/2 - lat0)). Similarly for the south pole: d > (π/2 + lat0) when lat0 is negative.
+    // Condition for North Pole inclusion: the spherical cap extends beyond the North Pole.
+    // (That is, if d > (π/2 - lat0)). Similarly, for the South Pole: d > (π/2 + lat0) when lat0 is negative.
     let adjustedPoints = circlePoints.slice();
 
-    // North pole case (for satellites in the northern hemisphere or whose cap covers the north)
+    // North Pole case (for satellites in the northern hemisphere or whose cap covers the north)
     if (d > (Math.PI / 2 - lat0)) {
         // Find the index with the maximum latitude (the highest point in our computed circle)
         let maxIndex = 0, maxLat = -Infinity;
@@ -120,7 +120,7 @@ export function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints
         ];
     }
 
-    // South pole case (for satellites in the southern hemisphere or whose cap covers the south)
+    // South Pole case (for satellites in the southern hemisphere or whose cap covers the south)
     if (d > (Math.PI / 2 + lat0)) {
         // Find the index with the minimum latitude (the lowest point in our computed circle)
         let minIndex = 0, minLat = Infinity;
@@ -130,7 +130,7 @@ export function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints
                 minIndex = i;
             }
         }
-        // Insert the south pole as an extra vertex immediately after the lowest point.
+        // Insert the South Pole as an extra vertex immediately after the lowest point.
         adjustedPoints = [
             ...adjustedPoints.slice(0, minIndex + 1),
             { lat: -90, lon: circlePoints[minIndex].lon },
@@ -141,8 +141,6 @@ export function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints
 
     return adjustedPoints;
 }
-// Make sure satellite.js is imported, e.g.,
-// const satellite = require('satellite.js');
 
 /**
  * Normalizes a longitude value to be within -180 to 180 degrees.
