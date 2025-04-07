@@ -15,6 +15,9 @@ trigger:
     - pull_request
     - custom  # Needed for manual triggers
 
+clone:
+  disable: true
+
 steps:
   - name: clone
     image: plugins/git
