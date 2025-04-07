@@ -16,14 +16,11 @@ trigger:
     - custom  # Needed for manual triggers
 
 steps:
-  - name: debug-info
-    image: node:16-alpine@arm64
-    privileged: true
+  - name: clone
+    image: plugins/git
     settings:
-      debug: true
-    commands:
-      - echo "Running pipeline on branch ${DRONE_BRANCH}"
-      - env | grep DRONE
+      depth: 50
+      skip_verify: true
 
   - name: build
     image: docker:dind
