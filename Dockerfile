@@ -12,6 +12,9 @@ RUN npm ci
 # Copy frontend source code
 COPY frontend/ ./
 
+# copy the .env template
+RUN cp .env.production .env
+
 # Set production environment variables
 ENV GS_BACKEND_PORT=6969
 ENV GS_BACKEND_HOST=localhost
