@@ -2,30 +2,33 @@ kind: pipeline
 type: docker
 name: default
 
+# Make sure we run for all events and branches
 trigger:
+  branch:
+    - '*'  # Run on all branches
   event:
     - push
     - pull_request
-    - custom            # Include if you use custom events
-    - promote           # Include if you use promotions
-    - rollback          # Include if you use rollbacks
-    - tag               # Include if you want to build on tags
-    # Add any other events you need
+    - custom  # Needed for manual triggers
 
 steps:
+  - name: debug-info  # Add a simple debug step that should always run
+    image: alpine
+    commands:
+      - echo "Running pipeline on branch ${DRONE_BRANCH}"
+      - echo "Commit message: ${DRONE_COMMIT_MESSAGE}"
+      - env | grep DRONE
+
   - name: build
     image: docker:dind
-    privileged: true
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
       - docker build -t ground-station:latest .
       - docker run -d -p 6969:6969 --name ground-station-test ground-station:latest
-      # Run any tests you need against the running container
-      - sleep 10  # Give the container time to start
+      - sleep 10
       - curl -s http://localhost:6969 || echo "Container not responding"
-      # Clean up after testing
       - docker stop ground-station-test
       - docker rm ground-station-test
 
