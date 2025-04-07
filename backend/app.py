@@ -1,5 +1,7 @@
 import uvicorn
 import socketio
+import os
+import httpx
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task
 from fastapi import FastAPI, WebSocket, Request, HTTPException
@@ -13,9 +15,9 @@ from logger import logger
 from engineio.payload import Payload
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
-import httpx
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
+
 
 
 Payload.max_decode_packets = 50
@@ -187,11 +189,6 @@ async def webrtc_websocket(websocket: WebSocket, client_id: str):
             del active_connections[client_id]
 
 
-# Root route
-@app.get("/")
-def read_root():
-    return {"message": "Ground Station root endpoint accessed, nothing to see here"}
-
 # Function to check and create tables
 async def init_db():
     """
@@ -203,6 +200,8 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized.")
 
+static_files_dir = os.environ.get("STATIC_FILES_DIR", "../frontend/dist")
+app.mount("/", StaticFiles(directory=static_files_dir, html=True), name="static")
 app.mount("/public", StaticFiles(directory="public"), name="public")
 
 
@@ -215,4 +214,4 @@ if __name__ == "__main__":
     logger.info(f'Starting Ground Station server with parameters {arguments}')
 
     # Run the ASGI application with Uvicorn on port 5000.
-    uvicorn.run(socket_app, host="0.0.0.0", port=5000, log_config=get_logger_config(arguments))
+    uvicorn.run(socket_app, host=arguments.host, port=arguments.port, log_config=get_logger_config(arguments))

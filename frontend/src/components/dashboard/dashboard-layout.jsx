@@ -144,7 +144,7 @@ const accounts = [
 ];
 
 function TimeDisplay() {
-    const [isUTC, setIsUTC] = React.useState(true); // Toggle between UTC and Local Time
+    const [isUTC, setIsUTC] = React.useState(false); // Toggle between UTC and Local Time
     const [currentTime, setCurrentTime] = React.useState(new Date());
 
     // Update the time every second

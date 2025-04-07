@@ -17,8 +17,9 @@ export const SocketProvider = ({ children }) => {
     
     useEffect(() => {
         // Initialize socket connection (replace URL with your server's URL)
+        const port = import.meta.env.GS_BACKEND_PORT || 5000;
         const host = window.location.hostname;
-        const backendURL = `ws://${host}:5000/ws`;
+        const backendURL = `ws://${host}:${port}/ws`;
         console.info("Connecting to backend at", backendURL);
         const manager = new Manager(backendURL);
         const newSocket = manager.socket("/");
