@@ -224,8 +224,7 @@ async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[u
 
         # Combine defaults with existing preferences
         combined_preferences = [
-            {"name": key, "value": preferences_dict.get(key, value)}
-            for key, value in defaults.items()
+            {"id": preferences_dict.get("id", None), "name": key, "value": preferences_dict.get(key, value)} for key, value in defaults.items()
         ]
 
         combined_preferences = serialize_object(combined_preferences)
