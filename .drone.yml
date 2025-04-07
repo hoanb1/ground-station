@@ -22,10 +22,10 @@ steps:
 trigger:
   branch:
     - main
-    - develop
   event:
     - push
     - pull_request
+    - tag
 
 volumes:
   - name: dockersock
