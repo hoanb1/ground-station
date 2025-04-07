@@ -2,6 +2,16 @@ kind: pipeline
 type: docker
 name: default
 
+trigger:
+  event:
+    - push
+    - pull_request
+    - custom            # Include if you use custom events
+    - promote           # Include if you use promotions
+    - rollback          # Include if you use rollbacks
+    - tag               # Include if you want to build on tags
+    # Add any other events you need
+
 steps:
   - name: build
     image: docker:dind
@@ -18,14 +28,6 @@ steps:
       # Clean up after testing
       - docker stop ground-station-test
       - docker rm ground-station-test
-
-trigger:
-  branch:
-    - main
-  event:
-    - push
-    - pull_request
-    - tag
 
 volumes:
   - name: dockersock
