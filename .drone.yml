@@ -16,7 +16,6 @@ steps:
     image: alpine
     commands:
       - echo "Running pipeline on branch ${DRONE_BRANCH}"
-      - echo "Commit message: ${DRONE_COMMIT_MESSAGE}"
       - env | grep DRONE
 
   - name: build
