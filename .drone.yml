@@ -12,8 +12,9 @@ trigger:
     - custom  # Needed for manual triggers
 
 steps:
-  - name: debug-info  # Add a simple debug step that should always run
+  - name: debug-info
     image: alpine
+    privileged: true
     settings:
       debug: true
     commands:
