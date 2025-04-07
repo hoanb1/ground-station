@@ -13,7 +13,7 @@ trigger:
 
 steps:
   - name: debug-info
-    image: alpine
+    image: node:16-alpine@arm64
     privileged: true
     settings:
       debug: true
