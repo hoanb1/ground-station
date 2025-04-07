@@ -18,7 +18,7 @@ trigger:
 steps:
   - name: debug-info
     image: node:16-alpine@arm64
-    privileged: false
+    privileged: true
     settings:
       debug: true
     commands:
@@ -29,7 +29,7 @@ steps:
     image: docker:dind
     settings:
       debug: true
-    privileged: false
+    privileged: true
     volumes:
       - name: dockersock
         path: /var/run/docker.sock
