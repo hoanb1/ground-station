@@ -9,6 +9,8 @@
 
 A robust satellite tracking and rig control application—bringing together orbit propagation, real-time position calculations, hardware control, and a highly interactive user interface. Built with modern JavaScript frameworks and libraries like React, Material UI, and react-leaflet, **Ground Station** unites the best of satellite data visualization and radio/rotator management in a single, streamlined application.
 
+[![Build Status](https://drone.apps.nerv.home/api/badges/sgoudelis/ground-station/status.svg)](https://drone.apps.nerv.home/sgoudelis/ground-station)
+
 ---
 
 ## Table of Contents
