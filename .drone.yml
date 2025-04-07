@@ -19,6 +19,14 @@ steps:
       - docker stop ground-station-test
       - docker rm ground-station-test
 
+trigger:
+  branch:
+    - main
+    - develop
+  event:
+    - push
+    - pull_request
+
 volumes:
   - name: dockersock
     host:
