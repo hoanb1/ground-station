@@ -14,6 +14,8 @@ trigger:
 steps:
   - name: debug-info  # Add a simple debug step that should always run
     image: alpine
+    settings:
+      debug: true
     commands:
       - echo "Running pipeline on branch ${DRONE_BRANCH}"
       - env | grep DRONE
