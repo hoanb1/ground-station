@@ -1,4 +1,3 @@
-// PreferencesForm.jsx
 import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { fetchPreferences, updatePreferences, setPreference } from './preferences-slice.jsx';
