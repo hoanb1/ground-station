@@ -4,22 +4,26 @@ import {enqueueSnackbar} from "notistack";
 /**
  * Calculates the latitude, longitude, altitude, and velocity of a satellite based on TLE data and date.
  *
+ * @param noradId
  * @param {string} tleLine1 The first line of the two-line element set (TLE) describing the satellite's orbit.
  * @param {string} tleLine2 The second line of the two-line element set (TLE) describing the satellite's orbit.
  * @param {Date} date The date and time for which to calculate the satellite's position and velocity.
  * @return {Object|null} An object containing latitude (lat), longitude (lon), altitude, and velocity of the satellite.
  *                       Returns null if the satellite's position or velocity cannot be determined.
  */
-export function getSatelliteLatLon(tleLine1, tleLine2, date) {
+export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
 
     try {
-        if (!tleLine1 || !tleLine2 || !date) {
+        if (!noradId || !tleLine1 || !tleLine2 || !date) {
             return [0, 0, 0, 0];
         }
 
         const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
         const pv = satellite.propagate(satrec, date);
-        if (!pv.position || !pv.velocity) return null;
+
+        if (!pv.position || !pv.velocity) {
+            return [0, 0, 0, 0];
+        }
 
         const gmst = satellite.gstime(date);
         const geo = satellite.eciToGeodetic(pv.position, gmst);
@@ -34,11 +38,12 @@ export function getSatelliteLatLon(tleLine1, tleLine2, date) {
         return [lat, lon, altitude, velocity];
 
     } catch (error) {
-        console.error("Error calculating satellite position and velocity:", error);
-        enqueueSnackbar("Error calculating satellite position and velocity: " + error.message, {
+        console.error(`Error calculating satellite ${noradId} position and velocity: ${error.message}`);
+        enqueueSnackbar(`Error calculating satellite ${noradId} position and velocity: ${error.message}`, {
             variant: "error",
             autoHideDuration: 5000,
         });
+
         return [0, 0, 0, 0];
     }
 }
@@ -46,7 +51,7 @@ export function getSatelliteLatLon(tleLine1, tleLine2, date) {
 /**
  * Returns an array of { lat, lon } points representing the satellite’s
  * coverage area on Earth (its horizon circle), adjusted so that if the area
- * includes the north or south pole, a vertex for that pole is inserted.
+ * includes the north or South Pole, a vertex for that pole is inserted.
  *
  * @param {number} satLat - Satellite latitude in degrees.
  * @param {number} satLon - Satellite longitude in degrees.
@@ -105,7 +110,7 @@ export function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints
                 maxIndex = i;
             }
         }
-        // Insert the north pole as an extra vertex immediately after the highest point.
+        // Insert the North Pole as an extra vertex immediately after the highest point.
         // (Using the same longitude as that highest point.)
         adjustedPoints = [
             { lat: 90, lon: circlePoints[0].lon },

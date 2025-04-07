@@ -2,7 +2,7 @@ import React, {useEffect, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {getTimeFromISO, humanizeFutureDateInMinutes, TitleBar} from "../common/common.jsx";
-import {DataGrid, gridClasses} from "@mui/x-data-grid";
+import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {fetchNextPasses, setSatellitePasses} from './target-sat-slice.jsx';
 import {darken, lighten, styled} from "@mui/material/styles";
@@ -24,11 +24,14 @@ const TimeFormatter = React.memo(({ value }) => {
 
 
 const NextPassesIsland = React.memo(() => {
+    const apiRef = useGridApiRef();
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const [containerHeight, setContainerHeight] = useState(0);
     const containerRef = useRef(null);
     const { passesLoading, satellitePasses, satelliteData, nextPassesHours, satelliteId } = useSelector(state => state.targetSatTrack);
+    const minHeight = 200;
+    const maxHeight = 400;
 
     useEffect(() => {
         if (satelliteId) {
@@ -49,8 +52,30 @@ const NextPassesIsland = React.memo(() => {
         };
     }, [satelliteId]);
 
-    const minHeight = 200;
-    const maxHeight = 400;
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            const rowIds = apiRef.current.getAllRowIds();
+            rowIds.forEach((rowId) => {
+
+                // Access the row model
+                const rowNode = apiRef.current.getRowNode(rowId);
+                if (!rowNode) {
+                    return;
+                }
+
+                // Update only the row model in the grid's internal state
+                apiRef.current.updateRows([{
+                    id: rowId,
+                    _rowClassName: ''
+                }]);
+            });
+        }, 2000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, []);
+
 
     useEffect(() => {
         const target = containerRef.current;
@@ -206,6 +231,7 @@ const NextPassesIsland = React.memo(() => {
                     minHeight,
                 }}>
                     <StyledDataGrid
+                        apiRef={apiRef}
                         fullWidth={true}
                         loading={passesLoading}
                         sx={{

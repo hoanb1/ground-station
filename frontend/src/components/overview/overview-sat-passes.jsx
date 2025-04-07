@@ -10,6 +10,7 @@ import {
     fetchSatellitesByGroupId,
     setPasses,
 } from './overview-sat-slice.jsx';
+import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
 
 
@@ -29,6 +30,7 @@ const TimeFormatter = React.memo(({ value }) => {
 
 
 const NextPassesGroupIsland = React.memo(() => {
+    const apiRef = useGridApiRef();
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const containerRef = useRef(null);
@@ -59,6 +61,7 @@ const NextPassesGroupIsland = React.memo(() => {
             observer.disconnect();
         };
     }, [containerRef]);
+
 
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -181,7 +184,7 @@ const NextPassesGroupIsland = React.memo(() => {
         {
             field: 'peak_altitude',
             minWidth: 100,
-            headerName: 'Max El',
+            headerName: 'Max elevation',
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -193,10 +196,36 @@ const NextPassesGroupIsland = React.memo(() => {
                     return "passes-cell-warning";
                 } else if (params.value > 45.0) {
                     return "passes-cell-success";
+                } else {
+                    return '';
                 }
             }
         },
     ];
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            const rowIds = apiRef.current.getAllRowIds();
+            rowIds.forEach((rowId) => {
+
+                // Access the row model
+                const rowNode = apiRef.current.getRowNode(rowId);
+                if (!rowNode) {
+                    return;
+                }
+
+                // Update only the row model in the grid's internal state
+                apiRef.current.updateRows([{
+                    id: rowId,
+                    _rowClassName: ''
+                }]);
+            });
+        }, 2000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, []);
 
     return (
         <>
@@ -210,6 +239,7 @@ const NextPassesGroupIsland = React.memo(() => {
                     minHeight,
                 }}>
                     <StyledDataGrid
+                        apiRef={apiRef}
                         pageSizeOptions={[5, 10, 15, 20]}
                         fullWidth={true}
                         loading={passesLoading}

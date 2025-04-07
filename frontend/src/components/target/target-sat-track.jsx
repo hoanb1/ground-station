@@ -380,6 +380,7 @@ const TargetSatelliteTrack = React.memo(function () {
             let now = new Date();
             now.setMinutes(now.getMinutes() + sliderTimeOffset);
             let [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
+                satelliteData['details']['norad_id'],
                 satelliteData['details']['tle1'],
                 satelliteData['details']['tle2'],
                 now

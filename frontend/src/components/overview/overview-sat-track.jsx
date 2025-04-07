@@ -236,85 +236,92 @@ const GlobalSatelliteTrack = React.memo(function () {
         let satIndex = 0;
 
         selectedSatellites.forEach(satellite => {
-            if (satIndex++ >= viewSatelliteLimit) {
-                return;
-            }
+            try {
+                if (satIndex++ >= viewSatelliteLimit) {
+                    return;
+                }
 
-            let noradid = satellite['norad_id'];
-            let [lat, lon, altitude, velocity] = getSatelliteLatLon(
-                satellite['tle1'],
-                satellite['tle2'],
-                now);
+                let noradid = satellite['norad_id'];
+                let [lat, lon, altitude, velocity] = getSatelliteLatLon(
+                    satellite['norad_id'],
+                    satellite['tle1'],
+                    satellite['tle2'],
+                    now);
 
-            let paths = {};
-            // calculate paths
-            paths = getSatellitePaths([
-                satellite['tle1'],
-                satellite['tle2']
-            ], orbitProjectionDuration);
+                let paths = {};
+                // calculate paths
+                paths = getSatellitePaths([
+                    satellite['tle1'],
+                    satellite['tle2']
+                ], orbitProjectionDuration);
 
-            // past path
-            currentPastPaths.push(<Polyline
-                key={`past-path-${noradid}`}
-                positions={paths.past}
-                pathOptions={{
-                    color: pastOrbitLineColor,
-                    weight: 1,
-                    opacity: 0.5,
-                    smoothFactor: 1,
-                }}
-            />)
-
-            // future path
-            currentFuturePaths.push(<Polyline
-                key={`future-path-${noradid}`}
-                positions={paths.future}
-                pathOptions={{
-                    color: futureOrbitLineColor,
-                    weight:1,
-                    opacity:1,
-                    dashArray: "3 3",
-                    smoothFactor: 1,
-                }}
-            />)
-
-            const onMarkerMouseOver = (event, noradId) => {
-                //console.log(noradId, event);
-            };
-
-            const markerEventHandlers = {
-                mouseover: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
-            }
-
-            const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);
-
-            if (isVisible) {
-                let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
-                currentCoverage.push(<Polyline
-                    noClip={true}
-                    key={"coverage-"+satellite['name']}
+                // past path
+                currentPastPaths.push(<Polyline
+                    key={`past-path-${noradid}`}
+                    positions={paths.past}
                     pathOptions={{
-                        color: satelliteCoverageColor,
+                        color: pastOrbitLineColor,
                         weight: 1,
-                        fill: true,
-                        opacity: 0.75,
-                        fillOpacity: 0.15,
+                        opacity: 0.5,
+                        smoothFactor: 1,
                     }}
-                    positions={coverage}
-                />);
-            }
+                />)
 
-            if (showTooltip) {
-                currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]} icon={satelliteIcon2}
-                                        eventHandlers={markerEventHandlers}>
-                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} permanent={isVisible}>
-                        {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                    </ThemedLeafletTooltip>
-                </Marker>);
-            } else {
-                currentPos.push(<Marker key={"marker-"+satellite['name']} position={[lat, lon]} icon={satelliteIcon2}
-                                        eventHandlers={markerEventHandlers}>
-                </Marker>);
+                // future path
+                currentFuturePaths.push(<Polyline
+                    key={`future-path-${noradid}`}
+                    positions={paths.future}
+                    pathOptions={{
+                        color: futureOrbitLineColor,
+                        weight: 1,
+                        opacity: 1,
+                        dashArray: "3 3",
+                        smoothFactor: 1,
+                    }}
+                />)
+
+                const onMarkerMouseOver = (event, noradId) => {
+                    //console.log(noradId, event);
+                };
+
+                const markerEventHandlers = {
+                    mouseover: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
+                }
+
+                const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);
+
+                if (isVisible) {
+                    let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                    currentCoverage.push(<Polyline
+                        noClip={true}
+                        key={"coverage-" + satellite['name']}
+                        pathOptions={{
+                            color: satelliteCoverageColor,
+                            weight: 1,
+                            fill: true,
+                            opacity: 0.75,
+                            fillOpacity: 0.15,
+                        }}
+                        positions={coverage}
+                    />);
+                }
+
+                if (showTooltip) {
+                    currentPos.push(<Marker key={"marker-" + satellite['norad_id']} position={[lat, lon]}
+                                            icon={satelliteIcon2}
+                                            eventHandlers={markerEventHandlers}>
+                        <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} permanent={true}>
+                            {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                        </ThemedLeafletTooltip>
+                    </Marker>);
+                } else {
+                    currentPos.push(<Marker key={"marker-" + satellite['norad_id']} position={[lat, lon]}
+                                            icon={satelliteIcon2}
+                                            eventHandlers={markerEventHandlers}>
+                    </Marker>);
+                }
+            } catch (e) {
+                console.error(`Error while updating satellite ${satellite['name']} (${satellite['norad_id']}): ${e}`);
             }
         });
 
