@@ -16,9 +16,8 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState("");
 
-    // Define the relay server URL
-    const RELAY_SERVER = "http://192.168.60.99:5000"; // Adjust this to your backend URL
-
+    const RELAY_SERVER = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
+    
     useEffect(() => {
         if (!videoRef.current || !webRTCSrc) return;
 

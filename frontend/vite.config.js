@@ -5,6 +5,9 @@ export default defineConfig(({ mode }) => {
   // Load env variables based on mode
   // This automatically loads .env, .env.local, and .env.[mode] files
 
+  const backendPort = process.env.GS_BACKEND_PORT || '5000';
+  const backendHost = process.env.GS_BACKEND_HOST || 'localhost';
+
   return {
     plugins: [react()],
 
@@ -20,6 +23,28 @@ export default defineConfig(({ mode }) => {
       port: 5173,
       strictPort: true,
       host: true, // Listen on all addresses
+      // Add proxy configuration
+      proxy: {
+        '/api': {  // For regular HTTP API requests
+          target: `http://${backendHost}:${backendPort}`,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/socket.io/': {  // For regular HTTP API requests
+          target: `http://${backendHost}:${backendPort}`,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/ws': {
+          target: `http://${backendHost}:5000`,
+          ws: true,
+          changeOrigin: true,
+          secure: false,
+          headers: {
+            'Access-Control-Allow-Origin': '*',
+          }
+        },
+      },
     },
 
     // Build configuration
