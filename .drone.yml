@@ -6,14 +6,13 @@ platform:
   os: linux
   arch: arm64
 
-# Make sure we run for all events and branches
 trigger:
   branch:
-    - '*'  # Run on all branches
+    - main
   event:
     - push
     - pull_request
-    - custom  # Needed for manual triggers
+    - custom
 
 clone:
   disable: true
@@ -34,12 +33,25 @@ steps:
       - name: dockersock
         path: /var/run/docker.sock
     commands:
+      # Build the new image
       - docker build -t ground-station:latest .
-      - docker run -d -p 6969:6969 --name ground-station-test ground-station:latest
-      - sleep 10
-      - curl -s http://localhost:6969 || echo "Container not responding"
-      - docker stop ground-station-test
-      - docker rm ground-station-test
+
+      # Stop and remove existing container if it exists
+      - docker rm -f ground-station-prod || true
+
+      # Run the new container
+      - docker run -d -p 7000:7000 --name ground-station-prod ground-station:latest
+
+      # Wait for container to initialize
+      - sleep 5
+
+      # Health check
+      - curl -s http://localhost:7000 || (echo "Container not responding" && exit 1)
+
+      # Display container info
+      - echo "✅ New container is running on host port 7000"
+      - docker ps | grep ground-station-prod
+
 
 volumes:
   - name: dockersock
