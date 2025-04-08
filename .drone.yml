@@ -40,11 +40,7 @@ steps:
       - docker rm -f ground-station-prod || true
 
       # Run the new container
-      - docker run -d \
-        -p 0.0.0.0:7000:7000 \
-        --name ground-station-prod \
-        -v /media/pool1/volumes/ground-station-data/gs.db:/app/backend/gs.db \
-        ground-station:latest
+      - docker run -d -p 0.0.0.0:7000:7000 --name ground-station-prod -v /media/pool1/volumes/ground-station-data/gs.db:/app/backend/gs.db ground-station:latest
 
       # Wait for container to initialize
       - sleep 5
