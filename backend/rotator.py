@@ -83,17 +83,17 @@ class RotatorController:
             self.logger.error(f"Error in async connection: {e}")
             raise
 
-    def disconnect(self) -> bool:
+    async def disconnect(self) -> bool:
 
         if not self.connected or self.rotator is None:
             self.logger.warning("Not connected to rotator")
             return True
 
         try:
-            result = self.rotator.close()
+            result = await asyncio.to_thread(self.rotator.close)
             self.logger.debug(f"Close command: result={result}")
 
-            #if result != Hamlib.RIG_OK:
+            # if result != Hamlib.RIG_OK:
             #    self.logger.warning(f"Error closing rotator connection: {self.get_error_message(result)}")
             #    return False
 
@@ -229,9 +229,9 @@ class RotatorController:
 
         self.check_connection()
 
-        az, el = await asyncio.to_thread(self._get_position)
+        az, el = await self._get_position()
 
-        return az, el
+        return round(az, 3), round(el, 3)
 
     async def _get_position(self) -> Tuple[float, float]:
         """

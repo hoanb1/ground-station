@@ -1494,9 +1494,10 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
         assert data.get('name', None) is not None, "name is required when setting tracking state"
         assert data.get('value', None) is not None, "value is required when setting tracking state"
         value = data.get('value', {})
-        assert value.get('norad_id', None) is not None, "norad_id is required when setting tracking state"
-        assert value.get('group_id', None) is not None, "group_id is required when setting tracking state"
-        assert value.get('tracking_state', None) is not None, "state is required when setting tracking state"
+        assert value.get('norad_id', None), "norad_id is required when setting tracking state"
+        assert value.get('group_id', None), "group_id is required when setting tracking state"
+        assert value.get('rotator_state', None) is not None, "rotator_state is required when setting tracking state"
+        assert value.get('rig_state', None) is not None, "rig_state is required when setting tracking state"
         assert value.get('rig_id') is not None, "rig_id is required when setting tracking state"
         assert value.get('rotator_id', None) is not None, "rotator_id is required when setting tracking state"
 

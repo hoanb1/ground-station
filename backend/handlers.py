@@ -354,6 +354,8 @@ async def data_submission_routing(sio, cmd, data, logger):
         elif cmd == "set-tracking-state":
             logger.debug(f'Updating satellite tracking state, data: {data}')
             tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
+
+            # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
 
             reply = {

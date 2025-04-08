@@ -63,6 +63,8 @@ import {setOpenMapSettingsDialog} from "./target-sat-slice.jsx";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import {SimpleTruncatedHtml} from '../common/common.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
+import RotatorControl from "./rotator-control.jsx";
+import RigControl from "./rig-control.jsx";
 
 
 // global leaflet map object
@@ -257,6 +259,24 @@ const TargetSatelliteTrack = React.memo(function () {
             },
             {
                 i: 'passes',
+                x: 0,
+                y: 14,
+                w: 8,
+                h: 10,
+                minH: 6,
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
+            },
+            {
+                i: 'rotator-control',
+                x: 0,
+                y: 14,
+                w: 8,
+                h: 10,
+                minH: 6,
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
+            },
+            {
+                i: 'rig-control',
                 x: 0,
                 y: 14,
                 w: 8,
@@ -664,6 +684,12 @@ const TargetSatelliteTrack = React.memo(function () {
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="video">
             <VideoWebRTCPlayer webRTCSrc={"http://192.168.60.47:1984/stream.html?src=roofcamera2_sub"}/>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="rotator-control">
+            <RotatorControl/>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="rig-control">
+            <RigControl/>
         </StyledIslandParentScrollbar>
     ];
 

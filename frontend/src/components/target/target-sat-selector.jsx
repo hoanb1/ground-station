@@ -30,7 +30,6 @@ import {enqueueSnackbar} from "notistack";
 
 const SATELLITE_NUMBER_LIMIT = 500;
 
-
 const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
@@ -112,7 +111,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
     };
 
     const handleTrackingStop = () => {
-        const newTrackingState = {...trackingState, 'tracking_state': "idle"};
+        const newTrackingState = {...trackingState, 'rotator_state': "idle"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
@@ -120,7 +119,8 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
         const newTrackingState = {
             'norad_id': satelliteId,
             'group_id': groupId,
-            'tracking_state': "tracking",
+            'rotator_state': "tracking",
+            'rig_state': trackingState['rig_state'],
             'rig_id': selectedRadioRig,
             'rotator_id': selectedRotator,
             'transmitter_id': selectedTransmitter,
@@ -150,12 +150,13 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setSelectedTransmitter(event.target.value));
         const data = {
             ...trackingState,
-            norad_id: satelliteId,
-            tracking_state: "idle",
-            group_id: groupId,
-            rig_id: selectedRadioRig,
-            rotator_id: selectedRotator,
-            transmitter_id: event.target.value,
+            'norad_id': satelliteId,
+            'rotator_state': "idle",
+            'rig_state': trackingState['rig_state'],
+            'group_id': groupId,
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': event.target.value,
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
@@ -166,7 +167,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                    <FormControl disabled={trackingState['rotator_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                                  size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
                         <Select onClose={handleSelectCloseEvent}
@@ -196,7 +197,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"}
+                    <FormControl disabled={trackingState['rotator_state'] === "tracking"}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
@@ -222,99 +223,100 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
                     </FormControl>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"}
-                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                 size="small">
-                        <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
-                        <Select
-                            id="rotator-select"
-                            value={rotators.length > 0? selectedRotator: "none"} // Set the current value here
-                            onChange={(event) => {
-                                handleRotatorChange(event);
-                            }}
-                            variant={'filled'}>
-                            <MenuItem value="none">
-                                [no rotator control]
-                            </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>select a rotator</em>
-                            </MenuItem>
-                            {rotators.map((rotators, index) => {
-                                return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;
-                            })}
-                        </Select>
-                    </FormControl>
-                </Grid>
+                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>*/}
+                {/*    <FormControl disabled={trackingState['rotator_state'] === "tracking"}*/}
+                {/*                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"*/}
+                {/*                 size="small">*/}
+                {/*        <InputLabel htmlFor="rotator-select">Rotator</InputLabel>*/}
+                {/*        <Select*/}
+                {/*            id="rotator-select"*/}
+                {/*            value={rotators.length > 0? selectedRotator: "none"} // Set the current value here*/}
+                {/*            onChange={(event) => {*/}
+                {/*                handleRotatorChange(event);*/}
+                {/*            }}*/}
+                {/*            variant={'filled'}>*/}
+                {/*            <MenuItem value="none">*/}
+                {/*                [no rotator control]*/}
+                {/*            </MenuItem>*/}
+                {/*            <MenuItem value="" disabled>*/}
+                {/*                <em>select a rotator</em>*/}
+                {/*            </MenuItem>*/}
+                {/*            {rotators.map((rotators, index) => {*/}
+                {/*                return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;*/}
+                {/*            })}*/}
+                {/*        </Select>*/}
+                {/*    </FormControl>*/}
+                {/*</Grid>*/}
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['tracking_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                 size="small">
-                        <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
-                        <Select
-                            id="radiorig-select"
-                            value={rigs.length > 0? selectedRadioRig: "none"} // Set the current value here
-                            onChange={(event) => {
-                                handleRigChange(event);
-                            }}
-                            variant={'filled'}>
-                            <MenuItem value="none">
-                                [no radio rig control]
-                            </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>select a radio</em>
-                            </MenuItem>
-                            {rigs.map((rig, index) => {
-                                return <MenuItem value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
-                            })}
-                        </Select>
-                    </FormControl>
-                </Grid>
+                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>*/}
+                {/*    <FormControl disabled={trackingState['rotator_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"*/}
+                {/*                 size="small">*/}
+                {/*        <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>*/}
+                {/*        <Select*/}
+                {/*            id="radiorig-select"*/}
+                {/*            value={rigs.length > 0? selectedRadioRig: "none"} // Set the current value here*/}
+                {/*            onChange={(event) => {*/}
+                {/*                handleRigChange(event);*/}
+                {/*            }}*/}
+                {/*            variant={'filled'}>*/}
+                {/*            <MenuItem value="none">*/}
+                {/*                [no radio rig control]*/}
+                {/*            </MenuItem>*/}
+                {/*            <MenuItem value="" disabled>*/}
+                {/*                <em>select a radio</em>*/}
+                {/*            </MenuItem>*/}
+                {/*            {rigs.map((rig, index) => {*/}
+                {/*                return <MenuItem value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;*/}
+                {/*            })}*/}
+                {/*        </Select>*/}
+                {/*    </FormControl>*/}
+                {/*</Grid>*/}
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <Grid container direction="row" sx={{
-                        justifyContent: "space-between",
-                        alignItems: "stretch",
-                    }}>
-                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}>
-                                A
-                            </Button>
-                        </Grid>
-                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
-                                B
-                            </Button>
-                        </Grid>
-                        <Grid size="grow" style={{paddingRight: '0rem'}}>
-                            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
-                                C
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Grid>
+                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>*/}
+                {/*    <Grid container direction="row" sx={{*/}
+                {/*        justifyContent: "space-between",*/}
+                {/*        alignItems: "stretch",*/}
+                {/*    }}>*/}
+                {/*        <Grid size="grow" style={{paddingRight: '0.5rem'}}>*/}
+                {/*            <Button fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}>*/}
+                {/*                A*/}
+                {/*            </Button>*/}
+                {/*        </Grid>*/}
+                {/*        <Grid size="grow" style={{paddingRight: '0.5rem'}}>*/}
+                {/*            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>*/}
+                {/*                B*/}
+                {/*            </Button>*/}
+                {/*        </Grid>*/}
+                {/*        <Grid size="grow" style={{paddingRight: '0rem'}}>*/}
+                {/*            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>*/}
+                {/*                C*/}
+                {/*            </Button>*/}
+                {/*        </Grid>*/}
+                {/*    </Grid>*/}
+                {/*</Grid>*/}
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
-                    <Grid container direction="row" sx={{
-                            justifyContent: "space-between",
-                            alignItems: "stretch",
-                        }}>
-                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button fullWidth={true} disabled={trackingState['tracking_state'] === "tracking"}
-                                    variant="contained" color="success" style={{height: '60px'}}
-                                    onClick={()=>{handleTrackingStart()}}
-                            >
-                                TRACK
-                            </Button>
-                        </Grid>
-                        <Grid size="grow">
-                            <Button fullWidth={true} variant="contained" color="error" style={{height: '60px'}}
-                                    onClick={() => {handleTrackingStop()}}>
-                                STOP
-                            </Button>
-                        </Grid>
-                    </Grid>
-                </Grid>
+                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>*/}
+                {/*    <Grid container direction="row" sx={{*/}
+                {/*            justifyContent: "space-between",*/}
+                {/*            alignItems: "stretch",*/}
+                {/*        }}>*/}
+                {/*        <Grid size="grow" style={{paddingRight: '0.5rem'}}>*/}
+                {/*            <Button fullWidth={true} disabled={trackingState['rotator_state'] === "tracking"}*/}
+                {/*                    variant="contained" color="success" style={{height: '60px'}}*/}
+                {/*                    onClick={()=>{handleTrackingStart()}}*/}
+                {/*            >*/}
+                {/*                TRACK*/}
+                {/*            </Button>*/}
+                {/*        </Grid>*/}
+                {/*        <Grid size="grow">*/}
+                {/*            <Button fullWidth={true} variant="contained" color="error" style={{height: '60px'}}*/}
+                {/*                    onClick={() => {handleTrackingStop()}}>*/}
+                {/*                STOP*/}
+                {/*            </Button>*/}
+                {/*        </Grid>*/}
+                {/*    </Grid>*/}
+                {/*</Grid>*/}
+
             </Grid>
         </>
     );

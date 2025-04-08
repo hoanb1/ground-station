@@ -53,7 +53,8 @@ function SatelliteList() {
         const data = {
             ...trackingState,
             norad_id: satelliteId,
-            tracking_state: "idle",
+            rotator_state: "idle",
+            rig_state: "idle",
             group_id: groupId,
             rig_id: selectedRadioRig,
             rotator_id: selectedRotator,
@@ -73,7 +74,7 @@ function SatelliteList() {
     };
 
     return (
-        <FormControl disabled={trackingState['tracking_state'] === "tracking"} fullWidth={true} variant={"filled"} size={"small"}>
+        <FormControl disabled={trackingState['rotator_state'] === "tracking"} fullWidth={true} variant={"filled"} size={"small"}>
             <InputLabel htmlFor="satellite-select">Satellite</InputLabel>
             <Select onClose={handleSelectCloseEvent} onOpen={handleSelectOpenEvent}  value={groupOfSats.length > 0? satelliteId: ""}
                     id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleUIElementChange}>

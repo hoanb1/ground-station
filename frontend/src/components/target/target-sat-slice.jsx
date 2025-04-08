@@ -28,21 +28,22 @@ export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {getState, dispatch, rejectWithValue}) => {
         const state = getState();
-        const {norad_id, tracking_state, group_id, rig_id, rotator_id, transmitter_id} = data;
+        const {norad_id, rotator_state, rig_state, group_id, rig_id, rotator_id, transmitter_id} = data;
         const trackState = {
             'name': 'satellite-tracking',
             'value': {
                 'norad_id': norad_id,
-                'tracking_state': tracking_state,
+                'rotator_state': rotator_state,
+                'rig_state': rig_state,
                 'group_id': group_id,
                 'rotator_id': rotator_id,
                 'rig_id': rig_id,
                 'transmitter_id': transmitter_id,
             }
         };
-
         return new Promise((resolve, reject) => {
             socket.emit('data_submission', 'set-tracking-state', trackState, (response) => {
+                console.info("setTrackingStateInBackend response", response);
                 if (response.success) {
                     resolve(response.data);
                 } else {
@@ -59,11 +60,10 @@ export const fetchNextPasses = createAsyncThunk(
     async ({socket, noradId, hours}, {getState, rejectWithValue}) => {
         return new Promise((resolve, reject) => {
 
-            // lets check first if we have something cached
+            // let's check first if we have something cached
             const state = getState();
             const cacheKey = getCacheKeyForSatelliteId(noradId);
             if (cacheKey in state.targetSatTrack.cachedPasses) {
-                console.info(`Using cached passes for ${noradId}`);
                 resolve(state.targetSatTrack.cachedPasses[cacheKey]);
             }
 
@@ -141,7 +141,8 @@ const targetSatTrackSlice = createSlice({
         groupOfSats: [],
         trackingState: {
             'norad_id': '',
-            'tracking_state': 'idle',
+            'rotator_state': 'idle',
+            'rig_state': 'idle',
             'group_id': '',
             'rig_id': 'none',
             'rotator_id': 'none',
@@ -213,12 +214,18 @@ const targetSatTrackSlice = createSlice({
         cachedPasses: {},
         selectedTransmitter: "",
         availableTransmitters: [],
+        rotatorPos: {
+            'az': 0,
+            'el': 0
+        },
     },
     reducers: {
         setLoading(state, action) {
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
+            console.info(`setSatelliteData: `,  action.payload);
+
             if (state.satelliteSelectOpen === true || state.satelliteGroupSelectOpen === true) {
                 //console.info("select is open, NOT updating tracking state");
             } else {
@@ -278,6 +285,10 @@ const targetSatTrackSlice = createSlice({
                     position: action.payload['satellite_data']['position'],
                     transmitters: action.payload['satellite_data']['transmitters'],
                 };
+            }
+
+            if (action.payload['rotator']) {
+                state.rotatorPos = action.payload['rotator'];
             }
         },
         setSatellitePasses(state, action) {
@@ -384,6 +395,9 @@ const targetSatTrackSlice = createSlice({
         },
         setShowGrid(state, action) {
             state.showGrid = action.payload;
+        },
+        setRotatorPos(state, action) {
+            state.rotatorPos = action.payload;
         }
     },
     extraReducers: (builder) => {

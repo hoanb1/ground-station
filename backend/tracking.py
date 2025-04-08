@@ -429,7 +429,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     minelevation = 10.0
     previous_tracking_state = None
     rotator = None
+    rotator_pos = {'az': 0, 'el': 0}
     notified = {}
+
 
     def in_tracking_state():
         if current_tracking_state == "tracking":
@@ -447,14 +449,14 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         """
         nonlocal notified
 
-        logger.info(f"Target satellite change detected from {old} to {new}")
+        logger.info(f"Target satellite change detected from '{old}' to '{new}'")
 
         notified = {}
         await sio.emit('satellite-tracking', {'events': [
             {'name': "norad_id_change", 'old': old, 'new': new},
         ]})
 
-    async def handle_tracker_state_change(old, new):
+    async def handle_rotator_state_change(old, new):
         """
         Callback called when the user has changed the tracking state.
 
@@ -462,7 +464,14 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         :param str new: Represents the new state of the tracker.
         :return: None
         """
-        logger.info(f"Tracker state change detected from {old} to {new}")
+        logger.info(f"Rotator state change detected from '{old}' to '{new}'")
+
+        if new == "tracking":
+            pass
+        elif new == "idle":
+            pass
+
+
 
     # check if satellite was changed in the UI and send a message/event
     norad_id_change_tracker = StateTracker(initial_state="")
@@ -470,8 +479,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
     # check if the tracking state changed, do stuff if it has
     tracking_state_tracker = StateTracker(initial_state="")
-    tracking_state_tracker.register_async_callback(handle_tracker_state_change)
-
+    tracking_state_tracker.register_async_callback(handle_rotator_state_change)
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
@@ -499,7 +507,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                 # detect tracker state change
                 if current_tracking_state != previous_tracking_state:
-                    logger.info(f"Tracking state changed from {previous_tracking_state} to {current_tracking_state}")
 
                     # check if the new state is not tracking
                     if current_tracking_state == "tracking":
@@ -530,7 +537,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         if rotator is not None:
                             logger.info(f"Disconnecting from rotator at {rotator.host}:{rotator.port}...")
                             try:
-                                rotator.disconnect()
+                                await rotator.disconnect()
                                 await sio.emit('satellite-tracking', {'events': [
                                     {'name': "rotator_disconnected"}
                                 ]})
@@ -557,6 +564,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 # work on our sky coordinates
                 skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
 
+                if rotator:
+                    # get rotator position
+                    rotator_pos['az'], rotator_pos['el'] = await rotator.get_position()
+                    logger.info(f"rotator pos {rotator_pos['az']} {rotator_pos['el']}")
+
                 # first we check if the az end el values in the skypoint tuple are reachable
                 if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:
                     raise AzimuthOutOfBounds(f"azimuth {round(skypoint[0], 3)}° is out of range (range: {azimuthlimits})")
@@ -580,6 +592,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     except StopAsyncIteration:
                         # Generator is done (slewing complete)
                         logger.info(f"Slewing to AZ={round(az, 3)}° EL={round(el, 3)}° complete")
+
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{norad_id} {satellite_name}: {e}")
@@ -616,6 +629,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         'satellite_data': satellite_data,
                         'tracking_state': tracker,
                         'events': events,
+                        'rotator': rotator_pos,
                     }
 
                     logger.debug(f"Sending satellite tracking data to the browser: {data}")
