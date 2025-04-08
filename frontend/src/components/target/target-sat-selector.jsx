@@ -196,32 +196,32 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
                     <SatelliteList/>
                 </Grid>
 
-                <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['rotator_state'] === "tracking"}
-                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
-                                 size="small">
-                        <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
-                        <Select
-                            id="transmitter-select"
-                            value={availableTransmitters.length > 0 ? selectedTransmitter : "none"}
-                            onChange={(event) => {
-                                handleTransmitterChange(event);
-                            }}
-                            variant={'filled'}>
-                            <MenuItem value="none">
-                                [no frequency control]
-                            </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>select a transmitter</em>
-                            </MenuItem>
-                            {availableTransmitters.map((transmitter, index) => {
-                                return <MenuItem value={transmitter.id} key={transmitter.id}>
-                                    {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
-                                </MenuItem>;
-                            })}
-                        </Select>
-                    </FormControl>
-                </Grid>
+                {/*<Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>*/}
+                {/*    <FormControl disabled={trackingState['rotator_state'] === "tracking"}*/}
+                {/*                 sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"*/}
+                {/*                 size="small">*/}
+                {/*        <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>*/}
+                {/*        <Select*/}
+                {/*            id="transmitter-select"*/}
+                {/*            value={availableTransmitters.length > 0 ? selectedTransmitter : "none"}*/}
+                {/*            onChange={(event) => {*/}
+                {/*                handleTransmitterChange(event);*/}
+                {/*            }}*/}
+                {/*            variant={'filled'}>*/}
+                {/*            <MenuItem value="none">*/}
+                {/*                [no frequency control]*/}
+                {/*            </MenuItem>*/}
+                {/*            <MenuItem value="" disabled>*/}
+                {/*                <em>select a transmitter</em>*/}
+                {/*            </MenuItem>*/}
+                {/*            {availableTransmitters.map((transmitter, index) => {*/}
+                {/*                return <MenuItem value={transmitter.id} key={transmitter.id}>*/}
+                {/*                    {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})*/}
+                {/*                </MenuItem>;*/}
+                {/*            })}*/}
+                {/*        </Select>*/}
+                {/*    </FormControl>*/}
+                {/*</Grid>*/}
 
                 {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>*/}
                 {/*    <FormControl disabled={trackingState['rotator_state'] === "tracking"}*/}

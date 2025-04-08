@@ -186,6 +186,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
                         <Grid size="grow">
                             <Button fullWidth={true} disabled={
+                                trackingState['rotator_state'] === "idle" ||
                                 satelliteId === "" ||
                                 ["none", ""].includes(selectedRotator)
                             } variant="contained" color="error" style={{height: '60px'}}

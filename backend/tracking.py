@@ -452,7 +452,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         :param new: Updated satellite information
         :type new: Any
         :return: None
-        :rtype: None
         """
         nonlocal notified
 
@@ -608,7 +607,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 if rotator:
                     # get rotator position
                     rotator_pos['az'], rotator_pos['el'] = await rotator.get_position()
-                    logger.info(f"rotator pos {rotator_pos['az']} {rotator_pos['el']}")
 
                 # first we check if the az end el values in the skypoint tuple are reachable
                 if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:

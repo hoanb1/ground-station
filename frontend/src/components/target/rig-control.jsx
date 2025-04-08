@@ -78,6 +78,21 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setRadioRig(event.target.value));
     }
 
+    function handleTransmitterChange(event) {
+        dispatch(setSelectedTransmitter(event.target.value));
+        const data = {
+            ...trackingState,
+            'norad_id': satelliteId,
+            'rotator_state': "idle",
+            'rig_state': trackingState['rig_state'],
+            'group_id': groupId,
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': event.target.value,
+        };
+        dispatch(setTrackingStateInBackend({ socket, data: data}));
+    }
+
     return (
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Radio rig control</TitleBar>
@@ -108,7 +123,34 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                     </FormControl>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
+                <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
+                    <FormControl disabled={trackingState['rig_state'] === "tracking"}
+                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
+                                 size="small">
+                        <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
+                        <Select
+                            id="transmitter-select"
+                            value={availableTransmitters.length > 0 ? selectedTransmitter : "none"}
+                            onChange={(event) => {
+                                handleTransmitterChange(event);
+                            }}
+                            variant={'filled'}>
+                            <MenuItem value="none">
+                                [no frequency control]
+                            </MenuItem>
+                            <MenuItem value="" disabled>
+                                <em>select a transmitter</em>
+                            </MenuItem>
+                            {availableTransmitters.map((transmitter, index) => {
+                                return <MenuItem value={transmitter.id} key={transmitter.id}>
+                                    {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
+                                </MenuItem>;
+                            })}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
                         justifyContent: "space-between",
                         alignItems: "stretch",
@@ -184,6 +226,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
                         <Grid size="grow">
                             <Button fullWidth={true} disabled={
+                                trackingState['rig_state'] === "idle" ||
                                 satelliteId === "" ||
                                 ["none", ""].includes(selectedRadioRig)
                                 || ["none", ""].includes(selectedTransmitter)
