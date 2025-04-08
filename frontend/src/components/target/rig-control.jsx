@@ -4,10 +4,16 @@ import {useDispatch, useSelector} from "react-redux";
 import {useEffect} from "react";
 import {
     fetchSatelliteGroups,
-    fetchSatellitesByGroupId, setGroupOfSats, setRadioRig, setRotator, setSatelliteGroupSelectOpen,
+    fetchSatellitesByGroupId,
+    setGroupOfSats,
+    setRadioRig,
+    setRotator,
+    setSatelliteGroupSelectOpen,
     setSatelliteId,
-    setSatGroupId, setSelectedTransmitter,
-    setStarting, setTrackingStateInBackend
+    setSatGroupId,
+    setSelectedTransmitter,
+    setStarting,
+    setTrackingStateInBackend
 } from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {humanizeFrequency, TitleBar} from "../common/common.jsx";
@@ -39,7 +45,6 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
 
     const { rigs } = useSelector((state) => state.rigs);
     const { rotators } = useSelector((state) => state.rotators);
-
 
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, 'rig_state': "idle"};
