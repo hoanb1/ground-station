@@ -45,8 +45,9 @@ steps:
       # Wait for container to initialize
       - sleep 5
 
-      # Health check
-      - curl -s http://localhost:7000 || (echo "Container not responding" && exit 1)
+      # Health check using wget instead of curl (wget is often available in docker images)
+      - apk add --no-cache wget || true
+      - wget -q -O - http://localhost:7000 > /dev/null 2>&1 || (echo "Container not responding, trying alternative check" && docker logs ground-station-prod && exit 1)
 
       # Display container info
       - echo "✅ New container is running on host port 7000"
