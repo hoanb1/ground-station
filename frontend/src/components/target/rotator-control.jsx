@@ -173,7 +173,11 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button fullWidth={true} disabled={trackingState['rotator_state'] === "tracking" || satelliteId === "" || ["none", ""].includes(selectedRotator)}
+                            <Button fullWidth={true} disabled={
+                                trackingState['rotator_state'] === "tracking" ||
+                                satelliteId === "" ||
+                                ["none", ""].includes(selectedRotator)
+                            }
                                     variant="contained" color="success" style={{height: '60px'}}
                                     onClick={()=>{handleTrackingStart()}}
                             >
@@ -181,7 +185,10 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                             </Button>
                         </Grid>
                         <Grid size="grow">
-                            <Button fullWidth={true} variant="contained" color="error" style={{height: '60px'}}
+                            <Button fullWidth={true} disabled={
+                                satelliteId === "" ||
+                                ["none", ""].includes(selectedRotator)
+                            } variant="contained" color="error" style={{height: '60px'}}
                                     onClick={() => {handleTrackingStop()}}>
                                 STOP
                             </Button>
