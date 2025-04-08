@@ -71,4 +71,4 @@ coverage/
 *.venv
 env.bak/
 venv.bak/
-/backend/gs.db
+/backend/db/gs.db
