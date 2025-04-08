@@ -47,7 +47,7 @@ steps:
 
       # Health check using wget instead of curl (wget is often available in docker images)
       - apk add --no-cache wget || true
-      - wget -q -O - http://localhost:7000 > /dev/null 2>&1 || (echo "Container not responding, trying alternative check" && docker logs ground-station-prod && exit 1)
+      - wget -q -O - http://0.0.0.0:7000 > /dev/null 2>&1 || (echo "Container not responding, trying alternative check" && docker logs ground-station-prod && exit 1)
 
       # Display container info
       - echo "✅ New container is running on host port 7000"
