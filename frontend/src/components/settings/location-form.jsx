@@ -9,7 +9,7 @@ import {
 } from '@mui/material';
 import {MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMapEvents} from 'react-leaflet';
 import Grid from '@mui/material/Grid2';
-import { SimpleVectorCircle } from '../common/icons.jsx';
+import {SimpleVectorCircle, SimpleVectorCircleWhite} from '../common/icons.jsx';
 import { enqueueSnackbar } from 'notistack';
 import { useSocket } from '../common/socket.jsx';
 import { getMaidenhead } from '../common/common.jsx';
@@ -21,7 +21,8 @@ import {
     setQth,
     setLocationLoading,
     storeLocation
-} from './location-slice.jsx'; // or correct path
+} from './location-slice.jsx';
+import {getTileLayerById} from "../common/tile-layers.jsx"; // or correct path
 
 let MapObject = null;
 
@@ -203,8 +204,8 @@ const LocationPage = () => {
                             style={{ height: '100%', width: '100%' }}
                         >
                             <TileLayer
-                                attribution='© Stadia Maps, © OpenMapTiles, © OpenStreetMap contributors'
-                                url="https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png"
+                                url={getTileLayerById("satellite")['url']}
+                                attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                             />
                             <MapClickHandler onClick={handleMapClick} />
                             <Marker position={[location.lat, location.lon]}>
@@ -214,8 +215,8 @@ const LocationPage = () => {
                                 <Polyline
                                     key={index}
                                     positions={polyline}
-                                    color="grey"
-                                    opacity={0.7}
+                                    color="white"
+                                    opacity={0.8}
                                     lineCap="round"
                                     lineJoin="round"
                                     dashArray="2, 2"
@@ -227,10 +228,18 @@ const LocationPage = () => {
                                     weight={1}
                                 />
                             ))}
-                            <Marker
-                                position={location}
-                                icon={SimpleVectorCircle}
-                            >
+                            <Marker position={location}>
+                            <Circle
+                                center={location}
+                                radius={400000} // Radius in meters (e.g., 100 km in this case)
+                                pathOptions={{
+                                    color: 'white',
+                                    fillOpacity: 0,
+                                    weight: 1,
+                                    opacity: 0.8,
+                                }}
+                            />
+                                
                             </Marker>
                         </MapContainer>
                     </Box>
