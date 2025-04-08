@@ -40,14 +40,19 @@ steps:
       - docker rm -f ground-station-prod || true
 
       # Run the new container
-      - docker run -d -p 7000:7000 --name ground-station-prod ground-station:latest
+      - docker run -d -p 0.0.0.0:7000:7000 --name ground-station-prod ground-station:latest
 
       # Wait for container to initialize
       - sleep 5
 
-      # Health check using wget instead of curl (wget is often available in docker images)
-      - apk add --no-cache wget || true
-      - wget -q -O - http://0.0.0.0:7000 > /dev/null 2>&1 || (echo "Container not responding, trying alternative check" && docker logs ground-station-prod && exit 1)
+      # Better health check approach using Docker's own health check mechanisms
+      - |
+        CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' ground-station-prod)
+        if [ "$CONTAINER_STATUS" != "running" ]; then
+          echo "Container is not running: $CONTAINER_STATUS"
+          docker logs ground-station-prod
+          exit 1
+        fi
 
       # Display container info
       - echo "✅ New container is running on host port 7000"
