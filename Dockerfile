@@ -15,10 +15,6 @@ COPY frontend/ ./
 # copy the .env template
 RUN cp .env.production .env
 
-# Set production environment variables
-ENV GS_BACKEND_PORT=6969
-ENV GS_BACKEND_HOST=localhost
-
 # Build the frontend for production
 RUN npm run build
 
@@ -106,9 +102,9 @@ ENV PYTHONPATH=/app
 ENV STATIC_FILES_DIR=/app/frontend/dist
 
 # Expose the port the app runs on
-EXPOSE 6969
+EXPOSE 7000
 
 WORKDIR backend/
 
 # Command to run the application
-CMD ["python", "app.py", "--secret-key=AuZ9theig2geu4wu", "--log-level=INFO", "--host=0.0.0.0", "--port=6969"]
+CMD ["python", "app.py", "--secret-key=AuZ9theig2geu4wu", "--log-level=INFO", "--host=0.0.0.0", "--port=7000"]
