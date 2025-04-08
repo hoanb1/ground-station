@@ -165,7 +165,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button fullWidth={true} disabled={trackingState['rig_state'] === "tracking" || satelliteId === "" || ["none", ""].includes(selectedRadioRig)}
+                                <Button fullWidth={true} disabled={trackingState['rig_state'] === "tracking" || satelliteId === "" || ["none", ""].includes(selectedRadioRig) || ["none", ""].includes(selectedTransmitter)}
                                     variant="contained" color="success" style={{height: '60px'}}
                                     onClick={()=>{handleTrackingStart()}}
                             >

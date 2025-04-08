@@ -106,21 +106,6 @@ class RotatorController:
             self.logger.error(f"Error disconnecting from rotator: {e}")
             return False
 
-    async def async_disconnect(self) -> bool:
-
-        if not self.connected or self.rotator is None:
-            self.logger.warning("Not connected to rotator")
-            return True
-
-        # Run the synchronous disconnect method in a thread pool
-        loop = asyncio.get_event_loop()
-        try:
-            return await asyncio.to_thread(self.disconnect)
-
-        except Exception as e:
-            self.logger.error(f"Error in async disconnection: {e}")
-            return False
-
     @asynccontextmanager
     async def _create_connection(self):
         """
@@ -346,12 +331,20 @@ class RotatorController:
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
         """Async context manager exit point - disconnects from the rotator asynchronously."""
-        await self.async_disconnect()
+        loop = asyncio.get_event_loop()
+        try:
+            loop.run_until_complete(self.disconnect())
+        finally:
+            pass
 
     def __del__(self) -> None:
         """Destructor - ensure we disconnect when the object is garbage collected."""
         if self.connected:
-            self.disconnect()
+            loop = asyncio.get_event_loop()
+            try:
+                loop.run_until_complete(self.disconnect())
+            finally:
+                pass
 
     @staticmethod
     def get_error_message(error_code: int) -> str:

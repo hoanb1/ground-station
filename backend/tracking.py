@@ -427,25 +427,32 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     azimuthlimits = (0, 360)
     eleveationlimits = (0, 180)
     minelevation = 10.0
-    previous_tracking_state = None
+    previous_rotator_state = None
     rotator = None
     rotator_pos = {'az': 0, 'el': 0}
     notified = {}
 
 
     def in_tracking_state():
-        if current_tracking_state == "tracking":
+        if current_rotator_state == "tracking":
             return True
         else:
             return False
 
     async def handle_satellite_change(old, new):
         """
-        Callback called when the user has selected a different satellite.
+        Handles satellite changes and notifies clients via the socket server.
 
-        :param old: The previous state or value associated with the satellite.
-        :param new: The updated state or value associated with the satellite.
+        When a satellite change event is detected, this function logs the change
+        and notifies connected clients. The emitted event contains the event name
+        as well as details about the old and new satellite states.
+
+        :param old: Previous satellite information
+        :type old: Any
+        :param new: Updated satellite information
+        :type new: Any
         :return: None
+        :rtype: None
         """
         nonlocal notified
 
@@ -458,10 +465,14 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
     async def handle_rotator_state_change(old, new):
         """
-        Callback called when the user has changed the tracking state.
+        Handles the changes in rotator state. Detects and logs the transition between
+        different rotator states and can trigger additional behaviors based on the
+        new state.
 
-        :param str old: Represents the previous state of the tracker.
-        :param str new: Represents the new state of the tracker.
+        :param old: The previous state of the rotator.
+        :type old: str
+        :param new: The current state of the rotator.
+        :type new: str
         :return: None
         """
         logger.info(f"Rotator state change detected from '{old}' to '{new}'")
@@ -472,14 +483,40 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
             pass
 
 
+    async def handle_rig_state_change(old, new):
+        """
+        Logs changes in the rig state and handles transitions between states.
+
+        The function detects a change in the state of a rig from an old state to a
+        new state. It performs specific actions based on the value of the new state,
+        such as initiating or stopping certain tasks when the rig enters states
+        like "tracking" or "idle".
+
+        :param old: Previous state of the rig.
+        :param new: New state of the rig.
+        :type old: str
+        :type new: str
+        :return: None
+        """
+
+        logger.info(f"Rig state change detected from '{old}' to '{new}'")
+
+        if new == "tracking":
+            pass
+        elif new == "idle":
+            pass
 
     # check if satellite was changed in the UI and send a message/event
     norad_id_change_tracker = StateTracker(initial_state="")
     norad_id_change_tracker.register_async_callback(handle_satellite_change)
 
-    # check if the tracking state changed, do stuff if it has
-    tracking_state_tracker = StateTracker(initial_state="")
-    tracking_state_tracker.register_async_callback(handle_rotator_state_change)
+    # check if the rotator state changed, do stuff if it has
+    rotator_state_tracker = StateTracker(initial_state="")
+    rotator_state_tracker.register_async_callback(handle_rotator_state_change)
+
+    # check if the rig state changed, do stuff if it has
+    rig_state_tracker = StateTracker(initial_state="")
+    rig_state_tracker.register_async_callback(handle_rig_state_change)
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
@@ -489,27 +526,31 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
-                group_id = tracking_state_reply['data']['value']['group_id']
-                norad_id = tracking_state_reply['data']['value']['norad_id']
+                current_group_id = tracking_state_reply['data']['value']['group_id']
+                current_norad_id = tracking_state_reply['data']['value']['norad_id']
 
                 satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
                 satellite_name = satellite_data['details']['name']
                 tracker = tracking_state_reply['data']['value']
                 selected_rotator_id = tracker.get('rotator_id', None)
                 selected_rig_id = tracker.get('rig_id', None)
-                current_tracking_state = tracker.get('tracking_state')
+                current_rotator_state = tracker.get('rotator_state')
+                current_rig_state = tracker.get('rig_state')
 
                 # check norad_id and detect change
-                await norad_id_change_tracker.update_state(norad_id)
+                await norad_id_change_tracker.update_state(current_norad_id)
 
-                # check tracking state change
-                await tracking_state_tracker.update_state(current_tracking_state)
+                # check rotator state change
+                await rotator_state_tracker.update_state(current_rotator_state)
+
+                # check rig state change
+                await rig_state_tracker.update_state(current_rig_state)
 
                 # detect tracker state change
-                if current_tracking_state != previous_tracking_state:
+                if current_rotator_state != previous_rotator_state:
 
                     # check if the new state is not tracking
-                    if current_tracking_state == "tracking":
+                    if current_rotator_state == "tracking":
 
                         # check what hardware was chosen and set it up
                         if selected_rotator_id is not None and rotator is None:
@@ -532,7 +573,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                                 ]})
                                 rotator = None  # Reset to None if connection fails
 
-                    elif current_tracking_state == "idle":
+                    elif current_rotator_state == "idle":
 
                         if rotator is not None:
                             logger.info(f"Disconnecting from rotator at {rotator.host}:{rotator.port}...")
@@ -559,7 +600,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     pass
 
                 # set this to the current value so that the above logic works
-                previous_tracking_state = current_tracking_state
+                previous_rotator_state = current_rotator_state
 
                 # work on our sky coordinates
                 skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
@@ -580,7 +621,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 if skypoint[1] < minelevation:
                     raise MinimumElevationError(f"target has not reached minimum elevation {minelevation}° degrees")
 
-                logger.info(f"We have a valid target (#{norad_id} {satellite_name}) at az: {round(skypoint[0], 3)}° el: {round(skypoint[1], 3)}°")
+                logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {round(skypoint[0], 3)}° el: {round(skypoint[1], 3)}°")
 
                 if rotator:
                     position_gen = rotator.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
@@ -595,7 +636,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
 
             except AzimuthOutOfBounds as e:
-                logger.warning(f"Azimuth out of bounds for satellite #{norad_id} {satellite_name}: {e}")
+                logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
                 if in_tracking_state() and notified.get('azimuth_out_of_bounds', False) is not True:
                     await sio.emit('satellite-tracking', {'events': [
                         {'name': "azimuth_out_of_bounds"}
@@ -603,7 +644,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     notified['azimuth_out_of_bounds'] = True
 
             except ElevationOutOfBounds as e:
-                logger.warning(f"Elevation out of bounds for satellite #{norad_id} {satellite_name}: {e}")
+                logger.warning(f"Elevation out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
                 if in_tracking_state() and notified.get('elevation_out_of_bounds', False) is not True:
                     await sio.emit('satellite-tracking', {'events': [
                         {'name': "elevation_out_of_bounds"}
@@ -611,7 +652,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     notified['elevation_out_of_bounds'] = True
 
             except MinimumElevationError as e:
-                logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{norad_id} {satellite_name}: {e}")
+                logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{current_norad_id} {satellite_name}: {e}")
                 if in_tracking_state() and notified.get('minelevation_error', False) is not True:
                     await sio.emit('satellite-tracking', {'events': [
                         {'name': "minelevation_error"}
