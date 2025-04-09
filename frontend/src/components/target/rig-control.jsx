@@ -83,7 +83,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         const data = {
             ...trackingState,
             'norad_id': satelliteId,
-            'rotator_state': "idle",
+            'rotator_state': trackingState['rotator_state'],
             'rig_state': trackingState['rig_state'],
             'group_id': groupId,
             'rig_id': selectedRadioRig,
@@ -171,7 +171,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h5" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                            <Typography variant="h5" style={{fontFamily: "monospace", fontWeight: "bold"}}>
                                 437Mhz
                             </Typography>
                         </Grid>
