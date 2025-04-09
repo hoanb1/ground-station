@@ -19,7 +19,7 @@ import {
 import {enqueueSnackbar} from "notistack";
 import {humanizeFrequency, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
-import {Button, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
+import {Button, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {
     GaugeContainer,
     GaugeValueArc,
@@ -30,6 +30,8 @@ import {
 } from '@mui/x-charts/Gauge';
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+import CheckCircleOutlineIcon from '@mui/icons-material/CheckCircleOutline';
+import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 
 function GaugePointer() {
@@ -93,6 +95,7 @@ function GaugeEl({el}) {
 
 
 
+
 const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
@@ -112,7 +115,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         selectedRotator,
         selectedTransmitter,
         availableTransmitters,
-        rotatorPos,
+        rotatorData,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -122,6 +125,26 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         const newTrackingState = {...trackingState, 'rotator_state': "idle"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
+
+    function getCurrentStatusofRotator() {
+        if (rotatorData['slewing']) {
+            return "slewing";
+        } else  if (rotatorData['tracking']) {
+            return "tracking";
+        } else {
+            return "idle";
+        }
+    }
+
+    function getConnectionStatusofRotator() {
+        if (rotatorData['connected'] === true) {
+            return "Connected";
+        } else  if (rotatorData['connected'] === false) {
+            return "Not connected";
+        } else {
+            return "unknown";
+        }
+    }
 
     const handleTrackingStart = () => {
         console.info(`trackingState`, trackingState);
@@ -157,6 +180,36 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
             <TitleBar className={"react-grid-draggable window-title-bar"}>Rotator control</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
+                <Grid container direction="row" sx={{
+                    backgroundColor: theme => rotatorData['connected'] ? theme.palette.success.main : theme.palette.info.main,
+                    padding: '0.1rem',
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: '100%',
+                }}>
+                    <Grid container direction="row" sx={{
+                        backgroundColor: theme => rotatorData['connected'] ? theme.palette.success.main : theme.palette.info.main,
+                        padding: '0.1rem',
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                        width: '100%',
+                    }}>
+                        <Typography variant="body1" sx={{
+                            color: theme => theme.palette.success.contrastText,
+                            width: '90%',
+                            textAlign: 'center',
+                            display: 'inline-flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                        }}>
+                            {rotatorData['connected']
+                                ? <CheckCircleOutlineIcon sx={{mr: 1}}/>
+                                : <ErrorOutlineIcon sx={{mr: 1}}/>}
+                            {getConnectionStatusofRotator()}
+                        </Typography>
+                    </Grid>
+                </Grid>
+
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={trackingState['rotator_state'] === "tracking"}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
@@ -183,15 +236,23 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
+
+                    <Grid container direction="row" sx={{
+                        justifyContent: "space-between",
+                        alignItems: "center",
+                    }}>
+
+                    </Grid>
+
                     <Grid container direction="row" sx={{
                         justifyContent: "space-between",
                         alignItems: "center",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                                <GaugeAz az={rotatorPos['az']}/>
+                                <GaugeAz az={rotatorData['az']}/>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                                <GaugeEl el={rotatorPos['el']}/>
+                                <GaugeEl el={rotatorData['el']}/>
                         </Grid>
 
                     </Grid>
@@ -200,16 +261,28 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h5" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {rotatorPos['az']}°
+                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                {rotatorData['az']}°
                             </Typography>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h5" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {rotatorPos['el']}°
+                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                {rotatorData['el']}°
                             </Typography>
                         </Grid>
                     </Grid>
+
+                    <Grid container direction="row" sx={{
+                        justifyContent: "space-between",
+                        alignItems: "stretch",
+                    }}>
+                        <Grid size="grow" style={{textAlign: 'center'}}>
+                            <Typography variant="body2" style={{fontFamily: "Monospace, monospace"}}>
+                                {getCurrentStatusofRotator()}
+                            </Typography>
+                        </Grid>
+                    </Grid>
+
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>

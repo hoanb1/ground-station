@@ -188,7 +188,7 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
                         </Select>
                     </FormControl>
                     </Grid>
-                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}
+                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}
                     container
                     direction="column"
                     ref={videoContainerRef}

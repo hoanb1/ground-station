@@ -213,9 +213,14 @@ const targetSatTrackSlice = createSlice({
         cachedPasses: {},
         selectedTransmitter: "",
         availableTransmitters: [],
-        rotatorPos: {
+        rotatorData: {
             'az': 0,
-            'el': 0
+            'el': 0,
+            'slewing': false,
+            'connected': false,
+            'tracking': false,
+            'minelevation': false,
+            'outofbounds': false,
         },
     },
     reducers: {
@@ -285,7 +290,7 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['rotator']) {
-                state.rotatorPos = action.payload['rotator'];
+                state.rotatorData = action.payload['rotator'];
             }
         },
         setSatellitePasses(state, action) {
@@ -393,8 +398,8 @@ const targetSatTrackSlice = createSlice({
         setShowGrid(state, action) {
             state.showGrid = action.payload;
         },
-        setRotatorPos(state, action) {
-            state.rotatorPos = action.payload;
+        setRotatorData(state, action) {
+            state.rotatorData = action.payload;
         }
     },
     extraReducers: (builder) => {

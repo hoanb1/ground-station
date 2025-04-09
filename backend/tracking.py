@@ -429,8 +429,17 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     minelevation = 10.0
     previous_rotator_state = None
     rotator = None
-    rotator_pos = {'az': 0, 'el': 0}
+    rotator_data = {
+        'az': 0,
+        'el': 0,
+        'connected': False,
+        'tracking': False,
+        'slewing': False,
+        'outofbounds': False,
+        'minelevation': False
+    }
     notified = {}
+    is_slewing = False
 
 
     def in_tracking_state():
@@ -477,9 +486,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         logger.info(f"Rotator state change detected from '{old}' to '{new}'")
 
         if new == "tracking":
-            pass
+            rotator_data['tracking'] = True
         elif new == "idle":
-            pass
+            rotator_data['tracking'] = False
 
 
     async def handle_rig_state_change(old, new):
@@ -563,6 +572,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                                 await sio.emit('satellite-tracking', {'events': [
                                     {'name': "rotator_connected"}
                                 ]})
+                                rotator_data['connected'] = True
 
                             except Exception as e:
                                 logger.error(f"Failed to connect to rotator: {e}")
@@ -581,7 +591,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                                 await sio.emit('satellite-tracking', {'events': [
                                     {'name': "rotator_disconnected"}
                                 ]})
-                                logger.info(f"Successfully disconnected from rotator at {rotator.host}:{rotator.port}")
+                                rotator_data['connected'] = False
 
                             except Exception as e:
                                 logger.error(f"Error disconnecting from rotator: {e}")
@@ -606,7 +616,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                 if rotator:
                     # get rotator position
-                    rotator_pos['az'], rotator_pos['el'] = await rotator.get_position()
+                    rotator_data['az'], rotator_data['el'] = await rotator.get_position()
 
                 # first we check if the az end el values in the skypoint tuple are reachable
                 if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:
@@ -626,10 +636,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
                     try:
                         az, el, is_slewing = await anext(position_gen)
+                        rotator_data['slewing'] = is_slewing
                         logger.info(f"Current position: AZ={round(az, 3)}°, EL={round(el, 3)}°, slewing={is_slewing}")
 
                     except StopAsyncIteration:
-                        # Generator is done (slewing complete)
+                        # generator is done (slewing complete)
                         logger.info(f"Slewing to AZ={round(az, 3)}° EL={round(el, 3)}° complete")
 
 
@@ -668,7 +679,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         'satellite_data': satellite_data,
                         'tracking_state': tracker,
                         'events': events,
-                        'rotator': rotator_pos,
+                        'rotator': rotator_data,
                     }
 
                     logger.debug(f"Sending satellite tracking data to the browser: {data}")
