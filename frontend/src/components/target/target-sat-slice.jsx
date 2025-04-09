@@ -43,7 +43,6 @@ export const setTrackingStateInBackend = createAsyncThunk(
         };
         return new Promise((resolve, reject) => {
             socket.emit('data_submission', 'set-tracking-state', trackState, (response) => {
-                console.info("setTrackingStateInBackend response", response);
                 if (response.success) {
                     resolve(response.data);
                 } else {
@@ -224,8 +223,6 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
-            console.info(`setSatelliteData: `,  action.payload);
-
             if (state.satelliteSelectOpen === true || state.satelliteGroupSelectOpen === true) {
                 //console.info("select is open, NOT updating tracking state");
             } else {

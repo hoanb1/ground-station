@@ -2,6 +2,7 @@ import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {useEffect} from "react";
+import { styled } from '@mui/material/styles';
 import {
     fetchSatelliteGroups,
     fetchSatellitesByGroupId,
@@ -19,8 +20,78 @@ import {enqueueSnackbar} from "notistack";
 import {humanizeFrequency, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Button, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import SatelliteList from "./target-sat-list.jsx";
+import {
+    GaugeContainer,
+    GaugeValueArc,
+    GaugeReferenceArc,
+    useGaugeState,
+    Gauge,
+    gaugeClasses,
+} from '@mui/x-charts/Gauge';
+import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
+
+
+function GaugePointer() {
+    const { valueAngle, outerRadius, cx, cy } = useGaugeState();
+
+    if (valueAngle === null) {
+        // No value to display
+        return null;
+    }
+
+    const target = {
+        x: cx + outerRadius * Math.sin(valueAngle),
+        y: cy - outerRadius * Math.cos(valueAngle),
+    };
+    return (
+        <g>
+            <circle cx={cx} cy={cy} r={5} fill="red" />
+            <path
+                d={`M ${cx} ${cy} L ${target.x} ${target.y}`}
+                stroke="red"
+                strokeWidth={3}
+            />
+        </g>
+    );
+}
+
+function GaugeAz({az}) {
+    return (
+        <GaugeContainer
+            valueMin={0}
+            valueMax={360}
+            width={150}
+            height={100}
+            startAngle={0}
+            endAngle={360}
+            value={az}
+        >
+            <GaugeReferenceArc />
+            <GaugePointer />
+        </GaugeContainer>
+    );
+}
+
+function GaugeEl({el}) {
+    return (
+        <GaugeContainer
+            valueMin={90}
+            valueMax={0}
+            width={150}
+            height={100}
+            startAngle={0}
+            endAngle={90}
+            value={el}
+        >
+            <GaugeReferenceArc />
+            <GaugePointer />
+        </GaugeContainer>
+    );
+}
+
+
+
 
 const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
     const { socket } = useSocket();
@@ -114,18 +185,15 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
                         justifyContent: "space-between",
-                        alignItems: "stretch",
+                        alignItems: "center",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="body1">
-                                Azimuth
-                            </Typography>
+                                <GaugeAz az={rotatorPos['az']}/>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="body1" >
-                                Elevation
-                            </Typography>
+                                <GaugeEl el={rotatorPos['el']}/>
                         </Grid>
+
                     </Grid>
                     <Grid container direction="row" sx={{
                         justifyContent: "space-between",
@@ -133,12 +201,12 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             <Typography variant="h5" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {rotatorPos['az']}
+                                {rotatorPos['az']}°
                             </Typography>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             <Typography variant="h5" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {rotatorPos['el']}
+                                {rotatorPos['el']}°
                             </Typography>
                         </Grid>
                     </Grid>
