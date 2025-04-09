@@ -466,6 +466,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
         logger.info(f"Target satellite change detected from '{old}' to '{new}'")
 
+        # reset the minelevation error
+        rotator_data['minelevation'] = False
+
         notified = {}
         await sio.emit('satellite-tracking', {'events': [
             {'name': "norad_id_change", 'old': old, 'new': new},
@@ -484,6 +487,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         :return: None
         """
         logger.info(f"Rotator state change detected from '{old}' to '{new}'")
+
+        # reset the minelevation error
+        rotator_data['minelevation'] = False
 
         if new == "tracking":
             rotator_data['tracking'] = True
@@ -580,7 +586,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                                 await sio.emit('satellite-tracking', {'events': [
                                     {'name': "rotator_error", "error": str(e)}
                                 ]})
-                                rotator = None  # Reset to None if connection fails
+                                rotator = None
 
                     elif current_rotator_state == "idle":
 
@@ -667,6 +673,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         {'name': "minelevation_error"}
                     ]})
                     notified['minelevation_error'] = True
+                    rotator_data['minelevation'] = True
 
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")

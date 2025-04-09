@@ -127,12 +127,14 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
     };
 
     function getCurrentStatusofRotator() {
-        if (rotatorData['slewing']) {
-            return "slewing";
-        } else  if (rotatorData['tracking']) {
-            return "tracking";
+        if (rotatorData['minelevation'] === true) {
+            return "Target below elevation limit";
+        } else if (rotatorData['slewing'] === true) {
+            return "Slewing";
+        } else  if (rotatorData['tracking'] === true) {
+            return "Tracking";
         } else {
-            return "idle";
+            return "Idle";
         }
     }
 
