@@ -90,12 +90,8 @@ class RotatorController:
             return True
 
         try:
-            result = await asyncio.to_thread(self.rotator.close)
+            result = await asyncio.wait_for(asyncio.to_thread(self.rotator.close), timeout=3.0)
             self.logger.debug(f"Close command: result={result}")
-
-            # if result != Hamlib.RIG_OK:
-            #    self.logger.warning(f"Error closing rotator connection: {self.get_error_message(result)}")
-            #    return False
 
             self.connected = False
             self.rotator = None
@@ -271,12 +267,22 @@ class RotatorController:
             pass
 
     def __del__(self) -> None:
-        """Destructor - ensure we disconnect when the object is garbage collected."""
-        if self.connected:
-            loop = asyncio.get_event_loop()
+        """Destructor - log a warning if still connected when object is garbage collected."""
+        if self.connected and hasattr(self, 'logger'):
             try:
-                loop.run_until_complete(self.disconnect())
-            finally:
+                # Just log a warning rather than trying to run async code
+                self.logger.warning("Object RotatorController being garbage collected while still connected")
+
+                # If there's a synchronous way to close the underlying connection, use it
+                if self.rig is not None and hasattr(self.rig, 'close') and callable(self.rig.close):
+                    try:
+                        # Only if close() can be called synchronously
+                        self.rig.close()
+                    except Exception as e:
+                        self.logger.error(f"Error during cleanup: {e}")
+
+            except Exception as e:
+                # Avoid any exceptions in __del__
                 pass
 
     @staticmethod

@@ -278,12 +278,17 @@ class RigController:
 
     def __del__(self) -> None:
         """Destructor - ensure we disconnect when the object is garbage collected."""
-        if self.connected:
-            loop = asyncio.get_event_loop()
+        if self.connected and self.rig is not None:
+            # Direct synchronous disconnection if possible
             try:
-                loop.run_until_complete(self.disconnect())
-            finally:
-                pass
+                self.logger.warning("Object RigController being destroyed while still connected to rig")
+                if hasattr(self.rig, 'close'):
+                    self.rig.close()
+                self.connected = False
+                self.rig = None
+            except Exception as e:
+                # Just log errors, never raise from __del__
+                self.logger.error(f"Error during cleanup: {e}")
 
     @staticmethod
     def get_error_message(error_code: int) -> str:
