@@ -189,27 +189,19 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                     alignItems: "center",
                     width: '100%',
                 }}>
-                    <Grid container direction="row" sx={{
-                        backgroundColor: theme => rotatorData['connected'] ? theme.palette.success.main : theme.palette.info.main,
-                        padding: '0.1rem',
-                        justifyContent: "space-between",
-                        alignItems: "center",
-                        width: '100%',
+                    <Typography variant="body1" sx={{
+                        color: theme => theme.palette.success.contrastText,
+                        width: '90%',
+                        textAlign: 'center',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
                     }}>
-                        <Typography variant="body1" sx={{
-                            color: theme => theme.palette.success.contrastText,
-                            width: '90%',
-                            textAlign: 'center',
-                            display: 'inline-flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                        }}>
-                            {rotatorData['connected']
-                                ? <CheckCircleOutlineIcon sx={{mr: 1}}/>
-                                : <ErrorOutlineIcon sx={{mr: 1}}/>}
-                            {getConnectionStatusofRotator()}
-                        </Typography>
-                    </Grid>
+                        {rotatorData['connected']
+                            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>
+                            : <ErrorOutlineIcon sx={{mr: 1}}/>}
+                        {getConnectionStatusofRotator()}
+                    </Typography>
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
@@ -263,12 +255,12 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {rotatorData['az']}°
+                            AZ: <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                               {rotatorData['az']}°
                             </Typography>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                            EL: <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
                                 {rotatorData['el']}°
                             </Typography>
                         </Grid>
@@ -279,12 +271,11 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="body2" style={{fontFamily: "Monospace, monospace"}}>
+                            <Typography variant={"h7"}>
                                 {getCurrentStatusofRotator()}
                             </Typography>
                         </Grid>
                     </Grid>
-
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>

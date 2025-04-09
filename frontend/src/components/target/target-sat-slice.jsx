@@ -222,6 +222,10 @@ const targetSatTrackSlice = createSlice({
             'minelevation': false,
             'outofbounds': false,
         },
+        rigData: {
+            'connected': false,
+            'tracking': false,
+        },
     },
     reducers: {
         setLoading(state, action) {

@@ -21,6 +21,8 @@ import Grid from "@mui/material/Grid2";
 import {Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import SatelliteList from "./target-sat-list.jsx";
 import Typography from "@mui/material/Typography";
+import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
+import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 
 const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
     const { socket } = useSocket();
@@ -41,6 +43,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         selectedRotator,
         selectedTransmitter,
         availableTransmitters,
+        rigData,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -50,6 +53,16 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         const newTrackingState = {...trackingState, 'rig_state': "idle"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
+
+    function getConnectionStatusofRig() {
+        if (rigData['connected'] === true) {
+            return "Connected";
+        } else  if (rigData['connected'] === false) {
+            return "Not connected";
+        } else {
+            return "unknown";
+        }
+    }
 
     const handleTrackingStart = () => {
         const newTrackingState = {
@@ -96,10 +109,32 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
     return (
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Radio rig control</TitleBar>
-            <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
+            <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
+                <Grid container direction="row" sx={{
+                    backgroundColor: theme => rigData['connected'] ? theme.palette.success.main : theme.palette.info.main,
+                    padding: '0.1rem',
+                    justifyContent: "space-between",
+                    alignItems: "center",
+                    width: '100%',
+                }}>
+                    <Typography variant="body1" sx={{
+                        color: theme => theme.palette.success.contrastText,
+                        width: '90%',
+                        textAlign: 'center',
+                        display: 'inline-flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                    }}>
+                        {rigData['connected']
+                            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>
+                            : <ErrorOutlineIcon sx={{mr: 1}}/>}
+                        {getConnectionStatusofRig()}
+                    </Typography>
+                </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+
                     <FormControl disabled={trackingState['rig_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
