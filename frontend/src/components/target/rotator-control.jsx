@@ -175,6 +175,8 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setRotator(event.target.value));
     }
 
+
+
     return (
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Rotator control</TitleBar>
