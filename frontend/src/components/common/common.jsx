@@ -150,7 +150,7 @@ export function InternationalDateLinePolyline() {
                 opacity: 0.9,
                 color: 'grey',
                 weight: 1,
-                dashArray: '5, 5',
+                dashArray: '1, 5',
             }}
         />,
         <Polyline
@@ -160,7 +160,7 @@ export function InternationalDateLinePolyline() {
                 opacity: 0.9,
                 color: 'grey',
                 weight: 1,
-                dashArray: '5, 5',
+                dashArray: '1, 5',
             }}
         />
     ];
@@ -398,6 +398,22 @@ export function humanizeFrequency(hertz, decimals = 2) {
     }
 
     return `${preciseHertz.toFixed(decimals)} ${units[unitIndex]}`;
+}
+
+export function preciseHumanizeFrequency(hertz) {
+    if (typeof hertz !== "number" || isNaN(hertz)) {
+        return "Invalid frequency";
+    }
+
+    const units = ["Hz", "kHz", "MHz", "GHz", "THz", "PHz"];
+    let unitIndex = 0;
+
+    while (hertz >= 1000 && unitIndex < units.length - 1) {
+        hertz /= 1000;
+        unitIndex++;
+    }
+
+    return `${hertz.toFixed(4)} ${units[unitIndex]}`;
 }
 
 export function SimpleTruncatedHtml({ htmlString, className }) {

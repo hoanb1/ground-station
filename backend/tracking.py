@@ -736,6 +736,10 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 if rotator_controller:
                     rotator_data['az'], rotator_data['el'] = await rotator_controller.get_position()
 
+                # get rig controller frequency and set a new one
+                if rig_controller:
+                    rig_data['frequency'] = await rig_controller.get_frequency()
+
                 # work on our sky coordinates
                 skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
 
@@ -767,10 +771,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         0,
                         current_transmitter.get('downlink_low', 0)
                     )
-
-                # get rig controller frequency and set a new one
-                if rig_controller:
-                    rig_data['frequency'] = await rig_controller.get_frequency()
 
                 if rig_controller:
                     frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])

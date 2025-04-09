@@ -16,7 +16,7 @@ import {
     setTrackingStateInBackend
 } from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
-import {humanizeFrequency, TitleBar} from "../common/common.jsx";
+import {humanizeFrequency, preciseHumanizeFrequency, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import SatelliteList from "./target-sat-list.jsx";
@@ -206,13 +206,13 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h6" style={{fontFamily: "monospace", fontWeight: "bold"}}>
-                                {humanizeFrequency(rigData['observed_freq'])}
+                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                {preciseHumanizeFrequency(rigData['frequency'])}
                             </Typography>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h6" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {humanizeFrequency(rigData['doppler_shift'])}
+                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                {preciseHumanizeFrequency(rigData['doppler_shift'])}
                             </Typography>
                         </Grid>
                     </Grid>
