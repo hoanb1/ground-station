@@ -32,7 +32,7 @@ const CoordinateGrid = ({
                 weight: weight,
                 opacity: opacity,
                 interactive: false,
-                dashArray: lat === 0 ? null : '5, 5', // Equator is solid, others dashed
+                dashArray: lat === 0 ? null : '1, 5', // Equator is solid, others dashed
                 zIndex: zIndex
             }
         });
@@ -70,7 +70,7 @@ const CoordinateGrid = ({
                 weight: weight,
                 opacity: opacity,
                 interactive: false,
-                dashArray: lng === 0 ? null : '5, 5', // Prime meridian solid, others dashed
+                dashArray: lng === 0 ? null : '1, 5', // Prime meridian solid, others dashed
                 zIndex: zIndex
             }
         });

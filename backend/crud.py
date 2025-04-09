@@ -687,6 +687,8 @@ async def fetch_rigs(session: AsyncSession, rig_id: Optional[Union[uuid.UUID | s
         if rig_id is None:
             stmt = select(Rigs)
         else:
+            if isinstance(rig_id, str):
+                rig_id = uuid.UUID(rig_id)
             stmt = select(Rigs).filter(Rigs.id == rig_id)
         result = await session.execute(stmt)
         rigs = result.scalars().all() if rig_id is None else result.scalar_one_or_none()
@@ -1089,9 +1091,12 @@ async def fetch_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) ->
         stmt = select(Transmitters).filter(Transmitters.id == transmitter_id)
         result = await session.execute(stmt)
         transmitter = result.scalar_one_or_none()
+        transmitter = serialize_object(transmitter)
         return {"success": True, "data": transmitter, "error": None}
 
     except Exception as e:
+        logger.error(f"Error fetching transmitters by transmitter id {transmitter_id}: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 

@@ -8,21 +8,21 @@ from contextlib import asynccontextmanager
 from Hamlib import Hamlib
 
 
-class RotatorController:
+class RigController:
     def __init__(
             self,
-            model: int = Hamlib.ROT_MODEL_SATROTCTL,
+            model: int = Hamlib.RIG_MODEL_NETRIGCTL,
             host: str = "127.0.0.1",
-            port: int = 4533,
+            port: int = 4532,
             verbose: bool = False,
             timeout: float = 5.0,
     ):
 
         # Set up logging
         device_path = f"{host}:{port}"
-        self.logger = logging.getLogger("rotator-control")
+        self.logger = logging.getLogger("rig-control")
         self.logger.setLevel(args.log_level)
-        self.logger.info(f"Initializing RotatorController with model={model}, device={device_path}")
+        self.logger.info(f"Initializing RigController with model={model}, device={device_path}")
 
         # Initialize Hamlib
         Hamlib.rig_set_debug(Hamlib.RIG_DEBUG_NONE)
@@ -35,43 +35,43 @@ class RotatorController:
         self.model = model
         self.device_path = device_path
         self.verbose = verbose
-        self.rotator = None
+        self.rig = None
         self.connected = False
         self.timeout = timeout
 
     async def connect(self) -> bool:
 
         if self.connected:
-            self.logger.warning("Already connected to rotator")
+            self.logger.warning("Already connected to rig")
             return True
 
         try:
-            # first we ping the rotator
+            # first we ping the rig
             pingcheck = await self.ping()
-            assert pingcheck, "Rotator did not respond to ping"
+            assert pingcheck, "Rig did not respond to ping"
 
-            self.logger.debug(f"Connecting to rotator at {self.device_path}")
-            self.rotator = Hamlib.Rot(self.model)
-            self.rotator.set_conf("rot_pathname", self.device_path)
+            self.logger.debug(f"Connecting to rig at {self.device_path}")
+            self.rig = Hamlib.Rig(self.model)
+            self.rig.set_conf("rig_pathname", self.device_path)
 
             # Set timeout
-            self.rotator.set_conf("timeout", str(int(self.timeout * 1000)))  # Convert to ms
+            self.rig.set_conf("timeout", str(int(self.timeout * 1000)))  # Convert to ms
 
-            # Initialize the rotator (opens the connection)
-            self.rotator.open()
+            # Initialize the rig (opens the connection)
+            self.rig.open()
 
             self.connected = True
-            self.logger.info(f"Successfully connected to rotator as {self.device_path}")
+            self.logger.info(f"Successfully connected to rig at {self.device_path}")
             return True
 
         except Exception as e:
-            self.logger.error(f"Error connecting to rotator: {e}")
-            raise RuntimeError(f"Error connecting to rotator: {e}")
+            self.logger.error(f"Error connecting to rig: {e}")
+            raise RuntimeError(f"Error connecting to rig: {e}")
 
     async def async_connect(self, timeout_s: float = 5.0) -> bool:
 
         if self.connected:
-            self.logger.warning("Already connected to rotator")
+            self.logger.warning("Already connected to rig")
             return True
 
         # Run the synchronous connect method in a thread pool
@@ -85,25 +85,25 @@ class RotatorController:
 
     async def disconnect(self) -> bool:
 
-        if not self.connected or self.rotator is None:
-            self.logger.warning("Not connected to rotator")
+        if not self.connected or self.rig is None:
+            self.logger.warning("Not connected to rig")
             return True
 
         try:
-            result = await asyncio.to_thread(self.rotator.close)
+            result = await asyncio.wait_for(asyncio.to_thread(self.rig.close), timeout=3.0)
             self.logger.debug(f"Close command: result={result}")
 
-            # if result != Hamlib.RIG_OK:
-            #    self.logger.warning(f"Error closing rotator connection: {self.get_error_message(result)}")
-            #    return False
-
             self.connected = False
-            self.rotator = None
-            self.logger.info("Disconnected from rotator")
+            self.rig = None
+            self.logger.info("Disconnected from rig")
             return True
 
+        except asyncio.TimeoutError:
+            self.logger.warning("Rig close operation timed out")
+            # Handle the timeout case appropriately
+
         except Exception as e:
-            self.logger.error(f"Error disconnecting from rotator: {e}")
+            self.logger.error(f"Error disconnecting from rig: {e}")
             return False
 
     @asynccontextmanager
@@ -134,9 +134,8 @@ class RotatorController:
         try:
             # Use the async connection manager
             async with self._create_connection() as (reader, writer):
-                # Send position query command
-
-                writer.write(b"p\n")
+                # Send frequency query command
+                writer.write(b"f\n")
                 await writer.drain()
 
                 # Receive response with timeout
@@ -147,7 +146,7 @@ class RotatorController:
 
                 response = response_bytes.decode('utf-8', errors='replace').strip()
 
-                # Parse the response (same as before)
+                # Parse the response
                 if not response:
                     return False
 
@@ -156,27 +155,20 @@ class RotatorController:
                     error_code = int(response.split()[1])
                     return error_code >= 0
 
-                elif response.startswith('get_pos:'):
-                    parts = response.split(':')[1].strip().split()
-                    if len(parts) >= 2:
-                        try:
-                            float(parts[0])
-                            float(parts[1])
-                            return True
-                        except ValueError:
-                            return False
-                    return False
+                elif response.startswith('get_freq:'):
+                    parts = response.split(':')[1].strip()
+                    try:
+                        float(parts)
+                        return True
+                    except ValueError:
+                        return False
 
                 else:
-                    parts = response.split()
-                    if len(parts) >= 2:
-                        try:
-                            float(parts[0])
-                            float(parts[1])
-                            return True
-                        except ValueError:
-                            return False
-                    return False
+                    try:
+                        float(response)
+                        return True
+                    except ValueError:
+                        return False
 
         except (asyncio.TimeoutError, ConnectionRefusedError, OSError) as e:
             # Handle all connection-related errors
@@ -188,82 +180,96 @@ class RotatorController:
             self.logger.exception(e)
             return False
 
-    async def get_position(self) -> Tuple[float, float]:
+    async def get_frequency(self) -> float:
 
         self.check_connection()
 
-        az, el = await self._get_position()
+        freq = await self._get_frequency()
 
-        return round(az, 3), round(el, 3)
+        return round(freq, 0)
 
-    async def _get_position(self) -> Tuple[float, float]:
+    async def _get_frequency(self) -> float:
 
         try:
-            az, el = await asyncio.to_thread(self.rotator.get_position)
-            assert az is not None, "Azimuth is None"
-            assert el is not None, "Elevation is None"
+            freq = await asyncio.to_thread(self.rig.get_freq)
+            assert freq is not None, "Frequency is None"
 
-            self.logger.debug(f"Current position: az={az}, el={el}")
-            return az, el
+            self.logger.debug(f"Current frequency: {freq} Hz")
+            return freq
 
         except Exception as e:
-            self.logger.error(f"Error getting position: {e}")
-            raise RuntimeError(f"Error getting position: {e}")
+            self.logger.error(f"Error getting frequency: {e}")
+            raise RuntimeError(f"Error getting frequency: {e}")
 
-    async def park(self) -> bool:
+    async def get_mode(self) -> Tuple[str, int]:
 
-        # Park the rotator
-        await asyncio.to_thread(self._park)
+        self.check_connection()
+
+        mode, bandwidth = await self._get_mode()
+
+        return mode, bandwidth
+
+    async def _get_mode(self) -> Tuple[str, int]:
+
+        try:
+            mode, bandwidth = await asyncio.to_thread(self.rig.get_mode)
+            assert mode is not None, "Mode is None"
+
+            self.logger.debug(f"Current mode: {mode}, bandwidth: {bandwidth} Hz")
+            return mode, bandwidth
+
+        except Exception as e:
+            self.logger.error(f"Error getting mode: {e}")
+            raise RuntimeError(f"Error getting mode: {e}")
+
+    async def standby(self) -> bool:
+
+        # Put the rig in standby mode
+        await asyncio.to_thread(self._standby)
 
         return True
 
-    def _park(self) -> bool:
+    def _standby(self) -> bool:
 
         self.check_connection()
 
         try:
-            self.logger.info("Parking rotator")
-            status = self.rotator.park()
-            self.logger.debug(f"Park command: status={status}")
-
-            #if status != Hamlib.RIG_OK:
-            #    error_msg = f"Failed to park rotator: {self.get_error_message(status)}"
-            #    self.logger.error(error_msg)
-            #    raise RuntimeError(error_msg)
+            self.logger.info("Setting rig to standby")
+            status = self.rig.set_powerstat(Hamlib.RIG_POWER_STANDBY)
+            self.logger.debug(f"Standby command: status={status}")
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Error parking rotator: {e}")
-            raise RuntimeError(f"Error parking rotator: {e}")
-
+            self.logger.error(f"Error setting rig to standby: {e}")
+            raise RuntimeError(f"Error setting rig to standby: {e}")
 
     def check_connection(self) -> bool:
 
-        if not self.connected or self.rotator is None:
-            error_msg = f"Not connected to rotator (connected: {self.connected}, rotator: {self.rotator})"
+        if not self.connected or self.rig is None:
+            error_msg = f"Not connected to rig (connected: {self.connected}, rig: {self.rig})"
             self.logger.error(error_msg)
             raise RuntimeError(error_msg)
 
         return True
 
-    def __enter__(self) -> 'RotatorController':
-        """Context manager entry point - connects to the rotator."""
+    def __enter__(self) -> 'RigController':
+        """Context manager entry point - connects to the rig."""
         self.connect()
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Context manager exit point - disconnects from the rotator."""
+        """Context manager exit point - disconnects from the rig."""
         self.disconnect()
 
     # New asynchronous context manager methods
-    async def __aenter__(self) -> 'RotatorController':
-        """Async context manager entry point - connects to the rotator asynchronously."""
+    async def __aenter__(self) -> 'RigController':
+        """Async context manager entry point - connects to the rig asynchronously."""
         await self.async_connect()
         return self
 
     async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Async context manager exit point - disconnects from the rotator asynchronously."""
+        """Async context manager exit point - disconnects from the rig asynchronously."""
         loop = asyncio.get_event_loop()
         try:
             loop.run_until_complete(self.disconnect())
@@ -305,48 +311,59 @@ class RotatorController:
 
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
-    async def set_position(self, target_az: float, target_el: float, update_interval: float = 2,
-                           az_tolerance: float = 1.0, el_tolerance: float = 1.0) -> AsyncGenerator[
-        Tuple[float, float, bool], None]:
+    async def set_frequency(self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0) -> AsyncGenerator[
+        Tuple[float, bool], None]:
 
-        # Start the slew operation
-        await self._set_position_start(target_az, target_el)
+        # Start the frequency setting operation
+        self.logger.info(f"Setting rig frequency to {target_freq} Hz")
+        await self._set_frequency_start(target_freq)
 
         # Initial status
-        current_az, current_el = await self._get_position()
-        az_reached = abs(current_az - target_az) <= az_tolerance
-        el_reached = abs(current_el - target_el) <= el_tolerance
-        is_slewing = not (az_reached and el_reached)
+        current_freq = await self._get_frequency()
+        freq_reached = abs(current_freq - target_freq) <= freq_tolerance
+        is_tuning = not freq_reached
 
-        # First yield with initial position
-        yield current_az, current_el, is_slewing
+        # First yield with initial frequency
+        yield current_freq, is_tuning
 
-        # Keep checking position when consumer requests an update
-        while is_slewing:
+        # Keep checking frequency when consumer requests an update
+        while is_tuning:
             # Wait for the update interval
             await asyncio.sleep(update_interval)
 
-            # Get current position
-            current_az, current_el = await self._get_position()
+            # Get current frequency
+            current_freq = await self._get_frequency()
 
             # Check if we've reached the target
-            az_reached = abs(current_az - target_az) <= az_tolerance
-            el_reached = abs(current_el - target_el) <= el_tolerance
-            is_slewing = not (az_reached and el_reached)
+            freq_reached = abs(current_freq - target_freq) <= freq_tolerance
+            is_tuning = not freq_reached
 
-            # Yield the current position and slewing status
-            yield current_az, current_el, is_slewing
+            # Yield the current frequency and tuning status
+            yield current_freq, is_tuning
 
-    async def _set_position_start(self, az: float, el: float) -> bool:
+    async def _set_frequency_start(self, freq: float) -> bool:
 
         try:
-            self.logger.info(f"Setting rotator position to az={az}, el={el}")
-            status = await asyncio.to_thread(self.rotator.set_position, az, el)
-            self.logger.debug(f"Set position command: status={status}")
+            status = await asyncio.to_thread(self.rig.set_freq, _freq_t=freq, vfo=Hamlib.RIG_VFO_A)
+            self.logger.debug(f"Set frequency command: status={status}")
 
             return True
 
         except Exception as e:
-            self.logger.error(f"Error setting rotator position: {e}")
+            self.logger.error(f"Error setting rig frequency: {e}")
             self.logger.exception(e)
-            raise RuntimeError(f"Error setting rotator position: {e}")
+            raise RuntimeError(f"Error setting rig frequency: {e}")
+
+    async def set_mode(self, mode: str, bandwidth: int = 0) -> bool:
+
+        try:
+            self.logger.info(f"Setting rig mode to {mode}, bandwidth={bandwidth} Hz")
+            status = await asyncio.to_thread(self.rig.set_mode, mode, bandwidth)
+            self.logger.debug(f"Set mode command: status={status}")
+
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error setting rig mode: {e}")
+            self.logger.exception(e)
+            raise RuntimeError(f"Error setting rig mode: {e}")

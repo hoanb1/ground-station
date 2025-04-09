@@ -224,7 +224,10 @@ const targetSatTrackSlice = createSlice({
         },
         rigData: {
             'connected': false,
-            'tracking': false,
+            'doppler_shift': 0,
+            'frequency': 0,
+            'observed_freq': 0,
+            'tracking': false
         },
     },
     reducers: {
@@ -293,9 +296,14 @@ const targetSatTrackSlice = createSlice({
                 };
             }
 
-            if (action.payload['rotator']) {
-                state.rotatorData = action.payload['rotator'];
+            if (action.payload['rotator_data']) {
+                state.rotatorData = action.payload['rotator_data'];
             }
+
+            if (action.payload['rig_data']) {
+                state.rigData = action.payload['rig_data'];
+            }
+
         },
         setSatellitePasses(state, action) {
             state.satellitePasses = action.payload;

@@ -206,13 +206,13 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h5" style={{fontFamily: "monospace", fontWeight: "bold"}}>
-                                437Mhz
+                            <Typography variant="h6" style={{fontFamily: "monospace", fontWeight: "bold"}}>
+                                {humanizeFrequency(rigData['observed_freq'])}
                             </Typography>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h5" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                +45565hz
+                            <Typography variant="h6" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                {humanizeFrequency(rigData['doppler_shift'])}
                             </Typography>
                         </Grid>
                     </Grid>

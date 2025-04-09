@@ -1,9 +1,14 @@
 import json
 import numpy as np
+import pprint
 import crud
 import asyncio
 import math
 import socketio
+import numpy as np
+from sqlalchemy.sql.functions import current_time
+from io import StringIO
+from skyfield.api import load, EarthSatellite, Topos
 from datetime import datetime, UTC
 from typing import Tuple
 from skyfield.api import load, wgs84
@@ -14,10 +19,88 @@ from logger import logger
 from models import ModelEncoder
 from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevationError
 from rotator import RotatorController
+from rig import RigController
 from arguments import arguments as args
 from typing import Callable, Any, List, Union, Coroutine, Optional
 from statetracker import StateTracker
 
+
+def pretty_dict(d):
+    # Create a string buffer and pretty print the dict to it
+    output = StringIO()
+    pprint.pprint(d, stream=output)
+    # Get the string value and return it without the last newline
+    return output.getvalue().rstrip()
+
+def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, observer_elevation, transmitted_freq_hz,
+                            time=None):
+    """
+    Calculate the Doppler shift for a satellite at a given time.
+
+    Parameters:
+    -----------
+    tle_line1, tle_line2 : str
+        The two-line element set for the satellite
+    observer_lat, observer_lon : float
+        Observer's latitude and longitude in degrees
+    observer_elevation : float
+        Observer's elevation in meters
+    transmitted_freq_mhz : float
+        Transmitted frequency in MHz
+    time : skyfield.timelib.Time, optional
+        Time of observation, defaults to current time
+
+    Returns:
+    --------
+    observed_freq_mhz : float
+        The Doppler-shifted frequency in MHz
+    doppler_shift_hz : float
+        The Doppler shift in Hz
+    """
+    # Load the timescale
+    ts = load.timescale()
+
+    # Set the time (now if not specified)
+    if time is None:
+        time = ts.now()
+
+    # Create satellite object from TLEs
+    satellite = EarthSatellite(tle_line1, tle_line2, name='Satellite', ts=ts)
+
+    # Define the ground station
+    topos = Topos(latitude_degrees=observer_lat,
+                  longitude_degrees=observer_lon,
+                  elevation_m=observer_elevation)
+
+    # Get the difference directly using the observation from the topos
+    difference = satellite - topos
+
+    # Calculate position at the specified time
+    topocentric = difference.at(time)
+
+    # Get the range rate (radial velocity) in km/s
+    # The radial_velocity needs to be accessed from the velocity property
+    # First, get the position and velocity vectors
+    pos, vel = topocentric.position.km, topocentric.velocity.km_per_s
+
+    # Calculate the radial velocity (component of velocity along the line of sight)
+    # This is done by taking the dot product of the unit position vector and velocity vector
+    pos_unit = pos / np.sqrt(np.sum(pos ** 2))  # Normalize position to get unit vector
+    range_rate = np.dot(pos_unit, vel)  # Dot product gives radial component
+
+    # Speed of light in km/s
+    c = 299792.458  # speed of light in km/s
+
+    # Calculate Doppler shift
+    doppler_factor = 1.0 - (range_rate / c)
+
+    # Calculate observed frequency
+    observed_freq_hz = transmitted_freq_hz * doppler_factor
+
+    # Calculate the shift in Hz
+    doppler_shift_hz = observed_freq_hz - transmitted_freq_hz
+
+    return round(float(observed_freq_hz), 2), round(float(doppler_shift_hz), 2)
 
 
 @async_timeit
@@ -428,7 +511,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     eleveationlimits = (0, 180)
     minelevation = 10.0
     previous_rotator_state = None
-    rotator = None
+    rotator_controller = None
+    rig_controller = None
+    current_rotator_id = None
     rotator_data = {
         'az': 0,
         'el': 0,
@@ -437,6 +522,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         'slewing': False,
         'outofbounds': False,
         'minelevation': False
+    }
+    rig_data = {
+        'connected': False,
+        'tracking': False,
+        'frequency': 0,
+        'observed_freq': 0, # hz
+        'doppler_shift': 0, # hz
     }
     notified = {}
     is_slewing = False
@@ -449,20 +541,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
             return False
 
     async def handle_satellite_change(old, new):
-        """
-        Handles satellite changes and notifies clients via the socket server.
-
-        When a satellite change event is detected, this function logs the change
-        and notifies connected clients. The emitted event contains the event name
-        as well as details about the old and new satellite states.
-
-        :param old: Previous satellite information
-        :type old: Any
-        :param new: Updated satellite information
-        :type new: Any
-        :return: None
-        """
-        nonlocal notified
+        nonlocal notified, rotator_data
 
         logger.info(f"Target satellite change detected from '{old}' to '{new}'")
 
@@ -475,17 +554,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         ]})
 
     async def handle_rotator_state_change(old, new):
-        """
-        Handles the changes in rotator state. Detects and logs the transition between
-        different rotator states and can trigger additional behaviors based on the
-        new state.
+        nonlocal rotator_controller
 
-        :param old: The previous state of the rotator.
-        :type old: str
-        :param new: The current state of the rotator.
-        :type new: str
-        :return: None
-        """
         logger.info(f"Rotator state change detected from '{old}' to '{new}'")
 
         # reset the minelevation error
@@ -493,32 +563,110 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
 
         if new == "tracking":
             rotator_data['tracking'] = True
+
+            # check what hardware was chosen and set it up
+            if current_rotator_id is not None and rotator_controller is None:
+
+                # rotator_controller was selected, and a rotator_controller is not setup, set it up now
+                try:
+                    rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=current_rotator_id)
+                    rotator_details = rotator_details_reply['data']
+                    rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
+                    await rotator_controller.connect()
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "rotator_connected"}
+                    ]})
+                    rotator_data['connected'] = True
+
+                except Exception as e:
+                    logger.error(f"Failed to connect to rotator_controller: {e}")
+                    logger.exception(e)
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "rotator_error", "error": str(e)}
+                    ]})
+                    rotator_controller = None
+
         elif new == "idle":
             rotator_data['tracking'] = False
 
+            if rotator_controller is not None:
+                logger.info(f"Disconnecting from rotator_controller at {rotator_controller.host}:{rotator_controller.port}...")
+                try:
+                    await rotator_controller.disconnect()
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "rotator_disconnected"}
+                    ]})
+                    rotator_data['connected'] = False
+
+                except Exception as e:
+                    logger.error(f"Error disconnecting from rotator_controller: {e}")
+                    logger.exception(e)
+
+                finally:
+                    # Set to None regardless of disconnect success
+                    rotator_controller = None
+        else:
+            logger.error(f"unknown tracking state: {new}")
+
+
+    async def handle_rotator_id_change(old, new):
+        logger.info(f"Rotator ID change detected from '{old}' to '{new}'")
 
     async def handle_rig_state_change(old, new):
-        """
-        Logs changes in the rig state and handles transitions between states.
-
-        The function detects a change in the state of a rig from an old state to a
-        new state. It performs specific actions based on the value of the new state,
-        such as initiating or stopping certain tasks when the rig enters states
-        like "tracking" or "idle".
-
-        :param old: Previous state of the rig.
-        :param new: New state of the rig.
-        :type old: str
-        :type new: str
-        :return: None
-        """
+        nonlocal rig_controller
 
         logger.info(f"Rig state change detected from '{old}' to '{new}'")
 
         if new == "tracking":
-            pass
+            rig_data['tracking'] = True
+
+            # check what hardware was chosen and set it up
+            if current_rig_id is not None and rig_controller is None:
+
+                # rotator_controller was selected, and a rotator_controller is not setup, set it up now
+                try:
+                    rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=current_rig_id)
+                    rotator_details = rig_details_reply['data']
+                    rig_controller = RigController(host=rotator_details['host'], port=rotator_details['port'])
+                    await rig_controller.connect()
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "rig_connected"}
+                    ]})
+                    rig_data['connected'] = True
+
+                except Exception as e:
+                    logger.error(f"Failed to connect to rig_controller: {e}")
+                    logger.exception(e)
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "rig_error", "error": str(e)}
+                    ]})
+                    rig_controller = None
+
         elif new == "idle":
-            pass
+            rig_data['tracking'] = False
+
+            if rig_controller is not None:
+                logger.info(f"Disconnecting from rig_controller at {rig_controller.host}:{rig_controller.port}...")
+                try:
+                    await rig_controller.disconnect()
+                    await sio.emit('satellite-tracking', {'events': [
+                        {'name': "rotator_disconnected"}
+                    ]})
+                    rig_data['connected'] = False
+
+                except Exception as e:
+                    logger.error(f"Error disconnecting from rig_controller: {e}")
+                    logger.exception(e)
+
+                finally:
+                    # Set to None regardless of disconnect success
+                    rig_controller = None
+
+    async def handle_transmitter_id_change(old, new):
+        logger.info(f"Transmitter ID change detected from '{old}' to '{new}'")
+
+    async def handle_rig_id_change(old, new):
+        logger.info(f"Rig ID change detected from '{old}' to '{new}'")
 
     # check if satellite was changed in the UI and send a message/event
     norad_id_change_tracker = StateTracker(initial_state="")
@@ -528,9 +676,21 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     rotator_state_tracker = StateTracker(initial_state="")
     rotator_state_tracker.register_async_callback(handle_rotator_state_change)
 
+    # check if the rotator id changed, do stuff if it has
+    rotator_id_tracker = StateTracker(initial_state="")
+    rotator_id_tracker.register_async_callback(handle_rotator_id_change)
+
     # check if the rig state changed, do stuff if it has
     rig_state_tracker = StateTracker(initial_state="")
     rig_state_tracker.register_async_callback(handle_rig_state_change)
+
+    # check if the transmitter id changed, do stuff if it has
+    transmitter_id_state_tracker = StateTracker(initial_state="")
+    transmitter_id_state_tracker.register_async_callback(handle_transmitter_id_change)
+
+    # check if the rig id changed, do stuff if it has
+    rig_id_state_tracker = StateTracker(initial_state="")
+    rig_id_state_tracker.register_async_callback(handle_rig_id_change)
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
@@ -540,94 +700,50 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
-                current_group_id = tracking_state_reply['data']['value']['group_id']
-                current_norad_id = tracking_state_reply['data']['value']['norad_id']
-
                 satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
+                satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
                 satellite_name = satellite_data['details']['name']
+                location_reply = await crud.fetch_location_for_userid(dbsession, user_id=None)
+                location = location_reply['data']
                 tracker = tracking_state_reply['data']['value']
-                selected_rotator_id = tracker.get('rotator_id', None)
-                selected_rig_id = tracker.get('rig_id', None)
+                current_norad_id = tracker.get('norad_id', None)
+                current_group_id = tracker.get('group_id', None)
+                current_rotator_id = tracker.get('rotator_id', None)
+                current_rig_id = tracker.get('rig_id', None)
                 current_rotator_state = tracker.get('rotator_state')
                 current_rig_state = tracker.get('rig_state')
+                current_transmitter_id = tracker.get('transmitter_id', None)
 
                 # check norad_id and detect change
                 await norad_id_change_tracker.update_state(current_norad_id)
 
-                # check rotator state change
+                # check rotator_controller state change
                 await rotator_state_tracker.update_state(current_rotator_state)
+
+                # check rotator_controller ID change
+                await rotator_id_tracker.update_state(current_rotator_id)
 
                 # check rig state change
                 await rig_state_tracker.update_state(current_rig_state)
 
-                # detect tracker state change
-                if current_rotator_state != previous_rotator_state:
+                # check transmitter id state change
+                await transmitter_id_state_tracker.update_state(current_transmitter_id)
 
-                    # check if the new state is not tracking
-                    if current_rotator_state == "tracking":
+                # check rig id state change
+                await rig_id_state_tracker.update_state(current_rig_id)
 
-                        # check what hardware was chosen and set it up
-                        if selected_rotator_id is not None and rotator is None:
-
-                            # rotator was selected, and a rotator is not setup, set it up now
-                            try:
-                                rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=selected_rotator_id)
-                                rotator_details = rotator_details_reply['data']
-                                rotator = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
-                                await rotator.connect()
-                                await sio.emit('satellite-tracking', {'events': [
-                                    {'name': "rotator_connected"}
-                                ]})
-                                rotator_data['connected'] = True
-
-                            except Exception as e:
-                                logger.error(f"Failed to connect to rotator: {e}")
-                                logger.exception(e)
-                                await sio.emit('satellite-tracking', {'events': [
-                                    {'name': "rotator_error", "error": str(e)}
-                                ]})
-                                rotator = None
-
-                    elif current_rotator_state == "idle":
-
-                        if rotator is not None:
-                            logger.info(f"Disconnecting from rotator at {rotator.host}:{rotator.port}...")
-                            try:
-                                await rotator.disconnect()
-                                await sio.emit('satellite-tracking', {'events': [
-                                    {'name': "rotator_disconnected"}
-                                ]})
-                                rotator_data['connected'] = False
-
-                            except Exception as e:
-                                logger.error(f"Error disconnecting from rotator: {e}")
-                                logger.exception(e)
-
-                            finally:
-                                # Set to None regardless of disconnect success
-                                rotator = None
-
-                    else:
-                        logger.error(f"unknown tracking state: {tracker['tracking_state']}")
-
-                else:
-                    # no tracker state change detected, move on
-                    pass
-
-                # set this to the current value so that the above logic works
-                previous_rotator_state = current_rotator_state
+                # get rotator controller position
+                if rotator_controller:
+                    rotator_data['az'], rotator_data['el'] = await rotator_controller.get_position()
 
                 # work on our sky coordinates
                 skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
-
-                if rotator:
-                    # get rotator position
-                    rotator_data['az'], rotator_data['el'] = await rotator.get_position()
 
                 # first we check if the az end el values in the skypoint tuple are reachable
                 if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:
                     raise AzimuthOutOfBounds(f"azimuth {round(skypoint[0], 3)}° is out of range (range: {azimuthlimits})")
 
+                # check elevation limits
                 if skypoint[1] < eleveationlimits[0] or skypoint[1] > eleveationlimits[1]:
                     raise ElevationOutOfBounds(f"elevation {round(skypoint[1], 3)}° is out of range (range: {eleveationlimits})")
 
@@ -635,10 +751,41 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 if skypoint[1] < minelevation:
                     raise MinimumElevationError(f"target has not reached minimum elevation {minelevation}° degrees")
 
+                # everything good, move on
                 logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {round(skypoint[0], 3)}° el: {round(skypoint[1], 3)}°")
 
-                if rotator:
-                    position_gen = rotator.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
+                if current_transmitter_id:
+                    current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
+                    current_transmitter = current_transmitter_reply.get('data', {})
+
+                    # calculate doppler shift
+                    rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
+                        satellite_tles[0],
+                        satellite_tles[1],
+                        location['lat'],
+                        location['lon'],
+                        0,
+                        current_transmitter.get('downlink_low', 0)
+                    )
+
+                # get rig controller frequency and set a new one
+                if rig_controller:
+                    rig_data['frequency'] = await rig_controller.get_frequency()
+
+                if rig_controller:
+                    frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])
+
+                    try:
+                        current_frequency, is_tuning = await anext(frequency_gen)
+                        rig_data['tuning'] = is_tuning
+                        logger.info(f"Current frequency: {current_frequency}, tuning={is_tuning}")
+
+                    except StopAsyncIteration:
+                        # generator is done (tuning complete)
+                        logger.info(f"Tuning to frequency {rig_data['observed_freq']} complete")
+
+                if rotator_controller:
+                    position_gen = rotator_controller.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
 
                     try:
                         az, el, is_slewing = await anext(position_gen)
@@ -648,7 +795,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     except StopAsyncIteration:
                         # generator is done (slewing complete)
                         logger.info(f"Slewing to AZ={round(az, 3)}° EL={round(el, 3)}° complete")
-
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
@@ -686,10 +832,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         'satellite_data': satellite_data,
                         'tracking_state': tracker,
                         'events': events,
-                        'rotator': rotator_data,
+                        'rotator_data': rotator_data,
+                        'rig_data': rig_data,
                     }
 
-                    logger.debug(f"Sending satellite tracking data to the browser: {data}")
+                    logger.debug(f"Sending satellite tracking data to the browser: \n%s", pretty_dict(data))
                     await sio.emit('satellite-tracking', data)
 
                 except Exception as e:
