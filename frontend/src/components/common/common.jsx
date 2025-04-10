@@ -434,38 +434,29 @@ export function preciseHumanizeFrequency(hertz) {
 }
 
 
-export function humanizeAltitude(meters, decimals = 2) {
+export function humanizeAltitude(meters, decimals = 2, unit = "km", showUnit=false) {
     if (typeof meters !== "number" || isNaN(meters)) {
         return "Invalid altitude";
     }
 
-    const units = ["m", "km", "mi", "ft"];
-    let unitIndex = 0;
-    let preciseAltitude = meters;
+    const conversions = {
+        m: meters,
+        km: meters / 1000,
+        mi: meters / 1609.34,
+        ft: meters * 3.28084
+    };
 
-    if (preciseAltitude >= 1000) {
-        preciseAltitude /= 1000;
-        unitIndex = 1; // km
-    }
-
-    if (unitIndex === 0 && preciseAltitude >= 1609.34) {
-        preciseAltitude = meters / 1609.34;
-        unitIndex = 2; // miles
-    } else if (unitIndex === 0 && preciseAltitude >= 3.28084) {
-        preciseAltitude = meters * 3.28084;
-        unitIndex = 3; // feet
-    }
-
-    return `${preciseAltitude.toFixed(decimals)} ${units[unitIndex]}`;
+    return conversions[unit]?.toFixed(decimals) + (showUnit ? ` ${unit}` : "") || "Invalid unit" ;
 }
 
 
-export function humanizeVelocity(kmPerSecond, decimals = 2) {
+export function humanizeVelocity(kmPerSecond, decimals = 2, unit = "km/s", showUnit=false) {
     if (typeof kmPerSecond !== "number" || isNaN(kmPerSecond)) {
         return "Invalid velocity";
     }
 
     const units = ["km/s", "km/h", "m/s", "mph"];
+    const index = units.indexOf(unit);
     let velocities = [
         kmPerSecond,                          // km/s
         kmPerSecond * 3600,                   // km/h
@@ -473,8 +464,7 @@ export function humanizeVelocity(kmPerSecond, decimals = 2) {
         kmPerSecond * 2236.94                 // mph (1 km/s = 2236.94 mph)
     ];
 
-    // Return humanized format
-    return units.map((unit, index) => `${velocities[index].toFixed(decimals)} ${unit}`).join(" / ");
+    return `${velocities[index].toFixed(decimals)}` + (showUnit ? ` ${units[index]}` : "");
 }
 
 export function SimpleTruncatedHtml({ htmlString, className }) {

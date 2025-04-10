@@ -95,9 +95,6 @@ function GaugeEl({el}) {
 }
 
 
-
-
-
 const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();

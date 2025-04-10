@@ -36,7 +36,7 @@ const WeatherDisplay = ({latitude, longitude, apiKey}) => {
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <CloudIcon fontSize="small" sx={{ mr: 0.5 }} />
+                    <CloudIcon fontSize="small" sx={{ mr: 0 }} />
                     Weather
                 </Box>
             </TitleBar>
@@ -118,8 +118,8 @@ const WeatherDisplay = ({latitude, longitude, apiKey}) => {
                                 </Box>
 
                                 {/* Weather Details Grid */}
-                                <Grid container spacing={1} sx={{ mb: 0.5 }}>
-                                    <Grid item xs={6}>
+                                <Grid container spacing={1}>
+                                    <Grid >
                                         <Box sx={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -135,7 +135,7 @@ const WeatherDisplay = ({latitude, longitude, apiKey}) => {
                                         </Box>
                                     </Grid>
 
-                                    <Grid item xs={6}>
+                                    <Grid >
                                         <Box sx={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -151,7 +151,7 @@ const WeatherDisplay = ({latitude, longitude, apiKey}) => {
                                         </Box>
                                     </Grid>
 
-                                    <Grid item xs={6}>
+                                    <Grid >
                                         <Box sx={{
                                             display: 'flex',
                                             alignItems: 'center',
@@ -167,7 +167,7 @@ const WeatherDisplay = ({latitude, longitude, apiKey}) => {
                                         </Box>
                                     </Grid>
 
-                                    <Grid item xs={6}>
+                                    <Grid >
                                         <Box sx={{
                                             display: 'flex',
                                             alignItems: 'center',

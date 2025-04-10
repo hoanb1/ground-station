@@ -209,27 +209,6 @@ const NextPassesGroupIsland = React.memo(() => {
                 }
             }
         },
-        {
-            field: 'id',
-            minWidth: 50,
-            headerName: 'Info',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            renderCell: (params) => {
-                const noradId = params.value.split("_")[0];
-                return (
-                <ArrowForwardIcon
-                    fontSize="small"
-                    style={{cursor: 'pointer', marginTop: '8px'}}
-                    onClick={() => {
-                        dispatch(setSelectedSatelliteId(parseInt(noradId)));
-                    }}
-                />
-                );
-            },
-        },
-        
     ];
 
     useEffect(() => {

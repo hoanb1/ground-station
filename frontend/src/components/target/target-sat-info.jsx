@@ -146,26 +146,29 @@ const SatelliteInfoIsland = () => {
                                 <Box minWidth={90}>
                                     <Typography variant="caption" color="text.secondary">Launch Date</Typography>
                                     <Typography variant="body2">
-                                        {satelliteData['details']['launched'] ? betterDateTimes(satelliteData['details']['launched']) : "n/a"}
+                                        {satelliteData['details']['launched'] ? betterDateTimes(satelliteData['details']['launched']) :
+                                            <Typography variant="body2">n/a</Typography>}
                                     </Typography>
                                 </Box>
 
                                 <Box>
                                     <Typography variant="caption" color="text.secondary">Countries</Typography>
-                                    {satelliteData['details']['countries'] ? renderCountryFlagsCSV(satelliteData['details']['countries']) : "n/a"}
+                                    <div>
+                                        {satelliteData['details']['countries'] ? renderCountryFlagsCSV(satelliteData['details']['countries']) :
+                                            <Typography variant="body2">n/a</Typography>}
+                                    </div>
                                 </Box>
                             </Stack>
                         </Grid>
 
                         <Grid>
-                            <Box sx={{
-                                alignItems: 'center',
-                                mb: 1.5,
-                                borderRadius: 1,
-                                p: 0.75
-                            }}>
-                                <Typography variant="body2" color="text.secondary" sx={{mr: 1}}>Status:</Typography>
-                                {satelliteData['details']['status'] ? betterStatusValue(satelliteData['details']['status']) : "n/a"}
+                            <Box spacing={1.5}>
+                                <Typography variant="caption" color="text.secondary" sx={{mr: 1}}>Status:</Typography>
+                                <div>
+                                    {satelliteData['details']['status'] ? betterStatusValue(satelliteData['details']['status']) :
+                                        <Typography variant="body2">n/a</Typography>
+                                    }
+                                </div>
                             </Box>
                         </Grid>
 
