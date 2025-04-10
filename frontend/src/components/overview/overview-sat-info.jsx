@@ -347,7 +347,7 @@ const SatelliteInfoCard = () => {
                                     </Typography>
                                     <Typography variant="caption"
                                                 sx={{color: (theme) => alpha(theme.palette.text.primary, 0.6)}}>
-                                        km/h
+                                        km/s
                                     </Typography>
                                 </Box>
                             </Box>
