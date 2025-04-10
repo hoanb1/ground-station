@@ -330,7 +330,23 @@ const GlobalSatelliteTrack = React.memo(function () {
                         }}
                         positions={coverage}
                     />);
+                } else if (selectedSatelliteId === noradid) {
+                    let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                    currentCoverage.push(<Polyline
+                        noClip={true}
+                        key={"coverage-" + satellite['name']}
+                        pathOptions={{
+                            color: satelliteCoverageColor,
+                            weight: 1,
+                            fill: true,
+                            opacity: 0.3,
+                            fillOpacity: 0.1,
+                        }}
+                        positions={coverage}
+                    />);
                 }
+
+
 
                 if (showTooltip) {
                     currentPos.push(<Marker key={"marker-" + satellite['norad_id']} position={[lat, lon]}
