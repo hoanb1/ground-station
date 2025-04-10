@@ -190,7 +190,7 @@ async def webrtc_websocket(websocket: WebSocket, client_id: str):
             del active_connections[client_id]
 
 # our public directory
-app.mount("/public", StaticFiles(directory="public"), name="public")
+app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
 @app.get("/{full_path:path}")
 async def serve_spa(request: Request, full_path: str):

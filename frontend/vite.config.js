@@ -19,7 +19,7 @@ export default defineConfig(({ mode }) => {
     },
 
     // Explicitly set the public directory
-    publicDir: '../backend/public',
+    publicDir: 'public',
 
     // Server configuration for development
     server: {
