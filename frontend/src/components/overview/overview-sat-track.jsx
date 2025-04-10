@@ -305,7 +305,6 @@ const GlobalSatelliteTrack = React.memo(function () {
                     />)
                 }
 
-
                 const onMarkerMouseOver = (event, noradId) => {
                     //console.log(noradId, event);
                 };
@@ -339,14 +338,12 @@ const GlobalSatelliteTrack = React.memo(function () {
                             color: satelliteCoverageColor,
                             weight: 1,
                             fill: true,
-                            opacity: 0.3,
-                            fillOpacity: 0.1,
+                            opacity: 0.9,
+                            fillOpacity: 0.3,
                         }}
                         positions={coverage}
                     />);
                 }
-
-
 
                 if (showTooltip) {
                     currentPos.push(<Marker key={"marker-" + satellite['norad_id']} position={[lat, lon]}
