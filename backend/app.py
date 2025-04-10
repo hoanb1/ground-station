@@ -2,6 +2,7 @@ import uvicorn
 import socketio
 import os
 import httpx
+from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task
 from fastapi import FastAPI, WebSocket, Request, HTTPException
@@ -189,6 +190,23 @@ async def webrtc_websocket(websocket: WebSocket, client_id: str):
             del active_connections[client_id]
 
 
+@app.get("/{full_path:path}")
+async def serve_spa(request: Request, full_path: str):
+    static_files_dir = os.environ.get("STATIC_FILES_DIR", "../frontend/dist")
+
+    # Skip requests for static assets (optional, depending on your setup)
+    # If you're serving static files from a 'static' subdirectory
+    if full_path.startswith(("static/", "assets/", "favicon.ico")):
+        return FileResponse(os.path.join(static_files_dir, full_path))
+
+    # For all other routes, serve the index.html file
+    return FileResponse(os.path.join(static_files_dir, "index.html"))
+
+
+app.mount("/public", StaticFiles(directory="public"), name="public")
+app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
+
+
 # Function to check and create tables
 async def init_db():
     """
@@ -199,11 +217,6 @@ async def init_db():
         # Create tables
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized.")
-
-static_files_dir = os.environ.get("STATIC_FILES_DIR", "../frontend/dist")
-app.mount("/", StaticFiles(directory=static_files_dir, html=True), name="static")
-app.mount("/public", StaticFiles(directory="public"), name="public")
-
 
 # Command-line argument parsing
 if __name__ == "__main__":

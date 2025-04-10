@@ -145,7 +145,7 @@ const SatelliteInfoCard = () => {
                                 : `0 0 8px ${theme.palette.warning.main}`
                         }
                     }}>
-                        {satelliteData['details']['name'] || "No satellite selected"}xs
+                        {satelliteData['details']['name'] || "No satellite selected"}
                     </Typography>
                     {betterStatusValue(satelliteData['details']['status'])}
                 </Box>
