@@ -35,164 +35,157 @@ const WeatherDisplay = ({latitude, longitude, apiKey}) => {
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                <Box sx={{display: 'flex', alignItems: 'center'}}>
-                    <CloudIcon sx={{mr: 1}}/>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <CloudIcon fontSize="small" sx={{ mr: 0.5 }} />
                     Weather
                 </Box>
             </TitleBar>
 
-            <Box sx={{p: 2, height: '100%', display: 'flex', flexDirection: 'column'}}>
-                {loading && (
-                    <Box sx={{display: 'flex', justifyContent: 'center', alignItems: 'center', flex: 1}}>
-                        <CircularProgress size={40} thickness={4}/>
-                    </Box>
-                )}
-
-                {error && (
-                    <Alert
-                        severity="error"
-                        sx={{mb: 2}}
-                        icon={<ErrorOutlineIcon/>}
-                    >
-                        <AlertTitle>Error loading weather data</AlertTitle>
-                        {error}
-                    </Alert>
-                )}
-
-                {!data ? (
-                    <Box
-                        sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            textAlign: 'center',
-                            p: 2,
-                            height: '100%',
-                            color: 'text.secondary'
-                        }}
-                    >
-                        <CloudOffIcon sx={{fontSize: 60, mb: 2, opacity: 0.7}}/>
-                        <Typography variant="h6" gutterBottom>No weather data available</Typography>
-                        <Typography variant="body2">
-                            Please check your location or network connection, and try again.
-                        </Typography>
+            <Box sx={{ p: 1, height: '100%', position: 'relative' }}>
+                {loading ? (
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        position: 'absolute',
+                        top: 0,
+                        left: 0,
+                        right: 0,
+                        bottom: 0,
+                        zIndex: 10
+                    }}>
+                        <CircularProgress size={30} thickness={4} />
                     </Box>
                 ) : (
-                    <Box sx={{height: '100%'}}>
-                        {/* Location Header */}
-                        <Box sx={{
-                            borderBottom: '1px solid',
-                            borderColor: 'divider',
-                            pb: 1,
-                            mb: 2
-                        }}>
-                            <Typography variant="h6" sx={{fontWeight: 'medium'}}>
-                                <LocationOnIcon fontSize="small" sx={{mr: 0.5, verticalAlign: 'text-bottom'}}/>
-                                {data.location}
-                            </Typography>
-                        </Box>
-
-                        {/* Main Temperature Display */}
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            justifyContent: 'center',
-                            mb: 2
-                        }}>
-                            <Box
-                                sx={{
-                                    background: 'linear-gradient(135deg, rgba(66,165,245,0.2) 0%, rgba(21,101,192,0.2) 100%)',
-                                    borderRadius: '50%',
-                                    p: 1,
-                                    mr: 1,
-                                    display: 'flex'
-                                }}
+                    <>
+                        {error && (
+                            <Alert
+                                severity="error"
+                                variant="outlined"
+                                sx={{ py: 0.5, px: 1, mb: 1 }}
                             >
-                                <img
-                                    src={`https://openweathermap.org/img/wn/${data.icon}@2x.png`}
-                                    alt={data.description}
-                                    style={{width: 80, height: 80}}
-                                />
+                                <Typography variant="caption">{error}</Typography>
+                            </Alert>
+                        )}
+
+                        {!data ? (
+                            <Box sx={{ textAlign: 'center', py: 1.5 }}>
+                                <CloudOffIcon sx={{ fontSize: 30, mb: 0.5, opacity: 0.7, color: 'text.secondary' }} />
+                                <Typography variant="body2" color="text.secondary">No weather data available</Typography>
                             </Box>
-                            <Typography
-                                variant="h2"
-                                sx={{
-                                    fontWeight: 'bold',
-                                    background: 'linear-gradient(45deg, #42A5F5 0%, #1565C0 100%)',
-                                    backgroundClip: 'text',
-                                    textFillColor: 'transparent',
-                                    WebkitBackgroundClip: 'text',
-                                    WebkitTextFillColor: 'transparent',
-                                }}
-                            >
-                                {Math.round(data.temperature)}°
-                            </Typography>
-                        </Box>
-
-                        {/* Weather Description */}
-                        <Box sx={{
-                            textAlign: 'center',
-                            mb: 3,
-                        }}>
-                            <Chip
-                                label={data.description}
-                                sx={{
-                                    borderRadius: 4,
-                                    textTransform: 'capitalize',
-                                    fontWeight: 'medium',
-                                    backgroundColor: 'primary.light',
-                                    color: 'primary.dark'
-                                }}
-                            />
-                        </Box>
-
-                        {/* Weather Details */}
-                        <Paper
-                            elevation={0}
-                            sx={{
-                                p: 2,
-                                borderRadius: 2,
-                                backgroundColor: 'background.default',
-                                border: '1px solid',
-                                borderColor: 'divider'
-                            }}
-                        >
-                            <Grid container spacing={1}>
-                                <Grid>
-                                    <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                        <ThermostatIcon sx={{mr: 1, color: 'warning.main'}} fontSize="small"/>
-                                        <Typography variant="body2" color="text.secondary">Feels Like</Typography>
+                        ) : (
+                            <>
+                                {/* Location and Temperature Header */}
+                                <Box sx={{
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'space-between',
+                                    mb: 1,
+                                    pb: 0.5,
+                                    borderBottom: '1px solid',
+                                    borderColor: 'divider',
+                                }}>
+                                    <Typography variant="subtitle1" sx={{ fontWeight: 'medium', display: 'flex', alignItems: 'center' }}>
+                                        <LocationOnIcon fontSize="small" sx={{ mr: 0.5, fontSize: 16 }} />
+                                        {data.location}
+                                    </Typography>
+                                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                        <img
+                                            src={`https://openweathermap.org/img/wn/${data.icon}.png`}
+                                            alt={data.description}
+                                            style={{ width: 40, height: 40, marginRight: -8 }}
+                                        />
+                                        <Typography variant="h5" sx={{ fontWeight: 'bold' }}>
+                                            {Math.round(data.temperature)}°C
+                                        </Typography>
                                     </Box>
-                                    <Typography variant="body1">{Math.round(data.feels_like)}°C</Typography>
-                                </Grid>
+                                </Box>
 
-                                <Grid>
-                                    <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                        <OpacityIcon sx={{mr: 1, color: 'info.main'}} fontSize="small"/>
-                                        <Typography variant="body2" color="text.secondary">Humidity</Typography>
-                                    </Box>
-                                    <Typography variant="body1">{data.humidity}%</Typography>
-                                </Grid>
+                                {/* Weather Chip */}
+                                <Box sx={{ mb: 1 }}>
+                                    <Chip
+                                        label={data.description}
+                                        size="small"
+                                        sx={{
+                                            height: 22,
+                                            fontSize: '0.75rem',
+                                            borderRadius: 1,
+                                            textTransform: 'capitalize',
+                                            backgroundColor: 'primary.light',
+                                            color: 'primary.dark'
+                                        }}
+                                    />
+                                </Box>
 
-                                <Grid>
-                                    <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                        <AirIcon sx={{mr: 1, color: 'success.main'}} fontSize="small"/>
-                                        <Typography variant="body2" color="text.secondary">Wind Speed</Typography>
-                                    </Box>
-                                    <Typography variant="body1">{data.windSpeed} m/s</Typography>
-                                </Grid>
+                                {/* Weather Details Grid */}
+                                <Grid container spacing={1} sx={{ mb: 0.5 }}>
+                                    <Grid item xs={6}>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            p: 0.75,
+                                            borderRadius: 1,
+                                            backgroundColor: 'background.default',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                        }}>
+                                            <ThermostatIcon sx={{ color: 'warning.main', fontSize: 18, mr: 0.5 }} />
+                                            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Feels:</Typography>
+                                            <Typography variant="body2">{Math.round(data.feels_like)}°C</Typography>
+                                        </Box>
+                                    </Grid>
 
-                                <Grid>
-                                    <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                        <CompareArrowsIcon sx={{mr: 1, color: 'secondary.main'}} fontSize="small"/>
-                                        <Typography variant="body2" color="text.secondary">Pressure</Typography>
-                                    </Box>
-                                    <Typography variant="body1">{data.pressure} hPa</Typography>
+                                    <Grid item xs={6}>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            p: 0.75,
+                                            borderRadius: 1,
+                                            backgroundColor: 'background.default',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                        }}>
+                                            <OpacityIcon sx={{ color: 'info.main', fontSize: 18, mr: 0.5 }} />
+                                            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Humidity:</Typography>
+                                            <Typography variant="body2">{data.humidity}%</Typography>
+                                        </Box>
+                                    </Grid>
+
+                                    <Grid item xs={6}>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            p: 0.75,
+                                            borderRadius: 1,
+                                            backgroundColor: 'background.default',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                        }}>
+                                            <AirIcon sx={{ color: 'success.main', fontSize: 18, mr: 0.5 }} />
+                                            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Wind:</Typography>
+                                            <Typography variant="body2">{data.windSpeed} m/s</Typography>
+                                        </Box>
+                                    </Grid>
+
+                                    <Grid item xs={6}>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            alignItems: 'center',
+                                            p: 0.75,
+                                            borderRadius: 1,
+                                            backgroundColor: 'background.default',
+                                            border: '1px solid',
+                                            borderColor: 'divider',
+                                        }}>
+                                            <CompareArrowsIcon sx={{ color: 'secondary.main', fontSize: 18, mr: 0.5 }} />
+                                            <Typography variant="caption" color="text.secondary" sx={{ mr: 0.5 }}>Pressure:</Typography>
+                                            <Typography variant="body2">{data.pressure} hPa</Typography>
+                                        </Box>
+                                    </Grid>
                                 </Grid>
-                            </Grid>
-                        </Paper>
-                    </Box>
+                            </>
+                        )}
+                    </>
                 )}
             </Box>
         </>
