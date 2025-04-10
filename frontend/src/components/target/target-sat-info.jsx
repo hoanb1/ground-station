@@ -1,7 +1,7 @@
 import {useSelector} from "react-redux";
 import {
     betterDateTimes,
-    betterStatusValue,
+    betterStatusValue, getClassNamesBasedOnGridEditing,
     renderCountryFlagsCSV,
     ThemedStackIsland,
     TitleBar
@@ -24,13 +24,13 @@ import TableCell from "@mui/material/TableCell";
 import React from "react";
 
 const SatelliteInfoIsland = () => {
-    const {satelliteData} = useSelector((state) => state.targetSatTrack);
+    const {satelliteData, gridEditable} = useSelector((state) => state.targetSatTrack);
 
     const fixedWidthFont = {'fontFamily': 'monospace'};
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable"}>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, [])}>
                 <Box sx={{display: 'flex', alignItems: 'center'}}>
                     <SatelliteAltIcon sx={{mr: 0.5, ml: 0, height: '0.9rem'}} size="small"/>
                     {satelliteData['details']['name']}

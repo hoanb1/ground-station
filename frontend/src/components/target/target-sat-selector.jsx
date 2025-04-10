@@ -8,7 +8,7 @@ import {
     Select,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
-import {humanizeFrequency, TitleBar} from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
@@ -49,6 +49,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
         selectedRotator,
         selectedTransmitter,
         availableTransmitters,
+        gridEditable,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -110,7 +111,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Select group and satellite</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>

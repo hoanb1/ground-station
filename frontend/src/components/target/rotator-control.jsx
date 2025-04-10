@@ -61,6 +61,7 @@ function GaugePointer() {
 function GaugeAz({az}) {
     return (
         <GaugeContainer
+            style={{margin: 'auto'}}
             valueMin={0}
             valueMax={360}
             width={150}
@@ -78,6 +79,7 @@ function GaugeAz({az}) {
 function GaugeEl({el}) {
     return (
         <GaugeContainer
+            style={{margin: 'auto'}}
             valueMin={90}
             valueMax={0}
             width={150}
@@ -243,10 +245,10 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "center",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                                <GaugeAz az={rotatorData['az']}/>
+                            <GaugeAz az={rotatorData['az']}/>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                                <GaugeEl el={rotatorData['el']}/>
+                            <GaugeEl el={rotatorData['el']}/>
                         </Grid>
 
                     </Grid>

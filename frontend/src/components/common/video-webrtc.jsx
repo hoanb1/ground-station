@@ -1,9 +1,10 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { TitleBar } from "./common.jsx";
+import {getClassNamesBasedOnGridEditing, TitleBar} from "./common.jsx";
 import { FormControl, InputLabel, MenuItem, Select, Button, CircularProgress, Slider, Stack, IconButton, Box, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { v4 as uuidv4 } from 'uuid';
 import ReplayIcon from '@mui/icons-material/Replay';
+import {useSelector} from 'react-redux';
 
 const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
     const videoRef = useRef(null);
@@ -15,7 +16,8 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
     const [isLoading, setIsLoading] = useState(false);
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState("");
-
+    const {gridEditable} = useSelector((state) => state.targetSatTrack);
+    
     const RELAY_SERVER = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
     
     useEffect(() => {
@@ -169,7 +171,7 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>WebRTC Video</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>WebRTC Video</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl size="small" fullWidth={true}>

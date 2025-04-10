@@ -10,7 +10,7 @@ import UpdateIcon from '@mui/icons-material/Update';
 import {Box, Typography, CircularProgress, Card, CardContent} from '@mui/material';
 import {
     betterDateTimes,
-    betterStatusValue,
+    betterStatusValue, getClassNamesBasedOnGridEditing,
     humanizeAltitude,
     humanizeLatitude,
     humanizeLongitude,
@@ -23,7 +23,7 @@ import {useSocket} from "../common/socket.jsx";
 const SatelliteInfoCard = () => {
     const dispatch = useDispatch();
     const {socket} = useSocket();
-    const {satelliteData, selectedSatelliteId, loading, error} = useSelector((state) => state.overviewSatTrack);
+    const {satelliteData, selectedSatelliteId, loading, error, gridEditable} = useSelector((state) => state.overviewSatTrack);
 
     useEffect(() => {
         if (selectedSatelliteId) {
@@ -33,7 +33,7 @@ const SatelliteInfoCard = () => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Satellite Info</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Satellite Info</TitleBar>
             <Box sx={{p: 2, borderRadius: 1}}>
                 <Grid container direction="column" spacing={1}>
                     {/* Header with name */}

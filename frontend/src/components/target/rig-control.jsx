@@ -16,7 +16,12 @@ import {
     setTrackingStateInBackend
 } from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
-import {humanizeFrequency, preciseHumanizeFrequency, TitleBar} from "../common/common.jsx";
+import {
+    getClassNamesBasedOnGridEditing,
+    humanizeFrequency,
+    preciseHumanizeFrequency,
+    TitleBar
+} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import SatelliteList from "./target-sat-list.jsx";
@@ -44,6 +49,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         selectedTransmitter,
         availableTransmitters,
         rigData,
+        gridEditable,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -108,7 +114,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Radio rig control</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>
 
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid container direction="row" sx={{

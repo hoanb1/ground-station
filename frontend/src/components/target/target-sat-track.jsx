@@ -25,6 +25,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
+    getClassNamesBasedOnGridEditing,
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
     MapTitleBar, renderCountryFlagsCSV,
@@ -587,6 +588,8 @@ const TargetSatelliteTrack = React.memo(function () {
         };
     }, [tileLayerID]);
 
+
+    
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
@@ -603,7 +606,7 @@ const TargetSatelliteTrack = React.memo(function () {
                 zoomDelta={0.25}
                 boundsOptions={{padding: [300, 300]}}
             >
-                <MapTitleBar className={"react-grid-draggable window-title-bar"}>
+                <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
                     Tracking {satelliteData['details']['name'] || "-"} {(satelliteData['position']['alt']/1000).toFixed(2)} km, {satelliteData['position']['vel'].toFixed(2)} km/s
                 </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
@@ -706,7 +709,7 @@ const TargetSatelliteTrack = React.memo(function () {
             rowHeight={30}
             isResizable={true}
             isDraggable={true}
-            draggableHandle=".react-grid-draggable"
+            draggableHandle={".react-grid-draggable"}
         >
             {gridContents}
         </ResponsiveReactGridLayout>;
@@ -721,7 +724,7 @@ const TargetSatelliteTrack = React.memo(function () {
             rowHeight={30}
             isResizable={false}
             isDraggable={false}
-            draggableHandle=".react-grid-draggable"
+            draggableHandle={".react-grid-draggable"}
         >
             {gridContents}
         </ResponsiveReactGridLayout>;

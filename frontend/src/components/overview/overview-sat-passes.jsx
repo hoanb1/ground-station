@@ -1,7 +1,13 @@
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
-import {formatWithZeros, getTimeFromISO, humanizeFutureDateInMinutes, TitleBar} from "../common/common.jsx";
+import {
+    formatWithZeros,
+    getClassNamesBasedOnGridEditing,
+    getTimeFromISO,
+    humanizeFutureDateInMinutes,
+    TitleBar
+} from "../common/common.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import {useDispatch, useSelector} from "react-redux";
@@ -37,7 +43,7 @@ const NextPassesGroupIsland = React.memo(() => {
     const dispatch = useDispatch();
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
-    const { selectedSatGroupId, passes, passesLoading, nextPassesHours } = useSelector(state => state.overviewSatTrack);
+    const { selectedSatGroupId, passes, passesLoading, nextPassesHours, gridEditable } = useSelector(state => state.overviewSatTrack);
     const minHeight = 200;
     const maxHeight = 400;
     const [columnUpdateKey, setColumnUpdateKey] = useState(0);
@@ -252,7 +258,7 @@ const NextPassesGroupIsland = React.memo(() => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Passes for the next {nextPassesHours} hours</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Passes for the next {nextPassesHours} hours</TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',

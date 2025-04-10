@@ -2,12 +2,13 @@ import React, {useEffect} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {getWeatherData} from './weather-slice.jsx';
 import {Box, Typography, CircularProgress, Card, CardContent} from '@mui/material';
-import {TitleBar} from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 
 const WeatherDisplay = ({latitude, longitude, apiKey}) => {
     const dispatch = useDispatch();
-    const {data, loading, error} = useSelector((state) => state.weather);
+    const {data, loading, error } = useSelector((state) => state.weather);
+    const { gridEditable } = useSelector(state => state.overviewSatTrack);
 
     useEffect(() => {
         if (latitude && longitude) {
@@ -18,7 +19,7 @@ const WeatherDisplay = ({latitude, longitude, apiKey}) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Weather</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Weather</TitleBar>
             <Grid container direction="column" spacing={0} padding={1}>
                 {loading && <CircularProgress/>}
                 {error && <Typography color="error">Error loading weather data: {error}</Typography>}

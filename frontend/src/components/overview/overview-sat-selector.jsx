@@ -7,7 +7,7 @@ import {
 import { useTheme, styled } from '@mui/material/styles';
 import React, {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
-import {TitleBar} from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useLocalStorageState} from "@toolpad/core";
@@ -28,7 +28,7 @@ const SATELLITE_NUMBER_LIMIT = 500;
 const OverviewSatelliteGroupSelector = React.memo(function () {
     const { socket } = useSocket();
     const dispatch = useDispatch();
-    const { satelliteGroupId, satGroups, formGroupSelectError, selectedSatGroupId } = useSelector(state => state.overviewSatTrack);
+    const { satelliteGroupId, satGroups, formGroupSelectError, selectedSatGroupId, gridEditable } = useSelector(state => state.overviewSatTrack);
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
         backgroundColor: "#1e1e1e",
@@ -52,7 +52,7 @@ const OverviewSatelliteGroupSelector = React.memo(function () {
 
     return (
         <ThemedSettingsDiv>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Select group of satellites</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Select group of satellites</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>

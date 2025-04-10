@@ -494,3 +494,12 @@ export function SimpleTruncatedHtml({ htmlString, className }) {
 export const formatWithZeros = (num, length) => {
     return String(num).padStart(length, '0');
 };
+
+
+export function getClassNamesBasedOnGridEditing(gridEditing, stringList) {
+    if (gridEditing) {
+        return ["react-grid-draggable", ...stringList].join(" ");
+    } else {
+        return stringList.join(" ");
+    }
+}
