@@ -274,10 +274,10 @@ class RotatorController:
                 self.logger.warning("Object RotatorController being garbage collected while still connected")
 
                 # If there's a synchronous way to close the underlying connection, use it
-                if self.rig is not None and hasattr(self.rig, 'close') and callable(self.rig.close):
+                if self.rotator is not None and hasattr(self.rotator, 'close') and callable(self.rotator.close):
                     try:
                         # Only if close() can be called synchronously
-                        self.rig.close()
+                        self.rotator.close()
                     except Exception as e:
                         self.logger.error(f"Error during cleanup: {e}")
 

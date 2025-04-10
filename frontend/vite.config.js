@@ -18,11 +18,15 @@ export default defineConfig(({ mode }) => {
       'import.meta.env.GS_BACKEND_HOST': JSON.stringify(process.env.GS_BACKEND_HOST || 'localhost'),
     },
 
+    // Explicitly set the public directory
+    publicDir: '../backend/public',
+
     // Server configuration for development
     server: {
       port: 5173,
       strictPort: true,
       host: true, // Listen on all addresses
+
       // Add proxy configuration
       proxy: {
         '/api': {  // For regular HTTP API requests
