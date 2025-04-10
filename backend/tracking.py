@@ -762,15 +762,17 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
                     current_transmitter = current_transmitter_reply.get('data', {})
 
-                    # calculate doppler shift
-                    rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
-                        satellite_tles[0],
-                        satellite_tles[1],
-                        location['lat'],
-                        location['lon'],
-                        0,
-                        current_transmitter.get('downlink_low', 0)
-                    )
+                    if current_transmitter:
+                        # calculate doppler shift
+                        downlink_freq = current_transmitter.get('downlink_low', 0)
+                        rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
+                            satellite_tles[0],
+                            satellite_tles[1],
+                            location['lat'],
+                            location['lon'],
+                            0,
+                            current_transmitter.get('downlink_low', 0)
+                        )
 
                 if rig_controller:
                     frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])

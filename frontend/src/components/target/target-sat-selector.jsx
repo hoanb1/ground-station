@@ -101,65 +101,12 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
     };
 
     const handleSelectOpenEvent = (event) => {
-        //console.info("Group select onOpen");
         dispatch(setSatelliteGroupSelectOpen(true));
     };
 
     const handleSelectCloseEvent = (event) => {
-        //console.info("Group select onClose");
         dispatch(setSatelliteGroupSelectOpen(false));
     };
-
-    const handleTrackingStop = () => {
-        const newTrackingState = {...trackingState, 'rotator_state': "idle"};
-        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
-    };
-
-    const handleTrackingStart = () => {
-        const newTrackingState = {
-            'norad_id': satelliteId,
-            'group_id': groupId,
-            'rotator_state': "tracking",
-            'rig_state': trackingState['rig_state'],
-            'rig_id': selectedRadioRig,
-            'rotator_id': selectedRotator,
-            'transmitter_id': selectedTransmitter,
-        };
-
-        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
-            .unwrap()
-            .then((response) => {
-
-            })
-            .catch((error) => {
-                enqueueSnackbar(`Failed to start tracking: ${error.message}`, {
-                    variant: "error"
-                });
-            });
-    };
-
-    function handleRotatorChange(event) {
-        dispatch(setRotator(event.target.value));
-    }
-
-    function handleRigChange(event) {
-        dispatch(setRadioRig(event.target.value));
-    }
-
-    function handleTransmitterChange(event) {
-        dispatch(setSelectedTransmitter(event.target.value));
-        const data = {
-            ...trackingState,
-            'norad_id': satelliteId,
-            'rotator_state': "idle",
-            'rig_state': trackingState['rig_state'],
-            'group_id': groupId,
-            'rig_id': selectedRadioRig,
-            'rotator_id': selectedRotator,
-            'transmitter_id': event.target.value,
-        };
-        dispatch(setTrackingStateInBackend({ socket, data: data}));
-    }
 
     return (
         <>
@@ -195,128 +142,6 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <SatelliteList/>
                 </Grid>
-
-                {/*<Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>*/}
-                {/*    <FormControl disabled={trackingState['rotator_state'] === "tracking"}*/}
-                {/*                 sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"*/}
-                {/*                 size="small">*/}
-                {/*        <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>*/}
-                {/*        <Select*/}
-                {/*            id="transmitter-select"*/}
-                {/*            value={availableTransmitters.length > 0 ? selectedTransmitter : "none"}*/}
-                {/*            onChange={(event) => {*/}
-                {/*                handleTransmitterChange(event);*/}
-                {/*            }}*/}
-                {/*            variant={'filled'}>*/}
-                {/*            <MenuItem value="none">*/}
-                {/*                [no frequency control]*/}
-                {/*            </MenuItem>*/}
-                {/*            <MenuItem value="" disabled>*/}
-                {/*                <em>select a transmitter</em>*/}
-                {/*            </MenuItem>*/}
-                {/*            {availableTransmitters.map((transmitter, index) => {*/}
-                {/*                return <MenuItem value={transmitter.id} key={transmitter.id}>*/}
-                {/*                    {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})*/}
-                {/*                </MenuItem>;*/}
-                {/*            })}*/}
-                {/*        </Select>*/}
-                {/*    </FormControl>*/}
-                {/*</Grid>*/}
-
-                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>*/}
-                {/*    <FormControl disabled={trackingState['rotator_state'] === "tracking"}*/}
-                {/*                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"*/}
-                {/*                 size="small">*/}
-                {/*        <InputLabel htmlFor="rotator-select">Rotator</InputLabel>*/}
-                {/*        <Select*/}
-                {/*            id="rotator-select"*/}
-                {/*            value={rotators.length > 0? selectedRotator: "none"} // Set the current value here*/}
-                {/*            onChange={(event) => {*/}
-                {/*                handleRotatorChange(event);*/}
-                {/*            }}*/}
-                {/*            variant={'filled'}>*/}
-                {/*            <MenuItem value="none">*/}
-                {/*                [no rotator control]*/}
-                {/*            </MenuItem>*/}
-                {/*            <MenuItem value="" disabled>*/}
-                {/*                <em>select a rotator</em>*/}
-                {/*            </MenuItem>*/}
-                {/*            {rotators.map((rotators, index) => {*/}
-                {/*                return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;*/}
-                {/*            })}*/}
-                {/*        </Select>*/}
-                {/*    </FormControl>*/}
-                {/*</Grid>*/}
-
-                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>*/}
-                {/*    <FormControl disabled={trackingState['rotator_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"*/}
-                {/*                 size="small">*/}
-                {/*        <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>*/}
-                {/*        <Select*/}
-                {/*            id="radiorig-select"*/}
-                {/*            value={rigs.length > 0? selectedRadioRig: "none"} // Set the current value here*/}
-                {/*            onChange={(event) => {*/}
-                {/*                handleRigChange(event);*/}
-                {/*            }}*/}
-                {/*            variant={'filled'}>*/}
-                {/*            <MenuItem value="none">*/}
-                {/*                [no radio rig control]*/}
-                {/*            </MenuItem>*/}
-                {/*            <MenuItem value="" disabled>*/}
-                {/*                <em>select a radio</em>*/}
-                {/*            </MenuItem>*/}
-                {/*            {rigs.map((rig, index) => {*/}
-                {/*                return <MenuItem value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;*/}
-                {/*            })}*/}
-                {/*        </Select>*/}
-                {/*    </FormControl>*/}
-                {/*</Grid>*/}
-
-                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>*/}
-                {/*    <Grid container direction="row" sx={{*/}
-                {/*        justifyContent: "space-between",*/}
-                {/*        alignItems: "stretch",*/}
-                {/*    }}>*/}
-                {/*        <Grid size="grow" style={{paddingRight: '0.5rem'}}>*/}
-                {/*            <Button fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}>*/}
-                {/*                A*/}
-                {/*            </Button>*/}
-                {/*        </Grid>*/}
-                {/*        <Grid size="grow" style={{paddingRight: '0.5rem'}}>*/}
-                {/*            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>*/}
-                {/*                B*/}
-                {/*            </Button>*/}
-                {/*        </Grid>*/}
-                {/*        <Grid size="grow" style={{paddingRight: '0rem'}}>*/}
-                {/*            <Button fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>*/}
-                {/*                C*/}
-                {/*            </Button>*/}
-                {/*        </Grid>*/}
-                {/*    </Grid>*/}
-                {/*</Grid>*/}
-
-                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>*/}
-                {/*    <Grid container direction="row" sx={{*/}
-                {/*            justifyContent: "space-between",*/}
-                {/*            alignItems: "stretch",*/}
-                {/*        }}>*/}
-                {/*        <Grid size="grow" style={{paddingRight: '0.5rem'}}>*/}
-                {/*            <Button fullWidth={true} disabled={trackingState['rotator_state'] === "tracking"}*/}
-                {/*                    variant="contained" color="success" style={{height: '60px'}}*/}
-                {/*                    onClick={()=>{handleTrackingStart()}}*/}
-                {/*            >*/}
-                {/*                TRACK*/}
-                {/*            </Button>*/}
-                {/*        </Grid>*/}
-                {/*        <Grid size="grow">*/}
-                {/*            <Button fullWidth={true} variant="contained" color="error" style={{height: '60px'}}*/}
-                {/*                    onClick={() => {handleTrackingStop()}}>*/}
-                {/*                STOP*/}
-                {/*            </Button>*/}
-                {/*        </Grid>*/}
-                {/*    </Grid>*/}
-                {/*</Grid>*/}
-
             </Grid>
         </>
     );

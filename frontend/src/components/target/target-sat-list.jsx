@@ -64,12 +64,10 @@ function SatelliteList() {
     }
 
     const handleSelectOpenEvent = (event) => {
-        //console.info("satellite select onOpen");
         dispatch(setSatelliteSelectOpen(true));
     };
 
     const handleSelectCloseEvent = (event) => {
-        //console.info("satellite select onClose");
         dispatch(setSatelliteSelectOpen(false));
     };
 

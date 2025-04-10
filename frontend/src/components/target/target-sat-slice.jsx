@@ -268,11 +268,11 @@ const targetSatTrackSlice = createSlice({
                         if (event.name === 'rotator_connected') {
                             enqueueSnackbar("Rotator connected!", {variant: 'success'});
                         } else if (event.name === 'rotator_disconnected') {
-                            enqueueSnackbar("Rotator disconnected!", {variant: 'warning'});
+                            enqueueSnackbar("Rotator disconnected!", {variant: 'info'});
                         } else if (event.name === 'rig_connected') {
                             enqueueSnackbar("Rig connected!", {variant: 'success'});
                         } else if (event.name === 'rig_disconnected') {
-                            enqueueSnackbar("Rig disconnected!", {variant: 'warning'});
+                            enqueueSnackbar("Rig disconnected!", {variant: 'info'});
                         } else if (event.name === 'elevation_out_of_bounds') {
                             enqueueSnackbar("Elevation of target is not reachable!", {variant: 'warning'});
                         } else if (event.name === 'azimuth_out_of_bounds') {
@@ -282,6 +282,8 @@ const targetSatTrackSlice = createSlice({
                         } else if (event.name === 'norad_id_change') {
                             enqueueSnackbar("Target satellite changed!", {variant: 'warning'});
                         } else if (event.name === 'rotator_error') {
+                            enqueueSnackbar(event.error, {variant: 'error'});
+                        } else if (event.name === 'rig_error') {
                             enqueueSnackbar(event.error, {variant: 'error'});
                         }
                     });
