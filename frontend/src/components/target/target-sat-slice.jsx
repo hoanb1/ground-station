@@ -280,7 +280,7 @@ const targetSatTrackSlice = createSlice({
                         } else if (event.name === 'minelevation_error') {
                             enqueueSnackbar("Target is beyond the minimum elevation limit", {variant: 'warning'});
                         } else if (event.name === 'norad_id_change') {
-                            enqueueSnackbar("Target satellite changed!", {variant: 'warning'});
+                            enqueueSnackbar("Target satellite changed!", {variant: 'info'});
                         } else if (event.name === 'rotator_error') {
                             enqueueSnackbar(event.error, {variant: 'error'});
                         } else if (event.name === 'rig_error') {
