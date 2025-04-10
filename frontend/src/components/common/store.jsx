@@ -13,6 +13,7 @@ import preferencesReducer from '../settings/preferences-slice.jsx';
 import targetSatTrackReducer from '../target/target-sat-slice.jsx'
 import overviewSatTrackReducer from '../overview/overview-sat-slice.jsx';
 import dashboardReducer from '../dashboard/dashboard-slice.jsx';
+import weatherReducer from '../overview/weather-slice.jsx';
 
 
 const persistConfig = {
@@ -33,7 +34,8 @@ const rootReducer = combineReducers({
     syncSatellite: synchronizeReducer,
     preferences: preferencesReducer,
     targetSatTrack: targetSatTrackReducer,
-    overviewSatTrack: overviewSatTrackReducer
+    overviewSatTrack: overviewSatTrackReducer,
+    weather: weatherReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

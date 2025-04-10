@@ -337,6 +337,23 @@ export const betterStatusValue = (status) => {
     }
 };
 
+export function humanizeLatitude(latitude) {
+    if (typeof latitude !== "number" || isNaN(latitude)) {
+        return "-";
+    }
+
+    const direction = latitude >= 0 ? "N" : "S";
+    return `${Math.abs(latitude).toFixed(4)}° ${direction}`;
+}
+
+export function humanizeLongitude(longitude) {
+    if (typeof longitude !== "number" || isNaN(longitude)) {
+        return "-";
+    }
+
+    const direction = longitude >= 0 ? "E" : "W";
+    return `${Math.abs(longitude).toFixed(4)}° ${direction}`;
+}
 
 export function getMaidenhead(lat, lon) {
     let adjLon = lon + 180;
@@ -414,6 +431,50 @@ export function preciseHumanizeFrequency(hertz) {
     }
 
     return `${hertz.toFixed(4)} ${units[unitIndex]}`;
+}
+
+
+export function humanizeAltitude(meters, decimals = 2) {
+    if (typeof meters !== "number" || isNaN(meters)) {
+        return "Invalid altitude";
+    }
+
+    const units = ["m", "km", "mi", "ft"];
+    let unitIndex = 0;
+    let preciseAltitude = meters;
+
+    if (preciseAltitude >= 1000) {
+        preciseAltitude /= 1000;
+        unitIndex = 1; // km
+    }
+
+    if (unitIndex === 0 && preciseAltitude >= 1609.34) {
+        preciseAltitude = meters / 1609.34;
+        unitIndex = 2; // miles
+    } else if (unitIndex === 0 && preciseAltitude >= 3.28084) {
+        preciseAltitude = meters * 3.28084;
+        unitIndex = 3; // feet
+    }
+
+    return `${preciseAltitude.toFixed(decimals)} ${units[unitIndex]}`;
+}
+
+
+export function humanizeVelocity(kmPerSecond, decimals = 2) {
+    if (typeof kmPerSecond !== "number" || isNaN(kmPerSecond)) {
+        return "Invalid velocity";
+    }
+
+    const units = ["km/s", "km/h", "m/s", "mph"];
+    let velocities = [
+        kmPerSecond,                          // km/s
+        kmPerSecond * 3600,                   // km/h
+        kmPerSecond * 1000,                   // m/s
+        kmPerSecond * 2236.94                 // mph (1 km/s = 2236.94 mph)
+    ];
+
+    // Return humanized format
+    return units.map((unit, index) => `${velocities[index].toFixed(decimals)} ${unit}`).join(" / ");
 }
 
 export function SimpleTruncatedHtml({ htmlString, className }) {

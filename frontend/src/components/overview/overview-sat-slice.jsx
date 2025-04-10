@@ -5,6 +5,21 @@ function getCacheKeyForGroupId(groupId) {
     return `${groupId}_${Math.floor(Date.now() / (2 * 60 * 60 * 1000))}`;
 }
 
+export const fetchSatelliteData = createAsyncThunk(
+    'overviewGroups/fetchSatelliteData',
+    async ({ socket, noradId }, { rejectWithValue }) => {
+        return await new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-satellite', noradId, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(new Error('Failed to fetch satellites'));
+                }
+            });
+        });
+    }
+);
+
 
 export const fetchSatelliteGroups = createAsyncThunk(
     'overviewGroups/fetchSatelliteGroupsOverview',
@@ -45,7 +60,7 @@ export const fetchNextPassesForGroup = createAsyncThunk(
     async ({ socket, selectedSatGroupId, hours }, { getState, rejectWithValue }) => {
         return new Promise((resolve, reject) => {
 
-            // lets check first if we have something cached
+            // let's check first if we have something cached
             const state = getState();
             const cacheKey = getCacheKeyForGroupId(selectedSatGroupId);
             if (cacheKey in state.overviewSatTrack.cachedPasses) {
@@ -67,6 +82,35 @@ export const fetchNextPassesForGroup = createAsyncThunk(
 const overviewSlice = createSlice({
     name: 'overviewSatTrack',
     initialState: {
+        selectedSatelliteId: "",
+        satelliteData: {
+            position: {
+                lat: 0,
+                lon: 0,
+                alt: 0,
+                vel: 0,
+                az: 0,
+                el: 0,
+            },
+            details: {
+                name: '',
+                norad_id: '',
+                name_other: '',
+                alternative_name: '',
+                operator: '',
+                countries: '',
+                tle1: "",
+                tle2: "",
+                launched: null,
+                deployed: null,
+                decayed: null,
+                updated: null,
+                status: '',
+                website: '',
+                is_geostationary: false,
+            },
+            transmitters: [],
+        },
         showPastOrbitPath: false,
         showFutureOrbitPath: false,
         showSatelliteCoverage: true,
@@ -177,7 +221,13 @@ const overviewSlice = createSlice({
         },
         setShowGrid(state, action) {
             state.showGrid = action.payload;
-        }
+        },
+        setSelectedSatelliteId(state, action) {
+            state.selectedSatelliteId = action.payload;
+        },
+        setSatelliteData(state, action) {
+            state.satelliteData = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -211,6 +261,19 @@ const overviewSlice = createSlice({
             .addCase(fetchNextPassesForGroup.rejected, (state, action) => {
                 state.passesLoading = false;
                 state.formGroupSelectError = true;
+            })
+            .addCase(fetchSatelliteData.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchSatelliteData.fulfilled, (state, action) => {
+                state.loading = false;
+                state.satelliteData = action.payload;
+                state.error = null;
+            })
+            .addCase(fetchSatelliteData.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
             });
     }
 });
@@ -240,6 +303,8 @@ export const {
     setOpenMapSettingsDialog,
     setNextPassesHours,
     setShowGrid,
+    setSelectedSatelliteId,
+    setSatelliteData,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;

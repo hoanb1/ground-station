@@ -61,6 +61,8 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import Typography from "@mui/material/Typography";
 import CoordinateGrid from "../common/mercator-grid.jsx";
+import WeatherDisplay from "./weather-card.jsx";
+import SatelliteInfoCard from "./overview-sat-info.jsx";
 
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
@@ -170,6 +172,24 @@ const GlobalSatelliteTrack = React.memo(function () {
                 y: 14,
                 w: 8,
                 h: 10,
+                minH: 7,
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
+            },
+            {
+                i: 'weather',
+                x: 0,
+                y: 14,
+                w: 8,
+                h: 2,
+                minH: 7,
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
+            },
+            {
+                i: 'sat-info',
+                x: 0,
+                y: 14,
+                w: 8,
+                h: 2,
                 minH: 7,
                 resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
@@ -499,6 +519,13 @@ const GlobalSatelliteTrack = React.memo(function () {
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesGroupIsland/>
         </StyledIslandParentNoScrollbar>,
+        <StyledIslandParentNoScrollbar key="weather">
+            <WeatherDisplay latitude={location.lat} longitude={location.lon} apiKey={"471aacccad269b47ed7d2aa3369c9f71"}/>
+        </StyledIslandParentNoScrollbar>,
+        <StyledIslandParentNoScrollbar key="sat-info">
+            <SatelliteInfoCard/>
+        </StyledIslandParentNoScrollbar>,
+
     ];
 
     let ResponsiveGridLayoutParent = null;

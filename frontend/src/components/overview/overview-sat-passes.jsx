@@ -3,12 +3,14 @@ import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import {formatWithZeros, getTimeFromISO, humanizeFutureDateInMinutes, TitleBar} from "../common/common.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
+import ArrowForwardIcon from '@mui/icons-material/ArrowForward';
 import {useDispatch, useSelector} from "react-redux";
 import {
     fetchNextPassesForGroup,
     fetchSatelliteGroups,
     fetchSatellitesByGroupId,
     setPasses,
+    setSelectedSatelliteId,
 } from './overview-sat-slice.jsx';
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
@@ -201,6 +203,27 @@ const NextPassesGroupIsland = React.memo(() => {
                 }
             }
         },
+        {
+            field: 'id',
+            minWidth: 50,
+            headerName: 'Info',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            renderCell: (params) => {
+                const noradId = params.value.split("_")[0];
+                return (
+                <ArrowForwardIcon
+                    fontSize="small"
+                    style={{cursor: 'pointer', marginTop: '8px'}}
+                    onClick={() => {
+                        dispatch(setSelectedSatelliteId(parseInt(noradId)));
+                    }}
+                />
+                );
+            },
+        },
+        
     ];
 
     useEffect(() => {
@@ -274,7 +297,6 @@ const NextPassesGroupIsland = React.memo(() => {
                         columns={columns}
                         pageSize={10}
                         rowsPerPageOptions={[5, 10, 20]}
-                        disableSelectionOnClick
                     />
                 </div>
             </div>
