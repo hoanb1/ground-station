@@ -285,7 +285,7 @@ const GlobalSatelliteTrack = React.memo(function () {
                         positions={paths.past}
                         pathOptions={{
                             color: pastOrbitLineColor,
-                            weight: 1,
+                            weight: 2,
                             opacity: 0.5,
                             smoothFactor: 1,
                         }}
@@ -297,9 +297,9 @@ const GlobalSatelliteTrack = React.memo(function () {
                         positions={paths.future}
                         pathOptions={{
                             color: futureOrbitLineColor,
-                            weight: 1,
+                            weight: 2,
                             opacity: 1,
-                            dashArray: "3 3",
+                            dashArray: "2 4",
                             smoothFactor: 1,
                         }}
                     />)
