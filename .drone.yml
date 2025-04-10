@@ -24,16 +24,12 @@ steps:
       depth: 50
       skip_verify: true
 
-  - name: build
-    image: docker:dind
-    settings:
-      debug: true
-    privileged: true
-    volumes:
-      - name: dockersock
-        path: /var/run/docker.sock
+  - name: deploy
+    image: docker:cli
+    environment:
+      DOCKER_HOST: tcp://192.168.60.98:2375
     commands:
-      # Build the new image
+      # Build the new image directly on the remote host
       - docker build -t ground-station:latest .
 
       # Stop and remove existing container if it exists
@@ -42,10 +38,8 @@ steps:
       # Run the new container
       - docker run -d -p 0.0.0.0:7000:7000 --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/db ground-station:latest
 
-      # Wait for container to initialize
+      # Check that it's running
       - sleep 5
-
-      # Better health check approach using Docker's own health check mechanisms
       - |
         CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' ground-station-prod)
         if [ "$CONTAINER_STATUS" != "running" ]; then
@@ -57,7 +51,6 @@ steps:
       # Display container info
       - echo "✅ New container is running on host port 7000"
       - docker ps | grep ground-station-prod
-
 
 volumes:
   - name: dockersock
