@@ -84,7 +84,6 @@ const SatelliteInfoCard = () => {
                     alignItems: 'center',
                     justifyContent: 'space-between',
                     width: '100%',
-                    pl: 0.5
                 }}>
                     <Box sx={{ display: 'flex', alignItems: 'center' }}>
                         <SatelliteIcon fontSize="small" sx={{ mr: 1, color: (theme) => theme.palette.secondary.light }} />
@@ -138,7 +137,7 @@ const SatelliteInfoCard = () => {
                 </Box>
 
                 {/* Main Telemetry Data Section */}
-                <Box sx={{ p: 1.5, flex: 1 }}>
+                <Box sx={{ p: 1, flex: 1 }}>
                     <Grid container spacing={1.5}>
                         {/* Position Data */}
                         <Grid xs={12}>
@@ -148,7 +147,6 @@ const SatelliteInfoCard = () => {
                                 background: "#121212",
                                 border: "1px solid #4b4b4b",
                                 boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.common.black, 0.3)}`,
-                                mb: 1.5
                             }}>
                                 <Typography variant="overline" sx={{
                                     color: (theme) => theme.palette.secondary.main,
@@ -223,7 +221,7 @@ const SatelliteInfoCard = () => {
                                 position: 'relative',
                                 display: 'flex',
                                 flexDirection: 'column',
-                                p: 1.25
+                                p: 1
                             }}>
                                 <Box sx={{
                                     position: 'absolute',
