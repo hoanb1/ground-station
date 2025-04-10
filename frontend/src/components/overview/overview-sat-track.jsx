@@ -134,6 +134,7 @@ const GlobalSatelliteTrack = React.memo(function () {
         openMapSettingsDialog,
         nextPassesHours,
         showGrid,
+        selectedSatelliteId,
     } = useSelector(state => state.overviewSatTrack);
     const { location, } = useSelector((state) => state.location);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
@@ -268,37 +269,42 @@ const GlobalSatelliteTrack = React.memo(function () {
                     satellite['tle2'],
                     now);
 
-                let paths = {};
-                // calculate paths
-                paths = getSatellitePaths([
-                    satellite['tle1'],
-                    satellite['tle2']
-                ], orbitProjectionDuration);
+                console.info(selectedSatelliteId, noradid);
 
-                // past path
-                currentPastPaths.push(<Polyline
-                    key={`past-path-${noradid}`}
-                    positions={paths.past}
-                    pathOptions={{
-                        color: pastOrbitLineColor,
-                        weight: 1,
-                        opacity: 0.5,
-                        smoothFactor: 1,
-                    }}
-                />)
+                if (selectedSatelliteId === noradid) {
 
-                // future path
-                currentFuturePaths.push(<Polyline
-                    key={`future-path-${noradid}`}
-                    positions={paths.future}
-                    pathOptions={{
-                        color: futureOrbitLineColor,
-                        weight: 1,
-                        opacity: 1,
-                        dashArray: "3 3",
-                        smoothFactor: 1,
-                    }}
-                />)
+                    // calculate paths
+                    let paths = getSatellitePaths([
+                        satellite['tle1'],
+                        satellite['tle2']
+                    ], orbitProjectionDuration);
+
+                    // past path
+                    currentPastPaths.push(<Polyline
+                        key={`past-path-${noradid}`}
+                        positions={paths.past}
+                        pathOptions={{
+                            color: pastOrbitLineColor,
+                            weight: 1,
+                            opacity: 0.5,
+                            smoothFactor: 1,
+                        }}
+                    />)
+
+                    // future path
+                    currentFuturePaths.push(<Polyline
+                        key={`future-path-${noradid}`}
+                        positions={paths.future}
+                        pathOptions={{
+                            color: futureOrbitLineColor,
+                            weight: 1,
+                            opacity: 1,
+                            dashArray: "3 3",
+                            smoothFactor: 1,
+                        }}
+                    />)
+                }
+
 
                 const onMarkerMouseOver = (event, noradId) => {
                     //console.log(noradId, event);
@@ -387,7 +393,7 @@ const GlobalSatelliteTrack = React.memo(function () {
         };
     },[selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
-        mapZoomLevel, showTooltip]);
+        mapZoomLevel, showTooltip, selectedSatelliteId]);
 
     function handleLayoutsChange(currentLayout, allLayouts){
         setLayouts(allLayouts);

@@ -262,7 +262,7 @@ const NextPassesGroupIsland = React.memo(() => {
                         }}
                         onRowClick={(params) => {
                             const noradId = params.row.id.split("_")[0];
-                            dispatch(setSelectedSatelliteId(noradId));
+                            dispatch(setSelectedSatelliteId(parseInt(noradId)));
                         }}
                         sx={{
                             border: 0,
