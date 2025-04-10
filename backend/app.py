@@ -189,6 +189,8 @@ async def webrtc_websocket(websocket: WebSocket, client_id: str):
         if client_id in active_connections:
             del active_connections[client_id]
 
+# our public directory
+app.mount("/public", StaticFiles(directory="public"), name="public")
 
 @app.get("/{full_path:path}")
 async def serve_spa(request: Request, full_path: str):
@@ -202,8 +204,6 @@ async def serve_spa(request: Request, full_path: str):
     # For all other routes, serve the index.html file
     return FileResponse(os.path.join(static_files_dir, "index.html"))
 
-
-app.mount("/public", StaticFiles(directory="public"), name="public")
 app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
 
