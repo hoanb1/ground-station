@@ -6,6 +6,17 @@ import {
     ThemedStackIsland,
     TitleBar
 } from "../common/common.jsx";
+import {
+    Box,
+    Typography,
+    Stack,
+} from '@mui/material';
+import CircleIcon from '@mui/icons-material/Circle';
+import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import CheckCircleIcon from '@mui/icons-material/CheckCircle';
+import CancelIcon from '@mui/icons-material/Cancel';
+import SettingsRemoteIcon from '@mui/icons-material/SettingsRemote';
+import Grid from "@mui/material/Grid2";
 import Table from "@mui/material/Table";
 import TableBody from "@mui/material/TableBody";
 import TableRow from "@mui/material/TableRow";
@@ -19,56 +30,147 @@ const SatelliteInfoIsland = () => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable"}>{satelliteData['details']['name']}</TitleBar>
+            <TitleBar className={"react-grid-draggable"}>
+                <Box sx={{display: 'flex', alignItems: 'center'}}>
+                    <SatelliteAltIcon sx={{mr: 0.5, ml: 0, height: '0.9rem'}} size="small"/>
+                    {satelliteData['details']['name']}
+                </Box>
+            </TitleBar>
+
             <ThemedStackIsland>
-                <Table size="small" style={{ width: '100%' }}>
-                    <TableBody>
-                        <TableRow>
-                            <TableCell><strong>Latitude:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['position']['lat'] ? satelliteData['position']['lat'].toFixed(4) : "n/a"}°</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Longitude:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['position']['lon'] ? satelliteData['position']['lon'].toFixed(4) : "n/a"}°</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Azimuth:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['position']['az'] ? satelliteData['position']['az'].toFixed(4) : "n/a"}°</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Elevation:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['position']['el'] ? satelliteData['position']['el'].toFixed(4) : "n/a"}°</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Altitude:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['position']['alt'] ? (satelliteData['position']['alt'] / 1000).toFixed(2) : "n/a"} km</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Velocity:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['position']['vel'] ? satelliteData['position']['vel'].toFixed(2) : "n/a"} km/s</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Status:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['details']['status']? betterStatusValue(satelliteData['details']['status']): "n/a"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Launch Date:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['details']['launched']? betterDateTimes(satelliteData['details']['launched']) :"n/a"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Countries:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['details']['countries']? renderCountryFlagsCSV(satelliteData['details']['countries']): "n/a"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Geostationary:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['details']['is_geostationary']? "Yes": "No"}</TableCell>
-                        </TableRow>
-                        <TableRow>
-                            <TableCell><strong>Transmitters:</strong></TableCell>
-                            <TableCell style={fixedWidthFont}>{satelliteData['transmitters'] ? satelliteData['transmitters'].length : "n/a"}</TableCell>
-                        </TableRow>
-                    </TableBody>
-                </Table>
+                <Box sx={{p: 1}}>
+                    {/* Position Section */}
+                    <Typography variant="subtitle1" sx={{
+                        fontWeight: 'medium',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        pb: 0.5,
+                        mb: 1.5
+                    }}>
+                        Position Data
+                    </Typography>
+
+                    <Grid container spacing={2} sx={{mb: 2}}>
+                        {/* First Column */}
+                        <Grid>
+                            <Stack spacing={1.5} sx={{display: 'flex', justifyContent: 'space-between'}}>
+                                <Box minWidth={150}>
+                                    <Typography variant="caption" color="text.secondary">Latitude</Typography>
+                                    <Typography variant="body1" sx={{fontFamily: 'monospace', fontWeight: 'medium'}}>
+                                        {satelliteData['position']['lat'] ? satelliteData['position']['lat'].toFixed(4) : "n/a"}°
+                                    </Typography>
+                                </Box>
+
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Longitude</Typography>
+                                    <Typography variant="body1" sx={{fontFamily: 'monospace', fontWeight: 'medium'}}>
+                                        {satelliteData['position']['lon'] ? satelliteData['position']['lon'].toFixed(4) : "n/a"}°
+                                    </Typography>
+                                </Box>
+
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Azimuth</Typography>
+                                    <Typography variant="body1" sx={{fontFamily: 'monospace', fontWeight: 'medium'}}>
+                                        {satelliteData['position']['az'] ? satelliteData['position']['az'].toFixed(4) : "n/a"}°
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        </Grid>
+
+                        {/* Second Column */}
+                        <Grid>
+                            <Stack spacing={1.5}>
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Elevation</Typography>
+                                    <Typography variant="body1" sx={{fontFamily: 'monospace', fontWeight: 'medium'}}>
+                                        {satelliteData['position']['el'] ? satelliteData['position']['el'].toFixed(4) : "n/a"}°
+                                    </Typography>
+                                </Box>
+
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Altitude</Typography>
+                                    <Typography variant="body1" sx={{fontFamily: 'monospace', fontWeight: 'medium'}}>
+                                        {satelliteData['position']['alt'] ? (satelliteData['position']['alt'] / 1000).toFixed(2) : "n/a"} km
+                                    </Typography>
+                                </Box>
+
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Velocity</Typography>
+                                    <Typography variant="body1" sx={{fontFamily: 'monospace', fontWeight: 'medium'}}>
+                                        {satelliteData['position']['vel'] ? satelliteData['position']['vel'].toFixed(2) : "n/a"} km/s
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        </Grid>
+                    </Grid>
+
+                    {/* Satellite Details Section */}
+                    <Typography variant="subtitle1" sx={{
+                        fontWeight: 'medium',
+                        borderBottom: '1px solid',
+                        borderColor: 'divider',
+                        pb: 0.5,
+                        mb: 1.5,
+                        mt: 1
+                    }}>
+                        Satellite Details
+                    </Typography>
+
+                    <Grid container spacing={2}>
+
+                        <Grid>
+                            <Stack spacing={1.5}>
+                                <Box minWidth={90}>
+                                    <Typography variant="caption" color="text.secondary">Geostationary</Typography>
+                                    <Typography variant="body2" sx={{display: 'flex', alignItems: 'center'}}>
+                                        {satelliteData['details']['is_geostationary'] ?
+                                            <CheckCircleIcon color="success" fontSize="small" sx={{mr: 0.5}}/> :
+                                            <CancelIcon color="error" fontSize="small" sx={{mr: 0.5}}/>
+                                        }
+                                        {satelliteData['details']['is_geostationary'] ? "Yes" : "No"}
+                                    </Typography>
+                                </Box>
+
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Transmitters</Typography>
+                                    <Typography variant="body2" sx={{display: 'flex', alignItems: 'center'}}>
+                                        <SettingsRemoteIcon fontSize="small" sx={{mr: 0.5}}/>
+                                        {satelliteData['transmitters'] ? satelliteData['transmitters'].length : "n/a"}
+                                    </Typography>
+                                </Box>
+                            </Stack>
+                        </Grid>
+
+                        <Grid>
+                            <Stack spacing={1.5}>
+                                <Box minWidth={90}>
+                                    <Typography variant="caption" color="text.secondary">Launch Date</Typography>
+                                    <Typography variant="body2">
+                                        {satelliteData['details']['launched'] ? betterDateTimes(satelliteData['details']['launched']) : "n/a"}
+                                    </Typography>
+                                </Box>
+
+                                <Box>
+                                    <Typography variant="caption" color="text.secondary">Countries</Typography>
+                                    {satelliteData['details']['countries'] ? renderCountryFlagsCSV(satelliteData['details']['countries']) : "n/a"}
+                                </Box>
+                            </Stack>
+                        </Grid>
+
+                        <Grid>
+                            <Box sx={{
+                                alignItems: 'center',
+                                mb: 1.5,
+                                borderRadius: 1,
+                                p: 0.75
+                            }}>
+                                <Typography variant="body2" color="text.secondary" sx={{mr: 1}}>Status:</Typography>
+                                {satelliteData['details']['status'] ? betterStatusValue(satelliteData['details']['status']) : "n/a"}
+                            </Box>
+                        </Grid>
+
+                    </Grid>
+                </Box>
             </ThemedStackIsland>
         </>
     );
