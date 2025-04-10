@@ -194,6 +194,11 @@ async def webrtc_websocket(websocket: WebSocket, client_id: str):
 async def serve_spa(request: Request, full_path: str):
     static_files_dir = os.environ.get("STATIC_FILES_DIR", "../frontend/dist")
 
+    # Skip requests for static assets (optional, depending on your setup)
+    # If you're serving static files from a 'static' subdirectory
+    if full_path.startswith(("static/", "assets/", "favicon.ico")):
+        return FileResponse(os.path.join(static_files_dir, full_path))
+
     # For all other routes, serve the index.html file
     return FileResponse(os.path.join(static_files_dir, "index.html"))
 
