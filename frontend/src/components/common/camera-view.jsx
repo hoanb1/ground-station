@@ -25,10 +25,10 @@ const CameraView = () => {
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Camera view</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl size="small" fullWidth={true}>
-                        <InputLabel id="dropdown-label">camera</InputLabel>
+                    <FormControl size={"small"} variant={"filled"} fullWidth={true} sx={{ minWidth: 200, marginTop: 0.5, marginBottom: 1 }}>
+                        <InputLabel htmlFor={"camera-select"} id="camera-select">camera</InputLabel>
                         <Select
-                            labelId="dropdown-label"
+                            labelId="camera-select"
                             value={selectedCameraId}
                             onChange={(e) => {
                                 handleCameraChange(e);
