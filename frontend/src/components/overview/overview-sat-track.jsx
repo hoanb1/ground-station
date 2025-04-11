@@ -269,8 +269,6 @@ const GlobalSatelliteTrack = React.memo(function () {
                     satellite['tle2'],
                     now);
 
-                console.info(selectedSatelliteId, noradid);
-
                 if (selectedSatelliteId === noradid) {
 
                     // calculate paths

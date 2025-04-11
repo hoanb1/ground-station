@@ -73,7 +73,6 @@ const SatelliteInfoCard = () => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
-                console.info('response', response);
 
             })
             .catch((error) => {

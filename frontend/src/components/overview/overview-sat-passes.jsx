@@ -29,7 +29,7 @@ const TimeFormatter = React.memo(({ value }) => {
     useEffect(() => {
         const interval = setInterval(() => {
             setForceUpdate(prev => prev + 1);
-        }, 2000); // Every minute
+        }, 1000); // Every minute
         return () => clearInterval(interval);
     }, []);
 
@@ -37,39 +37,8 @@ const TimeFormatter = React.memo(({ value }) => {
 });
 
 
-const NextPassesGroupIsland = React.memo(() => {
+const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }) => {
     const apiRef = useGridApiRef();
-    const {socket} = useSocket();
-    const dispatch = useDispatch();
-    const containerRef = useRef(null);
-    const [containerHeight, setContainerHeight] = useState(0);
-    const { selectedSatGroupId, passes, passesLoading, nextPassesHours, gridEditable } = useSelector(state => state.overviewSatTrack);
-    const minHeight = 200;
-    const maxHeight = 400;
-    const [columnUpdateKey, setColumnUpdateKey] = useState(0);
-
-    useEffect(() => {
-        if (selectedSatGroupId) {
-            dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
-        }
-        return () => {
-
-        };
-    }, [selectedSatGroupId]);
-
-    useEffect(() => {
-        const target = containerRef.current;
-        const observer = new ResizeObserver((entries) => {
-            setContainerHeight(entries[0].contentRect.height);
-        });
-        if (target) {
-            observer.observe(target);
-        }
-        return () => {
-            observer.disconnect();
-        };
-    }, [containerRef]);
-
 
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -114,6 +83,31 @@ const NextPassesGroupIsland = React.memo(() => {
             textDecoration: 'underline',
         }
     }));
+
+    useEffect(() => {
+        const intervalId = setInterval(() => {
+            const rowIds = apiRef.current.getAllRowIds();
+            rowIds.forEach((rowId) => {
+
+                // Access the row model
+                const rowNode = apiRef.current.getRowNode(rowId);
+                if (!rowNode) {
+                    return;
+                }
+
+                // Update only the row model in the grid's internal state
+                apiRef.current.updateRows([{
+                    id: rowId,
+                    _rowClassName: ''
+                }]);
+            });
+        }, 1000);
+
+        return () => {
+            clearInterval(intervalId);
+        };
+    }, []);
+
 
     const columns = [
         {
@@ -211,29 +205,91 @@ const NextPassesGroupIsland = React.memo(() => {
         },
     ];
 
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            const rowIds = apiRef.current.getAllRowIds();
-            rowIds.forEach((rowId) => {
-
-                // Access the row model
-                const rowNode = apiRef.current.getRowNode(rowId);
-                if (!rowNode) {
-                    return;
+    return (
+        <StyledDataGrid
+            apiRef={apiRef}
+            pageSizeOptions={[5, 10, 15, 20]}
+            fullWidth={true}
+            loading={passesLoading}
+            getRowClassName={(param) => {
+                if (param.row) {
+                    if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+                        return "passes-cell-passed";
+                    } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
+                        return "passes-cell-passing";
+                    }
                 }
+            }}
+            onRowClick={onRowClick}
+            sx={{
+                border: 0,
+                marginTop: 0,
+                [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                    outline: 'none',
+                },
+                [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                    {
+                        outline: 'none',
+                    },
+            }}
+            density={"compact"}
+            rows={passes}
+            initialState={{
+                pagination: { paginationModel: { pageSize: 20 } },
+                sorting: {
+                    sortModel: [{ field: 'event_start', sort: 'asc' }],
+                },
+            }}
+            columns={columns}
+            pageSize={10}
+            rowsPerPageOptions={[5, 10, 20]}
+        />
+    );
+},  (prevProps, nextProps) => {
+    // Custom comparison function - return true if props haven't changed in ways that matter
+    return (
+        prevProps.passes === nextProps.passes &&
+        prevProps.passesLoading === nextProps.passesLoading
+    );
+});
 
-                // Update only the row model in the grid's internal state
-                apiRef.current.updateRows([{
-                    id: rowId,
-                    _rowClassName: ''
-                }]);
-            });
-        }, 2000);
 
+const NextPassesGroupIsland = React.memo(() => {
+    const {socket} = useSocket();
+    const dispatch = useDispatch();
+    const containerRef = useRef(null);
+    const [containerHeight, setContainerHeight] = useState(0);
+    const { selectedSatGroupId, passes, passesLoading, nextPassesHours, gridEditable } = useSelector(state => state.overviewSatTrack);
+    const minHeight = 200;
+    const maxHeight = 400;
+    const [columnUpdateKey, setColumnUpdateKey] = useState(0);
+
+    useEffect(() => {
+        if (selectedSatGroupId) {
+            dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
+        }
         return () => {
-            clearInterval(intervalId);
+
         };
-    }, []);
+    }, [selectedSatGroupId]);
+
+    useEffect(() => {
+        const target = containerRef.current;
+        const observer = new ResizeObserver((entries) => {
+            setContainerHeight(entries[0].contentRect.height);
+        });
+        if (target) {
+            observer.observe(target);
+        }
+        return () => {
+            observer.disconnect();
+        };
+    }, [containerRef]);
+
+    const handleOnRowClick = (params) => {
+        const noradId = params.row.id.split("_")[0];
+        dispatch(setSelectedSatelliteId(parseInt(noradId)));
+    }
 
     return (
         <>
@@ -246,47 +302,7 @@ const NextPassesGroupIsland = React.memo(() => {
                     height: containerHeight - 25,
                     minHeight,
                 }}>
-                    <StyledDataGrid
-                        apiRef={apiRef}
-                        pageSizeOptions={[5, 10, 15, 20]}
-                        fullWidth={true}
-                        loading={passesLoading}
-                        getRowClassName={(param) => {
-                            if (param.row) {
-                                if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
-                                    return "passes-cell-passed";
-                                } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
-                                    return "passes-cell-passing";
-                                }
-                            }
-                        }}
-                        onRowClick={(params) => {
-                            const noradId = params.row.id.split("_")[0];
-                            dispatch(setSelectedSatelliteId(parseInt(noradId)));
-                        }}
-                        sx={{
-                            border: 0,
-                            marginTop: 0,
-                            [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                                outline: 'none',
-                            },
-                            [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                                {
-                                    outline: 'none',
-                                },
-                        }}
-                        density={"compact"}
-                        rows={passes}
-                        initialState={{
-                            pagination: { paginationModel: { pageSize: 20 } },
-                            sorting: {
-                                sortModel: [{ field: 'event_start', sort: 'asc' }],
-                            },
-                        }}
-                        columns={columns}
-                        pageSize={10}
-                        rowsPerPageOptions={[5, 10, 20]}
-                    />
+                    <MemoizedStyledDataGrid passes={passes} passesLoading={passesLoading} onRowClick={handleOnRowClick}/>
                 </div>
             </div>
         </>

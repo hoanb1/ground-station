@@ -15,7 +15,7 @@ const TimeFormatter = React.memo(({ value }) => {
     useEffect(() => {
         const interval = setInterval(() => {
             setForceUpdate(prev => prev + 1);
-        }, 2000); // Every minute
+        }, 1000); // Every minute
         return () => clearInterval(interval);
     }, []);
 
@@ -23,34 +23,8 @@ const TimeFormatter = React.memo(({ value }) => {
 });
 
 
-const NextPassesIsland = React.memo(() => {
+const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => {
     const apiRef = useGridApiRef();
-    const {socket} = useSocket();
-    const dispatch = useDispatch();
-    const [containerHeight, setContainerHeight] = useState(0);
-    const containerRef = useRef(null);
-    const { passesLoading, satellitePasses, satelliteData, nextPassesHours, satelliteId } = useSelector(state => state.targetSatTrack);
-    const minHeight = 200;
-    const maxHeight = 400;
-
-    useEffect(() => {
-        if (satelliteId) {
-            dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
-                .unwrap()
-                .then(data => {
-
-                })
-                .catch(error => {
-                    enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                    })
-                });
-        }
-        return () => {
-
-        };
-    }, [satelliteId]);
 
     useEffect(() => {
         const intervalId = setInterval(() => {
@@ -69,26 +43,13 @@ const NextPassesIsland = React.memo(() => {
                     _rowClassName: ''
                 }]);
             });
-        }, 2000);
+        }, 1000);
 
         return () => {
             clearInterval(intervalId);
         };
     }, []);
 
-
-    useEffect(() => {
-        const target = containerRef.current;
-        const observer = new ResizeObserver((entries) => {
-            setContainerHeight(entries[0].contentRect.height);
-        });
-        if (target) {
-            observer.observe(target);
-        }
-        return () => {
-            observer.disconnect();
-        };
-    }, [containerRef]);
 
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -220,6 +181,95 @@ const NextPassesIsland = React.memo(() => {
     ];
 
     return (
+        <StyledDataGrid
+            apiRef={apiRef}
+            fullWidth={true}
+            loading={passesLoading}
+            sx={{
+                border: 0,
+                marginTop: 0,
+                [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                    outline: 'none',
+                },
+                [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                    {
+                        outline: 'none',
+                    },
+            }}
+            getRowClassName={(param) => {
+                if (param.row) {
+                    if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+                        return "passes-cell-passed";
+                    } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
+                        return "passes-cell-passing";
+                    }
+                }
+            }}
+            density={"compact"}
+            rows={satellitePasses}
+            pageSizeOptions={[5, 10, 15, 20]}
+            initialState={{
+                pagination: { paginationModel: { pageSize: 15 } },
+                sorting: {
+                    sortModel: [{ field: 'event_start', sort: 'asc' }],
+                },
+            }}
+            columns={columns}
+            pageSize={10}
+            rowsPerPageOptions={[5, 10, 15, 20]}
+            disableSelectionOnClick
+        />
+    );
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.satellitePasses === nextProps.satellitePasses &&
+        prevProps.passesLoading === nextProps.passesLoading
+    );
+});
+
+
+const NextPassesIsland = React.memo(() => {
+    const {socket} = useSocket();
+    const dispatch = useDispatch();
+    const [containerHeight, setContainerHeight] = useState(0);
+    const containerRef = useRef(null);
+    const { passesLoading, satellitePasses, satelliteData, nextPassesHours, satelliteId } = useSelector(state => state.targetSatTrack);
+    const minHeight = 200;
+    const maxHeight = 400;
+
+    useEffect(() => {
+        if (satelliteId) {
+            dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
+                .unwrap()
+                .then(data => {
+
+                })
+                .catch(error => {
+                    enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
+                        variant: 'error',
+                        autoHideDuration: 5000,
+                    })
+                });
+        }
+        return () => {
+
+        };
+    }, [satelliteId]);
+
+    useEffect(() => {
+        const target = containerRef.current;
+        const observer = new ResizeObserver((entries) => {
+            setContainerHeight(entries[0].contentRect.height);
+        });
+        if (target) {
+            observer.observe(target);
+        }
+        return () => {
+            observer.disconnect();
+        };
+    }, [containerRef]);
+
+    return (
         <>
             <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {satelliteData['details']['name']} in the next {nextPassesHours} hours</TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
@@ -230,44 +280,7 @@ const NextPassesIsland = React.memo(() => {
                     height: containerHeight - 25,
                     minHeight,
                 }}>
-                    <StyledDataGrid
-                        apiRef={apiRef}
-                        fullWidth={true}
-                        loading={passesLoading}
-                        sx={{
-                            border: 0,
-                            marginTop: 0,
-                            [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                                outline: 'none',
-                            },
-                            [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                                {
-                                    outline: 'none',
-                                },
-                        }}
-                        getRowClassName={(param) => {
-                            if (param.row) {
-                                if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
-                                    return "passes-cell-passed";
-                                } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
-                                    return "passes-cell-passing";
-                                }
-                            }
-                        }}
-                        density={"compact"}
-                        rows={satellitePasses}
-                        pageSizeOptions={[5, 10, 15, 20]}
-                        initialState={{
-                            pagination: { paginationModel: { pageSize: 15 } },
-                            sorting: {
-                                sortModel: [{ field: 'event_start', sort: 'asc' }],
-                            },
-                        }}
-                        columns={columns}
-                        pageSize={10}
-                        rowsPerPageOptions={[5, 10, 15, 20]}
-                        disableSelectionOnClick
-                    />
+                    <MemoizedStyledDataGrid satellitePasses={satellitePasses} passesLoading={passesLoading}/>
                 </div>
             </div>
         </>
