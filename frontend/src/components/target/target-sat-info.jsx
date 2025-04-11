@@ -1,7 +1,7 @@
 import {useSelector} from "react-redux";
 import {
     betterDateTimes,
-    betterStatusValue, getClassNamesBasedOnGridEditing, humanizeDate,
+    betterStatusValue, getClassNamesBasedOnGridEditing, humanizeAltitude, humanizeDate,
     renderCountryFlagsCSV,
     ThemedStackIsland,
     TitleBar
@@ -90,7 +90,7 @@ const SatelliteInfoIsland = () => {
                                 <Box>
                                     <Typography variant="caption" color="text.secondary">Altitude</Typography>
                                     <Typography variant="body1" sx={{fontFamily: 'monospace', fontWeight: 'medium'}}>
-                                        {satelliteData['position']['alt'] ? (satelliteData['position']['alt'] / 1000).toFixed(2) : "n/a"} km
+                                        {satelliteData['position']['alt'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : "n/a"} km
                                     </Typography>
                                 </Box>
 

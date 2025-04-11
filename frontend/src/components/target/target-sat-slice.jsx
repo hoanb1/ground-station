@@ -156,6 +156,11 @@ const targetSatTrackSlice = createSlice({
                 az: 0,
                 el: 0,
             },
+            paths: {
+                'past': [],
+                'future': []
+            },
+            coverage: [],
             details: {
                 name: '',
                 norad_id: '',
@@ -294,6 +299,8 @@ const targetSatTrackSlice = createSlice({
                 state.satelliteData = {
                     details: action.payload['satellite_data']['details'],
                     position: action.payload['satellite_data']['position'],
+                    paths: action.payload['satellite_data']['paths'],
+                    coverage: action.payload['satellite_data']['coverage'],
                     transmitters: action.payload['satellite_data']['transmitters'],
                 };
             }

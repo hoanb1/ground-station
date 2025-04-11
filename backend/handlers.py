@@ -68,11 +68,9 @@ async def data_request_routing(sio, cmd, data, logger):
                 satellite_data['tle2']
             ])
 
-            reply = {'success': (satellite['success'] & transmitters['success']), 'data': {
-                'details': satellite_data,
-                'position': position,
-                'transmitters': transmitters
-            }}
+            satellite_data = await compiled_satellite_data(dbsession, satellite_data['norad_id'])
+
+            reply = {'success': (satellite['success'] & transmitters['success']), 'data': satellite_data}
 
         elif cmd == "get-satellites-for-group-id":
             logger.debug(f'Getting satellites for group id, data: {data}')
@@ -419,7 +417,7 @@ async def emit_tracker_data(dbsession, sio, logger):
         tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
         group_id = tracking_state_reply['data']['value'].get('group_id', None)
         norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
-        satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
+        satellite_data = await compiled_satellite_data(dbsession, norad_id)
         ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
         data = {
             'satellite_data': satellite_data,
@@ -431,8 +429,6 @@ async def emit_tracker_data(dbsession, sio, logger):
     except Exception as e:
         logger.error(f'Error emitting tracker data: {e}')
         logger.exception(e)
-
-
 
 
 async def auth_request_routing(sio, cmd, data, logger):

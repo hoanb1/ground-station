@@ -25,7 +25,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
-    getClassNamesBasedOnGridEditing,
+    getClassNamesBasedOnGridEditing, humanizeAltitude, humanizeVelocity,
     InternationalDateLinePolyline, MapArrowControls,
     MapStatusBar,
     MapTitleBar, renderCountryFlagsCSV,
@@ -402,83 +402,81 @@ const TargetSatelliteTrack = React.memo(function () {
     const satelliteUpdate = function (now) {
         if (Object.keys(satelliteData['details']['name']).length !== 0) {
 
+            const satelliteName = satelliteData['details']['name'];
+            const satelliteId = satelliteData['details']['norad_id'];
+            const latitude = satelliteData['position']['lat'];
+            const longitude = satelliteData['position']['lon'];
+            const altitude = satelliteData['position']['alt'];
+            const velocity = satelliteData['position']['vel'];
+            const paths = satelliteData['paths'];
+            const coverage = satelliteData['coverage'];
+
             // generate current positions for the group of satellites
             let currentPos = [];
             let currentCoverage = [];
             let currentFuturePaths = [];
             let currentPastPaths = [];
 
-            let now = new Date();
-            now.setMinutes(now.getMinutes() + sliderTimeOffset);
-            let [latitude, longitude, altitude, velocity] = getSatelliteLatLon(
-                satelliteData['details']['norad_id'],
-                satelliteData['details']['tle1'],
-                satelliteData['details']['tle2'],
-                now
-            );
-
             // focus map on satellite, center on latitude only
             //let mapCoords = MapObject.getCenter();
             //MapObject.setView([latitude, longitude], MapObject.getZoom());
 
-            // calculate paths
-            let paths = getSatellitePaths([
-                satelliteData['details']['tle1'],
-                satelliteData['details']['tle2']
-            ], orbitProjectionDuration);
+            if (paths) {
+                // past path
+                currentPastPaths.push(<Polyline
+                    key={`past-path-${noradId}`}
+                    positions={paths['past']}
+                    pathOptions={{
+                        color: pastOrbitLineColor,
+                        weight: 2,
+                        opacity: 1,
+                        smoothFactor: 1,
+                    }}
+                />)
 
-            // past path
-            currentPastPaths.push(<Polyline
-                key={`past-path-${noradId}`}
-                positions={paths.past}
-                pathOptions={{
-                    color: pastOrbitLineColor,
-                    weight: 1,
-                    opacity: 1,
-                    smoothFactor: 1,
-                }}
-            />)
-
-            // future path
-            currentFuturePaths.push(<Polyline
-                key={`future-path-${noradId}`}
-                positions={paths.future}
-                pathOptions={{
-                    color: futureOrbitLineColor,
-                    weight: 1,
-                    opacity: 0.8,
-                    dashArray: "3 3",
-                    smoothFactor: 1,
-                }}
-            />)
+                // future path
+                currentFuturePaths.push(<Polyline
+                    key={`future-path-${noradId}`}
+                    positions={paths['future']}
+                    pathOptions={{
+                        color: futureOrbitLineColor,
+                        weight: 2,
+                        opacity: 0.8,
+                        dashArray: "3 3",
+                        smoothFactor: 1,
+                    }}
+                />)
+            }
 
             if (showTooltip) {
-                currentPos.push(<Marker key={"marker-"+satelliteData['details']['norad_id']} position={[latitude, longitude]}
+                currentPos.push(<Marker key={"marker-"+satelliteId} position={[latitude, longitude]}
                                         icon={satelliteIcon2}>
                     <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={1} permanent>
-                        {satelliteData['details']['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(0) + " km/s"}
+                        {satelliteName} - {humanizeAltitude(altitude) + " km, " + humanizeVelocity(velocity) + " km/s"}
                     </ThemedLeafletTooltip>
                 </Marker>);
             } else {
-                currentPos.push(<Marker key={"marker-"+satelliteData['details']['norad_id']} position={[latitude, longitude]}
+                currentPos.push(<Marker key={"marker-"+satelliteId} position={[latitude, longitude]}
                                         icon={satelliteIcon2}>
                 </Marker>);
             }
 
-            let coverage = [];
-            coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
-            currentCoverage.push(<Polyline
-                ref={coverageRef}
-                noClip={true}
-                key={"coverage-"+satelliteData['details']['name']}
-                pathOptions={{
-                    color: satelliteCoverageColor,
-                    weight: 1,
-                    fill: true,
-                    fillOpacity: 0.2,
-                }}
-                positions={coverage}
-            />);
+            if (coverage) {
+                //let coverage = [];
+                //coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
+                currentCoverage.push(<Polyline
+                    ref={coverageRef}
+                    noClip={true}
+                    key={"coverage-"+satelliteData['details']['name']}
+                    pathOptions={{
+                        color: satelliteCoverageColor,
+                        weight: 1,
+                        fill: true,
+                        fillOpacity: 0.2,
+                    }}
+                    positions={coverage}
+                />);
+            }
 
             setCurrentPastSatellitesPaths(currentPastPaths);
             setCurrentFutureSatellitesPaths(currentFuturePaths);
@@ -663,7 +661,6 @@ const TargetSatelliteTrack = React.memo(function () {
                        rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}/>
                 </MapStatusBar>
                 <MapArrowControls mapObject={MapObject}/>
-                <MapSlider handleSliderChange={handleSliderChange}/>
                 {showGrid && (
                     <CoordinateGrid
                         latInterval={15}
@@ -672,7 +669,7 @@ const TargetSatelliteTrack = React.memo(function () {
                         lngColor="#FFFFFF"
                         weight={1}
                         opacity={0.5}
-                        showLabels={false}
+                        showLabels={true}
                     />
                 )}
             </MapContainer>

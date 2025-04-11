@@ -1,17 +1,13 @@
 import json
-import numpy as np
 import pprint
 import crud
 import asyncio
 import math
 import socketio
 import numpy as np
-from sqlalchemy.sql.functions import current_time
 from io import StringIO
-from skyfield.api import load, EarthSatellite, Topos
 from datetime import datetime, UTC
-from typing import Tuple
-from skyfield.api import load, wgs84
+import math
 from common import timeit, async_timeit, is_geostationary
 from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
@@ -21,8 +17,11 @@ from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevatio
 from rotator import RotatorController
 from rig import RigController
 from arguments import arguments as args
-from typing import Callable, Any, List, Union, Coroutine, Optional
 from statetracker import StateTracker
+from skyfield.api import load, wgs84, EarthSatellite
+from datetime import datetime, timedelta
+from typing import List, Dict, Union, Tuple, Optional
+from footprint import get_satellite_coverage_circle
 
 
 def pretty_dict(d):
@@ -420,13 +419,153 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         return reply
 
 
-async def compiled_satellite_data(dbsession, tracking_state) -> dict:
+def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: float = 1.0) -> Dict[
+    str, List[List[Dict[str, float]]]]:
+    """
+    Computes the satellite's past and future path coordinates from its TLE.
+    The path is computed at a fixed time step and then split into segments so that
+    no segment contains a line crossing the dateline (+180 or -180 longitude).
+
+    Args:
+        tle: A list containing two TLE lines [line1, line2]
+        duration_minutes: The projection duration (in minutes) for both past and future
+        step_minutes: The time interval in minutes between coordinate samples
+
+    Returns:
+        An object with two properties:
+        {
+            'past': [[{lat, lon}], ...],
+            'future': [[{lat, lon}], ...]
+        }
+        Each segment is a list of coordinate points that don't cross the dateline
+    """
+
+    try:
+        # Load time scale
+        ts = load.timescale()
+
+        # Create satellite object from TLE
+        if len(tle) != 2:
+            raise ValueError("TLE must contain exactly two lines")
+
+        satellite = EarthSatellite(tle[0], tle[1], 'Satellite', ts)
+
+        # Get current time
+        now = datetime.now(UTC)
+        now_time = ts.utc(now.year, now.month, now.day,
+                          now.hour, now.minute, now.second + now.microsecond / 1e6)
+
+        past_points = []
+        future_points = []
+        step_td = timedelta(minutes=step_minutes)
+
+        # Compute past points: from (now - durationMinutes) up to now (inclusive)
+        past_start = now - timedelta(minutes=duration_minutes)
+        current = past_start
+
+        while current <= now:
+            time = ts.utc(current.year, current.month, current.day,
+                          current.hour, current.minute, current.second + current.microsecond / 1e6)
+
+            geocentric = satellite.at(time)
+            subpoint = wgs84.subpoint(geocentric)
+
+            lat = float(subpoint.latitude.degrees)
+            lon = normalize_longitude(float(subpoint.longitude.degrees))
+
+            past_points.append({'lat': lat, 'lon': lon})
+            current += step_td
+
+        # Compute future points: from now up to (now + durationMinutes) (inclusive)
+        future_end = now + timedelta(minutes=duration_minutes)
+        current = now
+
+        while current <= future_end:
+            time = ts.utc(current.year, current.month, current.day,
+                          current.hour, current.minute, current.second + current.microsecond / 1e6)
+
+            geocentric = satellite.at(time)
+            subpoint = wgs84.subpoint(geocentric)
+
+            lat = float(subpoint.latitude.degrees)
+            lon = normalize_longitude(float(subpoint.longitude.degrees))
+
+            future_points.append({'lat': lat, 'lon': lon})
+            current += step_td
+
+        # Split the past and future arrays into segments to avoid drawing lines across the dateline
+        past_segments = split_at_dateline(past_points)
+        future_segments = split_at_dateline(future_points)
+
+        return {'past': past_segments, 'future': future_segments}
+
+    except Exception as e:
+        print(f"Error computing satellite paths: {str(e)}")
+        return {'past': [], 'future': []}
+
+
+def normalize_longitude(lon: float) -> float:
+    """
+    Normalize longitude to be in the range [-180, 180].
+
+    Args:
+        lon: The longitude value to normalize
+
+    Returns:
+        The normalized longitude value
+    """
+    while lon > 180:
+        lon -= 360
+    while lon < -180:
+        lon += 360
+    return lon
+
+
+def split_at_dateline(points: List[Dict[str, float]]) -> List[List[Dict[str, float]]]:
+    """
+    Splits a list of coordinate points into segments so that no segment
+    crosses the international date line (longitude ±180°).
+
+    Args:
+        points: A list of coordinate dictionaries with 'lat' and 'lon' keys
+
+    Returns:
+        A list of segments, where each segment is a list of coordinate points
+    """
+    if not points:
+        return []
+
+    segments = []
+    current_segment = [points[0]]
+
+    for i in range(1, len(points)):
+        prev_point = points[i - 1]
+        current_point = points[i]
+
+        # Check if we cross the dateline (large longitude change)
+        if abs(current_point['lon'] - prev_point['lon']) > 180:
+            # End the current segment
+            segments.append(current_segment)
+            # Start a new segment
+            current_segment = [current_point]
+        else:
+            # Add point to the current segment
+            current_segment.append(current_point)
+
+    # Add the last segment if it's not empty
+    if current_segment:
+        segments.append(current_segment)
+
+    return segments
+
+
+async def compiled_satellite_data(dbsession, norad_id) -> dict:
     """
     Compiles detailed information about a satellite, including its orbital details,
     transmitters, and sky position based on tracking data and user's location.
 
     :param dbsession: Database session object used to interact with the database
-    :param tracking_state: Tracking state dictionary containing satellite tracking data
+    :param norad_id: Tracking state dictionary containing satellite tracking data
     :return: Dictionary containing satellite details, transmitters, and position
     :rtype: dict
     :raises Exception: If satellite tracking data is unavailable or incomplete
@@ -438,13 +577,13 @@ async def compiled_satellite_data(dbsession, tracking_state) -> dict:
     satellite_data = {
         'details': {},
         'position': {},
+        'paths': {
+            'past': [],
+            'future': []
+        },
+        'coverage': [],
         'transmitters': [],
     }
-
-    if tracking_state.get('success', False) is False:
-        raise Exception(f"No satellite tracking information found in the db for name satellite-tracking")
-
-    norad_id = tracking_state['data']['value'].get('norad_id', None)
 
     satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
 
@@ -481,6 +620,21 @@ async def compiled_satellite_data(dbsession, tracking_state) -> dict:
     home_lon = location['data']['lon']
     sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
                                     satellite['data'][0]['tle2'], datetime.now(UTC))
+
+    # calculate paths
+    paths = get_satellite_path([
+        satellite_data['details']['tle1'],
+        satellite_data['details']['tle2']
+    ], duration_minutes=240, step_minutes=1)
+
+    satellite_data['paths'] = paths
+
+    satellite_data['coverage'] = get_satellite_coverage_circle(
+        position['lat'],
+        position['lon'],
+        position['alt'] / 1000,
+        num_points=300
+    )
 
     satellite_data['position'] = position
     position['az'] = sky_point[0]
@@ -700,7 +854,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
-                satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply)
+                satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply['data']['value']['norad_id'])
                 satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
                 satellite_name = satellite_data['details']['name']
                 location_reply = await crud.fetch_location_for_userid(dbsession, user_id=None)
