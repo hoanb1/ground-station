@@ -14,6 +14,7 @@ import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
+import CameraIcon from '@mui/icons-material/CameraAlt';
 import { closeSnackbar, enqueueSnackbar, SnackbarProvider } from 'notistack';
 import PeopleIcon from '@mui/icons-material/People';
 import { useSocket } from "./components/common/socket.jsx";
@@ -30,6 +31,7 @@ import { fetchTLESources } from './components/satellites/sources-slice.jsx'
 import { fetchSatelliteGroups } from './components/satellites/groups-slice.jsx';
 import { fetchUsers } from './components/settings/users-slice.jsx';
 import { getTrackingStateFromBackend } from './components/target/target-sat-slice.jsx';
+import { fetchCameras } from './components/hardware/camera-slice.jsx'
 
 
 const BRANDING = {
@@ -49,6 +51,7 @@ function uponConnectionToBackEnd(socket) {
     store.dispatch(fetchLocationForUserId({socket}));
     store.dispatch(fetchRigs({socket}));
     store.dispatch(fetchRotators({socket}));
+    store.dispatch(fetchCameras({socket}));
     store.dispatch(fetchTLESources({socket}));
     store.dispatch(fetchSatelliteGroups({socket}));
     store.dispatch(fetchUsers({socket}));
@@ -105,6 +108,11 @@ export default function App(props) {
             segment: 'hardware/rotator',
             title: 'Antenna rotators',
             icon: <SatelliteIcon/>,
+        },
+        {
+            segment: 'hardware/cameras',
+            title: 'Cameras',
+            icon: <CameraIcon/>,
         },
         {kind: 'divider'},
         {

@@ -131,6 +131,11 @@ async def data_request_routing(sio, cmd, data, logger):
             rotators = await crud.fetch_rotators(dbsession)
             reply = {'success': rotators['success'], 'data': rotators.get('data', [])}
 
+        elif cmd == "get-cameras":
+            logger.debug(f'Getting cameras, data: {data}')
+            cameras = await crud.fetch_cameras(dbsession)
+            reply = {'success': cameras['success'], 'data': cameras.get('data', [])}
+
         elif cmd == "get-location-for-user-id":
             logger.debug(f'Getting location for user id, data: {data}')
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data)
@@ -316,6 +321,32 @@ async def data_submission_routing(sio, cmd, data, logger):
             rotators = await crud.fetch_rotators(dbsession)
             reply = {'success': (rotators['success'] & delete_reply['success']),
                      'data': rotators.get('data', [])}
+
+        elif cmd == "submit-camera":
+            logger.debug(f'Adding camera, data: {data}')
+            add_reply = await crud.add_camera(dbsession, data)
+
+            cameras = await crud.fetch_cameras(dbsession)
+            reply = {'success': (cameras['success'] & add_reply['success']),
+                     'data': cameras.get('data', [])}
+
+        elif cmd == "edit-camera":
+            logger.debug(f'Editing camera, data: {data}')
+            edit_reply = await crud.edit_camera(dbsession, data)
+            logger.debug(f'Edit camera reply: {edit_reply}')
+
+            cameras = await crud.fetch_cameras(dbsession)
+            logger.debug(f'Cameras: {cameras}')
+            reply = {'success': (cameras['success'] & edit_reply['success']),
+                     'data': cameras.get('data', [])}
+
+        elif cmd == "delete-camera":
+            logger.debug(f'Delete camera, data: {data}')
+            delete_reply = await crud.delete_cameras(dbsession, data)
+
+            cameras = await crud.fetch_cameras(dbsession)
+            reply = {'success': (cameras['success'] & delete_reply['success']),
+                         'data': cameras.get('data', [])}
 
         elif cmd == "submit-location":
             logger.debug(f'Adding location, data: {data}')

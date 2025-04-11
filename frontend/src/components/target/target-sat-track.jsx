@@ -66,6 +66,7 @@ import {SimpleTruncatedHtml} from '../common/common.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
 import RotatorControl from "./rotator-control.jsx";
 import RigControl from "./rig-control.jsx";
+import CameraView from "../common/camera-view.jsx";
 
 
 // global leaflet map object
@@ -686,7 +687,7 @@ const TargetSatelliteTrack = React.memo(function () {
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="video">
-            <VideoWebRTCPlayer webRTCSrc={"http://192.168.60.47:1984/stream.html?src=roofcamera2_sub"}/>
+            <CameraView/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rotator-control">
             <RotatorControl/>

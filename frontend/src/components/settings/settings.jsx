@@ -25,6 +25,7 @@ import UsersTable from "./users-table.jsx";
 import LocationPage from "./location-form.jsx";
 import PreferencesForm from "./preferences-form.jsx";
 import MaintenanceForm from "./maintenance-form.jsx";
+import CameraTable from "../hardware/camera-table.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -53,6 +54,10 @@ export function SettingsTabRig() {
 
 export function SettingsTabRotator() {
     return (<SettingsTabs initialMainTab={"hardware"} initialTab={"rotatorcontrol"}/>);
+}
+
+export function SettingsTabCamera() {
+    return (<SettingsTabs initialMainTab={"hardware"} initialTab={"camera"}/>);
 }
 
 export function SettingsTabMaintenance () {
@@ -132,6 +137,7 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             tabsList = [
                 <AntTab key="rigcontrol" value="rigcontrol" label="Rig control" to="/hardware/rig" component={Link} />,
                 <AntTab key="rotatorcontrol" value="rotatorcontrol" label="Rotator control" to="/hardware/rotator" component={Link} />,
+                <AntTab key="camera" value="camera" label="Cameras" to="/hardware/cameras" component={Link} />,
             ];
             break;
         case "satellites":
@@ -184,6 +190,9 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             break;
         case "rotatorcontrol":
             activeTabContent = <RotatorControlForm/>;
+            break;
+        case "camera":
+            activeTabContent = <CameraForm/>;
             break;
         case "tlesources":
             activeTabContent = <TLESourcesForm/>;
@@ -252,6 +261,22 @@ const RotatorControlForm = () => {
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <AntennaRotatorTable/>
+            </Box>
+        </Paper>
+    );
+};
+
+
+const CameraForm = () => {
+
+    return (
+        <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
+            <Alert severity="info">
+                <AlertTitle>Camera control setup</AlertTitle>
+                Configure and manage your camera control setup here
+            </Alert>
+            <Box component="form" sx={{mt: 2}}>
+                <CameraTable/>
             </Box>
         </Paper>
     );

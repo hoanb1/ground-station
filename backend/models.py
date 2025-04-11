@@ -9,6 +9,7 @@ from sqlalchemy.orm import DeclarativeMeta
 from datetime import date, datetime
 from sqlalchemy.inspection import inspect
 from sqlalchemy import Column, String, Boolean, Integer, DateTime, ForeignKey, JSON, Enum
+from enum import Enum as PyEnum
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
 from enum import Enum as PyEnum
@@ -250,7 +251,6 @@ class SatelliteGroups(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-
 class SatelliteTrackingState(Base):
     __tablename__ = "satellite_tracking_state"
 
@@ -260,3 +260,17 @@ class SatelliteTrackingState(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
+class CameraType(str, PyEnum):
+    WEBRTC = "webrtc"
+    HLS = "hls"
+    MJPEG = "mjpeg"
+
+class Cameras(Base):
+    __tablename__ = 'cameras'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    name = Column(String, nullable=False)
+    url = Column(String, nullable=True)
+    type = Column(Enum(CameraType), nullable=False)
+    status = Column(Enum('active', 'inactive'), nullable=False, default='active')
+    added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))

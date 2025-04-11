@@ -1,7 +1,7 @@
 import {useSelector} from "react-redux";
 import {
     betterDateTimes,
-    betterStatusValue, getClassNamesBasedOnGridEditing,
+    betterStatusValue, getClassNamesBasedOnGridEditing, humanizeDate,
     renderCountryFlagsCSV,
     ThemedStackIsland,
     TitleBar
@@ -145,18 +145,17 @@ const SatelliteInfoIsland = () => {
                             <Stack spacing={1.5}>
                                 <Box minWidth={90}>
                                     <Typography variant="caption" color="text.secondary">Launch Date</Typography>
-                                    <Typography variant="body2">
-                                        {satelliteData['details']['launched'] ? betterDateTimes(satelliteData['details']['launched']) :
-                                            <Typography variant="body2">n/a</Typography>}
+                                    <Typography variant="caption" sx={{display: 'flex', alignItems: 'center'}}>
+                                        {satelliteData['details']['launched'] ? humanizeDate(satelliteData['details']['launched']) : "n/a"}
                                     </Typography>
                                 </Box>
 
                                 <Box>
                                     <Typography variant="caption" color="text.secondary">Countries</Typography>
-                                    <div>
+                                    <Box minWidth={90}>
                                         {satelliteData['details']['countries'] ? renderCountryFlagsCSV(satelliteData['details']['countries']) :
                                             <Typography variant="body2">n/a</Typography>}
-                                    </div>
+                                    </Box>
                                 </Box>
                             </Stack>
                         </Grid>

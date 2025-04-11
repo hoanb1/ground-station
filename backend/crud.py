@@ -8,7 +8,7 @@ from sqlalchemy import select, insert, update, delete, String
 from utils import *
 from datetime import datetime, UTC
 from models import Users
-from models import Locations, SatelliteTrackingState
+from models import Locations, SatelliteTrackingState, Cameras
 from models import Preferences
 from models import Rotators
 from models import Rigs
@@ -1562,6 +1562,135 @@ async def get_satellite_tracking_state(session: AsyncSession, name: str) -> dict
 
     finally:
         return reply
+
+
+async def fetch_cameras(session: AsyncSession, camera_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
+    """
+    Fetch a single camera by its UUID or all cameras if UUID is not provided.
+    """
+    try:
+        if camera_id is not None:
+            if isinstance(camera_id, str):
+                camera_id = uuid.UUID(camera_id)
+
+            stmt = select(Cameras).filter(Cameras.id == camera_id)
+            result = await session.execute(stmt)
+            cameras = result.scalar_one_or_none()
+        else:
+            stmt = select(Cameras)
+            result = await session.execute(stmt)
+            cameras = result.scalars().all()
+
+        cameras = serialize_object(cameras)
+        return {"success": True, "data": cameras, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching cameras: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def add_camera(session: AsyncSession, data: dict) -> dict:
+    """
+    Create and add a new camera record.
+    """
+    try:
+        new_id = uuid.uuid4()
+        now = datetime.now(UTC)
+        stmt = (
+            insert(Cameras)
+            .values(
+                id=new_id,
+                name=data["name"],
+                url=data.get("url", ""),
+                type=data.get("type", "webrtc"),
+                added=now,
+                updated=now
+            )
+            .returning(Cameras)
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        new_camera = result.scalar_one()
+        new_camera = serialize_object(new_camera)
+        return {"success": True, "data": new_camera, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error adding camera: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def edit_camera(session: AsyncSession, data: dict) -> dict:
+    """
+    Edit an existing camera record by updating provided fields.
+    """
+    try:
+        # Extract camera_id from data
+        camera_id = data.pop('id', None)
+        camera_id = uuid.UUID(camera_id)
+
+        if not camera_id:
+            raise Exception("id is required.")
+
+        del data["updated"]
+        del data["added"]
+
+        # Confirm the camera exists
+        stmt = select(Cameras).filter(Cameras.id == camera_id)
+        result = await session.execute(stmt)
+        camera = result.scalar_one_or_none()
+        if not camera:
+            return {"success": False, "error": f"Camera with id {camera_id} not found."}
+
+        # Add updated timestamp
+        data["updated"] = datetime.now(UTC)
+
+        upd_stmt = (
+            update(Cameras)
+            .where(Cameras.id == camera_id)
+            .values(**data)
+            .returning(Cameras)
+        )
+        upd_result = await session.execute(upd_stmt)
+        await session.commit()
+        updated_camera = upd_result.scalar_one_or_none()
+        updated_camera = serialize_object(updated_camera)
+        return {"success": True, "data": updated_camera, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error editing camera: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def delete_cameras(session: AsyncSession, camera_ids: list[Union[str, uuid.UUID]] | dict) -> dict:
+    """
+    Delete multiple camera records by their UUIDs or string representations of UUIDs.
+    """
+    try:
+        camera_ids = [uuid.UUID(camera_id) if isinstance(camera_id, str) else camera_id for camera_id in
+                      camera_ids]
+
+        stmt = (
+            delete(Cameras)
+            .where(Cameras.id.in_(camera_ids))
+            .returning(Cameras)
+        )
+        result = await session.execute(stmt)
+        deleted = result.scalars().all()
+        if not deleted:
+            return {"success": False, "error": "No cameras with the provided IDs were found."}
+        await session.commit()
+        return {"success": True, "data": None, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error deleting cameras: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
 
 
 

@@ -211,7 +211,7 @@ const targetSatTrackSlice = createSlice({
         openMapSettingsDialog: false,
         nextPassesHours: 12.0,
         cachedPasses: {},
-        selectedTransmitter: "",
+        selectedTransmitter: "none",
         availableTransmitters: [],
         rotatorData: {
             'az': 0,

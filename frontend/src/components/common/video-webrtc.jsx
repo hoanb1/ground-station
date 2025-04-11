@@ -6,7 +6,7 @@ import { v4 as uuidv4 } from 'uuid';
 import ReplayIcon from '@mui/icons-material/Replay';
 import {useSelector} from 'react-redux';
 
-const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
+const VideoWebRTCPlayer = ({ src, config = {} }) => {
     const videoRef = useRef(null);
     const videoContainerRef = useRef(null);
     const peerConnectionRef = useRef(null);
@@ -19,9 +19,11 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
     
     const RELAY_SERVER = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
-    
+
+    console.info("webRTCSrc", src);
+
     useEffect(() => {
-        if (!videoRef.current || !webRTCSrc) return;
+        if (!videoRef.current || !src) return;
 
         // Clean up previous connection on component unmount
         return () => {
@@ -138,7 +140,7 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
                     'Content-Type': 'application/json',
                 },
                 body: JSON.stringify({
-                    source_url: webRTCSrc,
+                    source_url: src,
                     camera_id: selectedCamera || undefined,
                     type: peerConnection.localDescription.type,
                     sdp: peerConnection.localDescription.sdp
@@ -171,81 +173,63 @@ const VideoWebRTCPlayer = ({ webRTCSrc, config = {} }) => {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>WebRTC Video</TitleBar>
-            <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl size="small" fullWidth={true}>
-                        <InputLabel id="dropdown-label">select camera</InputLabel>
-                        <Select
-                            labelId="dropdown-label"
-                            value={""}
-                            onChange={(e) => {
-
-                            }}
-                            label="select camera"
-                            variant={'filled'}>
-                            <MenuItem value="option1">Option 1</MenuItem>
-                            <MenuItem value="option2">Option 2</MenuItem>
-                            <MenuItem value="option3">Option 3</MenuItem>
-                        </Select>
-                    </FormControl>
+            <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}
+                  container
+                  direction="column"
+                  ref={videoContainerRef}
+                  sx={{
+                      position: 'relative',
+                      width: '100%',
+                      '&:hover .video-controls': {
+                          opacity: 1,
+                      },
+                  }}
+                  onMouseEnter={() => {
+                  }}
+                  onMouseLeave={() => {
+                  }}
+            >
+                {isLoading && (
+                    <Grid sx={{
+                        position: 'absolute',
+                        top: '50%',
+                        left: '50%',
+                        transform: 'translate(-50%, -50%)',
+                        zIndex: 10
+                    }}>
+                        <CircularProgress/>
                     </Grid>
-                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}
-                    container
-                    direction="column"
-                    ref={videoContainerRef}
-                    sx={{
-                        position: 'relative',
-                        width: '100%',
-                            '&:hover .video-controls': {
-                            opacity: 1,
-                        },
-                    }}
-                    onMouseEnter={() => {}}
-                    onMouseLeave={() => {}}
-                >
-                    {isLoading && (
-                        <Grid sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                zIndex: 10
-                            }}>
-                            <CircularProgress />
-                        </Grid>
-                    )}
+                )}
 
-                    {error && (
-                        <Grid
-                            item
-                            sx={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                color: 'error.main',
-                                textAlign: 'center',
-                                zIndex: 10
-                            }}
+                {error && (
+                    <Grid
+                        item
+                        sx={{
+                            position: 'absolute',
+                            top: '50%',
+                            left: '50%',
+                            transform: 'translate(-50%, -50%)',
+                            color: 'error.main',
+                            textAlign: 'center',
+                            zIndex: 10
+                        }}
+                    >
+                        <Typography variant="body1" color="error">
+                            {error}
+                        </Typography>
+                        <Button
+                            startIcon={<ReplayIcon/>}
+                            variant="contained"
+                            color="primary"
+                            onClick={handleReconnect}
+                            sx={{mt: 2}}
                         >
-                            <Typography variant="body1" color="error">
-                                {error}
-                            </Typography>
-                            <Button
-                                startIcon={<ReplayIcon />}
-                                variant="contained"
-                                color="primary"
-                                onClick={handleReconnect}
-                                sx={{ mt: 2 }}
-                            >
-                                Reconnect
-                            </Button>
-                        </Grid>
-                    )}
-                    <Grid>
-                        <video ref={videoRef} autoPlay playsInline style={{ width: '100%', display: 'block' }} />
+                            Reconnect
+                        </Button>
                     </Grid>
+                )}
+                <Grid>
+                    <video ref={videoRef} autoPlay playsInline style={{width: '100%', display: 'block'}}/>
                 </Grid>
             </Grid>
         </>
