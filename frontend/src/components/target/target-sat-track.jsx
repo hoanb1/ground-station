@@ -669,7 +669,7 @@ const TargetSatelliteTrack = React.memo(function () {
                         lngColor="#FFFFFF"
                         weight={1}
                         opacity={0.5}
-                        showLabels={true}
+                        showLabels={false}
                     />
                 )}
             </MapContainer>

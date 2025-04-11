@@ -625,7 +625,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     paths = get_satellite_path([
         satellite_data['details']['tle1'],
         satellite_data['details']['tle2']
-    ], duration_minutes=240, step_minutes=1)
+    ], duration_minutes=240, step_minutes=0.5)
 
     satellite_data['paths'] = paths
 

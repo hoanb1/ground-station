@@ -15,6 +15,7 @@ import {
     setShowSunIcon, setShowTerminatorLine, setShowTooltip, setTileLayerID,
     setOpenMapSettingsDialog, setShowGrid,
 } from "./target-sat-slice.jsx";
+import {setOpenAddDialog} from "../hardware/camera-slice.jsx";
 
 function MapSettingsIslandDialog() {
     const dispatch = useDispatch();
@@ -73,7 +74,8 @@ function MapSettingsIslandDialog() {
                         handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
                     />
                 </DialogContent>
-                <DialogActions>
+
+                <DialogActions style={{padding: '0px 24px 20px 20px'}}>
                     <Button onClick={handleCloseDialog}>Close</Button>
                 </DialogActions>
             </Dialog>
