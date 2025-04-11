@@ -17,7 +17,7 @@ import {
     setShowGrid,
 } from "./overview-sat-slice.jsx";
 
-function MapSettingsIslandDialog() {
+function MapSettingsIslandDialog({updateBackend}) {
     const dispatch = useDispatch();
     const {
         showPastOrbitPath,
@@ -72,6 +72,7 @@ function MapSettingsIslandDialog() {
                         handleShowTooltip={(value)=>{dispatch(setShowTooltip(value))}}
                         handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
                         handleTileLayerID={(value)=>{dispatch(setTileLayerID(value))}}
+                        updateBackend={updateBackend}
                     />
                 </DialogContent>
                 <DialogActions>

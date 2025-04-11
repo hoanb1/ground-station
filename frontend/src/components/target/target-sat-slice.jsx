@@ -8,6 +8,55 @@ function getCacheKeyForSatelliteId(satelliteId) {
 }
 
 
+export const setTargetMapSetting = createAsyncThunk(
+    'targetSatTrack/setTargetMapSetting',
+    async ({socket, key}, {getState, rejectWithValue}) => {
+        const state = getState();
+        const mapSettings = {
+            showPastOrbitPath: state['targetSatTrack']['showPastOrbitPath'],
+            showFutureOrbitPath: state['targetSatTrack']['showFutureOrbitPath'],
+            showSatelliteCoverage: state['targetSatTrack']['showSatelliteCoverage'],
+            showSunIcon: state['targetSatTrack']['showSunIcon'],
+            showMoonIcon: state['targetSatTrack']['showMoonIcon'],
+            showTerminatorLine: state['targetSatTrack']['showTerminatorLine'],
+            showTooltip: state['targetSatTrack']['showTooltip'],
+            showGrid: state['targetSatTrack']['showGrid'],
+            pastOrbitLineColor: state['targetSatTrack']['pastOrbitLineColor'],
+            futureOrbitLineColor: state['targetSatTrack']['futureOrbitLineColor'],
+            satelliteCoverageColor: state['targetSatTrack']['satelliteCoverageColor'],
+            orbitProjectionDuration: state['targetSatTrack']['orbitProjectionDuration'],
+            tileLayerID: state['targetSatTrack']['tileLayerID'],
+        };
+
+        return await new Promise((resolve, reject) => {
+            socket.emit('data_submission', 'set-map-settings', {name: key, value: mapSettings}, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue('Failed to set the mapping settings in the backend'));
+                }
+            });
+        });
+    }
+);
+
+
+export const getTargetMapSettings = createAsyncThunk(
+    'targetSatTrack/getTargetMapSettings',
+    async ({socket}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-map-settings', 'target-map-settings', (response) => {
+                if (response.success) {
+                    resolve(response.data['value']);
+                } else {
+                    reject(rejectWithValue("Failed getting the target map settings from backend"));
+                }
+            });
+        });
+    }
+);
+
+
 export const getTrackingStateFromBackend = createAsyncThunk(
     'targetSatTrack/getTrackingStateBackend',
     async ({socket}, {rejectWithValue}) => {
@@ -503,6 +552,42 @@ const targetSatTrackSlice = createSlice({
                 state.error = null;
             })
             .addCase(getTrackingStateFromBackend.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(setTargetMapSetting.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(setTargetMapSetting.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+            })
+            .addCase(setTargetMapSetting.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(getTargetMapSettings.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(getTargetMapSettings.fulfilled, (state, action) => {
+                state.loading = false;
+                state.tileLayerID = action.payload['tileLayerID'];
+                state.showPastOrbitPath = action.payload['showPastOrbitPath'];
+                state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
+                state.showSatelliteCoverage = action.payload['showSatelliteCoverage'];
+                state.showSunIcon = action.payload['showSunIcon'];
+                state.showMoonIcon = action.payload['showMoonIcon'];
+                state.showTerminatorLine = action.payload['showTerminatorLine'];
+                state.showTooltip = action.payload['showTooltip'];
+                state.showGrid = action.payload['showGrid'];
+                state.pastOrbitLineColor = action.payload['pastOrbitLineColor'];
+                state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
+                state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
+                state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
+            })
+            .addCase(getTargetMapSettings.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });

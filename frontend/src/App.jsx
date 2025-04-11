@@ -24,7 +24,7 @@ import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
 import { setMessage, setProgress } from './components/satellites/synchronize-slice.jsx';
 import { setStatus } from "./components/hardware/rig-slice.jsx";
-import { setSatelliteData } from './components/target/target-sat-slice.jsx';
+import { setSatelliteData, getTargetMapSettings } from './components/target/target-sat-slice.jsx';
 import { fetchRigs } from './components/hardware/rig-slice.jsx'
 import { fetchRotators } from './components/hardware/rotaror-slice.jsx'
 import { fetchTLESources } from './components/satellites/sources-slice.jsx'
@@ -32,7 +32,7 @@ import { fetchSatelliteGroups } from './components/satellites/groups-slice.jsx';
 import { fetchUsers } from './components/settings/users-slice.jsx';
 import { getTrackingStateFromBackend } from './components/target/target-sat-slice.jsx';
 import { fetchCameras } from './components/hardware/camera-slice.jsx'
-
+import { getOverviewMapSettings } from './components/overview/overview-sat-slice.jsx';
 
 const BRANDING = {
     logo: (
@@ -56,6 +56,8 @@ function uponConnectionToBackEnd(socket) {
     store.dispatch(fetchSatelliteGroups({socket}));
     store.dispatch(fetchUsers({socket}));
     store.dispatch(getTrackingStateFromBackend({socket}));
+    store.dispatch(getOverviewMapSettings({socket}));
+    store.dispatch(getTargetMapSettings({socket}));
 }
 
 export default function App(props) {

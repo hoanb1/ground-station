@@ -7,17 +7,24 @@ import DialogActions from "@mui/material/DialogActions";
 import {Button} from "@mui/material";
 import React from "react";
 import {
-    setFutureOrbitLineColor, setOrbitProjectionDuration,
-    setPastOrbitLineColor, setSatelliteCoverageColor,
-    setShowFutureOrbitPath, setShowMoonIcon,
+    setFutureOrbitLineColor,
+    setOrbitProjectionDuration,
+    setPastOrbitLineColor,
+    setSatelliteCoverageColor,
+    setShowFutureOrbitPath,
+    setShowMoonIcon,
     setShowPastOrbitPath,
     setShowSatelliteCoverage,
-    setShowSunIcon, setShowTerminatorLine, setShowTooltip, setTileLayerID,
-    setOpenMapSettingsDialog, setShowGrid,
+    setShowSunIcon,
+    setShowTerminatorLine,
+    setShowTooltip,
+    setTileLayerID,
+    setOpenMapSettingsDialog,
+    setShowGrid,
 } from "./target-sat-slice.jsx";
 import {setOpenAddDialog} from "../hardware/camera-slice.jsx";
 
-function MapSettingsIslandDialog() {
+function MapSettingsIslandDialog({updateBackend}) {
     const dispatch = useDispatch();
     const {
         showPastOrbitPath,
@@ -72,6 +79,7 @@ function MapSettingsIslandDialog() {
                         handleShowTooltip={(value)=>{dispatch(setShowTooltip(value))}}
                         handleTileLayerID={(value)=>{dispatch(setTileLayerID(value))}}
                         handleShowGrid={(value)=>{dispatch(setShowGrid(value))}}
+                        updateBackend={updateBackend}
                     />
                 </DialogContent>
 

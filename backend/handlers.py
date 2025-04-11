@@ -165,6 +165,11 @@ async def data_request_routing(sio, cmd, data, logger):
             await emit_tracker_data(dbsession, sio, logger)
             reply = {'success': tracking_state['success'], 'data': tracking_state.get('data', [])}
 
+        elif cmd == "get-map-settings":
+            logger.debug(f'Fetching map settings, data: {data}')
+            map_settings = await crud.get_map_settings(dbsession, name=data)
+            reply = {'success': map_settings['success'], 'data': map_settings.get('data', [])}
+
         else:
             logger.error(f'Unknown command: {cmd}')
 
@@ -387,15 +392,18 @@ async def data_submission_routing(sio, cmd, data, logger):
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
 
-            reply = {
-                'success': tracking_state_reply['success'],
-                'data': tracking_state_reply['data']['value'],
-            }
+            reply = {'success': tracking_state_reply['success'], 'data': tracking_state_reply['data']['value']}
+
+        elif cmd == "set-map-settings":
+            logger.debug(f'Updating map settings, data: {data}')
+            map_settings_reply = await crud.set_map_settings(dbsession, data)
+            reply = {'success': map_settings_reply['success'], 'data': map_settings_reply['data']}
 
         else:
-            logger.error(f'Unknown command: {cmd}')
+            logger.error(f'Unknown command 1: {cmd}')
 
     return reply
+
 
 async def emit_tracker_data(dbsession, sio, logger):
     """

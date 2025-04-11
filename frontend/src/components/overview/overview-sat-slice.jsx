@@ -1,9 +1,59 @@
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
+import {getTargetMapSettings} from "../target/target-sat-slice.jsx";
 
 
 function getCacheKeyForGroupId(groupId) {
     return `${groupId}_${Math.floor(Date.now() / (2 * 60 * 60 * 1000))}`;
 }
+
+export const getOverviewMapSettings = createAsyncThunk(
+    'overviewGroups/getOverviewMapSettings',
+    async ({socket}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-map-settings', 'overview-map-settings', (response) => {
+                if (response.success) {
+                    resolve(response.data['value']);
+                } else {
+                    reject(rejectWithValue("Failed getting the overview map settings from backend"));
+                }
+            });
+        });
+    }
+);
+
+
+export const setOverviewMapSetting = createAsyncThunk(
+    'overviewGroups/setOverviewMapSetting',
+    async ({socket, key}, {getState, rejectWithValue}) => {
+        const state = getState();
+        const mapSettings = {
+            showPastOrbitPath: state['overviewSatTrack']['showPastOrbitPath'],
+            showFutureOrbitPath: state['overviewSatTrack']['showFutureOrbitPath'],
+            showSatelliteCoverage: state['overviewSatTrack']['showSatelliteCoverage'],
+            showSunIcon: state['overviewSatTrack']['showSunIcon'],
+            showMoonIcon: state['overviewSatTrack']['showMoonIcon'],
+            showTerminatorLine: state['overviewSatTrack']['showTerminatorLine'],
+            showTooltip: state['overviewSatTrack']['showTooltip'],
+            showGrid: state['overviewSatTrack']['showGrid'],
+            pastOrbitLineColor: state['overviewSatTrack']['pastOrbitLineColor'],
+            futureOrbitLineColor: state['overviewSatTrack']['futureOrbitLineColor'],
+            satelliteCoverageColor: state['overviewSatTrack']['satelliteCoverageColor'],
+            orbitProjectionDuration: state['overviewSatTrack']['orbitProjectionDuration'],
+            tileLayerID: state['overviewSatTrack']['tileLayerID'],
+        };
+
+        return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'set-map-settings', {name: key, value: mapSettings}, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue('Failed to set the mapping settings in the backend'));
+                }
+            });
+        });
+    }
+);
+
 
 export const fetchSatelliteData = createAsyncThunk(
     'overviewGroups/fetchSatelliteData',
@@ -253,7 +303,6 @@ const overviewSlice = createSlice({
                 state.passesLoading = true;
             })
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
-                // cache the result for a few hours
                 state.cachedPasses[getCacheKeyForGroupId(state.selectedSatGroupId)] = action.payload;
                 state.passes = action.payload;
                 state.passesLoading = false;
@@ -272,6 +321,43 @@ const overviewSlice = createSlice({
                 state.error = null;
             })
             .addCase(fetchSatelliteData.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(setOverviewMapSetting.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(setOverviewMapSetting.fulfilled, (state, action) => {
+                state.loading = false;
+                console.info('setOverviewMapSetting.fulfilled', action.payload);
+            })
+            .addCase(setOverviewMapSetting.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(getOverviewMapSettings.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(getOverviewMapSettings.fulfilled, (state, action) => {
+                state.loading = false;
+                console.info("action", action.payload);
+                state.tileLayerID = action.payload['tileLayerID'];
+                state.showPastOrbitPath = action.payload['showPastOrbitPath'];
+                state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
+                state.showSatelliteCoverage = action.payload['showSatelliteCoverage'];
+                state.showSunIcon = action.payload['showSunIcon'];
+                state.showMoonIcon = action.payload['showMoonIcon'];
+                state.showTerminatorLine = action.payload['showTerminatorLine'];
+                state.showTooltip = action.payload['showTooltip'];
+                state.showGrid = action.payload['showGrid'];
+                state.pastOrbitLineColor = action.payload['pastOrbitLineColor'];
+                state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
+                state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
+                state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
+            })
+            .addCase(getOverviewMapSettings.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });

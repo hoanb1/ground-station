@@ -22,7 +22,8 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                handleShowFutureOrbitPath, handleShowPastOrbitPath,
                             handleShowSatelliteCoverage, handleSetShowSunIcon, handleSetShowMoonIcon,
                             handleShowTerminatorLine, handleFutureOrbitLineColor, handlePastOrbitLineColor,
-                            handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip, handleTileLayerID, handleShowGrid}) => {
+                            handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip,
+                               handleTileLayerID, handleShowGrid, updateBackend}) => {
 
     // Example options for orbit projection time range
     const timeOptions = [
@@ -61,6 +62,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                             onChange={(e) => {
                                 handleOrbitProjectionDuration(e.target.value);
                                 setOrbitProjectionDuration(e.target.value);
+                                updateBackend(e.target.value);
                             }}
                             variant={"filled"}
                         >
@@ -79,7 +81,11 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                             labelId="tile-layer-label"
                             value={tileLayerID}
                             label="Tile Layer"
-                            onChange={(e) => {setTileLayerID(e.target.value); handleTileLayerID(e.target.value);}}
+                            onChange={(e) => {
+                                setTileLayerID(e.target.value);
+                                handleTileLayerID(e.target.value);
+                                updateBackend(e.target.value);
+                            }}
                          variant={"filled"}>
                             {tileLayers.map((layer) => (
                                 <MenuItem key={layer.id} value={layer.id}>
@@ -99,6 +105,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleShowSatelliteCoverage(e.target.checked);
                                     setSatelliteCoverage(e.target.checked);
+                                    updateBackend(e.target.value);
                                 }}
                             />
                         }
@@ -115,6 +122,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleShowPastOrbitPath(e.target.checked);
                                     setShowPastOrbitPlot(e.target.checked);
+                                    updateBackend(e.target.value);
                                 }}
                             />
                         }
@@ -131,6 +139,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleShowFutureOrbitPath(e.target.checked);
                                     setShowFutureOrbitPlot(e.target.checked);
+                                    updateBackend(e.target.value);
                                 }}
                             />
                         }
@@ -146,6 +155,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleSetShowSunIcon(e.target.checked);
                                     setShowSun(e.target.checked);
+                                    updateBackend(e.target.value);
                                 }}
                             />
                         }
@@ -161,6 +171,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleSetShowMoonIcon(e.target.checked);
                                     setShowMoon(e.target.checked);
+                                    updateBackend(e.target.value);
                                 }}
                             />
                         }
@@ -176,6 +187,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleShowTerminatorLine(e.target.checked);
                                     setShowTerminator(e.target.checked);
+                                    updateBackend(e.target.value);
                                 }}
                             />
                         }
@@ -191,6 +203,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleShowTooltip(e.target.checked);
                                     setShowTooltip(e.target.checked);
+                                    updateBackend(e.target.value);
                                 }}
                             />
                         }
@@ -206,6 +219,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                   onChange={(e) => {
                                       handleShowGrid(e.target.checked);
                                       setShowGrid(e.target.checked);
+                                      updateBackend(e.target.value);
                                   }}
                               />
                           }
@@ -222,6 +236,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleSatelliteCoverageColor(e.target.value);
                                     setCoverageColor(e.target.value);
+                                    updateBackend(e.target.value);
                                 }}
                                 style={{
                                     width: '40px',
@@ -244,6 +259,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handlePastOrbitLineColor(e.target.value);
                                     setPastOrbitLineColor(e.target.value);
+                                    updateBackend(e.target.value);
                                 }}
                                 style={{
                                     width: '40px',
@@ -266,6 +282,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 onChange={(e) => {
                                     handleFutureOrbitLineColor(e.target.value);
                                     setFutureOrbitLineColor(e.target.value);
+                                    updateBackend(e.target.value);
                                 }}
                                 style={{
                                     width: '40px',

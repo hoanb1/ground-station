@@ -54,7 +54,7 @@ import {
     setGridEditable,
     setMapZoomLevel,
     setOpenMapSettingsDialog,
-    setNextPassesHours,
+    setNextPassesHours, setOverviewMapSetting,
 } from './overview-sat-slice.jsx';
 import NextPassesGroupIsland from "./overview-sat-passes.jsx";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -478,7 +478,10 @@ const GlobalSatelliteTrack = React.memo(function () {
                     <CenterMapButton/>
                     <FullscreenMapButton/>
                 </Box>
-                <MapSettingsIslandDialog/>
+                <MapSettingsIslandDialog updateBackend={()=>{
+                    const key = 'overview-map-settings';
+                    dispatch(setOverviewMapSetting({socket, key: key}));
+                }}/>
                 {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.5}></Marker>: null}
                 {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.5}></Marker>: null}
 

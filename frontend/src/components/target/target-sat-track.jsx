@@ -56,6 +56,7 @@ import {
     fetchSatellite,
     getTrackingStateFromBackend,
     setSatelliteId,
+    setTargetMapSetting,
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
@@ -587,8 +588,6 @@ const TargetSatelliteTrack = React.memo(function () {
         };
     }, [tileLayerID]);
 
-
-    
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
@@ -655,7 +654,10 @@ const TargetSatelliteTrack = React.memo(function () {
                 {showFutureOrbitPath? currentFutureSatellitesPaths: null}
                 {currentSatellitesPosition}
                 {showSatelliteCoverage? currentSatellitesCoverage: null}
-                <MapSettingsIslandDialog open={openMapSettingsDialog}/>
+                <MapSettingsIslandDialog updateBackend={()=>{
+                    const key = 'target-map-settings';
+                    dispatch(setTargetMapSetting({socket, key: key}));
+                }}/>
                 <MapStatusBar>
                     <SimpleTruncatedHtml className={"attribution"} htmlString={`<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
                        rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}/>
