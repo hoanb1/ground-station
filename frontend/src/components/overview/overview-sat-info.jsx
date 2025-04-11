@@ -120,7 +120,7 @@ const SatelliteInfoCard = () => {
                 overflow: 'hidden'
             }}>
                 {/* Satellite Name Header */}
-                <Box sx={{p: 2, pb: 1, borderBottom: "1px solid #4b4b4b"}}>
+                <Box sx={{p: 2, pb: 1, borderBottom: "1px solid #4b4b4b", display: 'flex', alignItems: 'center'}}>
                     <Typography variant="h6" sx={{
                         fontWeight: 'bold',
                         color: (theme) => theme.palette.text.primary,
@@ -144,7 +144,9 @@ const SatelliteInfoCard = () => {
                     }}>
                         {satelliteData['details']['name'] || "No satellite selected"}
                     </Typography>
-                    {betterStatusValue(satelliteData['details']['status'])}
+                    <div style={{flex: 1, display: 'flex', justifyContent: 'flex-end'}}>
+                        {betterStatusValue(satelliteData['details']['status'])}
+                    </div>
                 </Box>
 
                 {/* Main Telemetry Data Section */}
