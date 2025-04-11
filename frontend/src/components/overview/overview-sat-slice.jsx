@@ -132,7 +132,7 @@ const overviewSlice = createSlice({
         satelliteCoverageColor: '#FFFFFF',
         orbitProjectionDuration: 240,
         tileLayerID: 'satellite',
-        mapZoomLevel: 2,
+        mapZoomLevel: 1.5,
         satelliteGroupId: null,
         satGroups: [],
         formGroupSelectError: false,
