@@ -220,4 +220,4 @@ const PreferencesForm = () => {
     );
 };
 
-export default PreferencesForm;b
+export default PreferencesForm;
