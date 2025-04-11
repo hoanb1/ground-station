@@ -2,12 +2,10 @@ import React, {useEffect} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchSatelliteData} from './overview-sat-slice.jsx';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
-import CircleIcon from '@mui/icons-material/Circle';
 import ExploreIcon from '@mui/icons-material/Explore';
 import HeightIcon from '@mui/icons-material/Height';
 import SpeedIcon from '@mui/icons-material/Speed';
 import UpdateIcon from '@mui/icons-material/Update';
-import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import SatelliteIcon from '@mui/icons-material/Satellite';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
 import {alpha} from '@mui/material/styles';
@@ -23,7 +21,7 @@ import {
 import {
     betterDateTimes,
     betterStatusValue, getClassNamesBasedOnGridEditing,
-    humanizeAltitude,
+    humanizeAltitude, humanizeDate,
     humanizeLatitude,
     humanizeLongitude,
     humanizeVelocity,
@@ -383,6 +381,7 @@ const SatelliteInfoCard = () => {
                     bottom: 0,
                     position: 'absolute',
                     width: '100%',
+                    display: 'flex',
                     justifyContent: 'space-between',
                     alignItems: 'center',
                     p: 1,
@@ -407,7 +406,9 @@ const SatelliteInfoCard = () => {
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <UpdateIcon
                             sx={{fontSize: 12, mr: 0.5, color: (theme) => alpha(theme.palette.text.primary, 0.5)}}/>
-                        {betterDateTimes(satelliteData['details']['updated'])}
+                        <Typography variant="caption" sx={{color: (theme) => alpha(theme.palette.text.primary, 0.5)}}>
+                            {humanizeDate(satelliteData['details']['updated'])}
+                        </Typography>
                     </Box>
                 </Box>
             </Box>

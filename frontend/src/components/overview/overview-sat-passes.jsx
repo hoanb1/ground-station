@@ -214,9 +214,11 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
             getRowClassName={(param) => {
                 if (param.row) {
                     if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
-                        return "passes-cell-passed";
+                        return "passes-cell-passed pointer-cursor";
                     } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
-                        return "passes-cell-passing";
+                        return "passes-cell-passing pointer-cursor";
+                    } else {
+                        return "pointer-cursor";
                     }
                 }
             }}

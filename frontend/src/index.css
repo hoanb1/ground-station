@@ -60,3 +60,7 @@
 .vsc-controller {
     display: none !important;
 }
+
+.pointer-cursor {
+    cursor: pointer;
+}
