@@ -113,49 +113,44 @@ const SynchronizeTLEsCard = function () {
                 zIndex: 0
             }}/>
 
+            {/* Card content container */}
             <Box sx={{
-                display: 'flex',
                 position: 'relative',
                 zIndex: 1,
+                p: { xs: 2, sm: 3 },
             }}>
+                {/* Small decorative element */}
+                <Box sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '3px',
+                    background: 'linear-gradient(90deg, #00b0ff 0%, rgba(0,176,255,0) 100%)',
+                    boxShadow: '0 0 10px rgba(0,176,255,0.5)',
+                }}/>
+
+                {/* Header section with title and button */}
                 <Box sx={{
                     display: 'flex',
-                    flexDirection: 'column',
-                    width: '40%',
-                    background: 'linear-gradient(135deg, rgba(15,37,47,0.7) 0%, rgba(12,20,30,0.7) 100%)',
-                    borderRight: '1px solid #2d4856',
-                    position: 'relative',
-                    overflow: 'hidden',
+                    flexDirection: { xs: 'column', sm: 'row' },
+                    justifyContent: 'space-between',
+                    alignItems: { xs: 'flex-start', sm: 'center' },
+                    mb: 2,
                 }}>
-                    {/* Small decorative element */}
-                    <Box sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '3px',
-                        background: 'linear-gradient(90deg, #00b0ff 0%, rgba(0,176,255,0) 100%)',
-                        boxShadow: '0 0 10px rgba(0,176,255,0.5)',
-                    }}/>
-
-                    <CardContent sx={{
-                        flexGrow: 1,
-                        display: 'flex',
-                        flexDirection: 'column',
-                        p: 3,
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <SatelliteAltIcon sx={{
-                                mr: 1,
-                                color: '#40c0ff',
-                                filter: 'drop-shadow(0 0 3px rgba(64,192,255,0.6))',
-                                animation: 'pulse 3s infinite ease-in-out',
-                                '@keyframes pulse': {
-                                    '0%': { opacity: 0.8 },
-                                    '50%': { opacity: 1 },
-                                    '100%': { opacity: 0.8 }
-                                }
-                            }}/>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1.5, sm: 0 } }}>
+                        <SatelliteAltIcon sx={{
+                            mr: 1,
+                            color: '#40c0ff',
+                            filter: 'drop-shadow(0 0 3px rgba(64,192,255,0.6))',
+                            animation: 'pulse 3s infinite ease-in-out',
+                            '@keyframes pulse': {
+                                '0%': { opacity: 0.8 },
+                                '50%': { opacity: 1 },
+                                '100%': { opacity: 0.8 }
+                            }
+                        }}/>
+                        <Box>
                             <Typography
                                 component="div"
                                 variant="h6"
@@ -165,218 +160,206 @@ const SynchronizeTLEsCard = function () {
                                     textShadow: '0 0 10px rgba(0,0,0,0.5)',
                                     letterSpacing: '0.5px',
                                     textTransform: 'uppercase',
+                                    fontSize: { xs: '1rem', sm: '1.25rem' },
                                 }}
                             >
                                 TLE Data Sync
                             </Typography>
-                        </Box>
-                        <Typography
-                            variant="subtitle1"
-                            component="div"
-                            sx={{
-                                color: '#aaaaaa',
-                                mt: 1,
-                                fontSize: '0.9rem',
-                                fontWeight: 300,
-                                letterSpacing: '0.3px',
-                            }}
-                        >
-                            Fetch orbital data from satellite sources
-                        </Typography>
-                    </CardContent>
-
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        p: 2,
-                        pt: 0,
-                    }}>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={handleSynchronizeSatellites}
-                            sx={{
-                                background: 'linear-gradient(135deg, #0288d1 0%, #0277bd 100%)',
-                                boxShadow: '0 5px 15px rgba(2,136,209,0.3)',
-                                textTransform: 'uppercase',
-                                fontWeight: 600,
-                                letterSpacing: '1px',
-                                px: 3,
-                                py: 1,
-                                borderRadius: '8px',
-                                position: 'relative',
-                                overflow: 'hidden',
-                                transition: 'all 0.3s ease',
-                                '&:hover': {
-                                    background: 'linear-gradient(135deg, #039be5 0%, #0288d1 100%)',
-                                    boxShadow: '0 5px 20px rgba(2,136,209,0.5)',
-                                    transform: 'translateY(-2px)',
-                                },
-                                '&::before': {
-                                    content: '""',
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: '-100%',
-                                    width: '100%',
-                                    height: '100%',
-                                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                                    transition: 'all 0.5s ease',
-                                },
-                                '&:hover::before': {
-                                    left: '100%',
-                                }
-                            }}
-                        >
-                            <SyncIcon sx={{
-                                mr: 1,
-                                animation: progress > 0 && progress < 100 ? 'rotate 2s infinite linear' : 'none',
-                                '@keyframes rotate': {
-                                    '0%': { transform: 'rotate(0deg)' },
-                                    '100%': { transform: 'rotate(360deg)' }
-                                }
-                            }}/>
-                            Synchronize
-                        </Button>
-                    </Box>
-                </Box>
-
-                <Box
-                    sx={{
-                        width: '60%',
-                        display: 'flex',
-                        flexDirection: 'column',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        p: 3,
-                        position: 'relative',
-                    }}
-                >
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        width: '100%',
-                        position: 'relative',
-                    }}>
-                        <Box sx={{
-                            display: 'flex',
-                            justifyContent: 'space-between',
-                            alignItems: 'center',
-                            mb: 1,
-                        }}>
                             <Typography
-                                variant="caption"
+                                variant="subtitle2"
+                                component="div"
                                 sx={{
                                     color: '#aaaaaa',
-                                    fontWeight: 500,
-                                    textTransform: 'uppercase',
-                                    letterSpacing: '1px',
-                                    fontSize: '0.7rem',
+                                    fontSize: '0.8rem',
+                                    fontWeight: 300,
+                                    letterSpacing: '0.3px',
+                                    display: { xs: 'none', sm: 'block' },
                                 }}
                             >
-                                Synchronization Progress
-                            </Typography>
-                            <Typography
-                                variant="h6"
-                                sx={{
-                                    color: '#40c0ff',
-                                    fontWeight: 700,
-                                    textShadow: '0 0 5px rgba(64,192,255,0.3)',
-                                    fontFamily: 'monospace',
-                                    fontSize: '1.1rem',
-                                }}
-                            >
-                                {`${Math.round(progress)}%`}
+                                Fetch orbital data from satellite sources
                             </Typography>
                         </Box>
+                    </Box>
 
-                        <Box sx={{ position: 'relative', mb: 2 }}>
-                            <LinearProgress
-                                variant="determinate"
-                                value={progress}
-                                sx={{
-                                    height: 10,
-                                    borderRadius: 5,
-                                    backgroundColor: 'rgba(255,255,255,0.1)',
-                                    '& .MuiLinearProgress-bar': {
-                                        background: 'linear-gradient(90deg, #0288d1 0%, #40c0ff 100%)',
-                                        borderRadius: 5,
-                                        boxShadow: '0 0 10px rgba(64,192,255,0.5)',
-                                    }
-                                }}
-                            />
-
-                            {/* Animated scanner effect */}
-                            {progress > 0 && progress < 100 && (
-                                <Box sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    height: '100%',
-                                    width: '5px',
-                                    background: 'rgba(255,255,255,0.7)',
-                                    filter: 'blur(3px)',
-                                    animation: 'scan 2s infinite linear',
-                                    '@keyframes scan': {
-                                        '0%': { left: '0%' },
-                                        '100%': { left: '100%' }
-                                    },
-                                    zIndex: 2,
-                                }}/>
-                            )}
-                        </Box>
-
-                        <Box sx={{
-                            display: 'flex',
-                            flexDirection: 'column',
-                            width: '100%',
-                            mt: 1,
-                            p: 1.5,
-                            borderRadius: 2,
-                            backgroundColor: 'rgba(0,0,0,0.2)',
-                            border: '1px solid #2d4856',
-                            minHeight: '60px',
+                    <Button
+                        variant="contained"
+                        color="primary"
+                        onClick={handleSynchronizeSatellites}
+                        size="small"
+                        sx={{
+                            background: 'linear-gradient(135deg, #0288d1 0%, #0277bd 100%)',
+                            boxShadow: '0 5px 15px rgba(2,136,209,0.3)',
+                            textTransform: 'uppercase',
+                            fontWeight: 600,
+                            letterSpacing: '1px',
+                            px: { xs: 2, sm: 3 },
+                            py: 1,
+                            borderRadius: '8px',
                             position: 'relative',
                             overflow: 'hidden',
-                        }}>
-                            {/* Terminal effect for the status message */}
+                            transition: 'all 0.3s ease',
+                            '&:hover': {
+                                background: 'linear-gradient(135deg, #039be5 0%, #0288d1 100%)',
+                                boxShadow: '0 5px 20px rgba(2,136,209,0.5)',
+                                transform: 'translateY(-2px)',
+                            },
+                            '&::before': {
+                                content: '""',
+                                position: 'absolute',
+                                top: 0,
+                                left: '-100%',
+                                width: '100%',
+                                height: '100%',
+                                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                                transition: 'all 0.5s ease',
+                            },
+                            '&:hover::before': {
+                                left: '100%',
+                            },
+                            alignSelf: { xs: 'flex-start', sm: 'center' }
+                        }}
+                    >
+                        <SyncIcon sx={{
+                            mr: 1,
+                            animation: progress > 0 && progress < 100 ? 'rotate 2s infinite linear' : 'none',
+                            '@keyframes rotate': {
+                                '0%': { transform: 'rotate(0deg)' },
+                                '100%': { transform: 'rotate(360deg)' }
+                            },
+                            fontSize: { xs: '1rem', sm: '1.25rem' }
+                        }}/>
+                        Synchronize
+                    </Button>
+                </Box>
+
+                {/* Progress section */}
+                <Box sx={{
+                    mt: 1,
+                    border: '1px solid rgba(45,72,86,0.7)',
+                    borderRadius: 2,
+                    backgroundColor: 'rgba(7,19,24,0.5)',
+                    p: { xs: 1.5, sm: 2 },
+                }}>
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'space-between',
+                        alignItems: 'center',
+                        mb: 1,
+                    }}>
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: '#aaaaaa',
+                                fontWeight: 500,
+                                textTransform: 'uppercase',
+                                letterSpacing: '1px',
+                                fontSize: '0.7rem',
+                            }}
+                        >
+                            Synchronization Progress
+                        </Typography>
+                        <Typography
+                            variant="h6"
+                            sx={{
+                                color: '#40c0ff',
+                                fontWeight: 700,
+                                textShadow: '0 0 5px rgba(64,192,255,0.3)',
+                                fontFamily: 'monospace',
+                                fontSize: '1.1rem',
+                            }}
+                        >
+                            {`${Math.round(progress)}%`}
+                        </Typography>
+                    </Box>
+
+                    <Box sx={{ position: 'relative', mb: 2 }}>
+                        <LinearProgress
+                            variant="determinate"
+                            value={progress}
+                            sx={{
+                                height: 10,
+                                borderRadius: 5,
+                                backgroundColor: 'rgba(255,255,255,0.1)',
+                                '& .MuiLinearProgress-bar': {
+                                    background: 'linear-gradient(90deg, #0288d1 0%, #40c0ff 100%)',
+                                    borderRadius: 5,
+                                    boxShadow: '0 0 10px rgba(64,192,255,0.5)',
+                                }
+                            }}
+                        />
+
+                        {/* Animated scanner effect */}
+                        {progress > 0 && progress < 100 && (
                             <Box sx={{
                                 position: 'absolute',
                                 top: 0,
                                 left: 0,
-                                width: '100%',
                                 height: '100%',
-                                backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,30,60,0.15), rgba(0,30,60,0.15) 1px, transparent 1px, transparent 2px)',
-                                opacity: 0.5,
-                                pointerEvents: 'none',
+                                width: '5px',
+                                background: 'rgba(255,255,255,0.7)',
+                                filter: 'blur(3px)',
+                                animation: 'scan 2s infinite linear',
+                                '@keyframes scan': {
+                                    '0%': { left: '0%' },
+                                    '100%': { left: '100%' }
+                                },
+                                zIndex: 2,
                             }}/>
+                        )}
+                    </Box>
 
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    fontFamily: 'monospace',
-                                    color: '#bbbbbb',
-                                    position: 'relative',
-                                    zIndex: 1,
-                                    '&::after': progress > 0 && progress < 100 ? {
-                                        content: '"|"',
-                                        animation: 'blink 1s infinite',
-                                        '@keyframes blink': {
-                                            '0%': { opacity: 0 },
-                                            '50%': { opacity: 1 },
-                                            '100%': { opacity: 0 }
-                                        }
-                                    } : {},
-                                }}
-                            >
-                                {message || (
-                                    progress === 0
-                                        ? 'Ready to synchronize. Click the button to start.'
-                                        : progress === 100
-                                            ? 'Synchronization complete!'
-                                            : 'Synchronizing satellite data...'
-                                )}
-                            </Typography>
-                        </Box>
+                    {/* Status message box */}
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        width: '100%',
+                        p: 1.5,
+                        borderRadius: 2,
+                        backgroundColor: 'rgba(0,0,0,0.2)',
+                        border: '1px solid #2d4856',
+                        minHeight: { xs: '50px', sm: '60px' },
+                        position: 'relative',
+                        overflow: 'hidden',
+                    }}>
+                        {/* Terminal effect for the status message */}
+                        <Box sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            width: '100%',
+                            height: '100%',
+                            backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,30,60,0.15), rgba(0,30,60,0.15) 1px, transparent 1px, transparent 2px)',
+                            opacity: 0.5,
+                            pointerEvents: 'none',
+                        }}/>
+
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                fontFamily: 'monospace',
+                                color: '#bbbbbb',
+                                position: 'relative',
+                                zIndex: 1,
+                                fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                                '&::after': progress > 0 && progress < 100 ? {
+                                    content: '"|"',
+                                    animation: 'blink 1s infinite',
+                                    '@keyframes blink': {
+                                        '0%': { opacity: 0 },
+                                        '50%': { opacity: 1 },
+                                        '100%': { opacity: 0 }
+                                    }
+                                } : {},
+                            }}
+                        >
+                            {message || (
+                                progress === 0
+                                    ? 'Ready to synchronize. Click the button to start.'
+                                    : progress === 100
+                                        ? 'Synchronization complete!'
+                                        : 'Synchronizing satellite data...'
+                            )}
+                        </Typography>
                     </Box>
                 </Box>
             </Box>
