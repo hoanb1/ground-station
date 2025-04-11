@@ -42,19 +42,7 @@ const VideoMJPEGPlayer = ({ src, refreshRate = 0 }) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>MJPEG Video</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"} size={"small"}>
-                        <InputLabel htmlFor="camera-select">Camera</InputLabel>
-                        <Select value={selectedCamera} id="camera-select" label="Grouping"
-                                variant={"filled"} size={"small"} onChange={handleOnCameraChange}>
-                            {cameras.map((camera, index) => {
-                                return <MenuItem value={camera.id} key={index}>{camera.name}</MenuItem>;
-                            })}
-                        </Select>
-                    </FormControl>
-                </Grid>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <img
                         src={imageUrl}
