@@ -64,7 +64,7 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
 
         circle_points.append({"lat": lat_deg, "lon": lon_deg})
 
-    # If North Pole is included, add it at the beginning
+    # If North Pole is included, do some corrective stuff
     if north_pole_included:
         # remove the first element from the list
         circle_points.pop(0)
@@ -73,7 +73,7 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
         circle_points.insert(0,{"lat": 90.0, "lon": circle_points[0]["lon"]})
         circle_points.append({"lat": 90.0, "lon": circle_points[-1]["lon"]})
 
-    # If South Pole is included, add it at the appropriate position
+    # If South Pole is included, do some corrective stuff
     if south_pole_included:
         # find the index of the coord in the list with the lowest latitude
         min_lat_index = min(range(len(circle_points)), key=lambda idx: circle_points[idx]["lat"])

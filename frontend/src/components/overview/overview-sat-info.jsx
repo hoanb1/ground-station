@@ -61,7 +61,7 @@ const SatelliteInfoCard = () => {
         const newTrackingState = {
             'norad_id': selectedSatelliteId,
             'group_id': selectedSatGroupId,
-            'rotator_state': "tracking",
+            'rotator_state': trackingState['rotator_state'],
             'rig_state': trackingState['rig_state'],
             'rig_id': selectedRadioRig,
             'rotator_id': selectedRotator,

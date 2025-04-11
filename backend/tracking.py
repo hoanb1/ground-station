@@ -609,7 +609,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         raise Exception(f"No location found in the db for user id None, please set one")
 
     # get current position
-    position = get_satellite_position_from_tle([
+    position = await asyncio.to_thread(get_satellite_position_from_tle, [
         satellite_data['details']['name'],
         satellite_data['details']['tle1'],
         satellite_data['details']['tle2']
@@ -618,23 +618,23 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     # get position in the sky
     home_lat = location['data']['lat']
     home_lon = location['data']['lon']
-    sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
-                                    satellite['data'][0]['tle2'], datetime.now(UTC))
+    sky_point = await asyncio.to_thread(get_satellite_az_el, home_lat, home_lon, satellite['data'][0]['tle1'],
+                                        satellite['data'][0]['tle2'], datetime.now(UTC))
 
     # calculate paths
-    paths = get_satellite_path([
+    paths = await asyncio.to_thread(get_satellite_path, [
         satellite_data['details']['tle1'],
         satellite_data['details']['tle2']
     ], duration_minutes=240, step_minutes=0.5)
 
     satellite_data['paths'] = paths
 
-    satellite_data['coverage'] = get_satellite_coverage_circle(
-        position['lat'],
-        position['lon'],
-        position['alt'] / 1000,
-        num_points=300
-    )
+    satellite_data['coverage'] = await asyncio.to_thread(get_satellite_coverage_circle,
+                                                         position['lat'],
+                                                         position['lon'],
+                                                         position['alt'] / 1000,
+                                                         num_points=300
+                                                         )
 
     satellite_data['position'] = position
     position['az'] = sky_point[0]
