@@ -52,6 +52,16 @@ const preferencesSlice = createSlice({
                 id: null,
                 value: 'Europe/Athens',
                 name: 'timezone',
+            },
+            {
+                id: null,
+                name: 'stadia_maps_api_key',
+                value: "",
+            },
+            {
+                id: null,
+                name: 'openweather_api_key',
+                value: "",
             }
         ],
         status: 'idle',

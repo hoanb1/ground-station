@@ -116,6 +116,13 @@ export function setupTheme() {
                         backgroundColor: "#121212",
                     }
                 },
+            },
+            MuiTextField: {
+                styleOverrides: {
+                    root: {
+                        backgroundColor: "#121212",
+                    }
+                },
             }
             // MuiAppBar: {
             //     styleOverrides: {

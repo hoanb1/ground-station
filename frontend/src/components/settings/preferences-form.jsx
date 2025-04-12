@@ -84,18 +84,16 @@ const PreferencesForm = () => {
                         <Typography>Timezone</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
-                            variant="outlined"
                             size="small"
-                            fullWidth
                         >
                             <InputLabel>Timezone</InputLabel>
                             <Select
                                 value={getPreferenceValue('timezone')}
                                 onChange={handleChange('timezone')}
                                 label="Timezone"
-                            >
+                             variant={'filled'}>
                                 {timezoneOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.name}
@@ -110,18 +108,16 @@ const PreferencesForm = () => {
                         <Typography>Language</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
-                            variant="outlined"
                             size="small"
-                            fullWidth
                         >
                             <InputLabel>Language</InputLabel>
                             <Select
                                 value={getPreferenceValue('language')}
                                 onChange={handleChange('language')}
                                 label="Language"
-                            >
+                             variant={'filled'}>
                                 {languageOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.name}
@@ -136,18 +132,17 @@ const PreferencesForm = () => {
                         <Typography>Theme</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <FormControl
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
-                            variant="outlined"
                             size="small"
-                            fullWidth
                         >
-                            <InputLabel>Theme</InputLabel>
+                            <InputLabel htmlFor={"theme-selector"}>Theme</InputLabel>
                             <Select
+                                id={'theme-selector'}
                                 value={getPreferenceValue('theme')}
                                 onChange={handleChange('theme')}
                                 label="Theme"
-                            >
+                             variant={'filled'}>
                                 {themesOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.name}
@@ -174,11 +169,11 @@ const PreferencesForm = () => {
                             fullWidth
                             id="stadia-api-key"
                             variant="outlined"
-                            type="password"
+                            type="text"
                             size="small"
                             disabled={isLoading}
-                            value={getPreferenceValue('stadiaApiKey')}
-                            onChange={handleChange('stadiaApiKey')}
+                            value={getPreferenceValue('stadia_maps_api_key')}
+                            onChange={handleChange('stadia_maps_api_key')}
                         />
                     </Grid>
 
@@ -188,19 +183,20 @@ const PreferencesForm = () => {
                     </Grid>
                     <Grid size={8}>
                         <TextField
+                            style={{fontFamily: 'monospace'}}
                             fullWidth
                             id="openweather-api-key"
                             variant="outlined"
-                            type="password"
+                            type="text"
                             size="small"
                             disabled={isLoading}
-                            value={getPreferenceValue('openWeatherApiKey')}
-                            onChange={handleChange('openWeatherApiKey')}
+                            value={getPreferenceValue('openweather_api_key')}
+                            onChange={handleChange('openweather_api_key')}
                         />
                     </Grid>
                 </Grid>
 
-                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-end' }}>
+                <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>
                     <Button
                         disabled={isLoading}
                         variant="contained"
@@ -212,7 +208,7 @@ const PreferencesForm = () => {
                             fontWeight: 500
                         }}
                     >
-                        Save
+                        SAVE
                     </Button>
                 </Box>
             </Box>

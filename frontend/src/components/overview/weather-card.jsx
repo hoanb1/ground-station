@@ -20,16 +20,29 @@ import CompareArrowsIcon from '@mui/icons-material/CompareArrows';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 
 
-const WeatherDisplay = ({latitude, longitude, apiKey}) => {
+const WeatherDisplay = ({latitude, longitude}) => {
     const dispatch = useDispatch();
     const {data, loading, error} = useSelector((state) => state.weather);
     const {gridEditable} = useSelector(state => state.overviewSatTrack);
+    const {preferences} = useSelector(state => state.preferences);
 
     useEffect(() => {
         if (latitude && longitude) {
+            const apiKey = findOpenWeatherMapApiKey(preferences);
             dispatch(getWeatherData({latitude, longitude, apiKey}));
         }
-    }, [latitude, longitude, apiKey, dispatch]);
+    }, [latitude, longitude, dispatch]);
+
+
+    const findOpenWeatherMapApiKey = (preferences) => {
+        if (!Array.isArray(preferences)) {
+            console.error("Preferences is not an array");
+            return null;
+        }
+
+        const apiKeyObj = preferences.find(pref => pref.name === "openweather_api_key");
+        return apiKeyObj ? apiKeyObj.value : null;
+    };
 
 
     return (

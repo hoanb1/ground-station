@@ -542,7 +542,7 @@ const GlobalSatelliteTrack = React.memo(function () {
             <NextPassesGroupIsland/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="weather">
-            <WeatherDisplay latitude={location.lat} longitude={location.lon} apiKey={"471aacccad269b47ed7d2aa3369c9f71"}/>
+            <WeatherDisplay latitude={location.lat} longitude={location.lon} />
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="sat-info">
             <SatelliteInfoCard/>
