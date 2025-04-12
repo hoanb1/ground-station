@@ -792,7 +792,18 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         'rotator_data': rotator_data
                     })
 
-                    # no park command for some rotator controllers?
+                    # going to park position
+                    park_position_gen = rotator_controller.set_position(0.0, 90.0)
+
+                    try:
+                        parking_az, parking_el, is_slewing = await anext(park_position_gen)
+                        rotator_data['az'] = round(parking_az, 3)
+                        rotator_data['el'] = round(parking_el, 3)
+                        rotator_data['slewing'] = is_slewing
+                        logger.info(f"Current position: AZ={round(parking_az, 3)}°, EL={round(parking_el, 3)}°, slewing={is_slewing}")
+
+                    except StopAsyncIteration:
+                        logger.info(f"Parking to AZ={0}° EL={90}° complete")
 
                     rotator_data['parked'] = True
                     await sio.emit('satellite-tracking', {
