@@ -733,10 +733,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     rotator_details = rotator_details_reply['data']
                     rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
                     await rotator_controller.connect()
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "rotator_connected"}
-                    ]})
                     rotator_data['connected'] = True
+                    await sio.emit('satellite-tracking', {
+                        'events': [{'name': "rotator_connected"}],
+                        'rotator_data': rotator_data
+                    })
 
                 except Exception as e:
                     logger.error(f"Failed to connect to rotator_controller: {e}")
@@ -753,10 +754,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.info(f"Disconnecting from rotator_controller at {rotator_controller.host}:{rotator_controller.port}...")
                 try:
                     await rotator_controller.disconnect()
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "rotator_disconnected"}
-                    ]})
                     rotator_data['connected'] = False
+                    await sio.emit('satellite-tracking', {
+                        'events': [{'name': "rotator_disconnected"}],
+                        'rotator_data': rotator_data
+                    })
 
                 except Exception as e:
                     logger.error(f"Error disconnecting from rotator_controller: {e}")
@@ -791,7 +793,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     })
 
                     # no park command for some rotator controllers?
-
 
                     rotator_data['parked'] = True
                     await sio.emit('satellite-tracking', {
@@ -836,10 +837,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                     rotator_details = rig_details_reply['data']
                     rig_controller = RigController(host=rotator_details['host'], port=rotator_details['port'])
                     await rig_controller.connect()
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "rig_connected"}
-                    ]})
                     rig_data['connected'] = True
+                    await sio.emit('satellite-tracking', {
+                        'events': [{'name': "rig_connected"}],
+                        'rig_data': rig_data
+                    })
 
                 except Exception as e:
                     logger.error(f"Failed to connect to rig_controller: {e}")
@@ -856,10 +858,11 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 logger.info(f"Disconnecting from rig_controller at {rig_controller.host}:{rig_controller.port}...")
                 try:
                     await rig_controller.disconnect()
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "rig_disconnected"}
-                    ]})
                     rig_data['connected'] = False
+                    await sio.emit('satellite-tracking', {
+                        'events': [{'name': "rig_disconnected"}],
+                        'rig_data': rig_data
+                    })
 
                 except Exception as e:
                     logger.error(f"Error disconnecting from rig_controller: {e}")
