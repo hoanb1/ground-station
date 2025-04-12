@@ -72,7 +72,7 @@ function SatelliteList() {
     };
 
     return (
-        <FormControl disabled={trackingState['rotator_state'] === "tracking"} fullWidth={true} variant={"filled"} size={"small"}>
+        <FormControl disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"} fullWidth={true} variant={"filled"} size={"small"}>
             <InputLabel htmlFor="satellite-select">Satellite</InputLabel>
             <Select onClose={handleSelectCloseEvent} onOpen={handleSelectOpenEvent}  value={groupOfSats.length > 0? satelliteId: ""}
                     id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleUIElementChange}>

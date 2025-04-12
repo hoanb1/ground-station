@@ -1,3 +1,5 @@
+from concurrent.futures import ProcessPoolExecutor
+
 import time
 import asyncio
 import socket
@@ -90,21 +92,28 @@ class RigController:
             return True
 
         try:
-            result = await asyncio.wait_for(asyncio.to_thread(self.rig.close), timeout=3.0)
-            self.logger.debug(f"Close command: result={result}")
+            close_task = asyncio.create_task(asyncio.to_thread(self.rig.close))
+
+            # Wait with timeout
+            await asyncio.wait_for(close_task, timeout=3.0)
+            self.logger.info("Rig disconnected successfully")
+
+        except asyncio.TimeoutError:
+            self.logger.info("Rig disconnect operation is taking longer than expected")
 
             self.connected = False
             self.rig = None
             self.logger.info("Disconnected from rig")
-            return True
 
-        except asyncio.TimeoutError:
-            self.logger.warning("Rig close operation timed out")
-            # Handle the timeout case appropriately
+            return True
 
         except Exception as e:
             self.logger.error(f"Error disconnecting from rig: {e}")
             return False
+
+    async def close_rig(self):
+        with ProcessPoolExecutor() as pool:
+            return await asyncio.get_event_loop().run_in_executor(pool, self.rig.close)
 
     @asynccontextmanager
     async def _create_connection(self):

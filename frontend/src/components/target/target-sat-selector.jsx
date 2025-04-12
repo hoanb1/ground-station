@@ -115,7 +115,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['rotator_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                    <FormControl disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                                  size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
                         <Select onClose={handleSelectCloseEvent}

@@ -857,7 +857,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 try:
                     await rig_controller.disconnect()
                     await sio.emit('satellite-tracking', {'events': [
-                        {'name': "rotator_disconnected"}
+                        {'name': "rig_disconnected"}
                     ]})
                     rig_data['connected'] = False
 
