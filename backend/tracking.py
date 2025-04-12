@@ -631,7 +631,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     paths = await asyncio.to_thread(get_satellite_path, [
         satellite_data['details']['tle1'],
         satellite_data['details']['tle2']
-    ], duration_minutes=int(target_map_settings['orbitProjectionDuration']), step_minutes=0.5)
+    ], duration_minutes=int(target_map_settings.get('orbitProjectionDuration', 240)), step_minutes=0.5)
 
     satellite_data['paths'] = paths
 
