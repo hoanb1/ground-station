@@ -125,6 +125,10 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
+    function getRotatorStateFromTracking() {
+        return trackingState?.rotator_state || "unknown";
+    }
+    
     function getCurrentStatusofRotator() {
         if (rotatorData['minelevation'] === true) {
             return "Target below elevation limit";
@@ -171,6 +175,23 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                 });
             });
     };
+
+    function parkRotator() {
+        const newTrackingState = {
+            'norad_id': satelliteId,
+            'group_id': groupId,
+            'rotator_state': "parked",
+            'rig_state': trackingState['rig_state'],
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+        };
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
+            .unwrap()
+            .then((response) => {
+                console.info('response', response);
+            })
+    }
 
     function handleRotatorChange(event) {
         dispatch(setRotator(event.target.value));
@@ -282,8 +303,9 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button disabled={true} fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}>
-                                A
+                            <Button fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}
+                                    onClick={()=>{parkRotator()}}>
+                                PARK
                             </Button>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>

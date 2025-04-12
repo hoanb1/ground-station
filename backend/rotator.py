@@ -220,7 +220,7 @@ class RotatorController:
         try:
             self.logger.info("Parking rotator")
             status = self.rotator.park()
-            self.logger.debug(f"Park command: status={status}")
+            self.logger.info(f"Park command: status={status}")
 
             #if status != Hamlib.RIG_OK:
             #    error_msg = f"Failed to park rotator: {self.get_error_message(status)}"

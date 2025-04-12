@@ -765,6 +765,53 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 finally:
                     # Set to None regardless of disconnect success
                     rotator_controller = None
+
+        elif new == "parked":
+            rotator_data['tracking'] = False
+
+            if rotator_controller is not None:
+                logger.info(f"Parking rotator at {rotator_controller.host}:{rotator_controller.port}...")
+                try:
+                    await rotator_controller.park()
+
+                except Exception as e:
+                    logger.error(f"Error disconnecting from rotator_controller: {e}")
+                    logger.exception(e)
+            else:
+                # since the rotator is not connected, connect, sent the park command and disconnect
+                try:
+                    rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=current_rotator_id)
+                    rotator_details = rotator_details_reply['data']
+                    rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
+                    await rotator_controller.connect()
+                    rotator_data['connected'] = True
+                    await sio.emit('satellite-tracking', {
+                        'events': [{'name': "rotator_connected"}],
+                        'rotator_data': rotator_data
+                    })
+
+                    # no park command for some rotator controllers?
+
+
+                    rotator_data['parked'] = True
+                    await sio.emit('satellite-tracking', {
+                        'events': [{'name': "rotator_parked"}],
+                        'rotator_data': rotator_data
+                    })
+
+                    # now disconnect
+                    await rotator_controller.disconnect()
+                    rotator_data['connected'] = False
+                    rotator_controller = None
+                    await sio.emit('satellite-tracking', {
+                        'events': [{'name': "rotator_disconnected"}],
+                        'rotator_data': rotator_data
+                    })
+
+                except Exception as e:
+                    logger.error(f"Failed to connect to rotator_controller: {e}")
+                    logger.exception(e)
+
         else:
             logger.error(f"unknown tracking state: {new}")
 
@@ -934,7 +981,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                             current_transmitter.get('downlink_low', 0)
                         )
 
-                # rig control
+                # tune freq
                 if rig_controller:
                     frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])
 
@@ -947,7 +994,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         # generator is done (tuning complete)
                         logger.info(f"Tuning to frequency {rig_data['observed_freq']} complete")
 
-                # rotator controller
+                # slew rotator
                 if rotator_controller:
                     position_gen = rotator_controller.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
 
@@ -957,7 +1004,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         logger.info(f"Current position: AZ={round(az, 3)}°, EL={round(el, 3)}°, slewing={is_slewing}")
 
                     except StopAsyncIteration:
-                        # generator is done (slewing complete)
                         logger.info(f"Slewing to AZ={round(az, 3)}° EL={round(el, 3)}° complete")
 
             except AzimuthOutOfBounds as e:
