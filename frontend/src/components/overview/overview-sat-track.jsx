@@ -320,6 +320,7 @@ const GlobalSatelliteTrack = React.memo(function () {
                         key={"coverage-" + satellite['name']}
                         pathOptions={{
                             color: satelliteCoverageColor,
+                            fillColor: satelliteCoverageColor,
                             weight: 1,
                             fill: true,
                             opacity: 0.75,
@@ -333,11 +334,12 @@ const GlobalSatelliteTrack = React.memo(function () {
                         noClip={true}
                         key={"coverage-" + satellite['name']}
                         pathOptions={{
-                            color: satelliteCoverageColor,
-                            weight: 1,
+                            color: "#d875ff",
+                            fillColor: satelliteCoverageColor,
+                            weight: 2,
                             fill: true,
                             opacity: 0.9,
-                            fillOpacity: 0.3,
+                            fillOpacity: 0.5,
                         }}
                         positions={coverage}
                     />);
