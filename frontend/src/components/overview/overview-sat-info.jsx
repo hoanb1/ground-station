@@ -45,7 +45,7 @@ const SatelliteInfoCard = () => {
     } = useSelector((state) => state.overviewSatTrack);
     const {
         trackingState,
-        satelliteId,
+        satelliteId: trackingSatelliteId,
         selectedRadioRig,
         selectedRotator,
         selectedTransmitter
@@ -363,15 +363,10 @@ const SatelliteInfoCard = () => {
                                 border: "1px solid #4b4b4b",
                                 mt: 0.5
                             }}>
-                                <Button
-                                    disabled={!selectedSatelliteId}
-                                    variant="contained"
-                                    color="primary"
-                                    onClick={handleSetTrackingOnBackend}
-                                    fullWidth
-                                    sx={{py: 0.75}}
-                                >
-                                    Start tracking
+                                <Button disabled={!selectedSatelliteId || trackingSatelliteId===selectedSatelliteId}
+                                        variant="contained" color="primary"
+                                        onClick={handleSetTrackingOnBackend} fullWidth={true} sx={{py: 0.75}}>
+                                    {trackingSatelliteId===selectedSatelliteId? "TRACKING NOW": "START TRACKING"}
                                 </Button>
                             </Box>
                         </Grid>

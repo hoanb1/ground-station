@@ -319,9 +319,9 @@ const GlobalSatelliteTrack = React.memo(function () {
                         noClip={true}
                         key={"coverage-" + satellite['name']}
                         pathOptions={{
-                            color: satelliteCoverageColor,
+                            color: selectedSatelliteId === noradid? "#d875ff": satelliteCoverageColor,
                             fillColor: satelliteCoverageColor,
-                            weight: 1,
+                            weight: selectedSatelliteId === noradid? 2: 1,
                             fill: true,
                             opacity: 0.75,
                             fillOpacity: 0.15,
