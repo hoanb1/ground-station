@@ -234,7 +234,6 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         justifyContent: "space-between",
                         alignItems: "center",
                     }}>
-
                     </Grid>
 
                     <Grid container direction="row" sx={{
@@ -270,7 +269,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant={"h7"}>
+                            <Typography variant={"body1"} style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
                                 {getCurrentStatusofRotator()}
                             </Typography>
                         </Grid>

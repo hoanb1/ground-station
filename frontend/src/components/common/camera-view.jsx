@@ -13,8 +13,16 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt';
 
 const CameraView = () => {
     const dispatch = useDispatch();
-    const { cameras, selectedCameraId, selectedCamera } = useSelector((state) => state.cameras);
-    const { gridEditable } = useSelector((state) => state.targetSatTrack);
+    const {cameras, selectedCameraId, selectedCamera} = useSelector((state) => state.cameras);
+    const {gridEditable} = useSelector((state) => state.targetSatTrack);
+
+    useEffect(() => {
+        if (cameras.length === 1 && !selectedCameraId) {
+            dispatch(setSelectedCameraId(cameras[0].id));
+        }
+        return () => {
+        };
+    }, [cameras]);
 
     const handleCameraChange = (event) => {
         dispatch(setSelectedCameraId(event.target.value));
@@ -22,10 +30,12 @@ const CameraView = () => {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Camera view</TitleBar>
-            <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl size={"small"} variant={"filled"} fullWidth={true} sx={{ minWidth: 200, marginTop: 0.5, marginBottom: 1 }}>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Camera
+                view</TitleBar>
+            <Grid container spacing={{xs: 1, md: 1}} columns={{xs: 12, sm: 12, md: 12}}>
+                <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                    <FormControl size={"small"} variant={"filled"} fullWidth={true}
+                                 sx={{minWidth: 200, marginTop: 0.5, marginBottom: 1}}>
                         <InputLabel htmlFor={"camera-select"} id="camera-select">camera</InputLabel>
                         <Select
                             labelId="camera-select"
@@ -42,7 +52,7 @@ const CameraView = () => {
                             ))}
                         </Select>
                     </FormControl>
-                    </Grid>
+                </Grid>
 
                 {selectedCamera['type'] === 'webrtc' && (
                     <React.Suspense fallback={<CircularProgress/>}>
