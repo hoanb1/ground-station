@@ -72,9 +72,9 @@ const AboutPage = () => {
 
     return (
         <Paper
-            elevation={3}
+            elevation={1}
             sx={{
-                padding: 3,
+                padding: 1,
                 marginTop: 0,
                 borderRadius: 2,
             }}

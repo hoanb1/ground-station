@@ -397,6 +397,10 @@ async def data_submission_routing(sio, cmd, data, logger):
         elif cmd == "set-map-settings":
             logger.debug(f'Updating map settings, data: {data}')
             map_settings_reply = await crud.set_map_settings(dbsession, data)
+
+            # we emit here so that any open browsers are also informed of any change
+            await emit_tracker_data(dbsession, sio, logger)
+
             reply = {'success': map_settings_reply['success'], 'data': map_settings_reply['data']}
 
         else:
@@ -422,6 +426,8 @@ async def emit_tracker_data(dbsession, sio, logger):
     :rtype: None
     """
     try:
+        logger.debug("Sending tracker data to clients...")
+
         tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
         group_id = tracking_state_reply['data']['value'].get('group_id', None)
         norad_id = tracking_state_reply['data']['value'].get('norad_id', None)

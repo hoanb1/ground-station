@@ -31,6 +31,7 @@ def pretty_dict(d):
     # Get the string value and return it without the last newline
     return output.getvalue().rstrip()
 
+
 def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, observer_elevation, transmitted_freq_hz,
                             time=None):
     """
@@ -367,6 +368,7 @@ def get_satellite_position_from_tle(tle_lines):
         "vel": float(velocity_km_s)
     }
 
+
 async def get_ui_tracker_state(group_id: str, norad_id: int):
     """
     Fetches the current tracker state for a specified group ID and satellite ID. This function
@@ -600,6 +602,10 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         satellite_data['details']['tle2']
     ])
 
+    # get target map settings
+    target_map_settings_reply = await crud.get_map_settings(dbsession, 'target-map-settings')
+    target_map_settings = target_map_settings_reply['data'].get('value', {})
+
     # fetch transmitters
     transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
     satellite_data['transmitters'] = transmitters['data']
@@ -625,7 +631,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     paths = await asyncio.to_thread(get_satellite_path, [
         satellite_data['details']['tle1'],
         satellite_data['details']['tle2']
-    ], duration_minutes=240, step_minutes=0.5)
+    ], duration_minutes=int(target_map_settings['orbitProjectionDuration']), step_minutes=0.5)
 
     satellite_data['paths'] = paths
 
@@ -928,6 +934,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                             current_transmitter.get('downlink_low', 0)
                         )
 
+                # rig control
                 if rig_controller:
                     frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])
 
@@ -940,6 +947,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         # generator is done (tuning complete)
                         logger.info(f"Tuning to frequency {rig_data['observed_freq']} complete")
 
+                # rotator controller
                 if rotator_controller:
                     position_gen = rotator_controller.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
 
