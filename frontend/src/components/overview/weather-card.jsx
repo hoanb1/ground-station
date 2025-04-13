@@ -28,15 +28,16 @@ const WeatherDisplay = ({ latitude, longitude }) => {
 
     // Compact detail item component
     const DetailItem = ({ icon, label, value, color }) => (
-        <Grid item xs={6}>
+        <Grid>
             <Paper elevation={0} sx={{
+                margin: '0px',
                 p: 1, borderRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.09)',
                 backdropFilter: 'blur(10px)', display: 'flex',
                 flexDirection: 'column', alignItems: 'center', height: '100%'
             }}>
-                {React.cloneElement(icon, { sx: { color, fontSize: 20, mb: 0.5 } })}
+                {React.cloneElement(icon, { sx: { color, fontSize: 16, mb: 0 } })}
                 <Typography variant="caption" color="text.secondary">{label}</Typography>
-                <Typography variant="body1" fontWeight="medium">{value}</Typography>
+                <Typography variant="body2" fontWeight="medium">{value}</Typography>
             </Paper>
         </Grid>
     );
@@ -87,40 +88,45 @@ const WeatherDisplay = ({ latitude, longitude }) => {
                                 </Paper>
                             ) : (
                                 <>
-                                    <Box sx={{ mb: 1 }}>
-                                        <Typography variant="body2" color="text.secondary" sx={{
-                                            display: 'flex', alignItems: 'center'
-                                        }}>
-                                            <LocationOnIcon fontSize="small" sx={{ mr: 0.5, fontSize: 14 }} />
-                                            {data.location}
-                                        </Typography>
-                                    </Box>
-
                                     <Box sx={{
-                                        display: 'flex', alignItems: 'center',
-                                        justifyContent: 'space-between', mb: 1.5
+                                        display: 'flex',
+                                        alignItems: 'flex-start',
+                                        justifyContent: 'space-between',
                                     }}>
-                                        <Box>
-                                            <Typography variant="h3" fontWeight="bold" sx={{ lineHeight: 1 }}>
-                                                {Math.round(data.temperature)}°
+                                        <Box sx={{mb: 0}}>
+                                            <Typography variant="body2" color="text.secondary" sx={{
+                                                display: 'flex', alignItems: 'center'
+                                            }}>
+                                                <LocationOnIcon fontSize="small" sx={{mr: 0.5, fontSize: 14}}/>
+                                                {data.location}
                                             </Typography>
                                             <Chip label={data.description} size="small" sx={{
                                                 mt: 0.5, fontSize: '0.7rem', fontWeight: 'medium',
                                                 textTransform: 'capitalize', backgroundColor: 'primary.main',
                                                 color: 'primary.contrastText', borderRadius: 4,
                                                 height: 22
-                                            }} />
+                                            }}/>
                                         </Box>
-                                        <img src={`https://openweathermap.org/img/wn/${data.icon}@2x.png`}
-                                             alt={data.description} style={{ width: 70, height: 70 }} />
+
+                                        <Box sx={{
+                                            height: '45px',
+                                            display: 'flex', alignItems: 'center'
+                                        }}>
+                                            <Typography variant="h3" fontWeight="bold" sx={{lineHeight: 1}}>
+                                                {Math.round(data.temperature)}°
+                                            </Typography>
+                                            <img src={`https://openweathermap.org/img/wn/${data.icon}@2x.png`}
+                                                 alt={data.description}
+                                                 style={{width: 70, height: 70, marginLeft: '8px'}}/>
+                                        </Box>
                                     </Box>
 
                                     <Divider sx={{ my: 1 }} />
 
-                                    <Grid container spacing={1}>
+                                    <Grid container spacing={0.5}>
                                         <DetailItem
                                             icon={<ThermostatIcon />}
-                                            label="Feels Like"
+                                            label="Feels"
                                             value={`${Math.round(data.feels_like)}°C`}
                                             color="warning.main"
                                         />

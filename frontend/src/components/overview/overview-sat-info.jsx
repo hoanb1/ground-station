@@ -151,7 +151,7 @@ const SatelliteInfoCard = () => {
 
                 {/* Main Telemetry Data Section */}
                 <Box sx={{p: 1, flex: 1}}>
-                    <Grid container spacing={1.5}>
+                    <Grid container spacing={1}>
                         {/* Position Data */}
                         <Grid>
                             <Box sx={{
@@ -159,8 +159,17 @@ const SatelliteInfoCard = () => {
                                 borderRadius: 1,
                                 background: "#121212",
                                 border: "1px solid #4b4b4b",
+                                position: 'relative',
                                 boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.common.black, 0.3)}`,
                             }}>
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 3,
+                                    background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                }}/>
                                 <Typography variant="overline" sx={{
                                     color: (theme) => theme.palette.secondary.main,
                                     display: 'block',
