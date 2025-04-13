@@ -19,7 +19,7 @@ import cameraReducer from '../hardware/camera-slice.jsx';
 const persistConfig = {
     key: "root",
     storage,
-    whitelist: ['preferences', 'tleSources'],
+    whitelist: [],
 };
 
 const rootReducer = combineReducers({

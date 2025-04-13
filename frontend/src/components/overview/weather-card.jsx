@@ -123,7 +123,10 @@ const WeatherDisplay = ({ latitude, longitude }) => {
 
                                     <Divider sx={{ my: 1 }} />
 
-                                    <Grid container spacing={0.5}>
+                                    <Grid container spacing={0.5} style={{
+                                        alignItems: 'flex-start',
+                                        justifyContent: 'space-between',
+                                    }}>
                                         <DetailItem
                                             icon={<ThermostatIcon />}
                                             label="Feels"

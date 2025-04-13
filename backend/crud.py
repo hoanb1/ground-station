@@ -208,7 +208,9 @@ async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[u
     defaults = {
         'timezone': 'Europe/Athens',
         'language': 'en_US',
-        'theme': 'dark'
+        'theme': 'dark',
+        'stadia_maps_api_key': "",
+        'openweather_api_key': "",
     }
 
     try:
