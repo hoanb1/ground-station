@@ -28,7 +28,7 @@ const WeatherDisplay = ({ latitude, longitude }) => {
 
     // Compact detail item component
     const DetailItem = ({ icon, label, value, color }) => (
-        <Grid>
+        <Grid style={{marginRight: '4px'}}>
             <Paper elevation={0} sx={{
                 margin: '0px',
                 p: 1, borderRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.09)',
@@ -112,12 +112,12 @@ const WeatherDisplay = ({ latitude, longitude }) => {
                                             height: '45px',
                                             display: 'flex', alignItems: 'center'
                                         }}>
-                                            <Typography variant="h3" fontWeight="bold" sx={{lineHeight: 1}}>
+                                            <Typography variant="h4" fontWeight="bold" sx={{lineHeight: 1}}>
                                                 {Math.round(data.temperature)}°
                                             </Typography>
                                             <img src={`https://openweathermap.org/img/wn/${data.icon}@2x.png`}
                                                  alt={data.description}
-                                                 style={{width: 70, height: 70, marginLeft: '8px'}}/>
+                                                 style={{width: 70, height: 70, marginLeft: '0px'}}/>
                                         </Box>
                                     </Box>
 
@@ -126,27 +126,29 @@ const WeatherDisplay = ({ latitude, longitude }) => {
                                     <Grid container spacing={0.5} style={{
                                         alignItems: 'flex-start',
                                         justifyContent: 'space-between',
+                                        overflowY: 'auto',
+                                        height: "75px",
                                     }}>
                                         <DetailItem
-                                            icon={<ThermostatIcon />}
+                                            icon={<ThermostatIcon/>}
                                             label="Feels"
                                             value={`${Math.round(data.feels_like)}°C`}
                                             color="warning.main"
                                         />
                                         <DetailItem
-                                            icon={<OpacityIcon />}
+                                            icon={<OpacityIcon/>}
                                             label="Humidity"
                                             value={`${data.humidity}%`}
                                             color="info.main"
                                         />
                                         <DetailItem
-                                            icon={<AirIcon />}
+                                            icon={<AirIcon/>}
                                             label="Wind"
                                             value={`${data.windSpeed} m/s`}
                                             color="success.main"
                                         />
                                         <DetailItem
-                                            icon={<CompareArrowsIcon />}
+                                            icon={<CompareArrowsIcon/>}
                                             label="Pressure"
                                             value={`${data.pressure} hPa`}
                                             color="secondary.main"
