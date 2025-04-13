@@ -468,7 +468,10 @@ const GlobalSatelliteTrack = React.memo(function () {
                 zoomSnap={0.25}
                 zoomDelta={0.25}
             >
-                <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Birds eye view</MapTitleBar>
+                <MapTitleBar
+                    className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>
+                    Birds eye view
+                </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer
                     url={getTileLayerById(tileLayerID)['url']}

@@ -1,3 +1,6 @@
+import {store} from './store.jsx';
+
+
 // Tile layers
 export const tileLayers = [
     {
@@ -21,7 +24,7 @@ export const tileLayers = [
     {
         id: 'stadiadark',
         name: 'Stadia dark',
-        url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png',
+        url: 'https://tiles.stadiamaps.com/tiles/alidade_smooth_dark/{z}/{x}/{y}{r}.png?api_key={APIKEY}',
         attribution: '&copy; <a href="https://www.stadiamaps.com/" target="_blank">Stadia Maps</a> &copy; <a href="https://openmaptiles.org/" target="_blank">OpenMapTiles</a> &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
     },
     {
@@ -50,6 +53,16 @@ export const tileLayers = [
  * @returns {Object|null} - The tile layer object if found, otherwise null.
  */
 export function getTileLayerById(id) {
-    return tileLayers.find(layer => layer.id === id) || null;
+    const tileLayer = tileLayers.find(layer => layer.id === id) || {};
+    if (id==="stadiadark") {
+        const state = store.getState();
+        const preferences = state.preferences.preferences;
+        const apiKey = preferences.find(pref => pref.name === "stadia_maps_api_key");
+        if (apiKey) {
+            tileLayer.url = tileLayer.url.replace("{APIKEY}", apiKey.value);
+        }
+    }
+
+    return tileLayer
 }
 

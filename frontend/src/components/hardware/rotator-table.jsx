@@ -39,11 +39,22 @@ export default function AntennaRotatorTable() {
     const columns = [
         { field: 'name', headerName: 'Name', flex: 1, minWidth: 150 },
         { field: 'host', headerName: 'Host', flex: 1, minWidth: 150 },
-        { field: 'port', headerName: 'Port', type: 'number', flex: 1, minWidth: 80 },
-        { field: 'minaz', headerName: 'Min Az', type: 'number', flex: 1, minWidth: 80 },
-        { field: 'maxaz', headerName: 'Max Az', type: 'number', flex: 1, minWidth: 80 },
-        { field: 'minel', headerName: 'Min El', type: 'number', flex: 1, minWidth: 80 },
-        { field: 'maxel', headerName: 'Max El', type: 'number', flex: 1, minWidth: 80 },
+        {
+            field: 'port',
+            headerName: 'Port',
+            type: 'number',
+            flex: 1,
+            minWidth: 80,
+            align: 'right',
+            headerAlign: 'right',
+            valueFormatter: (value) => {
+                return value;
+            }
+        },
+        { field: 'minaz', headerName: 'Min AZ', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'maxaz', headerName: 'Max AZ', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'minel', headerName: 'Min EL', type: 'number', flex: 1, minWidth: 80 },
+        { field: 'maxel', headerName: 'Max EL', type: 'number', flex: 1, minWidth: 80 },
         { field: 'aztype', headerName: 'AZ Type', type: 'number', flex: 1, minWidth: 80 },
         { field: 'azendstop', headerName: 'AZ Endstop', type: 'number', flex: 1, minWidth: 80 },
     ];
