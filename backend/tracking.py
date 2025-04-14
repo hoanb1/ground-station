@@ -933,7 +933,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 current_rig_id = tracker.get('rig_id', None)
                 current_rotator_state = tracker.get('rotator_state')
                 current_rig_state = tracker.get('rig_state')
-                current_transmitter_id = tracker.get('transmitter_id', None)
+                current_transmitter_id = tracker.get('transmitter_id', "none")
 
                 # check norad_id and detect change
                 await norad_id_change_tracker.update_state(current_norad_id)

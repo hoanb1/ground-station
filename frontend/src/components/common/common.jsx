@@ -148,7 +148,7 @@ export function InternationalDateLinePolyline() {
             positions={dateLineCoordinates1}
             pathOptions={{
                 opacity: 0.9,
-                color: 'grey',
+                color: 'white',
                 weight: 1,
                 dashArray: '1, 5',
             }}
@@ -158,7 +158,7 @@ export function InternationalDateLinePolyline() {
             positions={dateLineCoordinates2}
             pathOptions={{
                 opacity: 0.9,
-                color: 'grey',
+                color: 'white',
                 weight: 1,
                 dashArray: '1, 5',
             }}

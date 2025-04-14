@@ -330,7 +330,7 @@ class RotatorController:
         # Keep checking position when consumer requests an update
         while is_slewing:
             # Wait for the update interval
-            await asyncio.sleep(update_interval)
+            #await asyncio.sleep(update_interval)
 
             # Get current position
             current_az, current_el = await self._get_position()

@@ -54,7 +54,7 @@ import {
     setGridEditable,
     setMapZoomLevel,
     setOpenMapSettingsDialog,
-    setNextPassesHours, setOverviewMapSetting,
+    setNextPassesHours, setOverviewMapSetting, setSelectedSatelliteId,
 } from './overview-sat-slice.jsx';
 import NextPassesGroupIsland from "./overview-sat-passes.jsx";
 import SettingsIcon from "@mui/icons-material/Settings";
@@ -303,12 +303,14 @@ const GlobalSatelliteTrack = React.memo(function () {
                     />)
                 }
 
-                const onMarkerMouseOver = (event, noradId) => {
-                    //console.log(noradId, event);
+                const onMarkerMouseClick = (event, noradId) => {
+                    dispatch(setSelectedSatelliteId(noradId));
                 };
 
                 const markerEventHandlers = {
-                    mouseover: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
+                    //mouseover: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
+                    //mouseout: (event) => (onMarkerMouseOver(event, satellite['norad_id'])),
+                    click: (event) => (onMarkerMouseClick(event, satellite['norad_id'])),
                 }
 
                 const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);
