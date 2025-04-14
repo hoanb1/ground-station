@@ -29,6 +29,11 @@ export default defineConfig(({ mode }) => {
 
       // Add proxy configuration
       proxy: {
+        '/satimages': {
+          target: `http://${backendHost}:${backendPort}`,
+          changeOrigin: true,
+          secure: false,
+        },
         '/api': {  // For regular HTTP API requests
           target: `http://${backendHost}:${backendPort}`,
           changeOrigin: true,

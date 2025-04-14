@@ -189,7 +189,7 @@ async def webrtc_websocket(websocket: WebSocket, client_id: str):
         if client_id in active_connections:
             del active_connections[client_id]
 
-# our public directory
+# the satimages directory
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
 @app.get("/{full_path:path}")
@@ -204,6 +204,7 @@ async def serve_spa(request: Request, full_path: str):
     # For all other routes, serve the index.html file
     return FileResponse(os.path.join(static_files_dir, "index.html"))
 
+# root path
 app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
 
@@ -218,7 +219,7 @@ async def init_db():
         await conn.run_sync(Base.metadata.create_all)
     logger.info("Database initialized.")
 
-# Command-line argument parsing
+
 if __name__ == "__main__":
     logger.info("Configuring database connection...")
     loop = asyncio.get_event_loop()

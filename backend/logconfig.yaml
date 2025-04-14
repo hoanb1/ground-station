@@ -24,13 +24,13 @@ handlers:
 
 loggers:
   uvicorn.error:
-    level: ERROR
+    level: INFO
     handlers:
       - default
     propagate: no
 
   uvicorn.access:
-    level: ERROR
+    level: INFO
     handlers:
       - access
     propagate: no
