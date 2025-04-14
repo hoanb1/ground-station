@@ -391,9 +391,9 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         'transmitters': [],
         'group_id': None,
         'norad_id': None,
-        'rotator_id': '',
-        'rig_id': '',
-        'transmitter_id': ''
+        'rotator_id': 'none',
+        'rig_id': 'none',
+        'transmitter_id': 'none'
     }
 
     try:
