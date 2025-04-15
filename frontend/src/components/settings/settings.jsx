@@ -26,6 +26,7 @@ import LocationPage from "./location-form.jsx";
 import PreferencesForm from "./preferences-form.jsx";
 import MaintenanceForm from "./maintenance-form.jsx";
 import CameraTable from "../hardware/camera-table.jsx";
+import {AntTab, AntTabs} from "../common/common.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -107,28 +108,6 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
         <LocationPage/>
     );
 
-    const AntTabs = styled(Tabs)({
-        borderBottom: '1px #4c4c4c solid',
-        '& .MuiTabs-indicator': {
-            backgroundColor: '#262626',
-        },
-    });
-
-    const AntTab = styled((props) => <Tab disableRipple {...props} />)(({ theme }) => ({
-        '&.MuiTab-root': {
-            fontSize: theme.typography.pxToRem(16),
-        },
-        '&.Mui-selected': {
-            color: '#fff',
-            fontWeight: theme.typography.fontWeightMedium,
-            backgroundColor: '#262626',
-            marginTop: '0px',
-            //borderTop: '1px #071318 solid',
-        },
-        '&.Mui-focusVisible': {
-            backgroundColor: '#d1eaff',
-        },
-    }));
 
     let tabsList = [];
     // Define arrays of tabs for each main category

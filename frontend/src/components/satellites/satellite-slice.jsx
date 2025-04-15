@@ -67,6 +67,7 @@ const satellitesSlice = createSlice({
         pageSize: 10,
         formValues: defaultSatellite,
         openSatelliteInfoDialog: false,
+        clickedSatellite: defaultSatellite,
     },
     reducers: {
         setSatellites: (state, action) => {

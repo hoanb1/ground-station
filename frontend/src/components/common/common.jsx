@@ -3,11 +3,12 @@ import Paper from "@mui/material/Paper";
 import {Polyline, Tooltip as LeafletTooltip} from "react-leaflet";
 import React, {useEffect, useRef, useState} from "react";
 import Tooltip from "@mui/material/Tooltip";
-import {Box, Chip, Fab, Stack} from "@mui/material";
+import {Box, Chip, Fab, Stack, Tab} from "@mui/material";
 import ArrowUpwardIcon from "@mui/icons-material/ArrowUpward";
 import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
+import Tabs from "@mui/material/Tabs";
 
 export const SATELLITE_NUMBER_LIMIT = 50;
 
@@ -35,6 +36,30 @@ export const StyledIslandParentNoScrollbar = styled("div")(({ theme }) => ({
     overflowY: 'hidden',
     overflowX: 'hidden',
 }));
+
+export const AntTabs = styled(Tabs)({
+    borderBottom: '1px #4c4c4c solid',
+    '& .MuiTabs-indicator': {
+        backgroundColor: '#262626',
+    },
+});
+
+export const AntTab = styled((props) => <Tab disableRipple {...props} />)(({ theme }) => ({
+    '&.MuiTab-root': {
+        fontSize: theme.typography.pxToRem(16),
+    },
+    '&.Mui-selected': {
+        color: '#fff',
+        fontWeight: theme.typography.fontWeightMedium,
+        backgroundColor: '#262626',
+        marginTop: '0px',
+        //borderTop: '1px #071318 solid',
+    },
+    '&.Mui-focusVisible': {
+        backgroundColor: '#d1eaff',
+    },
+}));
+
 
 export const CODEC_JSON = {
     parse: (value) => {
@@ -380,7 +405,7 @@ export function getMaidenhead(lat, lon) {
 export const renderCountryFlagsCSV = (csvCodes) => {
     if (!csvCodes) return "-";
 
-    const countryCodes = csvCodes.split(',').map(code => code.trim());
+    const countryCodes = Array.isArray(csvCodes) ? csvCodes : csvCodes.split(',').map(code => code.trim());
     return (
         <div style={{
             height: 17,

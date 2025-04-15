@@ -13,65 +13,157 @@ import DialogActions from "@mui/material/DialogActions";
 import Button from "@mui/material/Button";
 import * as React from "react";
 import Grid from "@mui/material/Grid2";
+import {DataGrid} from "@mui/x-data-grid";
 
 const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth>
+        <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth={true}>
             <DialogTitle>Satellite Information</DialogTitle>
             <DialogContent>
                 {selectedSatellite ? (
                     <Box>
-                        <Grid container spacing={2}>
-                            <Grid sx={{ mb: 2, textAlign: 'center' }} style={{minHeight: '300px', width: '60%' }} >
-                                <TableContainer>
-                                    <Table>
-                                        <TableBody>
-                                            <TableRow>
-                                                <TableCell><strong>Name</strong></TableCell>
-                                                <TableCell>{selectedSatellite['name']}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>NORAD ID</strong></TableCell>
-                                                <TableCell>{selectedSatellite['norad_id']}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>Status</strong></TableCell>
-                                                <TableCell>{betterStatusValue(selectedSatellite['status'])}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>Countries</strong></TableCell>
-                                                <TableCell>{renderCountryFlagsCSV(selectedSatellite['countries'])}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>Operator</strong></TableCell>
-                                                <TableCell>{selectedSatellite['operator'] || '-'}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>Launched</strong></TableCell>
-                                                <TableCell>{betterDateTimes(selectedSatellite['launched'])}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>Deployed</strong></TableCell>
-                                                <TableCell>{betterDateTimes(selectedSatellite['deployed'])}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>Decayed</strong></TableCell>
-                                                <TableCell>{betterDateTimes(selectedSatellite['decayed'])}</TableCell>
-                                            </TableRow>
-                                            <TableRow>
-                                                <TableCell><strong>Updated</strong></TableCell>
-                                                <TableCell>{betterDateTimes(selectedSatellite['updated'])}</TableCell>
-                                            </TableRow>
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
+                        <Grid container spacing={3}>
+                            <Grid
+                                sx={{
+                                    backgroundColor: '#1e1e1e',
+                                    borderRadius: '8px',
+                                    padding: 3,
+                                    boxShadow: '0 2px 4px rgba(255, 255, 255, 0.1)',
+                                    minHeight: '300px',
+                                    width: '60%',
+                                    color: '#ffffff',
+                                }}
+                            >
+                                <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>Name:</strong> <span>{selectedSatellite['name']}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>NORAD ID:</strong> <span>{selectedSatellite['norad_id']}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>Status:</strong>
+                                        <span>{betterStatusValue(selectedSatellite['status'])}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>Countries:</strong>
+                                        <span>{renderCountryFlagsCSV(selectedSatellite['countries'])}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>Operator:</strong> <span>{selectedSatellite['operator'] || '-'}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>Launched:</strong>
+                                        <span>{betterDateTimes(selectedSatellite['launched'])}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>Deployed:</strong>
+                                        <span>{betterDateTimes(selectedSatellite['deployed'])}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                            borderBottom: '1px solid #444444',
+                                        }}
+                                    >
+                                        <strong>Decayed:</strong>
+                                        <span>{betterDateTimes(selectedSatellite['decayed'])}</span>
+                                    </Box>
+                                    <Box
+                                        sx={{
+                                            display: 'flex',
+                                            justifyContent: 'space-between',
+                                            width: '100%',
+                                            padding: '8px 0',
+                                        }}
+                                    >
+                                        <strong>Updated:</strong>
+                                        <span>{betterDateTimes(selectedSatellite['updated'])}</span>
+                                    </Box>
+                                </Box>
                             </Grid>
-                            <Grid sx={{ mb: 2, textAlign: 'center' }} style={{minHeight: '300px', width: '38%' }} >
-                                <Box sx={{ mb: 2, textAlign: 'right' }}>
+                            <Grid
+                                sx={{
+                                    textAlign: 'center',
+                                    minHeight: '300px',
+                                    width: '37%',
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    alignItems: 'center',
+                                    backgroundColor: '#1e1e1e',
+                                    borderRadius: '8px',
+                                    boxShadow: '0 2px 4px rgba(255, 255, 255, 0.1)',
+                                }}
+                            >
+                                <Box sx={{textAlign: 'right'}}>
                                     <img
                                         src={`/satimages/${selectedSatellite['norad_id']}.png`}
                                         alt={`Satellite ${selectedSatellite['norad_id']}`}
-                                        style={{ maxWidth: '100%', height: 'auto' }}
+                                        style={{
+                                            maxWidth: '100%',
+                                            height: 'auto',
+                                            border: '1px solid #444444',
+                                            borderRadius: '4px',
+                                        }}
                                     />
                                 </Box>
                             </Grid>
@@ -79,48 +171,78 @@ const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
                         <Box mt={2}>
                             <h3>Transmitters</h3>
                             {selectedSatellite['transmitters'] && selectedSatellite['transmitters'].length ? (
-                                <TableContainer>
-                                    <Table>
-                                        <TableHead>
-                                            <TableRow style={{fontWeight: 'bold', backgroundColor: '#121212' }}>
-                                                <TableCell><strong>Description</strong></TableCell>
-                                                <TableCell><strong>Type</strong></TableCell>
-                                                <TableCell><strong>Status</strong></TableCell>
-                                                <TableCell><strong>Alive</strong></TableCell>
-                                                <TableCell><strong>Uplink low</strong></TableCell>
-                                                <TableCell><strong>Uplink high</strong></TableCell>
-                                                <TableCell><strong>Uplink drift</strong></TableCell>
-                                                <TableCell><strong>Downlink low</strong></TableCell>
-                                                <TableCell><strong>Downlink high</strong></TableCell>
-                                                <TableCell><strong>Downlink drift</strong></TableCell>
-                                                <TableCell><strong>Mode</strong></TableCell>
-                                                <TableCell><strong>Uplink mode</strong></TableCell>
-                                                <TableCell><strong>Invert</strong></TableCell>
-                                                <TableCell><strong>Baud</strong></TableCell>
-                                            </TableRow>
-                                        </TableHead>
-                                        <TableBody>
-                                            {selectedSatellite['transmitters'].map((transmitter, index) => (
-                                                <TableRow key={index}>
-                                                    <TableCell>{transmitter['description']}</TableCell>
-                                                    <TableCell>{transmitter['type']}</TableCell>
-                                                    <TableCell>{transmitter['status']}</TableCell>
-                                                    <TableCell>{transmitter['alive'] || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['uplink_low']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['uplink_high']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['uplink_drift']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['downlink_low']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['downlink_high']) || "-"}</TableCell>
-                                                    <TableCell>{humanizeFrequency(transmitter['downlink_drift']) || "-"}</TableCell>
-                                                    <TableCell>{transmitter['mode'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['uplink_mode'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['invert'] || "-"}</TableCell>
-                                                    <TableCell>{transmitter['baud'] || "-"}</TableCell>
-                                                </TableRow>
-                                            ))}
-                                        </TableBody>
-                                    </Table>
-                                </TableContainer>
+                                <DataGrid
+                                    rows={selectedSatellite['transmitters'].map((transmitter, index) => ({
+                                        id: index,
+                                        description: transmitter['description'] || "-",
+                                        type: transmitter['type'] || "-",
+                                        status: transmitter['status'] || "-",
+                                        alive: transmitter['alive'] || "-",
+                                        uplinkLow: humanizeFrequency(transmitter['uplink_low']) || "-",
+                                        uplinkHigh: humanizeFrequency(transmitter['uplink_high']) || "-",
+                                        uplinkDrift: humanizeFrequency(transmitter['uplink_drift']) || "-",
+                                        downlinkLow: humanizeFrequency(transmitter['downlink_low']) || "-",
+                                        downlinkHigh: humanizeFrequency(transmitter['downlink_high']) || "-",
+                                        downlinkDrift: humanizeFrequency(transmitter['downlink_drift']) || "-",
+                                        mode: transmitter['mode'] || "-",
+                                        uplinkMode: transmitter['uplink_mode'] || "-",
+                                        invert: transmitter['invert'] || "-",
+                                        baud: transmitter['baud'] || "-",
+                                    }))}
+                                    columns={[
+                                        {field: "description", headerName: "Description", flex: 1},
+                                        {field: "type", headerName: "Type", flex: 1},
+                                        {field: "status", headerName: "Status", flex: 1},
+                                        {field: "alive", headerName: "Alive", flex: 1},
+                                        {field: "uplinkLow", headerName: "Uplink low", flex: 1},
+                                        {field: "uplinkHigh", headerName: "Uplink high", flex: 1},
+                                        {field: "uplinkDrift", headerName: "Uplink drift", flex: 1},
+                                        {field: "downlinkLow", headerName: "Downlink low", flex: 1},
+                                        {field: "downlinkHigh", headerName: "Downlink high", flex: 1},
+                                        {field: "downlinkDrift", headerName: "Downlink drift", flex: 1},
+                                        {field: "mode", headerName: "Mode", flex: 1},
+                                        {field: "uplinkMode", headerName: "Uplink mode", flex: 1},
+                                        {field: "invert", headerName: "Invert", flex: 1},
+                                        {field: "baud", headerName: "Baud", flex: 1},
+                                    ]}
+                                    disableSelectionOnClick
+                                    sx={{
+                                        border: 'none',
+                                        backgroundColor: '#1e1e1e',
+                                        color: '#ffffff',
+                                        '& .MuiDataGrid-columnHeaders': {
+                                            backgroundColor: '#333333',
+                                            color: '#ffffff',
+                                            fontSize: '14px',
+                                            fontWeight: 'bold',
+                                            borderBottom: '1px solid #444444',
+                                        },
+                                        '& .MuiDataGrid-cell': {
+                                            whiteSpace: 'nowrap',
+                                            overflow: 'hidden',
+                                            textOverflow: 'ellipsis',
+                                            borderBottom: '1px solid #444444',
+                                        },
+                                        '& .MuiDataGrid-row': {
+                                            '&:nth-of-type(odd)': {
+                                                backgroundColor: '#292929',
+                                            },
+                                            '&:hover': {
+                                                backgroundColor: '#3a3a3a',
+                                            },
+                                        },
+                                        '& .MuiDataGrid-footerContainer': {
+                                            backgroundColor: '#333333',
+                                            color: '#ffffff',
+                                        },
+                                        '& .MuiDataGrid-cell:focus': {
+                                            outline: 'none',
+                                        },
+                                        '& .MuiDataGrid-selectedRowCount': {
+                                            color: '#ffffff',
+                                        },
+                                    }}
+                                />
                             ) : (
                                 <div style={{textAlign: 'center'}}>
                                     <span>No Transmitters Available</span>
