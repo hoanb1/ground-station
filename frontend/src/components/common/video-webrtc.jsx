@@ -20,8 +20,6 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
     
     const RELAY_SERVER = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
 
-    console.info("webRTCSrc", src);
-
     useEffect(() => {
         if (!videoRef.current || !src) return;
 

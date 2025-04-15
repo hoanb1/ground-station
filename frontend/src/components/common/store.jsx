@@ -15,6 +15,7 @@ import overviewSatTrackReducer from '../overview/overview-sat-slice.jsx';
 import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
+import waterfallReducer from '../target/waterfall-slice.jsx';
 
 const persistConfig = {
     key: "root",
@@ -37,6 +38,7 @@ const rootReducer = combineReducers({
     overviewSatTrack: overviewSatTrackReducer,
     weather: weatherReducer,
     cameras: cameraReducer,
+    waterfall: waterfallReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

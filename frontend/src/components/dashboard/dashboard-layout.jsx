@@ -54,9 +54,48 @@ function DashboardEditor() {
     );
 }
 
+
+function ConnectionStatus() {
+    const socket = useSocket().socket;
+    const [transportType, setTransportType] = useState('connecting...');
+
+    useEffect(() => {
+        const interval = setInterval(() => {
+            if (socket.connected) {
+                setTransportType(socket.io.engine.transport.name);
+            } else {
+                setTransportType('disconnected');
+            }
+        }, 1000);
+
+        return () => clearInterval(interval);
+    }, [socket]);
+    
+    return (
+        <>
+            <Box
+                sx={{
+                    mt: '10px',
+                    width: '12px',
+                    height: '12px',
+                    borderRadius: '50%',
+                    backgroundColor: transportType === "websocket"
+                        ? '#4caf50'
+                        : transportType === "polling"
+                            ? '#f57c00'
+                            : '#f44336', // Red for "disconnected"
+                    marginRight: '8px',
+                }}
+            />
+        </>
+    );
+}
+
+
 function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
+            <ConnectionStatus/>
             <DashboardEditor/>
             <TimeDisplay/>
             <ThemeSwitcher />

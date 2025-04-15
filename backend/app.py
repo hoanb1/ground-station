@@ -2,6 +2,7 @@ import uvicorn
 import socketio
 import os
 import httpx
+import rtlsdr
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task
@@ -18,6 +19,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
+from sdr import process_rtlsdr_data, active_clients, rtlsdr_devices
 
 
 
@@ -94,17 +96,143 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
+
+@sio.event
+async def configure_rtlsdr(sid, data):
+    """Configure RTLSDR device parameters"""
+    try:
+        device_id = data.get('deviceId', 0)
+        center_freq = data.get('centerFrequency', 100e6)  # Default to 100 MHz
+        sample_rate = data.get('sampleRate', 2.048e6)  # Default to 2.048 MSPS
+        gain = data.get('gain', 20)  # Default to 20 dB gain
+        fft_size = data.get('fftSize', 1024)  # Default FFT size
+
+        # Initialize or reconfigure RTLSDR
+        if device_id not in rtlsdr_devices:
+            # Create new RTLSDR instance
+            sdr = rtlsdr.RtlSdr(device_id)
+            rtlsdr_devices[device_id] = sdr
+            logger.info(f"Initialized RTLSDR device {device_id}")
+        else:
+            sdr = rtlsdr_devices[device_id]
+
+        # Configure SDR parameters
+        sdr.center_freq = center_freq
+        sdr.sample_rate = sample_rate
+        sdr.gain = gain
+
+        # Update client configuration
+        if sid in active_clients:
+            active_clients[sid].update({
+                'device_id': device_id,
+                'center_frequency': center_freq,
+                'sample_rate': sample_rate,
+                'gain': gain,
+                'fft_size': fft_size
+            })
+
+        await sio.emit('status', {
+            'configured': True,
+            'device_id': device_id,
+            'center_frequency': center_freq,
+            'sample_rate': sample_rate,
+            'gain': gain,
+            'fft_size': fft_size
+        }, room=sid)
+
+    except Exception as e:
+        logger.error(f"Error configuring RTLSDR: {str(e)}")
+        await sio.emit('error', {'message': f"Failed to configure RTLSDR: {str(e)}"}, room=sid)
+
+
+@sio.event
+async def start_streaming(sid):
+    """Start streaming FFT data from RTLSDR"""
+    if sid not in active_clients:
+        await sio.emit('error', {'message': "Client not registered"}, room=sid)
+        return
+
+    client = active_clients[sid]
+    device_id = client.get('device_id')
+
+    if device_id is None or device_id not in rtlsdr_devices:
+        await sio.emit('error', {'message': "RTLSDR not configured"}, room=sid)
+        return
+
+    # Cancel any existing task
+    if client.get('task'):
+        client['task'].cancel()
+
+    logger.info(f"Starting streaming SDR data for client {sid}")
+
+    # Start a new processing task
+    client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
+    await sio.emit('status', {'streaming': True}, room=sid)
+
+
+@sio.event
+async def stop_streaming(sid):
+    """Stop streaming FFT data"""
+    if sid in active_clients and active_clients[sid].get('task'):
+        active_clients[sid]['task'].cancel()
+        active_clients[sid]['task'] = None
+        await sio.emit('status', {'streaming': False}, room=sid)
+        logger.info(f"Stopped streaming SDR data for client {sid}")
+
+
 @sio.event
 async def connect(sid, environ, auth=None):
     client_ip = environ.get("REMOTE_ADDR")
     logger.info(f'Client {sid} from {client_ip} connected, auth: {auth}')
     SESSIONS[sid] = environ
 
+    # sdr session management stuff
+    active_clients[sid] = {
+        'device_id': None,
+        'center_frequency': None,
+        'sample_rate': None,
+        'gain': None,
+        'fft_size': 1024,
+        'task': None,
+    }
+    await sio.emit('status', {'connected': True}, room=sid)
+
 
 @sio.event
 async def disconnect(sid, environ):
     logger.info(f'Client {sid} from {SESSIONS[sid]['REMOTE_ADDR']} disconnected',)
     del SESSIONS[sid]
+
+    logger.info(f"Client disconnected: {sid}")
+
+    # Clean up client resources
+    if sid in active_clients:
+        client = active_clients[sid]
+        device_id = client.get('device_id')
+
+        # Cancel any running processing task
+        if client.get('task'):
+            client['task'].cancel()
+
+        # Close and release the RTLSDR device if it was exclusively used by this client
+        if device_id is not None and device_id in rtlsdr_devices:
+            # Check if no other clients are using this device
+            other_users = [cid for cid, c in active_clients.items()
+                           if cid != sid and c.get('device_id') == device_id]
+
+            if not other_users:
+                try:
+                    rtlsdr_devices[device_id].close()
+                    del rtlsdr_devices[device_id]
+                    logger.info(f"Released RTLSDR device {device_id}")
+                except Exception as e:
+                    logger.error(f"Error closing RTLSDR device: {str(e)}")
+
+        # Remove client from active clients
+        del active_clients[sid]
+
+
+
 
 @sio.on('data_request')
 async def handle_frontend_data_requests(sid, cmd, data=None):

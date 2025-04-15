@@ -342,7 +342,6 @@ const overviewSlice = createSlice({
             })
             .addCase(getOverviewMapSettings.fulfilled, (state, action) => {
                 state.loading = false;
-                console.info("action", action.payload);
                 state.tileLayerID = action.payload['tileLayerID'];
                 state.showPastOrbitPath = action.payload['showPastOrbitPath'];
                 state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];

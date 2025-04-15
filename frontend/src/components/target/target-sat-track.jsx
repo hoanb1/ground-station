@@ -68,6 +68,7 @@ import CoordinateGrid from "../common/mercator-grid.jsx";
 import RotatorControl from "./rotator-control.jsx";
 import RigControl from "./rig-control.jsx";
 import CameraView from "../common/camera-view.jsx";
+import WaterfallDisplay from "./waterfall-view.jsx";
 
 
 // global leaflet map object
@@ -289,6 +290,15 @@ const TargetSatelliteTrack = React.memo(function () {
             },
             {
                 i: 'video',
+                x: 10,
+                y: 14,
+                w: 2,
+                h: 10,
+                minH: 4,
+                resizeHandles: ['se','ne','nw','sw','s','e','w']
+            },
+            {
+                i: 'waterfall',
                 x: 10,
                 y: 14,
                 w: 2,
@@ -693,6 +703,9 @@ const TargetSatelliteTrack = React.memo(function () {
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rig-control">
             <RigControl/>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="waterfall">
+            <WaterfallDisplay/>
         </StyledIslandParentScrollbar>
     ];
 

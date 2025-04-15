@@ -41,6 +41,7 @@ export default defineConfig(({ mode }) => {
         },
         '/socket.io/': {  // For regular HTTP API requests
           target: `http://${backendHost}:${backendPort}`,
+          ws: true,
           changeOrigin: true,
           secure: false,
         },
