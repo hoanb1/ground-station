@@ -38,6 +38,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     dh-autoreconf \
     python3-full \
+    librtlsdr-dev \
     swig \
     && rm -rf /var/lib/apt/lists/*
 
