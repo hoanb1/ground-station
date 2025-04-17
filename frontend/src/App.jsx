@@ -13,6 +13,7 @@ import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./
 import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
+import MicrowaveIcon from '@mui/icons-material/Microwave';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import CameraIcon from '@mui/icons-material/CameraAlt';
 import { closeSnackbar, enqueueSnackbar, SnackbarProvider } from 'notistack';
@@ -32,7 +33,9 @@ import { fetchSatelliteGroups } from './components/satellites/groups-slice.jsx';
 import { fetchUsers } from './components/settings/users-slice.jsx';
 import { getTrackingStateFromBackend } from './components/target/target-sat-slice.jsx';
 import { fetchCameras } from './components/hardware/camera-slice.jsx'
+import { fetchSDRs } from './components/hardware/sdr-slice.jsx'
 import { getOverviewMapSettings } from './components/overview/overview-sat-slice.jsx';
+
 
 const BRANDING = {
     logo: (
@@ -52,12 +55,14 @@ function uponConnectionToBackEnd(socket) {
     store.dispatch(fetchRigs({socket}));
     store.dispatch(fetchRotators({socket}));
     store.dispatch(fetchCameras({socket}));
+    store.dispatch(fetchSDRs({socket}));
     store.dispatch(fetchTLESources({socket}));
     store.dispatch(fetchSatelliteGroups({socket}));
     store.dispatch(fetchUsers({socket}));
     store.dispatch(getTrackingStateFromBackend({socket}));
     store.dispatch(getOverviewMapSettings({socket}));
     store.dispatch(getTargetMapSettings({socket}));
+
 }
 
 export default function App(props) {
@@ -103,18 +108,23 @@ export default function App(props) {
         },
         {
             segment: 'hardware/rig',
-            title: 'Radio rigs',
+            title: 'Rigs',
             icon: <RadioIcon/>,
         },
         {
             segment: 'hardware/rotator',
-            title: 'Antenna rotators',
+            title: 'Rotators',
             icon: <SatelliteIcon/>,
         },
         {
             segment: 'hardware/cameras',
             title: 'Cameras',
             icon: <CameraIcon/>,
+        },
+        {
+            segment: 'hardware/sdrs',
+            title: 'SDRs',
+            icon: <MicrowaveIcon/>,
         },
         {kind: 'divider'},
         {

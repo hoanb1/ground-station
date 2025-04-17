@@ -114,6 +114,19 @@ class JsonField(TypeDecorator):
         return value
 
 
+class CameraType(str, PyEnum):
+    WEBRTC = "webrtc"
+    HLS = "hls"
+    MJPEG = "mjpeg"
+
+class SatelliteGroupType(str, PyEnum):
+    USER = "user"
+    SYSTEM = "system"
+
+class SDRType(str, PyEnum):
+    RTLSDRUSB = "rtlsdrusb"
+    RTLSDRTCP = "rtlsdrtcp"
+
 class Satellites(Base):
     __tablename__ = 'satellites'
     norad_id = Column(Integer, primary_key=True, nullable=False, unique=True)
@@ -182,6 +195,18 @@ class Rigs(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
+class SDRs(Base):
+    __tablename__ = 'sdrs'
+    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
+    name = Column(String, nullable=False)
+    serial = Column(String, nullable=True)
+    host = Column(String, nullable=True)
+    port = Column(Integer, nullable=True)
+    type = Column(Enum(SDRType), nullable=True)
+    frequency_range = Column(JsonField, nullable=True)
+    added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
 class Rotators(Base):
     __tablename__ = 'rotators'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
@@ -236,10 +261,6 @@ class SatelliteTLESources(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-class SatelliteGroupType(str, PyEnum):
-    USER = "user"
-    SYSTEM = "system"
-
 class SatelliteGroups(Base):
     __tablename__ = 'satellite_groups'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
@@ -253,17 +274,11 @@ class SatelliteGroups(Base):
 
 class SatelliteTrackingState(Base):
     __tablename__ = "satellite_tracking_state"
-
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, index=True, unique=True)
     value = Column(JSON, index=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-
-class CameraType(str, PyEnum):
-    WEBRTC = "webrtc"
-    HLS = "hls"
-    MJPEG = "mjpeg"
 
 class Cameras(Base):
     __tablename__ = 'cameras'
@@ -274,3 +289,5 @@ class Cameras(Base):
     status = Column(Enum('active', 'inactive'), nullable=False, default='active')
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+
+

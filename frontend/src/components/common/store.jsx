@@ -16,6 +16,8 @@ import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../target/waterfall-slice.jsx';
+import sdrsReducer from '../hardware/sdr-slice.jsx';
+
 
 const persistConfig = {
     key: "root",
@@ -39,6 +41,7 @@ const rootReducer = combineReducers({
     weather: weatherReducer,
     cameras: cameraReducer,
     waterfall: waterfallReducer,
+    sdrs: sdrsReducer,
 });
 
 const persistedReducer = persistReducer(persistConfig, rootReducer);

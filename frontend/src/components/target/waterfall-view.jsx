@@ -1,8 +1,23 @@
 import React, { useEffect, useRef, useState } from 'react';
-import { Box, Typography, Paper, CircularProgress, Slider, FormControl, InputLabel, Select, MenuItem } from '@mui/material';
+import {
+    Box,
+    Typography,
+    Paper,
+    CircularProgress,
+    Slider,
+    FormControl,
+    InputLabel,
+    Select,
+    MenuItem,
+    Button,
+    ButtonGroup
+} from '@mui/material';
 import {useDispatch, useSelector} from "react-redux";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import { IconButton } from '@mui/material';
+
+import StopIcon from '@mui/icons-material/Stop';
+import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import {useSocket} from "../common/socket.jsx";
 import {
@@ -330,11 +345,6 @@ const WaterfallDisplay = ({deviceId = 0}) => {
         ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, 12);
     };
 
-    const handlePlayButtonClick = () => {
-        dispatch(setIsPlaying(true));
-        startStreaming();
-    };
-
     return (
         <>
         <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall</TitleBar>
@@ -343,7 +353,26 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                     Error: {errorMessage}
                 </Typography>
             )}
-
+            <Box
+                sx={{
+                    display: 'flex',
+                    gap: 1,
+                    justifyContent: 'left',
+                    flexWrap: 'wrap'
+                }}
+            >
+                <ButtonGroup variant="filled" aria-label="Basic button group" sx={{borderRadius: 0}}>
+                    <Button disabled={isStreaming}>
+                        <PlayArrowIcon onClick={startStreaming} />
+                    </Button>
+                    <Button>
+                        <PauseIcon/>
+                    </Button>
+                    <Button  disabled={!isStreaming}>
+                        <StopIcon onClick={stopStreaming}/>
+                    </Button>
+                </ButtonGroup>
+            </Box>
             <Box
                 sx={{
                     width: '100%',
@@ -361,30 +390,6 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                         height={400}
                         style={{ width: '100%', height: '100%' }}
                     />
-
-                    {!isPlaying && (
-                        <div
-                            style={{
-                                position: 'absolute',
-                                top: '50%',
-                                left: '50%',
-                                transform: 'translate(-50%, -50%)',
-                                cursor: 'pointer',
-                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                                borderRadius: '50%',
-                                width: '60px',
-                                height: '60px',
-                                display: 'flex',
-                                justifyContent: 'center',
-                                alignItems: 'center',
-                                color: 'white',
-                                zIndex: 10
-                            }}
-                            onClick={handlePlayButtonClick}
-                        >
-                            <PlayArrowIcon style={{ fontSize: '40px' }} />
-                        </div>
-                    )}
                 </div>
 
             </Box>

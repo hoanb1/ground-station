@@ -134,6 +134,11 @@ async def data_request_routing(sio, cmd, data, logger):
             cameras = await crud.fetch_cameras(dbsession)
             reply = {'success': cameras['success'], 'data': cameras.get('data', [])}
 
+        elif cmd == "get-sdrs":
+            logger.debug(f'Getting SDRs, data: {data}')
+            sdrs = await crud.fetch_sdrs(dbsession)
+            reply = {'success': sdrs['success'], 'data': sdrs.get('data', [])}
+
         elif cmd == "get-location-for-user-id":
             logger.debug(f'Getting location for user id, data: {data}')
             locations = await crud.fetch_location_for_userid(dbsession, user_id=data)
@@ -350,6 +355,35 @@ async def data_submission_routing(sio, cmd, data, logger):
             cameras = await crud.fetch_cameras(dbsession)
             reply = {'success': (cameras['success'] & delete_reply['success']),
                          'data': cameras.get('data', [])}
+
+        elif cmd == "delete-sdr":
+            logger.debug(f'Delete SDR, data: {data}')
+            delete_reply = await crud.delete_sdrs(dbsession, list(data))
+
+            sdrs = await crud.fetch_sdrs(dbsession)
+            reply = {'success': (sdrs['success'] & delete_reply['success']),
+                     'data': sdrs.get('data', [])}
+
+        elif cmd == "submit-sdr":
+            logger.debug(f'Adding SDR, data: {data}')
+            add_reply = await crud.add_sdr(dbsession, data)
+            logger.info(add_reply)
+
+            sdrs = await crud.fetch_sdrs(dbsession)
+            logger.info(sdrs)
+
+            reply = {'success': (sdrs['success'] & add_reply['success']),
+                     'data': sdrs.get('data', [])}
+
+        elif cmd == "edit-sdr":
+            logger.debug(f'Editing SDR, data: {data}')
+            edit_reply = await crud.edit_sdr(dbsession, data)
+            logger.debug(f'Edit SDR reply: {edit_reply}')
+
+            sdrs = await crud.fetch_sdrs(dbsession)
+            logger.debug(f'SDRs: {sdrs}')
+            reply = {'success': (sdrs['success'] & edit_reply['success']),
+                     'data': sdrs.get('data', [])}
 
         elif cmd == "submit-location":
             logger.debug(f'Adding location, data: {data}')

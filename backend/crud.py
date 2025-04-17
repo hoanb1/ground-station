@@ -8,7 +8,7 @@ from sqlalchemy import select, insert, update, delete, String
 from utils import *
 from datetime import datetime, UTC
 from models import Users
-from models import Locations, SatelliteTrackingState, Cameras
+from models import Locations, SatelliteTrackingState, Cameras, SDRs
 from models import Preferences
 from models import Rotators
 from models import Rigs
@@ -1748,7 +1748,7 @@ async def set_map_settings(session: AsyncSession, data: dict ) -> dict:
 
 async def get_map_settings(session: AsyncSession, name: str) -> dict:
     """
-    Retrieve map settings for the given session and name.
+    Retrieve map settings for the given name.
 
     This asynchronous function queries the database to fetch the map
     settings related to satellite tracking state. If data is successfully
@@ -1779,4 +1779,229 @@ async def get_map_settings(session: AsyncSession, name: str) -> dict:
         logger.error(f"Error retrieving map settings: {str(e)}")
         logger.exception(e)
         return {'success': False, 'data': {}, 'error': str(e)}
+
+
+async def fetch_sdrs(session: AsyncSession) -> dict:
+    """
+    Fetches a list of SDRs from the database asynchronously and serializes their data.
+
+    This function executes a database query to retrieve all SDRs in a sorted order.
+    The SDR data is then serialized into a list of Python objects. If an error occurs
+    during the process, it logs the issue and returns an error response.
+
+    :param session: Async database session used to execute the query.
+    :type session: AsyncSession
+    :return: A dictionary containing the success status, serialized SDRs data if
+        successful, and any error messages if applicable.
+    :rtype: dict
+    """
+
+    try:
+        stmt = select(SDRs).order_by(SDRs.name)
+        result = await session.execute(stmt)
+        sdrs = result.scalars().all()
+        sdrs_list = [serialize_object(sdr) for sdr in sdrs]
+        return {"success": True, "data": sdrs_list, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching SDRs: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def fetch_sdr(session: AsyncSession, sdr_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
+    """
+    Fetches an SDR record from the database by its unique identifier
+    and serializes it into a dictionary format. If the `sdr_id` is provided as a string, it is automatically
+    converted into a UUID type. If no sdr_id is provided, returns all SDRs. The method handles potential
+    exceptions by logging detailed error messages and returning an error response.
+
+    :param session: The asynchronous database session used for executing queries.
+    :type session: AsyncSession
+    :param sdr_id: The unique identifier of the SDR record, either as a UUID or a string. If None, returns all SDRs.
+    :type sdr_id: Optional[Union[uuid.UUID, str]]
+    :return: A dictionary containing the result of the operation. Includes a boolean `success` key,
+             a `data` key with the serialized SDR record(s) if successful, and an `error` key with an error
+             message if any exception occurred.
+    :rtype: dict
+    """
+    try:
+        if sdr_id is None:
+            stmt = select(SDRs)
+            result = await session.execute(stmt)
+            sdr = result.scalars().all()
+        else:
+            # Convert string sdr_id to UUID if necessary
+            if isinstance(sdr_id, str):
+                sdr_id = uuid.UUID(sdr_id)
+
+            stmt = select(SDRs).filter(SDRs.id == sdr_id)
+            result = await session.execute(stmt)
+            sdr = result.scalar_one_or_none()
+
+        sdr = serialize_object(sdr)
+        return {"success": True, "data": sdr, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching SDR by id {sdr_id}: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def add_sdr(session: AsyncSession, data: dict) -> dict:
+    """
+    Adds a Software-Defined Radio (SDR) to the database.
+
+    This function creates and adds a new SDR record to the database session. It validates the
+    mandatory fields defined in the ``required_fields`` list and ensures that all necessary
+    attributes are provided before creating the SDR object. In case of any error during the
+    process, the session is rolled back, and the error is logged and returned.
+
+    :param session: Database session to manage the transaction asynchronously.
+    :type session: AsyncSession
+    :param data: Dictionary containing the SDR data to be stored. The dictionary
+        must include required fields such as 'name', 'host', and 'port'.
+    :type data: dict
+    :return: A dictionary with the operation's success status, either the serialized SDR
+        data upon success or an error message upon failure.
+    :rtype: dict
+    """
+    try:
+        required_fields = ['name', 'serial']
+        for field in required_fields:
+            assert field in data and data[field] is not None, f"Field '{field}' is required"
+
+        # Extract frequency values and create frequency_range dict
+        frequency_min = data.pop('frequency_min', None)
+        frequency_max = data.pop('frequency_max', None)
+
+        if frequency_min is not None and frequency_max is not None:
+            data['frequency_range'] = {
+                'min': frequency_min,
+                'max': frequency_max
+            }
+
+        new_sdr = SDRs(
+            **{key: value for key, value in data.items() if hasattr(SDRs, key)}
+        )
+
+        session.add(new_sdr)
+        await session.commit()
+
+        # Return the newly created SDR
+        return {"success": True, "data": serialize_object(new_sdr), "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error adding SDR: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def edit_sdr(session: AsyncSession, data: dict) -> dict:
+    """
+    Edits an existing SDR (System Data Record) in the database. The function retrieves
+    the SDR identified by the provided `sdr_id`, updates its fields dynamically according
+    to the key-value pairs provided in `sdr_data`, and commits the changes to the database.
+
+    :param session: Async database session to be used for querying and updating the SDR.
+    :type session: AsyncSession
+    :param data: Dictionary containing the fields and their new values to update in
+        the SDR, including the sdr_id. Only fields present in the dictionary and explicitly
+        part of the SDR object will be updated.
+    :type data: dict
+    :return: A dictionary containing the success status, the updated SDR data if successful,
+        and an error message if applicable. Keys:
+        - "success" (bool): Indicates if the operation was successful.
+        - "data" (dict or None): Serialized updated SDR data if the operation was successful.
+        - "error" (str or None): Error description if the operation failed.
+    :rtype: dict
+    """
+    try:
+        # Get sdr_id from data and convert to UUID if necessary
+        sdr_id = data.pop('id')
+        if isinstance(sdr_id, str):
+            sdr_id = uuid.UUID(sdr_id)
+
+        data.pop("updated", None)
+        data.pop("added", None)
+
+        # Extract frequency values and create frequency_range dict
+        frequency_min = data.pop('frequency_min', None)
+        frequency_max = data.pop('frequency_max', None)
+
+        if frequency_min is not None and frequency_max is not None:
+            data['frequency_range'] = {
+                'min': frequency_min,
+                'max': frequency_max
+            }
+
+        # Get the existing SDR
+        stmt = select(SDRs).filter(SDRs.id == sdr_id)
+        result = await session.execute(stmt)
+        sdr = result.scalar_one_or_none()
+
+        if not sdr:
+            return {"success": False, "error": f"SDR with id {sdr_id} not found"}
+
+        # Update fields dynamically from the input data
+        for key, value in data.items():
+            if hasattr(sdr, key) and value is not None:
+                setattr(sdr, key, value)
+
+        sdr.updated = datetime.now(UTC)
+
+        await session.commit()
+
+        # Return the updated SDR
+        return {"success": True, "data": serialize_object(sdr), "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error editing SDR {data}: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def delete_sdrs(session: AsyncSession, sdr_ids: list[Union[str, uuid.UUID]]) -> dict:
+    """
+    Deletes SDRs (Signal Detection Records) from the database based on the provided IDs.
+
+    This function will attempt to convert any string-based IDs into UUIDs, verify the existence
+    of the specified SDRs, and then delete them. If any error occurs during the process,
+    the operation will roll back the transaction and log the error.
+
+    :param session: An instance of AsyncSession for database transactions.
+    :type session: AsyncSession
+    :param sdr_ids: A list of SDR IDs, which can be a mix of strings or UUIDs,
+        representing the records to be deleted.
+    :type sdr_ids: list[Union[str, uuid.UUID]]
+    :return: A dictionary containing the success status, any error messages,
+        and additional data (if applicable).
+    :rtype: dict
+    """
+    try:
+        # Convert string IDs to UUIDs
+        sdr_ids = [uuid.UUID(sdr_id) if isinstance(sdr_id, str) else sdr_id for sdr_id in sdr_ids]
+
+        # Check if the SDRs exist
+        stmt = select(SDRs).filter(SDRs.id.in_(sdr_ids))
+        result = await session.execute(stmt)
+        sdrs = result.scalars().all()
+
+        if not sdrs:
+            return {"success": False, "error": "No SDRs with the provided IDs were found"}
+
+        # Delete the SDRs
+        stmt = delete(SDRs).where(SDRs.id.in_(sdr_ids))
+        await session.execute(stmt)
+        await session.commit()
+
+        return {"success": True, "data": None, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error deleting SDRs {sdr_ids}: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
 

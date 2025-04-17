@@ -27,6 +27,7 @@ import PreferencesForm from "./preferences-form.jsx";
 import MaintenanceForm from "./maintenance-form.jsx";
 import CameraTable from "../hardware/camera-table.jsx";
 import {AntTab, AntTabs} from "../common/common.jsx";
+import SDRTable from "../hardware/sdr-table.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -61,6 +62,10 @@ export function SettingsTabCamera() {
     return (<SettingsTabs initialMainTab={"hardware"} initialTab={"camera"}/>);
 }
 
+export function SettingsTabSDR() {
+    return (<SettingsTabs initialMainTab={"hardware"} initialTab={"sdrs"}/>);
+}
+
 export function SettingsTabMaintenance () {
     return (<SettingsTabs initialMainTab={"settings"} initialTab={"maintenance"}/>);
 }
@@ -74,7 +79,7 @@ export function SettingsTabAbout () {
 }
 
 const tabsTree = {
-    "hardware": ["rigcontrol", "rotatorcontrol"],
+    "hardware": ["rigcontrol", "rotatorcontrol", "camera", "sdrs"],
     "satellites": ["satellites", "tlesources", "groups"],
     "settings": ["preferences", "location", "maintenance", "users", "about"],
 };
@@ -108,15 +113,15 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
         <LocationPage/>
     );
 
-
     let tabsList = [];
     // Define arrays of tabs for each main category
     switch (activeMainTab) {
         case "hardware":
             tabsList = [
-                <AntTab key="rigcontrol" value="rigcontrol" label="Rig control" to="/hardware/rig" component={Link} />,
-                <AntTab key="rotatorcontrol" value="rotatorcontrol" label="Rotator control" to="/hardware/rotator" component={Link} />,
+                <AntTab key="rigcontrol" value="rigcontrol" label="Rigs" to="/hardware/rig" component={Link} />,
+                <AntTab key="rotatorcontrol" value="rotatorcontrol" label="Rotators" to="/hardware/rotator" component={Link} />,
                 <AntTab key="camera" value="camera" label="Cameras" to="/hardware/cameras" component={Link} />,
+                <AntTab key="sdrs" value="sdrs" label="SDRs" to="/hardware/sdrs" component={Link}/>,
             ];
             break;
         case "satellites":
@@ -172,6 +177,9 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             break;
         case "camera":
             activeTabContent = <CameraForm/>;
+            break;
+        case "sdrs":
+            activeTabContent = <SDRForm/>;
             break;
         case "tlesources":
             activeTabContent = <TLESourcesForm/>;
@@ -260,6 +268,23 @@ const CameraForm = () => {
         </Paper>
     );
 };
+
+
+const SDRForm = () => {
+
+    return (
+        <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
+            <Alert severity="info">
+                <AlertTitle>SDR control setup</AlertTitle>
+                Configure and manage your SDR control setup here
+            </Alert>
+            <Box component="form" sx={{mt: 2}}>
+                <SDRTable/>
+            </Box>
+        </Paper>
+    );
+};
+
 
 const RigControlForm = () => {
 

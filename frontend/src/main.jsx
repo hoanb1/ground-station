@@ -12,7 +12,8 @@ import {
     SettingsTabTLESources,
     SettingsTabAbout,
     SettingsTabSatelliteGroups,
-    SettingsTabUsers, SettingsTabCamera
+    SettingsTabUsers, SettingsTabCamera,
+    SettingsTabSDR
 } from "./components/settings/settings.jsx";
 import GlobalSatelliteTrack from "./components/overview/overview-sat-track.jsx";
 import App from "./App.jsx";
@@ -98,6 +99,10 @@ const router = createBrowserRouter([
                             {
                                 path: "cameras",
                                 Component: SettingsTabCamera,
+                            },
+                            {
+                                path: "sdrs",
+                                Component: SettingsTabSDR,
                             },
                         ],
                     },
