@@ -37,10 +37,12 @@ import {
     setIsPlaying, setSettingsDialogOpen,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
+import IQVisualizer from "./iq-visualizer.jsx";
 
 const WaterfallDisplay = ({deviceId = 0}) => {
     const dispatch = useDispatch();
-    const canvasRef = useRef(null);
+    const waterFallCanvasRef = useRef(null);
+    const visualIQCanvasRef = useRef(null);
     const { socket } = useSocket();
     const waterfallDataRef = useRef([]);
     const animationFrameRef = useRef(null);
@@ -67,6 +69,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
         isPlaying,
     } = useSelector((state) => state.waterfall);
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
+    const [samples, setSamples] = useState([]);
 
     // Effect to sync state to the ref
     useEffect(() => {
@@ -77,8 +80,8 @@ const WaterfallDisplay = ({deviceId = 0}) => {
 
     useEffect(() => {
         // Initialize canvas
-        if (canvasRef.current) {
-            const canvas = canvasRef.current;
+        if (waterFallCanvasRef.current) {
+            const canvas = waterFallCanvasRef.current;
             const ctx = canvas.getContext('2d');
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
@@ -104,11 +107,12 @@ const WaterfallDisplay = ({deviceId = 0}) => {
 
         socket.on('fftData', (data) => {
             // Add new FFT data to the waterfall buffer
+            setSamples(data);
             waterfallDataRef.current.unshift(data);
 
             // Keep only the most recent rows based on canvas height
-            if (canvasRef.current && waterfallDataRef.current.length > canvasRef.current.height) {
-                waterfallDataRef.current = waterfallDataRef.current.slice(0, canvasRef.current.height);
+            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
+                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
             }
         });
 
@@ -201,7 +205,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
 
 
     function drawWaterfall() {
-        const canvas = canvasRef.current;
+        const canvas = waterFallCanvasRef.current;
         if (!canvas) {
             return;
         }
@@ -389,7 +393,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
             >
                 <div style={{ position: 'relative', width: '100%', height: '100%' }}>
                     <canvas
-                        ref={canvasRef}
+                        ref={waterFallCanvasRef}
                         width={800}
                         height={400}
                         style={{ width: '100%', height: '100%' }}

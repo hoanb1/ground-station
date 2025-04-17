@@ -771,17 +771,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
         elif new == "parked":
             rotator_data['tracking'] = False
 
-            if rotator_controller is not None:
-                logger.info(f"Parking rotator at {rotator_controller.host}:{rotator_controller.port}...")
-                try:
-                    await rotator_controller.park()
-
-                except Exception as e:
-                    logger.error(f"Error disconnecting from rotator_controller: {e}")
-                    logger.exception(e)
-            else:
-                # since the rotator is not connected, connect, sent the park command and disconnect
-                try:
+            try:
+                if rotator_controller is None:
                     rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=current_rotator_id)
                     rotator_details = rotator_details_reply['data']
                     rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
@@ -792,25 +783,26 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         'rotator_data': rotator_data
                     })
 
-                    # going to park position
-                    park_position_gen = rotator_controller.set_position(0.0, 90.0)
+                # going to park position
+                park_position_gen = rotator_controller.set_position(0.0, 90.0)
 
-                    try:
-                        parking_az, parking_el, is_slewing = await anext(park_position_gen)
-                        rotator_data['az'] = round(parking_az, 3)
-                        rotator_data['el'] = round(parking_el, 3)
-                        rotator_data['slewing'] = is_slewing
-                        logger.info(f"Current position: AZ={round(parking_az, 3)}°, EL={round(parking_el, 3)}°, slewing={is_slewing}")
+                try:
+                    rotator_data['az'], rotator_data['el'], is_parking = await anext(park_position_gen)
+                    rotator_data['az'] = round(rotator_data['az'], 3)
+                    rotator_data['el'] = round(rotator_data['el'], 3)
+                    rotator_data['slewing'] = is_slewing
+                    logger.info(f"Current position: AZ={rotator_data['az']}°, EL={rotator_data['el']}°, parking={is_parking}")
 
-                    except StopAsyncIteration:
-                        logger.info(f"Parking to AZ={0}° EL={90}° complete")
+                except StopAsyncIteration:
+                    logger.info(f"Parking to AZ={0}° EL={90}° complete")
 
-                    rotator_data['parked'] = True
-                    await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rotator_parked"}],
-                        'rotator_data': rotator_data
-                    })
+                rotator_data['parked'] = True
+                await sio.emit('satellite-tracking', {
+                    'events': [{'name': "rotator_parked"}],
+                    'rotator_data': rotator_data
+                })
 
+                if rotator_controller is not None:
                     # now disconnect
                     await rotator_controller.disconnect()
                     rotator_data['connected'] = False
@@ -820,9 +812,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                         'rotator_data': rotator_data
                     })
 
-                except Exception as e:
-                    logger.error(f"Failed to connect to rotator_controller: {e}")
-                    logger.exception(e)
+            except Exception as e:
+                logger.error(f"Failed to connect to rotator_controller: {e}")
+                logger.exception(e)
 
         else:
             logger.error(f"unknown tracking state: {new}")
@@ -972,7 +964,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
                 if skypoint[1] < eleveationlimits[0] or skypoint[1] > eleveationlimits[1]:
                     raise ElevationOutOfBounds(f"elevation {round(skypoint[1], 3)}° is out of range (range: {eleveationlimits})")
 
-                # check if satellite is over a specific elevation limit
+                # check if the satellite is over a specific elevation limit
                 if skypoint[1] < minelevation:
                     raise MinimumElevationError(f"target has not reached minimum elevation {minelevation}° degrees")
 

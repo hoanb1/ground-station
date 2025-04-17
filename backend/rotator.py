@@ -206,14 +206,14 @@ class RotatorController:
             self.logger.error(f"Error getting position: {e}")
             raise RuntimeError(f"Error getting position: {e}")
 
-    async def park(self) -> bool:
+    async def park(self, park_az, park_el) -> bool:
 
         # Park the rotator
-        await asyncio.to_thread(self._park)
+        await asyncio.to_thread(self._park, park_az, park_el)
 
         return True
 
-    def _park(self) -> bool:
+    def _park(self, park_az, park_el) -> bool:
 
         self.check_connection()
 
