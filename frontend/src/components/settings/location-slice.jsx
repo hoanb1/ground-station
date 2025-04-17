@@ -2,7 +2,7 @@ import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import {enqueueSnackbar} from 'notistack';
 import {getMaidenhead} from '../common/common.jsx'; // or wherever it's defined
 
-// Example of async thunk that fetches location for the current user
+
 export const fetchLocationForUserId = createAsyncThunk(
     'location/fetchLocationForUser',
     async ({socket}, {rejectWithValue}) => {

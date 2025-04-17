@@ -19,6 +19,7 @@ import { IconButton } from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import SettingsIcon from '@mui/icons-material/Settings';
 import {useSocket} from "../common/socket.jsx";
 import {
     setColorMap,
@@ -33,8 +34,9 @@ import {
     setIsStreaming,
     setIsConnected,
     setTargetFPS,
-    setIsPlaying,
+    setIsPlaying, setSettingsDialogOpen,
 } from './waterfall-slice.jsx'
+import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 
 const WaterfallDisplay = ({deviceId = 0}) => {
     const dispatch = useDispatch();
@@ -361,17 +363,19 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                     flexWrap: 'wrap'
                 }}
             >
-                <ButtonGroup variant="filled" aria-label="Basic button group" sx={{borderRadius: 0}}>
-                    <Button disabled={isStreaming}>
-                        <PlayArrowIcon onClick={startStreaming} />
-                    </Button>
-                    <Button>
-                        <PauseIcon/>
-                    </Button>
-                    <Button  disabled={!isStreaming}>
-                        <StopIcon onClick={stopStreaming}/>
-                    </Button>
-                </ButtonGroup>
+                <Paper elevation={3} sx={{p: 0, display: 'inline-block', width: '100%', }}>
+                    <ButtonGroup variant="filled" aria-label="Basic button group" sx={{borderRadius: 0}}>
+                        <Button disabled={isStreaming}>
+                            <PlayArrowIcon onClick={startStreaming}/>
+                        </Button>
+                        <Button disabled={!isStreaming}>
+                            <StopIcon onClick={stopStreaming}/>
+                        </Button>
+                        <Button>
+                            <SettingsIcon onClick={() => dispatch(setSettingsDialogOpen(true))}/>
+                        </Button>
+                    </ButtonGroup>
+                </Paper>
             </Box>
             <Box
                 sx={{
@@ -393,6 +397,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                 </div>
 
             </Box>
+            <WaterFallSettingsDialog/>
         </>
     );
 };

@@ -19,12 +19,11 @@ import {
     setErrorMessage,
     setIsStreaming,
     setIsConnected,
-    setTargetFPS,
+    setTargetFPS, setSettingsDialogOpen,
 } from './waterfall-slice.jsx'
 
 
 export default function WaterFallSettingsDialog() {
-    const [open, setOpen] = useState(false);
     const dispatch = useDispatch();
     const {
         colorMap,
@@ -38,15 +37,16 @@ export default function WaterFallSettingsDialog() {
         errorMessage,
         isStreaming,
         isConnected,
-        targetFPS
+        targetFPS,
+        settingsDialogOpen,
     } = useSelector((state) => state.waterfall);
 
     const handleClickOpen = () => {
-        setOpen(true);
+        dispatch(setSettingsDialogOpen(true));
     };
 
     const handleClose = () => {
-        setOpen(false);
+        dispatch(setSettingsDialogOpen(false));
     };
 
     // Format frequency for display
@@ -67,7 +67,7 @@ export default function WaterFallSettingsDialog() {
                 Open Dialog
             </Button>
             <Dialog
-                open={open}
+                open={settingsDialogOpen}
                 onClose={handleClose}
                 aria-labelledby="sample-dialog-title"
                 aria-describedby="sample-dialog-description"
@@ -76,7 +76,7 @@ export default function WaterFallSettingsDialog() {
                 <DialogContent>
                     <DialogContentText id="sample-dialog-description">
 
-                        <Box sx={{ mb: 2 }}>
+                        <Box sx={{ mb: 2, width: '300px' }}>
                             <Typography variant="body2" gutterBottom>
                                 Center Frequency: {formatFrequency(centerFrequency)}
                             </Typography>
@@ -171,10 +171,7 @@ export default function WaterFallSettingsDialog() {
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleClose}>Cancel</Button>
-                    <Button onClick={handleClose} autoFocus>
-                        Confirm
-                    </Button>
+                    <Button onClick={handleClose}>Close</Button>
                 </DialogActions>
             </Dialog>
         </div>

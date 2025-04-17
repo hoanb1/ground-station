@@ -54,7 +54,6 @@ export default function SDRTable() {
             flex: 1,
             minWidth: 200,
             valueGetter: (params) => {
-                console.log(params);
                 if (!params) {
                     return "-";
                 }
