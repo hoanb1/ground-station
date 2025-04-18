@@ -157,7 +157,6 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
     }
 
     const handleTrackingStart = () => {
-        console.info(`trackingState`, trackingState);
         const newTrackingState = {
             'norad_id': satelliteId,
             'group_id': groupId,

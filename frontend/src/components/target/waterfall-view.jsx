@@ -10,7 +10,8 @@ import {
     Select,
     MenuItem,
     Button,
-    ButtonGroup
+    ButtonGroup,
+    Stack,
 } from '@mui/material';
 import {useDispatch, useSelector} from "react-redux";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
@@ -38,6 +39,7 @@ import {
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import IQVisualizer from "./iq-visualizer.jsx";
+import {enqueueSnackbar} from "notistack";
 
 const WaterfallDisplay = ({deviceId = 0}) => {
     const dispatch = useDispatch();
@@ -89,7 +91,6 @@ const WaterfallDisplay = ({deviceId = 0}) => {
 
         if (socket.connected) {
             dispatch(setIsConnected(true));
-            console.log('Connected to RTLSDR server');
         } else {
             console.warn("Can't connect to RTLSDR server. Make sure it's running and the server is accessible from this machine.")
         }
@@ -97,15 +98,19 @@ const WaterfallDisplay = ({deviceId = 0}) => {
         socket.on('disconnect', () => {
             dispatch(setIsConnected(false));
             dispatch(setIsStreaming(false));
-            setErrorMessage('Disconnected from RTLSDR server');
+            dispatch(setErrorMessage('Disconnected from backend server'));
         });
 
-        socket.on('error', (error) => {
+        socket.on('sdr-error', (error) => {
+            console.error(error);
             dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
             dispatch(setIsStreaming(false));
+            enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
+                variant: 'error'
+            });
         });
 
-        socket.on('fftData', (data) => {
+        socket.on('sdr-fft-data', (data) => {
             // Add new FFT data to the waterfall buffer
             setSamples(data);
             waterfallDataRef.current.unshift(data);
@@ -265,7 +270,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
         // If not in cache, calculate the color
         const normalizedValue = Math.max(0, Math.min(1, (roundedPower - minDb) / (maxDb - minDb)));
 
-        // Apply selected color map
+        // apply selected color map
         switch (mapName) {
             case 'viridis':
                 const viridisRGB = {
@@ -368,17 +373,17 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                 }}
             >
                 <Paper elevation={3} sx={{p: 0, display: 'inline-block', width: '100%', }}>
-                    <ButtonGroup variant="filled" aria-label="Basic button group" sx={{borderRadius: 0}}>
-                        <Button disabled={isStreaming}>
+                    <Stack direction="row" spacing={1}>
+                        <IconButton aria-label="play" disabled={isStreaming} color="primary">
                             <PlayArrowIcon onClick={startStreaming}/>
-                        </Button>
-                        <Button disabled={!isStreaming}>
+                        </IconButton>
+                        <IconButton aria-label="delete" disabled={!isStreaming} color="primary">
                             <StopIcon onClick={stopStreaming}/>
-                        </Button>
-                        <Button>
+                        </IconButton>
+                        <IconButton color="secondary" aria-label="add an alarm">
                             <SettingsIcon onClick={() => dispatch(setSettingsDialogOpen(true))}/>
-                        </Button>
-                    </ButtonGroup>
+                        </IconButton>
+                    </Stack>
                 </Paper>
             </Box>
             <Box

@@ -59,7 +59,7 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             fft_result /= num_segments  # Average the segments
 
             # Send FFT data to client
-            await sio.emit('fftData', fft_result.tolist(), room=client_id)
+            await sio.emit('sdr-fft-data', fft_result.tolist(), room=client_id)
 
             # Brief pause to prevent overwhelming the network
             await asyncio.sleep(0.2)

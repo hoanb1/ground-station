@@ -19,7 +19,8 @@ import {
     setErrorMessage,
     setIsStreaming,
     setIsConnected,
-    setTargetFPS, setSettingsDialogOpen,
+    setTargetFPS,
+    setSettingsDialogOpen,
 } from './waterfall-slice.jsx'
 
 
@@ -107,7 +108,9 @@ export default function WaterFallSettingsDialog() {
                         </Box>
 
                         <Box sx={{ mb: 2 }}>
-                            <FormControl fullWidth margin="normal">
+                            <FormControl margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                                         fullWidth={true} variant="filled"
+                                         size="small">
                                 <InputLabel>FFT Size</InputLabel>
                                 <Select
                                     value={fftSize}
@@ -152,7 +155,8 @@ export default function WaterFallSettingsDialog() {
                         </Box>
 
                         <Box sx={{ mb: 2 }}>
-                            <FormControl fullWidth>
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true} variant="filled"
+                                         size="small">
                                 <InputLabel>Color Map</InputLabel>
                                 <Select
                                     value={colorMap}
@@ -167,7 +171,6 @@ export default function WaterFallSettingsDialog() {
                                 </Select>
                             </FormControl>
                         </Box>
-
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
