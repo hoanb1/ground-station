@@ -40,7 +40,7 @@ import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import IQVisualizer from "./iq-visualizer.jsx";
 import {enqueueSnackbar} from "notistack";
 
-const WaterfallDisplay = ({deviceId = 0}) => {
+const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
     const visualIQCanvasRef = useRef(null);
@@ -158,8 +158,19 @@ const WaterfallDisplay = ({deviceId = 0}) => {
             workerRef.current = null;
         }
     };
-}, []);
 
+    }, []);
+
+    useEffect(() => {
+        // Configure RTL-SDR settings
+        socket.emit('configure_rtlsdr', {
+            deviceId,
+            centerFrequency,
+            sampleRate,
+            gain,
+            fftSize
+        });
+    }, [centerFrequency, sampleRate, fftSize, gain]);
 
     const startStreaming = () => {
         if (isConnected && !isStreaming) {
@@ -469,6 +480,10 @@ const WaterfallDisplay = ({deviceId = 0}) => {
             <WaterFallSettingsDialog/>
         </>
     );
-};
+}, (prevProps, nextProps) => {
+    return (
+        prevProps.deviceId === nextProps.deviceId
+    );
+});
 
 export default WaterfallDisplay;

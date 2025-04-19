@@ -15,7 +15,7 @@ active_clients: Dict[str, Dict[str, Any]] = {}
 
 # FFT processing parameters
 WINDOW_FUNCTION = np.hanning
-NUM_SAMPLES_PER_SCAN = 16 * 1024  # Number of samples per scan for FFT
+NUM_SAMPLES_PER_SCAN = 32 * 1024  # Number of samples per scan for FFT
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
@@ -27,9 +27,11 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             sdr = rtlsdr_devices[device_id]
 
             # Configure SDR parameters
-            #sdr.center_freq = center_freq
-            #sdr.sample_rate = sample_rate
-            #sdr.gain = gain
+            #'device_id': device_id,
+            #'center_frequency': center_freq,
+            #'sample_rate': sample_rate,
+            #'gain': gain,
+            #'fft_size': fft_size
 
             # Read samples
             #read_func = partial(sdr.read_samples, NUM_SAMPLES_PER_SCAN)
@@ -39,7 +41,7 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             # Apply window function to reduce spectral leakage
             fft_size = client['fft_size']
 
-            # Increase virtual resolution 4x (disabled for now)
+            # Increase virtual resolution 4x
             fft_size = fft_size * 4
             window = WINDOW_FUNCTION(fft_size)
 

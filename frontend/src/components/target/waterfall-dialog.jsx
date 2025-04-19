@@ -34,6 +34,7 @@ import {
     setSettingsDialogOpen,
     setAutoDBRange,
 } from './waterfall-slice.jsx'
+import FrequencyDisplay from "./frequency-control.jsx";
 
 
 export default function WaterFallSettingsDialog() {
@@ -90,6 +91,13 @@ export default function WaterFallSettingsDialog() {
                 <DialogContent>
                     <DialogContentText id="sample-dialog-description">
 
+                        <Box sx={{mb: 2, width: '100%'}}>
+                            <FrequencyDisplay
+                                initialFrequency={centerFrequency / 1000} // Convert Hz to kHz
+                                onChange={(newFrequency) => dispatch(setCenterFrequency(newFrequency * 1000))} // Convert kHz back to Hz
+                            />
+                        </Box>
+
                         <Box sx={{mb: 2, width: '300px'}}>
                             <Typography variant="body2" gutterBottom>
                                 Center Frequency: {formatFrequency(centerFrequency)}
@@ -99,7 +107,7 @@ export default function WaterFallSettingsDialog() {
                                     type="number"
                                     value={centerFrequency}
                                     onChange={(e) => dispatch(setCenterFrequency(Number(e.target.value)))}
-                                    disabled={isStreaming}
+                                    disabled={false}
                                     fullWidth
                                     size="small"
                                     variant="outlined"
@@ -142,7 +150,7 @@ export default function WaterFallSettingsDialog() {
                                 <Select
                                     value={fftSize}
                                     onChange={(e) => dispatch(setFFTSize(e.target.value))}
-                                    disabled={isStreaming}
+                                    disabled={false}
                                     variant={'filled'}>
                                     {fftSizeOptions.map(size => (
                                         <MenuItem key={size} value={size}>{size}</MenuItem>
@@ -158,7 +166,7 @@ export default function WaterFallSettingsDialog() {
                                 <Select
                                     value={sampleRate}
                                     onChange={(e) => dispatch(setSampleRate(e.target.value))}
-                                    disabled={isStreaming}
+                                    disabled={false}
                                     variant={'filled'}>
                                     {/* Low Range */}
                                     <MenuItem value={225001}>225.001 kHz</MenuItem>
@@ -194,7 +202,7 @@ export default function WaterFallSettingsDialog() {
                                 max={49}
                                 step={1}
                                 onChange={(_, value) => dispatch(setGain(value))}
-                                disabled={isStreaming}
+                                disabled={false}
                                 aria-labelledby="gain-slider"
                             />
                         </Box>
