@@ -3,7 +3,12 @@ import { Box, Typography, IconButton } from '@mui/material';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
 import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 
-const FrequencyDisplay = ({ initialFrequency = 1000.0, onChange }) => {
+const FrequencyDisplay = ({
+                              initialFrequency = 1000.0,
+                              onChange,
+                              integerDigits = 7, // New prop to configure the number of integer digits
+                              decimalDigits = 3 // Optional prop to configure decimal digits
+                          }) => {
     const [frequency, setFrequency] = useState(initialFrequency);
 
     // Update local state if prop changes
@@ -11,8 +16,8 @@ const FrequencyDisplay = ({ initialFrequency = 1000.0, onChange }) => {
         setFrequency(initialFrequency);
     }, [initialFrequency]);
 
-    // Convert frequency to string with fixed decimal places (e.g., "1000.000")
-    const frequencyString = frequency.toFixed(3);
+    // Convert frequency to string with fixed decimal places
+    const frequencyString = frequency.toFixed(decimalDigits);
 
     // Handle digit adjustment
     const adjustDigit = (position, increment) => {
@@ -25,8 +30,8 @@ const FrequencyDisplay = ({ initialFrequency = 1000.0, onChange }) => {
         // Handle edge cases
         if (newFrequency < 0) newFrequency = 0;
 
-        // Round to 3 decimal places to prevent floating point errors
-        newFrequency = Math.round(newFrequency * 1000) / 1000;
+        // Round to prevent floating point errors
+        newFrequency = Math.round(newFrequency * (10 ** decimalDigits)) / (10 ** decimalDigits);
 
         // Update state
         setFrequency(newFrequency);
@@ -40,8 +45,11 @@ const FrequencyDisplay = ({ initialFrequency = 1000.0, onChange }) => {
     // Create digit components with their controls
     const renderDigitControls = () => {
         const parts = frequencyString.split('.');
-        const integerPart = parts[0];
-        const decimalPart = parts[1] || '000';
+        let integerPart = parts[0];
+        const decimalPart = parts[1] || '0'.repeat(decimalDigits);
+
+        // Pad the integer part with zeros to match the desired length
+        integerPart = integerPart.padStart(integerDigits, '0');
 
         // Combine parts for display
         const allDigits = integerPart + '.' + decimalPart;
@@ -51,7 +59,6 @@ const FrequencyDisplay = ({ initialFrequency = 1000.0, onChange }) => {
         for (let i = integerPart.length - 1; i >= 0; i--) {
             positions.unshift(integerPart.length - 1 - i);
         }
-
 
         // Add decimal positions
         for (let i = 0; i < decimalPart.length; i++) {

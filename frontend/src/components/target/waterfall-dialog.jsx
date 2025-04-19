@@ -86,7 +86,7 @@ export default function WaterFallSettingsDialog() {
             >
                 <DialogTitle id="sample-dialog-title">Waterfall settings</DialogTitle>
                 <DialogContent>
-                    <DialogContentText id="sample-dialog-description">
+
 
                         <Box sx={{mb: 2, width: '100%'}}>
                             <FrequencyDisplay
@@ -220,7 +220,6 @@ export default function WaterFallSettingsDialog() {
                                 </Select>
                             </FormControl>
                         </Box>
-                    </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={handleClose}>Close</Button>

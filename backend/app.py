@@ -139,7 +139,7 @@ async def configure_rtlsdr(sid, data):
                 'fft_size': fft_size
             })
 
-        await sio.emit('status', {
+        await sio.emit('sdr-status', {
             'configured': True,
             'device_id': device_id,
             'center_frequency': center_freq,

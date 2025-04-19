@@ -14,7 +14,7 @@ import {
     Stack,
 } from '@mui/material';
 import {useDispatch, useSelector} from "react-redux";
-import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar, WaterfallStatusBar} from "../common/common.jsx";
 import { IconButton } from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -117,6 +117,10 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
         });
     });
 
+    socket.on('sdr-status', (data) => {
+        console.info(`sdr-status`, data);
+    })
+
     socket.on('sdr-fft-data', (data) => {
         // Add new FFT data to the waterfall buffer
         setSamples(data);
@@ -134,6 +138,10 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
             cancelAnimationFrame(animationFrameRef.current);
         }
 
+        socket.off('sdr-error');
+        socket.off('sdr-fft-data');
+        socket.off('sdr-status');
+        socket.off('disconnect');
     };
 
     }, []);
@@ -280,6 +288,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                 // Put the new row at the TOP of the canvas (instead of bottom)
                 ctx.putImageData(imageData, 0, 0);
             }
+            //drawFrequencyScale(ctx, canvas.width, centerFrequency, sampleRate);
         }
     }
 
@@ -457,9 +466,10 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                         height={800}
                         style={{ width: '100%', height: '100%' }}
                     />
-                </div>
 
+                </div>
             </Box>
+            <WaterfallStatusBar>{isStreaming? `f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} db`: `stopped`}</WaterfallStatusBar>
             <WaterFallSettingsDialog/>
         </>
     );
