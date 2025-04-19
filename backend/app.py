@@ -3,6 +3,7 @@ import socketio
 import os
 import httpx
 import rtlsdr
+import logging
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task
@@ -97,97 +98,6 @@ app.add_middleware(
 )
 
 
-@sio.on('configure_rtlsdr')
-async def configure_rtlsdr(sid, data):
-
-    try:
-        device_id = data.get('deviceId', 0)
-
-        # Default to 100 MHz
-        center_freq = data.get('centerFrequency', 100e6)
-
-        # Default to 2.048 MSPS
-        sample_rate = data.get('sampleRate', 2.048e6)
-
-        # Default to 20 dB gain
-        gain = data.get('gain', 20)
-
-        # Default FFT size
-        fft_size = data.get('fftSize', 1024)
-
-        # Initialize or reconfigure RTLSDR
-        if device_id not in rtlsdr_devices:
-            # Create new RTLSDR instance
-            sdr = rtlsdr.RtlSdr(device_id)
-            rtlsdr_devices[device_id] = sdr
-            logger.info(f"Initialized RTLSDR device {device_id}")
-        else:
-            sdr = rtlsdr_devices[device_id]
-
-        # Configure SDR parameters
-        sdr.center_freq = center_freq
-        sdr.sample_rate = sample_rate
-        sdr.gain = gain
-
-        # Update client configuration
-        if sid in active_clients:
-            active_clients[sid].update({
-                'device_id': device_id,
-                'center_frequency': center_freq,
-                'sample_rate': sample_rate,
-                'gain': gain,
-                'fft_size': fft_size
-            })
-
-        await sio.emit('sdr-status', {
-            'configured': True,
-            'device_id': device_id,
-            'center_frequency': center_freq,
-            'sample_rate': sample_rate,
-            'gain': gain,
-            'fft_size': fft_size
-        }, room=sid)
-
-    except Exception as e:
-        logger.error(f"Error configuring RTLSDR: {str(e)}")
-        await sio.emit('sdr-error', {'message': f"Failed to configure RTLSDR: {str(e)}"}, room=sid)
-
-
-@sio.on('start_streaming')
-async def start_streaming(sid):
-    """Start streaming FFT data from RTLSDR"""
-    if sid not in active_clients:
-        await sio.emit('sdr-error', {'message': "Client not registered"}, room=sid)
-        return
-
-    client = active_clients[sid]
-    device_id = client.get('device_id')
-
-    if device_id is None or device_id not in rtlsdr_devices:
-        await sio.emit('sdr-error', {'message': "RTLSDR not configured"}, room=sid)
-        return
-
-    # Cancel any existing task
-    if client.get('task'):
-        client['task'].cancel()
-
-    logger.info(f"Starting streaming SDR data for client {sid}")
-
-    # Start a new processing task
-    client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
-    await sio.emit('sdr-status', {'streaming': True}, room=sid)
-
-
-@sio.on('stop_streaming')
-async def stop_streaming(sid):
-    """Stop streaming FFT data"""
-    if sid in active_clients and active_clients[sid].get('task'):
-        active_clients[sid]['task'].cancel()
-        active_clients[sid]['task'] = None
-        await sio.emit('sdr-status', {'streaming': False}, room=sid)
-        logger.info(f"Stopped streaming SDR data for client {sid}")
-
-
 @sio.on('connect')
 async def connect(sid, environ, auth=None):
     client_ip = environ.get("REMOTE_ADDR")
@@ -239,24 +149,29 @@ async def disconnect(sid, environ):
         del active_clients[sid]
 
 
-
+@sio.on('sdr_data')
+async def handle_sdr_data_requests(sid, cmd, data=None):
+    sdrlogger = logging.getLogger('sdr-data-process')
+    sdrlogger.info(f'Received SDR event from: {sid}, with cmd: {cmd}, and data: {data}')
+    reply = await sdr_data_request_routing(sio, cmd, data, sdrlogger, sid)
+    return reply
 
 @sio.on('data_request')
 async def handle_frontend_data_requests(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-    reply = await data_request_routing(sio, cmd, data, logger)
+    reply = await data_request_routing(sio, cmd, data, logger, sid)
     return reply
 
 @sio.on('data_submission')
 async def handle_frontend_data_submissions(sid, cmd, data=None):
     logger.info(f'Received event from: {sid}, with cmd: {cmd}, and data: {data}')
-    reply = await data_submission_routing(sio, cmd, data, logger)
+    reply = await data_submission_routing(sio, cmd, data, logger, sid)
     return reply
 
 @sio.on('auth_request')
 async def handle_frontend_auth_requests(sid, cmd, data):
     logger.info(f'Received authentication event from client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}: {data}')
-    reply = await auth_request_routing(sio, cmd, data, logger)
+    reply = await auth_request_routing(sio, cmd, data, logger, sid)
 
     logger.info(f'Replying to authentication event from client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}: {reply}')
     return {'success': reply['success'], 'token': reply['token'], 'user': reply['user']}
@@ -264,7 +179,7 @@ async def handle_frontend_auth_requests(sid, cmd, data):
 
 @app.post("/api/webrtc/offer")
 async def create_webrtc_session(request: WebRTCRequest):
-    """Relay WebRTC offer to go2rtc and return answer"""
+    """Relay WebRTC offer to go2rtc and return an answer"""
     try:
         # Extract base URL from the provided stream URL
         base_url = request.source_url.split('/stream.html')[0]

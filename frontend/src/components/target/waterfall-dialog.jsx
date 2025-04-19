@@ -131,7 +131,7 @@ export default function WaterFallSettingsDialog() {
                                 value={dbRange}
                                 onChange={(e, newValue) => dispatch(setDbRange(newValue))}
                                 valueLabelDisplay="auto"
-                                min={-140}
+                                min={-110}
                                 max={0}
                                 step={1}
                                 sx={{mx: 2}}

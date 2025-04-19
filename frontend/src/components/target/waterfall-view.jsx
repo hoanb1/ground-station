@@ -76,13 +76,18 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
 
+    const cancelWaterfallAnimation = () => {
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+            animationFrameRef.current = null;
+        }
+    }
 
     // Effect to sync state to the ref
     useEffect(() => {
         visualSettingsRef.current.dbRange = dbRange;
         visualSettingsRef.current.colorMap = colorMap;
     }, [dbRange, colorMap]);
-
 
     useEffect(() => {
         // Initialize canvas
@@ -104,12 +109,14 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     }
 
     socket.on('disconnect', () => {
+        cancelWaterfallAnimation();
         dispatch(setIsConnected(false));
         dispatch(setIsStreaming(false));
         dispatch(setErrorMessage('Disconnected from backend server'));
     });
 
     socket.on('sdr-error', (error) => {
+        cancelWaterfallAnimation();
         dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
         dispatch(setIsStreaming(false));
         enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
@@ -134,9 +141,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     return () => {
         // Clean up
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-        }
+        cancelWaterfallAnimation();
 
         socket.off('sdr-error');
         socket.off('sdr-fft-data');
@@ -148,7 +153,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     useEffect(() => {
         // Configure RTL-SDR settings
-        socket.emit('configure_rtlsdr', {
+        socket.emit('sdr_data', 'configure_rtlsdr', {
             deviceId,
             centerFrequency,
             sampleRate,
@@ -160,7 +165,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     const startStreaming = () => {
         if (isConnected && !isStreaming) {
             // Configure RTL-SDR settings
-            socket.emit('configure_rtlsdr', {
+            socket.emit('sdr_data', 'configure_rtlsdr', {
                 deviceId,
                 centerFrequency,
                 sampleRate,
@@ -168,7 +173,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                 fftSize
             });
 
-            socket.emit('start_streaming');
+            socket.emit('sdr_data', 'start_streaming');
             dispatch(setIsStreaming(true));
 
             // Start the rendering loop
@@ -178,12 +183,9 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     const stopStreaming = () => {
         if (isStreaming) {
-            socket.emit('stop_streaming');
+            socket.emit('sdr_data', 'stop_streaming');
             dispatch(setIsStreaming(false));
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-                animationFrameRef.current = null;
-            }
+            cancelWaterfallAnimation();
         }
     };
 

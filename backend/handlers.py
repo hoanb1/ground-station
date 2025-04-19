@@ -2,6 +2,7 @@ import uuid
 import crud
 import requests
 import json
+import rtlsdr
 from db import engine, AsyncSessionLocal
 from sync import *
 from datetime import date, datetime
@@ -10,15 +11,17 @@ from models import ModelEncoder
 from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state, get_satellite_position_from_tle
 from common import is_geostationary
 from tracking import compiled_satellite_data
+from sdr import rtlsdr_devices, active_clients, process_rtlsdr_data
 
 
-async def data_request_routing(sio, cmd, data, logger):
+async def data_request_routing(sio, cmd, data, logger, sid):
     """
     Routes data requests based on the command provided, fetching respective
     data from the database. Depending on the `cmd` parameter, it retrieves
     specific information by invoking respective CRUD operations. Logs
     information if the command is unrecognized.
 
+    :param sid:
     :param sio:
     :param cmd: Command string specifying the action to perform. It determines
                 the target data to fetch.
@@ -36,7 +39,7 @@ async def data_request_routing(sio, cmd, data, logger):
 
     async with AsyncSessionLocal() as dbsession:
 
-        reply = {'success': None, 'data': None}
+        reply: {'success': None, 'data': None}
 
         if cmd == "get-tle-sources":
             logger.debug(f'Getting TLE sources')
@@ -180,7 +183,7 @@ async def data_request_routing(sio, cmd, data, logger):
 
     return reply
 
-async def data_submission_routing(sio, cmd, data, logger):
+async def data_submission_routing(sio, cmd, data, logger, sid):
     """
     Routes data submission commands to the appropriate CRUD operations and
     returns the response. The function supports creating, deleting, and
@@ -188,6 +191,7 @@ async def data_submission_routing(sio, cmd, data, logger):
     executes the corresponding command, and fetches the latest data from
     the database to include in the response.
 
+    :param sid:
     :param sio:
     :param cmd: Command string indicating the operation to perform. Supported
                 commands are "submit-tle-sources", "delete-tle-sources",
@@ -479,12 +483,13 @@ async def emit_tracker_data(dbsession, sio, logger):
         logger.exception(e)
 
 
-async def auth_request_routing(sio, cmd, data, logger):
+async def auth_request_routing(sio, cmd, data, logger, sid):
     """
     Routes authentication requests to the appropriate handle based on the command
     provided. Establishes an asynchronous session with the database for processing
     the request. Ensures the database session is properly closed after use.
 
+    :param sid:
     :param sio: Socket.IO server instance facilitating communication via events.
     :type sio: AsyncServer
     :param cmd: Command string determining the operation to be performed.
@@ -517,3 +522,114 @@ async def auth_request_routing(sio, cmd, data, logger):
             reply['success'] = False
 
     return reply
+
+
+async def sdr_data_request_routing(sio, cmd, data, logger, sid):
+
+    async with AsyncSessionLocal() as dbsession:
+        reply = {'success': None, 'data': None}
+
+        if cmd == "configure_rtlsdr":
+            try:
+                device_id = data.get('deviceId', 0)
+
+                # Default to 100 MHz
+                center_freq = data.get('centerFrequency', 100e6)
+
+                # Default to 2.048 MSPS
+                sample_rate = data.get('sampleRate', 2.048e6)
+
+                # Default to 20 dB gain
+                gain = data.get('gain', 20)
+
+                # Default FFT size
+                fft_size = data.get('fftSize', 1024)
+
+                # Initialize or reconfigure RTLSDR
+                if device_id not in rtlsdr_devices:
+                    # Create new RTLSDR instance
+                    sdr = rtlsdr.RtlSdr(device_id)
+                    rtlsdr_devices[device_id] = sdr
+                    logger.info(f"Initialized RTLSDR device {device_id}")
+                else:
+                    sdr = rtlsdr_devices[device_id]
+
+                # Configure SDR parameters
+                sdr.center_freq = center_freq
+                sdr.sample_rate = sample_rate
+                sdr.gain = gain
+
+                # Update client configuration
+                if sid in active_clients:
+                    active_clients[sid].update({
+                        'device_id': device_id,
+                        'center_frequency': center_freq,
+                        'sample_rate': sample_rate,
+                        'gain': gain,
+                        'fft_size': fft_size
+                    })
+
+                await sio.emit('sdr-status', {
+                    'configured': True,
+                    'device_id': device_id,
+                    'center_frequency': center_freq,
+                    'sample_rate': sample_rate,
+                    'gain': gain,
+                    'fft_size': fft_size
+                }, room=sid)
+
+            except Exception as e:
+                logger.error(f"Error configuring RTLSDR: {str(e)}")
+                await sio.emit('sdr-error', {'message': f"Failed to configure RTLSDR: {str(e)}"}, room=sid)
+
+        elif cmd == "start_streaming":
+
+            if sid not in active_clients:
+                logger.error(f"Client not registered: {sid}")
+                await sio.emit('sdr-error', {'message': "Client not registered"}, room=sid)
+                reply['success'] = False
+                return reply
+
+            client = active_clients[sid]
+            device_id = client.get('device_id')
+
+            if device_id is None or device_id not in rtlsdr_devices:
+                logger.error(f"RTLSDR not configured: {sid}")
+                await sio.emit('sdr-error', {'message': "RTLSDR not configured"}, room=sid)
+                reply['success'] = False
+                return reply
+
+            # Cancel any existing task
+            if client.get('task'):
+                client['task'].cancel()
+
+            logger.info(f"Starting streaming SDR data for client {sid}")
+
+            # Start a new processing task
+            client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
+            await sio.emit('sdr-status', {'streaming': True}, room=sid)
+
+        elif cmd == "stop_streaming":
+            if sid not in active_clients:
+                logger.error(f"Client not registered: {sid}")
+                await sio.emit('sdr-error', {'message': "Client not registered"}, room=sid)
+                reply['success'] = False
+                return reply
+
+            if 'task' not in active_clients[sid]:
+                logger.error(f"No streaming task found for client {sid}")
+                await sio.emit('sdr-error', {'message': "No streaming task found"}, room=sid)
+                reply['success'] = False
+                return reply
+
+            # cleanup
+            active_clients[sid]['task'].cancel()
+            active_clients[sid]['task'] = None
+            await sio.emit('sdr-status', {'streaming': False}, room=sid)
+            logger.info(f"Stopped streaming SDR data for client {sid}")
+
+        else:
+            logger.error(f'Unknown SDR command: {cmd}')
+
+    return reply
+
