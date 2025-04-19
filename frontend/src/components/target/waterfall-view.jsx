@@ -20,6 +20,7 @@ import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SettingsIcon from '@mui/icons-material/Settings';
+import HeightIcon from '@mui/icons-material/Height';
 import {useSocket} from "../common/socket.jsx";
 import {
     setColorMap,
@@ -72,6 +73,8 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     } = useSelector((state) => state.waterfall);
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
     const [samples, setSamples] = useState([]);
+    const [scrollFactor, setScrollFactor] = useState(2);
+    const accumulatedRowsRef = useRef(0);
 
     // Add a new ref for the worker
     const workerRef = useRef(null);
@@ -191,7 +194,6 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
         }
     };
 
-
     const stopStreaming = () => {
         if (isStreaming) {
             socket.emit('stop_streaming');
@@ -203,7 +205,6 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
         }
     };
 
-
     function renderLoop(timestamp) {
         // Limit to targetFPS
         if (!lastFrameTimeRef.current || timestamp - lastFrameTimeRef.current >= 1000 / targetFPS) {
@@ -213,7 +214,6 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         animationFrameRef.current = requestAnimationFrame(renderLoop);
     }
-
 
     // Auto-scale the color range based on the recent FFT data
     const autoScaleDbRange = () => {
@@ -260,45 +260,52 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     
     function drawWaterfall() {
         const canvas = waterFallCanvasRef.current;
-        if (!canvas) {
+        if (!canvas || waterfallDataRef.current.length === 0) {
             return;
         }
 
-        const ctx = canvas.getContext('2d');
+        accumulatedRowsRef.current += 1;
 
-        // Move existing pixels DOWN (instead of up)
-        // This line shifts the existing content downward
-        ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height - 1, 0, 1, canvas.width, canvas.height - 1);
+        // Only scroll the waterfall when we've accumulated enough rows
+        if (accumulatedRowsRef.current >= scrollFactor) {
+            accumulatedRowsRef.current = 0;
 
-        // Get imageData for the new row only
-        const imageData = ctx.createImageData(canvas.width, 1);
-        const data = imageData.data;
+            const ctx = canvas.getContext('2d');
 
-        // Only process the newest FFT data (first row in your array)
-        if (waterfallDataRef.current.length > 0) {
-            const fftRow = waterfallDataRef.current[0];
+            // Move existing pixels DOWN (instead of up)
+            // This line shifts the existing content downward
+            ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height - 1, 0, 1, canvas.width, canvas.height - 1);
 
-            // Calculate a scaling factor to fit all frequency bins to canvas width
-            const skipFactor = fftRow.length / canvas.width;
+            // Get imageData for the new row only
+            const imageData = ctx.createImageData(canvas.width, 1);
+            const data = imageData.data;
 
-            // Write directly to pixel data (much faster than fillRect)
-            for (let x = 0; x < canvas.width; x++) {
-                // Map canvas pixel to the appropriate FFT bin using scaling
-                const fftIndex = Math.min(Math.floor(x * skipFactor), fftRow.length - 1);
-                const amplitude = fftRow[fftIndex];
+            // Only scroll the waterfall when we've accumulated enough rows
+            if (waterfallDataRef.current.length > 0) {
+                const fftRow = waterfallDataRef.current[0];
 
-                const rgb = getColorForPower(amplitude, visualSettingsRef.current.colorMap, visualSettingsRef.current.dbRange);
+                // Calculate a scaling factor to fit all frequency bins to canvas width
+                const skipFactor = fftRow.length / canvas.width;
 
-                // Each pixel uses 4 array positions (r,g,b,a)
-                const pixelIndex = x * 4;
-                data[pixelIndex] = rgb.r;     // R
-                data[pixelIndex + 1] = rgb.g; // G
-                data[pixelIndex + 2] = rgb.b; // B
-                data[pixelIndex + 3] = 255;   // Alpha (fully opaque)
+                // Write directly to pixel data (much faster than fillRect)
+                for (let x = 0; x < canvas.width; x++) {
+                    // Map canvas pixel to the appropriate FFT bin using scaling
+                    const fftIndex = Math.min(Math.floor(x * skipFactor), fftRow.length - 1);
+                    const amplitude = fftRow[fftIndex];
+
+                    const rgb = getColorForPower(amplitude, visualSettingsRef.current.colorMap, visualSettingsRef.current.dbRange);
+
+                    // Each pixel uses 4 array positions (r,g,b,a)
+                    const pixelIndex = x * 4;
+                    data[pixelIndex] = rgb.r;     // R
+                    data[pixelIndex + 1] = rgb.g; // G
+                    data[pixelIndex + 2] = rgb.b; // B
+                    data[pixelIndex + 3] = 255;   // Alpha (fully opaque)
+                }
+
+                // Put the new row at the TOP of the canvas (instead of bottom)
+                ctx.putImageData(imageData, 0, 0);
             }
-
-            // Put the new row at the TOP of the canvas (instead of bottom)
-            ctx.putImageData(imageData, 0, 0);
         }
     }
 
@@ -440,19 +447,21 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                             Stop
                         </Button>
                         <Button
+                            startIcon={<HeightIcon/>}
+                            disabled={!isStreaming}
+                            color="secondary"
+                            onClick={autoScaleDbRange}
+                        >
+                            Auto Range
+                        </Button>
+                        <Button
                             startIcon={<SettingsIcon/>}
                             color="primary"
                             onClick={() => dispatch(setSettingsDialogOpen(true))}
                         >
                             Settings
                         </Button>
-                        <Button
-                            disabled={!isStreaming}
-                            color="info"
-                            onClick={autoScaleDbRange}
-                        >
-                            Auto Range
-                        </Button>
+
 
                     </ButtonGroup>
                 </Paper>

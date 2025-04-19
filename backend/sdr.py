@@ -17,7 +17,7 @@ active_clients: Dict[str, Dict[str, Any]] = {}
 
 # FFT processing parameters
 WINDOW_FUNCTION = np.hanning
-NUM_SAMPLES_PER_SCAN = 32 * 1024  # Number of samples per scan for FFT
+NUM_SAMPLES_PER_SCAN = 64 * 1024  # Number of samples per scan for FFT
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
@@ -28,17 +28,10 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             client = active_clients[client_id]
             sdr = rtlsdr_devices[device_id]
 
-            # Configure SDR parameters
-            #'device_id': device_id,
-            #'center_frequency': center_freq,
-            #'sample_rate': sample_rate,
-            #'gain': gain,
-            #'fft_size': fft_size
-
             # Read samples
-            #read_func = partial(sdr.read_samples, NUM_SAMPLES_PER_SCAN)
-            #samples = await asyncio.to_thread(read_func)
-            samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
+            read_func = partial(sdr.read_samples, NUM_SAMPLES_PER_SCAN)
+            samples = await asyncio.to_thread(read_func)
+            #samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
 
             #samples = apply_iq_correction(samples, gain_balance=1.02, phase_balance=0.01)
 

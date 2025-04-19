@@ -77,7 +77,7 @@ export default function WaterFallSettingsDialog() {
     };
 
     return (
-        <div>
+        <>
             <Dialog
                 open={settingsDialogOpen}
                 onClose={handleClose}
@@ -165,12 +165,10 @@ export default function WaterFallSettingsDialog() {
                                     onChange={(e) => dispatch(setSampleRate(e.target.value))}
                                     disabled={false}
                                     variant={'filled'}>
-                                    {/* Low Range */}
                                     <MenuItem value={225001}>225.001 kHz</MenuItem>
                                     <MenuItem value={250000}>250 kHz</MenuItem>
                                     <MenuItem value={275000}>275 kHz</MenuItem>
                                     <MenuItem value={300000}>300 kHz</MenuItem>
-                                    {/* High Range */}
                                     <MenuItem value={900001}>900.001 kHz</MenuItem>
                                     <MenuItem value={960000}>960 kHz</MenuItem>
                                     <MenuItem value={1024000}>1.024 MHz</MenuItem>
@@ -228,6 +226,6 @@ export default function WaterFallSettingsDialog() {
                     <Button onClick={handleClose}>Close</Button>
                 </DialogActions>
             </Dialog>
-        </div>
+        </>
     );
 }
