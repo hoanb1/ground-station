@@ -2,23 +2,26 @@ import asyncio
 import numpy as np
 import socketio
 import rtlsdr
+import logging
 from functools import partial
 from typing import Dict, List, Optional, Any
-from logger import logger
 
+# configure new logger
+logger = logging.getLogger('sdr-data-process')
 
 # Store active RTLSDR devices and client connections
 rtlsdr_devices: Dict[int, rtlsdr.RtlSdr] = {}
 active_clients: Dict[str, Dict[str, Any]] = {}
 
-
 # FFT processing parameters
 WINDOW_FUNCTION = np.hanning
-NUM_SAMPLES_PER_SCAN = 1024 * 1024  # Number of samples per scan for FFT
+NUM_SAMPLES_PER_SCAN = 256 * 1024  # Number of samples per scan for FFT
+
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
-    """Process RTLSDR data and send FFT results to client"""
+    """Process RTLSDR data and send FFT results to the client"""
+    logger.info(f"Processing RTLSDR data for client {client_id}")
     try:
         while client_id in active_clients and device_id in rtlsdr_devices:
             client = active_clients[client_id]
@@ -30,11 +33,15 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             #sdr.gain = gain
 
             # Read samples
+            #read_func = partial(sdr.read_samples, NUM_SAMPLES_PER_SCAN)
+            #samples = await asyncio.to_thread(read_func)
             samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
 
             # Apply window function to reduce spectral leakage
             fft_size = client['fft_size']
-            actual_fft_size = fft_size * 1  # Increase virtual resolution 4x
+
+            # Increase virtual resolution 4x (disabled for now)
+            actual_fft_size = fft_size * 1
             window = WINDOW_FUNCTION(fft_size)
 
             # Calculate FFT for multiple segments and average them
@@ -64,11 +71,12 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
 
             fft_result /= num_segments  # Average the segments
 
-            # Send FFT data to client
+            # Send FFT data to the client
             await sio.emit('sdr-fft-data', fft_result.tolist(), room=client_id)
+            logger.debug(f"FFT data sent to client {client_id}")
 
             # Brief pause to prevent overwhelming the network
-            await asyncio.sleep(0.2)
+            await asyncio.sleep(0.1)
 
     except Exception as e:
         logger.error(f"Error processing RTLSDR data: {str(e)}")

@@ -16,7 +16,7 @@ const waterfallSlice = createSlice({
         ],
         colorMap: 'magma',
         dbRange: [-120, 0],
-        fftSizeOptions: [1024, 2048, 4096, 8192, 16384, 32768],
+        fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384, 32768],
         fftSize: 1024,
         gain: 20,
         sampleRate: 2048000,

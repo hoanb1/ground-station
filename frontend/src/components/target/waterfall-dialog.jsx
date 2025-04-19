@@ -125,21 +125,39 @@ export default function WaterFallSettingsDialog() {
                         </Box>
 
                         <Box sx={{ mb: 2 }}>
-                            <Typography variant="body2" gutterBottom>
-                                Sample Rate: {formatFrequency(sampleRate)}
-                            </Typography>
-                            <Slider
-                                value={sampleRate}
-                                min={230000}  // 230 kHz
-                                max={3200000}  // 3.2 MHz for most RTLSDRs
-                                step={10000}
-                                onChange={(_, value) => dispatch(setSampleRate(value))}
-                                disabled={isStreaming}
-                                aria-labelledby="sample-rate-slider"
-                            />
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                         variant="filled" size="small">
+                                <InputLabel>Sample Rate</InputLabel>
+                                <Select
+                                    value={sampleRate}
+                                    onChange={(e) => dispatch(setSampleRate(e.target.value))}
+                                    disabled={isStreaming}
+                                    variant={'filled'}>
+                                    {/* Low Range */}
+                                    <MenuItem value={225001}>225.001 kHz</MenuItem>
+                                    <MenuItem value={250000}>250 kHz</MenuItem>
+                                    <MenuItem value={275000}>275 kHz</MenuItem>
+                                    <MenuItem value={300000}>300 kHz</MenuItem>
+                                    {/* High Range */}
+                                    <MenuItem value={900001}>900.001 kHz</MenuItem>
+                                    <MenuItem value={960000}>960 kHz</MenuItem>
+                                    <MenuItem value={1024000}>1.024 MHz</MenuItem>
+                                    <MenuItem value={1200000}>1.2 MHz</MenuItem>
+                                    <MenuItem value={1440000}>1.44 MHz</MenuItem>
+                                    <MenuItem value={1600000}>1.6 MHz</MenuItem>
+                                    <MenuItem value={1800000}>1.8 MHz</MenuItem>
+                                    <MenuItem value={2000000}>2 MHz</MenuItem>
+                                    <MenuItem value={2048000}>2.048 MHz</MenuItem>
+                                    <MenuItem value={2400000}>2.4 MHz</MenuItem>
+                                    <MenuItem value={2560000}>2.56 MHz</MenuItem>
+                                    <MenuItem value={2880000}>2.88 MHz</MenuItem>
+                                    <MenuItem value={3000000}>3 MHz</MenuItem>
+                                    <MenuItem value={3200000}>3.2 MHz</MenuItem>
+                                </Select>
+                            </FormControl>
                         </Box>
 
-                        <Box sx={{ mb: 2 }}>
+                        <Box sx={{mb: 2}}>
                             <Typography variant="body2" gutterBottom>
                                 Gain: {gain} dB
                             </Typography>
@@ -154,8 +172,9 @@ export default function WaterFallSettingsDialog() {
                             />
                         </Box>
 
-                        <Box sx={{ mb: 2 }}>
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true} variant="filled"
+                        <Box sx={{mb: 2}}>
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                         variant="filled"
                                          size="small">
                                 <InputLabel>Color Map</InputLabel>
                                 <Select

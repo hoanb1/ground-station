@@ -373,17 +373,31 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                 }}
             >
                 <Paper elevation={3} sx={{p: 0, display: 'inline-block', width: '100%', }}>
-                    <Stack direction="row" spacing={1}>
-                        <IconButton aria-label="play" disabled={isStreaming} color="primary">
-                            <PlayArrowIcon onClick={startStreaming}/>
-                        </IconButton>
-                        <IconButton aria-label="delete" disabled={!isStreaming} color="primary">
-                            <StopIcon onClick={stopStreaming}/>
-                        </IconButton>
-                        <IconButton color="secondary" aria-label="add an alarm">
-                            <SettingsIcon onClick={() => dispatch(setSettingsDialogOpen(true))}/>
-                        </IconButton>
-                    </Stack>
+                    <ButtonGroup variant="contained" size="small">
+                        <Button
+                            startIcon={<PlayArrowIcon/>}
+                            disabled={isStreaming}
+                            color="primary"
+                            onClick={startStreaming}
+                        >
+                            Start
+                        </Button>
+                        <Button
+                            startIcon={<StopIcon/>}
+                            disabled={!isStreaming}
+                            color="primary"
+                            onClick={stopStreaming}
+                        >
+                            Stop
+                        </Button>
+                        <Button
+                            startIcon={<SettingsIcon/>}
+                            color="secondary"
+                            onClick={() => dispatch(setSettingsDialogOpen(true))}
+                        >
+                            Settings
+                        </Button>
+                    </ButtonGroup>
                 </Paper>
             </Box>
             <Box
@@ -396,7 +410,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                     borderRadius: 1
                 }}
             >
-                <div style={{ position: 'relative', width: '100%', height: '100%' }}>
+                <div style={{position: 'relative', width: '100%', height: '100%'}}>
                     <canvas
                         ref={waterFallCanvasRef}
                         width={800}
