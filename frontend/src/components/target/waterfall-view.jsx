@@ -16,7 +16,6 @@ import {
 import {useDispatch, useSelector} from "react-redux";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import { IconButton } from '@mui/material';
-
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -74,13 +73,16 @@ const WaterfallDisplay = ({deviceId = 0}) => {
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
     const [samples, setSamples] = useState([]);
 
+    // Add a new ref for the worker
+    const workerRef = useRef(null);
+
     // Effect to sync state to the ref
     useEffect(() => {
         visualSettingsRef.current.dbRange = dbRange;
         visualSettingsRef.current.colorMap = colorMap;
     }, [dbRange, colorMap]);
 
-
+    // Initialize the worker in useEffect
     useEffect(() => {
         // Initialize canvas
         if (waterFallCanvasRef.current) {
@@ -90,45 +92,73 @@ const WaterfallDisplay = ({deviceId = 0}) => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-        if (socket.connected) {
-            dispatch(setIsConnected(true));
-        } else {
-            console.warn("Can't connect to RTLSDR server. Make sure it's running and the server is accessible from this machine.")
+    // Initialize worker
+    workerRef.current = new Worker(new URL('./waterfall-worker.js', import.meta.url));
+    
+    // Set up worker message handlers
+    workerRef.current.onmessage = (e) => {
+        if (e.data.type === 'frameProcessed') {
+            if (waterFallCanvasRef.current) {
+                const canvas = waterFallCanvasRef.current;
+                const ctx = canvas.getContext('2d');
+                
+                // Move existing pixels DOWN
+                ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height - 1, 0, 1, canvas.width, canvas.height - 1);
+                
+                // Put the new row at the TOP of the canvas
+                ctx.putImageData(e.data.imageData, 0, 0);
+            }
         }
+    };
 
-        socket.on('disconnect', () => {
-            dispatch(setIsConnected(false));
-            dispatch(setIsStreaming(false));
-            dispatch(setErrorMessage('Disconnected from backend server'));
+    if (socket.connected) {
+        dispatch(setIsConnected(true));
+    } else {
+        dispatch(setIsConnected(false));
+        enqueueSnackbar("Can't connect to RTLSDR server. Make sure it's running and the server is accessible from this machine.", {
+            variant: 'warning',
+            autoHideDuration: 10000,
+        })
+    }
+
+    socket.on('disconnect', () => {
+        dispatch(setIsConnected(false));
+        dispatch(setIsStreaming(false));
+        dispatch(setErrorMessage('Disconnected from backend server'));
+    });
+
+    socket.on('sdr-error', (error) => {
+        dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
+        dispatch(setIsStreaming(false));
+        enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
+            variant: 'error'
         });
+    });
 
-        socket.on('sdr-error', (error) => {
-            console.error(error);
-            dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
-            dispatch(setIsStreaming(false));
-            enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
-                variant: 'error'
-            });
-        });
+    socket.on('sdr-fft-data', (data) => {
+        // Add new FFT data to the waterfall buffer
+        setSamples(data);
+        waterfallDataRef.current.unshift(data);
 
-        socket.on('sdr-fft-data', (data) => {
-            // Add new FFT data to the waterfall buffer
-            setSamples(data);
-            waterfallDataRef.current.unshift(data);
+        // Keep only the most recent rows based on canvas height
+        if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
+            waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
+        }
+    });
 
-            // Keep only the most recent rows based on canvas height
-            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
-                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
-            }
-        });
-
-        return () => {
-            // Clean up
-            if (animationFrameRef.current) {
-                cancelAnimationFrame(animationFrameRef.current);
-            }
-        };
-    }, []);
+    return () => {
+        // Clean up
+        if (animationFrameRef.current) {
+            cancelAnimationFrame(animationFrameRef.current);
+        }
+        
+        // Terminate worker
+        if (workerRef.current) {
+            workerRef.current.terminate();
+            workerRef.current = null;
+        }
+    };
+}, []);
 
 
     const startStreaming = () => {
@@ -174,7 +204,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
     }
 
 
-    // Add this function to your component
+    // Auto-scale the color range based on the recent FFT data
     const autoScaleDbRange = () => {
         if (waterfallDataRef.current.length === 0) return;
 
@@ -400,11 +430,19 @@ const WaterfallDisplay = ({deviceId = 0}) => {
                         </Button>
                         <Button
                             startIcon={<SettingsIcon/>}
-                            color="secondary"
+                            color="primary"
                             onClick={() => dispatch(setSettingsDialogOpen(true))}
                         >
                             Settings
                         </Button>
+                        <Button
+                            disabled={!isStreaming}
+                            color="info"
+                            onClick={autoScaleDbRange}
+                        >
+                            Auto Range
+                        </Button>
+
                     </ButtonGroup>
                 </Paper>
             </Box>

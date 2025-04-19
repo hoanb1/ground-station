@@ -15,8 +15,7 @@ active_clients: Dict[str, Dict[str, Any]] = {}
 
 # FFT processing parameters
 WINDOW_FUNCTION = np.hanning
-NUM_SAMPLES_PER_SCAN = 256 * 1024  # Number of samples per scan for FFT
-
+NUM_SAMPLES_PER_SCAN = 16 * 1024  # Number of samples per scan for FFT
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
@@ -41,7 +40,7 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             fft_size = client['fft_size']
 
             # Increase virtual resolution 4x (disabled for now)
-            actual_fft_size = fft_size * 1
+            fft_size = fft_size * 4
             window = WINDOW_FUNCTION(fft_size)
 
             # Calculate FFT for multiple segments and average them
@@ -60,11 +59,8 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
                 #segment = samples[i * fft_size:(i + 1) * fft_size]
                 windowed_segment = segment * window
 
-                # Zero pad to increase virtual resolution
-                padded_segment = np.zeros(actual_fft_size, dtype=complex)
-                padded_segment[:fft_size] = windowed_segment
-
-                fft_segment = np.fft.fft(padded_segment)
+                # Perform FFT directly without zero padding
+                fft_segment = np.fft.fft(windowed_segment)
                 fft_segment = np.fft.fftshift(fft_segment)  # Shift DC to center
                 power = 10 * np.log10(np.abs(fft_segment) ** 2 + 1e-10)  # Convert to dB
                 fft_result += power
@@ -76,7 +72,7 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             logger.debug(f"FFT data sent to client {client_id}")
 
             # Brief pause to prevent overwhelming the network
-            await asyncio.sleep(0.1)
+            await asyncio.sleep(0.01)
 
     except Exception as e:
         logger.error(f"Error processing RTLSDR data: {str(e)}")

@@ -89,6 +89,11 @@ loggers:
       - default
     propagate: no
 
+  sdr-data-process:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
 
 root:
   level: DEBUG

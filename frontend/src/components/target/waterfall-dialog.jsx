@@ -14,7 +14,7 @@ import {
     MenuItem,
     Select,
     Slider,
-    Switch,
+    Switch, TextField,
     Typography
 } from "@mui/material";
 import {useDispatch, useSelector} from "react-redux";
@@ -90,19 +90,21 @@ export default function WaterFallSettingsDialog() {
                 <DialogContent>
                     <DialogContentText id="sample-dialog-description">
 
-                        <Box sx={{ mb: 2, width: '300px' }}>
+                        <Box sx={{mb: 2, width: '300px'}}>
                             <Typography variant="body2" gutterBottom>
                                 Center Frequency: {formatFrequency(centerFrequency)}
                             </Typography>
-                            <Slider
-                                value={centerFrequency}
-                                min={24000000}  // 24 MHz
-                                max={1766000000}  // 1.766 GHz
-                                step={100000}  // 100 kHz steps
-                                onChange={(_, value) => dispatch(setCenterFrequency(value))}
-                                disabled={isStreaming}
-                                aria-labelledby="frequency-slider"
-                            />
+                            <FormControl fullWidth variant="outlined" size="small">
+                                <TextField
+                                    type="number"
+                                    value={centerFrequency}
+                                    onChange={(e) => dispatch(setCenterFrequency(Number(e.target.value)))}
+                                    disabled={isStreaming}
+                                    fullWidth
+                                    size="small"
+                                    variant="outlined"
+                                />
+                            </FormControl>
                         </Box>
 
                         <Box sx={{mb: 2}}>
