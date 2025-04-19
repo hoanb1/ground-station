@@ -78,9 +78,6 @@ export default function WaterFallSettingsDialog() {
 
     return (
         <div>
-            <Button variant="outlined" onClick={handleClickOpen}>
-                Open Dialog
-            </Button>
             <Dialog
                 open={settingsDialogOpen}
                 onClose={handleClose}
