@@ -69,6 +69,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
         isConnected,
         targetFPS,
         isPlaying,
+        autoDBRange,
     } = useSelector((state) => state.waterfall);
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
     const [samples, setSamples] = useState([]);
@@ -199,16 +200,23 @@ const WaterfallDisplay = ({deviceId = 0}) => {
         dispatch(setDbRange([min, max]));
     };
 
-
     // Call this periodically, for example:
     useEffect(() => {
-        if (isStreaming) {
-            const interval = setInterval(autoScaleDbRange, 1000); // Update every second
-            return () => clearInterval(interval);
+        let interval;
+
+        if (isStreaming && autoDBRange) {
+            interval = setInterval(() => {
+                autoScaleDbRange();
+            }, 1000); // Update every second
         }
-    }, [isStreaming]);
 
-
+        return () => {
+            if (interval) {
+                clearInterval(interval);
+            }
+        };
+    }, [isStreaming, autoDBRange]);
+    
     function drawWaterfall() {
         const canvas = waterFallCanvasRef.current;
         if (!canvas) {
@@ -229,12 +237,12 @@ const WaterfallDisplay = ({deviceId = 0}) => {
         if (waterfallDataRef.current.length > 0) {
             const fftRow = waterfallDataRef.current[0];
 
-            // Calculate scaling factor to fit all frequency bins to canvas width
+            // Calculate a scaling factor to fit all frequency bins to canvas width
             const skipFactor = fftRow.length / canvas.width;
 
             // Write directly to pixel data (much faster than fillRect)
             for (let x = 0; x < canvas.width; x++) {
-                // Map canvas pixel to appropriate FFT bin using scaling
+                // Map canvas pixel to the appropriate FFT bin using scaling
                 const fftIndex = Math.min(Math.floor(x * skipFactor), fftRow.length - 1);
                 const amplitude = fftRow[fftIndex];
 
@@ -256,7 +264,7 @@ const WaterfallDisplay = ({deviceId = 0}) => {
 
     // Get color based on power level and selected color map
     const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
-        // Round the power value to reduce cache size (e.g., to nearest 0.5 dB)
+        // Round the power value to reduce cache size (e.g., to the nearest 0.5 dB)
         const roundedPower = Math.round(powerDb * 2) / 2;
 
         // Create a cache key

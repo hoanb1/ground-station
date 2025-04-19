@@ -25,10 +25,9 @@ const waterfallSlice = createSlice({
         isStreaming: false,
         isConnected: false,
         isPlaying: false,
-        targetFPS: 30,
+        targetFPS: 60,
         settingsDialogOpen: false,
-
-
+        autoDBRange: false,
 
     },
     reducers: {
@@ -74,6 +73,9 @@ const waterfallSlice = createSlice({
         setSettingsDialogOpen: (state, action) => {
             state.settingsDialogOpen = action.payload;
         },
+        setAutoDBRange: (state, action) => {
+            state.autoDBRange = action.payload;
+        },
     },
     extraReducers: (builder) => {
 
@@ -95,6 +97,7 @@ export const {
     setTargetFPS,
     setIsPlaying,
     setSettingsDialogOpen,
+    setAutoDBRange
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

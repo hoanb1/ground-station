@@ -5,7 +5,18 @@ import DialogActions from '@mui/material/DialogActions';
 import DialogContent from '@mui/material/DialogContent';
 import DialogContentText from '@mui/material/DialogContentText';
 import DialogTitle from '@mui/material/DialogTitle';
-import {Box, CircularProgress, FormControl, InputLabel, MenuItem, Select, Slider, Typography} from "@mui/material";
+import {
+    Box,
+    CircularProgress,
+    FormControl,
+    FormControlLabel,
+    InputLabel,
+    MenuItem,
+    Select,
+    Slider,
+    Switch,
+    Typography
+} from "@mui/material";
 import {useDispatch, useSelector} from "react-redux";
 import {
     setColorMap,
@@ -21,6 +32,7 @@ import {
     setIsConnected,
     setTargetFPS,
     setSettingsDialogOpen,
+    setAutoDBRange,
 } from './waterfall-slice.jsx'
 
 
@@ -40,6 +52,7 @@ export default function WaterFallSettingsDialog() {
         isConnected,
         targetFPS,
         settingsDialogOpen,
+        autoDBRange,
     } = useSelector((state) => state.waterfall);
 
     const handleClickOpen = () => {
@@ -92,22 +105,34 @@ export default function WaterFallSettingsDialog() {
                             />
                         </Box>
 
+                        <Box sx={{mb: 2}}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={autoDBRange}
+                                        onChange={(e) => dispatch(setAutoDBRange(e.target.checked))}
+                                    />
+                                }
+                                label="Auto DB Range"
+                            />
+                        </Box>
+
                         <Typography gutterBottom>Signal Range (dB)</Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%' }}>
-                            <Typography sx={{ mr: 1 }}>{dbRange[0]}</Typography>
+                        <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 2 }}>
+                            <Typography sx={{ mr: 1, width: '60px', textAlign: 'left',  fontFamily: 'Monospace' }}>{dbRange[0]}</Typography>
                             <Slider
                                 value={dbRange}
                                 onChange={(e, newValue) => dispatch(setDbRange(newValue))}
                                 valueLabelDisplay="auto"
                                 min={-140}
                                 max={0}
-                                step={5}
-                                sx={{ mx: 2 }}
+                                step={1}
+                                sx={{mx: 2}}
                             />
-                            <Typography sx={{ ml: 1 }}>{dbRange[1]}</Typography>
+                            <Typography sx={{ml: 1, width: '60px', textAlign: 'right', fontFamily: 'Monospace'}}>{dbRange[1]}</Typography>
                         </Box>
 
-                        <Box sx={{ mb: 2 }}>
+                        <Box sx={{mb: 2}}>
                             <FormControl margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                          fullWidth={true} variant="filled"
                                          size="small">
