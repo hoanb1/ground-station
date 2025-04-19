@@ -5,6 +5,8 @@ import rtlsdr
 import logging
 from functools import partial
 from typing import Dict, List, Optional, Any
+from scipy import interpolate
+
 
 # configure new logger
 logger = logging.getLogger('sdr-data-process')
@@ -38,6 +40,8 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             #samples = await asyncio.to_thread(read_func)
             samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
 
+            #samples = apply_iq_correction(samples, gain_balance=1.02, phase_balance=0.01)
+
             # Apply window function to reduce spectral leakage
             fft_size = client['fft_size']
 
@@ -63,9 +67,15 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
 
                 # Perform FFT directly without zero padding
                 fft_segment = np.fft.fft(windowed_segment)
-                fft_segment = np.fft.fftshift(fft_segment)  # Shift DC to center
-                power = 10 * np.log10(np.abs(fft_segment) ** 2 + 1e-10)  # Convert to dB
+
+                # Shift DC to center
+                fft_segment = np.fft.fftshift(fft_segment)
+
+                # Convert to dB
+                power = 10 * np.log10(np.abs(fft_segment) ** 2 + 1e-10)
                 fft_result += power
+
+                fft_result = interpolate_dc_spike(fft_result)
 
             fft_result /= num_segments  # Average the segments
 
@@ -86,3 +96,59 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
         if client_id in active_clients and active_clients[client_id].get('task'):
             active_clients[client_id]['task'] = None
 
+
+def apply_iq_correction(samples, gain_balance=1.0, phase_balance=0.0):
+    """
+    Apply IQ balance correction to the complex samples.
+
+    Args:
+        samples: Complex IQ samples
+        gain_balance: Ratio of I gain to Q gain
+        phase_balance: Phase offset between I and Q in radians
+
+    Returns:
+        Corrected complex samples
+    """
+    i = np.real(samples)
+    q = np.imag(samples)
+
+    # Apply gain and phase correction
+    i_corrected = i
+    q_corrected = q * gain_balance
+
+    # Phase correction
+    i_out = i_corrected * np.cos(phase_balance) - q_corrected * np.sin(phase_balance)
+    q_out = i_corrected * np.sin(phase_balance) + q_corrected * np.cos(phase_balance)
+
+    return i_out + 1j * q_out
+
+
+def interpolate_dc_spike(spectrum, width=5):
+    """
+    Interpolate over the DC spike
+
+    Args:
+        spectrum: FFT spectrum (shifted so DC is in center)
+        width: Width of DC spike to remove (in bins)
+
+    Returns:
+        Cleaned spectrum
+    """
+    center = len(spectrum) // 2
+    x = np.arange(len(spectrum))
+
+    # Create mask for bins to interpolate
+    mask = np.ones(len(spectrum), dtype=bool)
+    mask[center-width:center+width+1] = False
+
+    # Create an interpolation function using only non-DC bins
+    f = interpolate.interp1d(x[mask], spectrum[mask],
+                             kind='linear',
+                             bounds_error=False,
+                             fill_value='extrapolate')
+
+    # Create new spectrum with interpolated values
+    cleaned = spectrum.copy()
+    cleaned[center-width:center+width+1] = f(x[center-width:center+width+1])
+
+    return cleaned
