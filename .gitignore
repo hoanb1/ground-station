@@ -72,3 +72,4 @@ coverage/
 env.bak/
 venv.bak/
 /backend/db/gs.db
+/backend/de421.bsp

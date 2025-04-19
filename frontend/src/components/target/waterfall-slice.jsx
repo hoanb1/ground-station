@@ -14,7 +14,7 @@ const waterfallSlice = createSlice({
             'magma',
             'jet'
         ],
-        colorMap: 'magma',
+        colorMap: 'inferno',
         dbRange: [-120, 0],
         fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384, 32768],
         fftSize: 1024,
@@ -25,7 +25,7 @@ const waterfallSlice = createSlice({
         isStreaming: false,
         isConnected: false,
         isPlaying: false,
-        targetFPS: 60,
+        targetFPS: 30,
         settingsDialogOpen: false,
         autoDBRange: false,
 

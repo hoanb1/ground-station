@@ -73,11 +73,9 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     } = useSelector((state) => state.waterfall);
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
     const [samples, setSamples] = useState([]);
-    const [scrollFactor, setScrollFactor] = useState(2);
+    const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
 
-    // Add a new ref for the worker
-    const workerRef = useRef(null);
 
     // Effect to sync state to the ref
     useEffect(() => {
@@ -85,7 +83,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
         visualSettingsRef.current.colorMap = colorMap;
     }, [dbRange, colorMap]);
 
-    // Initialize the worker in useEffect
+
     useEffect(() => {
         // Initialize canvas
         if (waterFallCanvasRef.current) {
@@ -94,25 +92,6 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-
-    // Initialize worker
-    workerRef.current = new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
-    
-    // Set up worker message handlers
-    workerRef.current.onmessage = (e) => {
-        if (e.data.type === 'frameProcessed') {
-            if (waterFallCanvasRef.current) {
-                const canvas = waterFallCanvasRef.current;
-                const ctx = canvas.getContext('2d');
-                
-                // Move existing pixels DOWN
-                ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height - 1, 0, 1, canvas.width, canvas.height - 1);
-                
-                // Put the new row at the TOP of the canvas
-                ctx.putImageData(e.data.imageData, 0, 0);
-            }
-        }
-    };
 
     if (socket.connected) {
         dispatch(setIsConnected(true));
@@ -154,12 +133,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
         }
-        
-        // Terminate worker
-        if (workerRef.current) {
-            workerRef.current.terminate();
-            workerRef.current = null;
-        }
+
     };
 
     }, []);
@@ -235,8 +209,8 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
         }
 
         // Add some padding to the range
-        min = Math.floor(min);
-        max = Math.ceil(max);
+        min = Math.floor(min + 5);
+        max = Math.ceil(Math.max(max + 1, 0));
 
         dispatch(setDbRange([min, max]));
     };
@@ -479,8 +453,8 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                 <div style={{position: 'relative', width: '100%', height: '100%'}}>
                     <canvas
                         ref={waterFallCanvasRef}
-                        width={800}
-                        height={400}
+                        width={1600}
+                        height={800}
                         style={{ width: '100%', height: '100%' }}
                     />
                 </div>
