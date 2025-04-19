@@ -346,6 +346,53 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                 colorCache.current.set(cacheKey, magmaRGB);
                 return magmaRGB;
 
+            case 'websdr':
+                // Custom WebSDR colormap with blue -> purple -> magenta -> yellow
+                let websdrRGB;
+                if (normalizedValue < 0.25) {
+                    // Dark blue to medium blue for very weak signals
+                    const factor = normalizedValue / 0.25;
+                    websdrRGB = {
+                        r: 20 + Math.floor(factor * 40),
+                        g: 20 + Math.floor(factor * 50),
+                        b: 80 + Math.floor(factor * 100)
+                    };
+                } else if (normalizedValue < 0.5) {
+                    // Medium blue to purple transition
+                    const factor = (normalizedValue - 0.25) / 0.25;
+                    websdrRGB = {
+                        r: 60 + Math.floor(factor * 80),
+                        g: 70 - Math.floor(factor * 20),
+                        b: 180 + Math.floor(factor * 75)
+                    };
+                } else if (normalizedValue < 0.7) {
+                    // Purple to bright magenta
+                    const factor = (normalizedValue - 0.5) / 0.2;
+                    websdrRGB = {
+                        r: 140 + Math.floor(factor * 115),
+                        g: 50 + Math.floor(factor * 40),
+                        b: 255 - Math.floor(factor * 50)
+                    };
+                } else if (normalizedValue < 0.85) {
+                    // Magenta to gold transition
+                    const factor = (normalizedValue - 0.7) / 0.15;
+                    websdrRGB = {
+                        r: 255,
+                        g: 90 + Math.floor(factor * 165),
+                        b: 205 - Math.floor(factor * 205)
+                    };
+                } else {
+                    // Gold to bright yellow for strongest signals
+                    const factor = (normalizedValue - 0.85) / 0.15;
+                    websdrRGB = {
+                        r: 255,
+                        g: 255,
+                        b: Math.floor(factor * 130)
+                    };
+                }
+                colorCache.current.set(cacheKey, websdrRGB);
+                return websdrRGB;
+
             case 'jet':
                 // Classic jet colormap (blue -> cyan -> green -> yellow -> red)
                 let jetRGB;
@@ -471,7 +518,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
 
                 </div>
             </Box>
-            <WaterfallStatusBar>{isStreaming? `f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} db`: `stopped`}</WaterfallStatusBar>
+            <WaterfallStatusBar>{isStreaming? `f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`: `stopped`}</WaterfallStatusBar>
             <WaterFallSettingsDialog/>
         </>
     );

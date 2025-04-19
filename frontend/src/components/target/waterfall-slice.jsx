@@ -12,9 +12,10 @@ const waterfallSlice = createSlice({
             'plasma',
             'inferno',
             'magma',
-            'jet'
+            'jet',
+            'websdr',
         ],
-        colorMap: 'inferno',
+        colorMap: 'websdr',
         dbRange: [-19, 0],
         fftSizeOptions: [256, 512, 1024, 2048, 4096],
         fftSize: 1024,
