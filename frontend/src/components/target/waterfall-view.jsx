@@ -93,7 +93,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
         }
 
     // Initialize worker
-    workerRef.current = new Worker(new URL('./waterfall-worker.js', import.meta.url));
+    workerRef.current = new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
     
     // Set up worker message handlers
     workerRef.current.onmessage = (e) => {
