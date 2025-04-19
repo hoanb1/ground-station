@@ -453,7 +453,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                 <div style={{position: 'relative', width: '100%', height: '100%'}}>
                     <canvas
                         ref={waterFallCanvasRef}
-                        width={1600}
+                        width={2000}
                         height={800}
                         style={{ width: '100%', height: '100%' }}
                     />
