@@ -52,8 +52,8 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         gridEditable,
     } = useSelector((state) => state.targetSatTrack);
 
-    const { rigs } = useSelector((state) => state.rigs);
-    const { rotators } = useSelector((state) => state.rotators);
+    const {selectedSDR, selectedSDRId, sdrs} = useSelector((state) => state.sdrs);
+    const {rigs} = useSelector((state) => state.rigs);
 
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, 'rig_state': "idle"};
@@ -155,10 +155,16 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                                 [no radio rig control]
                             </MenuItem>
                             <MenuItem value="" disabled>
-                                <em>select a radio</em>
+                                <em>select a rig</em>
                             </MenuItem>
                             {rigs.map((rig, index) => {
                                 return <MenuItem value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
+                            })}
+                            <MenuItem value="" disabled>
+                                <em>select a SDR</em>
+                            </MenuItem>
+                            {sdrs.map((sdr, index) => {
+                                return <MenuItem value={sdr.id} key={index}>{sdr.name} ({sdr.host}:{sdr.port})</MenuItem>;
                             })}
                         </Select>
                     </FormControl>

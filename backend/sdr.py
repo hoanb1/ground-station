@@ -2,6 +2,7 @@ import asyncio
 import numpy as np
 import socketio
 import rtlsdr
+from functools import partial
 from typing import Dict, List, Optional, Any
 from logger import logger
 
@@ -13,7 +14,7 @@ active_clients: Dict[str, Dict[str, Any]] = {}
 
 # FFT processing parameters
 WINDOW_FUNCTION = np.hanning
-NUM_SAMPLES_PER_SCAN = 256 * 1024  # Number of samples per scan for FFT
+NUM_SAMPLES_PER_SCAN = 1024 * 1024  # Number of samples per scan for FFT
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
@@ -22,6 +23,11 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
         while client_id in active_clients and device_id in rtlsdr_devices:
             client = active_clients[client_id]
             sdr = rtlsdr_devices[device_id]
+
+            # Configure SDR parameters
+            #sdr.center_freq = center_freq
+            #sdr.sample_rate = sample_rate
+            #sdr.gain = gain
 
             # Read samples
             samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
@@ -67,7 +73,7 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
     except Exception as e:
         logger.error(f"Error processing RTLSDR data: {str(e)}")
         logger.exception(e)
-        await sio.emit('error', {'message': f"RTLSDR error: {str(e)}"}, room=client_id)
+        await sio.emit('sdr-error', {'message': f"RTLSDR error: {str(e)}"}, room=client_id)
 
     finally:
         # Clean up if the loop exits

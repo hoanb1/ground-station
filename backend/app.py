@@ -102,10 +102,18 @@ async def configure_rtlsdr(sid, data):
 
     try:
         device_id = data.get('deviceId', 0)
-        center_freq = data.get('centerFrequency', 100e6)  # Default to 100 MHz
-        sample_rate = data.get('sampleRate', 2.048e6)  # Default to 2.048 MSPS
-        gain = data.get('gain', 20)  # Default to 20 dB gain
-        fft_size = data.get('fftSize', 1024)  # Default FFT size
+
+        # Default to 100 MHz
+        center_freq = data.get('centerFrequency', 100e6)
+
+        # Default to 2.048 MSPS
+        sample_rate = data.get('sampleRate', 2.048e6)
+
+        # Default to 20 dB gain
+        gain = data.get('gain', 20)
+
+        # Default FFT size
+        fft_size = data.get('fftSize', 1024)
 
         # Initialize or reconfigure RTLSDR
         if device_id not in rtlsdr_devices:
