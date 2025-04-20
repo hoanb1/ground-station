@@ -12,73 +12,65 @@ logger = logging.getLogger('sdr-data-process')
 
 # Store active RTLSDR devices and client connections
 rtlsdr_devices: Dict[int, rtlsdr.RtlSdr] = {}
-active_clients: Dict[str, Dict[str, Any]] = {}
+active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 
 # FFT processing parameters
 WINDOW_FUNCTION = np.hanning
-NUM_SAMPLES_PER_SCAN = 64 * 1024  # Number of samples per scan for FFT
+
+# Number of samples per scan for FFT
+NUM_SAMPLES_PER_SCAN = 64 * 1024
 
 
+def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None, gain=None, fft_size=1024):
+    active_sdr_clients[sid] = {
+        'device_id': device_id,
+        'center_frequency': center_frequency,
+        'sample_rate': sample_rate,
+        'gain': gain,
+        'fft_size': fft_size,
+        'task': None,
+    }
 
 
+def cleanup_sdr_session(sid):
+    # Clean up client resources
+    if sid in active_sdr_clients:
+        client = active_sdr_clients[sid]
+        device_id = client.get('device_id')
 
+        # Cancel any running processing task
+        if client.get('task'):
+            client['task'].cancel()
+            client['task'] = None
 
+        # Close and release the RTLSDR device if it was exclusively used by this client
+        if device_id is not None and device_id in rtlsdr_devices:
+            # Check if no other clients are using this device
+            other_users = [cid for cid, c in active_sdr_clients.items()
+                           if cid != sid and c.get('device_id') == device_id]
 
+            if not other_users:
+                try:
+                    rtlsdr_devices[device_id].close()
+                    del rtlsdr_devices[device_id]
+                    logger.info(f"Released RTLSDR device {device_id}")
+                except Exception as e:
+                    logger.error(f"Error closing RTLSDR device: {str(e)}")
+                    logger.exception(e)
 
+        # Remove client from active clients
+        del active_sdr_clients[sid]
 
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
-
+    else:
+        logger.warning(f"Client {sid} not found in active clients while cleaning up")
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
     """Process RTLSDR data and send FFT results to the client"""
     logger.info(f"Processing RTLSDR data for client {client_id}")
     try:
-        while client_id in active_clients and device_id in rtlsdr_devices:
-            client = active_clients[client_id]
+        while client_id in active_sdr_clients and device_id in rtlsdr_devices:
+            client = active_sdr_clients[client_id]
             sdr = rtlsdr_devices[device_id]
 
             # Read samples
@@ -139,8 +131,8 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
 
     finally:
         # Clean up if the loop exits
-        if client_id in active_clients and active_clients[client_id].get('task'):
-            active_clients[client_id]['task'] = None
+        if client_id in active_sdr_clients and active_sdr_clients[client_id].get('task'):
+            active_sdr_clients[client_id]['task'] = None
 
 
 def apply_iq_correction(samples, gain_balance=1.0, phase_balance=0.0):

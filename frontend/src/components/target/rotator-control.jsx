@@ -65,7 +65,7 @@ function GaugeAz({az}) {
             valueMin={0}
             valueMax={360}
             width={150}
-            height={100}
+            height={140}
             startAngle={0}
             endAngle={360}
             value={az}
@@ -83,7 +83,7 @@ function GaugeEl({el}) {
             valueMin={90}
             valueMax={0}
             width={150}
-            height={100}
+            height={140}
             startAngle={0}
             endAngle={90}
             value={el}

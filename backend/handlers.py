@@ -11,7 +11,7 @@ from models import ModelEncoder
 from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state, get_satellite_position_from_tle
 from common import is_geostationary
 from tracking import compiled_satellite_data
-from sdr import rtlsdr_devices, active_clients, process_rtlsdr_data
+from sdr import rtlsdr_devices, active_sdr_clients, process_rtlsdr_data, cleanup_sdr_session, add_sdr_session
 
 
 async def data_request_routing(sio, cmd, data, logger, sid):
@@ -39,7 +39,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
     async with AsyncSessionLocal() as dbsession:
 
-        reply: {'success': None, 'data': None}
+        reply = {'success': None, 'data': None}
 
         if cmd == "get-tle-sources":
             logger.debug(f'Getting TLE sources')
@@ -529,8 +529,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
     async with AsyncSessionLocal() as dbsession:
         reply = {'success': None, 'data': None}
 
-        if cmd == "configure_rtlsdr":
+        if cmd == "configure-rtlsdr":
             try:
+                # Device id
                 device_id = data.get('deviceId', 0)
 
                 # Default to 100 MHz
@@ -559,15 +560,8 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 sdr.sample_rate = sample_rate
                 sdr.gain = gain
 
-                # Update client configuration
-                if sid in active_clients:
-                    active_clients[sid].update({
-                        'device_id': device_id,
-                        'center_frequency': center_freq,
-                        'sample_rate': sample_rate,
-                        'gain': gain,
-                        'fft_size': fft_size
-                    })
+                # Create an SDR session entry in memory
+                add_sdr_session(sid, device_id, center_freq, sample_rate, gain, fft_size)
 
                 await sio.emit('sdr-status', {
                     'configured': True,
@@ -582,15 +576,15 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 logger.error(f"Error configuring RTLSDR: {str(e)}")
                 await sio.emit('sdr-error', {'message': f"Failed to configure RTLSDR: {str(e)}"}, room=sid)
 
-        elif cmd == "start_streaming":
+        elif cmd == "start-streaming":
 
-            if sid not in active_clients:
+            if sid not in active_sdr_clients:
                 logger.error(f"Client not registered: {sid}")
                 await sio.emit('sdr-error', {'message': "Client not registered"}, room=sid)
                 reply['success'] = False
                 return reply
 
-            client = active_clients[sid]
+            client = active_sdr_clients[sid]
             device_id = client.get('device_id')
 
             if device_id is None or device_id not in rtlsdr_devices:
@@ -609,22 +603,21 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
             client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
             await sio.emit('sdr-status', {'streaming': True}, room=sid)
 
-        elif cmd == "stop_streaming":
-            if sid not in active_clients:
+        elif cmd == "stop-streaming":
+            if sid not in active_sdr_clients:
                 logger.error(f"Client not registered: {sid}")
                 await sio.emit('sdr-error', {'message': "Client not registered"}, room=sid)
                 reply['success'] = False
                 return reply
 
-            if 'task' not in active_clients[sid]:
+            if 'task' not in active_sdr_clients[sid]:
                 logger.error(f"No streaming task found for client {sid}")
                 await sio.emit('sdr-error', {'message': "No streaming task found"}, room=sid)
                 reply['success'] = False
                 return reply
 
             # cleanup
-            active_clients[sid]['task'].cancel()
-            active_clients[sid]['task'] = None
+            cleanup_sdr_session(sid)
             await sio.emit('sdr-status', {'streaming': False}, room=sid)
             logger.info(f"Stopped streaming SDR data for client {sid}")
 

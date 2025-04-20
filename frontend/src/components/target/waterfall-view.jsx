@@ -33,9 +33,9 @@ import {
     setCenterFrequency,
     setErrorMessage,
     setIsStreaming,
-    setIsConnected,
     setTargetFPS,
-    setIsPlaying, setSettingsDialogOpen,
+    setIsPlaying,
+    setSettingsDialogOpen,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import IQVisualizer from "./iq-visualizer.jsx";
@@ -98,21 +98,9 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-    if (socket.connected) {
-        dispatch(setIsConnected(true));
-    } else {
-        dispatch(setIsConnected(false));
-        enqueueSnackbar("Can't connect to RTLSDR server. Make sure it's running and the server is accessible from this machine.", {
-            variant: 'warning',
-            autoHideDuration: 10000,
-        })
-    }
-
     socket.on('disconnect', () => {
         cancelWaterfallAnimation();
-        dispatch(setIsConnected(false));
         dispatch(setIsStreaming(false));
-        dispatch(setErrorMessage('Disconnected from backend server'));
     });
 
     socket.on('sdr-error', (error) => {
@@ -140,32 +128,34 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
     });
 
     return () => {
-        // Clean up
+        // Clean up waterfall animation
         cancelWaterfallAnimation();
 
+        // Clean up socket listeners
         socket.off('sdr-error');
         socket.off('sdr-fft-data');
         socket.off('sdr-status');
-        socket.off('disconnect');
     };
 
     }, []);
 
     useEffect(() => {
-        // Configure RTL-SDR settings
-        socket.emit('sdr_data', 'configure_rtlsdr', {
-            deviceId,
-            centerFrequency,
-            sampleRate,
-            gain,
-            fftSize
-        });
+        // If we are streaming, configure RTL-SDR settings
+        if (isStreaming) {
+            socket.emit('sdr_data', 'configure-rtlsdr', {
+                deviceId,
+                centerFrequency,
+                sampleRate,
+                gain,
+                fftSize
+            });
+        }
     }, [centerFrequency, sampleRate, fftSize, gain]);
 
     const startStreaming = () => {
-        if (isConnected && !isStreaming) {
+        if (!isStreaming) {
             // Configure RTL-SDR settings
-            socket.emit('sdr_data', 'configure_rtlsdr', {
+            socket.emit('sdr_data', 'configure-rtlsdr', {
                 deviceId,
                 centerFrequency,
                 sampleRate,
@@ -173,7 +163,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                 fftSize
             });
 
-            socket.emit('sdr_data', 'start_streaming');
+            socket.emit('sdr_data', 'start-streaming');
             dispatch(setIsStreaming(true));
 
             // Start the rendering loop
@@ -183,7 +173,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     const stopStreaming = () => {
         if (isStreaming) {
-            socket.emit('sdr_data', 'stop_streaming');
+            socket.emit('sdr_data', 'stop-streaming');
             dispatch(setIsStreaming(false));
             cancelWaterfallAnimation();
         }
@@ -411,6 +401,55 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                 colorCache.current.set(cacheKey, jetRGB);
                 return jetRGB;
 
+            case 'cosmic':
+                // Custom cosmic colormap with dark purple to yellow gradient based on provided colors
+                // #070208 -> #100b56 -> #170d87 -> #7400cd -> #cb5cff -> #f9f9ae
+                let cosmicRGB;
+                if (normalizedValue < 0.2) {
+                    // #070208 to #100b56
+                    const factor = normalizedValue / 0.2;
+                    cosmicRGB = {
+                        r: 7 + Math.floor(factor * 9),
+                        g: 2 + Math.floor(factor * 9),
+                        b: 8 + Math.floor(factor * 78)
+                    };
+                } else if (normalizedValue < 0.4) {
+                    // #100b56 to #170d87
+                    const factor = (normalizedValue - 0.2) / 0.2;
+                    cosmicRGB = {
+                        r: 16 + Math.floor(factor * 7),
+                        g: 11 + Math.floor(factor * 2),
+                        b: 86 + Math.floor(factor * 49)
+                    };
+                } else if (normalizedValue < 0.6) {
+                    // #170d87 to #7400cd
+                    const factor = (normalizedValue - 0.4) / 0.2;
+                    cosmicRGB = {
+                        r: 23 + Math.floor(factor * 93),
+                        g: 13 + Math.floor(factor * 0),
+                        b: 135 + Math.floor(factor * 70)
+                    };
+                } else if (normalizedValue < 0.8) {
+                    // #7400cd to #cb5cff
+                    const factor = (normalizedValue - 0.6) / 0.2;
+                    cosmicRGB = {
+                        r: 116 + Math.floor(factor * 87),
+                        g: 0 + Math.floor(factor * 92),
+                        b: 205 + Math.floor(factor * 50)
+                    };
+                } else {
+                    // #cb5cff to #f9f9ae
+                    const factor = (normalizedValue - 0.8) / 0.2;
+                    cosmicRGB = {
+                        r: 203 + Math.floor(factor * 46),
+                        g: 92 + Math.floor(factor * 167),
+                        b: 255 - Math.floor(factor * 81)
+                    };
+                }
+
+                colorCache.current.set(cacheKey, cosmicRGB);
+                return cosmicRGB;
+
             default:
                 // Default grayscale
                 const intensity = Math.floor(normalizedValue * 255);
@@ -493,8 +532,6 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
                         >
                             Settings
                         </Button>
-
-
                     </ButtonGroup>
                 </Paper>
             </Box>

@@ -14,8 +14,9 @@ const waterfallSlice = createSlice({
             'magma',
             'jet',
             'websdr',
+            'cosmic',
         ],
-        colorMap: 'websdr',
+        colorMap: 'cosmic',
         dbRange: [-19, 0],
         fftSizeOptions: [256, 512, 1024, 2048, 4096],
         fftSize: 1024,
@@ -24,7 +25,6 @@ const waterfallSlice = createSlice({
         centerFrequency: 100000000,
         errorMessage: null,
         isStreaming: false,
-        isConnected: false,
         isPlaying: false,
         targetFPS: 30,
         settingsDialogOpen: false,
@@ -62,9 +62,6 @@ const waterfallSlice = createSlice({
         setIsStreaming: (state, action) => {
             state.isStreaming = action.payload;
         },
-        setIsConnected: (state, action) => {
-            state.isConnected = action.payload;
-        },
         setTargetFPS: (state, action) => {
             state.targetFPS = action.payload;
         },
@@ -94,7 +91,6 @@ export const {
     setCenterFrequency,
     setErrorMessage,
     setIsStreaming,
-    setIsConnected,
     setTargetFPS,
     setIsPlaying,
     setSettingsDialogOpen,

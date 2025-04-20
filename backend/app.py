@@ -20,9 +20,7 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
-from sdr import process_rtlsdr_data, active_clients, rtlsdr_devices
-
-
+from sdr import process_rtlsdr_data, active_sdr_clients, rtlsdr_devices, cleanup_sdr_session
 
 Payload.max_decode_packets = 50
 
@@ -97,23 +95,11 @@ app.add_middleware(
     allow_headers=["*"],
 )
 
-
 @sio.on('connect')
 async def connect(sid, environ, auth=None):
     client_ip = environ.get("REMOTE_ADDR")
     logger.info(f'Client {sid} from {client_ip} connected, auth: {auth}')
     SESSIONS[sid] = environ
-
-    # sdr session management stuff
-    active_clients[sid] = {
-        'device_id': None,
-        'center_frequency': None,
-        'sample_rate': None,
-        'gain': None,
-        'fft_size': 1024,
-        'task': None,
-    }
-    await sio.emit('sdr-status', {'connected': True}, room=sid)
 
 
 @sio.on('disconnect')
@@ -121,32 +107,8 @@ async def disconnect(sid, environ):
     logger.info(f'Client {sid} from {SESSIONS[sid]['REMOTE_ADDR']} disconnected')
     del SESSIONS[sid]
 
-    # Clean up client resources
-    if sid in active_clients:
-        client = active_clients[sid]
-        device_id = client.get('device_id')
-
-        # Cancel any running processing task
-        if client.get('task'):
-            client['task'].cancel()
-
-        # Close and release the RTLSDR device if it was exclusively used by this client
-        if device_id is not None and device_id in rtlsdr_devices:
-            # Check if no other clients are using this device
-            other_users = [cid for cid, c in active_clients.items()
-                           if cid != sid and c.get('device_id') == device_id]
-
-            if not other_users:
-                try:
-                    rtlsdr_devices[device_id].close()
-                    del rtlsdr_devices[device_id]
-                    logger.info(f"Released RTLSDR device {device_id}")
-                except Exception as e:
-                    logger.error(f"Error closing RTLSDR device: {str(e)}")
-                    logger.exception(e)
-
-        # Remove client from active clients
-        del active_clients[sid]
+    # clean up any SDR sessions
+    cleanup_sdr_session(sid)
 
 
 @sio.on('sdr_data')
