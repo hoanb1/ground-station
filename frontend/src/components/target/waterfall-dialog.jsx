@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import Button from '@mui/material/Button';
 import Dialog from '@mui/material/Dialog';
 import DialogActions from '@mui/material/DialogActions';
@@ -54,6 +54,26 @@ export default function WaterFallSettingsDialog() {
         autoDBRange,
     } = useSelector((state) => state.waterfall);
 
+    // lets use local state to keep track of the settings and then onChangeCommitted we can dispatch the changes
+    const [localCenterFrequency, setLocalCenterFrequency] = useState(centerFrequency);
+    const [localDbRange, setLocalDbRange] = useState(dbRange);
+    const [localFFTSize, setLocalFFTSize] = useState(fftSize);
+    const [localSampleRate, setLocalSampleRate] = useState(sampleRate);
+    const [localGain, setLocalGain] = useState(gain);
+    const [localColorMap, setLocalColorMap] = useState(colorMap);
+    const [localAutoDBRange, setLocalAutoDBRange] = useState(autoDBRange);
+
+    useEffect(() => {
+        setLocalCenterFrequency(centerFrequency);
+        setLocalDbRange(dbRange);
+        setLocalFFTSize(fftSize);
+        setLocalSampleRate(sampleRate);
+        setLocalGain(gain);
+        setLocalColorMap(colorMap);
+        setLocalAutoDBRange(autoDBRange);
+    }, [centerFrequency, dbRange, fftSize, sampleRate, gain, colorMap, autoDBRange]);
+
+
     const handleClickOpen = () => {
         dispatch(setSettingsDialogOpen(true));
     };
@@ -100,8 +120,11 @@ export default function WaterFallSettingsDialog() {
                             <FormControl fullWidth variant="outlined" size="small">
                                 <TextField
                                     type="number"
-                                    value={centerFrequency}
-                                    onChange={(e) => dispatch(setCenterFrequency(Number(e.target.value)))}
+                                    value={localCenterFrequency}
+                                    onChange={(e) => {
+                                        setLocalCenterFrequency(Number(e.target.value));
+                                        dispatch(setCenterFrequency(Number(e.target.value)));
+                                    }}
                                     disabled={false}
                                     fullWidth
                                     size="small"
@@ -114,8 +137,11 @@ export default function WaterFallSettingsDialog() {
                             <FormControlLabel
                                 control={
                                     <Switch
-                                        checked={autoDBRange}
-                                        onChange={(e) => dispatch(setAutoDBRange(e.target.checked))}
+                                        checked={localAutoDBRange}
+                                        onChange={(e) => {
+                                            setLocalAutoDBRange(e.target.checked);
+                                            dispatch(setAutoDBRange(e.target.checked));
+                                        }}
                                     />
                                 }
                                 label="Auto DB Range"
@@ -124,10 +150,15 @@ export default function WaterFallSettingsDialog() {
 
                         <Typography gutterBottom>Signal Range (dB)</Typography>
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 2 }}>
-                            <Typography sx={{ mr: 1, width: '60px', textAlign: 'left',  fontFamily: 'Monospace' }}>{dbRange[0]}</Typography>
+                            <Typography sx={{ mr: 1, width: '60px', textAlign: 'left', fontFamily: 'Monospace' }}>{dbRange[0]}</Typography>
                             <Slider
-                                value={dbRange}
-                                onChange={(e, newValue) => dispatch(setDbRange(newValue))}
+                                value={localDbRange}
+                                onChange={(e, newValue) => {
+                                    setLocalDbRange(newValue);
+                                }}
+                                onChangeCommitted={(e, newValue) => {
+                                    dispatch(setDbRange(newValue));
+                                }}
                                 valueLabelDisplay="auto"
                                 min={-110}
                                 max={0}
@@ -143,8 +174,11 @@ export default function WaterFallSettingsDialog() {
                                          size="small">
                                 <InputLabel>FFT Size</InputLabel>
                                 <Select
-                                    value={fftSize}
-                                    onChange={(e) => dispatch(setFFTSize(e.target.value))}
+                                    value={localFFTSize}
+                                    onChange={(e) => {
+                                        setLocalFFTSize(e.target.value);
+                                        dispatch(setFFTSize(e.target.value));
+                                    }}
                                     disabled={false}
                                     variant={'filled'}>
                                     {fftSizeOptions.map(size => (
@@ -159,8 +193,11 @@ export default function WaterFallSettingsDialog() {
                                          variant="filled" size="small">
                                 <InputLabel>Sample Rate</InputLabel>
                                 <Select
-                                    value={sampleRate}
-                                    onChange={(e) => dispatch(setSampleRate(e.target.value))}
+                                    value={localSampleRate}
+                                    onChange={(e) => {
+                                        setLocalSampleRate(e.target.value);
+                                        dispatch(setSampleRate(e.target.value));
+                                    }}
                                     disabled={false}
                                     variant={'filled'}>
                                     <MenuItem value={225001}>225.001 kHz</MenuItem>
@@ -190,11 +227,16 @@ export default function WaterFallSettingsDialog() {
                                 Gain: {gain} dB
                             </Typography>
                             <Slider
-                                value={gain}
+                                value={localGain}
                                 min={0}
                                 max={49}
                                 step={1}
-                                onChange={(_, value) => dispatch(setGain(value))}
+                                onChange={(_, value) => {
+                                    setLocalGain(value);
+                                }}
+                                onChangeCommitted={(_, value) => {
+                                    dispatch(setGain(value));
+                                }}
                                 disabled={false}
                                 aria-labelledby="gain-slider"
                             />
@@ -206,8 +248,11 @@ export default function WaterFallSettingsDialog() {
                                          size="small">
                                 <InputLabel>Color Map</InputLabel>
                                 <Select
-                                    value={colorMap}
-                                    onChange={(e) => dispatch(setColorMap(e.target.value))}
+                                    value={localColorMap}
+                                    onChange={(e) => {
+                                        setLocalColorMap(e.target.value);
+                                        dispatch(setColorMap(e.target.value));
+                                    }}
                                     label="Color Map"
                                     variant={'filled'}>
                                     {colorMaps.map(map => (

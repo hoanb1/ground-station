@@ -1,7 +1,12 @@
 import React, {useEffect, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
-import {getTimeFromISO, humanizeFutureDateInMinutes, TitleBar} from "../common/common.jsx";
+import {
+    getClassNamesBasedOnGridEditing,
+    getTimeFromISO,
+    humanizeFutureDateInMinutes,
+    TitleBar
+} from "../common/common.jsx";
 import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {fetchNextPasses, setSatellitePasses} from './target-sat-slice.jsx';
@@ -235,7 +240,14 @@ const NextPassesIsland = React.memo(() => {
     const dispatch = useDispatch();
     const [containerHeight, setContainerHeight] = useState(0);
     const containerRef = useRef(null);
-    const { passesLoading, satellitePasses, satelliteData, nextPassesHours, satelliteId } = useSelector(state => state.targetSatTrack);
+    const {
+        passesLoading,
+        satellitePasses,
+        satelliteData,
+        nextPassesHours,
+        satelliteId,
+        gridEditable
+    } = useSelector(state => state.targetSatTrack);
     const minHeight = 200;
     const maxHeight = 400;
 
@@ -273,7 +285,7 @@ const NextPassesIsland = React.memo(() => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Next passes for {satelliteData['details']['name']} in the next {nextPassesHours} hours</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Next passes for {satelliteData['details']['name']} in the next {nextPassesHours} hours</TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',

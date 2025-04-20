@@ -18,7 +18,7 @@ active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 WINDOW_FUNCTION = np.hanning
 
 # Number of samples per scan for FFT
-NUM_SAMPLES_PER_SCAN = 64 * 1024
+NUM_SAMPLES_PER_SCAN = 16 * 1024
 
 
 def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None, gain=None, fft_size=1024):

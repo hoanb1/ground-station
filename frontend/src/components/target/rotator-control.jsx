@@ -17,7 +17,7 @@ import {
     setTrackingStateInBackend
 } from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
-import {humanizeFrequency, TitleBar} from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Button, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {
@@ -115,6 +115,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         selectedTransmitter,
         availableTransmitters,
         rotatorData,
+        gridEditable,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -203,7 +204,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
 
     return (
         <>
-            <TitleBar className={"react-grid-draggable window-title-bar"}>Rotator control</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Rotator control</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
                 <Grid container direction="row" sx={{
