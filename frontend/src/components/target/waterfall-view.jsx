@@ -154,6 +154,7 @@ const WaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     const startStreaming = () => {
         if (!isStreaming) {
+            dispatch(setErrorMessage(''));
             // Configure RTL-SDR settings
             socket.emit('sdr_data', 'configure-rtlsdr', {
                 deviceId,

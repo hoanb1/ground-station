@@ -18,10 +18,20 @@ active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 WINDOW_FUNCTION = np.hanning
 
 # Number of samples per scan for FFT
-NUM_SAMPLES_PER_SCAN = 16 * 1024
+NUM_SAMPLES_PER_SCAN = 32 * 1024
 
 
 def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None, gain=None, fft_size=1024):
+    """Store new SDR client session parameters.
+
+    Args:
+        sid: Client session ID
+        device_id: RTL-SDR device identifier
+        center_frequency: Center frequency in Hz
+        sample_rate: Sample rate in Hz
+        gain: Device gain in dB
+        fft_size: FFT size for spectral analysis
+    """
     active_sdr_clients[sid] = {
         'device_id': device_id,
         'center_frequency': center_frequency,
@@ -33,7 +43,17 @@ def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None
 
 
 def cleanup_sdr_session(sid):
-    # Clean up client resources
+    """Clean up and release resources associated with an SDR client session.
+    
+    This function performs the following cleanup tasks:
+    - Cancels any running processing tasks
+    - Releases the RTLSDR device if no other clients are using it
+    - Removes the client from active clients list
+    
+    Args:
+        sid: Client session ID to clean up
+    """
+
     if sid in active_sdr_clients:
         client = active_sdr_clients[sid]
         device_id = client.get('device_id')
@@ -166,7 +186,7 @@ def interpolate_dc_spike(spectrum, width=5):
     Interpolate over the DC spike
 
     Args:
-        spectrum: FFT spectrum (shifted so DC is in center)
+        spectrum: FFT spectrum (shifted so DC is in the center)
         width: Width of DC spike to remove (in bins)
 
     Returns:
