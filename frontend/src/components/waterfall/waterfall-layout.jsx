@@ -50,6 +50,7 @@ import SettingsIcon from "@mui/icons-material/Settings";
 import Typography from "@mui/material/Typography";
 import CoordinateGrid from "../common/mercator-grid.jsx";
 import MainWaterfallDisplay from "./waterfall-view.jsx";
+import WaterfallSettings from "./waterfall-settings.jsx";
 
 
 // global callback for dashboard editing here
@@ -125,7 +126,10 @@ const WaterfallLayout = React.memo(function () {
     let gridContents = [
         <StyledIslandParentScrollbar key="waterfall">
             <MainWaterfallDisplay/>
-        </StyledIslandParentScrollbar>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="settings">
+            <WaterfallSettings/>
+        </StyledIslandParentScrollbar>,
     ];
 
     let ResponsiveGridLayoutParent = null;

@@ -7,7 +7,8 @@ const FrequencyDisplay = ({
                               initialFrequency = 1000.0,
                               onChange,
                               integerDigits = 7, // New prop to configure the number of integer digits
-                              decimalDigits = 3 // Optional prop to configure decimal digits
+                              decimalDigits = 3, // Optional prop to configure decimal digits
+                              size = 'medium' // New prop to control size - can be 'small', 'medium', 'large' or a number
                           }) => {
     const [frequency, setFrequency] = useState(initialFrequency);
 
@@ -16,8 +17,34 @@ const FrequencyDisplay = ({
         setFrequency(initialFrequency);
     }, [initialFrequency]);
 
-    // Convert frequency to string with fixed decimal places
-    const frequencyString = frequency.toFixed(decimalDigits);
+    // Size mapping for predefined sizes
+    const sizeMap = {
+        small: 0.8,
+        medium: 1,
+        large: 1.4
+    };
+    
+    // Determine the scale factor based on size prop
+    const scaleFactor = typeof size === 'number' 
+        ? size 
+        : sizeMap[size] || sizeMap.medium;
+    
+    // Calculate dynamic sizes based on scale factor
+    const fontSizes = {
+        digits: `${1.5 * scaleFactor}rem`,
+        unit: `${1.2 * scaleFactor}rem`,
+        label: `${0.875 * scaleFactor}rem`,
+        unitLabel: `${0.7 * scaleFactor}rem`
+    };
+    
+    const iconSize = scaleFactor <= 0.8 ? 'small' : 'medium';
+    const iconSx = {
+        fontSize: `${24 * scaleFactor}px`
+    };
+    
+    const spacing = {
+        mx: 0.5 * scaleFactor
+    };
 
     // Handle digit adjustment
     const adjustDigit = (position, increment) => {
@@ -42,83 +69,179 @@ const FrequencyDisplay = ({
         }
     };
 
+    // Create a single digit with controls
+    const renderDigit = (digit, position, index) => {
+        return (
+            <Box
+                key={`digit-${index}`}
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    ...spacing
+                }}
+            >
+                <IconButton
+                    size={iconSize}
+                    onClick={() => adjustDigit(position, 1)}
+                    sx={{ p: 0 }}
+                >
+                    <ArrowDropUpIcon sx={iconSx} />
+                </IconButton>
+                <Typography 
+                    sx={{ 
+                        fontFamily: 'monospace',
+                        fontSize: fontSizes.digits
+                    }}
+                >
+                    {digit}
+                </Typography>
+                <IconButton
+                    size={iconSize}
+                    onClick={() => adjustDigit(position, -1)}
+                    sx={{ p: 0 }}
+                >
+                    <ArrowDropDownIcon sx={iconSx} />
+                </IconButton>
+            </Box>
+        );
+    };
+
+    // Render a separator (comma or decimal point)
+    const renderSeparator = (separator, index) => {
+        return (
+            <Box
+                key={`separator-${index}`}
+                sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    ...spacing
+                }}
+            >
+                <Box sx={{ height: 24 * scaleFactor }}></Box>
+                <Typography 
+                    sx={{ 
+                        fontFamily: 'monospace',
+                        fontSize: fontSizes.digits
+                    }}
+                >
+                    {separator}
+                </Typography>
+                <Box sx={{ height: 24 * scaleFactor }}></Box>
+            </Box>
+        );
+    };
+
     // Create digit components with their controls
     const renderDigitControls = () => {
+        // Convert frequency to string with fixed decimal places
+        const frequencyString = frequency.toFixed(decimalDigits);
+        
         const parts = frequencyString.split('.');
         let integerPart = parts[0];
         const decimalPart = parts[1] || '0'.repeat(decimalDigits);
 
         // Pad the integer part with zeros to match the desired length
         integerPart = integerPart.padStart(integerDigits, '0');
-
-        // Combine parts for display
-        const allDigits = integerPart + '.' + decimalPart;
-
+        
         // Create array of positions (power of 10) for each digit
         const positions = [];
         for (let i = integerPart.length - 1; i >= 0; i--) {
             positions.unshift(integerPart.length - 1 - i);
         }
-
+        
         // Add decimal positions
         for (let i = 0; i < decimalPart.length; i++) {
             positions.push(-(i + 1));
         }
 
+        // Group the integer part into groups of 3 digits
+        const groups = [];
+        
+        // Process the integer part in groups of 3, starting from the right
+        for (let i = integerPart.length - 1; i >= 0; i -= 3) {
+            const startIndex = Math.max(0, i - 2);
+            const group = [];
+            
+            // Get the digits for this group (up to 3)
+            for (let j = startIndex; j <= i; j++) {
+                const digit = integerPart[j];
+                const position = positions[j];
+                group.push({ digit, position, index: j });
+            }
+            
+            // Determine label for this group
+            let label;
+            if (i === integerPart.length - 1) {
+                label = 'kHz'; // rightmost group (units)
+            } else if (i === integerPart.length - 4) {
+                label = 'MHz'; // second group from right (thousands)
+            } else if (i === integerPart.length - 7) {
+                label = 'GHz'; // third group from right (millions)
+            } else {
+                label = '';
+            }
+            
+            // Add the group and label
+            groups.unshift({ digits: group, label });
+        }
+        
+        // Handle the decimal part as a separate group
+        if (decimalPart.length > 0) {
+            const decimalGroup = [];
+            for (let i = 0; i < decimalPart.length; i++) {
+                const digit = decimalPart[i];
+                const position = -(i + 1);
+                decimalGroup.push({ digit, position, index: integerPart.length + 1 + i });
+            }
+            groups.push({ digits: decimalGroup, label: 'Hz' });
+        }
+
         return (
-            <Box sx={{ display: 'flex', justifyContent: 'center' }}>
-                {allDigits.split('').map((digit, index) => {
-                    // Skip the decimal point for adjustments
-                    if (digit === '.') {
-                        return (
-                            <Box
-                                key={`digit-${index}`}
-                                sx={{
+            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                    {groups.map((group, groupIndex) => (
+                        <React.Fragment key={`group-${groupIndex}`}>
+                            {/* Render each digit group as a column with a label underneath */}
+                            <Box 
+                                sx={{ 
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
-                                    mx: 0.5
                                 }}
                             >
-                                <Box sx={{ height: 24 }}></Box>
-                                <Typography variant="h5" sx={{ fontFamily: 'monospace' }}>.</Typography>
-                                <Box sx={{ height: 24 }}></Box>
+                                {/* Digits row */}
+                                <Box sx={{ display: 'flex' }}>
+                                    {group.digits.map((digitObj, digitIndex) => 
+                                        renderDigit(digitObj.digit, digitObj.position, digitObj.index)
+                                    )}
+                                </Box>
+                                
+                                {/* Label underneath */}
+                                <Typography
+                                    sx={{
+                                        fontSize: fontSizes.unitLabel,
+                                        color: 'text.secondary',
+                                        mt: 0.5 * scaleFactor,
+                                        mb: 1 * scaleFactor,
+                                        fontFamily: 'monospace'
+                                    }}
+                                >
+                                    {group.label}
+                                </Typography>
                             </Box>
-                        );
-                    }
-
-                    const position = positions[index > integerPart.length ? index - 1 : index];
-
-                    return (
-                        <Box
-                            key={`digit-${index}`}
-                            sx={{
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                mx: 0.5
-                            }}
-                        >
-                            <IconButton
-                                size="small"
-                                onClick={() => adjustDigit(position, 1)}
-                                sx={{ p: 0 }}
-                            >
-                                <ArrowDropUpIcon />
-                            </IconButton>
-                            <Typography variant="h5" sx={{ fontFamily: 'monospace' }}>{digit}</Typography>
-                            <IconButton
-                                size="small"
-                                onClick={() => adjustDigit(position, -1)}
-                                sx={{ p: 0 }}
-                            >
-                                <ArrowDropDownIcon />
-                            </IconButton>
-                        </Box>
-                    );
-                })}
-                <Box sx={{ display: 'flex', alignItems: 'center', ml: 1 }}>
-                    <Typography variant="h6">kHz</Typography>
+                            
+                            {/* Add comma between integer groups */}
+                            {groupIndex < groups.length - 1 && 
+                             !(groupIndex === groups.length - 2 && decimalPart.length > 0) && 
+                                renderSeparator(',', `comma-${groupIndex}`)}
+                            
+                            {/* Add decimal point between the integer and decimal groups */}
+                            {groupIndex === groups.length - 2 && decimalPart.length > 0 && 
+                                renderSeparator('.', 'decimal')}
+                        </React.Fragment>
+                    ))}
                 </Box>
             </Box>
         );
@@ -129,25 +252,26 @@ const FrequencyDisplay = ({
             display: 'flex',
             flexDirection: 'column',
             alignItems: 'center',
-            my: 2,
+            my: 0,
             width: '100%'
         }}>
-            <Typography variant="subtitle1" gutterBottom>
-                Frequency (kHz)
-            </Typography>
-
             <Box sx={{
                 display: 'flex',
                 justifyContent: 'center',
                 alignItems: 'center',
                 width: '100%',
-                p: 2,
-                border: '1px solid #ccc',
-                borderRadius: 1,
+                p: 0,
                 bgcolor: 'background.paper'
             }}>
                 {renderDigitControls()}
             </Box>
+            <Typography 
+                variant="subtitle1" 
+                gutterBottom
+                sx={{ fontSize: fontSizes.label, mt: 1 * scaleFactor }}
+            >
+                Frequency
+            </Typography>
         </Box>
     );
 };

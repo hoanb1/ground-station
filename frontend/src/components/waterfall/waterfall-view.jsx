@@ -42,10 +42,10 @@ import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
+    const { socket } = useSocket();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
-    const visualIQCanvasRef = useRef(null);
-    const { socket } = useSocket();
+    const canvasDataRef = useRef(null);
     const waterfallDataRef = useRef([]);
     const animationFrameRef = useRef(null);
     const visualSettingsRef = useRef({
