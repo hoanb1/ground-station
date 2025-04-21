@@ -200,6 +200,9 @@ function TimeDisplay() {
         ? currentTime.toUTCString().slice(17, 25) // Extract only the 24-hour time part
         : currentTime.toLocaleTimeString([], {hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false});
 
+    const timeZoneAbbr = new Date().toLocaleTimeString('en-US', { timeZoneName: 'short' })
+        .split(' ').pop();
+
     return (
         <Box
             onClick={() => setIsUTC(!isUTC)} // Toggle between UTC and Local Time on click
@@ -212,7 +215,7 @@ function TimeDisplay() {
             }}
         >
             <Typography variant="body2" sx={{fontWeight: "bold", fontFamily: "monospace"}}>
-                {formattedTime} {isUTC ? "UTC" : "local"}
+                {formattedTime} {isUTC ? "UTC" : timeZoneAbbr}
             </Typography>
         </Box>
     );

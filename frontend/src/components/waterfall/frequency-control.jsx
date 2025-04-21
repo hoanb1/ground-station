@@ -265,13 +265,6 @@ const FrequencyDisplay = ({
             }}>
                 {renderDigitControls()}
             </Box>
-            <Typography 
-                variant="subtitle1" 
-                gutterBottom
-                sx={{ fontSize: fontSizes.label, mt: 1 * scaleFactor }}
-            >
-                Frequency
-            </Typography>
         </Box>
     );
 };

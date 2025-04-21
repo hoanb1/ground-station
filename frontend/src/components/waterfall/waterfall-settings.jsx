@@ -61,6 +61,9 @@ const AccordionSummary = styled((props) => (
 ))(({theme}) => ({
     backgroundColor: 'rgba(0, 0, 0, .03)',
     flexDirection: 'row-reverse',
+    minHeight: 34,
+    height: 34,
+    fontSize: '0.7rem',
     [`& .${accordionSummaryClasses.expandIconWrapper}.${accordionSummaryClasses.expanded}`]:
         {
             transform: 'rotate(90deg)',

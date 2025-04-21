@@ -13,6 +13,10 @@ import {
     ButtonGroup,
     Stack,
 } from '@mui/material';
+import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {useDispatch, useSelector} from "react-redux";
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar, WaterfallStatusBar} from "../common/common.jsx";
 import { IconButton } from '@mui/material';
@@ -485,11 +489,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     return (
         <>
         <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall</TitleBar>
-            {errorMessage && (
-                <Typography color="error" variant="body2" sx={{ mb: 2 }}>
-                    Error: {errorMessage}
-                </Typography>
-            )}
             <Box
                 sx={{
                     display: 'flex',
@@ -544,17 +543,61 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     borderRadius: 1
                 }}
             >
-                <div style={{position: 'relative', width: '100%', height: '100%'}}>
-                    <canvas
-                        ref={waterFallCanvasRef}
-                        width={2000}
-                        height={1000}
-                        style={{ width: '100%', height: '100%' }}
-                    />
-
-                </div>
+                <TransformWrapper
+                    limitToBounds={true}
+                    disablePadding={true}
+                    panning={{
+                        disabled: true,
+                        wheelPanning: false,
+                        disabledAxisY: true,
+                    }}
+                    initialScale={1}
+                    initialPositionX={0}
+                    initialPositionY={0}
+                    minScale={1}
+                    maxScale={10}
+                    wheel={{ step: 0.1 }}
+                >
+                    {({ zoomIn, zoomOut, resetTransform }) => (
+                        <>
+                            <Box sx={{ 
+                                position: 'absolute', 
+                                top: 10, 
+                                right: 10, 
+                                zIndex: 10,
+                                backgroundColor: 'rgba(0,0,0,0.5)',
+                                borderRadius: '4px',
+                                padding: '4px'
+                            }}>
+                                <ButtonGroup orientation="vertical" size="small">
+                                    <IconButton onClick={() => zoomIn()} sx={{ color: 'white' }}>
+                                        <ZoomInIcon />
+                                    </IconButton>
+                                    <IconButton onClick={() => zoomOut()} sx={{ color: 'white' }}>
+                                        <ZoomOutIcon />
+                                    </IconButton>
+                                    <IconButton onClick={() => resetTransform()} sx={{ color: 'white' }}>
+                                        <RestartAltIcon />
+                                    </IconButton>
+                                </ButtonGroup>
+                            </Box>
+                            <TransformComponent>
+                                <div style={{position: 'relative', width: '100%', height: '100%'}}>
+                                    <canvas
+                                        ref={waterFallCanvasRef}
+                                        width={2048}
+                                        height={700}
+                                        style={{ width: '100%', height: '100%' }}
+                                    />
+                                </div>
+                            </TransformComponent>
+                        </>
+                    )}
+                </TransformWrapper>
             </Box>
-            <WaterfallStatusBar>{isStreaming? `f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`: `stopped`}</WaterfallStatusBar>
+            <WaterfallStatusBar>{errorMessage? <Typography color="error" variant="body2" sx={{ mb: 2 }}>
+                Error: {errorMessage}
+            </Typography>: isStreaming? `f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`: `stopped`}</WaterfallStatusBar>
             <WaterFallSettingsDialog/>
         </>
     );
