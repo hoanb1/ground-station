@@ -32,7 +32,7 @@ import {
     setTargetFPS,
     setSettingsDialogOpen,
     setAutoDBRange,
-} from './target-sat-slice.jsx'
+} from './waterfall-slice.jsx'
 import FrequencyDisplay from "./frequency-control.jsx";
 
 
@@ -52,7 +52,7 @@ export default function WaterFallSettingsDialog() {
         targetFPS,
         settingsDialogOpen,
         autoDBRange,
-    } = useSelector((state) => state.targetSatTrack);
+    } = useSelector((state) => state.waterfall);
 
     // lets use local state to keep track of the settings and then onChangeCommitted we can dispatch the changes
     const [localCenterFrequency, setLocalCenterFrequency] = useState(centerFrequency);

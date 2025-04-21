@@ -11,8 +11,9 @@ import {stringAvatar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
 import {useCallback, useEffect, useState} from "react";
-import {handleSetGridEditableOverview as OverviewModeSetEditing} from '../overview/overview-sat-track.jsx'
-import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target/target-sat-track.jsx'
+import {handleSetGridEditableOverview as OverviewModeSetEditing} from '../overview/overview-sat-layout.jsx'
+import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target/target-sat-layout.jsx'
+import {handleSetGridEditableWaterfall as WaterfallModeSetEditing} from '../waterfall/waterfall-layout.jsx';
 import CheckIcon from '@mui/icons-material/Check';
 import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "../common/socket.jsx";
@@ -28,12 +29,14 @@ function DashboardEditor() {
         dispatch(setIsEditing(true));
         OverviewModeSetEditing(true);
         TargetModeSetEditing(true);
+        WaterfallModeSetEditing(true);
     };
 
     const handleSaveClick = () => {
         dispatch(setIsEditing(false));
         OverviewModeSetEditing(false);
         TargetModeSetEditing(false);
+        WaterfallModeSetEditing(false);
     };
 
     const handleCancelClick = () => {

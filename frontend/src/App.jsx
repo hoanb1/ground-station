@@ -15,6 +15,7 @@ import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
 import MicrowaveIcon from '@mui/icons-material/Microwave';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
+import WavesIcon from '@mui/icons-material/Waves';
 import CameraIcon from '@mui/icons-material/CameraAlt';
 import { closeSnackbar, enqueueSnackbar, SnackbarProvider } from 'notistack';
 import PeopleIcon from '@mui/icons-material/People';
@@ -35,6 +36,7 @@ import { getTrackingStateFromBackend } from './components/target/target-sat-slic
 import { fetchCameras } from './components/hardware/camera-slice.jsx'
 import { fetchSDRs } from './components/hardware/sdr-slice.jsx'
 import { getOverviewMapSettings } from './components/overview/overview-sat-slice.jsx';
+import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 
 
 const BRANDING = {
@@ -100,6 +102,11 @@ export default function App(props) {
             segment: 'track',
             title: 'Tracking console',
             icon: <GpsFixedIcon/>,
+        },
+        {
+            segment: 'waterfall',
+            title: 'Waterfall view',
+            icon: <WavesIcon/>,
         },
         {kind: 'divider'},
         {

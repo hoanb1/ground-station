@@ -9,8 +9,8 @@ import {
 import { Link } from 'react-router';
 import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
-import {gridLayoutStoreName as overviewGridLayoutName} from '../overview/overview-sat-track.jsx';
-import {gridLayoutStoreName as targetGridLayoutName} from '../target/target-sat-track.jsx';
+import {gridLayoutStoreName as overviewGridLayoutName} from '../overview/overview-sat-layout.jsx';
+import {gridLayoutStoreName as targetGridLayoutName} from '../target/target-sat-layout.jsx';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import Grid from "@mui/material/Grid2";

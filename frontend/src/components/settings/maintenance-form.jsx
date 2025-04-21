@@ -1,5 +1,7 @@
-import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/overview-sat-track.jsx";
-import {gridLayoutStoreName as targetGridLayoutName} from "../target/target-sat-track.jsx";
+import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/overview-sat-layout.jsx";
+import {gridLayoutStoreName as targetGridLayoutName} from "../target/target-sat-layout.jsx";
+import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/waterfall-layout.jsx";
+
 import Paper from "@mui/material/Paper";
 import {Alert, AlertTitle, Box, Button} from "@mui/material";
 import Grid from "@mui/material/Grid2";
@@ -9,6 +11,7 @@ const MaintenanceForm = () => {
     const clearLayoutLocalStorage = () => {
         localStorage.setItem(overviewGridLayoutName, null);
         localStorage.setItem(targetGridLayoutName, null);
+        localStorage.setItem(waterfallGridLayoutName, null);
     }
 
     const clearSatelliteDataLocalStorage = () => {

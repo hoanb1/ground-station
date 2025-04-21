@@ -15,7 +15,7 @@ import overviewSatTrackReducer from '../overview/overview-sat-slice.jsx';
 import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
-import waterfallReducer from '../target/waterfall-slice.jsx';
+import waterfallReducer from '../waterfall/waterfall-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 
 

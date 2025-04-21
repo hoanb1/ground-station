@@ -29,7 +29,7 @@ const waterfallSlice = createSlice({
         targetFPS: 30,
         settingsDialogOpen: false,
         autoDBRange: false,
-
+        gridEditable: false,
     },
     reducers: {
         setColorMap: (state, action) => {
@@ -74,6 +74,9 @@ const waterfallSlice = createSlice({
         setAutoDBRange: (state, action) => {
             state.autoDBRange = action.payload;
         },
+        setGridEditable: (state, action) => {
+            state.gridEditable = action.payload;
+        },
     },
     extraReducers: (builder) => {
 
@@ -94,7 +97,8 @@ export const {
     setTargetFPS,
     setIsPlaying,
     setSettingsDialogOpen,
-    setAutoDBRange
+    setAutoDBRange,
+    setGridEditable,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

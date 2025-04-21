@@ -36,12 +36,12 @@ import {
     setTargetFPS,
     setIsPlaying,
     setSettingsDialogOpen,
-} from './target-sat-slice.jsx'
+    setGridEditable,
+} from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
-import IQVisualizer from "./iq-visualizer.jsx";
 import {enqueueSnackbar} from "notistack";
 
-const MiniWaterfallDisplay = React.memo(({deviceId = 0}) => {
+const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
     const visualIQCanvasRef = useRef(null);
@@ -71,7 +71,7 @@ const MiniWaterfallDisplay = React.memo(({deviceId = 0}) => {
         isPlaying,
         autoDBRange,
         gridEditable
-    } = useSelector((state) => state.targetSatTrack);
+    } = useSelector((state) => state.waterfall);
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
 
@@ -537,7 +537,7 @@ const MiniWaterfallDisplay = React.memo(({deviceId = 0}) => {
             <Box
                 sx={{
                     width: '100%',
-                    height: '400px',
+                    height: '100%',
                     bgcolor: 'black',
                     position: 'relative',
                     overflow: 'hidden',
@@ -548,7 +548,7 @@ const MiniWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     <canvas
                         ref={waterFallCanvasRef}
                         width={2000}
-                        height={800}
+                        height={1000}
                         style={{ width: '100%', height: '100%' }}
                     />
 
@@ -564,4 +564,4 @@ const MiniWaterfallDisplay = React.memo(({deviceId = 0}) => {
     );
 });
 
-export default MiniWaterfallDisplay;
+export default MainWaterfallDisplay;
