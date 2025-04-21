@@ -183,9 +183,68 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
 
                     </AccordionDetails>
                 </Accordion>
+                <Accordion expanded={expandedPanels.includes('panel3')} onChange={handleChange('panel3')}>
+                    <AccordionSummary aria-controls="panel3d-content" id="panel3d-header">
+                        <Typography component="span">SDR</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails>
+                        <Box sx={{mb: 2}}>
+                            <Typography variant="body2" gutterBottom>
+                                Gain: {gain} dB
+                            </Typography>
+                            <Slider
+                                value={localGain}
+                                min={0}
+                                max={49}
+                                step={1}
+                                onChange={(_, value) => {
+                                    setLocalGain(value);
+                                }}
+                                onChangeCommitted={(_, value) => {
+                                    dispatch(setGain(value));
+                                }}
+                                disabled={false}
+                                aria-labelledby="gain-slider"
+                            />
+                        </Box>
+                        <Box sx={{ mb: 2 }}>
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                         variant="filled" size="small">
+                                <InputLabel>Sample Rate</InputLabel>
+                                <Select
+                                    value={localSampleRate}
+                                    onChange={(e) => {
+                                        setLocalSampleRate(e.target.value);
+                                        dispatch(setSampleRate(e.target.value));
+                                    }}
+                                    disabled={false}
+                                    variant={'filled'}>
+                                    <MenuItem value={225001}>225.001 kHz</MenuItem>
+                                    <MenuItem value={250000}>250 kHz</MenuItem>
+                                    <MenuItem value={275000}>275 kHz</MenuItem>
+                                    <MenuItem value={300000}>300 kHz</MenuItem>
+                                    <MenuItem value={900001}>900.001 kHz</MenuItem>
+                                    <MenuItem value={960000}>960 kHz</MenuItem>
+                                    <MenuItem value={1024000}>1.024 MHz</MenuItem>
+                                    <MenuItem value={1200000}>1.2 MHz</MenuItem>
+                                    <MenuItem value={1440000}>1.44 MHz</MenuItem>
+                                    <MenuItem value={1600000}>1.6 MHz</MenuItem>
+                                    <MenuItem value={1800000}>1.8 MHz</MenuItem>
+                                    <MenuItem value={2000000}>2 MHz</MenuItem>
+                                    <MenuItem value={2048000}>2.048 MHz</MenuItem>
+                                    <MenuItem value={2400000}>2.4 MHz</MenuItem>
+                                    <MenuItem value={2560000}>2.56 MHz</MenuItem>
+                                    <MenuItem value={2880000}>2.88 MHz</MenuItem>
+                                    <MenuItem value={3000000}>3 MHz</MenuItem>
+                                    <MenuItem value={3200000}>3.2 MHz</MenuItem>
+                                </Select>
+                            </FormControl>
+                        </Box>
+                    </AccordionDetails>
+                </Accordion>
                 <Accordion expanded={expandedPanels.includes('panel2')} onChange={handleChange('panel2')}>
                     <AccordionSummary aria-controls="panel2d-content" id="panel2d-header">
-                        <Typography component="span">Collapsible Group Item #2</Typography>
+                        <Typography component="span">FFT</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
                         <Box sx={{mb: 2}}>
@@ -239,58 +298,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
                         </Box>
-                        <Box sx={{ mb: 2 }}>
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                         variant="filled" size="small">
-                                <InputLabel>Sample Rate</InputLabel>
-                                <Select
-                                    value={localSampleRate}
-                                    onChange={(e) => {
-                                        setLocalSampleRate(e.target.value);
-                                        dispatch(setSampleRate(e.target.value));
-                                    }}
-                                    disabled={false}
-                                    variant={'filled'}>
-                                    <MenuItem value={225001}>225.001 kHz</MenuItem>
-                                    <MenuItem value={250000}>250 kHz</MenuItem>
-                                    <MenuItem value={275000}>275 kHz</MenuItem>
-                                    <MenuItem value={300000}>300 kHz</MenuItem>
-                                    <MenuItem value={900001}>900.001 kHz</MenuItem>
-                                    <MenuItem value={960000}>960 kHz</MenuItem>
-                                    <MenuItem value={1024000}>1.024 MHz</MenuItem>
-                                    <MenuItem value={1200000}>1.2 MHz</MenuItem>
-                                    <MenuItem value={1440000}>1.44 MHz</MenuItem>
-                                    <MenuItem value={1600000}>1.6 MHz</MenuItem>
-                                    <MenuItem value={1800000}>1.8 MHz</MenuItem>
-                                    <MenuItem value={2000000}>2 MHz</MenuItem>
-                                    <MenuItem value={2048000}>2.048 MHz</MenuItem>
-                                    <MenuItem value={2400000}>2.4 MHz</MenuItem>
-                                    <MenuItem value={2560000}>2.56 MHz</MenuItem>
-                                    <MenuItem value={2880000}>2.88 MHz</MenuItem>
-                                    <MenuItem value={3000000}>3 MHz</MenuItem>
-                                    <MenuItem value={3200000}>3.2 MHz</MenuItem>
-                                </Select>
-                            </FormControl>
-                        </Box>
-                        <Box sx={{mb: 2}}>
-                            <Typography variant="body2" gutterBottom>
-                                Gain: {gain} dB
-                            </Typography>
-                            <Slider
-                                value={localGain}
-                                min={0}
-                                max={49}
-                                step={1}
-                                onChange={(_, value) => {
-                                    setLocalGain(value);
-                                }}
-                                onChangeCommitted={(_, value) => {
-                                    dispatch(setGain(value));
-                                }}
-                                disabled={false}
-                                aria-labelledby="gain-slider"
-                            />
-                        </Box>
                         <Box sx={{mb: 2}}>
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled"
@@ -314,19 +321,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         </Box>
                     </AccordionDetails>
                 </Accordion>
-                <Accordion expanded={expandedPanels.includes('panel3')} onChange={handleChange('panel3')}>
-                    <AccordionSummary aria-controls="panel3d-content" id="panel3d-header">
-                        <Typography component="span">Collapsible Group Item #3</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails>
-                        <Typography>
-                            Lorem ipsum dolor sit amet, consectetur adipiscing elit. Suspendisse
-                            malesuada lacus ex, sit amet blandit leo lobortis eget. Lorem ipsum dolor
-                            sit amet, consectetur adipiscing elit. Suspendisse malesuada lacus ex,
-                            sit amet blandit leo lobortis eget.
-                        </Typography>
-                    </AccordionDetails>
-                </Accordion>
+
             </div>
         </>
 
