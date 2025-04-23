@@ -221,6 +221,33 @@ export default function App(props) {
 
             socket.on("satellite-tracking", (data) => {
                 store.dispatch(setSatelliteData(data));
+                if (data['events']) {
+                    if (data['events']) {
+                        data['events'].forEach(event => {
+                            if (event.name === 'rotator_connected') {
+                                enqueueSnackbar("Rotator connected!", {variant: 'success'});
+                            } else if (event.name === 'rotator_disconnected') {
+                                enqueueSnackbar("Rotator disconnected!", {variant: 'info'});
+                            } else if (event.name === 'rig_connected') {
+                                enqueueSnackbar("Rig connected!", {variant: 'success'});
+                            } else if (event.name === 'rig_disconnected') {
+                                enqueueSnackbar("Rig disconnected!", {variant: 'info'});
+                            } else if (event.name === 'elevation_out_of_bounds') {
+                                enqueueSnackbar("Elevation of target is not reachable!", {variant: 'warning'});
+                            } else if (event.name === 'azimuth_out_of_bounds') {
+                                enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
+                            } else if (event.name === 'minelevation_error') {
+                                enqueueSnackbar("Target is beyond the minimum elevation limit", {variant: 'warning'});
+                            } else if (event.name === 'norad_id_change') {
+                                enqueueSnackbar("Target satellite changed!", {variant: 'info'});
+                            } else if (event.name === 'rotator_error') {
+                                enqueueSnackbar(event.error, {variant: 'error'});
+                            } else if (event.name === 'rig_error') {
+                                enqueueSnackbar(event.error, {variant: 'error'});
+                            }
+                        });
+                    }
+                }
             });
 
             return () => {

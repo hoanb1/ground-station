@@ -33,7 +33,6 @@ import {
     StyledIslandParentScrollbar, ThemedLeafletTooltip,
     ThemedStackIsland,
 } from "../common/common.jsx";
-import {getSatelliteCoverageCircle, getSatelliteLatLon, getSatellitePaths} from "../common/tracking-logic.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
@@ -52,7 +51,6 @@ import {
     setGridEditable,
     setSliderTimeOffset,
     setLoading,
-    setSatelliteData,
     fetchSatellite,
     getTrackingStateFromBackend,
     setSatelliteId,
@@ -69,6 +67,14 @@ import RotatorControl from "./rotator-control.jsx";
 import RigControl from "./rig-control.jsx";
 import CameraView from "../common/camera-view.jsx";
 import MiniWaterfallDisplay from "./waterfall-view.jsx";
+import {
+    satellitePositionSelector,
+    satelliteCoverageSelector,
+    satelliteDetailsSelector,
+    satelliteTrackingStateSelector,
+    satellitePathsSelector,
+    satelliteTransmittersSelector
+} from './state-selectors.jsx';
 
 
 // global leaflet map object
@@ -198,7 +204,6 @@ const TargetSatelliteLayout = React.memo(function () {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {
-        satelliteData,
         groupId,
         satelliteId: noradId,
         showPastOrbitPath,
@@ -224,8 +229,14 @@ const TargetSatelliteLayout = React.memo(function () {
         showGrid,
     } = useSelector(state => state.targetSatTrack);
 
-    const { location } = useSelector(state => state.location);
+    const satellitePosition = useSelector(satellitePositionSelector);
+    const satelliteCoverage = useSelector(satelliteCoverageSelector);
+    const satelliteDetails = useSelector(satelliteDetailsSelector);
+    const satelliteTrackingState = useSelector(satelliteTrackingStateSelector);
+    const satellitePaths = useSelector(satellitePathsSelector);
+    const satelliteTransmitters = useSelector(satelliteTransmittersSelector);
 
+    const { location } = useSelector(state => state.location);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -402,16 +413,16 @@ const TargetSatelliteLayout = React.memo(function () {
     }
 
     const satelliteUpdate = function (now) {
-        if (Object.keys(satelliteData['details']['name']).length !== 0) {
+        if (Object.keys(satelliteDetails['name']).length !== 0) {
 
-            const satelliteName = satelliteData['details']['name'];
-            const satelliteId = satelliteData['details']['norad_id'];
-            const latitude = satelliteData['position']['lat'];
-            const longitude = satelliteData['position']['lon'];
-            const altitude = satelliteData['position']['alt'];
-            const velocity = satelliteData['position']['vel'];
-            const paths = satelliteData['paths'];
-            const coverage = satelliteData['coverage'];
+            const satelliteName = satelliteDetails['name'];
+            const satelliteId = satelliteDetails['norad_id'];
+            const latitude = satellitePosition['lat'];
+            const longitude = satellitePosition['lon'];
+            const altitude = satellitePosition['alt'];
+            const velocity = satellitePosition['vel'];
+            const paths = satellitePaths;
+            const coverage = satelliteCoverage;
 
             // generate current positions for the group of satellites
             let currentPos = [];
@@ -469,7 +480,7 @@ const TargetSatelliteLayout = React.memo(function () {
                 currentCoverage.push(<Polyline
                     ref={coverageRef}
                     noClip={true}
-                    key={"coverage-"+satelliteData['details']['name']}
+                    key={"coverage-"+satelliteDetails['name']}
                     pathOptions={{
                         color: satelliteCoverageColor,
                         weight: 1,
@@ -486,7 +497,7 @@ const TargetSatelliteLayout = React.memo(function () {
             setCurrentSatellitesCoverage(currentCoverage);
 
         } else {
-            //console.warn("No satellite data found for norad id: ", noradId, satelliteData);
+            //console.warn("No satellite data found for norad id: ", noradId, satelliteDetails);
         }
 
         // Day/night boundary
@@ -529,7 +540,7 @@ const TargetSatelliteLayout = React.memo(function () {
                 }
             );
         }
-    }, [MapObject, satelliteData, sliderTimeOffset, noradId]);
+    }, [MapObject, satellitePosition, sliderTimeOffset, noradId]);
 
     useEffect(() => {
         // we do this here once onmount,
@@ -568,9 +579,10 @@ const TargetSatelliteLayout = React.memo(function () {
         return ()=> {
         };
 
-    },[satelliteData, sliderTimeOffset, showTooltip, orbitProjectionDuration, tileLayerID, showPastOrbitPath,
-        showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor,
-        futureOrbitLineColor, satelliteCoverageColor]);
+    },[satelliteDetails, satellitePosition, satellitePaths, satelliteCoverage, sliderTimeOffset, showTooltip,
+        orbitProjectionDuration, tileLayerID, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage,
+        showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor,
+        satelliteCoverageColor]);
 
     useEffect(() => {
         // zoom in and out a bit to fix the zoom factor issue
@@ -593,7 +605,7 @@ const TargetSatelliteLayout = React.memo(function () {
     let gridContents = [
         <StyledIslandParent key="map">
             <MapContainer
-                center={[satelliteData['position']['lat'] || 0, satelliteData['position']['lon'] || 0]}
+                center={[satellitePosition['lat'] || 0, satellitePosition['lon'] || 0]}
                 zoom={mapZoomLevel}
                 style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
                 dragging={false}
@@ -606,7 +618,7 @@ const TargetSatelliteLayout = React.memo(function () {
                 boundsOptions={{padding: [300, 300]}}
             >
                 <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                    Tracking {satelliteData['details']['name'] || "-"} {(satelliteData['position']['alt']/1000).toFixed(2)} km, {satelliteData['position']['vel'].toFixed(2)} km/s
+                    Tracking {satelliteDetails['name'] || "-"} {(satellitePosition['alt']/1000).toFixed(2)} km, {satellitePosition['vel'].toFixed(2)} km/s
                 </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer

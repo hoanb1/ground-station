@@ -1,6 +1,5 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import {enqueueSnackbar} from "notistack";
 
 
 function getCacheKeyForSatelliteId(satelliteId) {
@@ -311,6 +310,9 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
+            let changes = [];
+
+
             if (state.satelliteSelectOpen === true || state.satelliteGroupSelectOpen === true) {
                 //console.info("select is open, NOT updating tracking state");
             } else {
@@ -320,6 +322,7 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['tracking_state']) {
+                changes.push('tracking_state');
                 state.trackingState = action.payload['tracking_state'];
                 //state.groupId = action.payload['tracking_state']['group_id'];
                 //state.satelliteId = action.payload['tracking_state']['norad_id'];
@@ -328,6 +331,7 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['ui_tracker_state']) {
+                changes.push('ui_tracker_state');
                 state.satGroups = action.payload['ui_tracker_state']['groups'];
                 state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
                 state.availableTransmitters = action.payload['ui_tracker_state']['transmitters'];
@@ -337,36 +341,9 @@ const targetSatTrackSlice = createSlice({
                 state.selectedRotator = action.payload['ui_tracker_state']['rotator_id'];
                 state.selectedTransmitter = action.payload['ui_tracker_state']['transmitter_id'];
             }
-            
-            if (action.payload['events']) {
-                if (action.payload['events']) {
-                    action.payload['events'].forEach(event => {
-                        if (event.name === 'rotator_connected') {
-                            enqueueSnackbar("Rotator connected!", {variant: 'success'});
-                        } else if (event.name === 'rotator_disconnected') {
-                            enqueueSnackbar("Rotator disconnected!", {variant: 'info'});
-                        } else if (event.name === 'rig_connected') {
-                            enqueueSnackbar("Rig connected!", {variant: 'success'});
-                        } else if (event.name === 'rig_disconnected') {
-                            enqueueSnackbar("Rig disconnected!", {variant: 'info'});
-                        } else if (event.name === 'elevation_out_of_bounds') {
-                            enqueueSnackbar("Elevation of target is not reachable!", {variant: 'warning'});
-                        } else if (event.name === 'azimuth_out_of_bounds') {
-                            enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
-                        } else if (event.name === 'minelevation_error') {
-                            enqueueSnackbar("Target is beyond the minimum elevation limit", {variant: 'warning'});
-                        } else if (event.name === 'norad_id_change') {
-                            enqueueSnackbar("Target satellite changed!", {variant: 'info'});
-                        } else if (event.name === 'rotator_error') {
-                            enqueueSnackbar(event.error, {variant: 'error'});
-                        } else if (event.name === 'rig_error') {
-                            enqueueSnackbar(event.error, {variant: 'error'});
-                        }
-                    });
-                }
-            }
 
             if (action.payload['satellite_data']) {
+                changes.push('satellite_data');
                 state.satelliteData = {
                     details: action.payload['satellite_data']['details'],
                     position: action.payload['satellite_data']['position'],
@@ -377,12 +354,16 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['rotator_data']) {
+                changes.push('rotator_data');
                 state.rotatorData = action.payload['rotator_data'];
             }
 
             if (action.payload['rig_data']) {
+                changes.push('rig_data');
                 state.rigData = action.payload['rig_data'];
             }
+
+            console.info("satelliteData changes: ", changes);
 
         },
         setSatellitePasses(state, action) {
