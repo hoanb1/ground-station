@@ -83,7 +83,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const eventCountRef = useRef(0);
     const binCountRef = useRef(0);
     const lastMetricUpdateRef = useRef(Date.now());
-
+    const lastTimestampRef = useRef(null);
     const {
         colorMap,
         colorMaps,
@@ -365,10 +365,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             const imageData = ctx.createImageData(canvas.width, 1);
             const data = imageData.data;
 
-            // Clear the left margin (0 to bandscopeAxisYWidth pixels)
-            ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
-            ctx.fillRect(0, 0, bandscopeAxisYWidth, 1);
-
             if (waterfallDataRef.current.length > 0) {
                 const fftRow = waterfallDataRef.current[0];
 
@@ -398,11 +394,53 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             }
 
             // You could optionally add a vertical line at bandscopeAxisYWidth here
-            ctx.strokeStyle = 'rgba(161,161,161,0.5)';
+            ctx.strokeStyle = 'rgb(100, 105, 112, 1)';
             ctx.beginPath();
-            ctx.moveTo(bandscopeAxisYWidth, 0);
+            ctx.moveTo(bandscopeAxisYWidth-1, 0);
             ctx.lineTo(bandscopeAxisYWidth, 1);
+            ctx.lineWidth = 2;
             ctx.stroke();
+
+            // Check if we should add a timestamp
+            const now = new Date();
+
+            // Store the current time in state to track minute changes
+            // If this is the first row or the minute has changed since last timestamp
+            if (!lastTimestampRef.current ||
+                now.getMinutes() !== lastTimestampRef.current.getMinutes() ||
+                now.getHours() !== lastTimestampRef.current.getHours()) {
+
+                // Format the time as HH:MM
+                const hours = String(now.getHours()).padStart(2, '0');
+                const minutes = String(now.getMinutes()).padStart(2, '0');
+                const timeString = `${hours}:${minutes}`;
+
+                // Draw a more visible background for the timestamp
+                ctx.fillStyle = 'rgba(28, 28, 28, 1)';
+                ctx.fillRect(0, 0, bandscopeAxisYWidth-2, 14); // Taller rectangle to fit the text
+
+                // Draw the time text
+                ctx.font = '14px monospace';
+                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
+                ctx.textAlign = 'center';
+                ctx.textBaseline = 'top';
+                ctx.fillText(timeString, bandscopeAxisYWidth / 2, 2);
+
+                // Update the last timestamp reference
+                lastTimestampRef.current = now;
+
+                // Also, draw a subtle horizontal line to mark the minute boundary
+                //ctx.strokeStyle = 'rgb(177, 177, 177, 0.6)';
+                //ctx.beginPath();
+                //ctx.moveTo(0, 0);
+                //ctx.lineTo(canvas.width, 0);
+                //ctx.lineWidth = 2;
+                //ctx.stroke();
+            }
+
+            // Clear the left margin (0 to bandscopeAxisYWidth pixels)
+            ctx.fillStyle = 'rgb(28, 28, 28, 1)';
+            ctx.fillRect(0, 0, bandscopeAxisYWidth, 1);
         }
     }
 
@@ -474,17 +512,41 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     // Helper function to draw the FFT data as a line
     function drawFftLine(ctx, fftData, width, height, [minDb, maxDb]) {
+        const graphWidth = width - bandscopeAxisYWidth;
+        const skipFactor = fftData.length / graphWidth;
 
-        // Main line in green
-        ctx.strokeStyle = 'rgba(123,162,255,0.8)';
+        // Get the current colormap from settings
+        const currentColorMap = visualSettingsRef.current.colorMap;
+
+        // Generate line color based on a "hot" point in the colormap (e.g., 80% intensity)
+        // This gives a color that's representative of the colormap
+        const lineColorPoint = 0.8; // Use 80% intensity for the line
+        const lineRgb = getColorForPower(
+            minDb + (maxDb - minDb) * lineColorPoint,
+            currentColorMap,
+            [minDb, maxDb]
+        );
+
+        // Create line color with proper opacity
+        const lineColor = `rgba(${lineRgb.r}, ${lineRgb.g}, ${lineRgb.b}, 0.8)`;
+
+        // Generate fill color based on same colormap but with lower intensity
+        const fillColorPoint = 0.5; // Use 50% intensity for fill base color
+        const fillRgb = getColorForPower(
+            minDb + (maxDb - minDb) * fillColorPoint,
+            currentColorMap,
+            [minDb, maxDb]
+        );
+
+        // Create fill color with low opacity
+        const fillColor = `rgba(${fillRgb.r}, ${fillRgb.g}, ${fillRgb.b}, 0.3)`;
+
+        // Set line style with generated color
+        ctx.strokeStyle = lineColor;
         ctx.lineWidth = 2;
         ctx.beginPath();
 
-        const graphWidth = width - bandscopeAxisYWidth;
-
-        // Calculate a scaling factor to fit all frequency bins to graph width
-        const skipFactor = fftData.length / graphWidth;
-
+        // Draw the line path
         for (let x = 0; x < graphWidth; x++) {
             // Map canvas pixel to the appropriate FFT bin using scaling
             const fftIndex = Math.min(Math.floor(x * skipFactor), fftData.length - 1);
@@ -501,14 +563,16 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             }
         }
 
+        // Draw the line
         ctx.stroke();
 
-        // Draw fill below the line for better visibility
-        ctx.fillStyle = 'rgba(80,182,255,0.1)';
+        // Add fill below the line using the generated fill color
+        ctx.fillStyle = fillColor;
         ctx.lineTo(width, height);
         ctx.lineTo(bandscopeAxisYWidth, height);
         ctx.fill();
     }
+
 
     // Get color based on power level and selected color map
     const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
@@ -794,7 +858,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                         <Button
                             startIcon={<StopIcon/>}
                             disabled={!isStreaming}
-                            color="primary"
+                            color="error"
                             onClick={stopStreaming}
                         >
                             Stop
@@ -861,7 +925,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             <canvas
                                 ref={waterFallCanvasRef}
                                 width={2048}
-                                height={1000}
+                                height={900}
                                 style={{width: '100%', height: '100%'}}
                             />
                         </div>

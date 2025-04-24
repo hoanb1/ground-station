@@ -21,12 +21,10 @@ logger = logging.getLogger('sdr-data-process')
 # - np.bartlett: Triangular window with linear slopes
 # - np.flattop: Excellent amplitude accuracy but poor frequency resolution
 # - np.boxcar: Rectangular window (no windowing), best frequency resolution but high spectral leakage
-WINDOW_FUNCTION = np.hamming
-
-
+WINDOW_FUNCTION = np.hanning
 
 # Number of samples per scan for FFT
-NUM_SAMPLES_PER_SCAN = 128 * 1024
+NUM_SAMPLES_PER_SCAN = 64 * 1024
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
