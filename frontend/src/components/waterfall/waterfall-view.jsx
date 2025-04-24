@@ -691,28 +691,81 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const drawFrequencyScale = (ctx, width) => {
         const startFreq = visualSettingsRef.current.centerFrequency - visualSettingsRef.current.sampleRate / 2;
         const endFreq = visualSettingsRef.current.centerFrequency + visualSettingsRef.current.sampleRate / 2;
+        const freqRange = endFreq - startFreq;
 
         const height = 30; // Height of the frequency scale area
+        const tickHeight = 10; // Height of the frequency tick marks
 
         // Draw background for scale
         ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
         ctx.fillRect(bandscopeAxisYWidth, ctx.canvas.height - height, width - bandscopeAxisYWidth, height);
 
-        ctx.font = '16px Monospace';
+        // Calculate the appropriate interval for tick marks
+        // We want roughly 8-12 tick marks across the width for readability
+        const availableWidth = width - bandscopeAxisYWidth;
+        const targetTickCount = 12;
+
+        // Calculate an interval in Hz based on frequency range
+        let interval = freqRange / targetTickCount;
+
+        // Round to a nice number (1, 2, or 5 × 10^n)
+        const magnitude = Math.pow(10, Math.floor(Math.log10(interval)));
+        const normalized = interval / magnitude;
+
+        if (normalized < 1.5) interval = magnitude;
+        else if (normalized < 3.5) interval = 2 * magnitude;
+        else if (normalized < 7.5) interval = 5 * magnitude;
+        else interval = 10 * magnitude;
+
+        // Calculate the first tick position (round up to the nearest interval)
+        const firstTick = Math.ceil(startFreq / interval) * interval;
+
+        // Draw the tick marks and labels
+        ctx.strokeStyle = 'rgba(200, 200, 200, 0.7)';
+        ctx.lineWidth = 1;
         ctx.fillStyle = 'white';
-
-        // Draw center frequency
-        const centerX = bandscopeAxisYWidth + (width - bandscopeAxisYWidth) / 2;
+        ctx.font = '16px Monospace'; // Smaller font for tick labels
         ctx.textAlign = 'center';
-        ctx.fillText(`${(visualSettingsRef.current.centerFrequency / 1e6).toFixed(3)} MHz`, centerX, ctx.canvas.height - 6);
 
-        // Draw start frequency
-        ctx.textAlign = 'left';
-        ctx.fillText(`${(startFreq / 1e6).toFixed(3)} MHz`, bandscopeAxisYWidth + 5, ctx.canvas.height - 6);
+        for (let freq = firstTick; freq <= endFreq; freq += interval) {
+            // Calculate x position for this frequency
+            const x = bandscopeAxisYWidth + ((freq - startFreq) / freqRange) * availableWidth;
 
-        // Draw end frequency
-        ctx.textAlign = 'right';
-        ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, ctx.canvas.height - 6);
+            // Draw the tick mark
+            ctx.beginPath();
+            ctx.moveTo(x, ctx.canvas.height - height);
+            ctx.lineTo(x, ctx.canvas.height - height + tickHeight);
+            ctx.stroke();
+
+            // Draw the tick label (in MHz or kHz depending on frequency)
+            if (interval >= 1e6) {
+                // For intervals of 1MHz or more, show MHz with 1 decimal place
+                ctx.fillText(humanizeFrequency(freq), x, ctx.canvas.height - height + tickHeight + 10);
+            } else if (interval >= 1e3) {
+                // For intervals of 1kHz or more, show kHz
+                //ctx.fillText(`${(freq / 1e3).toFixed(0)}k`, x, ctx.canvas.height - height + tickHeight + 10);
+                ctx.fillText(humanizeFrequency(freq), x, ctx.canvas.height - height + tickHeight + 10);
+            } else {
+                // For small intervals, just show Hz
+                ctx.fillText(humanizeFrequency(freq), x, ctx.canvas.height - height + tickHeight + 10);
+            }
+        }
+
+        // // Draw the main frequency labels with larger font
+        // ctx.font = '16px Monospace';
+        //
+        // // Draw center frequency
+        // const centerX = bandscopeAxisYWidth + (width - bandscopeAxisYWidth) / 2;
+        // ctx.textAlign = 'center';
+        // ctx.fillText(`${(visualSettingsRef.current.centerFrequency / 1e6).toFixed(3)} MHz`, centerX, ctx.canvas.height - 6);
+        //
+        // // Draw start frequency
+        // ctx.textAlign = 'left';
+        // ctx.fillText(`${(startFreq / 1e6).toFixed(3)} MHz`, bandscopeAxisYWidth + 5, ctx.canvas.height - 6);
+        //
+        // // Draw end frequency
+        // ctx.textAlign = 'right';
+        // ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, ctx.canvas.height - 6);
     };
 
     return (
