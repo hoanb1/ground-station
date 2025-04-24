@@ -73,9 +73,15 @@ def cleanup_sdr_session(sid):
 
             if not other_users:
                 try:
+                    # disable bias-t
+                    rtlsdr_devices[device_id].set_bias_tee(False)
+
+                    # close socket
                     rtlsdr_devices[device_id].close()
+
                     del rtlsdr_devices[device_id]
                     logger.info(f"Released RTLSDR device {device_id}")
+
                 except Exception as e:
                     logger.error(f"Error closing RTLSDR device: {str(e)}")
                     logger.exception(e)

@@ -2,8 +2,6 @@ import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {useState} from "react";
 
-
-
 const waterfallSlice = createSlice({
     name: 'waterfallState',
     initialState: {
@@ -21,7 +19,12 @@ const waterfallSlice = createSlice({
         dbRange: [-80, -20],
         fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384],
         fftSize: 4096,
-        gain: 20,
+        gain: 25.4,
+        rtlGains: [0, 0.9, 1.4, 2.7, 3.7, 7.7, 8.7, 12.5, 14.4, 15.7, 16.6, 19.7, 20.7, 22.9, 25.4,
+            28.0, 29.7, 32.8, 33.8, 36.4, 37.2, 38.6, 40.2, 42.1, 43.4, 43.9, 44.5, 48.0, 49.6],
+        biasT: false,
+        tunerAgc: false,
+        rtlAgc: false,
         sampleRate: 2048000,
         centerFrequency: 100000000,
         errorMessage: null,
@@ -78,6 +81,16 @@ const waterfallSlice = createSlice({
         setGridEditable: (state, action) => {
             state.gridEditable = action.payload;
         },
+        setBiasT: (state, action) => {
+            state.biasT = action.payload;
+        },
+        setTunerAgc: (state, action) => {
+            state.tunerAgc = action.payload;
+        },
+        setRtlAgc: (state, action) => {
+            state.rtlAgc = action.payload;
+        },
+
     },
     extraReducers: (builder) => {
 
@@ -100,6 +113,9 @@ export const {
     setSettingsDialogOpen,
     setAutoDBRange,
     setGridEditable,
+    setBiasT,
+    setTunerAgc,
+    setRtlAgc,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

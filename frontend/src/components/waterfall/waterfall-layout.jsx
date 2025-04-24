@@ -1,54 +1,17 @@
 import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
 import { Responsive, WidthProvider } from 'react-grid-layout';
-import {
-    MapContainer,
-    TileLayer,
-    Marker,
-    Polyline,
-    Polygon,
-    useMapEvents,
-} from 'react-leaflet';
-import L from 'leaflet';
 import 'leaflet-fullscreen/dist/Leaflet.fullscreen.js';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
-import {duration, styled} from "@mui/material/styles";
-import createTerminatorLine from '../common/terminator-line.jsx';
-import {getSunMoonCoords} from "../common/sunmoon.jsx";
-import {moonIcon, sunIcon, homeIcon, satelliteIcon, satelliteIcon2} from '../common/icons.jsx';
-import MapSettingsIsland from "../common/map-settings.jsx";
-import {Box, Button, Fab} from "@mui/material";
-import HomeIcon from '@mui/icons-material/Home';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import {getTileLayerById, tileLayers} from "../common/tile-layers.jsx";
 import {
-    StyledIslandParent,
     StyledIslandParentScrollbar,
-    MapTitleBar,
-    ThemedLeafletTooltip,
-    MapStatusBar,
-    InternationalDateLinePolyline,
-    MapArrowControls,
-    ThemedStackIsland,
-    betterStatusValue,
-    betterDateTimes,
-    renderCountryFlagsCSV,
-    StyledIslandParentNoScrollbar,
-    SimpleTruncatedHtml,
-    getClassNamesBasedOnGridEditing,
 } from "../common/common.jsx";
 import {
     setGridEditable
 } from './waterfall-slice.jsx';
-import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
-import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";
-import SettingsIcon from "@mui/icons-material/Settings";
-import Typography from "@mui/material/Typography";
-import CoordinateGrid from "../common/mercator-grid.jsx";
 import MainWaterfallDisplay from "./waterfall-view.jsx";
 import WaterfallSettings from "./waterfall-settings.jsx";
 

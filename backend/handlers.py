@@ -563,6 +563,15 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 # Default FFT size
                 fft_size = data.get('fftSize', 1024)
 
+                # Enable/disable Bias-T
+                bias_t = data.get('biasT', False)
+
+                # Read tuner agc setting
+                tuner_agc = data.get('tunerAgc', False)
+
+                # Read AGC mode
+                rtl_agc = data.get('rtlAgc', False)
+
                 # Initialize or reconfigure RTLSDR
                 if device_id not in rtlsdr_devices:
                     # Create new RTLSDR instance
@@ -575,7 +584,13 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 # Configure SDR parameters
                 sdr.center_freq = center_freq
                 sdr.sample_rate = sample_rate
-                sdr.gain = gain
+                sdr.set_bias_tee(bias_t)
+                sdr.set_agc_mode(rtl_agc) # RTL AGC
+                sdr.set_manual_gain_enabled(not tuner_agc) # Tuner AGC
+
+                # When in manual gain mode, set a specific gain
+                if not tuner_agc:
+                    sdr.gain = gain
 
                 # Create an SDR session entry in memory
                 add_sdr_session(sid, device_id, center_freq, sample_rate, gain, fft_size)
@@ -619,9 +634,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 client['thread_future'] = None
 
             logger.info(f"Starting streaming SDR data for client {sid}")
-
-            # Start a new processing task
-            #client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
 
             # Start a new processing task in a separate thread
             threaded_func = functools.partial(run_async_in_thread, process_rtlsdr_data, sio, device_id, sid)

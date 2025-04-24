@@ -48,6 +48,9 @@ import {
     setIsPlaying,
     setSettingsDialogOpen,
     setGridEditable,
+    setBiasT,
+    setTunerAgc,
+    setRtlAgc,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -99,7 +102,10 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         targetFPS,
         isPlaying,
         autoDBRange,
-        gridEditable
+        gridEditable,
+        biasT,
+        tunerAgc,
+        rtlAgc,
     } = useSelector((state) => state.waterfall);
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
@@ -196,10 +202,13 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 centerFrequency,
                 sampleRate,
                 gain,
-                fftSize
+                fftSize,
+                biasT,
+                tunerAgc,
+                rtlAgc,
             });
         }
-    }, [centerFrequency, sampleRate, fftSize, gain]);
+    }, [centerFrequency, sampleRate, fftSize, gain, biasT, rtlAgc, tunerAgc]);
 
     // Call this periodically, for example:
     useEffect(() => {
@@ -531,7 +540,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         const lineColor = `rgba(${lineRgb.r}, ${lineRgb.g}, ${lineRgb.b}, 0.8)`;
 
         // Generate fill color based on same colormap but with lower intensity
-        const fillColorPoint = 0.5; // Use 50% intensity for fill base color
+        const fillColorPoint = 0.7; // Use 50% intensity for fill base color
         const fillRgb = getColorForPower(
             minDb + (maxDb - minDb) * fillColorPoint,
             currentColorMap,
@@ -815,22 +824,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 ctx.fillText(humanizeFrequency(freq), x, ctx.canvas.height - height + tickHeight + 10);
             }
         }
-
-        // // Draw the main frequency labels with larger font
-        // ctx.font = '16px Monospace';
-        //
-        // // Draw center frequency
-        // const centerX = bandscopeAxisYWidth + (width - bandscopeAxisYWidth) / 2;
-        // ctx.textAlign = 'center';
-        // ctx.fillText(`${(visualSettingsRef.current.centerFrequency / 1e6).toFixed(3)} MHz`, centerX, ctx.canvas.height - 6);
-        //
-        // // Draw start frequency
-        // ctx.textAlign = 'left';
-        // ctx.fillText(`${(startFreq / 1e6).toFixed(3)} MHz`, bandscopeAxisYWidth + 5, ctx.canvas.height - 6);
-        //
-        // // Draw end frequency
-        // ctx.textAlign = 'right';
-        // ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, ctx.canvas.height - 6);
     };
 
     return (

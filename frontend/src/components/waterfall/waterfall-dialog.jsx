@@ -31,7 +31,7 @@ import {
     setIsStreaming,
     setTargetFPS,
     setSettingsDialogOpen,
-    setAutoDBRange,
+    setAutoDBRange, setBiasT,
 } from './waterfall-slice.jsx'
 import FrequencyDisplay from "./frequency-control.jsx";
 
@@ -52,6 +52,7 @@ export default function WaterFallSettingsDialog() {
         targetFPS,
         settingsDialogOpen,
         autoDBRange,
+        biasT,
     } = useSelector((state) => state.waterfall);
 
     // lets use local state to keep track of the settings and then onChangeCommitted we can dispatch the changes
@@ -104,8 +105,6 @@ export default function WaterFallSettingsDialog() {
             >
                 <DialogTitle id="sample-dialog-title">Waterfall settings</DialogTitle>
                 <DialogContent>
-
-
                     <Box sx={{mb: 2, width: '100%'}}>
                         <FrequencyDisplay
                             initialFrequency={centerFrequency / 1000} // Convert Hz to kHz
@@ -241,6 +240,8 @@ export default function WaterFallSettingsDialog() {
                             aria-labelledby="gain-slider"
                         />
                     </Box>
+
+
 
                     <Box sx={{mb: 2}}>
                         <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}

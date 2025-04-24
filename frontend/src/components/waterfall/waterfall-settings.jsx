@@ -9,7 +9,7 @@ import MuiAccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import {useSelector, useDispatch} from 'react-redux';
-import {setGridEditable} from './waterfall-slice.jsx';
+import {setGridEditable, setRtlAgc, setTunerAgc} from './waterfall-slice.jsx';
 import FrequencyControl from "./frequency-control.jsx";
 import {
     setColorMap,
@@ -25,6 +25,7 @@ import {
     setTargetFPS,
     setSettingsDialogOpen,
     setAutoDBRange,
+    setBiasT,
 } from './waterfall-slice.jsx'
 import {
     Box,
@@ -100,6 +101,10 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         settingsDialogOpen,
         autoDBRange,
         gridEditable,
+        biasT,
+        tunerAgc,
+        rtlAgc,
+        rtlGains,
     } = useSelector((state) => state.waterfall);
 
     const [expandedPanels, setExpandedPanels] = React.useState(['panel1']);
@@ -147,6 +152,19 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         return `${freq.toFixed(0)} Hz`;
     };
 
+    const gainMarks = rtlGains.map((value, index) => ({
+        value,
+        // Only show labels for min, max, and a few points in between
+        label: (index === 0 ||
+            index === rtlGains.length - 1 ||
+            index === Math.floor(rtlGains.length / 4) ||
+            index === Math.floor(rtlGains.length / 2) ||
+            index === Math.floor(3 * rtlGains.length / 4))
+            ? value.toString()
+            : ''
+    }));
+
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
@@ -177,24 +195,33 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         <Typography component="span">SDR</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
+
                         <Box sx={{mb: 2}}>
                             <Typography variant="body2" gutterBottom>
-                                Gain: {gain} dB
+                                Gain: {localGain} dB
                             </Typography>
+
                             <Slider
+                                step={null}
+                                marks={gainMarks}
                                 value={localGain}
-                                min={0}
-                                max={49}
-                                step={1}
+                                valueLabelDisplay="auto"
+                                valueLabelFormat={value => `${value} dB`}
                                 onChange={(_, value) => {
                                     setLocalGain(value);
                                 }}
+                                min={rtlGains[0]}
+                                max={rtlGains[rtlGains.length - 1]}
                                 onChangeCommitted={(_, value) => {
+                                    setLocalGain(value);
                                     dispatch(setGain(value));
                                 }}
                                 disabled={false}
                                 aria-labelledby="gain-slider"
+                                track={false}
                             />
+
+
                         </Box>
                         <Box sx={{ mb: 2 }}>
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
@@ -229,6 +256,46 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
                         </Box>
+                        <Box sx={{mb: 2}}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={biasT}
+                                        onChange={(e) => {
+                                            dispatch(setBiasT(e.target.checked));
+                                        }}
+                                    />
+                                }
+                                label="Enable Bias T"
+                            />
+                        </Box>
+                        <Box sx={{mb: 2}}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={tunerAgc}
+                                        onChange={(e) => {
+                                            dispatch(setTunerAgc(e.target.checked));
+                                        }}
+                                    />
+                                }
+                                label="Enable tuner AGC"
+                            />
+                        </Box>
+                        <Box sx={{mb: 2}}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={rtlAgc}
+                                        onChange={(e) => {
+                                            dispatch(setRtlAgc(e.target.checked));
+                                        }}
+                                    />
+                                }
+                                label="Enable RTL AGC"
+                            />
+                        </Box>
+
                     </AccordionDetails>
                 </Accordion>
                 <Accordion expanded={expandedPanels.includes('panel2')} onChange={handleChange('panel2')}>
@@ -331,7 +398,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
 
             </div>
         </>
-
     );
 });
 
