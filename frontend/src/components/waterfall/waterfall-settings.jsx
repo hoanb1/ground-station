@@ -276,7 +276,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 }}
                                 valueLabelDisplay="auto"
                                 min={-110}
-                                max={0}
+                                max={30}
                                 step={1}
                                 sx={{mx: 2}}
                             />
@@ -322,6 +322,23 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
                         </Box>
+                        <Box sx={{mb: 2}}>
+                            <Typography variant="body2" gutterBottom>
+                                Target FPS: {targetFPS}
+                            </Typography>
+                            <Slider
+                                value={targetFPS}
+                                min={5}
+                                max={60}
+                                step={1}
+                                onChange={(_, value) => {
+                                    dispatch(setTargetFPS(value));
+                                }}
+                                disabled={false}
+                                aria-labelledby="target-fps-slider"
+                            />
+                        </Box>
+
                     </AccordionDetails>
                 </Accordion>
 

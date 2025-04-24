@@ -26,7 +26,7 @@ const waterfallSlice = createSlice({
         errorMessage: null,
         isStreaming: false,
         isPlaying: false,
-        targetFPS: 30,
+        targetFPS: 20,
         settingsDialogOpen: false,
         autoDBRange: false,
         gridEditable: false,

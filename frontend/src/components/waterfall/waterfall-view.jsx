@@ -63,6 +63,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         colorMap: 'magma',
     });
     const colorCache = useRef(new Map());
+
     const lastFrameTimeRef = useRef(0);
     
     // Add state for tracking metrics
@@ -93,6 +94,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         autoDBRange,
         gridEditable
     } = useSelector((state) => state.waterfall);
+    const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
 
@@ -102,6 +104,11 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             animationFrameRef.current = null;
         }
     }
+
+    // Update the ref whenever the Redux state changes
+    useEffect(() => {
+        targetFPSRef.current = targetFPS;
+    }, [targetFPS]);
 
     // Effect to sync state to the ref
     useEffect(() => {
@@ -170,7 +177,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             });
         }
     }, [centerFrequency, sampleRate, fftSize, gain]);
-
+    
     const startStreaming = () => {
         if (!isStreaming) {
             dispatch(setErrorMessage(''));
@@ -200,8 +207,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     };
 
     function renderLoop(timestamp) {
-        // Limit to targetFPS
-        if (!lastFrameTimeRef.current || timestamp - lastFrameTimeRef.current >= 1000 / targetFPS) {
+        // Limit to targetFPSRef.current
+        if (!lastFrameTimeRef.current || timestamp - lastFrameTimeRef.current >= 1000 / targetFPSRef.current) {
             drawWaterfall();
             lastFrameTimeRef.current = timestamp;
         }
