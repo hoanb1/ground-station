@@ -3,6 +3,8 @@ import crud
 import requests
 import json
 import rtlsdr
+import concurrent.futures
+import functools
 from db import engine, AsyncSessionLocal
 from sync import *
 from datetime import date, datetime
@@ -11,7 +13,22 @@ from models import ModelEncoder
 from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state, get_satellite_position_from_tle
 from common import is_geostationary
 from tracking import compiled_satellite_data
-from sdr import rtlsdr_devices, active_sdr_clients, process_rtlsdr_data, cleanup_sdr_session, add_sdr_session
+from sdr import rtlsdr_devices, active_sdr_clients, process_rtlsdr_data
+from waterfall import cleanup_sdr_session, add_sdr_session
+
+
+# Create a global thread pool executor
+thread_executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
+
+# Function to run async code in a thread
+def run_async_in_thread(async_func, *args, **kwargs):
+    """Run an async function in a separate thread."""
+    loop = asyncio.new_event_loop()
+    asyncio.set_event_loop(loop)
+    try:
+        return loop.run_until_complete(async_func(*args, **kwargs))
+    finally:
+        loop.close()
 
 
 async def data_request_routing(sio, cmd, data, logger, sid):
@@ -593,14 +610,23 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 reply['success'] = False
                 return reply
 
-            # Cancel any existing task
-            if client.get('task'):
+            # task clean up
+            if 'task' in client and client['task']:
                 client['task'].cancel()
+                client['task'] = None
+            if 'thread_future' in client and client['thread_future']:
+                client['thread_future'].cancel()
+                client['thread_future'] = None
 
             logger.info(f"Starting streaming SDR data for client {sid}")
 
             # Start a new processing task
-            client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
+            #client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
+
+            # Start a new processing task in a separate thread
+            threaded_func = functools.partial(run_async_in_thread, process_rtlsdr_data, sio, device_id, sid)
+            client['thread_future'] = thread_executor.submit(threaded_func)
+
             await sio.emit('sdr-status', {'streaming': True}, room=sid)
 
         elif cmd == "stop-streaming":

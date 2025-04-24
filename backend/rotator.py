@@ -5,61 +5,50 @@ from typing import Optional, Tuple, Dict, Any, Union, AsyncGenerator, Generator
 import logging
 from arguments import arguments as args
 from contextlib import asynccontextmanager
-from Hamlib import Hamlib
-
 
 class RotatorController:
     def __init__(
             self,
-            model: int = Hamlib.ROT_MODEL_SATROTCTL,
+            model: int = None,  # Model no longer used directly
             host: str = "127.0.0.1",
             port: int = 4533,
             verbose: bool = False,
-            timeout: float = 5.0,
+            timeout: float = 3.0,
     ):
-
         # Set up logging
         device_path = f"{host}:{port}"
         self.logger = logging.getLogger("rotator-control")
         self.logger.setLevel(args.log_level)
-        self.logger.info(f"Initializing RotatorController with model={model}, device={device_path}")
-
-        # Initialize Hamlib
-        Hamlib.rig_set_debug(Hamlib.RIG_DEBUG_NONE)
-        if verbose:
-            Hamlib.rig_set_debug(Hamlib.RIG_DEBUG_VERBOSE)
+        self.logger.info(f"Initializing RotatorController with device={device_path}")
 
         # Initialize attributes
         self.host = host
         self.port = port
-        self.model = model
         self.device_path = device_path
         self.verbose = verbose
-        self.rotator = None
+        self.reader = None
+        self.writer = None
         self.connected = False
         self.timeout = timeout
 
     async def connect(self) -> bool:
-
         if self.connected:
             self.logger.warning("Already connected to rotator")
             return True
 
         try:
-            # first we ping the rotator
+            # First ping the rotator to ensure it's responsive
             pingcheck = await self.ping()
             assert pingcheck, "Rotator did not respond to ping"
 
             self.logger.debug(f"Connecting to rotator at {self.device_path}")
-            self.rotator = Hamlib.Rot(self.model)
-            self.rotator.set_conf("rot_pathname", self.device_path)
-
-            # Set timeout
-            self.rotator.set_conf("timeout", str(int(self.timeout * 1000)))  # Convert to ms
-
-            # Initialize the rotator (opens the connection)
-            self.rotator.open()
-
+            
+            # Create a persistent connection
+            self.reader, self.writer = await asyncio.wait_for(
+                asyncio.open_connection(self.host, self.port),
+                timeout=self.timeout
+            )
+            
             self.connected = True
             self.logger.info(f"Successfully connected to rotator as {self.device_path}")
             return True
@@ -68,33 +57,28 @@ class RotatorController:
             self.logger.error(f"Error connecting to rotator: {e}")
             raise RuntimeError(f"Error connecting to rotator: {e}")
 
-    async def async_connect(self, timeout_s: float = 5.0) -> bool:
-
-        if self.connected:
-            self.logger.warning("Already connected to rotator")
-            return True
-
-        # Run the synchronous connect method in a thread pool
-        try:
-            connected = await asyncio.to_thread(self.connect)
-            return connected
-
-        except Exception as e:
-            self.logger.error(f"Error in async connection: {e}")
-            raise
-
     async def disconnect(self) -> bool:
-
-        if not self.connected or self.rotator is None:
+        if not self.connected or self.writer is None:
             self.logger.warning("Not connected to rotator")
             return True
 
         try:
-            result = await asyncio.wait_for(asyncio.to_thread(self.rotator.close), timeout=3.0)
-            self.logger.debug(f"Close command: result={result}")
+            # Send a quit command (optional)
+            try:
+                await self._send_command("q")
+            except Exception as e:
+                self.logger.warning(f"Error sending quit command: {e}")
 
+            # Close the connection
+            self.writer.close()
+            try:
+                await asyncio.wait_for(self.writer.wait_closed(), timeout=3.0)
+            except asyncio.TimeoutError:
+                self.logger.warning("Timeout waiting for connection to close")
+            
             self.connected = False
-            self.rotator = None
+            self.reader = None
+            self.writer = None
             self.logger.info("Disconnected from rotator")
             return True
 
@@ -104,34 +88,65 @@ class RotatorController:
 
     @asynccontextmanager
     async def _create_connection(self):
+        """Creates a temporary connection if not already connected."""
+        if self.connected and self.reader is not None and self.writer is not None:
+            # Use existing connection
+            yield self.reader, self.writer
+        else:
+            # Create temporary connection
+            reader = writer = None
+            try:
+                # Use asyncio's open_connection with timeout
+                reader, writer = await asyncio.wait_for(
+                    asyncio.open_connection(self.host, self.port),
+                    timeout=self.timeout
+                )
+                yield reader, writer
+            finally:
+                # Close the connection if it was opened temporarily
+                if writer is not None and (not self.connected or writer is not self.writer):
+                    writer.close()
+                    try:
+                        # Wait for the writer to close, but with a timeout
+                        await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
+                    except (asyncio.TimeoutError, Exception):
+                        # Ignore errors during cleanup
+                        pass
 
-        reader = writer = None
+    async def _send_command(self, command: str) -> str:
+        """Send a command to the rotator and get the response."""
+        self.check_connection()
+        
         try:
-            # Use asyncio's open_connection with timeout
-            reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port),
+            # Add newline to the command
+            full_command = f"{command}\n"
+            
+            # Send the command
+            self.writer.write(full_command.encode('utf-8'))
+            await self.writer.drain()
+            
+            # Read the response
+            response_bytes = await asyncio.wait_for(
+                self.reader.read(1000),
                 timeout=self.timeout
             )
-            yield reader, writer
-
-        finally:
-            # Close the connection if it was opened
-            if writer is not None:
-                writer.close()
-                try:
-                    # Wait for the writer to close, but with a timeout
-                    await asyncio.wait_for(writer.wait_closed(), timeout=1.0)
-                except (asyncio.TimeoutError, Exception):
-                    # Ignore errors during cleanup
-                    pass
+            
+            response = response_bytes.decode('utf-8', errors='replace').strip()
+            
+            if self.verbose:
+                self.logger.debug(f"Command: {command} -> Response: {response}")
+                
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Error sending command '{command}': {e}")
+            raise RuntimeError(f"Error communicating with rotator: {e}")
 
     async def ping(self):
-
         try:
             # Use the async connection manager
             async with self._create_connection() as (reader, writer):
                 # Send position query command
-
                 writer.write(b"p\n")
                 await writer.drain()
 
@@ -143,7 +158,7 @@ class RotatorController:
 
                 response = response_bytes.decode('utf-8', errors='replace').strip()
 
-                # Parse the response (same as before)
+                # Parse the response
                 if not response:
                     return False
 
@@ -185,155 +200,113 @@ class RotatorController:
             return False
 
     async def get_position(self) -> Tuple[float, float]:
-
-        self.check_connection()
-
-        az, el = await self._get_position()
-
-        return round(az, 3), round(el, 3)
-
-    async def _get_position(self) -> Tuple[float, float]:
-
+        """Get the current azimuth and elevation."""
         try:
-            az, el = await asyncio.to_thread(self.rotator.get_position)
-            assert az is not None, "Azimuth is None"
-            assert el is not None, "Elevation is None"
-
-            self.logger.debug(f"Current position: az={az}, el={el}")
-            return az, el
-
+            response = await self._send_command("p")
+            
+            # Handle various response formats
+            if response.startswith('RPRT'):
+                error_code = int(response.split()[1])
+                if error_code < 0:
+                    raise RuntimeError(f"Error getting position: {response}")
+                return 0.0, 0.0  # Default values on success without position info
+            
+            elif response.startswith('get_pos:'):
+                parts = response.split(':')[1].strip().split()
+                if len(parts) >= 2:
+                    az = float(parts[0])
+                    el = float(parts[1])
+                    self.logger.debug(f"Current position: az={az}, el={el}")
+                    return round(az, 3), round(el, 3)
+                raise RuntimeError(f"Invalid position format: {response}")
+            
+            else:
+                # Try to parse as direct values
+                parts = response.split()
+                if len(parts) >= 2:
+                    try:
+                        az = float(parts[0])
+                        el = float(parts[1])
+                        self.logger.debug(f"Current position: az={az}, el={el}")
+                        return round(az, 3), round(el, 3)
+                    except ValueError:
+                        raise RuntimeError(f"Invalid position values: {response}")
+                raise RuntimeError(f"Invalid position format: {response}")
+                
         except Exception as e:
             self.logger.error(f"Error getting position: {e}")
             raise RuntimeError(f"Error getting position: {e}")
 
-    async def park(self, park_az, park_el) -> bool:
-
-        # Park the rotator
-        await asyncio.to_thread(self._park, park_az, park_el)
-
-        return True
-
-    def _park(self, park_az, park_el) -> bool:
-
-        self.check_connection()
-
+    async def park(self, park_az=None, park_el=None) -> bool:
+        """Park the rotator."""
         try:
             self.logger.info("Parking rotator")
-            status = self.rotator.park()
-            self.logger.info(f"Park command: status={status}")
-
-            #if status != Hamlib.RIG_OK:
-            #    error_msg = f"Failed to park rotator: {self.get_error_message(status)}"
-            #    self.logger.error(error_msg)
-            #    raise RuntimeError(error_msg)
-
+            
+            # Send park command
+            response = await self._send_command("K")
+            
+            # Check response
+            if response.startswith('RPRT'):
+                error_code = int(response.split()[1])
+                if error_code < 0:
+                    self.logger.error(f"Park command failed: {response}")
+                    return False
+            
+            self.logger.info(f"Park command: response={response}")
             return True
-
+            
         except Exception as e:
             self.logger.error(f"Error parking rotator: {e}")
             raise RuntimeError(f"Error parking rotator: {e}")
 
-
     def check_connection(self) -> bool:
-
-        if not self.connected or self.rotator is None:
-            error_msg = f"Not connected to rotator (connected: {self.connected}, rotator: {self.rotator})"
+        """Check if connected to the rotator."""
+        if not self.connected or self.writer is None or self.reader is None:
+            error_msg = f"Not connected to rotator (connected: {self.connected})"
             self.logger.error(error_msg)
             raise RuntimeError(error_msg)
-
         return True
 
-    def __enter__(self) -> 'RotatorController':
-        """Context manager entry point - connects to the rotator."""
-        self.connect()
-        return self
-
-    def __exit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Context manager exit point - disconnects from the rotator."""
-        self.disconnect()
-
-    # New asynchronous context manager methods
-    async def __aenter__(self) -> 'RotatorController':
-        """Async context manager entry point - connects to the rotator asynchronously."""
-        await self.async_connect()
-        return self
-
-    async def __aexit__(self, exc_type, exc_val, exc_tb) -> None:
-        """Async context manager exit point - disconnects from the rotator asynchronously."""
-        loop = asyncio.get_event_loop()
-        try:
-            loop.run_until_complete(self.disconnect())
-        finally:
-            pass
-
-    def __del__(self) -> None:
-        """Destructor - log a warning if still connected when object is garbage collected."""
-        if self.connected and hasattr(self, 'logger'):
-            try:
-                # Just log a warning rather than trying to run async code
-                self.logger.warning("Object RotatorController being garbage collected while still connected")
-
-                # If there's a synchronous way to close the underlying connection, use it
-                if self.rotator is not None and hasattr(self.rotator, 'close') and callable(self.rotator.close):
-                    try:
-                        # Only if close() can be called synchronously
-                        self.rotator.close()
-                    except Exception as e:
-                        self.logger.error(f"Error during cleanup: {e}")
-
-            except Exception as e:
-                # Avoid any exceptions in __del__
-                pass
-
-    @staticmethod
-    def get_error_message(error_code: int) -> str:
-
-        error_messages = {
-            Hamlib.RIG_OK: "No error",
-            Hamlib.RIG_EINVAL: "Invalid parameter",
-            Hamlib.RIG_ECONF: "Invalid configuration",
-            Hamlib.RIG_ENOMEM: "Memory shortage",
-            Hamlib.RIG_ENIMPL: "Function not implemented",
-            Hamlib.RIG_ETIMEOUT: "Communication timed out",
-            Hamlib.RIG_EIO: "IO error",
-            Hamlib.RIG_EINTERNAL: "Internal Hamlib error",
-            Hamlib.RIG_EPROTO: "Protocol error",
-            Hamlib.RIG_ERJCTED: "Command rejected",
-            Hamlib.RIG_ETRUNC: "String truncated",
-            Hamlib.RIG_ENAVAIL: "Function not available",
-            Hamlib.RIG_ENTARGET: "Target not available",
-            Hamlib.RIG_BUSERROR: "Bus error",
-            Hamlib.RIG_BUSBUSY: "Bus busy",
-            Hamlib.RIG_EARG: "Invalid argument",
-            Hamlib.RIG_EVFO: "Invalid VFO",
-            Hamlib.RIG_EDOM: "Argument out of domain",
-        }
-
-        return error_messages.get(error_code, f"Unknown error code: {error_code}")
-
     async def set_position(self, target_az: float, target_el: float, update_interval: float = 2,
-                           az_tolerance: float = 1.0, el_tolerance: float = 1.0) -> AsyncGenerator[
+                         az_tolerance: float = 1.0, el_tolerance: float = 1.0) -> AsyncGenerator[
         Tuple[float, float, bool], None]:
-
+        """Set the rotator position and yield updates until it reaches the target."""
         # Start the slew operation
-        await self._set_position_start(target_az, target_el)
+        try:
+            self.logger.info(f"Setting rotator position to az={target_az}, el={target_el}")
+            
+            # Format the set position command
+            command = f"P {target_az} {target_el}"
+            response = await self._send_command(command)
+            
+            # Check the response
+            if response.startswith('RPRT'):
+                error_code = int(response.split()[1])
+                if error_code < 0:
+                    error_msg = f"Failed to set position: {response}"
+                    self.logger.error(error_msg)
+                    raise RuntimeError(error_msg)
+            
+            self.logger.debug(f"Set position command: response={response}")
+
+        except Exception as e:
+            self.logger.error(f"Error setting rotator position: {e}")
+            self.logger.exception(e)
+            raise RuntimeError(f"Error setting rotator position: {e}")
 
         # Initial status
-        current_az, current_el = await self._get_position()
+        current_az, current_el = await self.get_position()
         az_reached = abs(current_az - target_az) <= az_tolerance
         el_reached = abs(current_el - target_el) <= el_tolerance
         is_slewing = not (az_reached and el_reached)
 
-        # First yield with initial position
+        # First yield with the initial position
         yield current_az, current_el, is_slewing
 
-        # Keep checking position when consumer requests an update
+        # Keep checking position until target is reached
         while is_slewing:
-            # Wait for the update interval
-            #await asyncio.sleep(update_interval)
-
-            # Get current position
-            current_az, current_el = await self._get_position()
+            # Get the current position
+            current_az, current_el = await self.get_position()
 
             # Check if we've reached the target
             az_reached = abs(current_az - target_az) <= az_tolerance
@@ -343,16 +316,124 @@ class RotatorController:
             # Yield the current position and slewing status
             yield current_az, current_el, is_slewing
 
-    async def _set_position_start(self, az: float, el: float) -> bool:
-
+    async def stop(self) -> bool:
+        """Stop the rotator."""
         try:
-            self.logger.info(f"Setting rotator position to az={az}, el={el}")
-            status = await asyncio.to_thread(self.rotator.set_position, az, el)
-            self.logger.debug(f"Set position command: status={status}")
-
+            response = await self._send_command("S")
+            
+            # Check response
+            if response.startswith('RPRT'):
+                error_code = int(response.split()[1])
+                if error_code < 0:
+                    self.logger.error(f"Stop command failed: {response}")
+                    return False
+            
+            self.logger.info(f"Stop command: response={response}")
             return True
-
+            
         except Exception as e:
-            self.logger.error(f"Error setting rotator position: {e}")
-            self.logger.exception(e)
-            raise RuntimeError(f"Error setting rotator position: {e}")
+            self.logger.error(f"Error stopping rotator: {e}")
+            raise RuntimeError(f"Error stopping rotator: {e}")
+
+    async def set_rotation_speed(self, speed: float) -> bool:
+        """Set the rotation speed."""
+        try:
+            command = f"R {speed}"
+            response = await self._send_command(command)
+            
+            # Check response
+            if response.startswith('RPRT'):
+                error_code = int(response.split()[1])
+                if error_code < 0:
+                    self.logger.error(f"Set speed command failed: {response}")
+                    return False
+            
+            self.logger.info(f"Set speed command: response={response}")
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error setting rotation speed: {e}")
+            raise RuntimeError(f"Error setting rotation speed: {e}")
+
+    async def get_info(self) -> str:
+        """Get rotator information."""
+        try:
+            response = await self._send_command("_")
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Error getting rotator info: {e}")
+            raise RuntimeError(f"Error getting rotator info: {e}")
+
+    async def set_conf(self, parameter: str, value: str) -> bool:
+        """Set a configuration parameter."""
+        try:
+            command = f"set_conf {parameter} {value}"
+            response = await self._send_command(command)
+            
+            if response.startswith('RPRT'):
+                error_code = int(response.split()[1])
+                if error_code < 0:
+                    self.logger.error(f"Set configuration failed: {response}")
+                    return False
+            
+            return True
+            
+        except Exception as e:
+            self.logger.error(f"Error setting configuration: {e}")
+            raise RuntimeError(f"Error setting configuration: {e}")
+
+    async def get_conf(self, parameter: str) -> str:
+        """Get a configuration parameter."""
+        try:
+            command = f"get_conf {parameter}"
+            response = await self._send_command(command)
+            return response
+            
+        except Exception as e:
+            self.logger.error(f"Error getting configuration: {e}")
+            raise RuntimeError(f"Error getting configuration: {e}")
+
+    def __del__(self) -> None:
+        """Destructor - log a warning if still connected when object is garbage collected."""
+        if hasattr(self, 'connected') and self.connected and hasattr(self, 'logger'):
+            try:
+                # Just log a warning rather than trying to run async code
+                self.logger.warning("Object RotatorController being garbage collected while still connected")
+                
+                # If there's a synchronous way to close the underlying connection, use it
+                if hasattr(self, 'writer') and self.writer is not None:
+                    try:
+                        # Only close the writer synchronously
+                        self.writer.close()
+                    except Exception as e:
+                        self.logger.error(f"Error during cleanup: {e}")
+            except Exception:
+                # Avoid any exceptions in __del__
+                pass
+
+    @staticmethod
+    def get_error_message(error_code: int) -> str:
+        """Map error codes to messages."""
+        error_messages = {
+            0: "No error",
+            -1: "Invalid parameter",
+            -2: "Invalid configuration",
+            -3: "Memory shortage",
+            -4: "Function not implemented",
+            -5: "Communication timed out",
+            -6: "IO error",
+            -7: "Internal error",
+            -8: "Protocol error",
+            -9: "Command rejected",
+            -10: "String truncated",
+            -11: "Function not available",
+            -12: "Target not available",
+            -13: "Bus error",
+            -14: "Bus busy",
+            -15: "Invalid argument",
+            -16: "Invalid VFO",
+            -17: "Argument out of domain",
+        }
+        
+        return error_messages.get(error_code, f"Unknown error code: {error_code}")

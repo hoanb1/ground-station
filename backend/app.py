@@ -4,6 +4,7 @@ import os
 import httpx
 import rtlsdr
 import logging
+import threading
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task
@@ -20,7 +21,9 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
-from sdr import process_rtlsdr_data, active_sdr_clients, rtlsdr_devices, cleanup_sdr_session
+from sdr import process_rtlsdr_data, active_sdr_clients, rtlsdr_devices
+from waterfall import waterfall_socket_app, cleanup_sdr_session
+
 
 Payload.max_decode_packets = 50
 
@@ -215,6 +218,9 @@ async def serve_spa(request: Request, full_path: str):
 
     # For all other routes, serve the index.html file
     return FileResponse(os.path.join(static_files_dir, "index.html"))
+
+# Mount the waterfall Socket.IO app at the /waterfall path
+app.mount("/ws/waterfall", waterfall_socket_app)
 
 # root path
 app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")

@@ -532,3 +532,23 @@ export function getClassNamesBasedOnGridEditing(gridEditing, stringList) {
         return stringList.join(" ");
     }
 }
+
+export function humanizeNumber(number, decimals = 1) {
+    if (typeof number !== 'number' || isNaN(number)) {
+        return 'Invalid number';
+    }
+
+    const absNumber = Math.abs(number);
+    const sign = number < 0 ? '-' : '';
+
+    if (absNumber < 1000) {
+        return sign + absNumber.toString();
+    }
+
+    const suffixes = ['', 'K', 'M', 'B', 'T'];
+    const exponent = Math.min(Math.floor(Math.log10(absNumber) / 3), suffixes.length - 1);
+    const scaledNumber = absNumber / Math.pow(1000, exponent);
+
+    return sign + scaledNumber.toFixed(decimals) + suffixes[exponent];
+}
+

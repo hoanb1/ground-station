@@ -649,7 +649,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     return satellite_data
 
 
-async def satellite_tracking_task(sio: socketio.AsyncServer):
+async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
     """
     Periodically tracks and transmits satellite position and details along with user location data
     to the browser using Socket.IO.
@@ -659,6 +659,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
     location. Data retrieval is achieved through database queries for satellite and user
     information, and updates are transmitted via a Socket.IO communication channel.
 
+    :param stop_event:
+    :param stop_event:
     :param sio: The Socket.IO server instance for emitting satellite tracking data asynchronously.
     :type sio: socketio.AsyncServer
     :return: None
@@ -834,7 +836,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer):
             # check what hardware was chosen and set it up
             if current_rig_id is not None and rig_controller is None:
 
-                # rotator_controller was selected, and a rotator_controller is not setup, set it up now
+                # rig_controller was selected, and a rig_controller is not setup, set it up now
                 try:
                     rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=current_rig_id)
                     rotator_details = rig_details_reply['data']

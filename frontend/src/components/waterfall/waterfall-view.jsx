@@ -18,7 +18,13 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import {useDispatch, useSelector} from "react-redux";
-import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar, WaterfallStatusBar} from "../common/common.jsx";
+import {
+    getClassNamesBasedOnGridEditing,
+    humanizeFrequency,
+    humanizeNumber,
+    TitleBar,
+    WaterfallStatusBar
+} from "../common/common.jsx";
 import { IconButton } from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
@@ -58,6 +64,17 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     });
     const colorCache = useRef(new Map());
     const lastFrameTimeRef = useRef(0);
+    
+    // Add state for tracking metrics
+    const [eventMetrics, setEventMetrics] = useState({
+        eventsPerSecond: 0,
+        binsPerSecond: 0
+    });
+    
+    // Add refs for tracking event count and bin count
+    const eventCountRef = useRef(0);
+    const binCountRef = useRef(0);
+    const lastMetricUpdateRef = useRef(Date.now());
 
     const {
         colorMap,
@@ -486,9 +503,65 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, 12);
     };
 
+    // Effect to update the metrics every second
+    useEffect(() => {
+        const metricsInterval = setInterval(() => {
+            const now = Date.now();
+            const elapsedSeconds = (now - lastMetricUpdateRef.current) / 1000;
+            
+            if (elapsedSeconds > 0) {
+                setEventMetrics({
+                    eventsPerSecond: Math.round(eventCountRef.current / elapsedSeconds),
+                    binsPerSecond: Math.round(binCountRef.current / elapsedSeconds)
+                });
+                
+                // Reset counters
+                eventCountRef.current = 0;
+                binCountRef.current = 0;
+                lastMetricUpdateRef.current = now;
+            }
+        }, 1000); // Update metrics every second
+        
+        return () => {
+            clearInterval(metricsInterval);
+        };
+    }, []);
+
+    // Update the sdr-fft-data event handler to count events and bins
+    useEffect(() => {
+        // ... your other socket event handlers
+
+        socket.on('sdr-fft-data', (data) => {
+            // Increment event counter
+            eventCountRef.current += 1;
+            
+            // Add bin count (assume data is an array where each element is an FFT bin)
+            binCountRef.current += data.length;
+            
+            // Your existing code
+            waterfallDataRef.current.unshift(data);
+            
+            // Keep only the most recent rows based on canvas height
+            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
+                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
+            }
+        });
+
+        return () => {
+            // Clean up waterfall animation
+            cancelWaterfallAnimation();
+            
+            // Clean up socket listeners
+            socket.off('sdr-error');
+            socket.off('sdr-fft-data');
+            socket.off('sdr-status');
+        };
+    }, []);
+
+    // Update your return statement to display the metrics
     return (
         <>
-        <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall</TitleBar>
             <Box
                 sx={{
                     display: 'flex',
@@ -499,6 +572,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             >
                 <Paper elevation={3} sx={{p: 0, display: 'inline-block', width: '100%', }}>
                     <ButtonGroup variant="contained" size="small">
+                        {/* Your existing buttons */}
                         <Button
                             startIcon={<PlayArrowIcon/>}
                             disabled={isStreaming}
@@ -531,8 +605,11 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             Settings
                         </Button>
                     </ButtonGroup>
+                    
+
                 </Paper>
             </Box>
+            
             <Box
                 sx={{
                     width: '100%',
@@ -597,13 +674,13 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             </Box>
             <WaterfallStatusBar>{errorMessage? <Typography color="error" variant="body2" sx={{ mb: 2 }}>
                 Error: {errorMessage}
-            </Typography>: isStreaming? `f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`: `stopped`}</WaterfallStatusBar>
+            </Typography>: isStreaming? `events/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`: `stopped`}
+
+
+            </WaterfallStatusBar>
+
             <WaterFallSettingsDialog/>
         </>
-    );
-}, (prevProps, nextProps) => {
-    return (
-        prevProps.deviceId === nextProps.deviceId
     );
 });
 

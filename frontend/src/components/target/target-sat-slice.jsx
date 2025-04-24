@@ -310,19 +310,7 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
-            let changes = [];
-
-
-            if (state.satelliteSelectOpen === true || state.satelliteGroupSelectOpen === true) {
-                //console.info("select is open, NOT updating tracking state");
-            } else {
-                //console.info("select is close, updating tracking state");
-                //state.groupId = action.payload['tracking_state']['group_id'];
-                //state.satelliteId = action.payload['tracking_state']['norad_id'];
-            }
-
             if (action.payload['tracking_state']) {
-                changes.push('tracking_state');
                 state.trackingState = action.payload['tracking_state'];
                 //state.groupId = action.payload['tracking_state']['group_id'];
                 //state.satelliteId = action.payload['tracking_state']['norad_id'];
@@ -331,7 +319,6 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['ui_tracker_state']) {
-                changes.push('ui_tracker_state');
                 state.satGroups = action.payload['ui_tracker_state']['groups'];
                 state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
                 state.availableTransmitters = action.payload['ui_tracker_state']['transmitters'];
@@ -343,28 +330,20 @@ const targetSatTrackSlice = createSlice({
             }
 
             if (action.payload['satellite_data']) {
-                changes.push('satellite_data');
-                state.satelliteData = {
-                    details: action.payload['satellite_data']['details'],
-                    position: action.payload['satellite_data']['position'],
-                    paths: action.payload['satellite_data']['paths'],
-                    coverage: action.payload['satellite_data']['coverage'],
-                    transmitters: action.payload['satellite_data']['transmitters'],
-                };
+                state.satelliteData.details = action.payload['satellite_data']['details'];
+                state.satelliteData.position = action.payload['satellite_data']['position'];
+                state.satelliteData.paths = action.payload['satellite_data']['paths'];
+                state.satelliteData.coverage = action.payload['satellite_data']['coverage'];
+                state.satelliteData.transmitters = action.payload['satellite_data']['transmitters'];
             }
 
             if (action.payload['rotator_data']) {
-                changes.push('rotator_data');
                 state.rotatorData = action.payload['rotator_data'];
             }
 
             if (action.payload['rig_data']) {
-                changes.push('rig_data');
                 state.rigData = action.payload['rig_data'];
             }
-
-            console.info("satelliteData changes: ", changes);
-
         },
         setSatellitePasses(state, action) {
             state.satellitePasses = action.payload;

@@ -64,7 +64,6 @@ function uponConnectionToBackEnd(socket) {
     store.dispatch(getTrackingStateFromBackend({socket}));
     store.dispatch(getOverviewMapSettings({socket}));
     store.dispatch(getTargetMapSettings({socket}));
-
 }
 
 export default function App(props) {
