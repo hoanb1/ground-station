@@ -48,7 +48,7 @@ def cleanup_sdr_session(sid):
     This function performs the following cleanup tasks:
     - Cancels any running processing tasks
     - Releases the RTLSDR device if no other clients are using it
-    - Removes the client from active clients list
+    - Removes the client from the active clients list
 
     Args:
         sid: Client session ID to clean up

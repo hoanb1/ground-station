@@ -396,8 +396,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             // You could optionally add a vertical line at bandscopeAxisYWidth here
             ctx.strokeStyle = 'rgb(100, 105, 112, 1)';
             ctx.beginPath();
-            ctx.moveTo(bandscopeAxisYWidth-1, 0);
-            ctx.lineTo(bandscopeAxisYWidth, 1);
+            ctx.moveTo(bandscopeAxisYWidth - 1, 0);
+            ctx.lineTo(bandscopeAxisYWidth - 1, 1);
             ctx.lineWidth = 2;
             ctx.stroke();
 
@@ -440,7 +440,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
             // Clear the left margin (0 to bandscopeAxisYWidth pixels)
             ctx.fillStyle = 'rgb(28, 28, 28, 1)';
-            ctx.fillRect(0, 0, bandscopeAxisYWidth, 1);
+            ctx.fillRect(0, 0, bandscopeAxisYWidth - 2, 1);
         }
     }
 
