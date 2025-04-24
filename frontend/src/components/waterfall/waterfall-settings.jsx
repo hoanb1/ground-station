@@ -164,24 +164,10 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 size={"small"}
                             />
                         </Box>
-                        <Box sx={{mb: 2, width: '300px'}}>
-                            <Typography variant="body2" gutterBottom>
+                        <Box sx={{mb: 2, textAlign: 'center'}}>
+                            <Typography variant="body2" gutterBottom align="center">
                                 Center Frequency: {formatFrequency(centerFrequency)}
                             </Typography>
-                            <FormControl fullWidth={true} variant="outlined" size="small" style={{paddingRight: '20px'}}>
-                                <TextField
-                                    type="number"
-                                    value={localCenterFrequency}
-                                    onChange={(e) => {
-                                        setLocalCenterFrequency(Number(e.target.value));
-                                        dispatch(setCenterFrequency(Number(e.target.value)));
-                                    }}
-                                    disabled={false}
-                                    fullWidth
-                                    size="small"
-                                    variant="outlined"
-                                />
-                            </FormControl>
                         </Box>
 
                     </AccordionDetails>
@@ -270,9 +256,10 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 value={localDbRange}
                                 onChange={(e, newValue) => {
                                     setLocalDbRange(newValue);
+                                    dispatch(setDbRange(newValue));
                                 }}
                                 onChangeCommitted={(e, newValue) => {
-                                    dispatch(setDbRange(newValue));
+
                                 }}
                                 valueLabelDisplay="auto"
                                 min={-110}

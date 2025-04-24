@@ -13,7 +13,7 @@ class RotatorController:
             host: str = "127.0.0.1",
             port: int = 4533,
             verbose: bool = False,
-            timeout: float = 3.0,
+            timeout: float = 5.0,
     ):
         # Set up logging
         device_path = f"{host}:{port}"

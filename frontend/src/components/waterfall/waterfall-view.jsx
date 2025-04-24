@@ -1,4 +1,4 @@
-import React, { useEffect, useRef, useState } from 'react';
+import React, {useEffect, useRef, useState} from 'react';
 import {
     Box,
     Typography,
@@ -12,8 +12,9 @@ import {
     Button,
     ButtonGroup,
     Stack,
+    Divider,
 } from '@mui/material';
-import { TransformWrapper, TransformComponent } from "react-zoom-pan-pinch";
+import {TransformWrapper, TransformComponent} from "react-zoom-pan-pinch";
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -25,7 +26,7 @@ import {
     TitleBar,
     WaterfallStatusBar
 } from "../common/common.jsx";
-import { IconButton } from '@mui/material';
+import {IconButton} from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
 import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
@@ -52,26 +53,29 @@ import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
-    const { socket } = useSocket();
+    const {socket} = useSocket();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
+    const bandscopeCanvasRef = useRef(null); // New ref for bandscope canvas
     const canvasDataRef = useRef(null);
-    const waterfallDataRef = useRef([]);
+    const waterfallDataRef = useRef(new Array(1000).fill(-120));
     const animationFrameRef = useRef(null);
+    const bandscopeAnimationFrameRef = useRef(null); // New ref for bandscope animation
     const visualSettingsRef = useRef({
-        dbRange: [-120, -20],
+        dbRange: [-120, 30],
         colorMap: 'magma',
     });
     const colorCache = useRef(new Map());
 
     const lastFrameTimeRef = useRef(0);
-    
+    const lastBandscopeFrameTimeRef = useRef(0); // New ref for bandscope timing
+
     // Add state for tracking metrics
     const [eventMetrics, setEventMetrics] = useState({
         eventsPerSecond: 0,
         binsPerSecond: 0
     });
-    
+
     // Add refs for tracking event count and bin count
     const eventCountRef = useRef(0);
     const binCountRef = useRef(0);
@@ -97,11 +101,16 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
+    const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(70);
 
-    const cancelWaterfallAnimation = () => {
+    const cancelAnimations = () => {
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
+        }
+        if (bandscopeAnimationFrameRef.current) {
+            cancelAnimationFrame(bandscopeAnimationFrameRef.current);
+            bandscopeAnimationFrameRef.current = null;
         }
     }
 
@@ -117,7 +126,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     }, [dbRange, colorMap]);
 
     useEffect(() => {
-        // Initialize canvas
+        // Initialize canvases
         if (waterFallCanvasRef.current) {
             const canvas = waterFallCanvasRef.current;
             const ctx = canvas.getContext('2d');
@@ -125,44 +134,52 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
-    socket.on('disconnect', () => {
-        cancelWaterfallAnimation();
-        dispatch(setIsStreaming(false));
-    });
-
-    socket.on('sdr-error', (error) => {
-        cancelWaterfallAnimation();
-        dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
-        dispatch(setIsStreaming(false));
-        enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
-            variant: 'error'
-        });
-    });
-
-    socket.on('sdr-status', (data) => {
-        console.info(`sdr-status`, data);
-    })
-
-    socket.on('sdr-fft-data', (data) => {
-        // Add new FFT data to the waterfall buffer
-        waterfallDataRef.current.unshift(data);
-
-        // Keep only the most recent rows based on canvas height
-        if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
-            waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
+        if (bandscopeCanvasRef.current) {
+            const canvas = bandscopeCanvasRef.current;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = 'black';
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
-    });
 
-    return () => {
-        // Clean up waterfall animation
-        cancelWaterfallAnimation();
+        socket.on('disconnect', () => {
+            cancelAnimations();
+            dispatch(setIsStreaming(false));
+        });
 
-        // Clean up socket listeners
-        socket.off('sdr-error');
-        socket.off('sdr-fft-data');
-        socket.off('sdr-status');
-    };
+        socket.on('sdr-error', (error) => {
+            cancelAnimations();
+            dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
+            dispatch(setIsStreaming(false));
+            enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
+                variant: 'error'
+            });
+        });
 
+        socket.on('sdr-status', (data) => {
+            console.info(`sdr-status`, data);
+        });
+
+        socket.on('sdr-fft-data', (data) => {
+            // Add new FFT data to the waterfall buffer
+            waterfallDataRef.current.unshift(data);
+
+            // Keep only the most recent rows based on canvas height
+            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
+                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
+            }
+        });
+
+        drawBandscope();
+
+        return () => {
+            // Clean up animations
+            cancelAnimations();
+
+            // Clean up socket listeners
+            socket.off('sdr-error');
+            socket.off('sdr-fft-data');
+            socket.off('sdr-status');
+        };
     }, []);
 
     useEffect(() => {
@@ -177,7 +194,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             });
         }
     }, [centerFrequency, sampleRate, fftSize, gain]);
-    
+
     const startStreaming = () => {
         if (!isStreaming) {
             dispatch(setErrorMessage(''));
@@ -193,8 +210,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             socket.emit('sdr_data', 'start-streaming');
             dispatch(setIsStreaming(true));
 
-            // Start the rendering loop
-            renderLoop();
+            // Start both rendering loops
+            renderWaterfallLoop();
+            renderBandscopeLoop();
         }
     };
 
@@ -202,18 +220,28 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         if (isStreaming) {
             socket.emit('sdr_data', 'stop-streaming');
             dispatch(setIsStreaming(false));
-            cancelWaterfallAnimation();
+            cancelAnimations();
         }
     };
 
-    function renderLoop(timestamp) {
+    function renderWaterfallLoop(timestamp) {
         // Limit to targetFPSRef.current
         if (!lastFrameTimeRef.current || timestamp - lastFrameTimeRef.current >= 1000 / targetFPSRef.current) {
             drawWaterfall();
             lastFrameTimeRef.current = timestamp;
         }
 
-        animationFrameRef.current = requestAnimationFrame(renderLoop);
+        animationFrameRef.current = requestAnimationFrame(renderWaterfallLoop);
+    }
+
+    function renderBandscopeLoop(timestamp) {
+        // Limit to targetFPSRef.current
+        if (!lastBandscopeFrameTimeRef.current || timestamp - lastBandscopeFrameTimeRef.current >= 1000 / targetFPSRef.current) {
+            drawBandscope();
+            lastBandscopeFrameTimeRef.current = timestamp;
+        }
+
+        bandscopeAnimationFrameRef.current = requestAnimationFrame(renderBandscopeLoop);
     }
 
     // Auto-scale the color range based on the recent FFT data
@@ -236,7 +264,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         }
 
         // Add some padding to the range
-        min = Math.floor(min + 5);
+        min = Math.floor(min);
         max = Math.ceil(Math.max(max + 1, 0));
 
         dispatch(setDbRange([min, max]));
@@ -258,7 +286,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             }
         };
     }, [isStreaming, autoDBRange]);
-    
+
     function drawWaterfall() {
         const canvas = waterFallCanvasRef.current;
         if (!canvas || waterfallDataRef.current.length === 0) {
@@ -274,43 +302,158 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             const ctx = canvas.getContext('2d');
 
             // Move existing pixels DOWN (instead of up)
-            // This line shifts the existing content downward
             ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height - 1, 0, 1, canvas.width, canvas.height - 1);
 
             // Get imageData for the new row only
             const imageData = ctx.createImageData(canvas.width, 1);
             const data = imageData.data;
 
-            // Only scroll the waterfall when we've accumulated enough rows
+            // Clear the left margin (0 to bandscopeAxisYWidth pixels)
+            ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
+            ctx.fillRect(0, 0, bandscopeAxisYWidth, 1);
+
             if (waterfallDataRef.current.length > 0) {
                 const fftRow = waterfallDataRef.current[0];
 
-                // Calculate a scaling factor to fit all frequency bins to canvas width
-                const skipFactor = fftRow.length / canvas.width;
+                // Calculate a scaling factor to fit all frequency bins to available width
+                // Important: Use canvas.width - bandscopeAxisYWidth as the target width
+                const skipFactor = fftRow.length / (canvas.width - bandscopeAxisYWidth);
 
-                // Write directly to pixel data (much faster than fillRect)
-                for (let x = 0; x < canvas.width; x++) {
+                // For each pixel position in the display width (starting from bandscopeAxisYWidth)
+                for (let x = 0; x < canvas.width - bandscopeAxisYWidth; x++) {
                     // Map canvas pixel to the appropriate FFT bin using scaling
                     const fftIndex = Math.min(Math.floor(x * skipFactor), fftRow.length - 1);
                     const amplitude = fftRow[fftIndex];
 
                     const rgb = getColorForPower(amplitude, visualSettingsRef.current.colorMap, visualSettingsRef.current.dbRange);
 
-                    // Each pixel uses 4 array positions (r,g,b,a)
-                    const pixelIndex = x * 4;
+                    // Calculate position in the image data array
+                    // Offset by bandscopeAxisYWidth to start 70 pixels from the left
+                    const pixelIndex = (x + bandscopeAxisYWidth) * 4;
                     data[pixelIndex] = rgb.r;     // R
                     data[pixelIndex + 1] = rgb.g; // G
                     data[pixelIndex + 2] = rgb.b; // B
-                    data[pixelIndex + 3] = 255;   // Alpha (fully opaque)
+                    data[pixelIndex + 3] = 255;   // Alpha
                 }
 
-                // Put the new row at the TOP of the canvas (instead of bottom)
+                // Put the new row at the TOP of the canvas
                 ctx.putImageData(imageData, 0, 0);
             }
-            //drawFrequencyScale(ctx, canvas.width, centerFrequency, sampleRate);
+
+            // You could optionally add a vertical line at bandscopeAxisYWidth here
+            //ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
+            //ctx.beginPath();
+            //ctx.moveTo(bandscopeAxisYWidth, 0);
+            //ctx.lineTo(bandscopeAxisYWidth, 1);
+            //ctx.stroke();
         }
     }
 
+
+    
+    function drawBandscope() {
+        const canvas = bandscopeCanvasRef.current;
+        // if (!canvas || waterfallDataRef.current.length === 0) {
+        //     return;
+        // }
+
+        const ctx = canvas.getContext('2d');
+        const width = canvas.width;
+        const height = canvas.height;
+
+        // Clear the canvas
+        ctx.fillStyle = 'black';
+        ctx.fillRect(0, 0, width, height);
+
+        // Get the most recent FFT data
+        const fftData = waterfallDataRef.current[0];
+
+        // Draw the dB axis (y-axis)
+        drawDbAxis(ctx, width, height, visualSettingsRef.current.dbRange);
+
+        // Draw the FFT data as a line graph
+        drawFftLine(ctx, fftData, width, height, visualSettingsRef.current.dbRange);
+    }
+
+    // Helper function to draw the dB axis
+    function drawDbAxis(ctx, width, height, [minDb, maxDb]) {
+
+        // Draw background for the axis area
+        ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
+        ctx.fillRect(0, 0, bandscopeAxisYWidth, height);
+
+        // Draw vertical line to separate axis from plot
+        ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
+        ctx.beginPath();
+        ctx.moveTo(bandscopeAxisYWidth, 0);
+        ctx.lineTo(bandscopeAxisYWidth, height);
+        ctx.stroke();
+
+        // Draw dB marks and labels
+        ctx.fillStyle = 'white';
+        ctx.font = '16px Monospace';
+        ctx.textAlign = 'right';
+
+        // Calculate step size based on range
+        const dbRange = maxDb - minDb;
+        const steps = Math.min(10, dbRange); // Maximum 10 steps
+        const stepSize = Math.ceil(dbRange / steps);
+
+        for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
+            const y = height - ((db - minDb) / (maxDb - minDb)) * height;
+
+            // Draw horizontal grid line
+            ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+            ctx.beginPath();
+            ctx.moveTo(bandscopeAxisYWidth, y);
+            ctx.lineTo(width, y);
+            ctx.stroke();
+
+            // Draw label
+            ctx.fillText(`${db} dB`, bandscopeAxisYWidth - 5, y + 3);
+        }
+
+        // Draw frequency scale at the bottom
+        drawFrequencyScale(ctx, width, centerFrequency, sampleRate);
+    }
+
+    // Helper function to draw the FFT data as a line
+    function drawFftLine(ctx, fftData, width, height, [minDb, maxDb]) {
+
+        // Main line in green
+        ctx.strokeStyle = 'rgba(123,162,255,0.8)';
+        ctx.lineWidth = 2;
+        ctx.beginPath();
+
+        const graphWidth = width - bandscopeAxisYWidth;
+
+        // Calculate a scaling factor to fit all frequency bins to graph width
+        const skipFactor = fftData.length / graphWidth;
+
+        for (let x = 0; x < graphWidth; x++) {
+            // Map canvas pixel to the appropriate FFT bin using scaling
+            const fftIndex = Math.min(Math.floor(x * skipFactor), fftData.length - 1);
+            const amplitude = fftData[fftIndex];
+
+            // Normalize amplitude to canvas height using dB range
+            const normalizedValue = Math.max(0, Math.min(1, (amplitude - minDb) / (maxDb - minDb)));
+            const y = height - (normalizedValue * height);
+
+            if (x === 0) {
+                ctx.moveTo(bandscopeAxisYWidth + x, y);
+            } else {
+                ctx.lineTo(bandscopeAxisYWidth + x, y);
+            }
+        }
+
+        ctx.stroke();
+
+        // Draw fill below the line for better visibility
+        ctx.fillStyle = 'rgba(80,182,255,0.1)';
+        ctx.lineTo(width, height);
+        ctx.lineTo(bandscopeAxisYWidth, height);
+        ctx.fill();
+    }
 
     // Get color based on power level and selected color map
     const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
@@ -414,15 +557,19 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 // Classic jet colormap (blue -> cyan -> green -> yellow -> red)
                 let jetRGB;
                 if (normalizedValue < 0.125) {
-                    jetRGB = { r: 0, g: 0, b: Math.floor(normalizedValue * 8 * 255) };
+                    jetRGB = {r: 0, g: 0, b: Math.floor(normalizedValue * 8 * 255)};
                 } else if (normalizedValue < 0.375) {
-                    jetRGB = { r: 0, g: Math.floor((normalizedValue - 0.125) * 4 * 255), b: 255 };
+                    jetRGB = {r: 0, g: Math.floor((normalizedValue - 0.125) * 4 * 255), b: 255};
                 } else if (normalizedValue < 0.625) {
-                    jetRGB = { r: Math.floor((normalizedValue - 0.375) * 4 * 255), g: 255, b: Math.floor(255 - (normalizedValue - 0.375) * 4 * 255) };
+                    jetRGB = {
+                        r: Math.floor((normalizedValue - 0.375) * 4 * 255),
+                        g: 255,
+                        b: Math.floor(255 - (normalizedValue - 0.375) * 4 * 255)
+                    };
                 } else if (normalizedValue < 0.875) {
-                    jetRGB = { r: 255, g: Math.floor(255 - (normalizedValue - 0.625) * 4 * 255), b: 0 };
+                    jetRGB = {r: 255, g: Math.floor(255 - (normalizedValue - 0.625) * 4 * 255), b: 0};
                 } else {
-                    jetRGB = { r: Math.floor(255 - (normalizedValue - 0.875) * 8 * 255), g: 0, b: 0 };
+                    jetRGB = {r: Math.floor(255 - (normalizedValue - 0.875) * 8 * 255), g: 0, b: 0};
                 }
 
                 colorCache.current.set(cacheKey, jetRGB);
@@ -477,37 +624,41 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 colorCache.current.set(cacheKey, cosmicRGB);
                 return cosmicRGB;
 
-            default:
+            case 'greyscale':
                 // Default grayscale
                 const intensity = Math.floor(normalizedValue * 255);
-                const greyRGB = { r: intensity, g: intensity, b: intensity };
+                const greyRGB = {r: intensity, g: intensity, b: intensity};
                 colorCache.current.set(cacheKey, greyRGB);
                 return greyRGB;
         }
-    };
+    }
 
-
-    // Draw frequency scale along the top
+    // Draw frequency scale along the bottom
     const drawFrequencyScale = (ctx, width, centerFreq, sRate) => {
         const startFreq = centerFreq - sRate / 2;
         const endFreq = centerFreq + sRate / 2;
 
-        ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-        ctx.fillRect(0, 0, width, 20);
+        const height = 30; // Height of the frequency scale area
 
-        ctx.font = '10px Arial';
+        // Draw background for scale
+        ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
+        ctx.fillRect(bandscopeAxisYWidth, ctx.canvas.height - height, width - bandscopeAxisYWidth, height);
+
+        ctx.font = '16px Monospace';
         ctx.fillStyle = 'white';
 
         // Draw center frequency
+        const centerX = bandscopeAxisYWidth + (width - bandscopeAxisYWidth) / 2;
         ctx.textAlign = 'center';
-        ctx.fillText(`${(centerFreq / 1e6).toFixed(3)} MHz`, width / 2, 12);
+        ctx.fillText(`${(centerFreq / 1e6).toFixed(3)} MHz`, centerX, ctx.canvas.height - 6);
 
-        // Draw start and end frequencies
+        // Draw start frequency
         ctx.textAlign = 'left';
-        ctx.fillText(`${(startFreq / 1e6).toFixed(3)} MHz`, 5, 12);
+        ctx.fillText(`${(startFreq / 1e6).toFixed(3)} MHz`, bandscopeAxisYWidth + 5, ctx.canvas.height - 6);
 
+        // Draw end frequency
         ctx.textAlign = 'right';
-        ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, 12);
+        ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, ctx.canvas.height - 6);
     };
 
     // Effect to update the metrics every second
@@ -515,20 +666,20 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         const metricsInterval = setInterval(() => {
             const now = Date.now();
             const elapsedSeconds = (now - lastMetricUpdateRef.current) / 1000;
-            
+
             if (elapsedSeconds > 0) {
                 setEventMetrics({
                     eventsPerSecond: Math.round(eventCountRef.current / elapsedSeconds),
                     binsPerSecond: Math.round(binCountRef.current / elapsedSeconds)
                 });
-                
+
                 // Reset counters
                 eventCountRef.current = 0;
                 binCountRef.current = 0;
                 lastMetricUpdateRef.current = now;
             }
         }, 1000); // Update metrics every second
-        
+
         return () => {
             clearInterval(metricsInterval);
         };
@@ -536,18 +687,16 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     // Update the sdr-fft-data event handler to count events and bins
     useEffect(() => {
-        // ... your other socket event handlers
-
         socket.on('sdr-fft-data', (data) => {
             // Increment event counter
             eventCountRef.current += 1;
-            
-            // Add bin count (assume data is an array where each element is an FFT bin)
+
+            // Add bin count
             binCountRef.current += data.length;
-            
+
             // Your existing code
             waterfallDataRef.current.unshift(data);
-            
+
             // Keep only the most recent rows based on canvas height
             if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
                 waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
@@ -555,20 +704,17 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         });
 
         return () => {
-            // Clean up waterfall animation
-            cancelWaterfallAnimation();
-            
-            // Clean up socket listeners
+            cancelAnimations();
             socket.off('sdr-error');
             socket.off('sdr-fft-data');
             socket.off('sdr-status');
         };
     }, []);
 
-    // Update your return statement to display the metrics
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall &
+                Spectrum</TitleBar>
             <Box
                 sx={{
                     display: 'flex',
@@ -577,9 +723,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     flexWrap: 'wrap'
                 }}
             >
-                <Paper elevation={3} sx={{p: 0, display: 'inline-block', width: '100%', }}>
+                <Paper elevation={3} sx={{p: 0, display: 'inline-block', width: '100%',}}>
                     <ButtonGroup variant="contained" size="small">
-                        {/* Your existing buttons */}
                         <Button
                             startIcon={<PlayArrowIcon/>}
                             disabled={isStreaming}
@@ -612,78 +757,68 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             Settings
                         </Button>
                     </ButtonGroup>
-                    
-
                 </Paper>
             </Box>
-            
+
+            {/* Container for both bandscope and waterfall */}
             <Box
                 sx={{
                     width: '100%',
                     height: '100%',
+                    display: 'flex',
+                    flexDirection: 'column',
                     bgcolor: 'black',
                     position: 'relative',
                     overflow: 'hidden',
                     borderRadius: 1
                 }}
             >
-                <TransformWrapper
-                    limitToBounds={true}
-                    disablePadding={true}
-                    panning={{
-                        disabled: true,
-                        wheelPanning: false,
-                        disabledAxisY: true,
+                {/* Bandscope (spectrum) section */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        height: '20%',
+                        position: 'relative',
+                        borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
                     }}
-                    initialScale={1}
-                    initialPositionX={0}
-                    initialPositionY={0}
-                    minScale={1}
-                    maxScale={10}
-                    wheel={{ step: 0.1 }}
                 >
-                    {({ zoomIn, zoomOut, resetTransform }) => (
-                        <>
-                            <Box sx={{ 
-                                position: 'absolute', 
-                                top: 10, 
-                                right: 10, 
-                                zIndex: 10,
-                                backgroundColor: 'rgba(0,0,0,0.5)',
-                                borderRadius: '4px',
-                                padding: '4px'
-                            }}>
-                                <ButtonGroup orientation="vertical" size="small">
-                                    <IconButton onClick={() => zoomIn()} sx={{ color: 'white' }}>
-                                        <ZoomInIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => zoomOut()} sx={{ color: 'white' }}>
-                                        <ZoomOutIcon />
-                                    </IconButton>
-                                    <IconButton onClick={() => resetTransform()} sx={{ color: 'white' }}>
-                                        <RestartAltIcon />
-                                    </IconButton>
-                                </ButtonGroup>
-                            </Box>
-                            <TransformComponent>
-                                <div style={{position: 'relative', width: '100%', height: '100%'}}>
-                                    <canvas
-                                        ref={waterFallCanvasRef}
-                                        width={2048}
-                                        height={2000}
-                                        style={{ width: '100%', height: '100%' }}
-                                    />
-                                </div>
-                            </TransformComponent>
-                        </>
-                    )}
-                </TransformWrapper>
+                    <canvas
+                        ref={bandscopeCanvasRef}
+                        width={2048}
+                        height={300}
+                        style={{width: '100%', height: '100%'}}
+                    />
+                </Box>
+
+                {/* Waterfall section */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        height: '80%',
+                        position: 'relative',
+                    }}
+                >
+                    <>
+                        <div style={{position: 'relative', width: '100%', height: '100%'}}>
+                            <canvas
+                                ref={waterFallCanvasRef}
+                                width={2048}
+                                height={1000}
+                                style={{width: '100%', height: '100%'}}
+                            />
+                        </div>
+                    </>
+                </Box>
             </Box>
-            <WaterfallStatusBar>{errorMessage? <Typography color="error" variant="body2" sx={{ mb: 2 }}>
-                Error: {errorMessage}
-            </Typography>: isStreaming? `events/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`: `stopped`}
-
-
+            <WaterfallStatusBar>
+                {errorMessage ?
+                    <Typography color="error" variant="body2" sx={{mb: 2}}>
+                        Error: {errorMessage}
+                    </Typography>
+                    : isStreaming ?
+                        `events/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
+                        : `stopped`
+                }
             </WaterfallStatusBar>
 
             <WaterFallSettingsDialog/>
