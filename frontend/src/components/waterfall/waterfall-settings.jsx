@@ -26,6 +26,7 @@ import {
     setSettingsDialogOpen,
     setAutoDBRange,
     setBiasT,
+    setFFTWindow,
 } from './waterfall-slice.jsx'
 import {
     Box,
@@ -105,6 +106,8 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         tunerAgc,
         rtlAgc,
         rtlGains,
+        fftWindow,
+        fftWindows,
     } = useSelector((state) => state.waterfall);
 
     const [expandedPanels, setExpandedPanels] = React.useState(['panel1']);
@@ -202,6 +205,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                             </Typography>
 
                             <Slider
+                                size={'small'}
                                 step={null}
                                 marks={gainMarks}
                                 value={localGain}
@@ -228,6 +232,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                          variant="filled" size="small">
                                 <InputLabel>Sample Rate</InputLabel>
                                 <Select
+                                    size={'small'}
                                     value={localSampleRate}
                                     onChange={(e) => {
                                         setLocalSampleRate(e.target.value);
@@ -260,6 +265,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                             <FormControlLabel
                                 control={
                                     <Switch
+                                        size={'small'}
                                         checked={biasT}
                                         onChange={(e) => {
                                             dispatch(setBiasT(e.target.checked));
@@ -273,6 +279,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                             <FormControlLabel
                                 control={
                                     <Switch
+                                        size={'small'}
                                         checked={tunerAgc}
                                         onChange={(e) => {
                                             dispatch(setTunerAgc(e.target.checked));
@@ -286,6 +293,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                             <FormControlLabel
                                 control={
                                     <Switch
+                                        size={'small'}
                                         checked={rtlAgc}
                                         onChange={(e) => {
                                             dispatch(setRtlAgc(e.target.checked));
@@ -304,9 +312,28 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     </AccordionSummary>
                     <AccordionDetails>
                         <Box sx={{mb: 2}}>
+                            <Typography variant="body2" gutterBottom>
+                                Target FPS: {targetFPS}
+                            </Typography>
+                            <Slider
+                                size={'small'}
+                                value={targetFPS}
+                                min={5}
+                                max={60}
+                                step={1}
+                                onChange={(_, value) => {
+                                    dispatch(setTargetFPS(value));
+                                }}
+                                disabled={false}
+                                aria-labelledby="target-fps-slider"
+                            />
+                        </Box>
+
+                        <Box sx={{mb: 2}}>
                             <FormControlLabel
                                 control={
                                     <Switch
+                                        size={'small'}
                                         checked={localAutoDBRange}
                                         onChange={(e) => {
                                             setLocalAutoDBRange(e.target.checked);
@@ -320,6 +347,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 2 }}>
                             <Typography sx={{ mr: 1, width: '60px', textAlign: 'left', fontFamily: 'Monospace' }}>{dbRange[0]}</Typography>
                             <Slider
+                                size={'small'}
                                 value={localDbRange}
                                 onChange={(e, newValue) => {
                                     setLocalDbRange(newValue);
@@ -342,6 +370,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                          size="small">
                                 <InputLabel>FFT Size</InputLabel>
                                 <Select
+                                    size={'small'}
                                     value={localFFTSize}
                                     onChange={(e) => {
                                         setLocalFFTSize(e.target.value);
@@ -361,6 +390,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                          size="small">
                                 <InputLabel>Color Map</InputLabel>
                                 <Select
+                                    size={'small'}
                                     value={localColorMap}
                                     onChange={(e) => {
                                         setLocalColorMap(e.target.value);
@@ -376,23 +406,27 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
                         </Box>
-                        <Box sx={{mb: 2}}>
-                            <Typography variant="body2" gutterBottom>
-                                Target FPS: {targetFPS}
-                            </Typography>
-                            <Slider
-                                value={targetFPS}
-                                min={5}
-                                max={60}
-                                step={1}
-                                onChange={(_, value) => {
-                                    dispatch(setTargetFPS(value));
-                                }}
-                                disabled={false}
-                                aria-labelledby="target-fps-slider"
-                            />
-                        </Box>
 
+                        <Box sx={{mb: 2}}>
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                         variant="filled" size="small">
+                                <InputLabel>FFT Window</InputLabel>
+                                <Select
+                                    size={'small'}
+                                    value={fftWindow}
+                                    onChange={(e) => {
+                                        dispatch(setFFTWindow(e.target.value));
+                                    }}
+                                    disabled={false}
+                                    variant={'filled'}>
+                                    {fftWindows.map(window => (
+                                        <MenuItem key={window} value={window}>
+                                            {window.charAt(0).toUpperCase() + window.slice(1)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Box>
                     </AccordionDetails>
                 </Accordion>
 

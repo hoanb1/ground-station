@@ -21,16 +21,31 @@ waterfall_sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*'
 waterfall_socket_app = socketio.ASGIApp(waterfall_sio)
 
 
-def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None, gain=None, fft_size=1024):
-    """Store new SDR client session parameters.
+def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None, gain=None, fft_size=1024, fft_window='hanning'):
+    """
+    Adds a new SDR (Software-Defined Radio) session to the active SDR sessions dictionary with
+    the given session details. The session is uniquely identified by the `sid` key, and the
+    associated configuration parameters such as device ID, center frequency, sampling rate, FFT
+    size, gain, and FFT window are stored to manage the SDR client's properties. When the session
+    is created, the `task` attribute is initialized to None until further assigned.
 
-    Args:
-        sid: Client session ID
-        device_id: RTL-SDR device identifier
-        center_frequency: Center frequency in Hz
-        sample_rate: Sample rate in Hz
-        gain: Device gain in dB
-        fft_size: FFT size for spectral analysis
+    :param sid: Unique session identifier for the SDR client.
+    :type sid: str
+    :param device_id: Identifier for the SDR device, defaults to None if not provided.
+    :type device_id: str, optional
+    :param center_frequency: Center frequency of the SDR in Hz, defaults to None if not provided.
+    :type center_frequency: float, optional
+    :param sample_rate: Sample rate of the SDR in samples per second, defaults to None if not
+        provided.
+    :type sample_rate: float, optional
+    :param gain: Gain setting for the SDR, defaults to None if not provided.
+    :type gain: float, optional
+    :param fft_size: Size of the FFT (Fast Fourier Transform) window to be used in processing,
+        defaults to 1024.
+    :type fft_size: int, optional
+    :param fft_window: Name of the FFT window algorithm, defaults to 'hanning'.
+    :type fft_window: str, optional
+    :return: None
     """
     active_sdr_clients[sid] = {
         'device_id': device_id,
@@ -39,6 +54,7 @@ def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None
         'gain': gain,
         'fft_size': fft_size,
         'task': None,
+        'fft_window': fft_window,
     }
 
 

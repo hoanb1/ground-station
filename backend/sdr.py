@@ -11,17 +11,14 @@ from waterfall import active_sdr_clients, rtlsdr_devices
 # configure new logger
 logger = logging.getLogger('sdr-data-process')
 
-
-# FFT processing parameters
-# Available window functions:
-# - np.hanning: Reduces spectral leakage, good balance between freq resolution and amplitude accuracy
-# - np.hamming: Similar to Hanning but with different coefficients
-# - np.blackman: Better sidelobe suppression than Hanning but wider main lobe
-# - np.kaiser: Parameterized window with adjustable sidelobe levels
-# - np.bartlett: Triangular window with linear slopes
-# - np.flattop: Excellent amplitude accuracy but poor frequency resolution
-# - np.boxcar: Rectangular window (no windowing), best frequency resolution but high spectral leakage
-WINDOW_FUNCTION = np.hanning
+# Map window function names to numpy functions
+window_functions = {
+    'hanning': np.hanning,
+    'hamming': np.hamming,
+    'blackman': np.blackman,
+    'kaiser': lambda n: np.kaiser(n, beta=8.6),  # Beta chosen for good sidelobe suppression
+    'bartlett': np.bartlett
+}
 
 # Number of samples per scan for FFT
 NUM_SAMPLES_PER_SCAN = 32 * 1024
@@ -40,14 +37,19 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             #samples = await asyncio.to_thread(read_func)
             samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
 
+            # remove DC spike
             samples = remove_dc_offset(samples)
 
             # Apply window function to reduce spectral leakage
             fft_size = client['fft_size']
+            fft_window = client['fft_window']
 
             # Increase virtual resolution 4x
             fft_size = fft_size * 4
-            window = WINDOW_FUNCTION(fft_size)
+
+            # Select window function based on client preference, fallback to hanning if invalid
+            window_func = window_functions.get(fft_window.lower(), np.hanning)
+            window = window_func(fft_size)
 
             # Calculate FFT for multiple segments and average them
             #num_segments = len(samples) // fft_size
@@ -80,8 +82,6 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
                 window_correction = 1.0  # Depends on window type used
                 power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
                 fft_result += power
-
-                #fft_result = interpolate_dc_spike(fft_result)
 
             fft_result /= num_segments  # Average the segments
 

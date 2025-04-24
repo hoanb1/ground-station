@@ -106,6 +106,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         biasT,
         tunerAgc,
         rtlAgc,
+        fftWindow,
     } = useSelector((state) => state.waterfall);
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
@@ -206,9 +207,10 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 biasT,
                 tunerAgc,
                 rtlAgc,
+                fftWindow,
             });
         }
-    }, [centerFrequency, sampleRate, fftSize, gain, biasT, rtlAgc, tunerAgc]);
+    }, [centerFrequency, sampleRate, fftSize, gain, biasT, rtlAgc, tunerAgc, fftWindow]);
 
     // Call this periodically, for example:
     useEffect(() => {

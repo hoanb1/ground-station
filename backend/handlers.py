@@ -572,6 +572,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 # Read AGC mode
                 rtl_agc = data.get('rtlAgc', False)
 
+                # Read FFT window
+                fft_window = data.get('fftWindow', 'hanning')
+
                 # Initialize or reconfigure RTLSDR
                 if device_id not in rtlsdr_devices:
                     # Create new RTLSDR instance
@@ -593,7 +596,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                     sdr.gain = gain
 
                 # Create an SDR session entry in memory
-                add_sdr_session(sid, device_id, center_freq, sample_rate, gain, fft_size)
+                add_sdr_session(sid, device_id, center_freq, sample_rate, gain, fft_size, fft_window)
 
                 await sio.emit('sdr-status', {
                     'configured': True,
