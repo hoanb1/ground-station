@@ -338,7 +338,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         // Add some padding to the range
         min = Math.floor(min);
-        max = Math.ceil(Math.max(max + 1, 0));
+        //max = Math.ceil(Math.max(max + 1, 0));
+        max = Math.ceil(max);
 
         dispatch(setDbRange([min, max]));
     };

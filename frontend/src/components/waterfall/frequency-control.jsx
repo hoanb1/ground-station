@@ -43,7 +43,7 @@ const FrequencyDisplay = ({
     };
     
     const spacing = {
-        mx: 0.5 * scaleFactor
+        mx: 0.2 * scaleFactor
     };
 
     // Handle digit adjustment
@@ -200,15 +200,16 @@ const FrequencyDisplay = ({
 
         return (
             <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center' }}>
-                <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+                <Box sx={{ display: 'flex', justifyContent: 'center'}}>
                     {groups.map((group, groupIndex) => (
                         <React.Fragment key={`group-${groupIndex}`}>
                             {/* Render each digit group as a column with a label underneath */}
                             <Box 
-                                sx={{ 
+                                sx={{
                                     display: 'flex',
                                     flexDirection: 'column',
                                     alignItems: 'center',
+
                                 }}
                             >
                                 {/* Digits row */}

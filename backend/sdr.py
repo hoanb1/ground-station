@@ -74,7 +74,13 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
                 fft_segment = np.fft.fftshift(fft_segment)
 
                 # Convert to dB
-                power = 10 * np.log10(np.abs(fft_segment) ** 2 + 1e-10)
+                #power = 10 * np.log10(np.abs(fft_segment) ** 2 + 1e-10)
+                #fft_result += power
+
+                # Proper power normalization with window correction
+                N = len(fft_segment)
+                window_correction = 1.0  # Depends on window type used
+                power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
                 fft_result += power
 
                 fft_result = interpolate_dc_spike(fft_result)
