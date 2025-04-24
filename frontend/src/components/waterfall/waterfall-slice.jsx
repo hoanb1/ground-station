@@ -18,7 +18,7 @@ const waterfallSlice = createSlice({
             'greyscale',
         ],
         colorMap: 'cosmic',
-        dbRange: [-19, 0],
+        dbRange: [-19, 10],
         fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384],
         fftSize: 4096,
         gain: 20,

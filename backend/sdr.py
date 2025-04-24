@@ -13,7 +13,17 @@ logger = logging.getLogger('sdr-data-process')
 
 
 # FFT processing parameters
-WINDOW_FUNCTION = np.hanning
+# Available window functions:
+# - np.hanning: Reduces spectral leakage, good balance between freq resolution and amplitude accuracy
+# - np.hamming: Similar to Hanning but with different coefficients
+# - np.blackman: Better sidelobe suppression than Hanning but wider main lobe
+# - np.kaiser: Parameterized window with adjustable sidelobe levels
+# - np.bartlett: Triangular window with linear slopes
+# - np.flattop: Excellent amplitude accuracy but poor frequency resolution
+# - np.boxcar: Rectangular window (no windowing), best frequency resolution but high spectral leakage
+WINDOW_FUNCTION = np.hamming
+
+
 
 # Number of samples per scan for FFT
 NUM_SAMPLES_PER_SCAN = 128 * 1024

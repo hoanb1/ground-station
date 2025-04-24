@@ -64,6 +64,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const visualSettingsRef = useRef({
         dbRange: [-120, 30],
         colorMap: 'magma',
+        fftSize: 1024,
+        sampleRate: 2000000,
+        centerFrequency: 1000000000,
     });
     const colorCache = useRef(new Map());
 
@@ -123,7 +126,10 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     useEffect(() => {
         visualSettingsRef.current.dbRange = dbRange;
         visualSettingsRef.current.colorMap = colorMap;
-    }, [dbRange, colorMap]);
+        visualSettingsRef.current.sampleRate = sampleRate;
+        visualSettingsRef.current.centerFrequency = centerFrequency;
+
+    }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
     useEffect(() => {
         // Initialize canvases
@@ -194,6 +200,73 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             });
         }
     }, [centerFrequency, sampleRate, fftSize, gain]);
+
+    // Call this periodically, for example:
+    useEffect(() => {
+        let interval;
+
+        if (isStreaming && autoDBRange) {
+            interval = setInterval(() => {
+                autoScaleDbRange();
+            }, 1000); // Update every second
+        }
+
+        return () => {
+            if (interval) {
+                clearInterval(interval);
+            }
+        };
+    }, [isStreaming, autoDBRange]);
+
+    // Effect to update the metrics every second
+    useEffect(() => {
+        const metricsInterval = setInterval(() => {
+            const now = Date.now();
+            const elapsedSeconds = (now - lastMetricUpdateRef.current) / 1000;
+
+            if (elapsedSeconds > 0) {
+                setEventMetrics({
+                    eventsPerSecond: Math.round(eventCountRef.current / elapsedSeconds),
+                    binsPerSecond: Math.round(binCountRef.current / elapsedSeconds)
+                });
+
+                // Reset counters
+                eventCountRef.current = 0;
+                binCountRef.current = 0;
+                lastMetricUpdateRef.current = now;
+            }
+        }, 1000); // Update metrics every second
+
+        return () => {
+            clearInterval(metricsInterval);
+        };
+    }, []);
+
+    // Update the sdr-fft-data event handler to count events and bins
+    useEffect(() => {
+        socket.on('sdr-fft-data', (data) => {
+            // Increment event counter
+            eventCountRef.current += 1;
+
+            // Add bin count
+            binCountRef.current += data.length;
+
+            // Your existing code
+            waterfallDataRef.current.unshift(data);
+
+            // Keep only the most recent rows based on canvas height
+            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
+                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
+            }
+        });
+
+        return () => {
+            cancelAnimations();
+            socket.off('sdr-error');
+            socket.off('sdr-fft-data');
+            socket.off('sdr-status');
+        };
+    }, []);
 
     const startStreaming = () => {
         if (!isStreaming) {
@@ -270,23 +343,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         dispatch(setDbRange([min, max]));
     };
 
-    // Call this periodically, for example:
-    useEffect(() => {
-        let interval;
-
-        if (isStreaming && autoDBRange) {
-            interval = setInterval(() => {
-                autoScaleDbRange();
-            }, 1000); // Update every second
-        }
-
-        return () => {
-            if (interval) {
-                clearInterval(interval);
-            }
-        };
-    }, [isStreaming, autoDBRange]);
-
     function drawWaterfall() {
         const canvas = waterFallCanvasRef.current;
         if (!canvas || waterfallDataRef.current.length === 0) {
@@ -341,16 +397,14 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             }
 
             // You could optionally add a vertical line at bandscopeAxisYWidth here
-            //ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
-            //ctx.beginPath();
-            //ctx.moveTo(bandscopeAxisYWidth, 0);
-            //ctx.lineTo(bandscopeAxisYWidth, 1);
-            //ctx.stroke();
+            ctx.strokeStyle = 'rgba(161,161,161,0.5)';
+            ctx.beginPath();
+            ctx.moveTo(bandscopeAxisYWidth, 0);
+            ctx.lineTo(bandscopeAxisYWidth, 1);
+            ctx.stroke();
         }
     }
 
-
-    
     function drawBandscope() {
         const canvas = bandscopeCanvasRef.current;
         // if (!canvas || waterfallDataRef.current.length === 0) {
@@ -414,7 +468,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         }
 
         // Draw frequency scale at the bottom
-        drawFrequencyScale(ctx, width, centerFrequency, sampleRate);
+        drawFrequencyScale(ctx, width);
     }
 
     // Helper function to draw the FFT data as a line
@@ -634,9 +688,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     }
 
     // Draw frequency scale along the bottom
-    const drawFrequencyScale = (ctx, width, centerFreq, sRate) => {
-        const startFreq = centerFreq - sRate / 2;
-        const endFreq = centerFreq + sRate / 2;
+    const drawFrequencyScale = (ctx, width) => {
+        const startFreq = visualSettingsRef.current.centerFrequency - visualSettingsRef.current.sampleRate / 2;
+        const endFreq = visualSettingsRef.current.centerFrequency + visualSettingsRef.current.sampleRate / 2;
 
         const height = 30; // Height of the frequency scale area
 
@@ -650,7 +704,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         // Draw center frequency
         const centerX = bandscopeAxisYWidth + (width - bandscopeAxisYWidth) / 2;
         ctx.textAlign = 'center';
-        ctx.fillText(`${(centerFreq / 1e6).toFixed(3)} MHz`, centerX, ctx.canvas.height - 6);
+        ctx.fillText(`${(visualSettingsRef.current.centerFrequency / 1e6).toFixed(3)} MHz`, centerX, ctx.canvas.height - 6);
 
         // Draw start frequency
         ctx.textAlign = 'left';
@@ -660,56 +714,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         ctx.textAlign = 'right';
         ctx.fillText(`${(endFreq / 1e6).toFixed(3)} MHz`, width - 5, ctx.canvas.height - 6);
     };
-
-    // Effect to update the metrics every second
-    useEffect(() => {
-        const metricsInterval = setInterval(() => {
-            const now = Date.now();
-            const elapsedSeconds = (now - lastMetricUpdateRef.current) / 1000;
-
-            if (elapsedSeconds > 0) {
-                setEventMetrics({
-                    eventsPerSecond: Math.round(eventCountRef.current / elapsedSeconds),
-                    binsPerSecond: Math.round(binCountRef.current / elapsedSeconds)
-                });
-
-                // Reset counters
-                eventCountRef.current = 0;
-                binCountRef.current = 0;
-                lastMetricUpdateRef.current = now;
-            }
-        }, 1000); // Update metrics every second
-
-        return () => {
-            clearInterval(metricsInterval);
-        };
-    }, []);
-
-    // Update the sdr-fft-data event handler to count events and bins
-    useEffect(() => {
-        socket.on('sdr-fft-data', (data) => {
-            // Increment event counter
-            eventCountRef.current += 1;
-
-            // Add bin count
-            binCountRef.current += data.length;
-
-            // Your existing code
-            waterfallDataRef.current.unshift(data);
-
-            // Keep only the most recent rows based on canvas height
-            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
-                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
-            }
-        });
-
-        return () => {
-            cancelAnimations();
-            socket.off('sdr-error');
-            socket.off('sdr-fft-data');
-            socket.off('sdr-status');
-        };
-    }, []);
 
     return (
         <>
@@ -816,7 +820,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                         Error: {errorMessage}
                     </Typography>
                     : isStreaming ?
-                        `events/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
+                        `ffts/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
                         : `stopped`
                 }
             </WaterfallStatusBar>
