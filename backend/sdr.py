@@ -24,7 +24,7 @@ logger = logging.getLogger('sdr-data-process')
 WINDOW_FUNCTION = np.hanning
 
 # Number of samples per scan for FFT
-NUM_SAMPLES_PER_SCAN = 64 * 1024
+NUM_SAMPLES_PER_SCAN = 32 * 1024
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
