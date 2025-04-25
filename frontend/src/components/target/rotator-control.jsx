@@ -61,7 +61,10 @@ function GaugePointer() {
 function GaugeAz({az}) {
     return (
         <GaugeContainer
-            style={{margin: 'auto'}}
+            style={{
+                margin: 'auto',
+                touchAction: 'auto',
+            }}
             valueMin={0}
             valueMax={360}
             width={150}
@@ -79,7 +82,10 @@ function GaugeAz({az}) {
 function GaugeEl({el}) {
     return (
         <GaugeContainer
-            style={{margin: 'auto'}}
+            style={{
+                margin: 'auto',
+                touchAction: 'auto',
+            }}
             valueMin={90}
             valueMax={0}
             width={130}

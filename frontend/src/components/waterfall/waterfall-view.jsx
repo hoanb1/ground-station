@@ -113,6 +113,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
+    const [waterfallCanvasWidth, setWaterfallCanvasWidth] = useState(4096 / 2);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
 
     const cancelAnimations = () => {
@@ -842,7 +843,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         ctx.strokeStyle = 'rgba(200, 200, 200, 0.7)';
         ctx.lineWidth = 1;
         ctx.fillStyle = 'white';
-        ctx.font = '14px Monospace'; // Smaller font for tick labels
+        ctx.font = '13px Monospace'; // Smaller font for tick labels
         ctx.textAlign = 'center';
 
         for (let freq = firstTick; freq <= endFreq; freq += interval) {
@@ -996,7 +997,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
                     {/* Right column - Main visualization canvases */}
                     <Box sx={{
-                        overflowX: 'auto',
+                        overflowX: 'scroll',
                         overflowY: 'hidden',
                         display: 'inline-block',
                         flexGrow: 1,
@@ -1004,7 +1005,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     }}>
                         <Box
                             sx={{
-                                width: '2046px',
+                                width: `${waterfallCanvasWidth}px`,
                                 height: '100%',
                                 position: 'relative',
                                 display: 'flex',
@@ -1013,7 +1014,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                         >
                             <canvas
                                 ref={bandscopeCanvasRef}
-                                width={2048 - bandscopeAxisYWidth}
+                                width={waterfallCanvasWidth - bandscopeAxisYWidth}
                                 height={110}
                                 style={{
                                     width: '100%',
@@ -1024,7 +1025,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             />
                             <canvas
                                 ref={frequencyBarScopeCanvasRef}
-                                width={2048 - bandscopeAxisYWidth}
+                                width={waterfallCanvasWidth - bandscopeAxisYWidth}
                                 height={21}
                                 style={{
                                     width: '100%',
@@ -1035,7 +1036,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             />
                             <canvas
                                 ref={waterFallCanvasRef}
-                                width={2048 - bandscopeAxisYWidth}
+                                width={waterfallCanvasWidth - bandscopeAxisYWidth}
                                 height={900}
                                 style={{
                                     width: '100%',
