@@ -482,6 +482,31 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         bandScopeCtx.fillStyle = 'black';
         bandScopeCtx.fillRect(0, 0, width, height);
 
+        const [minDb, maxDb] = visualSettingsRef.current.dbRange;
+
+        // Draw dB marks and labels
+        bandScopeCtx.fillStyle = 'white';
+        bandScopeCtx.font = '12px Monospace';
+        bandScopeCtx.textAlign = 'right';
+
+        // Calculate step size based on range
+        const dbRange = maxDb - minDb;
+        const steps = Math.min(6, dbRange); // Maximum 10 steps
+        const stepSize = Math.ceil(dbRange / steps);
+
+        for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
+            const y = height - ((db - minDb) / (maxDb - minDb)) * height;
+
+            // Draw a horizontal dotted grid line
+            bandScopeCtx.strokeStyle = 'rgba(150, 150, 150, 0.4)';
+            bandScopeCtx.setLineDash([2, 2]);
+            bandScopeCtx.beginPath();
+            bandScopeCtx.moveTo(0, y);
+            bandScopeCtx.lineTo(width, y);
+            bandScopeCtx.stroke();
+            bandScopeCtx.setLineDash([]);
+        }
+
         // Get the most recent FFT data
         const fftData = waterfallDataRef.current[0];
 
@@ -519,12 +544,14 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
             const y = height - ((db - minDb) / (maxDb - minDb)) * height;
 
-            // Draw a horizontal grid line
-            ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
+            // Draw a horizontal dotted grid line
+            ctx.strokeStyle = 'rgba(150, 150, 150, 0.4)';
+            ctx.setLineDash([2, 2]);
             ctx.beginPath();
             ctx.moveTo(bandscopeAxisYWidth, y);
             ctx.lineTo(width, y);
             ctx.stroke();
+            ctx.setLineDash([]);
 
             // Draw label
             ctx.fillText(`${db} dB`, bandscopeAxisYWidth - 5, y + 3);
