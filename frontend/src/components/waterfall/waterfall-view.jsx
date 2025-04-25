@@ -811,19 +811,12 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         const endFreq = visualSettingsRef.current.centerFrequency + visualSettingsRef.current.sampleRate / 2;
         const freqRange = endFreq - startFreq;
 
-        const height = 30; // Height of the frequency scale area
+        const height = 25; // Height of the frequency scale area
         const tickHeight = 10; // Height of the frequency tick marks
 
         // Draw background for scale
         ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
         ctx.fillRect(0, ctx.canvas.height - height, width, height);
-
-        // Draw vertical line at the left edge
-        //ctx.strokeStyle = 'rgba(200, 200, 200, 0.7)';
-        //ctx.beginPath();
-        //ctx.moveTo(0, ctx.canvas.height - height);
-        //ctx.lineTo(0, ctx.canvas.height);
-        //ctx.stroke();
 
         // Calculate the appropriate interval for tick marks
         // We want roughly 8-12 tick marks across the width for readability
@@ -849,7 +842,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         ctx.strokeStyle = 'rgba(200, 200, 200, 0.7)';
         ctx.lineWidth = 1;
         ctx.fillStyle = 'white';
-        ctx.font = '16px Monospace'; // Smaller font for tick labels
+        ctx.font = '14px Monospace'; // Smaller font for tick labels
         ctx.textAlign = 'center';
 
         for (let freq = firstTick; freq <= endFreq; freq += interval) {
@@ -937,29 +930,34 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             </Box>
 
             {/* Container for both bandscope and waterfall */}
+
             <Box
                 sx={{
                     width: '100%',
                     height: '100%',
                     bgcolor: 'black',
                     position: 'relative',
-                    overflowX: 'auto',
-                    overflowY: 'hidden',
                     borderRadius: 1,
+
                 }}
             >
-                <div style={{
-                    width: '100%',
-                    height: 'calc(100% - 90px)',
-                    overflow: 'auto',
+                <Box sx={{
+                    height: '100%',
+                    display: 'flex',
+                    flexDirection: 'row',
                 }}>
-                    {/* Bandscope (spectrum) section */}
+                    {/* Left column - Y-axis canvases */}
                     <Box
                         sx={{
-                            width: '1600px',
-                            height: '110px',
+                            width: bandscopeAxisYWidth,
+                            minWidth: bandscopeAxisYWidth,
+                            maxWidth: bandscopeAxisYWidth,
+                            height: '1000px',
                             position: 'relative',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
+                            borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            flexShrink: 0,
                         }}
                     >
                         <canvas
@@ -967,99 +965,89 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             width={bandscopeAxisYWidth}
                             height={110}
                             style={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                width: '70px',
-                                height: '100%'
+                                width: '100%',
+                                height: '110px',
+                                backgroundColor: 'rgba(40, 40, 40, 0.7)',
+                                display: 'block',
                             }}
                         />
-                        <canvas
-                            ref={bandscopeCanvasRef}
-                            width={2048 - bandscopeAxisYWidth}
-                            height={110}
-                            style={{
-                                position: 'absolute',
-                                left: '70px',
-                                top: 0,
-                                width: 'calc(100% - 70px)',
-                                height: '100%'
-                            }}
-                        />
-                    </Box>
-
-                    {/* Frequency scale section */}
-                    <Box
-                        sx={{
-                            width: '1600px',
-                            height: '21px',
-                            position: 'relative',
-                        }}
-                    >
                         <canvas
                             width={bandscopeAxisYWidth}
                             height={21}
                             style={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                width: '70px',
-                                height: '100%',
-                                backgroundColor: 'rgba(40, 40, 40, 0.7)',
-                                borderRight: '1px solid rgba(255, 255, 255, 0.2)'
+                                width: '100%',
+                                height: '21px',
+                                backgroundColor: 'rgba(28, 28, 28, 1)',
+                                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                                display: 'block',
                             }}
                         />
-                        <canvas
-                            ref={frequencyBarScopeCanvasRef}
-                            width={2048 - bandscopeAxisYWidth}
-                            height={30}
-                            style={{
-                                position: 'absolute',
-                                left: '70px',
-                                top: 0,
-                                width: 'calc(100% - 70px)',
-                                height: '100%'
-                            }}
-                        />
-                    </Box>
-
-                    {/* Waterfall section */}
-                    <Box
-                        sx={{
-                            width: '1600px',
-                            height: '900px',
-                            position: 'relative',
-                        }}
-                    >
                         <canvas
                             ref={waterFallLeftMarginCanvasRef}
                             width={bandscopeAxisYWidth}
                             height={900}
                             style={{
-                                position: 'absolute',
-                                left: 0,
-                                top: 0,
-                                width: '70px',
-                                height: '100%',
-                                borderRight: '1px solid rgba(255, 255, 255, 0.2)'
-                            }}
-                        />
-                        <canvas
-                            ref={waterFallCanvasRef}
-                            width={2048 - bandscopeAxisYWidth}
-                            height={900}
-                            style={{
-                                position: 'absolute',
-                                left: '70px',
-                                top: 0,
-                                width: 'calc(100% - 70px)',
-                                height: '100%'
+                                width: '100%',
+                                height: 'calc(100% - 131px)',
+                                display: 'block',
                             }}
                         />
                     </Box>
-                </div>
 
+                    {/* Right column - Main visualization canvases */}
+                    <Box sx={{
+                        overflowX: 'auto',
+                        overflowY: 'hidden',
+                        display: 'inline-block',
+                        flexGrow: 1,
+                        height: 'calc(100% - 90px)',
+                    }}>
+                        <Box
+                            sx={{
+                                width: '2046px',
+                                height: '100%',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                            }}
+                        >
+                            <canvas
+                                ref={bandscopeCanvasRef}
+                                width={2048 - bandscopeAxisYWidth}
+                                height={110}
+                                style={{
+                                    width: '100%',
+                                    height: '110px',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                                    display: 'block',
+                                }}
+                            />
+                            <canvas
+                                ref={frequencyBarScopeCanvasRef}
+                                width={2048 - bandscopeAxisYWidth}
+                                height={21}
+                                style={{
+                                    width: '100%',
+                                    height: '21px',
+                                    borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                                    display: 'block',
+                                }}
+                            />
+                            <canvas
+                                ref={waterFallCanvasRef}
+                                width={2048 - bandscopeAxisYWidth}
+                                height={900}
+                                style={{
+                                    width: '100%',
+                                    height: '1000px',
+                                    display: 'block',
+                                }}
+                            />
+                        </Box>
+                    </Box>
+                </Box>
             </Box>
+
             <WaterfallStatusBar>
                 {errorMessage ?
                     <Typography color="error" variant="body2" sx={{mb: 2}}>
