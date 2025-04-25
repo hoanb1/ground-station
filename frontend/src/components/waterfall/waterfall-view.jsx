@@ -457,9 +457,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
     function drawBandscope() {
         const canvas = bandscopeCanvasRef.current;
-        // if (!canvas || waterfallDataRef.current.length === 0) {
-        //     return;
-        // }
+        if (!canvas || waterfallDataRef.current.length === 0) {
+             return;
+        }
 
         const ctx = canvas.getContext('2d');
         const width = canvas.width;
@@ -486,7 +486,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
         ctx.fillRect(0, 0, bandscopeAxisYWidth, height);
 
-        // Draw vertical line to separate axis from plot
+        // Draw vertical line to separate axis from the plot
         ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
         ctx.beginPath();
         ctx.moveTo(bandscopeAxisYWidth, 0);
@@ -500,13 +500,13 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         // Calculate step size based on range
         const dbRange = maxDb - minDb;
-        const steps = Math.min(10, dbRange); // Maximum 10 steps
+        const steps = Math.min(6, dbRange); // Maximum 10 steps
         const stepSize = Math.ceil(dbRange / steps);
 
         for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
             const y = height - ((db - minDb) / (maxDb - minDb)) * height;
 
-            // Draw horizontal grid line
+            // Draw a horizontal grid line
             ctx.strokeStyle = 'rgba(100, 100, 100, 0.5)';
             ctx.beginPath();
             ctx.moveTo(bandscopeAxisYWidth, y);
@@ -541,7 +541,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         // Create line color with proper opacity
         const lineColor = `rgba(${lineRgb.r}, ${lineRgb.g}, ${lineRgb.b}, 0.8)`;
 
-        // Generate fill color based on same colormap but with lower intensity
+        // Generate fill color based on the same colormap but with lower intensity
         const fillColorPoint = 0.7; // Use 50% intensity for fill base color
         const fillRgb = getColorForPower(
             minDb + (maxDb - minDb) * fillColorPoint,
@@ -554,7 +554,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         // Set line style with generated color
         ctx.strokeStyle = lineColor;
-        ctx.lineWidth = 2;
+        ctx.lineWidth = 1;
         ctx.beginPath();
 
         // Draw the line path
@@ -894,7 +894,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 <Box
                     sx={{
                         width: '100%',
-                        height: '20%',
+                        height: '130px',
                         position: 'relative',
                         borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
                     }}
@@ -902,7 +902,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     <canvas
                         ref={bandscopeCanvasRef}
                         width={2048}
-                        height={300}
+                        height={130}
                         style={{width: '100%', height: '100%'}}
                     />
                 </Box>
@@ -911,7 +911,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 <Box
                     sx={{
                         width: '100%',
-                        height: '80%',
+                        height: '900px',
                         position: 'relative',
                     }}
                 >

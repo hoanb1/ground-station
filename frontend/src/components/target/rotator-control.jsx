@@ -82,7 +82,7 @@ function GaugeEl({el}) {
             style={{margin: 'auto'}}
             valueMin={90}
             valueMax={0}
-            width={150}
+            width={130}
             height={140}
             startAngle={0}
             endAngle={90}

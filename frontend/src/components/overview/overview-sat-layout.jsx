@@ -182,7 +182,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 y: 14,
                 w: 8,
                 h: 2,
-                minH: 7,
+                minH: 5,
                 resizeHandles: ['se','ne','nw','sw','s','e','w']
             },
             {
