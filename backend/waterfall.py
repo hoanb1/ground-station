@@ -12,7 +12,7 @@ logger = logging.getLogger('waterfall-process')
 active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 
 # Store active RTLSDR devices and client connections
-rtlsdr_devices: Dict[int, rtlsdr.RtlSdr] = {}
+rtlsdr_devices: Dict[int, rtlsdr.RtlSdrAio] = {}
 
 # Create a second Socket.IO server instance specifically for waterfall data
 waterfall_sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
@@ -56,7 +56,6 @@ def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None
         'task': None,
         'fft_window': fft_window,
     }
-
 
 def cleanup_sdr_session(sid):
     """Clean up and release resources associated with an SDR client session.

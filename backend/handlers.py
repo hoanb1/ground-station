@@ -572,7 +572,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 # Read AGC mode
                 rtl_agc = data.get('rtlAgc', False)
 
-                # Read FFT window
+                # Read the FFT window
                 fft_window = data.get('fftWindow', 'hanning')
 
                 # Initialize or reconfigure RTLSDR
@@ -639,8 +639,11 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
             logger.info(f"Starting streaming SDR data for client {sid}")
 
             # Start a new processing task in a separate thread
-            threaded_func = functools.partial(run_async_in_thread, process_rtlsdr_data, sio, device_id, sid)
-            client['thread_future'] = thread_executor.submit(threaded_func)
+            #threaded_func = functools.partial(run_async_in_thread, process_rtlsdr_data, sio, device_id, sid)
+            #client['thread_future'] = thread_executor.submit(threaded_func)
+
+            # Start a new processing task
+            client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
 
             await sio.emit('sdr-status', {'streaming': True}, room=sid)
 

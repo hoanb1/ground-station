@@ -837,16 +837,27 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     display: 'flex',
                     gap: 1,
                     justifyContent: 'left',
-                    flexWrap: 'wrap'
+                    flexWrap: 'wrap',
                 }}
             >
-                <Paper elevation={3} sx={{p: 0, display: 'inline-block', width: '100%',}}>
+                <Paper elevation={3} sx={{
+                    p: 0,
+                    display: 'inline-block',
+                    width: '100%',
+                    borderBottom: '1px solid',
+                    borderColor: '#434343',
+                    paddingBottom: '0px',
+                    borderRadius: 0,
+                }}>
                     <ButtonGroup variant="contained" size="small">
                         <Button
                             startIcon={<PlayArrowIcon/>}
                             disabled={isStreaming}
                             color="primary"
                             onClick={startStreaming}
+                            sx={{
+                                borderRadius: 0,
+                            }}
                         >
                             Start
                         </Button>
@@ -855,6 +866,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             disabled={!isStreaming}
                             color="error"
                             onClick={stopStreaming}
+                            sx={{
+                                borderRadius: 0,
+                            }}
                         >
                             Stop
                         </Button>
@@ -863,15 +877,11 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                             disabled={!isStreaming}
                             color="secondary"
                             onClick={autoScaleDbRange}
+                            sx={{
+                                borderRadius: 0,
+                            }}
                         >
                             Auto Range
-                        </Button>
-                        <Button
-                            startIcon={<SettingsIcon/>}
-                            color="primary"
-                            onClick={() => dispatch(setSettingsDialogOpen(true))}
-                        >
-                            Settings
                         </Button>
                     </ButtonGroup>
                 </Paper>

@@ -33,9 +33,9 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             sdr = rtlsdr_devices[device_id]
 
             # Read samples
-            #read_func = partial(sdr.read_samples, NUM_SAMPLES_PER_SCAN)
-            #samples = await asyncio.to_thread(read_func)
-            samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
+            read_func = partial(sdr.read_samples, NUM_SAMPLES_PER_SCAN)
+            samples = await asyncio.to_thread(read_func)
+            #samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
 
             # remove DC spike
             samples = remove_dc_offset(samples)
