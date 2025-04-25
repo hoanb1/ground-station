@@ -24,37 +24,37 @@ handlers:
 
 loggers:
   uvicorn.error:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
 
   uvicorn.access:
-    level: ERROR
+    level: WARNING
     handlers:
       - access
     propagate: no
 
   engineio.server:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
 
   socketio.server:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
 
   asyncio:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
 
   urllib3.connectionpool:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
@@ -66,7 +66,7 @@ loggers:
     propagate: no
 
   sqlalchemy:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
@@ -78,18 +78,30 @@ loggers:
     propagate: no
 
   httpcore.http11:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
 
   httpcore.connection:
-    level: ERROR
+    level: WARNING
     handlers:
       - default
     propagate: no
 
   sdr-data-process:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rtlsdr.rtlsdraio:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rtlsdr.rtlsdr:
     level: INFO
     handlers:
       - default

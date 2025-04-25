@@ -288,7 +288,10 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 centerFrequency,
                 sampleRate,
                 gain,
-                fftSize
+                fftSize,
+                biasT,
+                tunerAgc,
+                rtlAgc,
             });
 
             socket.emit('sdr_data', 'start-streaming');
