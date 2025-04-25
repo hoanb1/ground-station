@@ -178,19 +178,13 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         <Typography component="span">Frequency</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
-                        <Box sx={{mb: 2, width: '100%'}}>
+                        <Box sx={{mb: 0, width: '100%'}}>
                             <FrequencyDisplay
                                 initialFrequency={centerFrequency / 1000} // Convert Hz to kHz
                                 onChange={(newFrequency) => dispatch(setCenterFrequency(newFrequency * 1000))} // Convert kHz back to Hz
                                 size={"small"}
                             />
                         </Box>
-                        <Box sx={{mb: 2, textAlign: 'center'}}>
-                            <Typography variant="body2" gutterBottom align="center">
-                                Center Frequency: {formatFrequency(centerFrequency)}
-                            </Typography>
-                        </Box>
-
                     </AccordionDetails>
                 </Accordion>
                 <Accordion expanded={expandedPanels.includes('panel3')} onChange={handleChange('panel3')}>

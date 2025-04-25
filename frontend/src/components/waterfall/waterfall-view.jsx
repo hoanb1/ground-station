@@ -60,7 +60,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
     const bandscopeCanvasRef = useRef(null); // New ref for bandscope canvas
-    const canvasDataRef = useRef(null);
+    const dBAxisScopeCanvasRef = useRef(null);
+    const frequencyBarScopeCanvasRef = useRef(null);
+    const waterFallLeftMarginCanvasRef = useRef(null);
     const waterfallDataRef = useRef(new Array(1000).fill(-120));
     const animationFrameRef = useRef(null);
     const bandscopeAnimationFrameRef = useRef(null); // New ref for bandscope animation
@@ -111,7 +113,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
-    const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(70);
+    const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
 
     const cancelAnimations = () => {
         if (animationFrameRef.current) {
@@ -359,8 +361,10 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     };
 
     function drawWaterfall() {
-        const canvas = waterFallCanvasRef.current;
-        if (!canvas || waterfallDataRef.current.length === 0) {
+        const waterFallCanvas = waterFallCanvasRef.current;
+        const waterFallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
+
+        if (!waterFallCanvas || waterfallDataRef.current.length === 0) {
             return;
         }
 
@@ -370,24 +374,24 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         if (accumulatedRowsRef.current >= scrollFactor) {
             accumulatedRowsRef.current = 0;
 
-            const ctx = canvas.getContext('2d');
+            const waterFallCtx = waterFallCanvas.getContext('2d');
+            const waterFallLeftMarginCtx = waterFallLeftMarginCanvas.getContext('2d');
 
             // Move existing pixels DOWN (instead of up)
-            ctx.drawImage(canvas, 0, 0, canvas.width, canvas.height - 1, 0, 1, canvas.width, canvas.height - 1);
+            waterFallCtx.drawImage(waterFallCanvas, 0, 0, waterFallCanvas.width, waterFallCanvas.height - 1, 0, 1, waterFallCanvas.width, waterFallCanvas.height - 1);
 
             // Get imageData for the new row only
-            const imageData = ctx.createImageData(canvas.width, 1);
+            const imageData = waterFallCtx.createImageData(waterFallCanvas.width, 1);
             const data = imageData.data;
 
             if (waterfallDataRef.current.length > 0) {
                 const fftRow = waterfallDataRef.current[0];
 
-                // Calculate a scaling factor to fit all frequency bins to available width
-                // Important: Use canvas.width - bandscopeAxisYWidth as the target width
-                const skipFactor = fftRow.length / (canvas.width - bandscopeAxisYWidth);
+                // Calculate a scaling factor to fit all frequency bins to the available width
+                const skipFactor = fftRow.length / (waterFallCanvas.width);
 
-                // For each pixel position in the display width (starting from bandscopeAxisYWidth)
-                for (let x = 0; x < canvas.width - bandscopeAxisYWidth; x++) {
+                // For each pixel position in the display width
+                for (let x = 0; x < waterFallCanvas.width; x++) {
                     // Map canvas pixel to the appropriate FFT bin using scaling
                     const fftIndex = Math.min(Math.floor(x * skipFactor), fftRow.length - 1);
                     const amplitude = fftRow[fftIndex];
@@ -395,8 +399,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     const rgb = getColorForPower(amplitude, visualSettingsRef.current.colorMap, visualSettingsRef.current.dbRange);
 
                     // Calculate position in the image data array
-                    // Offset by bandscopeAxisYWidth to start 70 pixels from the left
-                    const pixelIndex = (x + bandscopeAxisYWidth) * 4;
+                    const pixelIndex = x * 4;
                     data[pixelIndex] = rgb.r;     // R
                     data[pixelIndex + 1] = rgb.g; // G
                     data[pixelIndex + 2] = rgb.b; // B
@@ -404,82 +407,89 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 }
 
                 // Put the new row at the TOP of the canvas
-                ctx.putImageData(imageData, 0, 0);
+                waterFallCtx.putImageData(imageData, 0, 0);
             }
-
-            // You could optionally add a vertical line at bandscopeAxisYWidth here
-            ctx.strokeStyle = 'rgb(100, 105, 112, 1)';
-            ctx.beginPath();
-            ctx.moveTo(bandscopeAxisYWidth - 1, 0);
-            ctx.lineTo(bandscopeAxisYWidth - 1, 1);
-            ctx.lineWidth = 2;
-            ctx.stroke();
-
-            // Check if we should add a timestamp
-            const now = new Date();
-
-            // Store the current time in state to track minute changes
-            // If this is the first row or the minute has changed since last timestamp
-            if (!lastTimestampRef.current ||
-                now.getMinutes() !== lastTimestampRef.current.getMinutes() ||
-                now.getHours() !== lastTimestampRef.current.getHours()) {
-
-                // Format the time as HH:MM
-                const hours = String(now.getHours()).padStart(2, '0');
-                const minutes = String(now.getMinutes()).padStart(2, '0');
-                const timeString = `${hours}:${minutes}`;
-
-                // Draw a more visible background for the timestamp
-                ctx.fillStyle = 'rgba(28, 28, 28, 1)';
-                ctx.fillRect(0, 0, bandscopeAxisYWidth-2, 14); // Taller rectangle to fit the text
-
-                // Draw the time text
-                ctx.font = '14px monospace';
-                ctx.fillStyle = 'rgba(255, 255, 255, 1)';
-                ctx.textAlign = 'center';
-                ctx.textBaseline = 'top';
-                ctx.fillText(timeString, bandscopeAxisYWidth / 2, 2);
-
-                // Update the last timestamp reference
-                lastTimestampRef.current = now;
-
-                // Also, draw a subtle horizontal line to mark the minute boundary
-                //ctx.strokeStyle = 'rgb(177, 177, 177, 0.6)';
-                //ctx.beginPath();
-                //ctx.moveTo(0, 0);
-                //ctx.lineTo(canvas.width, 0);
-                //ctx.lineWidth = 2;
-                //ctx.stroke();
-            }
-
-            // Clear the left margin (0 to bandscopeAxisYWidth pixels)
-            ctx.fillStyle = 'rgb(28, 28, 28, 1)';
-            ctx.fillRect(0, 0, bandscopeAxisYWidth - 2, 1);
+            updateWaterfallLeftMargin();
         }
     }
 
+
+    function updateWaterfallLeftMargin() {
+        if (!waterFallLeftMarginCanvasRef.current) return;
+
+        const waterFallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
+        const waterFallLeftMarginCtx = waterFallLeftMarginCanvas.getContext('2d');
+
+        // This part should run on EVERY frame, not just when minutes change
+        // Move existing pixels DOWN by 1 pixel
+        waterFallLeftMarginCtx.drawImage(
+            waterFallLeftMarginCanvas,
+            0, 0,
+            waterFallLeftMarginCanvas.width, waterFallLeftMarginCanvas.height - 1,
+            0, 1,
+            waterFallLeftMarginCanvas.width, waterFallLeftMarginCanvas.height - 1
+        );
+
+        // Fill the top row with the background color
+        waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
+        waterFallLeftMarginCtx.fillRect(0, 0, waterFallLeftMarginCanvas.width, 1);
+
+        const now = new Date();
+
+        // Only update the timestamp itself when minutes change
+        if (!lastTimestampRef.current ||
+            now.getMinutes() !== lastTimestampRef.current.getMinutes() ||
+            now.getHours() !== lastTimestampRef.current.getHours()) {
+
+            // Format the time as HH:MM
+            const hours = String(now.getHours()).padStart(2, '0');
+            const minutes = String(now.getMinutes()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}`;
+
+            // Draw a more visible background for the timestamp
+            waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
+            waterFallLeftMarginCtx.fillRect(0, 0, bandscopeAxisYWidth, 14);
+
+            // Draw the time text
+            waterFallLeftMarginCtx.font = '12px monospace';
+            waterFallLeftMarginCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+            waterFallLeftMarginCtx.textAlign = 'center';
+            waterFallLeftMarginCtx.textBaseline = 'top';
+            waterFallLeftMarginCtx.fillText(timeString, bandscopeAxisYWidth / 2, 2);
+
+            // Update the last timestamp reference
+            lastTimestampRef.current = now;
+        }
+    }
+
+
     function drawBandscope() {
-        const canvas = bandscopeCanvasRef.current;
-        if (!canvas || waterfallDataRef.current.length === 0) {
+        const bandScopeCanvas = bandscopeCanvasRef.current;
+        const dBAxisCanvas = dBAxisScopeCanvasRef.current;
+
+        if (!bandScopeCanvas || waterfallDataRef.current.length === 0) {
              return;
         }
 
-        const ctx = canvas.getContext('2d');
-        const width = canvas.width;
-        const height = canvas.height;
+        const bandScopeCtx = bandScopeCanvas.getContext('2d');
+        const dBAxisCtx = dBAxisCanvas.getContext('2d');
+
+
+        const width = bandScopeCanvas.width;
+        const height = bandScopeCanvas.height;
 
         // Clear the canvas
-        ctx.fillStyle = 'black';
-        ctx.fillRect(0, 0, width, height);
+        bandScopeCtx.fillStyle = 'black';
+        bandScopeCtx.fillRect(0, 0, width, height);
 
         // Get the most recent FFT data
         const fftData = waterfallDataRef.current[0];
 
         // Draw the dB axis (y-axis)
-        drawDbAxis(ctx, width, height, visualSettingsRef.current.dbRange);
+        drawDbAxis(dBAxisCtx, width, height, visualSettingsRef.current.dbRange);
 
         // Draw the FFT data as a line graph
-        drawFftLine(ctx, fftData, width, height, visualSettingsRef.current.dbRange);
+        drawFftLine(bandScopeCtx, fftData, width, height, visualSettingsRef.current.dbRange);
     }
 
     // Helper function to draw the dB axis
@@ -498,7 +508,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         // Draw dB marks and labels
         ctx.fillStyle = 'white';
-        ctx.font = '16px Monospace';
+        ctx.font = '12px Monospace';
         ctx.textAlign = 'right';
 
         // Calculate step size based on range
@@ -521,12 +531,14 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         }
 
         // Draw frequency scale at the bottom
-        drawFrequencyScale(ctx, width);
+        const frequencyBarScopeCanvas = frequencyBarScopeCanvasRef.current;
+        const frequencyBarScopeCtx = frequencyBarScopeCanvas.getContext('2d');
+        drawFrequencyScale(frequencyBarScopeCtx, frequencyBarScopeCanvas.width);
     }
 
     // Helper function to draw the FFT data as a line
     function drawFftLine(ctx, fftData, width, height, [minDb, maxDb]) {
-        const graphWidth = width - bandscopeAxisYWidth;
+        const graphWidth = width;
         const skipFactor = fftData.length / graphWidth;
 
         // Get the current colormap from settings
@@ -571,9 +583,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             const y = height - (normalizedValue * height);
 
             if (x === 0) {
-                ctx.moveTo(bandscopeAxisYWidth + x, y);
+                ctx.moveTo(x, y);
             } else {
-                ctx.lineTo(bandscopeAxisYWidth + x, y);
+                ctx.lineTo(x, y);
             }
         }
 
@@ -583,7 +595,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         // Add fill below the line using the generated fill color
         ctx.fillStyle = fillColor;
         ctx.lineTo(width, height);
-        ctx.lineTo(bandscopeAxisYWidth, height);
+        ctx.lineTo(0, height);
         ctx.fill();
     }
 
@@ -777,12 +789,19 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         // Draw background for scale
         ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
-        ctx.fillRect(bandscopeAxisYWidth, ctx.canvas.height - height, width - bandscopeAxisYWidth, height);
+        ctx.fillRect(0, ctx.canvas.height - height, width, height);
+
+        // Draw vertical line at the left edge
+        //ctx.strokeStyle = 'rgba(200, 200, 200, 0.7)';
+        //ctx.beginPath();
+        //ctx.moveTo(0, ctx.canvas.height - height);
+        //ctx.lineTo(0, ctx.canvas.height);
+        //ctx.stroke();
 
         // Calculate the appropriate interval for tick marks
         // We want roughly 8-12 tick marks across the width for readability
-        const availableWidth = width - bandscopeAxisYWidth;
-        const targetTickCount = 12;
+        const availableWidth = width;
+        const targetTickCount = 10;
 
         // Calculate an interval in Hz based on frequency range
         let interval = freqRange / targetTickCount;
@@ -808,7 +827,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         for (let freq = firstTick; freq <= endFreq; freq += interval) {
             // Calculate x position for this frequency
-            const x = bandscopeAxisYWidth + ((freq - startFreq) / freqRange) * availableWidth;
+            const x = (((freq - startFreq) / freqRange) * availableWidth);
 
             // Draw the tick mark
             ctx.beginPath();
@@ -895,7 +914,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 sx={{
                     width: '100%',
                     height: '100%',
-                    display: 'flex',
                     flexDirection: 'column',
                     bgcolor: 'black',
                     position: 'relative',
@@ -907,17 +925,72 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                 <Box
                     sx={{
                         width: '100%',
-                        height: '130px',
+                        height: '110px',
                         position: 'relative',
                         borderBottom: '1px solid rgba(255, 255, 255, 0.2)'
                     }}
                 >
                     <canvas
-                        ref={bandscopeCanvasRef}
-                        width={2048}
-                        height={130}
-                        style={{width: '100%', height: '100%'}}
+                        ref={dBAxisScopeCanvasRef}
+                        width={bandscopeAxisYWidth}
+                        height={110}
+                        style={{
+                            position: 'absolute',
+                            left: 0,
+                            top: 0,
+                            width: '70px',
+                            height: '100%'
+                        }}
                     />
+                    <canvas
+                        ref={bandscopeCanvasRef}
+                        width={2048 - bandscopeAxisYWidth}
+                        height={110}
+                        style={{
+                            position: 'absolute',
+                            left: '70px',
+                            top: 0,
+                            width: 'calc(100% - 70px)',
+                            height: '100%'
+                        }}
+                    />
+                </Box>
+
+                {/* Frequency scale section */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        height: '21px',
+                        position: 'relative',
+                    }}
+                >
+                    <Box sx={{display: 'flex', width: '100%'}}>
+                        <canvas
+                            width={bandscopeAxisYWidth}
+                            height={21}
+                            style={{
+                                position: 'absolute',
+                                left: 0,
+                                top: 0,
+                                width: '70px',
+                                height: '100%',
+                                backgroundColor: 'rgba(40, 40, 40, 0.7)',
+                                borderRight: '1px solid rgba(255, 255, 255, 0.2)'
+                            }}
+                        />
+                        <canvas
+                            ref={frequencyBarScopeCanvasRef}
+                            width={2048 - bandscopeAxisYWidth}
+                            height={30}
+                            style={{
+                                position: 'absolute',
+                                left: '70px',
+                                top: 0,
+                                width: 'calc(100% - 70px)',
+                                height: '100%'
+                            }}
+                        />
+                    </Box>
                 </Box>
 
                 {/* Waterfall section */}
@@ -928,13 +1001,32 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                         position: 'relative',
                     }}
                 >
-                    <>
+                <>
                         <div style={{position: 'relative', width: '100%', height: '100%'}}>
                             <canvas
-                                ref={waterFallCanvasRef}
-                                width={2048}
+                                ref={waterFallLeftMarginCanvasRef}
+                                width={bandscopeAxisYWidth}
                                 height={900}
-                                style={{width: '100%', height: '100%'}}
+                                style={{
+                                    position: 'absolute',
+                                    left: 0,
+                                    top: 0,
+                                    width: '70px',
+                                    height: '100%',
+                                    borderRight: '1px solid rgba(255, 255, 255, 0.2)'
+                                }}
+                            />
+                            <canvas
+                                ref={waterFallCanvasRef}
+                                width={2048 - bandscopeAxisYWidth}
+                                height={900}
+                                style={{
+                                    position: 'absolute',
+                                    left: '70px',
+                                    top: 0,
+                                    width: 'calc(100% - 70px)',
+                                    height: '100%'
+                                }}
                             />
                         </div>
                     </>
