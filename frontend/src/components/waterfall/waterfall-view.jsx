@@ -56,7 +56,7 @@ import {
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
-import FrequencyScale from "./frequency-scale-html.jsx";
+import FrequencyScale from "./frequency-scale-canvas.jsx";
 
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {

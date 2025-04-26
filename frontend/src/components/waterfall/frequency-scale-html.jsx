@@ -1,14 +1,17 @@
-import React, { useMemo } from 'react';
-import { humanizeFrequency } from "../common/common.jsx";
+import React, {useMemo, useEffect, useCallback, useRef} from 'react';
+import {humanizeFrequency} from "../common/common.jsx";
 
-const FrequencyScaleHtml = ({ centerFrequency, sampleRate, containerWidth }) => {
-    // Calculate start and end frequencies
+const FrequencyScaleHtml = ({centerFrequency, sampleRate, containerWidth}) => {
+    const containerRef = useRef(null);
+    const resizeObserver = useRef(null);
+
+    // Calculate start and end frequencies 
     const startFreq = centerFrequency - sampleRate / 2;
     const endFreq = centerFrequency + sampleRate / 2;
     const freqRange = endFreq - startFreq;
 
     // Calculate a nice rounded step size based on frequency range and container width
-    const { ticks, majorTicks, tickStep } = useMemo(() => {
+    const {ticks, majorTicks, tickStep} = useMemo(() => {
         // Aim for a major tick roughly every 100-150px
         const targetMajorTickCount = Math.max(3, Math.floor(containerWidth / 220));
 
@@ -35,10 +38,10 @@ const FrequencyScaleHtml = ({ centerFrequency, sampleRate, containerWidth }) => 
 
         // Add minor and major ticks
         for (let freq = firstTick - (minorTicksPerMajor > 0 ? minorStep : 0);
-             freq <= endFreq + tickStep/10; // Small buffer to ensure we include the last tick
+             freq <= endFreq + tickStep / 10; // Small buffer to ensure we include the last tick
              freq += minorStep > 0 ? minorStep : tickStep) {
 
-            if (freq < startFreq - tickStep/10) continue;
+            if (freq < startFreq - tickStep / 10) continue;
 
             const isMajor = Math.abs(Math.round(freq / tickStep) * tickStep - freq) < tickStep / 100;
 
@@ -56,11 +59,31 @@ const FrequencyScaleHtml = ({ centerFrequency, sampleRate, containerWidth }) => 
             }
         }
 
-        return { ticks, majorTicks, tickStep };
+        return {ticks, majorTicks, tickStep};
     }, [startFreq, endFreq, freqRange, containerWidth]);
 
+    const handleResize = useCallback((entries) => {
+        const [entry] = entries;
+        if (entry && entry.contentRect) {
+            console.log('Container size changed:', entry.contentRect);
+        }
+    }, []);
+
+    useEffect(() => {
+        if (containerRef.current) {
+            resizeObserver.current = new ResizeObserver(handleResize);
+            resizeObserver.current.observe(containerRef.current);
+        }
+
+        return () => {
+            if (resizeObserver.current) {
+                resizeObserver.current.disconnect();
+            }
+        };
+    }, [handleResize]);
+
     return (
-        <div style={{
+        <div ref={containerRef} style={{
             position: 'relative',
             width: '100%',
             height: '20px',
@@ -78,7 +101,7 @@ const FrequencyScaleHtml = ({ centerFrequency, sampleRate, containerWidth }) => 
                     width: '1px',
                     backgroundColor: 'rgba(255, 255, 255, 0.4)',
                     marginLeft: '-0.5px'
-                }} />
+                }}/>
             ))}
 
             {/* Major ticks with labels */}
@@ -93,7 +116,7 @@ const FrequencyScaleHtml = ({ centerFrequency, sampleRate, containerWidth }) => 
                         width: '1px',
                         backgroundColor: 'white',
                         marginLeft: '-0.5px'
-                    }} />
+                    }}/>
 
                     {/* Label with a fixed span and fixed width */}
                     <span style={{
