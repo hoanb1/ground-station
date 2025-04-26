@@ -57,6 +57,7 @@ import {
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
 import FrequencyScale from "./frequency-scale-canvas.jsx";
+import {useResizeDetector} from "react-resize-detector";
 
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
@@ -1061,7 +1062,7 @@ const WaterfallWithStrictXAxisZoom = ({
 
         if (oldWidth === 0 || newWidth === oldWidth) return;
 
-        // Calculate new position based on scale and size change ratio
+        // Calculate a new position based on scale and size change ratio
         // This keeps the visible content centered as the container resizes
         const centerPointRatio = 0.5; // Center of the view
         const oldCenterPoint = oldWidth * centerPointRatio;
@@ -1407,7 +1408,11 @@ const WaterfallWithStrictXAxisZoom = ({
                         touchAction: 'none', // Prevent default touch behaviors
                     }}
                 />
-                <FrequencyScale centerFrequency={centerFrequency} containerWidth={waterfallCanvasWidth - bandscopeAxisYWidth} sampleRate={sampleRate}/>
+                <FrequencyScale
+                    centerFrequency={centerFrequency}
+                    containerWidth={waterfallCanvasWidth - bandscopeAxisYWidth}
+                    sampleRate={sampleRate}
+                />
                 <canvas
                     ref={frequencyBarScopeCanvasRef}
                     width={waterfallCanvasWidth - bandscopeAxisYWidth}
@@ -1426,7 +1431,7 @@ const WaterfallWithStrictXAxisZoom = ({
                     height={900}
                     style={{
                         width: '100%',
-                        height: '700px',
+                        height: '800px',
                         display: 'block',
                         touchAction: 'none', // Prevent default touch behaviors
                     }}
