@@ -445,15 +445,20 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         const now = new Date();
 
-        // Only update the timestamp itself when minutes change
-        if (!lastTimestampRef.current ||
-            now.getMinutes() !== lastTimestampRef.current.getMinutes() ||
-            now.getHours() !== lastTimestampRef.current.getHours()) {
+        // Calculate seconds since the epoch and check if divisible by 15
+        const currentSeconds = Math.floor(now.getTime() / 1000);
+        const shouldUpdate = !lastTimestampRef.current ||
+            currentSeconds % 15 === 0 ||
+            (lastTimestampRef.current.getMinutes() !== now.getMinutes()) ||
+            (lastTimestampRef.current.getHours() !== now.getHours());
 
-            // Format the time as HH:MM
+        // Update the timestamp every 15 seconds
+        if (shouldUpdate) {
+            // Format the time as HH:MM:SS
             const hours = String(now.getHours()).padStart(2, '0');
             const minutes = String(now.getMinutes()).padStart(2, '0');
-            const timeString = `${hours}:${minutes}`;
+            const seconds = String(now.getSeconds()).padStart(2, '0');
+            const timeString = `${hours}:${minutes}:${seconds}`;
 
             // Draw a more visible background for the timestamp
             waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
@@ -964,7 +969,7 @@ const WaterfallWithStrictXAxisZoom = ({
         // Wheel event for zooming
         const handleWheel = (e) => {
             e.preventDefault();
-            const deltaScale = -e.deltaY * 0.001;
+            const deltaScale = -e.deltaY * 0.01;
             zoomOnXAxisOnly(deltaScale, e.offsetX);
         };
 
@@ -1150,7 +1155,7 @@ const WaterfallWithStrictXAxisZoom = ({
             >
                 <canvas
                     ref={bandscopeCanvasRef}
-                    width={waterfallCanvasWidth - bandscopeAxisYWidth}
+                    width={waterfallCanvasWidth}
                     height={110}
                     style={{
                         width: '100%',
@@ -1162,12 +1167,12 @@ const WaterfallWithStrictXAxisZoom = ({
                 />
                 <FrequencyScale
                     centerFrequency={centerFrequency}
-                    containerWidth={waterfallCanvasWidth - bandscopeAxisYWidth}
+                    containerWidth={waterfallCanvasWidth}
                     sampleRate={sampleRate}
                 />
                 <canvas
                     ref={waterFallCanvasRef}
-                    width={waterfallCanvasWidth - bandscopeAxisYWidth}
+                    width={waterfallCanvasWidth}
                     height={900}
                     style={{
                         width: '100%',

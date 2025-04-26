@@ -70,13 +70,13 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
         const freqRange = endFreq - startFreq;
 
         // Adaptive tick spacing based on container width
-        const minPixelsPerMajorTick = 120; // Minimum pixels between major ticks
+        const minPixelsPerMajorTick = 110; // Minimum pixels between major ticks
         const targetMajorTickCount = Math.max(2, Math.min(Math.floor(actualWidth / minPixelsPerMajorTick), 16));
 
         const approxStepSize = freqRange / targetMajorTickCount;
         const magnitude = 10 ** Math.floor(Math.log10(approxStepSize));
-        let tickStep;
 
+        let tickStep;
         if (approxStepSize / magnitude < 1.5) {
             tickStep = magnitude;
         } else if (approxStepSize / magnitude < 3) {
@@ -86,6 +86,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
         } else {
             tickStep = 10 * magnitude;
         }
+        console.info(`Tick step: ${tickStep}`);
 
         // Calculate where the first tick should be (round up to the next nice number)
         const firstTick = Math.ceil(startFreq / tickStep) * tickStep;
