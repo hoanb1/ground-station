@@ -64,6 +64,7 @@ function GaugeAz({az}) {
             style={{
                 margin: 'auto',
                 touchAction: 'auto',
+                pointerEvents: 'none',  // Makes the element completely non-interactive
             }}
             valueMin={0}
             valueMax={360}
@@ -72,6 +73,14 @@ function GaugeAz({az}) {
             startAngle={0}
             endAngle={360}
             value={az}
+            onTouchStart={(e) => {
+                // Stop event from bubbling up
+                e.stopPropagation();
+            }}
+            onTouchMove={(e) => {
+                // Stop event from bubbling up
+                e.stopPropagation();
+            }}
         >
             <GaugeReferenceArc />
             <GaugePointer />
@@ -85,14 +94,23 @@ function GaugeEl({el}) {
             style={{
                 margin: 'auto',
                 touchAction: 'auto',
+                pointerEvents: 'none',  // Makes the element completely non-interactive
             }}
             valueMin={90}
             valueMax={0}
-            width={130}
-            height={140}
+            width={120}
+            height={130}
             startAngle={0}
             endAngle={90}
             value={el}
+            onTouchStart={(e) => {
+                // Stop event from bubbling up
+                e.stopPropagation();
+            }}
+            onTouchMove={(e) => {
+                // Stop event from bubbling up
+                e.stopPropagation();
+            }}
         >
             <GaugeReferenceArc />
             <GaugePointer />

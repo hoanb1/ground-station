@@ -757,6 +757,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                                 height: 'calc(100% - 131px)',
                                 display: 'block',
                             }}
+
                         />
                     </Box>
 
@@ -968,7 +969,11 @@ const WaterfallWithStrictXAxisZoom = ({
 
         // Wheel event for zooming
         const handleWheel = (e) => {
-            e.preventDefault();
+            //e.preventDefault();
+            // Only zoom when shift key is pressed
+            if (!e.shiftKey) {
+                return;
+            };
             const deltaScale = -e.deltaY * 0.01;
             zoomOnXAxisOnly(deltaScale, e.offsetX);
         };
@@ -978,7 +983,7 @@ const WaterfallWithStrictXAxisZoom = ({
             isDraggingRef.current = true;
             lastXRef.current = e.clientX;
             // Prevent text selection during drag
-            e.preventDefault();
+            //e.preventDefault();
             // Set cursor to indicate dragging
             container.style.cursor = 'grabbing';
         };
@@ -1006,7 +1011,7 @@ const WaterfallWithStrictXAxisZoom = ({
             if (e.touches.length === 1) {
                 isDraggingRef.current = true;
                 lastXRef.current = e.touches[0].clientX;
-                e.preventDefault();
+                //e.preventDefault();
             } else if (e.touches.length === 2) {
                 // Pinch-to-zoom
                 const touch1 = e.touches[0];
@@ -1016,7 +1021,7 @@ const WaterfallWithStrictXAxisZoom = ({
                     touch2.clientY - touch1.clientY
                 );
                 pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2;
-                e.preventDefault();
+                //e.preventDefault();
             }
         };
 
@@ -1026,7 +1031,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 const deltaX = e.touches[0].clientX - lastXRef.current;
                 lastXRef.current = e.touches[0].clientX;
                 panOnXAxisOnly(deltaX);
-                e.preventDefault();
+                //e.preventDefault();
             }
             // Two touches = pinch zoom
             else if (e.touches.length === 2) {
@@ -1044,7 +1049,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 pinchCenterXRef.current = currentCenterX;
 
                 zoomOnXAxisOnly(deltaScale, pinchCenterXRef.current);
-                e.preventDefault();
+                //e.preventDefault();
             }
         };
 
@@ -1088,7 +1093,7 @@ const WaterfallWithStrictXAxisZoom = ({
 
         canvases.forEach(canvas => {
             if (canvas) {
-                canvas.style.touchAction = 'none'; // Prevent default touch behaviors
+                canvas.style.touchAction = 'pan-y';
             }
         });
     }, [bandscopeCanvasRef, waterFallCanvasRef]);
@@ -1098,7 +1103,7 @@ const WaterfallWithStrictXAxisZoom = ({
             height: 'calc(100% - 90px)',
             width: '100%',
             overflow: 'hidden',
-            touchAction: 'none', // Prevent default touch behaviors
+            touchAction: 'pan-y', // Prevent default touch behaviors
             position: 'relative',
         }}>
             {/* Zoom controls */}
@@ -1150,7 +1155,7 @@ const WaterfallWithStrictXAxisZoom = ({
                     display: 'flex',
                     flexDirection: 'column',
                     transformOrigin: 'left center',
-                    touchAction: 'pan-y', // Prevent default touch behaviors
+                    touchAction: 'pan-y',
                 }}
             >
                 <canvas
@@ -1162,7 +1167,7 @@ const WaterfallWithStrictXAxisZoom = ({
                         height: '110px',
                         borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
                         display: 'block',
-                        touchAction: 'pan-y', // Prevent default touch behaviors
+                        touchAction: 'pan-y',
                     }}
                 />
                 <FrequencyScale
@@ -1178,7 +1183,7 @@ const WaterfallWithStrictXAxisZoom = ({
                         width: '100%',
                         height: '800px',
                         display: 'block',
-                        touchAction: 'pan-y', // Prevent default touch behaviors
+                        touchAction: 'pan-y',
                     }}
                 />
             </Box>
