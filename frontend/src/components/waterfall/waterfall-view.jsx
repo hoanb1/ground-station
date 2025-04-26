@@ -973,7 +973,7 @@ const WaterfallWithStrictXAxisZoom = ({
             // Only zoom when shift key is pressed
             if (!e.shiftKey) {
                 return;
-            };
+            }
             const deltaScale = -e.deltaY * 0.01;
             zoomOnXAxisOnly(deltaScale, e.offsetX);
         };
@@ -983,7 +983,7 @@ const WaterfallWithStrictXAxisZoom = ({
             isDraggingRef.current = true;
             lastXRef.current = e.clientX;
             // Prevent text selection during drag
-            //e.preventDefault();
+            e.preventDefault();
             // Set cursor to indicate dragging
             container.style.cursor = 'grabbing';
         };
@@ -1021,7 +1021,7 @@ const WaterfallWithStrictXAxisZoom = ({
                     touch2.clientY - touch1.clientY
                 );
                 pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2;
-                //e.preventDefault();
+                e.preventDefault();
             }
         };
 
@@ -1049,7 +1049,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 pinchCenterXRef.current = currentCenterX;
 
                 zoomOnXAxisOnly(deltaScale, pinchCenterXRef.current);
-                //e.preventDefault();
+                e.preventDefault();
             }
         };
 
@@ -1103,7 +1103,7 @@ const WaterfallWithStrictXAxisZoom = ({
             height: 'calc(100% - 90px)',
             width: '100%',
             overflow: 'hidden',
-            touchAction: 'pan-y', // Prevent default touch behaviors
+            touchAction: 'pan-y',
             position: 'relative',
         }}>
             {/* Zoom controls */}
@@ -1181,7 +1181,7 @@ const WaterfallWithStrictXAxisZoom = ({
                     height={900}
                     style={{
                         width: '100%',
-                        height: '800px',
+                        height: '900px',
                         display: 'block',
                         touchAction: 'pan-y',
                     }}
