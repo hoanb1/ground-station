@@ -56,6 +56,7 @@ import {
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
+import FrequencyScale from "./frequency-scale-html.jsx";
 
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
@@ -1005,6 +1006,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                         bandscopeCanvasRef={bandscopeCanvasRef}
                         frequencyBarScopeCanvasRef={frequencyBarScopeCanvasRef}
                         waterFallCanvasRef={waterFallCanvasRef}
+                        centerFrequency={centerFrequency}
+                        sampleRate={sampleRate}
                     />
                 </Box>
             </Box>
@@ -1031,7 +1034,9 @@ const WaterfallWithStrictXAxisZoom = ({
                                           bandscopeAxisYWidth,
                                           bandscopeCanvasRef,
                                           frequencyBarScopeCanvasRef,
-                                          waterFallCanvasRef
+                                          waterFallCanvasRef,
+                                          centerFrequency,
+                                          sampleRate,
                                       }) => {
     const containerRef = useRef(null);
     const containerWidthRef = useRef(0);
@@ -1047,7 +1052,7 @@ const WaterfallWithStrictXAxisZoom = ({
     const [customScale, setCustomScale] = useState(1);
     const [customPositionX, setCustomPositionX] = useState(0);
 
-    // Function to recalculate position when container resizes
+    // Function to recalculate position when the container resizes
     const handleResize = useCallback(() => {
         if (!containerRef.current || scaleRef.current <= 1) return;
 
@@ -1402,6 +1407,7 @@ const WaterfallWithStrictXAxisZoom = ({
                         touchAction: 'none', // Prevent default touch behaviors
                     }}
                 />
+                <FrequencyScale centerFrequency={centerFrequency} containerWidth={waterfallCanvasWidth - bandscopeAxisYWidth} sampleRate={sampleRate}/>
                 <canvas
                     ref={frequencyBarScopeCanvasRef}
                     width={waterfallCanvasWidth - bandscopeAxisYWidth}
@@ -1410,8 +1416,8 @@ const WaterfallWithStrictXAxisZoom = ({
                         width: '100%',
                         height: '21px',
                         borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                        display: 'block',
                         touchAction: 'none', // Prevent default touch behaviors
+                        display: 'none', // re-enable with block
                     }}
                 />
                 <canvas
