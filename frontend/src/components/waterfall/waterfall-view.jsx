@@ -1116,7 +1116,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 <IconButton
                     size={isMobile ? "medium" : "small"}
                     onClick={() => {
-                        zoomOnXAxisOnly(0.1, window.innerWidth / 2);
+                        zoomOnXAxisOnly(0.3, window.innerWidth / 2);
                     }}
                     sx={{ color: 'white' }}
                 >
@@ -1125,7 +1125,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 <IconButton
                     size={isMobile ? "medium" : "small"}
                     onClick={() => {
-                        zoomOnXAxisOnly(-0.1, window.innerWidth / 2);
+                        zoomOnXAxisOnly(-0.3, window.innerWidth / 2);
                     }}
                     sx={{ color: 'white' }}
                 >
