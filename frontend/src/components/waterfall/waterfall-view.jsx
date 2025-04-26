@@ -14,7 +14,6 @@ import {
     Stack,
     Divider,
 } from '@mui/material';
-import {TransformWrapper, TransformComponent} from "react-zoom-pan-pinch";
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -58,6 +57,7 @@ import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
 import FrequencyScale from "./frequency-scale-canvas.jsx";
 import {useResizeDetector} from "react-resize-detector";
+import {getColorForPower} from "./waterfall-colors.jsx";
 
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
@@ -66,7 +66,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const waterFallCanvasRef = useRef(null);
     const bandscopeCanvasRef = useRef(null); // New ref for bandscope canvas
     const dBAxisScopeCanvasRef = useRef(null);
-    const frequencyBarScopeCanvasRef = useRef(null);
     const waterFallLeftMarginCanvasRef = useRef(null);
     const waterfallDataRef = useRef(new Array(1000).fill(-120));
     const animationFrameRef = useRef(null);
@@ -402,7 +401,12 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     const fftIndex = Math.min(Math.floor(x * skipFactor), fftRow.length - 1);
                     const amplitude = fftRow[fftIndex];
 
-                    const rgb = getColorForPower(amplitude, visualSettingsRef.current.colorMap, visualSettingsRef.current.dbRange);
+                    const rgb = getColorForPower(
+                        amplitude,
+                        visualSettingsRef.current.colorMap,
+                        visualSettingsRef.current.dbRange,
+                        colorCache
+                    );
 
                     // Calculate position in the image data array
                     const pixelIndex = x * 4;
@@ -418,7 +422,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             updateWaterfallLeftMargin();
         }
     }
-
 
     function updateWaterfallLeftMargin() {
         if (!waterFallLeftMarginCanvasRef.current) return;
@@ -467,7 +470,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             lastTimestampRef.current = now;
         }
     }
-
 
     function drawBandscope() {
         const bandScopeCanvas = bandscopeCanvasRef.current;
@@ -562,11 +564,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             // Draw label
             ctx.fillText(`${db} dB`, bandscopeAxisYWidth - 5, y + 3);
         }
-
-        // Draw frequency scale at the bottom
-        const frequencyBarScopeCanvas = frequencyBarScopeCanvasRef.current;
-        const frequencyBarScopeCtx = frequencyBarScopeCanvas.getContext('2d');
-        drawFrequencyScale(frequencyBarScopeCtx, frequencyBarScopeCanvas.width);
     }
 
     // Helper function to draw the FFT data as a line
@@ -583,7 +580,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         const lineRgb = getColorForPower(
             minDb + (maxDb - minDb) * lineColorPoint,
             currentColorMap,
-            [minDb, maxDb]
+            [minDb, maxDb],
+            colorCache,
         );
 
         // Create line color with proper opacity
@@ -594,7 +592,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         const fillRgb = getColorForPower(
             minDb + (maxDb - minDb) * fillColorPoint,
             currentColorMap,
-            [minDb, maxDb]
+            [minDb, maxDb],
+            colorCache,
         );
 
         // Create fill color with low opacity
@@ -631,250 +630,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         ctx.lineTo(0, height);
         ctx.fill();
     }
-
-
-    // Get color based on power level and selected color map
-    const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
-        // Round the power value to reduce cache size (e.g., to the nearest 0.5 dB)
-        const roundedPower = Math.round(powerDb * 2) / 2;
-
-        // Create a cache key
-        const cacheKey = `${roundedPower}-${mapName}-${minDb}-${maxDb}`;
-
-        // Check if this color is already cached
-        if (colorCache.current.has(cacheKey)) {
-            return colorCache.current.get(cacheKey);
-        }
-
-        // If not in cache, calculate the color
-        const normalizedValue = Math.max(0, Math.min(1, (roundedPower - minDb) / (maxDb - minDb)));
-
-        // apply selected color map
-        switch (mapName) {
-            case 'viridis':
-                const viridisRGB = {
-                    r: Math.floor(70 + 180 * normalizedValue),
-                    g: Math.floor(normalizedValue < 0.5 ? 70 + 180 * normalizedValue * 2 : 250 - 80 * (normalizedValue - 0.5) * 2),
-                    b: Math.floor(normalizedValue < 0.5 ? 130 + 120 * normalizedValue * 2 : 250 - 200 * (normalizedValue - 0.5) * 2)
-                };
-                colorCache.current.set(cacheKey, viridisRGB);
-                return viridisRGB;
-            case 'plasma':
-                const plasmaRGB = {
-                    r: Math.floor(20 + 230 * normalizedValue),
-                    g: Math.floor(normalizedValue < 0.7 ? 20 + 180 * normalizedValue / 0.7 : 200 - 150 * (normalizedValue - 0.7) / 0.3),
-                    b: Math.floor(normalizedValue < 0.5 ? 120 + 80 * normalizedValue / 0.5 : 200 - 200 * (normalizedValue - 0.5) / 0.5)
-                };
-                colorCache.current.set(cacheKey, plasmaRGB);
-                return plasmaRGB;
-            case 'inferno':
-                const infernoRGB = {
-                    r: Math.floor(normalizedValue < 0.5 ? 20 + 200 * normalizedValue / 0.5 : 220 + 35 * (normalizedValue - 0.5) / 0.5),
-                    g: Math.floor(normalizedValue < 0.7 ? 10 + 120 * normalizedValue / 0.7 : 130 - 30 * (normalizedValue - 0.7) / 0.3),
-                    b: Math.floor(normalizedValue < 0.3 ? 40 + 80 * normalizedValue / 0.3 : 120 - 120 * (normalizedValue - 0.3) / 0.7)
-                };
-                colorCache.current.set(cacheKey, infernoRGB);
-                return infernoRGB;
-            case 'magma':
-                const magmaRGB = {
-                    r: Math.floor(normalizedValue < 0.6 ? 30 + 170 * normalizedValue / 0.6 : 200 + 55 * (normalizedValue - 0.6) / 0.4),
-                    g: Math.floor(normalizedValue < 0.7 ? 10 + 140 * normalizedValue / 0.7 : 150 + 50 * (normalizedValue - 0.7) / 0.3),
-                    b: Math.floor(normalizedValue < 0.4 ? 100 + 70 * normalizedValue / 0.4 : 170 - 70 * (normalizedValue - 0.4) / 0.6)
-                };
-                colorCache.current.set(cacheKey, magmaRGB);
-                return magmaRGB;
-
-            case 'websdr':
-                // Custom WebSDR colormap with blue -> purple -> magenta -> yellow
-                let websdrRGB;
-                if (normalizedValue < 0.25) {
-                    // Dark blue to medium blue for very weak signals
-                    const factor = normalizedValue / 0.25;
-                    websdrRGB = {
-                        r: 20 + Math.floor(factor * 40),
-                        g: 20 + Math.floor(factor * 50),
-                        b: 80 + Math.floor(factor * 100)
-                    };
-                } else if (normalizedValue < 0.5) {
-                    // Medium blue to purple transition
-                    const factor = (normalizedValue - 0.25) / 0.25;
-                    websdrRGB = {
-                        r: 60 + Math.floor(factor * 80),
-                        g: 70 - Math.floor(factor * 20),
-                        b: 180 + Math.floor(factor * 75)
-                    };
-                } else if (normalizedValue < 0.7) {
-                    // Purple to bright magenta
-                    const factor = (normalizedValue - 0.5) / 0.2;
-                    websdrRGB = {
-                        r: 140 + Math.floor(factor * 115),
-                        g: 50 + Math.floor(factor * 40),
-                        b: 255 - Math.floor(factor * 50)
-                    };
-                } else if (normalizedValue < 0.85) {
-                    // Magenta to gold transition
-                    const factor = (normalizedValue - 0.7) / 0.15;
-                    websdrRGB = {
-                        r: 255,
-                        g: 90 + Math.floor(factor * 165),
-                        b: 205 - Math.floor(factor * 205)
-                    };
-                } else {
-                    // Gold to bright yellow for strongest signals
-                    const factor = (normalizedValue - 0.85) / 0.15;
-                    websdrRGB = {
-                        r: 255,
-                        g: 255,
-                        b: Math.floor(factor * 130)
-                    };
-                }
-                colorCache.current.set(cacheKey, websdrRGB);
-                return websdrRGB;
-
-            case 'jet':
-                // Classic jet colormap (blue -> cyan -> green -> yellow -> red)
-                let jetRGB;
-                if (normalizedValue < 0.125) {
-                    jetRGB = {r: 0, g: 0, b: Math.floor(normalizedValue * 8 * 255)};
-                } else if (normalizedValue < 0.375) {
-                    jetRGB = {r: 0, g: Math.floor((normalizedValue - 0.125) * 4 * 255), b: 255};
-                } else if (normalizedValue < 0.625) {
-                    jetRGB = {
-                        r: Math.floor((normalizedValue - 0.375) * 4 * 255),
-                        g: 255,
-                        b: Math.floor(255 - (normalizedValue - 0.375) * 4 * 255)
-                    };
-                } else if (normalizedValue < 0.875) {
-                    jetRGB = {r: 255, g: Math.floor(255 - (normalizedValue - 0.625) * 4 * 255), b: 0};
-                } else {
-                    jetRGB = {r: Math.floor(255 - (normalizedValue - 0.875) * 8 * 255), g: 0, b: 0};
-                }
-
-                colorCache.current.set(cacheKey, jetRGB);
-                return jetRGB;
-
-            case 'cosmic':
-                // Custom cosmic colormap with dark purple to yellow gradient based on provided colors
-                // #070208 -> #100b56 -> #170d87 -> #7400cd -> #cb5cff -> #f9f9ae
-                let cosmicRGB;
-                if (normalizedValue < 0.2) {
-                    // #070208 to #100b56
-                    const factor = normalizedValue / 0.2;
-                    cosmicRGB = {
-                        r: 7 + Math.floor(factor * 9),
-                        g: 2 + Math.floor(factor * 9),
-                        b: 8 + Math.floor(factor * 78)
-                    };
-                } else if (normalizedValue < 0.4) {
-                    // #100b56 to #170d87
-                    const factor = (normalizedValue - 0.2) / 0.2;
-                    cosmicRGB = {
-                        r: 16 + Math.floor(factor * 7),
-                        g: 11 + Math.floor(factor * 2),
-                        b: 86 + Math.floor(factor * 49)
-                    };
-                } else if (normalizedValue < 0.6) {
-                    // #170d87 to #7400cd
-                    const factor = (normalizedValue - 0.4) / 0.2;
-                    cosmicRGB = {
-                        r: 23 + Math.floor(factor * 93),
-                        g: 13 + Math.floor(factor * 0),
-                        b: 135 + Math.floor(factor * 70)
-                    };
-                } else if (normalizedValue < 0.8) {
-                    // #7400cd to #cb5cff
-                    const factor = (normalizedValue - 0.6) / 0.2;
-                    cosmicRGB = {
-                        r: 116 + Math.floor(factor * 87),
-                        g: 0 + Math.floor(factor * 92),
-                        b: 205 + Math.floor(factor * 50)
-                    };
-                } else {
-                    // #cb5cff to #f9f9ae
-                    const factor = (normalizedValue - 0.8) / 0.2;
-                    cosmicRGB = {
-                        r: 203 + Math.floor(factor * 46),
-                        g: 92 + Math.floor(factor * 167),
-                        b: 255 - Math.floor(factor * 81)
-                    };
-                }
-
-                colorCache.current.set(cacheKey, cosmicRGB);
-                return cosmicRGB;
-
-            case 'greyscale':
-                // Default grayscale
-                const intensity = Math.floor(normalizedValue * 255);
-                const greyRGB = {r: intensity, g: intensity, b: intensity};
-                colorCache.current.set(cacheKey, greyRGB);
-                return greyRGB;
-        }
-    }
-
-    // Draw frequency scale along the bottom
-    const drawFrequencyScale = (ctx, width) => {
-        const startFreq = visualSettingsRef.current.centerFrequency - visualSettingsRef.current.sampleRate / 2;
-        const endFreq = visualSettingsRef.current.centerFrequency + visualSettingsRef.current.sampleRate / 2;
-        const freqRange = endFreq - startFreq;
-
-        const height = 25; // Height of the frequency scale area
-        const tickHeight = 10; // Height of the frequency tick marks
-
-        // Draw background for scale
-        ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
-        ctx.fillRect(0, ctx.canvas.height - height, width, height);
-
-        // Calculate the appropriate interval for tick marks
-        // We want roughly 8-12 tick marks across the width for readability
-        const availableWidth = width;
-        const targetTickCount = 10;
-
-        // Calculate an interval in Hz based on frequency range
-        let interval = freqRange / targetTickCount;
-
-        // Round to a nice number (1, 2, or 5 × 10^n)
-        const magnitude = Math.pow(10, Math.floor(Math.log10(interval)));
-        const normalized = interval / magnitude;
-
-        if (normalized < 1.5) interval = magnitude;
-        else if (normalized < 3.5) interval = 2 * magnitude;
-        else if (normalized < 7.5) interval = 5 * magnitude;
-        else interval = 10 * magnitude;
-
-        // Calculate the first tick position (round up to the nearest interval)
-        const firstTick = Math.ceil(startFreq / interval) * interval;
-
-        // Draw the tick marks and labels
-        ctx.strokeStyle = 'rgba(200, 200, 200, 0.7)';
-        ctx.lineWidth = 1;
-        ctx.fillStyle = 'white';
-        ctx.font = '13px Monospace'; // Smaller font for tick labels
-        ctx.textAlign = 'center';
-
-        for (let freq = firstTick; freq <= endFreq; freq += interval) {
-            // Calculate x position for this frequency
-            const x = (((freq - startFreq) / freqRange) * availableWidth);
-
-            // Draw the tick mark
-            ctx.beginPath();
-            ctx.moveTo(x, ctx.canvas.height - height);
-            ctx.lineTo(x, ctx.canvas.height - height + tickHeight);
-            ctx.stroke();
-
-            // Draw the tick label (in MHz or kHz depending on frequency)
-            if (interval >= 1e6) {
-                // For intervals of 1MHz or more, show MHz with 1 decimal place
-                ctx.fillText(humanizeFrequency(freq), x, ctx.canvas.height - height + tickHeight + 10);
-            } else if (interval >= 1e3) {
-                // For intervals of 1kHz or more, show kHz
-                //ctx.fillText(`${(freq / 1e3).toFixed(0)}k`, x, ctx.canvas.height - height + tickHeight + 10);
-                ctx.fillText(humanizeFrequency(freq), x, ctx.canvas.height - height + tickHeight + 10);
-            } else {
-                // For small intervals, just show Hz
-                ctx.fillText(humanizeFrequency(freq), x, ctx.canvas.height - height + tickHeight + 10);
-            }
-        }
-    };
 
     return (
         <>
@@ -1005,7 +760,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                         bandscopeAxisYWidth={bandscopeAxisYWidth}
                         waterfallCanvasWidth={waterfallCanvasWidth}
                         bandscopeCanvasRef={bandscopeCanvasRef}
-                        frequencyBarScopeCanvasRef={frequencyBarScopeCanvasRef}
                         waterFallCanvasRef={waterFallCanvasRef}
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
@@ -1034,7 +788,6 @@ const WaterfallWithStrictXAxisZoom = ({
                                           waterfallCanvasWidth,
                                           bandscopeAxisYWidth,
                                           bandscopeCanvasRef,
-                                          frequencyBarScopeCanvasRef,
                                           waterFallCanvasRef,
                                           centerFrequency,
                                           sampleRate,
@@ -1325,7 +1078,6 @@ const WaterfallWithStrictXAxisZoom = ({
     useEffect(() => {
         const canvases = [
             bandscopeCanvasRef.current,
-            frequencyBarScopeCanvasRef.current,
             waterFallCanvasRef.current
         ];
 
@@ -1334,7 +1086,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 canvas.style.touchAction = 'none'; // Prevent default touch behaviors
             }
         });
-    }, [bandscopeCanvasRef, frequencyBarScopeCanvasRef, waterFallCanvasRef]);
+    }, [bandscopeCanvasRef, waterFallCanvasRef]);
 
     return (
         <Box sx={{
@@ -1393,7 +1145,7 @@ const WaterfallWithStrictXAxisZoom = ({
                     display: 'flex',
                     flexDirection: 'column',
                     transformOrigin: 'left center',
-                    touchAction: 'none', // Prevent default touch behaviors
+                    touchAction: 'pan-y', // Prevent default touch behaviors
                 }}
             >
                 <canvas
@@ -1405,25 +1157,13 @@ const WaterfallWithStrictXAxisZoom = ({
                         height: '110px',
                         borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
                         display: 'block',
-                        touchAction: 'none', // Prevent default touch behaviors
+                        touchAction: 'pan-y', // Prevent default touch behaviors
                     }}
                 />
                 <FrequencyScale
                     centerFrequency={centerFrequency}
                     containerWidth={waterfallCanvasWidth - bandscopeAxisYWidth}
                     sampleRate={sampleRate}
-                />
-                <canvas
-                    ref={frequencyBarScopeCanvasRef}
-                    width={waterfallCanvasWidth - bandscopeAxisYWidth}
-                    height={21}
-                    style={{
-                        width: '100%',
-                        height: '21px',
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                        touchAction: 'none', // Prevent default touch behaviors
-                        display: 'none', // re-enable with block
-                    }}
                 />
                 <canvas
                     ref={waterFallCanvasRef}
@@ -1433,7 +1173,7 @@ const WaterfallWithStrictXAxisZoom = ({
                         width: '100%',
                         height: '800px',
                         display: 'block',
-                        touchAction: 'none', // Prevent default touch behaviors
+                        touchAction: 'pan-y', // Prevent default touch behaviors
                     }}
                 />
             </Box>

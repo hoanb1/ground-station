@@ -185,7 +185,8 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
                     display: 'block',
                     width: '100%',
                     height: '100%',
-                    backgroundColor: 'rgba(36, 36, 36, 1)'
+                    backgroundColor: 'rgba(36, 36, 36, 1)',
+                    touchAction: 'pan-y',
                 }}
             />
         </div>
