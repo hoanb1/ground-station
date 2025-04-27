@@ -910,6 +910,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
     async with (AsyncSessionLocal() as dbsession):
         while True:
             try:
+                start_loop_date = datetime.now(UTC)
                 events = []
                 tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
                 assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
@@ -1061,6 +1062,16 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     logger.critical(f"Error sending satellite tracking data to the browser: {e}")
                     logger.exception(e)
 
-                logger.info(f"Waiting for {args.track_interval} seconds before next update...")
-                await asyncio.sleep(args.track_interval)
+                # calculate sleep time
+                end_loop_date = datetime.now(UTC)
+                loop_duration = round((end_loop_date - start_loop_date).total_seconds(), 2)
+
+                if loop_duration > args.track_interval:
+                    logger.warning(f"Single tracking loop iteration took longer ({loop_duration}) than the configured "
+                                   f"interval ({args.track_interval})")
+
+                remaining_time_to_sleep = max((args.track_interval - loop_duration), 0)
+
+                logger.info(f"Waiting for {remaining_time_to_sleep} seconds before next update (already spent {loop_duration})...")
+                await asyncio.sleep(remaining_time_to_sleep)
 
