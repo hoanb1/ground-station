@@ -53,7 +53,9 @@ import {
     setTunerAgc,
     setRtlAgc,
     setWaterFallCanvasWidth,
-    setWaterFallVisualWidth, setWaterFallScaleX, setWaterFallPositionX,
+    setWaterFallVisualWidth,
+    setWaterFallScaleX,
+    setWaterFallPositionX,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -123,7 +125,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
-    const [waterfallCanvasWidth, setWaterfallCanvasWidth] = useState(waterFallCanvasWidth);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
 
     const cancelAnimations = () => {
@@ -851,8 +852,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
                     {/* Right column - Main visualization canvases */}
                     <WaterfallWithStrictXAxisZoom
-                        bandscopeAxisYWidth={bandscopeAxisYWidth}
-                        waterfallCanvasWidth={waterfallCanvasWidth}
                         bandscopeCanvasRef={bandscopeCanvasRef}
                         waterFallCanvasRef={waterFallCanvasRef}
                         centerFrequency={centerFrequency}
@@ -879,8 +878,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
 
 const WaterfallWithStrictXAxisZoom = ({
-                                          waterfallCanvasWidth,
-                                          bandscopeAxisYWidth,
                                           bandscopeCanvasRef,
                                           waterFallCanvasRef,
                                           centerFrequency,
@@ -906,7 +903,7 @@ const WaterfallWithStrictXAxisZoom = ({
     // State for React rendering
     const [customScale, setCustomScale] = useState(1);
     const [customPositionX, setCustomPositionX] = useState(0);
-    const [visualContainerWidth, setVisualContainerWidth] = useState(waterfallCanvasWidth);
+    const [visualContainerWidth, setVisualContainerWidth] = useState(waterFallCanvasWidth);
 
     // Function to recalculate position when the container resizes
     const handleResize = useCallback(() => {
@@ -1273,7 +1270,7 @@ const WaterfallWithStrictXAxisZoom = ({
             >
                 <canvas
                     ref={bandscopeCanvasRef}
-                    width={waterfallCanvasWidth}
+                    width={waterFallCanvasWidth}
                     height={110}
                     style={{
                         width: '100%',
@@ -1290,7 +1287,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 />
                 <canvas
                     ref={waterFallCanvasRef}
-                    width={waterfallCanvasWidth}
+                    width={waterFallCanvasWidth}
                     height={900}
                     style={{
                         width: '100%',

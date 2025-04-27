@@ -63,15 +63,17 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
         // Calculate frequency range and tick spacing
         const freqRange = endFreq - startFreq;
 
-        // IMPROVED: More adaptive tick spacing based on container width
-        // Decrease minPixelsPerMajorTick as actualWidth increases
+        // More adaptive tick spacing based on container width
         let minPixelsPerMajorTick;
         if (actualWidth > 1200) {
-            minPixelsPerMajorTick = 90; // More ticks for very wide displays
+            // More ticks for very wide displays
+            minPixelsPerMajorTick = 90;
         } else if (actualWidth > 800) {
-            minPixelsPerMajorTick = 100; // Medium density for wider displays
+            // Medium density for wider displays
+            minPixelsPerMajorTick = 100;
         } else {
-            minPixelsPerMajorTick = 110; // Original spacing for smaller displays
+            // Original spacing for smaller displays
+            minPixelsPerMajorTick = 110;
         }
 
         // Increase maximum number of ticks for larger displays
@@ -95,16 +97,20 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
         // Calculate where the first tick should be (round up to the next nice number)
         const firstTick = Math.ceil(startFreq / tickStep) * tickStep;
 
-        // IMPROVED: Adaptive minor ticks based on width
+        // Adaptive minor ticks based on width
         let minorTicksPerMajor;
         if (actualWidth > 1000) {
-            minorTicksPerMajor = 20; // More detail for very wide displays
+            // More detail for very wide displays
+            minorTicksPerMajor = 20;
         } else if (actualWidth > 700) {
-            minorTicksPerMajor = 10; // Original setting for medium displays
+            // Original setting for medium displays
+            minorTicksPerMajor = 10;
         } else if (actualWidth > 300) {
-            minorTicksPerMajor = 5; // Fewer ticks for smaller displays
+            // Fewer ticks for smaller displays
+            minorTicksPerMajor = 5;
         } else {
-            minorTicksPerMajor = 2; // No minor ticks for very small displays
+            // No minor ticks for very small displays
+            minorTicksPerMajor = 2;
         }
 
         const minorStep = minorTicksPerMajor > 0 ? tickStep / minorTicksPerMajor : 0;
@@ -130,7 +136,9 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
                  freq <= endFreq + tickStep/10; // Small buffer to ensure we include the last tick
                  freq += minorStep > 0 ? minorStep : tickStep) {
 
-                if (freq < startFreq - tickStep/10) continue;
+                if (freq < startFreq - tickStep/10) {
+                    continue;
+                }
 
                 const isBigTick = Math.abs(Math.round(freq / tickStep) * tickStep - freq) < tickStep / 100;
                 const x = ((freq - startFreq) / freqRange) * canvas.width;
@@ -152,8 +160,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
                     ctx.fillText(freqText, x, 4);
 
                 } else if (minorStep > 0) {
-                    // Draw minor tick
-                    // IMPROVED: Allow some minor ticks to have labels when there's room
+                    // Allow some minor ticks to have labels when there's room
                     const isLabeledMinor = actualWidth > 1000 &&
                         (minorTicksPerMajor <= 5 || freq % (tickStep / 2) < minorStep / 2);
 
@@ -167,20 +174,15 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
                     ctx.stroke();
 
                     // Draw some labels on important minor ticks when there's a lot of space
-                    console.info("1: ", isLabeledMinor, actualWidth);
                     if (isLabeledMinor && actualWidth > 1000) {
                         const minorFreqText = preciseHumanizeFrequency(freq);
                         const minorTextWidth = ctx.measureText(minorFreqText).width;
-
-                        console.info("2: ", "minorFreqText: ", minorFreqText,
-                            "actualPixelsPerTick: ", actualPixelsPerTick, "(minorTicksPerMajor): ", (minorTicksPerMajor),
-                            "(minorTextWidth): ", (minorTextWidth));
 
                         if (actualPixelsPerTick / (minorTicksPerMajor / 7) >= (minorTextWidth)) {
                             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'top';
-                            ctx.font = `bold ${fontSizeBase - 1}px monospace`;
+                            ctx.font = `bold ${fontSizeBase}px monospace`;
                             ctx.fillText(minorFreqText, x, 4);
                         }
                     }
