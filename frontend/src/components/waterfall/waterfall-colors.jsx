@@ -118,6 +118,57 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb], colorCache) =
             colorCache.current.set(cacheKey, jetRGB);
             return jetRGB;
 
+
+        case 'radar':
+            // Radar display inspired palette with phosphor green elements
+            // #000000 (black) -> #001F00 (very dark green) -> #003300 (dark green) ->
+            // #00FF00 (radar green) -> #88FF88 (light green) -> #FFFFFF (white trace)
+            let radarRGB;
+            if (normalizedValue < 0.15) {
+                // #000000 to #001F00 (black to very dark green) - empty radar space
+                const factor = normalizedValue / 0.15;
+                radarRGB = {
+                    r: 0,
+                    g: 0 + Math.floor(factor * 31),
+                    b: 0
+                };
+            } else if (normalizedValue < 0.35) {
+                // #001F00 to #003300 (very dark green to dark green) - faint returns
+                const factor = (normalizedValue - 0.15) / 0.2;
+                radarRGB = {
+                    r: 0,
+                    g: 31 + Math.floor(factor * 20),
+                    b: 0
+                };
+            } else if (normalizedValue < 0.6) {
+                // #003300 to #00FF00 (dark green to classic radar green) - standard returns
+                const factor = (normalizedValue - 0.35) / 0.25;
+                radarRGB = {
+                    r: 0,
+                    g: 51 + Math.floor(factor * 204),
+                    b: 0
+                };
+            } else if (normalizedValue < 0.85) {
+                // #00FF00 to #88FF88 (radar green to light green) - strong returns
+                const factor = (normalizedValue - 0.6) / 0.25;
+                radarRGB = {
+                    r: 0 + Math.floor(factor * 136),
+                    g: 255,
+                    b: 0 + Math.floor(factor * 136)
+                };
+            } else {
+                // #88FF88 to #FFFFFF (light green to white) - critical returns/targets
+                const factor = (normalizedValue - 0.85) / 0.15;
+                radarRGB = {
+                    r: 136 + Math.floor(factor * 119),
+                    g: 255,
+                    b: 136 + Math.floor(factor * 119)
+                };
+            }
+
+            colorCache.current.set(cacheKey, radarRGB);
+            return radarRGB;
+
         case 'cosmic':
             // Custom cosmic colormap with dark purple to yellow gradient based on provided colors
             // #070208 -> #100b56 -> #170d87 -> #7400cd -> #cb5cff -> #f9f9ae
@@ -168,10 +219,13 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb], colorCache) =
             return cosmicRGB;
 
         case 'greyscale':
-            // Default grayscale
-            const intensity = Math.floor(normalizedValue * 255);
+            // Modified grayscale with darker low intensity
+            // Apply a power curve to make low intensities darker
+            const curvedValue = Math.pow(normalizedValue, 2.0); // Power > 1 makes darker low values
+            const intensity = Math.floor(curvedValue * 255);
             const greyRGB = {r: intensity, g: intensity, b: intensity};
             colorCache.current.set(cacheKey, greyRGB);
             return greyRGB;
+
     }
 }

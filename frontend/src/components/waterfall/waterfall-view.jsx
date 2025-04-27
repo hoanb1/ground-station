@@ -67,7 +67,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const bandscopeCanvasRef = useRef(null); // New ref for bandscope canvas
     const dBAxisScopeCanvasRef = useRef(null);
     const waterFallLeftMarginCanvasRef = useRef(null);
-    const waterfallDataRef = useRef(new Array(1000).fill(-120));
+    const waterfallDataRef = useRef(new Array(1024).fill(-120));
     const animationFrameRef = useRef(null);
     const bandscopeAnimationFrameRef = useRef(null); // New ref for bandscope animation
     const visualSettingsRef = useRef({
@@ -192,7 +192,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         drawBandscope();
 
         return () => {
-            // Clean up animations
+            // Cleanup animations
             cancelAnimations();
 
             // Clean up socket listeners
@@ -307,6 +307,9 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             // Start both rendering loops
             renderWaterfallLoop();
             renderBandscopeLoop();
+
+            // auto range the dB scale
+            setTimeout(() => autoScaleDbRange(), 1500);
         }
     };
 
@@ -338,9 +341,10 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         bandscopeAnimationFrameRef.current = requestAnimationFrame(renderBandscopeLoop);
     }
 
-    // Auto-scale the color range based on the recent FFT data
     const autoScaleDbRange = () => {
-        if (waterfallDataRef.current.length === 0) return;
+        if (waterfallDataRef.current.length === 0) {
+            return;
+        }
 
         // Find min and max values in recent data
         let min = Infinity;
@@ -811,9 +815,11 @@ const WaterfallWithStrictXAxisZoom = ({
     // State for React rendering
     const [customScale, setCustomScale] = useState(1);
     const [customPositionX, setCustomPositionX] = useState(0);
+    const [visualContainerWidth, setVisualContainerWidth] = useState(waterfallCanvasWidth);
 
     // Function to recalculate position when the container resizes
     const handleResize = useCallback(() => {
+        console.log("handleResize main waterfall container");
         if (!containerRef.current || scaleRef.current <= 1) return;
 
         const newWidth = containerRef.current.clientWidth;
@@ -830,7 +836,7 @@ const WaterfallWithStrictXAxisZoom = ({
         // Scale the center point positions
         const oldScaledCenter = (oldCenterPoint - positionXRef.current) / scaleRef.current;
 
-        // Calculate new position to maintain the same content at center
+        // Calculate the position to maintain the same content at center
         const newPositionX = newCenterPoint - (oldScaledCenter * scaleRef.current);
 
         // Apply constraints to keep within bounds
@@ -865,10 +871,17 @@ const WaterfallWithStrictXAxisZoom = ({
         };
     }, [handleResize]);
 
-    // Apply transform directly to DOM element
+    // Calculate the visual width including CSS transforms
+    function getScaledWidth(element, scaleX) {
+        return element.getBoundingClientRect().width;
+    }
+
+    // Apply transform directly to a DOM element
     const applyTransform = useCallback(() => {
         if (containerRef.current) {
             containerRef.current.style.transform = `translateX(${positionXRef.current}px) scaleX(${scaleRef.current})`;
+            const newVisualWidth = getScaledWidth(containerRef.current, scaleRef.current);
+            setVisualContainerWidth(newVisualWidth);
         }
     }, []);
 
@@ -901,10 +914,10 @@ const WaterfallWithStrictXAxisZoom = ({
         const containerWidth = containerRef.current?.clientWidth || 0;
         containerWidthRef.current = containerWidth;
 
-        // Calculate how far from left edge the center point is (as a ratio of scaled width)
+        // Calculate how far from the left edge the center point is (as a ratio of scaled width)
         const mousePointRatio = (centerX - positionXRef.current) / (containerWidth * prevScale);
 
-        // Calculate new position
+        // Calculate a new position
         let newPositionX = 0;
         if (newScale === 1) {
             // Reset position at scale 1
@@ -953,7 +966,7 @@ const WaterfallWithStrictXAxisZoom = ({
         updateReactState();
     }, [applyTransform, updateReactState]);
 
-    // Reset to default state
+    // Reset to the default state
     const resetCustomTransform = useCallback(() => {
         scaleRef.current = 1;
         positionXRef.current = 0;
@@ -1172,7 +1185,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 />
                 <FrequencyScale
                     centerFrequency={centerFrequency}
-                    containerWidth={waterfallCanvasWidth}
+                    containerWidth={visualContainerWidth}
                     sampleRate={sampleRate}
                 />
                 <canvas

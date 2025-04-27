@@ -1,54 +1,48 @@
 import React, { useRef, useEffect, useState } from 'react';
-import { humanizeFrequency } from "../common/common.jsx";
+import {humanizeFrequency, preciseHumanizeFrequency} from "../common/common.jsx";
+
+const getFrequencyScaleWidth = (element) => {
+    // Get the actual client dimensions of the element
+    return element.current.getBoundingClientRect();
+}
+
 
 const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
     const canvasRef = useRef(null);
-    const containerRef = useRef(null);
-    const [actualWidth, setActualWidth] = useState(containerWidth || 300);
+    const frequencyScaleContainerRef = useRef(null);
+    const [actualWidth, setActualWidth] = useState(4096);
     const lastMeasuredWidthRef = useRef(0);
 
     // Calculate start and end frequencies
     const startFreq = centerFrequency - sampleRate / 2;
     const endFreq = centerFrequency + sampleRate / 2;
 
-    // Active polling approach to measure the container size
-    useEffect(() => {
-        if (!containerRef.current) return;
+    const updateActualWidth = () => {
+        // Get the actual client dimensions of the element
+        const rect = getFrequencyScaleWidth(frequencyScaleContainerRef);
 
-        // Function to measure the actual rendered width
-        const measureContainerWidth = () => {
-            if (!containerRef.current) return;
-
-            // Get the actual client dimensions of the element
-            const rect = containerRef.current.getBoundingClientRect();
-
-            // Only update if width has changed significantly (avoid unnecessary redraws)
-            if (Math.abs(rect.width - lastMeasuredWidthRef.current) > 1) {
-                if (rect.width > 0) {
-                    lastMeasuredWidthRef.current = rect.width;
-                    setActualWidth(rect.width);
-                }
+        // Only update if the width has changed significantly (avoid unnecessary redraws)
+        if (Math.abs(rect.width - lastMeasuredWidthRef.current) > 1) {
+            if (rect.width > 0) {
+                lastMeasuredWidthRef.current = rect.width;
+                setActualWidth(rect.width);
             }
-        };
+        }
+    }
 
-        // Measure immediately
-        measureContainerWidth();
+    useEffect(() => {
+        const interval = setInterval(() => {
+            updateActualWidth();
+        }, 250);
 
-        // Set up polling interval for continuous measurement
-        const pollInterval = setInterval(measureContainerWidth, 250);
-
-        // Handle window resize events
-        const handleResize = () => {
-            measureContainerWidth();
-        };
-        window.addEventListener('resize', handleResize);
-
-        // Clean up on unmount
         return () => {
-            clearInterval(pollInterval);
-            window.removeEventListener('resize', handleResize);
+            clearInterval(interval);
         };
     }, []);
+
+    useEffect(() => {
+        updateActualWidth();
+    }, [containerWidth]);
 
     // Draw the frequency scale on the canvas
     useEffect(() => {
@@ -69,9 +63,20 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
         // Calculate frequency range and tick spacing
         const freqRange = endFreq - startFreq;
 
-        // Adaptive tick spacing based on container width
-        const minPixelsPerMajorTick = 110; // Minimum pixels between major ticks
-        const targetMajorTickCount = Math.max(2, Math.min(Math.floor(actualWidth / minPixelsPerMajorTick), 16));
+        // IMPROVED: More adaptive tick spacing based on container width
+        // Decrease minPixelsPerMajorTick as actualWidth increases
+        let minPixelsPerMajorTick;
+        if (actualWidth > 1200) {
+            minPixelsPerMajorTick = 90; // More ticks for very wide displays
+        } else if (actualWidth > 800) {
+            minPixelsPerMajorTick = 100; // Medium density for wider displays
+        } else {
+            minPixelsPerMajorTick = 110; // Original spacing for smaller displays
+        }
+
+        // Increase maximum number of ticks for larger displays
+        const maxTicks = Math.max(16, Math.min(24, Math.floor(actualWidth / 200)));
+        const targetMajorTickCount = Math.max(2, Math.min(Math.floor(actualWidth / minPixelsPerMajorTick), maxTicks));
 
         const approxStepSize = freqRange / targetMajorTickCount;
         const magnitude = 10 ** Math.floor(Math.log10(approxStepSize));
@@ -86,13 +91,22 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
         } else {
             tickStep = 10 * magnitude;
         }
-        console.info(`Tick step: ${tickStep}`);
 
         // Calculate where the first tick should be (round up to the next nice number)
         const firstTick = Math.ceil(startFreq / tickStep) * tickStep;
 
-        // Minor ticks (if space allows)
-        const minorTicksPerMajor = actualWidth > 500 ? 5 : (actualWidth > 300 ? 2 : 0);
+        // IMPROVED: Adaptive minor ticks based on width
+        let minorTicksPerMajor;
+        if (actualWidth > 1000) {
+            minorTicksPerMajor = 20; // More detail for very wide displays
+        } else if (actualWidth > 700) {
+            minorTicksPerMajor = 10; // Original setting for medium displays
+        } else if (actualWidth > 300) {
+            minorTicksPerMajor = 5; // Fewer ticks for smaller displays
+        } else {
+            minorTicksPerMajor = 2; // No minor ticks for very small displays
+        }
+
         const minorStep = minorTicksPerMajor > 0 ? tickStep / minorTicksPerMajor : 0;
 
         // Determine actual major ticks (might be different from target due to rounding)
@@ -102,14 +116,13 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
                 majorTicks.push(freq);
             }
         }
-
         // Only draw labels if we have at least one major tick
         if (majorTicks.length > 0) {
-            // Calculate available space per label
+            // This sets how much space each label needs to be displayed
             const actualPixelsPerTick = actualWidth / majorTicks.length;
 
             // Determine font size based on available space
-            const fontSizeBase = actualWidth < 250 ? 8 : 10;
+            const fontSizeBase = Math.min(12, Math.max(8, Math.floor(actualWidth / 100 + 8)));
             ctx.font = `bold ${fontSizeBase}px monospace`;
 
             // Draw minor and major ticks
@@ -119,11 +132,11 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
 
                 if (freq < startFreq - tickStep/10) continue;
 
-                const isMajor = Math.abs(Math.round(freq / tickStep) * tickStep - freq) < tickStep / 100;
+                const isBigTick = Math.abs(Math.round(freq / tickStep) * tickStep - freq) < tickStep / 100;
                 const x = ((freq - startFreq) / freqRange) * canvas.width;
 
-                if (isMajor) {
-                    // Draw a major tick
+                if (isBigTick) {
+                    // Draw a big tick
                     ctx.beginPath();
                     ctx.strokeStyle = 'white';
                     ctx.lineWidth = 1;
@@ -131,47 +144,50 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
                     ctx.lineTo(x, height);
                     ctx.stroke();
 
-                    // Calculate text width for a frequency label
+                    // Draw frequency label
                     const freqText = humanizeFrequency(freq);
-                    const textWidth = ctx.measureText(freqText).width;
+                    ctx.fillStyle = 'white';
+                    ctx.textAlign = 'center';
+                    ctx.textBaseline = 'top';
+                    ctx.fillText(freqText, x, 4);
 
-                    // Only draw text if we have enough space (text width plus padding fits)
-                    if (actualPixelsPerTick >= (textWidth + 10)) {
-                        // Draw frequency label
-                        ctx.fillStyle = 'white';
-                        ctx.textAlign = 'center';
-                        ctx.textBaseline = 'top';
-                        ctx.fillText(freqText, x, 4);
-                    }
                 } else if (minorStep > 0) {
                     // Draw minor tick
+                    // IMPROVED: Allow some minor ticks to have labels when there's room
+                    const isLabeledMinor = actualWidth > 1000 &&
+                        (minorTicksPerMajor <= 5 || freq % (tickStep / 2) < minorStep / 2);
+
                     ctx.beginPath();
-                    ctx.strokeStyle = 'rgba(255, 255, 255, 0.4)';
+                    ctx.strokeStyle = isLabeledMinor
+                        ? 'rgba(255, 255, 255, 0.7)'
+                        : 'rgba(255, 255, 255, 0.4)';
                     ctx.lineWidth = 1;
-                    ctx.moveTo(x, height - 4);
+                    ctx.moveTo(x, isLabeledMinor ? height - 6 : height - 4);
                     ctx.lineTo(x, height);
                     ctx.stroke();
+
+                    // Draw some labels on important minor ticks when there's a lot of space
+                    if (isLabeledMinor && actualWidth > 1800) {
+                        const minorFreqText = preciseHumanizeFrequency(freq);
+                        const minorTextWidth = ctx.measureText(minorFreqText).width;
+
+                        if (actualPixelsPerTick / (minorTicksPerMajor / 2) >= (minorTextWidth + 30)) {
+                            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                            ctx.textAlign = 'center';
+                            ctx.textBaseline = 'top';
+                            ctx.font = `bold ${fontSizeBase - 1}px monospace`;
+                            ctx.fillText(minorFreqText, x, 4);
+                        }
+                    }
                 }
             }
         }
-
-        // Draw the center frequency label
-        const centerFontSize = actualWidth < 250 ? 10 : 11;
-        ctx.font = `bold ${centerFontSize}px monospace`;
-        ctx.fillStyle = 'white';
-        ctx.textAlign = 'center';
-        ctx.textBaseline = 'top';
-
-        // Draw background for center frequency
-        const centerText = humanizeFrequency(centerFrequency);
-        const centerTextWidth = ctx.measureText(centerText).width;
-        const padding = 4;
 
     }, [centerFrequency, sampleRate, actualWidth]);
 
     return (
         <div
-            ref={containerRef}
+            ref={frequencyScaleContainerRef}
             style={{
                 width: '100%',
                 height: '20px',

@@ -469,7 +469,10 @@ export function preciseHumanizeFrequency(hertz) {
         unitIndex++;
     }
 
-    return `${hertz.toFixed(4)} ${units[unitIndex]}`;
+    let formatted = hertz.toFixed(4);
+    formatted = formatted.replace(/\.?0+$/, '');
+
+    return `${formatted} ${units[unitIndex]}`;
 }
 
 

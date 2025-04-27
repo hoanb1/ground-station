@@ -585,8 +585,12 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                     sdr = rtlsdr_devices[device_id]
 
                 # Configure SDR parameters
-                sdr.center_freq = center_freq
-                sdr.sample_rate = sample_rate
+                if sdr.center_freq is not center_freq:
+                    sdr.center_freq = center_freq
+
+                if sdr.sample_rate is not sample_rate:
+                    sdr.sample_rate = sample_rate
+
                 sdr.set_bias_tee(bias_t)
                 sdr.set_agc_mode(rtl_agc) # RTL AGC
                 sdr.set_manual_gain_enabled(not tuner_agc) # Tuner AGC
