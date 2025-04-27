@@ -111,6 +111,213 @@ function saveLayoutsToLocalStorage(layouts) {
 }
 
 
+const l = {
+    "lg": [{
+        "w": 6,
+        "h": 17,
+        "x": 0,
+        "y": 0,
+        "i": "map",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 12,
+        "x": 6,
+        "y": 0,
+        "i": "info",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 6,
+        "h": 9,
+        "x": 0,
+        "y": 17,
+        "i": "passes",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 4,
+        "x": 8,
+        "y": 0,
+        "i": "satselector",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 8,
+        "x": 8,
+        "y": 4,
+        "i": "video",
+        "minH": 4,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 11,
+        "x": 10,
+        "y": 0,
+        "i": "rotator-control",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 9,
+        "x": 10,
+        "y": 11,
+        "i": "rig-control",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }],
+    "md": [{
+        "w": 6,
+        "h": 15,
+        "x": 0,
+        "y": 0,
+        "i": "map",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 11,
+        "x": 8,
+        "y": 0,
+        "i": "info",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 6,
+        "h": 9,
+        "x": 0,
+        "y": 15,
+        "i": "passes",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 4,
+        "x": 6,
+        "y": 0,
+        "i": "satselector",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 7,
+        "x": 6,
+        "y": 4,
+        "i": "video",
+        "minH": 4,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 11,
+        "x": 8,
+        "y": 11,
+        "i": "rotator-control",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 9,
+        "x": 8,
+        "y": 22,
+        "i": "rig-control",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }],
+    "sm": [{
+        "w": 6,
+        "h": 15,
+        "x": 0,
+        "y": 4,
+        "i": "map",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 11,
+        "x": 4,
+        "y": 28,
+        "i": "info",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 6,
+        "h": 9,
+        "x": 0,
+        "y": 19,
+        "i": "passes",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 6,
+        "h": 4,
+        "x": 0,
+        "y": 0,
+        "i": "satselector",
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 7,
+        "x": 0,
+        "y": 39,
+        "i": "video",
+        "minH": 4,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 11,
+        "x": 0,
+        "y": 28,
+        "i": "rotator-control",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }, {
+        "w": 2,
+        "h": 9,
+        "x": 2,
+        "y": 28,
+        "i": "rig-control",
+        "minH": 6,
+        "moved": false,
+        "static": false,
+        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+    }]
+};
+
 function CenterSatelliteButton() {
     const targetCoordinates = [0, 0];
     const handleClick = () => {
@@ -247,68 +454,210 @@ const TargetSatelliteLayout = React.memo(function () {
 
     // default layout if none in localStorage
     const defaultLayouts = {
-        lg: [
-            {
-                i: 'map',
-                x: 0,
-                y: 3,
-                w: 8,
-                h: 15,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-            {
-                i: 'satselector',
-                x: 10,
-                y: 0,
-                w: 2,
-                h: 4,
-                resizeHandles: ['se','ne','nw','sw','s','e','w'],
-            },
-            {
-                i: 'info',
-                x: 10,
-                y: 11,
-                w: 2,
-                h: 8,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-            {
-                i: 'passes',
-                x: 0,
-                y: 14,
-                w: 8,
-                h: 10,
-                minH: 6,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-            {
-                i: 'rotator-control',
-                x: 0,
-                y: 14,
-                w: 8,
-                h: 10,
-                minH: 6,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-            {
-                i: 'rig-control',
-                x: 0,
-                y: 14,
-                w: 8,
-                h: 10,
-                minH: 6,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-            {
-                i: 'video',
-                x: 10,
-                y: 14,
-                w: 2,
-                h: 10,
-                minH: 4,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-        ]
+        lg: [{
+            "w": 6,
+            "h": 17,
+            "x": 0,
+            "y": 0,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 12,
+            "x": 6,
+            "y": 0,
+            "i": "info",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 9,
+            "x": 0,
+            "y": 17,
+            "i": "passes",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 4,
+            "x": 8,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 8,
+            "x": 8,
+            "y": 4,
+            "i": "video",
+            "minH": 4,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 10,
+            "y": 0,
+            "i": "rotator-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 9,
+            "x": 10,
+            "y": 11,
+            "i": "rig-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        md: [{
+            "w": 6,
+            "h": 15,
+            "x": 0,
+            "y": 0,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 8,
+            "y": 0,
+            "i": "info",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 9,
+            "x": 0,
+            "y": 15,
+            "i": "passes",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 4,
+            "x": 6,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 7,
+            "x": 6,
+            "y": 4,
+            "i": "video",
+            "minH": 4,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 8,
+            "y": 11,
+            "i": "rotator-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 9,
+            "x": 8,
+            "y": 22,
+            "i": "rig-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        sm: [{
+            "w": 6,
+            "h": 15,
+            "x": 0,
+            "y": 4,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 4,
+            "y": 28,
+            "i": "info",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 9,
+            "x": 0,
+            "y": 19,
+            "i": "passes",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 4,
+            "x": 0,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 7,
+            "x": 0,
+            "y": 39,
+            "i": "video",
+            "minH": 4,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 0,
+            "y": 28,
+            "i": "rotator-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 9,
+            "x": 2,
+            "y": 28,
+            "i": "rig-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }]
     };
 
     // globalize the callback

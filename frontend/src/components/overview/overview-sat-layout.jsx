@@ -150,51 +150,55 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
 
     // Default layout if none in localStorage
     const defaultLayouts = {
-        lg: [
-            {
-                i: 'map',
-                x: 0,
-                y: 4,
-                w: 10,
-                h: 18,
-                resizeHandles: ['se','ne','nw','sw','s','e','w'],
-            },
-            {
-                i: 'satselector',
-                x: 11,
-                y: 0,
-                w: 2,
-                h: 3,
-                resizeHandles: ['se','ne','nw','sw','s','e','w'],
-            },
-            {
-                i: 'passes',
-                x: 0,
-                y: 14,
-                w: 8,
-                h: 10,
-                minH: 7,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-            {
-                i: 'weather',
-                x: 0,
-                y: 14,
-                w: 8,
-                h: 2,
-                minH: 5,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-            {
-                i: 'sat-info',
-                x: 0,
-                y: 14,
-                w: 8,
-                h: 2,
-                minH: 7,
-                resizeHandles: ['se','ne','nw','sw','s','e','w']
-            },
-        ]
+        lg: [{
+            "w": 8,
+            "h": 17,
+            "x": 0,
+            "y": 0,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 3,
+            "x": 10,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 8,
+            "h": 7,
+            "x": 0,
+            "y": 17,
+            "i": "passes",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 5,
+            "x": 10,
+            "y": 3,
+            "i": "weather",
+            "minH": 5,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 14,
+            "x": 8,
+            "y": 0,
+            "i": "sat-info",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }]
     };
 
     // globalize the callback

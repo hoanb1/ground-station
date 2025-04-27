@@ -47,24 +47,101 @@ const WaterfallLayout = React.memo(function () {
 
     // Default layout if none in localStorage
     const defaultLayouts = {
-        lg: [
-            {
-                i: 'waterfall',
-                x: 0,
-                y: 4,
-                w: 10,
-                h: 18,
-                resizeHandles: ['se','ne','nw','sw','s','e','w'],
-            },
-            {
-                i: 'settings',
-                x: 11,
-                y: 0,
-                w: 2,
-                h: 3,
-                resizeHandles: ['se','ne','nw','sw','s','e','w'],
-            },
-        ]
+        lg: [{
+            "w": 10,
+            "h": 23,
+            "x": 0,
+            "y": 0,
+            "i": "waterfall",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 18,
+            "x": 10,
+            "y": 0,
+            "i": "settings",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        md: [{
+            "w": 10,
+            "h": 21,
+            "x": 0,
+            "y": 0,
+            "i": "waterfall",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 10,
+            "h": 11,
+            "x": 0,
+            "y": 21,
+            "i": "settings",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        sm: [{
+            "w": 6,
+            "h": 21,
+            "x": 0,
+            "y": 0,
+            "i": "waterfall",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 21,
+            "x": 4,
+            "y": 21,
+            "i": "settings",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        xs: [{
+            "w": 2,
+            "h": 21,
+            "x": 0,
+            "y": 7,
+            "i": "waterfall",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 7,
+            "x": 0,
+            "y": 0,
+            "i": "settings",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        xxs: [{
+            "w": 2,
+            "h": 21,
+            "x": 0,
+            "y": 0,
+            "i": "waterfall",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 21,
+            "x": 0,
+            "y": 21,
+            "i": "settings",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }]
     };
 
     // globalize the callback
