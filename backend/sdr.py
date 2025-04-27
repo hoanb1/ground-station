@@ -20,12 +20,52 @@ window_functions = {
     'bartlett': np.bartlett
 }
 
-# Number of samples per scan for FFT
-NUM_SAMPLES_PER_SCAN = 32 * 1024
+
+def calculate_samples_per_scan(sample_rate):
+    """
+    Calculate the number of samples required per scan based on the provided sample rate.
+
+    This function determines the number of samples to be processed in each scan
+    depending on the given sample rate. The function adjusts the base sample value
+    (32 KB) relative to predefined thresholds for the sample rate. Lower sample
+    rates result in fewer samples per scan, optimizing the processing accordingly.
+
+    :param sample_rate: The sample rate in Hz that determines how many samples
+        need to be processed per scan.
+    :type sample_rate: float
+    :return: The calculated number of samples to be used per scan, modified
+        relative to the sample rate.
+    :rtype: int
+    """
+    # Default value for high sample rates
+    base_samples = 32 * 1024
+    if sample_rate < 1e6:  # Less than 1 MHz
+        return base_samples // 4
+    elif sample_rate < 2e6:  # Less than 2 MHz
+        return base_samples // 2
+    else:
+        return base_samples
 
 
 async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_id: str):
-    """Process RTLSDR data and send FFT results to the client"""
+    """
+    Processes real-time SDR (software-defined radio) data for a connected client.
+    The function performs signal processing on the raw samples received from the
+    SDR device, applies window functions, calculates FFT spectrum, and emits the
+    processed FFT data back to the client. It operates asynchronously to handle
+    real-time streaming and data processing.
+
+    :param sio: AsyncServer instance used for Socket.IO communication.
+    :type sio: socketio.AsyncServer
+    :param device_id: Identifier for the specific SDR device being used.
+    :type device_id: int
+    :param client_id: Identifier for the client connected to process the SDR data.
+    :type client_id: str
+    :return: None
+    :rtype: None
+
+    :raises Exception: If any error occurs during SDR data streaming or processing.
+    """
     logger.info(f"Processing RTLSDR data for client {client_id}")
     try:
         while client_id in active_sdr_clients and device_id in rtlsdr_devices:
@@ -35,7 +75,9 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             # Read samples
             #read_func = partial(sdr.read_samples, NUM_SAMPLES_PER_SCAN)
             #samples = await asyncio.to_thread(read_func)
-            samples = sdr.read_samples(NUM_SAMPLES_PER_SCAN)
+
+            num_samples = calculate_samples_per_scan(sdr.sample_rate)
+            samples = sdr.read_samples(num_samples)
 
             # remove DC spike
             samples = remove_dc_offset(samples)
