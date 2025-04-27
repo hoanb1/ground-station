@@ -52,12 +52,96 @@ import {
     setBiasT,
     setTunerAgc,
     setRtlAgc,
+    setWaterFallCanvasWidth,
+    setWaterFallVisualWidth, setWaterFallScaleX, setWaterFallPositionX,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
 import FrequencyScale from "./frequency-scale-canvas.jsx";
 import {useResizeDetector} from "react-resize-detector";
 import {getColorForPower} from "./waterfall-colors.jsx";
+
+
+// Function to create a worker using blob URL (inline worker)
+const createInlineWorker = () => {
+  const workerCode = `
+    let renderIntervalId = null;
+    let targetFPS = 30;
+    
+    // Main message handler
+    self.onmessage = function(e) {
+      const { cmd, data } = e.data;
+      
+      switch(cmd) {
+        case 'start':
+          startRendering(data.fps || targetFPS);
+          break;
+        
+        case 'stop':
+          stopRendering();
+          break;
+        
+        case 'updateFPS':
+          updateFPS(data.fps);
+          break;
+          
+        case 'updateFFTData':
+          // If we receive new FFT data, notify the main thread immediately
+          self.postMessage({ type: 'render', immediate: true });
+          break;
+          
+        default:
+          console.error('Unknown command:', cmd);
+      }
+    };
+    
+    // Start the rendering cycle
+    function startRendering(fps) {
+      // Clear any existing interval first
+      stopRendering();
+      
+      targetFPS = fps;
+      const interval = Math.floor(1000 / targetFPS);
+      
+      renderIntervalId = setInterval(() => {
+        self.postMessage({ type: 'render' });
+      }, interval);
+      
+      // Confirm start
+      self.postMessage({ type: 'status', status: 'started', fps: targetFPS });
+    }
+    
+    // Stop the rendering cycle
+    function stopRendering() {
+      if (renderIntervalId) {
+        clearInterval(renderIntervalId);
+        renderIntervalId = null;
+        
+        // Confirm stop
+        self.postMessage({ type: 'status', status: 'stopped' });
+      }
+    }
+    
+    // Update FPS setting
+    function updateFPS(fps) {
+      if (fps !== targetFPS) {
+        targetFPS = fps;
+        
+        // Restart with new FPS if currently running
+        if (renderIntervalId) {
+          startRendering(targetFPS);
+        }
+        
+        self.postMessage({ type: 'status', status: 'fpsUpdated', fps: targetFPS });
+      }
+    }
+  `;
+  
+  const blob = new Blob([workerCode], { type: 'application/javascript' });
+  const workerUrl = URL.createObjectURL(blob);
+  
+  return new Worker(workerUrl);
+};
 
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
@@ -69,6 +153,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
     const waterFallLeftMarginCanvasRef = useRef(null);
     const waterfallDataRef = useRef(new Array(1024).fill(-120));
     const animationFrameRef = useRef(null);
+    const workerRef = useRef(null);
     const bandscopeAnimationFrameRef = useRef(null); // New ref for bandscope animation
     const visualSettingsRef = useRef({
         dbRange: [-120, 30],
@@ -113,18 +198,27 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         tunerAgc,
         rtlAgc,
         fftWindow,
+        waterFallVisualWidth,
+        waterFallCanvasWidth,
     } = useSelector((state) => state.waterfall);
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
-    const [waterfallCanvasWidth, setWaterfallCanvasWidth] = useState(4096);
+    const [waterfallCanvasWidth, setWaterfallCanvasWidth] = useState(waterFallCanvasWidth);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
 
     const cancelAnimations = () => {
+        // Stop the worker
+        if (workerRef.current) {
+          workerRef.current.postMessage({ cmd: 'stop' });
+        }
+        
+        // Clear any leftover animation frames
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
         }
+        
         if (bandscopeAnimationFrameRef.current) {
             cancelAnimationFrame(bandscopeAnimationFrameRef.current);
             bandscopeAnimationFrameRef.current = null;
@@ -144,6 +238,52 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         visualSettingsRef.current.centerFrequency = centerFrequency;
 
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
+
+    // Initialize worker when the component mounts
+    useEffect(() => {
+      // Create the worker
+      const worker = createInlineWorker();
+
+      // Set up message handler
+      worker.onmessage = (e) => {
+        const { type, immediate, status } = e.data;
+
+        if (type === 'render') {
+          // Draw waterfall and bandscope
+          if (waterFallCanvasRef.current) {
+            drawWaterfall();
+          }
+
+          if (bandscopeCanvasRef.current) {
+            drawBandscope();
+          }
+        }
+        else if (type === 'status') {
+          // Optional: handle status updates from the worker
+          console.log('Worker status:', status);
+        }
+      };
+
+      // Store the worker reference
+      workerRef.current = worker;
+
+      // If we're already streaming, start the worker
+      if (isStreaming) {
+        worker.postMessage({
+          cmd: 'start',
+          data: { fps: targetFPSRef.current }
+        });
+      }
+
+      // Clean up when component unmounts
+      return () => {
+        if (workerRef.current) {
+          workerRef.current.postMessage({ cmd: 'stop' });
+          workerRef.current.terminate();
+          workerRef.current = null;
+        }
+      };
+    }, []);
 
     useEffect(() => {
         // Initialize canvases
@@ -179,14 +319,20 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             console.info(`sdr-status`, data);
         });
 
+        // Modify the socket event handler for FFT data
         socket.on('sdr-fft-data', (data) => {
-            // Add new FFT data to the waterfall buffer
-            waterfallDataRef.current.unshift(data);
-
-            // Keep only the most recent rows based on canvas height
-            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
-                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
-            }
+          // Add new FFT data to the waterfall buffer
+          waterfallDataRef.current.unshift(data);
+          
+          // Keep only the most recent rows based on canvas height
+          if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
+            waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
+          }
+          
+          // Notify the worker that new data is available
+          if (workerRef.current) {
+            workerRef.current.postMessage({ cmd: 'updateFFTData' });
+          }
         });
 
         drawBandscope();
@@ -218,6 +364,18 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             });
         }
     }, [centerFrequency, sampleRate, fftSize, gain, biasT, rtlAgc, tunerAgc, fftWindow]);
+
+    // Update the worker when FPS changes
+    useEffect(() => {
+      targetFPSRef.current = targetFPS;
+      
+      if (workerRef.current && isStreaming) {
+        workerRef.current.postMessage({ 
+          cmd: 'updateFPS', 
+          data: { fps: targetFPS } 
+        });
+      }
+    }, [targetFPS]);
 
     // Call this periodically, for example:
     useEffect(() => {
@@ -286,31 +444,38 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         };
     }, []);
 
+    // Modify startStreaming and cancelAnimations
     const startStreaming = () => {
-        if (!isStreaming) {
-            dispatch(setErrorMessage(''));
-            // Configure RTL-SDR settings
-            socket.emit('sdr_data', 'configure-rtlsdr', {
-                deviceId,
-                centerFrequency,
-                sampleRate,
-                gain,
-                fftSize,
-                biasT,
-                tunerAgc,
-                rtlAgc,
-            });
-
-            socket.emit('sdr_data', 'start-streaming');
-            dispatch(setIsStreaming(true));
-
-            // Start both rendering loops
-            renderWaterfallLoop();
-            renderBandscopeLoop();
-
-            // auto range the dB scale
-            setTimeout(() => autoScaleDbRange(), 1500);
+      if (!isStreaming) {
+        dispatch(setErrorMessage(''));
+        
+        // Configure RTL-SDR settings
+        socket.emit('sdr_data', 'configure-rtlsdr', {
+          deviceId,
+          centerFrequency,
+          sampleRate,
+          gain,
+          fftSize,
+          biasT,
+          tunerAgc,
+          rtlAgc,
+          fftWindow,
+        });
+        
+        socket.emit('sdr_data', 'start-streaming');
+        dispatch(setIsStreaming(true));
+        
+        // Start the worker
+        if (workerRef.current) {
+          workerRef.current.postMessage({ 
+            cmd: 'start', 
+            data: { fps: targetFPSRef.current } 
+          });
         }
+        
+        // auto range the dB scale
+        setTimeout(() => autoScaleDbRange(), 1500);
+      }
     };
 
     const stopStreaming = () => {
@@ -783,7 +948,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                         Error: {errorMessage}
                     </Typography>
                     : isStreaming ?
-                        `ffts/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
+                        `FFTs/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
                         : `stopped`
                 }
             </WaterfallStatusBar>
@@ -811,7 +976,14 @@ const WaterfallWithStrictXAxisZoom = ({
     const lastXRef = useRef(0);
     const lastPinchDistanceRef = useRef(0);
     const pinchCenterXRef = useRef(0);
+    const dispatch = useDispatch();
 
+    const {
+        waterFallVisualWidth,
+        waterFallCanvasWidth,
+        waterFallScaleX,
+        waterFallPositionX,
+    } = useSelector((state) => state.waterfall);
     // State for React rendering
     const [customScale, setCustomScale] = useState(1);
     const [customPositionX, setCustomPositionX] = useState(0);
@@ -882,17 +1054,22 @@ const WaterfallWithStrictXAxisZoom = ({
             containerRef.current.style.transform = `translateX(${positionXRef.current}px) scaleX(${scaleRef.current})`;
             const newVisualWidth = getScaledWidth(containerRef.current, scaleRef.current);
             setVisualContainerWidth(newVisualWidth);
+            dispatch(setWaterFallVisualWidth(newVisualWidth));
         }
     }, []);
 
-    // Detect mobile devices
-    useEffect(() => {
-        const checkMobile = () => {
-            setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
-        };
+    const checkMobile = () => {
+        setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
+    };
 
+    useEffect(() => {
+        // Detect mobile devices
         checkMobile();
         window.addEventListener('resize', checkMobile);
+
+        // Set positionX and scaleX values from Redux
+        scaleRef.current = waterFallScaleX;
+        positionXRef.current = waterFallPositionX;
 
         return () => window.removeEventListener('resize', checkMobile);
     }, []);
@@ -934,6 +1111,10 @@ const WaterfallWithStrictXAxisZoom = ({
         // Update refs
         scaleRef.current = newScale;
         positionXRef.current = newPositionX;
+
+        // Set the values on Redux
+        dispatch(setWaterFallScaleX(newScale));
+        dispatch(setWaterFallPositionX(newPositionX));
 
         // Apply transform immediately
         applyTransform();

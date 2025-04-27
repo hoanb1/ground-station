@@ -167,11 +167,16 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
                     ctx.stroke();
 
                     // Draw some labels on important minor ticks when there's a lot of space
-                    if (isLabeledMinor && actualWidth > 1800) {
+                    console.info("1: ", isLabeledMinor, actualWidth);
+                    if (isLabeledMinor && actualWidth > 1000) {
                         const minorFreqText = preciseHumanizeFrequency(freq);
                         const minorTextWidth = ctx.measureText(minorFreqText).width;
 
-                        if (actualPixelsPerTick / (minorTicksPerMajor / 2) >= (minorTextWidth + 30)) {
+                        console.info("2: ", "minorFreqText: ", minorFreqText,
+                            "actualPixelsPerTick: ", actualPixelsPerTick, "(minorTicksPerMajor): ", (minorTicksPerMajor),
+                            "(minorTextWidth): ", (minorTextWidth));
+
+                        if (actualPixelsPerTick / (minorTicksPerMajor / 7) >= (minorTextWidth)) {
                             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'top';

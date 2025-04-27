@@ -1,6 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
-import {useState} from "react";
+import {useRef, useState} from "react";
 
 const waterfallSlice = createSlice({
     name: 'waterfallState',
@@ -33,10 +33,14 @@ const waterfallSlice = createSlice({
         errorMessage: null,
         isStreaming: false,
         isPlaying: false,
-        targetFPS: 20,
+        targetFPS: 10,
         settingsDialogOpen: false,
         autoDBRange: false,
         gridEditable: false,
+        waterFallCanvasWidth: 4096,
+        waterFallVisualWidth: 4096,
+        waterFallScaleX: 1,
+        waterFallPositionX: 0,
     },
     reducers: {
         setColorMap: (state, action) => {
@@ -95,7 +99,21 @@ const waterfallSlice = createSlice({
         },
         setFFTWindow: (state, action) => {
             state.fftWindow = action.payload;
+        },
+        setWaterFallCanvasWidth: (state, action) => {
+            state.waterFallCanvasWidth = action.payload;
+        },
+        setWaterFallVisualWidth: (state, action) => {
+            state.waterFallVisualWidth = action.payload;
+        },
+        setWaterFallScaleX: (state, action) => {
+            state.waterFallScaleX = action.payload;
+        },
+        setWaterFallPositionX: (state, action) => {
+            state.waterFallPositionX = action.payload;
         }
+
+
     },
     extraReducers: (builder) => {
 
@@ -122,6 +140,10 @@ export const {
     setTunerAgc,
     setRtlAgc,
     setFFTWindow,
+    setWaterFallCanvasWidth,
+    setWaterFallVisualWidth,
+    setWaterFallScaleX,
+    setWaterFallPositionX,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;
