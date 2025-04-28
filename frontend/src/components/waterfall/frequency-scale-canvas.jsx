@@ -128,7 +128,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
             const actualPixelsPerTick = actualWidth / majorTicks.length;
 
             // Determine font size based on available space
-            const fontSizeBase = Math.min(12, Math.max(8, Math.floor(actualWidth / 100 + 8)));
+            const fontSizeBase = Math.min(10, Math.max(8, Math.floor(actualWidth / 100 + 8)));
             ctx.font = `bold ${fontSizeBase}px monospace`;
 
             // Draw minor and major ticks

@@ -198,30 +198,28 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 Gain: {localGain} dB
                             </Typography>
 
-                            <Slider
-                                size={'small'}
-                                step={null}
-                                marks={gainMarks}
-                                value={localGain}
-                                valueLabelDisplay="auto"
-                                valueLabelFormat={value => `${value} dB`}
-                                onChange={(_, value) => {
-                                    setLocalGain(value);
-                                }}
-                                min={rtlGains[0]}
-                                max={rtlGains[rtlGains.length - 1]}
-                                onChangeCommitted={(_, value) => {
-                                    setLocalGain(value);
-                                    dispatch(setGain(value));
-                                }}
-                                disabled={false}
-                                aria-labelledby="gain-slider"
-                                track={false}
-                            />
-
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                         variant="filled" size="small">
+                                <InputLabel>Gain (dB)</InputLabel>
+                                <Select
+                                    size={'small'}
+                                    value={localGain}
+                                    onChange={(e) => {
+                                        setLocalGain(e.target.value);
+                                        dispatch(setGain(e.target.value));
+                                    }}
+                                    disabled={false}
+                                    variant={'filled'}>
+                                    {rtlGains.map(gain => (
+                                        <MenuItem key={gain} value={gain}>
+                                            {gain} dB
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
 
                         </Box>
-                        <Box sx={{ mb: 2 }}>
+                        <Box sx={{mb: 2}}>
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>Sample Rate</InputLabel>
@@ -255,7 +253,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
                         </Box>
-                        <Box sx={{mb: 2}}>
+                        <Box sx={{mb: 2, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -269,7 +267,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 label="Enable Bias T"
                             />
                         </Box>
-                        <Box sx={{mb: 2}}>
+                        <Box sx={{mb: 2, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -283,7 +281,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 label="Enable tuner AGC"
                             />
                         </Box>
-                        <Box sx={{mb: 2}}>
+                        <Box sx={{mb: 2, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -306,24 +304,22 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     </AccordionSummary>
                     <AccordionDetails>
                         <Box sx={{mb: 2}}>
-                            <Typography variant="body2" gutterBottom>
-                                Target FPS: {targetFPS}
-                            </Typography>
-                            <Slider
-                                size={'small'}
-                                value={targetFPS}
-                                min={5}
-                                max={60}
-                                step={1}
-                                onChange={(_, value) => {
-                                    dispatch(setTargetFPS(value));
-                                }}
-                                disabled={false}
-                                aria-labelledby="target-fps-slider"
-                            />
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                         variant="filled" size="small">
+                                <InputLabel>Target FPS</InputLabel>
+                                <Select
+                                    size={'small'}
+                                    value={targetFPS}
+                                    onChange={(e) => dispatch(setTargetFPS(e.target.value))}
+                                    variant={'filled'}>
+                                    {[5, 10, 15, 20, 30, 40, 50].map(fps => (
+                                        <MenuItem key={fps} value={fps}>{fps}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
                         </Box>
 
-                        <Box sx={{mb: 2}}>
+                        <Box sx={{mb: 2, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
