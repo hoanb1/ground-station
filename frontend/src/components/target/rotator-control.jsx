@@ -408,9 +408,9 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                     }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>
                             <Button disabled={
-                                ["tracking", "connected", "stopped"].includes(trackingState['rotator_state']) ||
+                                ["tracking", "connected", "stopped", "parked"].includes(trackingState['rotator_state']) ||
                                 ["none", ""].includes(selectedRotator)
-                            } fullWidth={true} variant="contained" color="info" style={{height: '35px'}}
+                            } fullWidth={true} variant="contained" color="success" style={{height: '35px'}}
                                     onClick={() => {
                                         connectRotator()
                                     }}>
@@ -429,7 +429,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
                             <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
-                                    fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}
+                                    fullWidth={true} variant="contained" color="warning" style={{height: '35px'}}
                                     onClick={() => {
                                         parkRotator()
                                     }}>

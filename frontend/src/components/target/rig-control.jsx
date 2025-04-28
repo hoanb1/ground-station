@@ -258,7 +258,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                             <Button disabled={
                                 ["tracking", "connected", "stopped"].includes(trackingState['rig_state']) ||
                                 ["none", ""].includes(selectedRotator)
-                            } fullWidth={true} variant="contained" color="info" style={{height: '35px'}}
+                            } fullWidth={true} variant="contained" color="success" style={{height: '35px'}}
                                     onClick={() => {
                                         connectRig()
                                     }}>
