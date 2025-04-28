@@ -66,14 +66,14 @@ class RigController:
         try:
             # Send a quit command (optional)
             try:
-                await self._send_command("q")
+                await self._send_command("q", waitforreply=False)
             except Exception as e:
                 self.logger.warning("Error sending quit command to rig")
 
             # Close the connection
             self.writer.close()
             try:
-                await asyncio.wait_for(self.writer.wait_closed(), timeout=3.0)
+                await asyncio.wait_for(self.writer.wait_closed(), timeout=1.0)
             except asyncio.TimeoutError:
                 self.logger.warning("Timeout waiting for connection to close")
             
@@ -114,7 +114,7 @@ class RigController:
                         # Ignore errors during cleanup
                         pass
 
-    async def _send_command(self, command: str) -> str:
+    async def _send_command(self, command: str, waitforreply=True) -> str:
         """Send a command to the rig and get the response."""
         self.check_connection()
         
@@ -125,15 +125,17 @@ class RigController:
             # Send the command
             self.writer.write(full_command.encode('utf-8'))
             await self.writer.drain()
-            
-            # Read the response
-            response_bytes = await asyncio.wait_for(
-                self.reader.read(1000),
-                timeout=self.timeout
-            )
-            
-            response = response_bytes.decode('utf-8', errors='replace').strip()
-            
+
+            if waitforreply:
+                # Read the response
+                response_bytes = await asyncio.wait_for(
+                    self.reader.read(1000),
+                    timeout=self.timeout
+                )
+                response = response_bytes.decode('utf-8', errors='replace').strip()
+            else:
+                response = "(no wait for reply)"
+
             if self.verbose:
                 self.logger.debug(f"Command: {command} -> Response: {response}")
                 

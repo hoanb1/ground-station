@@ -722,10 +722,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
         # reset the minelevation error
         rotator_data['minelevation'] = False
-
-        if new == "tracking":
-            rotator_data['tracking'] = True
-
+        if new == "connected":
             # check what hardware was chosen and set it up
             if current_rotator_id is not None and rotator_controller is None:
 
@@ -749,8 +746,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     ]})
                     rotator_controller = None
 
-        elif new == "idle":
+        elif new == "tracking":
+            rotator_data['tracking'] = True
+
+        elif new == "stopped":
             rotator_data['tracking'] = False
+
+        elif new == "disconnected":
 
             if rotator_controller is not None:
                 logger.info(f"Disconnecting from rotator_controller at {rotator_controller.host}:{rotator_controller.port}...")
@@ -1049,7 +1051,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 try:
                     data = {
                         'satellite_data': satellite_data,
-                        'tracking_state': tracker,
+                        #'tracking_state': tracker,
                         'events': events,
                         'rotator_data': rotator_data,
                         'rig_data': rig_data,

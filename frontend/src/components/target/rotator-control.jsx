@@ -146,7 +146,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
     const { rotators } = useSelector((state) => state.rotators);
 
     const handleTrackingStop = () => {
-        const newTrackingState = {...trackingState, 'rotator_state': "idle"};
+        const newTrackingState = {...trackingState, 'rotator_state': "stopped"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
@@ -218,8 +218,42 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
-                console.info('response', response);
-            })
+
+            });
+    }
+
+    function connectRotator() {
+        const newTrackingState = {
+            'norad_id': satelliteId,
+            'group_id': groupId,
+            'rotator_state': "connected",
+            'rig_state': trackingState['rig_state'],
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+        };
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
+            .unwrap()
+            .then((response) => {
+
+            });
+    }
+
+    function disconnectRotator() {
+        const newTrackingState = {
+            'norad_id': satelliteId,
+            'group_id': groupId,
+            'rotator_state': "disconnected",
+            'rig_state': trackingState['rig_state'],
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+        };
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
+            .unwrap()
+            .then((response) => {
+
+            });
     }
 
     function handleRotatorChange(event) {
@@ -284,6 +318,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         justifyContent: "space-between",
                         alignItems: "center",
                     }}>
+
                     </Grid>
 
                     <Grid container direction="row" sx={{
@@ -298,6 +333,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
 
                     </Grid>
+
                     <Grid container direction="row" sx={{
                         justifyContent: "space-between",
                         alignItems: "stretch",
@@ -331,33 +367,47 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         justifyContent: "space-between",
                         alignItems: "stretch",
                     }}>
-                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}
-                                    onClick={()=>{parkRotator()}}>
+                        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>
+                            <Button disabled={
+                                ["tracking", "connected", "stopped"].includes(trackingState['rotator_state']) ||
+                                ["none", ""].includes(selectedRotator)
+                            } fullWidth={true} variant="contained" color="info" style={{height: '35px'}}
+                                    onClick={() => {
+                                        connectRotator()
+                                    }}>
+                                CONNECT
+                            </Button>
+                        </Grid>
+                        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 2}}>
+                            <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
+                                    fullWidth={true}
+                                    variant="contained" color="error" style={{height: '35px'}}
+                                    onClick={() => {
+                                        disconnectRotator()
+                                    }}>
+                                DISCONNECT
+                            </Button>
+                        </Grid>
+                        <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
+                            <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
+                                    fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}
+                                    onClick={() => {
+                                        parkRotator()
+                                    }}>
                                 PARK
-                            </Button>
-                        </Grid>
-                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button disabled={true} fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
-                                B
-                            </Button>
-                        </Grid>
-                        <Grid size="grow" style={{paddingRight: '0rem'}}>
-                            <Button disabled={true} fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
-                                C
                             </Button>
                         </Grid>
                     </Grid>
                 </Grid>
 
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
+                <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
                         justifyContent: "space-between",
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
                             <Button fullWidth={true} disabled={
-                                trackingState['rotator_state'] === "tracking" ||
+                                ["tracking", "disconnected"].includes(trackingState['rotator_state']) ||
                                 satelliteId === "" ||
                                 ["none", ""].includes(selectedRotator)
                             }
@@ -369,8 +419,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
                         <Grid size="grow">
                             <Button fullWidth={true} disabled={
-                                trackingState['rotator_state'] === "idle" ||
-                                trackingState['rotator_state'] === "parked" ||
+                                ["stopped", "parked", "disconnected"].includes(trackingState['rotator_state']) ||
                                 satelliteId === "" ||
                                 ["none", ""].includes(selectedRotator)
                             } variant="contained" color="error" style={{height: '60px'}}

@@ -65,7 +65,7 @@ class RotatorController:
         try:
             # Send a quit command (optional)
             try:
-                await self._send_command("q")
+                await self._send_command("q", waitforreply=False)
             except Exception as e:
                 self.logger.warning(f"Error sending quit command: {e}")
 
@@ -113,7 +113,7 @@ class RotatorController:
                         # Ignore errors during cleanup
                         pass
 
-    async def _send_command(self, command: str) -> str:
+    async def _send_command(self, command: str, waitforreply=True) -> str:
         """Send a command to the rotator and get the response."""
         self.check_connection()
         
@@ -124,14 +124,17 @@ class RotatorController:
             # Send the command
             self.writer.write(full_command.encode('utf-8'))
             await self.writer.drain()
-            
-            # Read the response
-            response_bytes = await asyncio.wait_for(
-                self.reader.read(1000),
-                timeout=self.timeout
-            )
-            
-            response = response_bytes.decode('utf-8', errors='replace').strip()
+
+            if waitforreply:
+                # Read the response
+                response_bytes = await asyncio.wait_for(
+                    self.reader.read(1000),
+                    timeout=self.timeout
+                )
+
+                response = response_bytes.decode('utf-8', errors='replace').strip()
+            else:
+                response = "(no wait for reply)"
             
             if self.verbose:
                 self.logger.debug(f"Command: {command} -> Response: {response}")
