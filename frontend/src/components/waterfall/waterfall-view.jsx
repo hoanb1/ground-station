@@ -240,19 +240,27 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         });
 
         // Modify the socket event handler for FFT data
-        socket.on('sdr-fft-data', (data) => {
-          // Add new FFT data to the waterfall buffer
-          waterfallDataRef.current.unshift(data);
-          
-          // Keep only the most recent rows based on canvas height
-          if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
-            waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
-          }
-          
-          // Notify the worker that new data is available
-          if (workerRef.current) {
-            workerRef.current.postMessage({ cmd: 'updateFFTData' });
-          }
+        socket.on('sdr-fft-data', (binaryData) => {
+            const floatArray = new Float32Array(binaryData);
+
+            // Increment event counter
+            eventCountRef.current += 1;
+
+            // Add bin count
+            binCountRef.current += floatArray.length;
+
+            // Add new FFT data to the waterfall buffer
+            waterfallDataRef.current.unshift(floatArray);
+
+            // Keep only the most recent rows based on canvas height
+            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
+                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
+            }
+
+            // Notify the worker that new data is available
+            if (workerRef.current) {
+                workerRef.current.postMessage({ cmd: 'updateFFTData' });
+            }
         });
 
         drawBandscope();
@@ -338,31 +346,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         };
     }, []);
 
-    // Update the sdr-fft-data event handler to count events and bins
-    useEffect(() => {
-        socket.on('sdr-fft-data', (data) => {
-            // Increment event counter
-            eventCountRef.current += 1;
-
-            // Add bin count
-            binCountRef.current += data.length;
-
-            // Your existing code
-            waterfallDataRef.current.unshift(data);
-
-            // Keep only the most recent rows based on canvas height
-            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
-                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
-            }
-        });
-
-        return () => {
-            cancelAnimations();
-            socket.off('sdr-error');
-            socket.off('sdr-fft-data');
-            socket.off('sdr-status');
-        };
-    }, []);
 
     // Modify startStreaming and cancelAnimations
     const startStreaming = () => {

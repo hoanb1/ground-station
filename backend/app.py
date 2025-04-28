@@ -82,7 +82,7 @@ async def lifespan(fastapiapp: FastAPI):
 
 
 # Create an asynchronous Socket.IO server using ASGI mode.
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True)
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True)
 app = FastAPI(lifespan=lifespan)
 
 # Wrap the Socket.IO server with an ASGI application.

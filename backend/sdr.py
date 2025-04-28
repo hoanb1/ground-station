@@ -87,8 +87,8 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             fft_window = client['fft_window']
 
             # Increase virtual resolution 4x
-            fft_size = fft_size * 4
-            #fft_size = fft_size * 1
+            #fft_size = fft_size * 4
+            fft_size = fft_size * 1
 
             # Select window function based on client preference, fallback to hanning if invalid
             window_func = window_functions.get(fft_window.lower(), np.hanning)
@@ -128,8 +128,11 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
 
             fft_result /= num_segments  # Average the segments
 
+            # Convert to Float32
+            fft_result = fft_result.astype(np.float32)
+
             # Send FFT data to the client
-            await sio.emit('sdr-fft-data', fft_result.tolist(), room=client_id)
+            await sio.emit('sdr-fft-data', fft_result.tobytes(), room=client_id)
             logger.debug(f"FFT data sent to client {client_id}")
 
             # Brief pause to prevent overwhelming the network
