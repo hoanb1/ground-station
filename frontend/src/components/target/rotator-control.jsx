@@ -288,7 +288,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['rotator_state'] === "tracking"}
+                    <FormControl disabled={["tracking", "connected"].includes(trackingState['rotator_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="rotator-select">Rotator</InputLabel>

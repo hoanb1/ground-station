@@ -832,12 +832,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
         logger.info(f"Rig state change detected from '{old}' to '{new}'")
 
-        if new == "tracking":
-            rig_data['tracking'] = True
-
+        if new == "connected":
             # check what hardware was chosen and set it up
             if current_rig_id is not None and rig_controller is None:
-
                 # rig_controller was selected, and a rig_controller is not setup, set it up now
                 try:
                     rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=current_rig_id)
@@ -858,9 +855,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     ]})
                     rig_controller = None
 
-        elif new == "idle":
-            rig_data['tracking'] = False
-
+        elif new == "disconnected":
+            # disconnected rig_controller
             if rig_controller is not None:
                 logger.info(f"Disconnecting from rig_controller at {rig_controller.host}:{rig_controller.port}...")
                 try:
@@ -878,6 +874,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 finally:
                     # Set to None regardless of disconnect success
                     rig_controller = None
+
+        elif new == "tracking":
+            rig_data['tracking'] = True
+
+        elif new == "stopped":
+            rotator_data['tracking'] = False
+
 
     async def handle_transmitter_id_change(old, new):
         logger.info(f"Transmitter ID change detected from '{old}' to '{new}'")

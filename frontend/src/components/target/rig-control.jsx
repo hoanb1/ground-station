@@ -56,7 +56,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
     const {rigs} = useSelector((state) => state.rigs);
 
     const handleTrackingStop = () => {
-        const newTrackingState = {...trackingState, 'rig_state': "idle"};
+        const newTrackingState = {...trackingState, 'rig_state': "stopped"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
@@ -112,6 +112,24 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
 
+    function connectRig() {
+        const data = {
+            ...trackingState,
+            'rig_state': "connected",
+            'rig_id': selectedRadioRig,
+        };
+        dispatch(setTrackingStateInBackend({ socket, data: data}));
+    }
+
+    function disconnectRig() {
+        const data = {
+            ...trackingState,
+            'rig_state': "disconnected",
+            'rig_id': selectedRadioRig,
+        };
+        dispatch(setTrackingStateInBackend({ socket, data: data}));
+    }
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>
@@ -141,7 +159,8 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
 
-                    <FormControl disabled={trackingState['rig_state'] === "tracking"} sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                    <FormControl disabled={["tracking", "connected"].includes(trackingState['rig_state'])}
+                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
                         <Select
@@ -171,7 +190,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['rig_state'] === "tracking"}
+                    <FormControl disabled={["tracking", "connected"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
@@ -235,19 +254,25 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         justifyContent: "space-between",
                         alignItems: "stretch",
                     }}>
-                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button disabled={true} fullWidth={true} variant="contained" color="secondary" style={{height: '35px'}}>
-                                A
+                        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>
+                            <Button disabled={
+                                ["tracking", "connected", "stopped"].includes(trackingState['rig_state']) ||
+                                ["none", ""].includes(selectedRotator)
+                            } fullWidth={true} variant="contained" color="info" style={{height: '35px'}}
+                                    onClick={() => {
+                                        connectRig()
+                                    }}>
+                                CONNECT
                             </Button>
                         </Grid>
-                        <Grid size="grow" style={{paddingRight: '0.5rem'}}>
-                            <Button disabled={true} fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
-                                B
-                            </Button>
-                        </Grid>
-                        <Grid size="grow" style={{paddingRight: '0rem'}}>
-                            <Button disabled={true} fullWidth={true} variant="contained" color="info" style={{height: '35px'}}>
-                                C
+                        <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
+                            <Button disabled={["disconnected"].includes(trackingState['rig_state'])}
+                                    fullWidth={true}
+                                    variant="contained" color="error" style={{height: '35px'}}
+                                    onClick={() => {
+                                        disconnectRig()
+                                    }}>
+                                DISCONNECT
                             </Button>
                         </Grid>
                     </Grid>
@@ -260,7 +285,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                     }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem'}}>
                                 <Button fullWidth={true} disabled={
-                                    trackingState['rig_state'] === "tracking" ||
+                                    trackingState['rig_state'] === "tracking" || trackingState['rig_state'] === "disconnected" ||
                                     satelliteId === "" ||
                                     ["none", ""].includes(selectedRadioRig)
                                     || ["none", ""].includes(selectedTransmitter)
@@ -273,7 +298,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
                         <Grid size="grow">
                             <Button fullWidth={true} disabled={
-                                trackingState['rig_state'] === "idle" ||
+                                trackingState['rig_state'] === "stopped" || trackingState['rig_state'] === "disconnected" ||
                                 satelliteId === "" ||
                                 ["none", ""].includes(selectedRadioRig)
                                 || ["none", ""].includes(selectedTransmitter)
