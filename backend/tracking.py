@@ -977,7 +977,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                         )
 
                 # tune freq
-                if rig_controller:
+                if rig_controller and current_rig_state == "tracking":
                     frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])
 
                     try:
@@ -990,7 +990,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                         logger.info(f"Tuning to frequency {rig_data['observed_freq']} complete")
 
                 # slew rotator
-                if rotator_controller:
+                if rotator_controller and current_rotator_state == "tracking":
                     position_gen = rotator_controller.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
 
                     try:
