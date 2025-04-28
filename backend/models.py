@@ -2,6 +2,7 @@ import uuid
 import json
 from datetime import date, datetime
 from sqlalchemy.exc import NoInspectionAvailable
+from common import ModelEncoder
 from sqlalchemy import Table, MetaData, Float
 from datetime import datetime, UTC, timezone, timedelta
 from sqlalchemy import TypeDecorator, DateTime
@@ -22,47 +23,6 @@ Base = declarative_base()
 # Creates a MetaData object that holds schema-level information such as tables, columns, and constraints.
 metadata = MetaData()
 
-class ModelEncoder(json.JSONEncoder):
-    def default(self, obj):
-
-        if isinstance(obj, (date, datetime)):
-            return obj.isoformat()
-
-        if isinstance(obj, timedelta):
-            return str(obj)
-
-        if isinstance(obj, uuid.UUID):
-            return str(obj)
-
-        # Attempt to convert SQLAlchemy model objects
-        # by reading their columns
-        try:
-            return {
-                column.name: getattr(obj, column.name)
-                for column in obj.__table__.columns
-            }
-        except AttributeError:
-            # If the object is not a SQLAlchemy model row, fallback
-            return super().default(obj)
-
-def serialize_object(obj):
-    """
-    Serializes a Python object into a JSON-compatible format and then
-    deserializes it back to a Python object. The serialization utilizes
-    a custom JSON encoder, `ModelEncoder`, to handle potentially
-    non-standard object types. The function ensures that the resulting
-    object is JSON-compatible but has been reconstructed into its
-    Python representation.
-
-    :param obj: The Python object to be serialized and deserialized.
-        This may include custom objects that require a specific
-        JSON encoder, as well as built-in Python data structures.
-    :return: The deserialized Python object resulting from the
-        serialization and deserialization process. The output is a
-        JSON-compatible Python object reconstructed to mimic the
-        original input structure.
-    """
-    return json.loads(json.dumps(obj, cls=ModelEncoder))
 
 class AwareDateTime(TypeDecorator):
     """

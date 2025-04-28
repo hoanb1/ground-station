@@ -17,7 +17,7 @@ from models import Transmitters
 from models import SatelliteTLESources
 from models import SatelliteGroups
 from logger import logger
-from models import serialize_object
+from common import serialize_object
 from typing import Optional
 
 

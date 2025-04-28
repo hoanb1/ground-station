@@ -194,10 +194,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     <AccordionDetails>
 
                         <Box sx={{mb: 2}}>
-                            <Typography variant="body2" gutterBottom>
-                                Gain: {localGain} dB
-                            </Typography>
-
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>Gain (dB)</InputLabel>

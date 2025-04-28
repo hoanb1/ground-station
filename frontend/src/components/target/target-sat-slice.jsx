@@ -188,8 +188,8 @@ const targetSatTrackSlice = createSlice({
         groupOfSats: [],
         trackingState: {
             'norad_id': '',
-            'rotator_state': 'idle',
-            'rig_state': 'idle',
+            'rotator_state': 'disconnected',
+            'rig_state': 'disconnected',
             'group_id': '',
             'rig_id': 'none',
             'rotator_id': 'none',
@@ -335,6 +335,7 @@ const targetSatTrackSlice = createSlice({
                 state.satelliteData.paths = action.payload['satellite_data']['paths'];
                 state.satelliteData.coverage = action.payload['satellite_data']['coverage'];
                 state.satelliteData.transmitters = action.payload['satellite_data']['transmitters'];
+                state.satelliteData.nextPass = action.payload['satellite_data']['nextPass'];
             }
 
             if (action.payload['rotator_data']) {

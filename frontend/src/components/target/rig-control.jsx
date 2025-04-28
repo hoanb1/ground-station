@@ -159,7 +159,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
 
-                    <FormControl disabled={["tracking", "connected"].includes(trackingState['rig_state'])}
+                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
@@ -190,7 +190,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking", "connected"].includes(trackingState['rig_state'])}
+                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
@@ -298,7 +298,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
                         <Grid size="grow">
                             <Button fullWidth={true} disabled={
-                                trackingState['rig_state'] === "stopped" || trackingState['rig_state'] === "disconnected" ||
+                                ["stopped", "disconnected", "connected"].includes(trackingState['rig_state']) ||
                                 satelliteId === "" ||
                                 ["none", ""].includes(selectedRadioRig)
                                 || ["none", ""].includes(selectedTransmitter)

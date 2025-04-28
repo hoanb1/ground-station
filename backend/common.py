@@ -1,8 +1,61 @@
 import time
 import math
+import json
+import uuid
 import functools
+import numpy
+from datetime import date, datetime, timedelta
 from logger import logger
 from skyfield.api import EarthSatellite, load, wgs84
+from datetime import datetime, UTC
+
+
+
+class ModelEncoder(json.JSONEncoder):
+    def default(self, obj):
+
+        if isinstance(obj, (date, datetime)):
+            return obj.isoformat()
+
+        if isinstance(obj, timedelta):
+            return str(obj)
+
+        if isinstance(obj, uuid.UUID):
+            return str(obj)
+
+        if isinstance(obj, numpy.bool):
+            return bool(obj)
+
+        # Attempt to convert SQLAlchemy model objects
+        # by reading their columns
+        try:
+            return {
+                column.name: getattr(obj, column.name)
+                for column in obj.__table__.columns
+            }
+        except AttributeError:
+            # If the object is not an SQLAlchemy model row, fallback
+            return super().default(obj)
+
+
+def serialize_object(obj):
+    """
+    Serializes a Python object into a JSON-compatible format and then
+    deserializes it back to a Python object. The serialization utilizes
+    a custom JSON encoder, `ModelEncoder`, to handle potentially
+    non-standard object types. The function ensures that the resulting
+    object is JSON-compatible but has been reconstructed into its
+    Python representation.
+
+    :param obj: The Python object to be serialized and deserialized.
+        This may include custom objects that require a specific
+        JSON encoder, as well as built-in Python data structures.
+    :return: The deserialized Python object resulting from the
+        serialization and deserialization process. The output is a
+        JSON-compatible Python object reconstructed to mimic the
+        original input structure.
+    """
+    return json.loads(json.dumps(obj, cls=ModelEncoder))
 
 
 def timeit(func):
@@ -128,3 +181,4 @@ def is_satellite_over_location(tle, date, target_lat, target_lon, threshold_km=5
 
     # check if the satellite’s subpoint is within `threshold_km` of target lat/lon
     return distance_km <= threshold_km
+

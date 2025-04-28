@@ -1,7 +1,7 @@
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
-import {useEffect} from "react";
+import {useEffect, useRef} from "react";
 import { styled } from '@mui/material/styles';
 import {
     fetchSatelliteGroups,
@@ -58,7 +58,30 @@ function GaugePointer() {
     );
 }
 
-function GaugeAz({az}) {
+const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forElevation = false}) => {
+    const {outerRadius, cx, cy} = useGaugeState();
+    const angleInRad = forElevation ?
+        ((90 - angle) * Math.PI) / 180 :
+        (angle * Math.PI) / 180;
+    const target = {
+        x: cx + outerRadius * Math.sin(angleInRad),
+        y: cy - outerRadius * Math.cos(angleInRad),
+    };
+    return (
+        <g>
+            <path
+                d={`M ${cx} ${cy} L ${target.x} ${target.y}`}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                opacity={opacity}
+            />
+        </g>
+    );
+};
+
+function GaugeAz({az, limits = [null, null]}) {
+    const [maxAz, minAz] = limits;
+
     return (
         <GaugeContainer
             style={{
@@ -82,13 +105,21 @@ function GaugeAz({az}) {
                 e.stopPropagation();
             }}
         >
-            <GaugeReferenceArc />
-            <GaugePointer />
+            <GaugeReferenceArc/>
+            {minAz !== null && maxAz !== null && <>
+                <Pointer angle={minAz} stroke={"#393939"} strokeWidth={1}/>
+                <Pointer angle={maxAz} stroke={"#393939"} strokeWidth={1}/>
+            </>}
+            <GaugePointer/>
+            <text x="75" y="18" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
+            <text x="130" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
+            <text x="75" y="125" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
+            <text x="20" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
         </GaugeContainer>
     );
 }
 
-function GaugeEl({el}) {
+function GaugeEl({el, maxElevation = null}) {
     return (
         <GaugeContainer
             style={{
@@ -112,8 +143,15 @@ function GaugeEl({el}) {
                 e.stopPropagation();
             }}
         >
-            <GaugeReferenceArc />
-            <GaugePointer />
+            <GaugeReferenceArc/>
+            {maxElevation !== null && <>
+                <Pointer angle={0} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
+                <Pointer angle={maxElevation} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
+            </>}
+            <GaugePointer/>
+            <text x="100" y="110" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
+            <text x="75" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
+            <text x="20" y="29" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
         </GaugeContainer>
     );
 }
@@ -140,6 +178,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         availableTransmitters,
         rotatorData,
         gridEditable,
+        satelliteData,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -288,7 +327,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking", "connected"].includes(trackingState['rotator_state'])}
+                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rotator_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
@@ -326,10 +365,10 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "center",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <GaugeAz az={rotatorData['az']}/>
+                            <GaugeAz az={rotatorData['az']} limits={[null, null]}/>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <GaugeEl el={rotatorData['el']}/>
+                            <GaugeEl el={rotatorData['el']} maxElevation={null}/>
                         </Grid>
 
                     </Grid>
@@ -419,7 +458,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         </Grid>
                         <Grid size="grow">
                             <Button fullWidth={true} disabled={
-                                ["stopped", "parked", "disconnected"].includes(trackingState['rotator_state']) ||
+                                ["stopped", "parked", "disconnected", "connected"].includes(trackingState['rotator_state']) ||
                                 satelliteId === "" ||
                                 ["none", ""].includes(selectedRotator)
                             } variant="contained" color="error" style={{height: '60px'}}

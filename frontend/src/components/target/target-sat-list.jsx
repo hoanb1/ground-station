@@ -49,12 +49,10 @@ function SatelliteList() {
         dispatch(setSatelliteId(satelliteId));
         dispatch(setAvailableTransmitters(getTransmittersForSatelliteId(satelliteId)));
 
-        // set the tracking state in the backend to the new norad id and leave the state as idle
+        // set the tracking state in the backend to the new norad id and leave the state as is
         const data = {
             ...trackingState,
             norad_id: satelliteId,
-            rotator_state: "idle",
-            rig_state: "idle",
             group_id: groupId,
             rig_id: selectedRadioRig,
             rotator_id: selectedRotator,

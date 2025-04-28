@@ -88,6 +88,7 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
 
             # Increase virtual resolution 4x
             fft_size = fft_size * 4
+            #fft_size = fft_size * 1
 
             # Select window function based on client preference, fallback to hanning if invalid
             window_func = window_functions.get(fft_window.lower(), np.hanning)

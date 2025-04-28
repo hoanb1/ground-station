@@ -246,7 +246,7 @@ class RotatorController:
             self.logger.info("Parking rotator")
             
             # Send park command
-            response = await self._send_command("K")
+            response = await self._send_command("K", waitforreply=False)
             
             # Check response
             if response.startswith('RPRT'):

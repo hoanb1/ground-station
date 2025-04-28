@@ -9,7 +9,6 @@ from db import engine, AsyncSessionLocal
 from sync import *
 from datetime import date, datetime
 from auth import *
-from models import ModelEncoder
 from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state, get_satellite_position_from_tle
 from common import is_geostationary
 from tracking import compiled_satellite_data

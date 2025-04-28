@@ -8,7 +8,7 @@ import numpy as np
 from io import StringIO
 from datetime import datetime, UTC
 import math
-from common import timeit, async_timeit, is_geostationary
+from common import timeit, async_timeit, is_geostationary, serialize_object
 from skyfield.api import Loader, Topos, EarthSatellite
 from db import engine, AsyncSessionLocal
 from logger import logger
@@ -646,6 +646,16 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     position['az'] = sky_point[0]
     position['el'] = sky_point[1]
 
+    # # calculate elevation and azimuth on LOS and AOS
+    # satellite_data['nextPass'] = await asyncio.to_thread(calculate_next_pass,
+    #     [satellite_data['details']['tle1'], satellite_data['details']['tle2']],
+    #     location['data']['lat'],
+    #     location['data']['lon'],
+    #     0,
+    # )
+
+    satellite_data = serialize_object(satellite_data)
+    
     return satellite_data
 
 
@@ -670,7 +680,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
     assert 1 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
 
     azimuthlimits = (0, 360)
-    eleveationlimits = (0, 180)
+    eleveationlimits = (0, 90)
     minelevation = 10.0
     previous_rotator_state = None
     rotator_controller = None
@@ -776,48 +786,20 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             rotator_data['tracking'] = False
 
             try:
-                if rotator_controller is None:
-                    rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=current_rotator_id)
-                    rotator_details = rotator_details_reply['data']
-                    rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
-                    await rotator_controller.connect()
-                    rotator_data['connected'] = True
-                    await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rotator_connected"}],
-                        'rotator_data': rotator_data
-                    })
-
                 # going to park position
-                park_position_gen = rotator_controller.set_position(0.0, 90.0)
+                park_reply = await rotator_controller.park()
 
-                try:
-                    rotator_data['az'], rotator_data['el'], is_parking = await anext(park_position_gen)
-                    rotator_data['az'] = round(rotator_data['az'], 3)
-                    rotator_data['el'] = round(rotator_data['el'], 3)
-                    rotator_data['slewing'] = is_slewing
-                    logger.info(f"Current position: AZ={rotator_data['az']}°, EL={rotator_data['el']}°, parking={is_parking}")
-
-                except StopAsyncIteration:
-                    logger.info(f"Parking to AZ={0}° EL={90}° complete")
-
-                rotator_data['parked'] = True
-                await sio.emit('satellite-tracking', {
-                    'events': [{'name': "rotator_parked"}],
-                    'rotator_data': rotator_data
-                })
-
-                if rotator_controller is not None:
-                    # now disconnect
-                    await rotator_controller.disconnect()
-                    rotator_data['connected'] = False
-                    rotator_controller = None
+                if park_reply:
+                    rotator_data['parked'] = True
                     await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rotator_disconnected"}],
+                        'events': [{'name': "rotator_parked"}],
                         'rotator_data': rotator_data
                     })
+                else:
+                    raise Exception("Failed to park rotator")
 
             except Exception as e:
-                logger.error(f"Failed to connect to rotator_controller: {e}")
+                logger.error(f"Failed to park rotator: {e}")
                 logger.exception(e)
 
         else:
@@ -985,7 +967,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
                     if current_transmitter:
                         # calculate doppler shift
-                        downlink_freq = current_transmitter.get('downlink_low', 0)
                         rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
                             satellite_tles[0],
                             satellite_tles[1],
@@ -1079,4 +1060,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
                 logger.info(f"Waiting for {remaining_time_to_sleep} seconds before next update (already spent {loop_duration})...")
                 await asyncio.sleep(remaining_time_to_sleep)
+
+
 
