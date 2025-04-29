@@ -33,8 +33,8 @@ const sdrTypeFields = {
         }
     },
     rtlsdrtcpv3: {
-        excludeFields: [],
-        fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max', 'serial'],
+        excludeFields: ['serial'],
+        fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max'],
         defaults: {
             host: '127.0.0.1',
             port: 1234,
@@ -55,8 +55,8 @@ const sdrTypeFields = {
         }
     },
     rtlsdrtcpv4: {
-        excludeFields: [],
-        fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max', 'serial'],
+        excludeFields: ['serial'],
+        fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max'],
         defaults: {
             host: '127.0.0.1',
             port: 1234,
@@ -114,17 +114,23 @@ export default function SDRTable() {
     ];
 
     const handleChange = (e) => {
-        const { name, value } = e.target;
-        
+        const {name, value} = e.target;
+
         // If changing the SDR type, apply default values for that type
         if (name === 'type') {
             const newType = value;
             const typeConfig = sdrTypeFields[newType];
-            
+
             if (typeConfig && typeConfig.defaults) {
-                // Apply default values for the new type, preserving the type selection
+                // Set excluded fields to null and apply defaults
+                const nullifiedExcluded = typeConfig.excludeFields.reduce((acc, field) => {
+                    acc[field] = null;
+                    return acc;
+                }, {});
+
                 dispatch(setFormValues({
                     ...typeConfig.defaults,
+                    ...nullifiedExcluded,
                     type: newType
                 }));
             } else {
@@ -270,16 +276,22 @@ export default function SDRTable() {
                     onChange={handleChange} 
                     value={getFieldValue('frequency_max')}
                 />,
-                <TextField 
-                    key="serial" 
-                    name="serial" 
-                    label="Serial" 
-                    fullWidth 
-                    variant="filled"
-                    onChange={handleChange} 
-                    value={getFieldValue('serial')}
-                />
             );
+
+            // Serial field - only show for types that don't exclude it
+            if (!config.excludeFields.includes('serial')) {
+                fields.push(
+                    <TextField
+                        key="serial"
+                        name="serial"
+                        label="Serial"
+                        fullWidth
+                        variant="filled"
+                        onChange={handleChange}
+                        value={getFieldValue('serial')}
+                    />
+                );
+            }
         }
 
         return fields;
@@ -289,22 +301,27 @@ export default function SDRTable() {
         <Box sx={{ width: '100%' }}>
             <DataGrid
                 loading={loading}
-                rows={sdrs}
+                rows={sdrs.map(row => ({
+                    ...row,
+                    host: row.host || '-',
+                    port: row.port || '-',
+                    serial: row.serial || '-'
+                }))}
                 columns={columns}
                 checkboxSelection
                 disableSelectionOnClick
-                onRowSelectionModelChange={(selected)=>{
+                onRowSelectionModelChange={(selected) => {
                     setSelected(selected);
                 }}
                 initialState={{
-                    pagination: { paginationModel: { pageSize: 5 } },
+                    pagination: {paginationModel: {pageSize: 5}},
                     sorting: {
-                        sortModel: [{ field: 'name', sort: 'desc' }],
+                        sortModel: [{field: 'name', sort: 'desc'}],
                     },
                 }}
                 selectionModel={selected}
                 pageSize={pageSize}
-                pageSizeOptions={[5, 10, 25, { value: -1, label: 'All' }]}
+                pageSizeOptions={[5, 10, 25, {value: -1, label: 'All'}]}
                 onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                 rowsPerPageOptions={[5, 10, 25]}
                 getRowId={(row) => row.id}
@@ -327,7 +344,7 @@ export default function SDRTable() {
                 <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
                     <DialogTitle>Add SDR</DialogTitle>
                     <DialogContent>
-                        <Stack spacing={2}>
+                    <Stack spacing={2}>
                             {renderFormFields()}
                         </Stack>
                     </DialogContent>

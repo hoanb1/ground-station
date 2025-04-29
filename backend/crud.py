@@ -1860,16 +1860,30 @@ async def add_sdr(session: AsyncSession, data: dict) -> dict:
     :param session: Database session to manage the transaction asynchronously.
     :type session: AsyncSession
     :param data: Dictionary containing the SDR data to be stored. The dictionary
-        must include required fields such as 'name', 'host', and 'port'.
+        must include required fields based on type - name and serial for USB type,
+        name, host, and port for TCP type.
     :type data: dict
     :return: A dictionary with the operation's success status, either the serialized SDR
         data upon success or an error message upon failure.
     :rtype: dict
     """
     try:
-        required_fields = ['name', 'serial']
-        for field in required_fields:
-            assert field in data and data[field] is not None, f"Field '{field}' is required"
+        # Name is always required
+        if 'name' not in data or data['name'] is None:
+            raise AssertionError("Field 'name' is required")
+
+        # Check type-specific required fields
+        sdr_type = data.get('type')
+        if sdr_type:
+            if sdr_type.lower() in ['rtlsdrusbv3', 'rtlsdrusbv4']:
+                if 'serial' not in data or data['serial'] is None:
+                    raise AssertionError("Field 'serial' is required for USB type SDRs")
+
+            elif sdr_type.lower() in ['rtlsdrtcpv3', 'rtlsdrtcpv4']:
+                if 'host' not in data or data['host'] is None:
+                    raise AssertionError("Field 'host' is required for TCP type SDRs")
+                if 'port' not in data or data['port'] is None:
+                    raise AssertionError("Field 'port' is required for TCP type SDRs")
 
         # Extract frequency values and create frequency_range dict
         frequency_min = data.pop('frequency_min', None)
