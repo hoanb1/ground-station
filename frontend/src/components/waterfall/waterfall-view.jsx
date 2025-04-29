@@ -67,7 +67,7 @@ import {createInlineWorker} from "./waterfall-worker.jsx";
 import FrequencyDisplay from "./frequency-control.jsx";
 
 
-const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
+const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
@@ -288,7 +288,7 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         // If we are streaming, configure RTL-SDR settings
         if (isStreaming) {
             socket.emit('sdr_data', 'configure-rtlsdr', {
-                deviceId,
+                selectedSDRId,
                 centerFrequency,
                 sampleRate,
                 gain,
