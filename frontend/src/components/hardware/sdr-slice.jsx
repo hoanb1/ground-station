@@ -62,13 +62,12 @@ export const submitOrEditSDR = createAsyncThunk(
 const defaultSDR = {
     id: null,
     name: '',
-    device: '',
     host: '127.0.0.1',
     port: 1234,
-    type: 'rtlsdrusb',
+    type: 'rtlsdrusbv3',
     serial: '',
-    frequency_min: 0,
-    frequency_max: 0,
+    frequency_min: 24,
+    frequency_max: 1700,
 };
 
 const sdrsSlice = createSlice({

@@ -56,6 +56,7 @@ import {
     setWaterFallVisualWidth,
     setWaterFallScaleX,
     setWaterFallPositionX,
+    setStartStreamingLoading,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -63,6 +64,7 @@ import FrequencyScale from "./frequency-scale-canvas.jsx";
 import {useResizeDetector} from "react-resize-detector";
 import {getColorForPower} from "./waterfall-colors.jsx";
 import {createInlineWorker} from "./waterfall-worker.jsx";
+import FrequencyDisplay from "./frequency-control.jsx";
 
 
 const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
@@ -121,6 +123,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         fftWindow,
         waterFallVisualWidth,
         waterFallCanvasWidth,
+        selectedSDRId,
+        startStreamingLoading,
     } = useSelector((state) => state.waterfall);
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
@@ -237,6 +241,10 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
 
         socket.on('sdr-status', (data) => {
             console.info(`sdr-status`, data);
+            if (data['streaming'] === true) {
+                dispatch(setStartStreamingLoading(false));
+            }
+
         });
 
         // Modify the socket event handler for FFT data
@@ -346,39 +354,41 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
         };
     }, []);
 
-
-    // Modify startStreaming and cancelAnimations
+// Modify startStreaming and cancelAnimations
     const startStreaming = () => {
-      if (!isStreaming) {
-        dispatch(setErrorMessage(''));
-        
-        // Configure RTL-SDR settings
-        socket.emit('sdr_data', 'configure-rtlsdr', {
-          deviceId,
-          centerFrequency,
-          sampleRate,
-          gain,
-          fftSize,
-          biasT,
-          tunerAgc,
-          rtlAgc,
-          fftWindow,
-        });
-        
-        socket.emit('sdr_data', 'start-streaming');
-        dispatch(setIsStreaming(true));
-        
-        // Start the worker
-        if (workerRef.current) {
-          workerRef.current.postMessage({ 
-            cmd: 'start', 
-            data: { fps: targetFPSRef.current } 
-          });
+
+        if (!isStreaming) {
+            dispatch(setStartStreamingLoading(true));
+            dispatch(setErrorMessage(''));
+
+            // Configure RTL-SDR settings
+            socket.emit('sdr_data', 'configure-rtlsdr', {
+                selectedSDRId,
+                centerFrequency,
+                sampleRate,
+                gain,
+                fftSize,
+                biasT,
+                tunerAgc,
+                rtlAgc,
+                fftWindow,
+            }, () => {
+                // Start streaming after configuration is acknowledged
+                socket.emit('sdr_data', 'start-streaming');
+                dispatch(setIsStreaming(true));
+
+                // Start the worker
+                if (workerRef.current) {
+                    workerRef.current.postMessage({
+                        cmd: 'start',
+                        data: {fps: targetFPSRef.current}
+                    });
+                }
+
+                // auto range the dB scale
+                setTimeout(() => autoScaleDbRange(), 1500);
+            });
         }
-        
-        // auto range the dB scale
-        setTimeout(() => autoScaleDbRange(), 1500);
-      }
     };
 
     const stopStreaming = () => {
@@ -388,26 +398,6 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
             cancelAnimations();
         }
     };
-
-    function renderWaterfallLoop(timestamp) {
-        // Limit to targetFPSRef.current
-        if (!lastFrameTimeRef.current || timestamp - lastFrameTimeRef.current >= 1000 / targetFPSRef.current) {
-            drawWaterfall();
-            lastFrameTimeRef.current = timestamp;
-        }
-
-        animationFrameRef.current = requestAnimationFrame(renderWaterfallLoop);
-    }
-
-    function renderBandscopeLoop(timestamp) {
-        // Limit to targetFPSRef.current
-        if (!lastBandscopeFrameTimeRef.current || timestamp - lastBandscopeFrameTimeRef.current >= 1000 / targetFPSRef.current) {
-            drawBandscope();
-            lastBandscopeFrameTimeRef.current = timestamp;
-        }
-
-        bandscopeAnimationFrameRef.current = requestAnimationFrame(renderBandscopeLoop);
-    }
 
     const autoScaleDbRange = () => {
         if (waterfallDataRef.current.length === 0) {
@@ -732,7 +722,8 @@ const MainWaterfallDisplay = React.memo(({deviceId = 0}) => {
                     <ButtonGroup variant="contained" size="small">
                         <Button
                             startIcon={<PlayArrowIcon/>}
-                            disabled={isStreaming}
+                            loading={startStreamingLoading}
+                            disabled={isStreaming || (selectedSDRId === "none")}
                             color="primary"
                             onClick={startStreaming}
                             sx={{
@@ -1207,7 +1198,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 zIndex: 10,
                 display: 'flex',
                 gap: '5px',
-                backgroundColor: 'rgba(0,0,0,0.5)',
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
                 borderRadius: '20px',
                 padding: '5px',
             }}>

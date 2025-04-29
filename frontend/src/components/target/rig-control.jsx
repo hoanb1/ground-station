@@ -158,14 +158,13 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-
                     <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
                         <Select
                             id="radiorig-select"
-                            value={rigs.length > 0? selectedRadioRig: "none"} // Set the current value here
+                            value={rigs.length > 0? selectedRadioRig: "none"}
                             onChange={(event) => {
                                 handleRigChange(event);
                             }}

@@ -6,7 +6,7 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 const FrequencyDisplay = ({
                               initialFrequency = 1000.0,
                               onChange,
-                              integerDigits = 7, // New prop to configure the number of integer digits
+                              integerDigits = 8, // New prop to configure the number of integer digits
                               decimalDigits = 3, // Optional prop to configure decimal digits
                               size = 'medium' // New prop to control size - can be 'small', 'medium', 'large' or a number
                           }) => {

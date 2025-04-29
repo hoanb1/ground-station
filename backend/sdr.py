@@ -8,6 +8,7 @@ from typing import Dict, List, Optional, Any
 from scipy import interpolate
 from waterfall import active_sdr_clients, rtlsdr_devices
 
+
 # configure new logger
 logger = logging.getLogger('sdr-data-process')
 

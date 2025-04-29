@@ -20,6 +20,54 @@ import {
     setFormValues,
 } from './sdr-slice.jsx';
 
+// SDR type field configurations with default values
+const sdrTypeFields = {
+    rtlsdrusbv3: {
+        excludeFields: ['host', 'port'],
+        fields: ['name', 'frequency_min', 'frequency_max', 'serial'],
+        defaults: {
+            name: 'USB SDR v3',
+            frequency_min: 24,
+            frequency_max: 1700,
+            serial: ''
+        }
+    },
+    rtlsdrtcpv3: {
+        excludeFields: [],
+        fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max', 'serial'],
+        defaults: {
+            host: '127.0.0.1',
+            port: 1234,
+            name: 'TCP SDR v3',
+            frequency_min: 24,
+            frequency_max: 1700,
+            serial: ''
+        }
+    },
+    rtlsdrusbv4: {
+        excludeFields: ['host', 'port'],
+        fields: ['name', 'frequency_min', 'frequency_max', 'serial'],
+        defaults: {
+            name: 'USB SDR v4',
+            frequency_min: 24,
+            frequency_max: 1800,
+            serial: ''
+        }
+    },
+    rtlsdrtcpv4: {
+        excludeFields: [],
+        fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max', 'serial'],
+        defaults: {
+            host: '127.0.0.1',
+            port: 1234,
+            name: 'TCP SDR v4',
+            frequency_min: 24,
+            frequency_max: 1800,
+            serial: ''
+        }
+    }
+};
+
 export default function SDRTable() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
@@ -67,7 +115,26 @@ export default function SDRTable() {
 
     const handleChange = (e) => {
         const { name, value } = e.target;
-        dispatch(setFormValues({...formValues, [name]: value}));
+        
+        // If changing the SDR type, apply default values for that type
+        if (name === 'type') {
+            const newType = value;
+            const typeConfig = sdrTypeFields[newType];
+            
+            if (typeConfig && typeConfig.defaults) {
+                // Apply default values for the new type, preserving the type selection
+                dispatch(setFormValues({
+                    ...typeConfig.defaults,
+                    type: newType
+                }));
+            } else {
+                // Just update the type if no defaults are defined
+                dispatch(setFormValues({...formValues, type: newType}));
+            }
+        } else {
+            // Normal field update
+            dispatch(setFormValues({...formValues, [name]: value}));
+        }
     };
 
     const handleSubmit = () => {
@@ -92,6 +159,130 @@ export default function SDRTable() {
             .catch((err) => {
                 enqueueSnackbar(err, { variant: 'error' });
             });
+    };
+
+    // Get the field value or its default from the SDR type configuration
+    const getFieldValue = (fieldName) => {
+        const selectedType = formValues.type;
+        
+        // If we have a value in formValues, use it
+        if (formValues[fieldName] !== undefined) {
+            return formValues[fieldName];
+        }
+        
+        // Otherwise check for default in the type configuration
+        if (selectedType && 
+            sdrTypeFields[selectedType] && 
+            sdrTypeFields[selectedType].defaults && 
+            sdrTypeFields[selectedType].defaults[fieldName] !== undefined) {
+            return sdrTypeFields[selectedType].defaults[fieldName];
+        }
+        
+        // Fallback to empty string/value
+        return '';
+    };
+
+    // Renders form fields based on the selected SDR type
+    const renderFormFields = () => {
+        const selectedType = formValues.type || '';
+        
+        // Define common fields that all SDR types have
+        const fields = [
+            <FormControl key="type-select" fullWidth variant="filled">
+                <InputLabel id="sdr-type-label">SDR Type</InputLabel>
+                <Select
+                    name="type"
+                    labelId="sdr-type-label"
+                    value={formValues.type || ''}
+                    onChange={(e) => handleChange({target: {name: "type", value: e.target.value}})}
+                    variant={'filled'}>
+                    <MenuItem value="rtlsdrusbv3">RTL-SDR USB v3</MenuItem>
+                    <MenuItem value="rtlsdrtcpv3">RTL-SDR TCP v3</MenuItem>
+                    <MenuItem value="rtlsdrusbv4">RTL-SDR USB v4</MenuItem>
+                    <MenuItem value="rtlsdrtcpv4">RTL-SDR TCP v4</MenuItem>
+                </Select>
+            </FormControl>
+        ];
+
+        // If a valid SDR type is selected, add the corresponding fields
+        if (selectedType && sdrTypeFields[selectedType]) {
+            const config = sdrTypeFields[selectedType];
+
+            // Host field - only show for types that don't exclude it
+            if (!config.excludeFields.includes('host')) {
+                fields.push(
+                    <TextField 
+                        key="host" 
+                        name="host" 
+                        label="Host" 
+                        fullWidth 
+                        variant="filled"
+                        onChange={handleChange} 
+                        value={getFieldValue('host')}
+                    />
+                );
+            }
+
+            // Port field - only show for types that don't exclude it
+            if (!config.excludeFields.includes('port')) {
+                fields.push(
+                    <TextField 
+                        key="port" 
+                        name="port" 
+                        label="Port" 
+                        fullWidth 
+                        variant="filled"
+                        type="number" 
+                        onChange={handleChange} 
+                        value={getFieldValue('port')}
+                    />
+                );
+            }
+
+            // Add the common fields that all types have
+            fields.push(
+                <TextField 
+                    key="name" 
+                    name="name" 
+                    label="Name" 
+                    fullWidth 
+                    variant="filled" 
+                    onChange={handleChange}
+                    value={getFieldValue('name')}
+                />,
+                <TextField 
+                    key="frequency_min" 
+                    name="frequency_min" 
+                    label="Minimum Frequency (MHz)" 
+                    fullWidth 
+                    variant="filled"
+                    type="number" 
+                    onChange={handleChange} 
+                    value={getFieldValue('frequency_min')}
+                />,
+                <TextField 
+                    key="frequency_max" 
+                    name="frequency_max" 
+                    label="Maximum Frequency (MHz)" 
+                    fullWidth 
+                    variant="filled"
+                    type="number" 
+                    onChange={handleChange} 
+                    value={getFieldValue('frequency_max')}
+                />,
+                <TextField 
+                    key="serial" 
+                    name="serial" 
+                    label="Serial" 
+                    fullWidth 
+                    variant="filled"
+                    onChange={handleChange} 
+                    value={getFieldValue('serial')}
+                />
+            );
+        }
+
+        return fields;
     };
 
     return (
@@ -137,32 +328,7 @@ export default function SDRTable() {
                     <DialogTitle>Add SDR</DialogTitle>
                     <DialogContent>
                         <Stack spacing={2}>
-                            <FormControl fullWidth variant="filled">
-                                <InputLabel id="sdr-type-label">SDR Type</InputLabel>
-                                <Select
-                                    name="type"
-                                    labelId="sdr-type-label"
-                                    value={formValues.type}
-                                    onChange={(e) => handleChange({target: {name: "type", value: e.target.value}})}
-                                    variant={'filled'}>
-                                    <MenuItem value="rtlsdrusb">RTL-SDR USB</MenuItem>
-                                    <MenuItem value="rtlsdrtcp">RTL-SDR TCP</MenuItem>
-                                </Select>
-                            </FormControl>
-
-                            <TextField name="host" label="Host" fullWidth variant="filled"
-                                       onChange={handleChange} value={formValues.host}/>
-                            <TextField name="port" label="Port" fullWidth variant="filled"
-                                       type="number" onChange={handleChange} value={formValues.port}/>
-                            <TextField name="name" label="Name" fullWidth variant="filled" onChange={handleChange}
-                                       value={formValues.name}/>
-                            <TextField name="frequency_min" label="Minimum Frequency (MHz)" fullWidth variant="filled"
-                                       type="number" onChange={handleChange} value={formValues.frequency_min}/>
-                            <TextField name="frequency_max" label="Maximum Frequency (MHz)" fullWidth variant="filled"
-                                       type="number" onChange={handleChange} value={formValues.frequency_max}/>
-                            <TextField name="serial" label="Serial" fullWidth variant="filled"
-                                       onChange={handleChange} value={formValues.serial}/>
-                            
+                            {renderFormFields()}
                         </Stack>
                     </DialogContent>
                     <DialogActions style={{padding: '0px 24px 20px 20px'}}>

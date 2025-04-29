@@ -4,7 +4,7 @@ import {
     Tab,
     Button,
     Alert,
-    AlertTitle
+    AlertTitle, Typography
 } from '@mui/material';
 import { Link } from 'react-router';
 import Paper from "@mui/material/Paper";
@@ -274,9 +274,29 @@ const SDRForm = () => {
 
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
-            <Alert severity="info">
-                <AlertTitle>SDR control setup</AlertTitle>
-                Configure and manage your SDR control setup here
+            <Alert severity="info" sx={{mb: 2}}>
+                <AlertTitle>SDR Control Panel</AlertTitle>
+                This panel allows you to manage Software Defined Radio (SDR) devices connected to your ground station.
+                You can:
+                <ul>
+                    <li>Add and remove SDR devices</li>
+                    <li>Configure sampling rates and gain settings</li>
+                    <li>Monitor device status and performance</li>
+                    <li>Assign SDRs to specific satellites or frequencies</li>
+                </ul>
+            </Alert>
+            <Alert severity="warning" sx={{mb: 2}}>
+                <AlertTitle>Configuring RTL-SDR Serial Numbers</AlertTitle>
+                Use these commands in terminal to change device serial numbers:
+                <Box sx={{pl: 2, mt: 1}}>
+                    <Typography component="div" variant="body2" color="text.secondary">
+                        1. View current ID: <code>rtl_eeprom -d 0</code>
+                        <br/>
+                        2. Set new serial: <code>rtl_eeprom -d 0 -s NEWSERIAL</code>
+                        <br/>
+                        3. Verify changes: <code>rtl_test</code>
+                    </Typography>
+                </Box>
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <SDRTable/>
@@ -289,9 +309,9 @@ const SDRForm = () => {
 const RigControlForm = () => {
 
     return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
+        <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>Rig control setup</AlertTitle>
+            <AlertTitle>Rig control setup</AlertTitle>
                 Configure and manage your rig control setup here
             </Alert>
             <Box component="form" sx={{mt: 2}}>

@@ -40,6 +40,9 @@ const waterfallSlice = createSlice({
         waterFallVisualWidth: 4096,
         waterFallScaleX: 1,
         waterFallPositionX: 0,
+        expandedPanels: ['sdr', 'freqControl', 'fft'],
+        selectedSDRId: "none",
+        startStreamingLoading: false,
     },
     reducers: {
         setColorMap: (state, action) => {
@@ -110,9 +113,16 @@ const waterfallSlice = createSlice({
         },
         setWaterFallPositionX: (state, action) => {
             state.waterFallPositionX = action.payload;
-        }
-
-
+        },
+        setExpandedPanels(state, action) {
+            state.expandedPanels = action.payload;
+        },
+        setSelectedSDRId(state, action) {
+            state.selectedSDRId = action.payload;
+        },
+        setStartStreamingLoading(state, action) {
+            state.startStreamingLoading = action.payload;
+        },
     },
     extraReducers: (builder) => {
 
@@ -143,6 +153,9 @@ export const {
     setWaterFallVisualWidth,
     setWaterFallScaleX,
     setWaterFallPositionX,
+    setExpandedPanels,
+    setSelectedSDRId,
+    setStartStreamingLoading,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

@@ -84,8 +84,10 @@ class SatelliteGroupType(str, PyEnum):
     SYSTEM = "system"
 
 class SDRType(str, PyEnum):
-    RTLSDRUSB = "rtlsdrusb"
-    RTLSDRTCP = "rtlsdrtcp"
+    RTLSDRUSBV3 = "rtlsdrusbv3"
+    RTLSDRTCPV3 = "rtlsdrtcpv3"
+    RTLSDRUSBV4 = "rtlsdrusbv4"
+    RTLSDRTCPV4 = "rtlsdrtcpv4"
 
 class Satellites(Base):
     __tablename__ = 'satellites'

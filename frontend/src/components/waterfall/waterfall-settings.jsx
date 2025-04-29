@@ -27,6 +27,8 @@ import {
     setAutoDBRange,
     setBiasT,
     setFFTWindow,
+    setExpandedPanels,
+    setSelectedSDRId,
 } from './waterfall-slice.jsx'
 import {
     Box,
@@ -108,9 +110,12 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         rtlGains,
         fftWindow,
         fftWindows,
+        expandedPanels,
+        selectedSDRId,
     } = useSelector((state) => state.waterfall);
 
-    const [expandedPanels, setExpandedPanels] = React.useState(['panel1']);
+    const { sdrs } = useSelector((state) => state.sdrs);
+
     const [localCenterFrequency, setLocalCenterFrequency] = useState(centerFrequency);
     const [localDbRange, setLocalDbRange] = useState(dbRange);
     const [localFFTSize, setLocalFFTSize] = useState(fftSize);
@@ -129,53 +134,31 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         setLocalAutoDBRange(autoDBRange);
     }, [centerFrequency, dbRange, fftSize, sampleRate, gain, colorMap, autoDBRange]);
 
-
-    // Modified handler for toggling panels
     const handleChange = (panel) => (event, isExpanded) => {
-        setExpandedPanels(prev => {
+        const updateExpandedPanels = (expandedPanels) => {
             if (isExpanded) {
-                // Add the panel if it's not already in the array
-                return prev.includes(panel) ? prev : [...prev, panel];
-            } else {
-                // Remove the panel if it's in the array
-                return prev.filter(p => p !== panel);
+                return expandedPanels.includes(panel)
+                    ? expandedPanels
+                    : [...expandedPanels, panel];
             }
-        });
+            return expandedPanels.filter(p => p !== panel);
+        };
+        dispatch(setExpandedPanels(updateExpandedPanels(expandedPanels)));
     };
 
-    // Format frequency for display
-    const formatFrequency = (freq) => {
-        if (freq >= 1e9) {
-            return `${(freq / 1e9).toFixed(3)} GHz`;
-        } else if (freq >= 1e6) {
-            return `${(freq / 1e6).toFixed(3)} MHz`;
-        } else if (freq >= 1e3) {
-            return `${(freq / 1e3).toFixed(3)} kHz`;
-        }
-        return `${freq.toFixed(0)} Hz`;
-    };
-
-    const gainMarks = rtlGains.map((value, index) => ({
-        value,
-        // Only show labels for min, max, and a few points in between
-        label: (index === 0 ||
-            index === rtlGains.length - 1 ||
-            index === Math.floor(rtlGains.length / 4) ||
-            index === Math.floor(rtlGains.length / 2) ||
-            index === Math.floor(3 * rtlGains.length / 4))
-            ? value.toString()
-            : ''
-    }));
-
+    function handleSDRChange(event) {
+        dispatch(setSelectedSDRId(event.target.value));
+    }
 
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
                 settings</TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
-                <Accordion expanded={expandedPanels.includes('panel1')} onChange={handleChange('panel1')}>
-                    <AccordionSummary aria-controls="panel1d-content" id="panel1d-header">
-                        <Typography component="span">Frequency</Typography>
+
+                <Accordion expanded={expandedPanels.includes('freqControl')} onChange={handleChange('freqControl')}>
+                    <AccordionSummary aria-controls="freq-content" id="freq-header">
+                        <Typography component="span">Frequency control</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
                         <Box sx={{mb: 0, width: '100%'}}>
@@ -187,13 +170,37 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         </Box>
                     </AccordionDetails>
                 </Accordion>
-                <Accordion expanded={expandedPanels.includes('panel3')} onChange={handleChange('panel3')}>
+
+                <Accordion expanded={expandedPanels.includes('sdr')} onChange={handleChange('sdr')}>
                     <AccordionSummary aria-controls="panel3d-content" id="panel3d-header">
                         <Typography component="span">SDR</Typography>
                     </AccordionSummary>
                     <AccordionDetails>
 
                         <Box sx={{mb: 2}}>
+                            <FormControl disabled={false}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                         size="small">
+                                <InputLabel htmlFor="sdr-select">SDR</InputLabel>
+                                <Select
+                                    id="sdr-select"
+                                    value={sdrs.length > 0? selectedSDRId: "none"}
+                                    onChange={(event) => {
+                                        handleSDRChange(event);
+                                    }}
+                                    variant={'filled'}>
+                                    <MenuItem value="none">
+                                        [no SDR selected]
+                                    </MenuItem>
+                                    <MenuItem value="" disabled>
+                                        <em>select a SDR</em>
+                                    </MenuItem>
+                                    {sdrs.map((sdr, index) => {
+                                        return <MenuItem value={sdr.id} key={index}>{sdr.name} ({sdr.type})</MenuItem>;
+                                    })}
+                                </Select>
+                            </FormControl>
+
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>Gain (dB)</InputLabel>
@@ -213,9 +220,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     ))}
                                 </Select>
                             </FormControl>
-
-                        </Box>
-                        <Box sx={{mb: 2}}>
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>Sample Rate</InputLabel>
@@ -249,7 +253,8 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
                         </Box>
-                        <Box sx={{mb: 2, ml: 1.5}}>
+
+                        <Box sx={{mb: 0, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -262,8 +267,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 }
                                 label="Enable Bias T"
                             />
-                        </Box>
-                        <Box sx={{mb: 2, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -276,8 +279,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 }
                                 label="Enable tuner AGC"
                             />
-                        </Box>
-                        <Box sx={{mb: 2, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -294,7 +295,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
 
                     </AccordionDetails>
                 </Accordion>
-                <Accordion expanded={expandedPanels.includes('panel2')} onChange={handleChange('panel2')}>
+                <Accordion expanded={expandedPanels.includes('fft')} onChange={handleChange('fft')}>
                     <AccordionSummary aria-controls="panel2d-content" id="panel2d-header">
                         <Typography component="span">FFT</Typography>
                     </AccordionSummary>
@@ -314,8 +315,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
                         </Box>
-
-                        <Box sx={{mb: 2, ml: 1.5}}>
+                        <Box sx={{mb: 0, ml: 1.5}}>
                             <FormControlLabel
                                 control={
                                     <Switch
@@ -369,8 +369,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     ))}
                                 </Select>
                             </FormControl>
-                        </Box>
-                        <Box sx={{mb: 2}}>
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled"
                                          size="small">
@@ -391,9 +389,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     ))}
                                 </Select>
                             </FormControl>
-                        </Box>
-
-                        <Box sx={{mb: 2}}>
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>FFT Window</InputLabel>
