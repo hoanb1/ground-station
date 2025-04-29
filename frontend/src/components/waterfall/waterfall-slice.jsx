@@ -30,6 +30,7 @@ const waterfallSlice = createSlice({
         sampleRate: 2048000,
         centerFrequency: 100000000,
         errorMessage: null,
+        errorDialogOpen: false,
         isStreaming: false,
         isPlaying: false,
         targetFPS: 10,
@@ -123,6 +124,9 @@ const waterfallSlice = createSlice({
         setStartStreamingLoading(state, action) {
             state.startStreamingLoading = action.payload;
         },
+        setErrorDialogOpen(state, action) {
+            state.errorDialogOpen = action.payload;
+        },
     },
     extraReducers: (builder) => {
 
@@ -156,6 +160,7 @@ export const {
     setExpandedPanels,
     setSelectedSDRId,
     setStartStreamingLoading,
+    setErrorDialogOpen,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

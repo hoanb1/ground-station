@@ -13,7 +13,13 @@ import {
     ButtonGroup,
     Stack,
     Divider,
+    Dialog,
+    DialogTitle,
+    DialogContent,
+    DialogContentText,
+    DialogActions,
 } from '@mui/material';
+import ErrorIcon from '@mui/icons-material/Error';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
@@ -44,6 +50,7 @@ import {
     setSampleRate,
     setCenterFrequency,
     setErrorMessage,
+    setErrorDialogOpen,
     setIsStreaming,
     setTargetFPS,
     setIsPlaying,
@@ -111,6 +118,7 @@ const MainWaterfallDisplay = React.memo(() => {
         sampleRate,
         centerFrequency,
         errorMessage,
+        errorDialogOpen,
         isStreaming,
         isConnected,
         targetFPS,
@@ -134,15 +142,15 @@ const MainWaterfallDisplay = React.memo(() => {
     const cancelAnimations = () => {
         // Stop the worker
         if (workerRef.current) {
-          workerRef.current.postMessage({ cmd: 'stop' });
+            workerRef.current.postMessage({cmd: 'stop'});
         }
-        
+
         // Clear any leftover animation frames
         if (animationFrameRef.current) {
             cancelAnimationFrame(animationFrameRef.current);
             animationFrameRef.current = null;
         }
-        
+
         if (bandscopeAnimationFrameRef.current) {
             cancelAnimationFrame(bandscopeAnimationFrameRef.current);
             bandscopeAnimationFrameRef.current = null;
@@ -165,48 +173,47 @@ const MainWaterfallDisplay = React.memo(() => {
 
     // Initialize worker when the component mounts
     useEffect(() => {
-      // Create the worker
-      const worker = createInlineWorker();
+        // Create the worker
+        const worker = createInlineWorker();
 
-      // Set up message handler
-      worker.onmessage = (e) => {
-        const { type, immediate, status } = e.data;
+        // Set up message handler
+        worker.onmessage = (e) => {
+            const {type, immediate, status} = e.data;
 
-        if (type === 'render') {
-          // Draw waterfall and bandscope
-          if (waterFallCanvasRef.current) {
-            drawWaterfall();
-          }
+            if (type === 'render') {
+                // Draw waterfall and bandscope
+                if (waterFallCanvasRef.current) {
+                    drawWaterfall();
+                }
 
-          if (bandscopeCanvasRef.current) {
-            drawBandscope();
-          }
+                if (bandscopeCanvasRef.current) {
+                    drawBandscope();
+                }
+            } else if (type === 'status') {
+                // Optional: handle status updates from the worker
+                console.log('Worker status:', status);
+            }
+        };
+
+        // Store the worker reference
+        workerRef.current = worker;
+
+        // If we're already streaming, start the worker
+        if (isStreaming) {
+            worker.postMessage({
+                cmd: 'start',
+                data: {fps: targetFPSRef.current}
+            });
         }
-        else if (type === 'status') {
-          // Optional: handle status updates from the worker
-          console.log('Worker status:', status);
-        }
-      };
 
-      // Store the worker reference
-      workerRef.current = worker;
-
-      // If we're already streaming, start the worker
-      if (isStreaming) {
-        worker.postMessage({
-          cmd: 'start',
-          data: { fps: targetFPSRef.current }
-        });
-      }
-
-      // Clean up when component unmounts
-      return () => {
-        if (workerRef.current) {
-          workerRef.current.postMessage({ cmd: 'stop' });
-          workerRef.current.terminate();
-          workerRef.current = null;
-        }
-      };
+        // Clean up when component unmounts
+        return () => {
+            if (workerRef.current) {
+                workerRef.current.postMessage({cmd: 'stop'});
+                workerRef.current.terminate();
+                workerRef.current = null;
+            }
+        };
     }, []);
 
     useEffect(() => {
@@ -233,6 +240,7 @@ const MainWaterfallDisplay = React.memo(() => {
         socket.on('sdr-error', (error) => {
             cancelAnimations();
             dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
+            dispatch(setErrorDialogOpen(true));
             enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
                 variant: 'error'
             });
@@ -247,7 +255,6 @@ const MainWaterfallDisplay = React.memo(() => {
                 dispatch(setIsStreaming(false));
                 dispatch(setStartStreamingLoading(false));
             }
-
         });
 
         // Modify the socket event handler for FFT data
@@ -270,7 +277,7 @@ const MainWaterfallDisplay = React.memo(() => {
 
             // Notify the worker that new data is available
             if (workerRef.current) {
-                workerRef.current.postMessage({ cmd: 'updateFFTData' });
+                workerRef.current.postMessage({cmd: 'updateFFTData'});
             }
         });
 
@@ -306,14 +313,14 @@ const MainWaterfallDisplay = React.memo(() => {
 
     // Update the worker when FPS changes
     useEffect(() => {
-      targetFPSRef.current = targetFPS;
-      
-      if (workerRef.current && isStreaming) {
-        workerRef.current.postMessage({ 
-          cmd: 'updateFPS', 
-          data: { fps: targetFPS } 
-        });
-      }
+        targetFPSRef.current = targetFPS;
+
+        if (workerRef.current && isStreaming) {
+            workerRef.current.postMessage({
+                cmd: 'updateFPS',
+                data: {fps: targetFPS}
+            });
+        }
     }, [targetFPS]);
 
     // Call this periodically, for example:
@@ -546,7 +553,7 @@ const MainWaterfallDisplay = React.memo(() => {
         const dBAxisCanvas = dBAxisScopeCanvasRef.current;
 
         if (!bandScopeCanvas || waterfallDataRef.current.length === 0) {
-             return;
+            return;
         }
 
         const bandScopeCtx = bandScopeCanvas.getContext('2d');
@@ -837,14 +844,55 @@ const MainWaterfallDisplay = React.memo(() => {
                 </Box>
             </Box>
 
+            <Dialog
+                open={errorMessage !== '' && errorDialogOpen}
+                onClose={() => dispatch(setErrorDialogOpen(false))}
+                aria-labelledby="error-dialog-title"
+                aria-describedby="error-dialog-description"
+                PaperProps={{
+                    style: {
+                        backgroundColor: '#ffebee',
+                        border: '1px solid #ef9a9a'
+                    }
+                }}
+            >
+                <DialogTitle
+                    id="error-dialog-title"
+                    sx={{
+                        color: '#c62828',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
+                    }}
+                >
+                    <ErrorIcon color="error"/>
+                    Error Occurred
+                </DialogTitle>
+                <DialogContent>
+                    <DialogContentText
+                        id="error-dialog-description"
+                        sx={{
+                            color: '#d32f2f'
+                        }}
+                    >
+                        {errorMessage}
+                    </DialogContentText>
+                </DialogContent>
+                <DialogActions>
+                    <Button
+                        onClick={() => dispatch(setErrorDialogOpen(false))}
+                        variant="contained"
+                        color="error"
+                    >
+                        Close
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
             <WaterfallStatusBar>
-                {errorMessage ?
-                    <Typography color="error" variant="body2" sx={{mb: 2}}>
-                        Error: {errorMessage}
-                    </Typography>
-                    : isStreaming ?
-                        `FFTs/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
-                        : `stopped`
+                {isStreaming ?
+                    `FFTs/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
+                    : `stopped`
                 }
             </WaterfallStatusBar>
 
@@ -1148,14 +1196,14 @@ const WaterfallWithStrictXAxisZoom = ({
         container.style.cursor = 'grab';
 
         // Add all event listeners
-        container.addEventListener('wheel', handleWheel, { passive: false });
+        container.addEventListener('wheel', handleWheel, {passive: false});
         container.addEventListener('mousedown', handleMouseDown);
         window.addEventListener('mousemove', handleMouseMove);
         window.addEventListener('mouseup', handleMouseUp);
 
         // For touch events, passive: false is critical for preventDefault to work
-        container.addEventListener('touchstart', handleTouchStart, { passive: false });
-        container.addEventListener('touchmove', handleTouchMove, { passive: false });
+        container.addEventListener('touchstart', handleTouchStart, {passive: false});
+        container.addEventListener('touchmove', handleTouchMove, {passive: false});
         window.addEventListener('touchend', handleTouchEnd);
 
         // Cleanup
@@ -1210,25 +1258,25 @@ const WaterfallWithStrictXAxisZoom = ({
                     onClick={() => {
                         zoomOnXAxisOnly(0.3, window.innerWidth / 2);
                     }}
-                    sx={{ color: 'white' }}
+                    sx={{color: 'white'}}
                 >
-                    <AddIcon />
+                    <AddIcon/>
                 </IconButton>
                 <IconButton
                     size={isMobile ? "medium" : "small"}
                     onClick={() => {
                         zoomOnXAxisOnly(-0.3, window.innerWidth / 2);
                     }}
-                    sx={{ color: 'white' }}
+                    sx={{color: 'white'}}
                 >
-                    <RemoveIcon />
+                    <RemoveIcon/>
                 </IconButton>
                 <IconButton
                     size={isMobile ? "medium" : "small"}
                     onClick={resetCustomTransform}
-                    sx={{ color: 'white' }}
+                    sx={{color: 'white'}}
                 >
-                    <RestartAltIcon />
+                    <RestartAltIcon/>
                 </IconButton>
             </Box>
 
