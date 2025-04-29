@@ -1,6 +1,6 @@
 import React, {useState, useEffect, useCallback, useMemo, memo, useRef} from 'react';
-import { SatelliteAlt } from '@mui/icons-material';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import {SatelliteAlt} from '@mui/icons-material';
+import {Responsive, WidthProvider} from 'react-grid-layout';
 import {
     MapContainer,
     TileLayer,
@@ -82,7 +82,8 @@ let MapObject = null;
 const storageMapZoomValueKey = "target-map-zoom-level";
 
 // global callback for dashboard editing here
-export let handleSetGridEditableTarget = function () {};
+export let handleSetGridEditableTarget = function () {
+};
 
 export const gridLayoutStoreName = 'target-sat-track-layouts';
 
@@ -324,8 +325,10 @@ function CenterSatelliteButton() {
         MapObject.setView(targetCoordinates, MapObject.getZoom());
     };
 
-    return <Fab size="small" color="primary" aria-label="Follow satellite" onClick={()=>{handleClick()}}>
-        <SatelliteAlt />
+    return <Fab size="small" color="primary" aria-label="Follow satellite" onClick={() => {
+        handleClick()
+    }}>
+        <SatelliteAlt/>
     </Fab>;
 }
 
@@ -408,7 +411,7 @@ const MapSlider = function ({handleSliderChange}) {
 
 
 const TargetSatelliteLayout = React.memo(function () {
-    const { socket } = useSocket();
+    const {socket} = useSocket();
     const dispatch = useDispatch();
     const {
         groupId,
@@ -443,7 +446,7 @@ const TargetSatelliteLayout = React.memo(function () {
     const satellitePaths = useSelector(satellitePathsSelector);
     const satelliteTransmitters = useSelector(satelliteTransmittersSelector);
 
-    const { location } = useSelector(state => state.location);
+    const {location} = useSelector(state => state.location);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -454,7 +457,75 @@ const TargetSatelliteLayout = React.memo(function () {
 
     // default layout if none in localStorage
     const defaultLayouts = {
-        lg: [{
+        "lg": [{
+            "w": 6,
+            "h": 15,
+            "x": 0,
+            "y": 0,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 6,
+            "y": 0,
+            "i": "info",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 7,
+            "x": 0,
+            "y": 15,
+            "i": "passes",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 4,
+            "x": 8,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 7,
+            "x": 8,
+            "y": 4,
+            "i": "video",
+            "minH": 4,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 10,
+            "y": 0,
+            "i": "rotator-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 10,
+            "x": 10,
+            "y": 11,
+            "i": "rig-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        "md": [{
             "w": 6,
             "h": 17,
             "x": 0,
@@ -464,10 +535,10 @@ const TargetSatelliteLayout = React.memo(function () {
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
-            "h": 12,
+            "w": 4,
+            "h": 11,
             "x": 6,
-            "y": 0,
+            "y": 15,
             "i": "info",
             "moved": false,
             "static": false,
@@ -483,76 +554,8 @@ const TargetSatelliteLayout = React.memo(function () {
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
-            "h": 4,
-            "x": 8,
-            "y": 0,
-            "i": "satselector",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 8,
-            "x": 8,
-            "y": 4,
-            "i": "video",
-            "minH": 4,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 11,
-            "x": 10,
-            "y": 0,
-            "i": "rotator-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 9,
-            "x": 10,
-            "y": 11,
-            "i": "rig-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
-        md: [{
-            "w": 6,
-            "h": 15,
-            "x": 0,
-            "y": 0,
-            "i": "map",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 11,
-            "x": 8,
-            "y": 0,
-            "i": "info",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 6,
-            "h": 9,
-            "x": 0,
-            "y": 15,
-            "i": "passes",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 4,
+            "w": 4,
+            "h": 5,
             "x": 6,
             "y": 0,
             "i": "satselector",
@@ -560,37 +563,37 @@ const TargetSatelliteLayout = React.memo(function () {
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
-            "h": 7,
+            "w": 4,
+            "h": 10,
             "x": 6,
-            "y": 4,
+            "y": 5,
             "i": "video",
             "minH": 4,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
+            "w": 5,
             "h": 11,
-            "x": 8,
-            "y": 11,
+            "x": 0,
+            "y": 26,
             "i": "rotator-control",
             "minH": 6,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
-            "h": 9,
-            "x": 8,
-            "y": 22,
+            "w": 5,
+            "h": 11,
+            "x": 5,
+            "y": 26,
             "i": "rig-control",
             "minH": 6,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }],
-        sm: [{
+        "sm": [{
             "w": 6,
             "h": 15,
             "x": 0,
@@ -657,6 +660,74 @@ const TargetSatelliteLayout = React.memo(function () {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        "xs": [{
+            "w": 2,
+            "h": 15,
+            "x": 0,
+            "y": 4,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 0,
+            "y": 28,
+            "i": "info",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 9,
+            "x": 0,
+            "y": 19,
+            "i": "passes",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 4,
+            "x": 0,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 7,
+            "x": 0,
+            "y": 39,
+            "i": "video",
+            "minH": 4,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 11,
+            "x": 0,
+            "y": 46,
+            "i": "rotator-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 9,
+            "x": 0,
+            "y": 57,
+            "i": "rig-control",
+            "minH": 6,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }]
     };
 
@@ -702,8 +773,10 @@ const TargetSatelliteLayout = React.memo(function () {
             dispatch(setOpenMapSettingsDialog(true));
         };
 
-        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
-            <SettingsIcon />
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
+            handleClick()
+        }}>
+            <SettingsIcon/>
         </Fab>;
     }
 
@@ -713,8 +786,10 @@ const TargetSatelliteLayout = React.memo(function () {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
 
-        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
-            <HomeIcon />
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
+            handleClick()
+        }}>
+            <HomeIcon/>
         </Fab>;
     }
 
@@ -724,8 +799,10 @@ const TargetSatelliteLayout = React.memo(function () {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
 
-        return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
-            <FilterCenterFocusIcon />
+        return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={() => {
+            handleClick()
+        }}>
+            <FilterCenterFocusIcon/>
         </Fab>;
     }
 
@@ -756,8 +833,10 @@ const TargetSatelliteLayout = React.memo(function () {
             }
         };
 
-        return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
-            <FullscreenIcon />
+        return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={() => {
+            handleMapFullscreen()
+        }}>
+            <FullscreenIcon/>
         </Fab>;
     }
 
@@ -811,14 +890,14 @@ const TargetSatelliteLayout = React.memo(function () {
             }
 
             if (showTooltip) {
-                currentPos.push(<Marker key={"marker-"+satelliteId} position={[latitude, longitude]}
+                currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
                                         icon={satelliteIcon2}>
                     <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={1} permanent>
                         {satelliteName} - {humanizeAltitude(altitude) + " km, " + humanizeVelocity(velocity) + " km/s"}
                     </ThemedLeafletTooltip>
                 </Marker>);
             } else {
-                currentPos.push(<Marker key={"marker-"+satelliteId} position={[latitude, longitude]}
+                currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
                                         icon={satelliteIcon2}>
                 </Marker>);
             }
@@ -829,7 +908,7 @@ const TargetSatelliteLayout = React.memo(function () {
                 currentCoverage.push(<Polyline
                     ref={coverageRef}
                     noClip={true}
-                    key={"coverage-"+satelliteDetails['name']}
+                    key={"coverage-" + satelliteDetails['name']}
                     pathOptions={{
                         color: satelliteCoverageColor,
                         weight: 1,
@@ -864,7 +943,7 @@ const TargetSatelliteLayout = React.memo(function () {
         dispatch(setMoonPos(moonPos));
     }
 
-    function handleLayoutsChange(currentLayout, allLayouts){
+    function handleLayoutsChange(currentLayout, allLayouts) {
         setLayouts(allLayouts);
         saveLayoutsToLocalStorage(allLayouts);
     }
@@ -894,13 +973,13 @@ const TargetSatelliteLayout = React.memo(function () {
     useEffect(() => {
         // we do this here once onmount,
         // we set the norad id and group id, once only here
-        dispatch(getTrackingStateFromBackend({ socket }))
+        dispatch(getTrackingStateFromBackend({socket}))
             .unwrap()
             .then((response) => {
-                    const noradId = response['value']['norad_id'];
-                    const groupId = response['value']['group_id'];
-                    dispatch(setSatelliteId(noradId));
-                    dispatch(setSatGroupId(groupId))
+                const noradId = response['value']['norad_id'];
+                const groupId = response['value']['group_id'];
+                dispatch(setSatelliteId(noradId));
+                dispatch(setSatGroupId(groupId))
             })
             .catch((error) => {
                 enqueueSnackbar(`Failed to get tracking state: ${error}`, {
@@ -922,13 +1001,13 @@ const TargetSatelliteLayout = React.memo(function () {
         };
     }, [noradId]);
 
-    useEffect(()=>{
+    useEffect(() => {
         satelliteUpdate(new Date());
 
-        return ()=> {
+        return () => {
         };
 
-    },[satelliteDetails, satellitePosition, satellitePaths, satelliteCoverage, sliderTimeOffset, showTooltip,
+    }, [satelliteDetails, satellitePosition, satellitePaths, satelliteCoverage, sliderTimeOffset, showTooltip,
         orbitProjectionDuration, tileLayerID, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage,
         showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor,
         satelliteCoverageColor]);
@@ -956,7 +1035,7 @@ const TargetSatelliteLayout = React.memo(function () {
             <MapContainer
                 center={[satellitePosition['lat'] || 0, satellitePosition['lon'] || 0]}
                 zoom={mapZoomLevel}
-                style={{ width:'100%', height:'100%', minHeight:'400px', minWidth:'400px' }}
+                style={{width: '100%', height: '100%', minHeight: '400px', minWidth: '400px'}}
                 dragging={false}
                 scrollWheelZoom={false}
                 maxZoom={7}
@@ -967,24 +1046,24 @@ const TargetSatelliteLayout = React.memo(function () {
                 boundsOptions={{padding: [300, 300]}}
             >
                 <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                    Tracking {satelliteDetails['name'] || "-"} {(satellitePosition['alt']/1000).toFixed(2)} km, {satellitePosition['vel'].toFixed(2)} km/s
+                    Tracking {satelliteDetails['name'] || "-"} {(satellitePosition['alt'] / 1000).toFixed(2)} km, {satellitePosition['vel'].toFixed(2)} km/s
                 </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer
                     url={getTileLayerById(tileLayerID)['url']}
                     attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                 />
-                <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 0, top: 30, position: 'absolute'}}>
+                <Box sx={{'& > :not(style)': {m: 1}}} style={{right: 0, top: 30, position: 'absolute'}}>
                     <MapSettingsButton/>
                     <CenterHomeButton/>
                     <CenterMapButton/>
                     <FullscreenMapButton/>
                 </Box>
 
-                {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.5}></Marker>: null}
-                {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.5}></Marker>: null}
+                {sunPos && showSunIcon ? <Marker position={sunPos} icon={sunIcon} opacity={0.5}></Marker> : null}
+                {moonPos && showMoonIcon ? <Marker position={moonPos} icon={moonIcon} opacity={0.5}></Marker> : null}
 
-                {daySidePolygon.length>1 && showTerminatorLine && (
+                {daySidePolygon.length > 1 && showTerminatorLine && (
                     <Polygon
                         positions={daySidePolygon}
                         pathOptions={{
@@ -997,7 +1076,7 @@ const TargetSatelliteLayout = React.memo(function () {
                     />
                 )}
 
-                {terminatorLine.length>1 && showTerminatorLine && (
+                {terminatorLine.length > 1 && showTerminatorLine && (
                     <Polyline
                         positions={terminatorLine}
                         pathOptions={{
@@ -1012,11 +1091,11 @@ const TargetSatelliteLayout = React.memo(function () {
                 {InternationalDateLinePolyline()}
                 {location.lat && location.lon ?
                     <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/> : null}
-                {showPastOrbitPath? currentPastSatellitesPaths: null}
-                {showFutureOrbitPath? currentFutureSatellitesPaths: null}
+                {showPastOrbitPath ? currentPastSatellitesPaths : null}
+                {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
                 {currentSatellitesPosition}
-                {showSatelliteCoverage? currentSatellitesCoverage: null}
-                <MapSettingsIslandDialog updateBackend={()=>{
+                {showSatelliteCoverage ? currentSatellitesCoverage : null}
+                <MapSettingsIslandDialog updateBackend={() => {
                     const key = 'target-map-settings';
                     dispatch(setTargetMapSetting({socket, key: key}));
                 }}/>
@@ -1042,7 +1121,7 @@ const TargetSatelliteLayout = React.memo(function () {
             <SatelliteInfoIsland/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
-        <NextPassesIsland/>
+            <NextPassesIsland/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
@@ -1066,8 +1145,8 @@ const TargetSatelliteLayout = React.memo(function () {
             className="layout"
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
-            breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-            cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
+            breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
+            cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
             rowHeight={30}
             isResizable={true}
             isDraggable={true}
@@ -1081,8 +1160,8 @@ const TargetSatelliteLayout = React.memo(function () {
             className="layout"
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
-            breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-            cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
+            breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
+            cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
             rowHeight={30}
             isResizable={false}
             isDraggable={false}
