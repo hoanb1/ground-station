@@ -91,8 +91,8 @@ function GaugeAz({az, limits = [null, null]}) {
             }}
             valueMin={0}
             valueMax={360}
-            width={150}
-            height={150}
+            width={140}
+            height={140}
             startAngle={0}
             endAngle={360}
             value={az}
@@ -110,11 +110,15 @@ function GaugeAz({az, limits = [null, null]}) {
                 <Pointer angle={minAz} stroke={"#393939"} strokeWidth={1}/>
                 <Pointer angle={maxAz} stroke={"#393939"} strokeWidth={1}/>
             </>}
+            <Pointer angle={270}/>
+            <Pointer angle={180}/>
+            <Pointer angle={90}/>
+            <Pointer angle={0}/>
             <GaugePointer/>
-            <text x="75" y="18" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
-            <text x="134" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
-            <text x="75" y="135" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
-            <text x="15" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
+            <text x="70" y="18" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
+            <text x="124" y="70" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
+            <text x="70" y="125" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
+            <text x="15" y="70" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
         </GaugeContainer>
     );
 }
@@ -148,10 +152,14 @@ function GaugeEl({el, maxElevation = null}) {
                 <Pointer angle={0} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
                 <Pointer angle={maxElevation} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
             </>}
+
+
+            <Pointer angle={90}/>
+            <Pointer angle={0}/>
             <GaugePointer/>
-            <text x="107" y="114" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
+            <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
             <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
-            <text x="20" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
+            <text x="10" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
         </GaugeContainer>
     );
 }
