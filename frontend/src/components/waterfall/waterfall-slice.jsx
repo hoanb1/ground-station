@@ -38,6 +38,7 @@ const waterfallSlice = createSlice({
         autoDBRange: false,
         gridEditable: false,
         waterFallCanvasWidth: 4096,
+        waterFallCanvasHeight: 900,
         waterFallVisualWidth: 4096,
         waterFallScaleX: 1,
         waterFallPositionX: 0,
@@ -127,6 +128,9 @@ const waterfallSlice = createSlice({
         setErrorDialogOpen(state, action) {
             state.errorDialogOpen = action.payload;
         },
+        setWaterFallCanvasHeight(state, action) {
+            state.waterFallCanvasHeight = action.payload;
+        },
     },
     extraReducers: (builder) => {
 
@@ -161,6 +165,7 @@ export const {
     setSelectedSDRId,
     setStartStreamingLoading,
     setErrorDialogOpen,
+    setWaterFallCanvasHeight,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

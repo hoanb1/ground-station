@@ -64,6 +64,7 @@ import {
     setWaterFallScaleX,
     setWaterFallPositionX,
     setStartStreamingLoading,
+    setWaterFallCanvasHeight,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -131,6 +132,7 @@ const MainWaterfallDisplay = React.memo(() => {
         fftWindow,
         waterFallVisualWidth,
         waterFallCanvasWidth,
+        waterFallCanvasHeight,
         selectedSDRId,
         startStreamingLoading,
     } = useSelector((state) => state.waterfall);
@@ -824,10 +826,10 @@ const MainWaterfallDisplay = React.memo(() => {
                         <canvas
                             ref={waterFallLeftMarginCanvasRef}
                             width={bandscopeAxisYWidth}
-                            height={900}
+                            height={waterFallCanvasHeight}
                             style={{
                                 width: '100%',
-                                height: 'calc(100% - 131px)',
+                                height: `${waterFallCanvasHeight}px`,
                                 display: 'block',
                             }}
 
@@ -922,6 +924,7 @@ const WaterfallWithStrictXAxisZoom = ({
     const {
         waterFallVisualWidth,
         waterFallCanvasWidth,
+        waterFallCanvasHeight,
         waterFallScaleX,
         waterFallPositionX,
     } = useSelector((state) => state.waterfall);
@@ -1313,10 +1316,10 @@ const WaterfallWithStrictXAxisZoom = ({
                 <canvas
                     ref={waterFallCanvasRef}
                     width={waterFallCanvasWidth}
-                    height={900}
+                    height={waterFallCanvasHeight}
                     style={{
                         width: '100%',
-                        height: '900px',
+                        height: `${waterFallCanvasHeight}px`,
                         display: 'block',
                         touchAction: 'pan-y',
                     }}
