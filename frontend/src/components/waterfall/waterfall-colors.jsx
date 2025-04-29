@@ -18,9 +18,9 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb], colorCache) =
     switch (mapName) {
         case 'viridis':
             const viridisRGB = {
-                r: Math.floor(70 + 180 * normalizedValue),
-                g: Math.floor(normalizedValue < 0.5 ? 70 + 180 * normalizedValue * 2 : 250 - 80 * (normalizedValue - 0.5) * 2),
-                b: Math.floor(normalizedValue < 0.5 ? 130 + 120 * normalizedValue * 2 : 250 - 200 * (normalizedValue - 0.5) * 2)
+                r: Math.floor(0 + 230 * Math.pow(normalizedValue, 2.0)),
+                g: Math.floor(normalizedValue < 0.5 ? 5 + 215 * Math.pow(normalizedValue * 2, 1.4) : 220 - 160 * Math.pow((normalizedValue - 0.5) * 2, 0.8)),
+                b: Math.floor(normalizedValue < 0.5 ? 20 + 210 * Math.pow(normalizedValue * 2, 1.2) : 230 - 230 * Math.pow((normalizedValue - 0.5) * 2, 0.7))
             };
             colorCache.current.set(cacheKey, viridisRGB);
             return viridisRGB;
@@ -117,57 +117,6 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb], colorCache) =
 
             colorCache.current.set(cacheKey, jetRGB);
             return jetRGB;
-
-
-        case 'radar':
-            // Radar display inspired palette with phosphor green elements
-            // #000000 (black) -> #001F00 (very dark green) -> #003300 (dark green) ->
-            // #00FF00 (radar green) -> #88FF88 (light green) -> #FFFFFF (white trace)
-            let radarRGB;
-            if (normalizedValue < 0.15) {
-                // #000000 to #001F00 (black to very dark green) - empty radar space
-                const factor = normalizedValue / 0.15;
-                radarRGB = {
-                    r: 0,
-                    g: 0 + Math.floor(factor * 31),
-                    b: 0
-                };
-            } else if (normalizedValue < 0.35) {
-                // #001F00 to #003300 (very dark green to dark green) - faint returns
-                const factor = (normalizedValue - 0.15) / 0.2;
-                radarRGB = {
-                    r: 0,
-                    g: 31 + Math.floor(factor * 20),
-                    b: 0
-                };
-            } else if (normalizedValue < 0.6) {
-                // #003300 to #00FF00 (dark green to classic radar green) - standard returns
-                const factor = (normalizedValue - 0.35) / 0.25;
-                radarRGB = {
-                    r: 0,
-                    g: 51 + Math.floor(factor * 204),
-                    b: 0
-                };
-            } else if (normalizedValue < 0.85) {
-                // #00FF00 to #88FF88 (radar green to light green) - strong returns
-                const factor = (normalizedValue - 0.6) / 0.25;
-                radarRGB = {
-                    r: 0 + Math.floor(factor * 136),
-                    g: 255,
-                    b: 0 + Math.floor(factor * 136)
-                };
-            } else {
-                // #88FF88 to #FFFFFF (light green to white) - critical returns/targets
-                const factor = (normalizedValue - 0.85) / 0.15;
-                radarRGB = {
-                    r: 136 + Math.floor(factor * 119),
-                    g: 255,
-                    b: 136 + Math.floor(factor * 119)
-                };
-            }
-
-            colorCache.current.set(cacheKey, radarRGB);
-            return radarRGB;
 
         case 'cosmic':
             // Custom cosmic colormap with dark purple to yellow gradient based on provided colors

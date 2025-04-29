@@ -725,6 +725,35 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             {'name': "norad_id_change", 'old': old, 'new': new},
         ]})
 
+
+    async def connect_to_rotator():
+        """
+        Check if rotator_controller is set up, if not set it up.
+        :return:
+        """
+        nonlocal rotator_controller
+        if current_rotator_id is not None and rotator_controller is None:
+            # rotator_controller was selected, and a rotator_controller is not setup, set it up now
+            try:
+                rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=current_rotator_id)
+                rotator_details = rotator_details_reply['data']
+                rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
+                await rotator_controller.connect()
+                rotator_data['connected'] = True
+                await sio.emit('satellite-tracking', {
+                    'events': [{'name': "rotator_connected"}],
+                    'rotator_data': rotator_data
+                })
+
+            except Exception as e:
+                logger.error(f"Failed to connect to rotator_controller: {e}")
+                logger.exception(e)
+                await sio.emit('satellite-tracking', {'events': [
+                    {'name': "rotator_error", "error": str(e)}
+                ]})
+                rotator_controller = None
+
+
     async def handle_rotator_state_change(old, new):
         nonlocal rotator_controller
 
@@ -734,32 +763,17 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
         rotator_data['minelevation'] = False
         if new == "connected":
             # check what hardware was chosen and set it up
-            if current_rotator_id is not None and rotator_controller is None:
-
-                # rotator_controller was selected, and a rotator_controller is not setup, set it up now
-                try:
-                    rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=current_rotator_id)
-                    rotator_details = rotator_details_reply['data']
-                    rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
-                    await rotator_controller.connect()
-                    rotator_data['connected'] = True
-                    await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rotator_connected"}],
-                        'rotator_data': rotator_data
-                    })
-
-                except Exception as e:
-                    logger.error(f"Failed to connect to rotator_controller: {e}")
-                    logger.exception(e)
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "rotator_error", "error": str(e)}
-                    ]})
-                    rotator_controller = None
+            await connect_to_rotator()
+            rotator_data['connected'] = True
 
         elif new == "tracking":
+            # check what hardware was chosen and set it up
+            await connect_to_rotator()
             rotator_data['tracking'] = True
 
         elif new == "stopped":
+            # check what hardware was chosen and set it up
+            await connect_to_rotator()
             rotator_data['tracking'] = False
 
         elif new == "disconnected":
@@ -809,6 +823,36 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
     async def handle_rotator_id_change(old, new):
         logger.info(f"Rotator ID change detected from '{old}' to '{new}'")
 
+
+    async def connect_to_rig():
+        """
+        If rig_controller is not set up yet, set it up.
+        :return:
+        """
+        nonlocal rig_controller
+        # check what hardware was chosen and set it up
+        if current_rig_id is not None and rig_controller is None:
+            # rig_controller was selected, and a rig_controller is not setup, set it up now
+            try:
+                rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=current_rig_id)
+                rotator_details = rig_details_reply['data']
+                rig_controller = RigController(host=rotator_details['host'], port=rotator_details['port'])
+                await rig_controller.connect()
+                rig_data['connected'] = True
+                await sio.emit('satellite-tracking', {
+                    'events': [{'name': "rig_connected"}],
+                    'rig_data': rig_data
+                })
+
+            except Exception as e:
+                logger.error(f"Failed to connect to rig_controller: {e}")
+                logger.exception(e)
+                await sio.emit('satellite-tracking', {'events': [
+                    {'name': "rig_error", "error": str(e)}
+                ]})
+                rig_controller = None
+
+
     async def handle_rig_state_change(old, new):
         nonlocal rig_controller
 
@@ -816,26 +860,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
         if new == "connected":
             # check what hardware was chosen and set it up
-            if current_rig_id is not None and rig_controller is None:
-                # rig_controller was selected, and a rig_controller is not setup, set it up now
-                try:
-                    rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=current_rig_id)
-                    rotator_details = rig_details_reply['data']
-                    rig_controller = RigController(host=rotator_details['host'], port=rotator_details['port'])
-                    await rig_controller.connect()
-                    rig_data['connected'] = True
-                    await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rig_connected"}],
-                        'rig_data': rig_data
-                    })
-
-                except Exception as e:
-                    logger.error(f"Failed to connect to rig_controller: {e}")
-                    logger.exception(e)
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "rig_error", "error": str(e)}
-                    ]})
-                    rig_controller = None
+            await connect_to_rig()
+            rig_data['connected'] = True
 
         elif new == "disconnected":
             # disconnected rig_controller
@@ -858,9 +884,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     rig_controller = None
 
         elif new == "tracking":
+            # check what hardware was chosen and set it up
+            await connect_to_rig()
             rig_data['tracking'] = True
 
         elif new == "stopped":
+            # check what hardware was chosen and set it up
+            await connect_to_rig()
             rotator_data['tracking'] = False
 
 
