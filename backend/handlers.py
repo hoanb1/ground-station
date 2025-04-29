@@ -560,6 +560,15 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 # Default to 100 MHz
                 center_freq = data.get('centerFrequency', 100e6)
 
+                # Validate center frequency against device limits
+                frequency_range = sdr_device.get('frequency_range', {'min': float(0), 'max': float(1000000000)})
+                logger.info(center_freq)
+                logger.info(frequency_range)
+                if not (frequency_range['min'] * 1e6 <= center_freq <= frequency_range['max'] * 1e6):
+                    raise Exception(
+                        f"Center frequency {center_freq / 1e6:.2f} MHz is outside device limits "
+                        f"({frequency_range['min']:.2f} MHz - {frequency_range['max']:.2f} MHz)")
+
                 # Default to 2.048 MSPS
                 sample_rate = data.get('sampleRate', 2.048e6)
 

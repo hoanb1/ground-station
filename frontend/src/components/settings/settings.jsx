@@ -275,17 +275,6 @@ const SDRForm = () => {
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info" sx={{mb: 2}}>
-                <AlertTitle>SDR Control Panel</AlertTitle>
-                This panel allows you to manage Software Defined Radio (SDR) devices connected to your ground station.
-                You can:
-                <ul>
-                    <li>Add and remove SDR devices</li>
-                    <li>Configure sampling rates and gain settings</li>
-                    <li>Monitor device status and performance</li>
-                    <li>Assign SDRs to specific satellites or frequencies</li>
-                </ul>
-            </Alert>
-            <Alert severity="warning" sx={{mb: 2}}>
                 <AlertTitle>Configuring RTL-SDR Serial Numbers</AlertTitle>
                 Use these commands in terminal to change device serial numbers:
                 <Box sx={{pl: 2, mt: 1}}>

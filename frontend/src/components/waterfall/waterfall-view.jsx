@@ -233,7 +233,6 @@ const MainWaterfallDisplay = React.memo(() => {
         socket.on('sdr-error', (error) => {
             cancelAnimations();
             dispatch(setErrorMessage(error.message || 'Failed to connect to RTL-SDR'));
-            dispatch(setIsStreaming(false));
             enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
                 variant: 'error'
             });
@@ -242,6 +241,10 @@ const MainWaterfallDisplay = React.memo(() => {
         socket.on('sdr-status', (data) => {
             console.info(`sdr-status`, data);
             if (data['streaming'] === true) {
+                dispatch(setIsStreaming(true));
+                dispatch(setStartStreamingLoading(false));
+            } else if (data['streaming'] === false) {
+                dispatch(setIsStreaming(false));
                 dispatch(setStartStreamingLoading(false));
             }
 

@@ -139,6 +139,10 @@ async def process_rtlsdr_data(sio: socketio.AsyncServer, device_id: int, client_
             # Brief pause to prevent overwhelming the network
             await asyncio.sleep(0.01)
 
+        else:
+            logger.info(f"SDR client {client_id} no longer connected, stopping SDR data processing")
+            await sio.emit('sdr-status', {'streaming': False}, room=client_id)
+
     except Exception as e:
         logger.error(f"Error processing RTLSDR data: {str(e)}")
         logger.exception(e)
