@@ -87,12 +87,12 @@ function GaugeAz({az, limits = [null, null]}) {
             style={{
                 margin: 'auto',
                 touchAction: 'auto',
-                pointerEvents: 'none',  // Makes the element completely non-interactive
+                pointerEvents: 'none',
             }}
             valueMin={0}
             valueMax={360}
             width={150}
-            height={140}
+            height={150}
             startAngle={0}
             endAngle={360}
             value={az}
@@ -112,9 +112,9 @@ function GaugeAz({az, limits = [null, null]}) {
             </>}
             <GaugePointer/>
             <text x="75" y="18" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
-            <text x="130" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
-            <text x="75" y="125" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
-            <text x="20" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
+            <text x="134" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
+            <text x="75" y="135" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
+            <text x="15" y="75" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
         </GaugeContainer>
     );
 }
@@ -129,7 +129,7 @@ function GaugeEl({el, maxElevation = null}) {
             }}
             valueMin={90}
             valueMax={0}
-            width={120}
+            width={130}
             height={130}
             startAngle={0}
             endAngle={90}
@@ -149,9 +149,9 @@ function GaugeEl({el, maxElevation = null}) {
                 <Pointer angle={maxElevation} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
             </>}
             <GaugePointer/>
-            <text x="100" y="110" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
-            <text x="75" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
-            <text x="20" y="29" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
+            <text x="107" y="114" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
+            <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
+            <text x="20" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
         </GaugeContainer>
     );
 }

@@ -38,7 +38,7 @@ def calculate_samples_per_scan(sample_rate):
     :rtype: int
     """
     # Default value for high sample rates
-    base_samples = 32 * 1024
+    base_samples = 64 * 1024
     if sample_rate < 1e6:  # Less than 1 MHz
         return base_samples // 4
     elif sample_rate < 2e6:  # Less than 2 MHz
