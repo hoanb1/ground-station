@@ -178,7 +178,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     <AccordionDetails>
 
                         <Box sx={{mb: 2}}>
-                            <FormControl disabled={false}
+                            <FormControl disabled={isStreaming}
                                          sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                          size="small">
                                 <InputLabel htmlFor="sdr-select">SDR</InputLabel>

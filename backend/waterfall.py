@@ -21,7 +21,7 @@ waterfall_sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*'
 waterfall_socket_app = socketio.ASGIApp(waterfall_sio)
 
 
-def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None, gain=None, fft_size=1024,
+def add_sdr_session(sid, sdr_id=None, center_frequency=None, sample_rate=None, gain=None, fft_size=1024,
                     fft_window='hanning'):
     """
     Adds a new SDR (Software-Defined Radio) session to the active SDR sessions dictionary with
@@ -32,8 +32,8 @@ def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None
 
     :param sid: Unique session identifier for the SDR client.
     :type sid: str
-    :param device_id: Identifier for the SDR device, defaults to None if not provided.
-    :type device_id: str, optional
+    :param sdr_id: Identifier for the SDR device, defaults to None if not provided.
+    :type sdr_id: str, optional
     :param center_frequency: Center frequency of the SDR in Hz, defaults to None if not provided.
     :type center_frequency: float, optional
     :param sample_rate: Sample rate of the SDR in samples per second, defaults to None if not
@@ -49,7 +49,7 @@ def add_sdr_session(sid, device_id=None, center_frequency=None, sample_rate=None
     :return: None
     """
     active_sdr_clients[sid] = {
-        'device_id': device_id,
+        'sdr_id': sdr_id,
         'center_frequency': center_frequency,
         'sample_rate': sample_rate,
         'gain': gain,

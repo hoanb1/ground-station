@@ -548,12 +548,12 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
         if cmd == "configure-rtlsdr":
             try:
                 # SDR device id
-                selected_sdr_id = data.get('selectedSDRId', None)
+                sdr_id = data.get('selectedSDRId', None)
 
                 # Fetch SDR device details from database
-                sdr_device_reply = await crud.fetch_sdr(dbsession, selected_sdr_id)
+                sdr_device_reply = await crud.fetch_sdr(dbsession, sdr_id)
                 if not sdr_device_reply['success'] or not sdr_device_reply['data']:
-                    raise Exception(f"SDR device with id {selected_sdr_id} not found in database")
+                    raise Exception(f"SDR device with id {sdr_id} not found in database")
 
                 sdr_device = sdr_device_reply['data']
 
@@ -589,14 +589,14 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 fft_window = data.get('fftWindow', 'hanning')
 
                 # Initialize or reconfigure RTLSDR
-                if selected_sdr_id not in rtlsdr_devices:
+                if sdr_id not in rtlsdr_devices:
                     # Create new RTLSDR instance
                     sdr_object = rtlsdr.RtlSdr(serial_number=sdr_device['serial'])
-                    rtlsdr_devices[selected_sdr_id] = sdr_object
-                    logger.info(f"Initialized RTLSDR device with id: {selected_sdr_id} and serial: {sdr_device['serial']}")
+                    rtlsdr_devices[sdr_id] = sdr_object
+                    logger.info(f"Initialized RTLSDR device with id: {sdr_id} and serial: {sdr_device['serial']}")
                 else:
-                    sdr_object = rtlsdr_devices[selected_sdr_id]
-                    logger.info(f"Reconfigured RTLSDR device with id: {selected_sdr_id} and serial: {sdr_device['serial']}")
+                    sdr_object = rtlsdr_devices[sdr_id]
+                    logger.info(f"Reconfigured RTLSDR device with id: {sdr_id} and serial: {sdr_device['serial']}")
 
                 # Configure SDR parameters
                 if sdr_object.center_freq is not center_freq:
@@ -616,7 +616,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
 
                 # Create an SDR session entry in memory
                 logger.info(f"Creating an SDR session for client {sid}")
-                session = add_sdr_session(sid, selected_sdr_id, center_freq, sample_rate, gain, fft_size, fft_window)
+                session = add_sdr_session(sid, sdr_id, center_freq, sample_rate, gain, fft_size, fft_window)
 
                 await sio.emit('sdr-status', session, room=sid)
 
@@ -631,21 +631,23 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
         elif cmd == "start-streaming":
 
             try:
-                logger.info(active_sdr_clients)
+                # SDR device id
+                sdr_id = data.get('selectedSDRId', None)
 
                 if sid not in active_sdr_clients:
                     raise Exception(f"Client with id: {sid} not registered")
 
                 client = active_sdr_clients[sid]
-                device_id = client.get('device_id')
+                sdr_id = client.get('sdr_id')
 
-                if device_id is None or device_id not in rtlsdr_devices:
-                    raise Exception(f"SDR device with id {device_id} not found in memory")
+                if sdr_id is None or sdr_id not in rtlsdr_devices:
+                    raise Exception(f"SDR device with id {sdr_id} not found in memory")
 
                 # task clean up, if there is one
                 if 'task' in client and client['task']:
                     client['task'].cancel()
                     client['task'] = None
+
                 # thread clean up, if there is one
                 if 'thread_future' in client and client['thread_future']:
                     client['thread_future'].cancel()
@@ -654,11 +656,11 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 logger.info(f"Starting streaming SDR data for client {sid}")
 
                 # Start a new processing task in a separate thread
-                # threaded_func = functools.partial(run_async_in_thread, process_rtlsdr_data, sio, device_id, sid)
+                # threaded_func = functools.partial(run_async_in_thread, process_rtlsdr_data, sio, sdr_id, sid)
                 # client['thread_future'] = thread_executor.submit(threaded_func)
 
                 # Start a new processing task
-                client['task'] = asyncio.create_task(process_rtlsdr_data(sio, device_id, sid))
+                client['task'] = asyncio.create_task(process_rtlsdr_data(sio, sdr_id, sid))
 
                 await sio.emit('sdr-status', {'streaming': True}, room=sid)
 
@@ -671,6 +673,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
         elif cmd == "stop-streaming":
 
             try:
+                # SDR device id
+                sdr_id = data.get('selectedSDRId', None)
+
                 if sid not in active_sdr_clients:
                     logger.error(f"Client not registered: {sid}")
                     await sio.emit('sdr-error', {'message': "Client not registered"}, room=sid)

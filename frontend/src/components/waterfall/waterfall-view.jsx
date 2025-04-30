@@ -386,7 +386,7 @@ const MainWaterfallDisplay = React.memo(() => {
                 fftWindow,
             }, () => {
                 // Start streaming after configuration is acknowledged
-                socket.emit('sdr_data', 'start-streaming');
+                socket.emit('sdr_data', 'start-streaming', {selectedSDRId});
                 dispatch(setIsStreaming(true));
 
                 // Start the worker
@@ -405,7 +405,7 @@ const MainWaterfallDisplay = React.memo(() => {
 
     const stopStreaming = () => {
         if (isStreaming) {
-            socket.emit('sdr_data', 'stop-streaming');
+            socket.emit('sdr_data', 'stop-streaming', {selectedSDRId});
             dispatch(setIsStreaming(false));
             cancelAnimations();
         }
