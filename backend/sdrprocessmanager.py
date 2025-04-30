@@ -4,6 +4,7 @@ import rtlsdr
 import time
 import asyncio
 import logging
+import signal
 from functools import partial
 
 from pydantic.v1.networks import host_regex
@@ -20,6 +21,8 @@ class SDRProcessManager:
         self.logger = logging.getLogger('sdr-process-manager')
         self.sio = sio
         self.processes = {}  # Map of sdr_id to process information
+        signal.signal(signal.SIGINT, self._signal_handler)
+        signal.signal(signal.SIGTERM, self._signal_handler)
 
     def set_sio(self, sio):
         """
@@ -45,7 +48,8 @@ class SDRProcessManager:
             :param sdr_config:
         """
 
-        assert self.sio is not None, "Socket.IO server instance not set when setting up SDR process manager. Please call set_sio() first."
+        assert self.sio is not None, ("Socket.IO server instance not set when setting up SDR process manager."
+                                      " Please call set_sio() first.")
         assert sdr_device['type'] in ['rtlsdrusbv3', 'rtlsdrtcpv3', 'rtlsdrusbv4', 'rtlsdrtcpv4']
         assert sdr_device['id']
 
@@ -94,6 +98,8 @@ class SDRProcessManager:
 
             # Send configuration to the process
             self.processes[sdr_id]['config_queue'].put(config)
+
+            await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
 
             return sdr_id
 
@@ -145,6 +151,8 @@ class SDRProcessManager:
 
             # Start async task to monitor the data queue
             asyncio.create_task(self._monitor_data_queue(sdr_id))
+
+            await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
 
             return sdr_id
 
@@ -223,6 +231,18 @@ class SDRProcessManager:
             bool: True if the process exists and is running, False otherwise
         """
         return sdr_id in self.processes and self.processes[sdr_id]['process'].is_alive()
+
+    def _signal_handler(self, signum, frame):
+        """
+        Handle system signals for graceful shutdown
+        
+        Args:
+            signum: Signal number
+            frame: Current stack frame
+        """
+        self.logger.info(f"Received signal {signum}, shutting down all SDR processes...")
+        for sdr_id in list(self.processes.keys()):
+            asyncio.create_task(self.stop_sdr_process(sdr_id))
 
     async def _monitor_data_queue(self, sdr_id):
         """

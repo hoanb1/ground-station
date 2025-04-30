@@ -1,3 +1,5 @@
+import sys
+
 import uvicorn
 import socketio
 import os
@@ -108,15 +110,13 @@ async def connect(sid, environ, auth=None):
     logger.info(f'Client {sid} from {client_ip} connected, auth: {auth}')
     SESSIONS[sid] = environ
 
-
 @sio.on('disconnect')
 async def disconnect(sid, environ):
     logger.info(f'Client {sid} from {SESSIONS[sid]['REMOTE_ADDR']} disconnected')
     del SESSIONS[sid]
 
     # clean up any SDR sessions
-    cleanup_sdr_session(sid)
-
+    await cleanup_sdr_session(sid)
 
 @sio.on('sdr_data')
 async def handle_sdr_data_requests(sid, cmd, data=None):
@@ -249,5 +249,16 @@ if __name__ == "__main__":
 
     logger.info(f'Starting Ground Station server with parameters {arguments}')
 
-    # Run the ASGI application with Uvicorn on port 5000.
-    uvicorn.run(socket_app, host=arguments.host, port=arguments.port, log_config=get_logger_config(arguments))
+    try:
+        # Run the ASGI application with Uvicorn on port 5000.
+        uvicorn.run(socket_app, host=arguments.host, port=arguments.port, log_config=get_logger_config(arguments))
+
+    except KeyboardInterrupt:
+        logger.info("Received keyboard interrupt, shutting down...")
+        sys.exit(0)
+
+    except Exception as e:
+        logger.error(f"Error starting Ground Station server: {str(e)}")
+        logger.exception(e)
+        sys.exit(1)
+

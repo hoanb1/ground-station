@@ -89,27 +89,27 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                             logger.info(f"Updated center frequency: {sdr.center_freq}")
 
                     if 'fft_size' in new_config:
-                        if old_config['fft_size'] != new_config['fft_size']:
+                        if old_config.get('fft_size', 0) != new_config['fft_size']:
                             fft_size = new_config['fft_size']
                             logger.info(f"Updated FFT size: {fft_size}")
 
                     if 'fft_window' in new_config:
-                        if old_config['fft_window'] != new_config['fft_window']:
+                        if old_config.get('fft_window', None) != new_config['fft_window']:
                             fft_window = new_config['fft_window']
                             logger.info(f"Updated FFT window: {fft_window}")
 
                     if 'bias_t' in new_config:
-                        if old_config['bias_t'] != new_config['bias_t']:
+                        if old_config.get('bias_t', None) != new_config['bias_t']:
                             sdr.set_bias_tee(new_config['bias_t'])
                             logger.info(f"Updated bias-T: {new_config['bias_t']}")
 
                     if 'rtl_agc' in new_config:
-                        if old_config['rtl_agc'] != new_config['rtl_agc']:
+                        if old_config.get('rtl_agc', None) != new_config['rtl_agc']:
                             sdr.set_agc_mode(new_config['rtl_agc'])
                             logger.info(f"Updated RTL AGC: {new_config['rtl_agc']}")
 
                     if 'tuner_agc' in new_config:
-                        if old_config['tuner_agc'] != new_config['tuner_agc']:
+                        if old_config.get('tuner_agc', None) != new_config['tuner_agc']:
                             sdr.set_manual_gain_enabled(not new_config['tuner_agc']) # Tuner AGC
                             logger.info(f"Updated tuner AGC: {new_config['tuner_agc']}")
 

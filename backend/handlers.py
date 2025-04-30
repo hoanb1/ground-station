@@ -652,8 +652,6 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                 process_sdr_id = await sdr_process_manager.start_sdr_process(sdr_device, sdr_config, sid)
                 logger.info(f"SDR process started for client {sid} with process id: {process_sdr_id}")
 
-                await sio.emit('sdr-status', {'streaming': True}, room=sid)
-
             except Exception as e:
                 logger.error(f"Error starting SDR stream: {str(e)}")
                 logger.exception(e)
@@ -685,7 +683,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                     reply['success'] = False
 
                 # cleanup
-                cleanup_sdr_session(sid)
+                await cleanup_sdr_session(sid)
 
                 await sio.emit('sdr-status', {'streaming': False}, room=sid)
                 logger.info(f"Stopped streaming SDR data for client {sid}")

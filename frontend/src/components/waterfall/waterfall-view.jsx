@@ -3,12 +3,6 @@ import {
     Box,
     Typography,
     Paper,
-    CircularProgress,
-    Slider,
-    FormControl,
-    InputLabel,
-    Select,
-    MenuItem,
     Button,
     ButtonGroup,
     Stack,
@@ -69,11 +63,12 @@ import {
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
 import FrequencyScale from "./frequency-scale-canvas.jsx";
-import {useResizeDetector} from "react-resize-detector";
 import {getColorForPower} from "./waterfall-colors.jsx";
-import {createInlineWorker} from "./waterfall-worker.jsx";
-import FrequencyDisplay from "./frequency-control.jsx";
 
+
+export const createExternalWorker = () => {
+    return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
+};
 
 const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
@@ -173,12 +168,12 @@ const MainWaterfallDisplay = React.memo(() => {
 
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
-    // Initialize worker when the component mounts
+    // Initialize the worker when the component mounts
     useEffect(() => {
         // Create the worker
-        const worker = createInlineWorker();
+        const worker = createExternalWorker();
 
-        // Set up message handler
+        // Set up a message handler
         worker.onmessage = (e) => {
             const {type, immediate, status} = e.data;
 
@@ -251,8 +246,8 @@ const MainWaterfallDisplay = React.memo(() => {
         socket.on('sdr-status', (data) => {
             console.info(`sdr-status`, data);
             if (data['streaming'] === true) {
-                dispatch(setIsStreaming(true));
-                dispatch(setStartStreamingLoading(false));
+                //dispatch(setIsStreaming(true));
+                //dispatch(setStartStreamingLoading(false));
             } else if (data['streaming'] === false) {
                 dispatch(setIsStreaming(false));
                 dispatch(setStartStreamingLoading(false));
@@ -261,6 +256,11 @@ const MainWaterfallDisplay = React.memo(() => {
 
         // Modify the socket event handler for FFT data
         socket.on('sdr-fft-data', (binaryData) => {
+            if (!isStreaming) {
+                dispatch(setIsStreaming(true));
+                dispatch(setStartStreamingLoading(false));
+            }
+
             const floatArray = new Float32Array(binaryData);
 
             // Increment event counter
@@ -387,7 +387,6 @@ const MainWaterfallDisplay = React.memo(() => {
             }, () => {
                 // Start streaming after configuration is acknowledged
                 socket.emit('sdr_data', 'start-streaming', {selectedSDRId});
-                dispatch(setIsStreaming(true));
 
                 // Start the worker
                 if (workerRef.current) {

@@ -5,6 +5,8 @@ import asyncio
 import numpy as np
 from datetime import time
 from typing import Dict, List, Optional, Any
+from sdrprocessmanager import sdr_process_manager
+
 
 logger = logging.getLogger('waterfall-process')
 
@@ -48,7 +50,7 @@ def get_sdr_session(sid: str) -> Optional[Dict]:
     return active_sdr_clients.get(sid)
 
 
-def cleanup_sdr_session(sid):
+async def cleanup_sdr_session(sid):
     """Clean up and release resources associated with an SDR client session.
 
     This function performs the following cleanup tasks:
@@ -60,37 +62,13 @@ def cleanup_sdr_session(sid):
         sid: Client session ID to clean up
     """
     if sid in active_sdr_clients:
-        client = active_sdr_clients[sid]
-        if 'task' in client and client['task']:
-            client['task'].cancel()
-            client['task'] = None
 
-        if 'thread_future' in client and client['thread_future']:
-            client['thread_future'].cancel()
-            client['thread_future'] = None
+        client = get_sdr_session(sid)
+        sdr_id = client.get('sdr_id')
 
-        device_id = client.get('device_id')
-
-        # Close and release the RTLSDR device if it was exclusively used by this client
-        if device_id is not None and device_id in rtlsdr_devices:
-            # Check if no other clients are using this device
-            other_users = [cid for cid, c in active_sdr_clients.items()
-                           if cid != sid and c.get('device_id') == device_id]
-
-            if not other_users:
-                try:
-                    # disable bias-t
-                    rtlsdr_devices[device_id].set_bias_tee(False)
-
-                    # close socket
-                    rtlsdr_devices[device_id].close()
-
-                    del rtlsdr_devices[device_id]
-                    logger.info(f"Released RTLSDR device {device_id}")
-
-                except Exception as e:
-                    logger.error(f"Error closing RTLSDR device: {str(e)}")
-                    logger.exception(e)
+        if sdr_id:
+            # Stop or leave the SDR process
+            await sdr_process_manager.stop_sdr_process(sdr_id, sid)
 
         # Remove client from active clients
         del active_sdr_clients[sid]
@@ -111,7 +89,7 @@ async def disconnect(sid):
     """Disconnect from the waterfall client"""
 
     # clean up any SDR sessions
-    cleanup_sdr_session(sid)
+    await cleanup_sdr_session(sid)
 
 
 @waterfall_sio.event
