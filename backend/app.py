@@ -23,6 +23,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
 from sdr import process_rtlsdr_data, active_sdr_clients, rtlsdr_devices
 from waterfall import waterfall_socket_app, cleanup_sdr_session
+from sdrprocessmanager import sdr_process_manager
 
 
 Payload.max_decode_packets = 50
@@ -97,6 +98,9 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Feed in the Socket.IO server instance to the SDR process manager
+sdr_process_manager.set_sio(sio)
 
 @sio.on('connect')
 async def connect(sid, environ, auth=None):
