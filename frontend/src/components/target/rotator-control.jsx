@@ -129,7 +129,7 @@ function GaugeEl({el, maxElevation = null}) {
             style={{
                 margin: 'auto',
                 touchAction: 'auto',
-                pointerEvents: 'none',  // Makes the element completely non-interactive
+                pointerEvents: 'none',
             }}
             valueMin={90}
             valueMax={0}
@@ -147,13 +147,11 @@ function GaugeEl({el, maxElevation = null}) {
                 e.stopPropagation();
             }}
         >
-            <GaugeReferenceArc/>
+            <GaugeReferenceArc />
             {maxElevation !== null && <>
                 <Pointer angle={0} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
                 <Pointer angle={maxElevation} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
             </>}
-
-
             <Pointer angle={90}/>
             <Pointer angle={0}/>
             <GaugePointer/>
@@ -425,7 +423,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                                 CONNECT
                             </Button>
                         </Grid>
-                        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 2}}>
+                        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1.5}}>
                             <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
                                     fullWidth={true}
                                     variant="contained" color="error" style={{height: '35px'}}
