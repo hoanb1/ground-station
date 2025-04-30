@@ -1,9 +1,11 @@
 import multiprocessing
+import json
 import numpy as np
 import rtlsdr
 import time
 import logging
 from functools import partial
+from rtlsdrtcpclient import RtlSdrTcpClient
 
 
 def rtlsdr_worker_process(config_queue, data_queue, stop_event):
@@ -57,17 +59,19 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         if config.get('connection_type') == 'tcp':
             hostname = config.get('hostname', '127.0.0.1')
             port = config.get('port', 1234)
-            logger.info(f"Connecting to RTL-SDR TCP server at {hostname}:{port}")
-            sdr = rtlsdr.RtlSdrTcpClient(hostname=hostname, port=port)
+            logger.info(f"Connecting to RTL-SDR TCP server at {hostname}:{port}...")
+            sdr = RtlSdrTcpClient(hostname=hostname, port=port)
+
         else:
             serial_number = config.get('serial_number', 0)
-            logger.info(f"Connecting to RTL-SDR serial number {serial_number}")
+            logger.info(f"Connecting to RTL-SDR with serial number {serial_number} over USB...")
             sdr = rtlsdr.RtlSdr(serial_number=serial_number)
 
         # Configure the device
-        sdr.sample_rate = config.get('sample_rate', 2.048e6)
+        logger.info(f"center_freq={config.get('center_freq', 100e6)}, type: {type(config.get('center_freq', 100e6))}")
         sdr.center_freq = config.get('center_freq', 100e6)
-        sdr.gain = config.get('gain', 'auto')
+        sdr.sample_rate = config.get('sample_rate', 2.048e6)
+        sdr.gain = config.get('gain', 25.4)
 
         logger.info(f"RTL-SDR configured: sample_rate={sdr.sample_rate}, center_freq={sdr.center_freq}, gain={sdr.gain}")
 
@@ -196,8 +200,9 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 # Pause before retrying
                 time.sleep(1)
 
-    except Exception as e:
-        logger.error(f"Worker process error: {str(e)}")
+    except ConnectionRefusedError as e:
+        error_msg = f"Connection refused to RTL-SDR TCP server at {hostname}:{port}: {str(e)}"
+        logger.error(error_msg)
         logger.exception(e)
 
         # Send error back to the main process
@@ -205,7 +210,35 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
             data_queue.put({
                 'type': 'error',
                 'client_id': client_id,
-                'message': str(e),
+                'message': error_msg,
+                'timestamp': time.time()
+            })
+
+    except json.decoder.JSONDecodeError as e:
+        error_msg = f"Invalid response from RTL-SDR TCP server: {str(e)}"
+        logger.error(error_msg)
+        logger.exception(e)
+
+        # Send error back to the main process
+        if data_queue:
+            data_queue.put({
+                'type': 'error',
+                'client_id': client_id,
+                'message': error_msg,
+                'timestamp': time.time()
+            })
+
+    except Exception as e:
+        error_msg = f"Error in RTL-SDR worker process: {str(e)}"
+        logger.error(error_msg)
+        logger.exception(e)
+
+        # Send error back to the main process
+        if data_queue:
+            data_queue.put({
+                'type': 'error',
+                'client_id': client_id,
+                'message': error_msg,
                 'timestamp': time.time()
             })
 

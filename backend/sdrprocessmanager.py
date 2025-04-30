@@ -63,13 +63,13 @@ class SDRProcessManager:
             connection_type = "usb"
 
         elif sdr_device['type'] == 'rtlsdrtcpv3':
-            hostname = sdr_device.host
-            port = sdr_device.port
+            hostname = sdr_device['host']
+            port = sdr_device['port']
             serial_number = 0
             connection_type = "tcp"
 
         elif sdr_device['type'] == 'rtlsdrusbv4':
-            serial_number = sdr_device.serial
+            serial_number = sdr_device['serial']
             connection_type = "usb"
 
         elif sdr_device['type'] == 'rtlsdrtcpv4':

@@ -107,6 +107,12 @@ loggers:
       - default
     propagate: no
 
+  rtlsdr-tcp-client:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
