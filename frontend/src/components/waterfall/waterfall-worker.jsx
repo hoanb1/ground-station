@@ -1,4 +1,3 @@
-// waterfall-worker.js
 let renderIntervalId = null;
 let targetFPS = 30;
 
@@ -35,11 +34,11 @@ function startRendering(fps) {
     stopRendering();
 
     targetFPS = fps;
-    const interval = Math.floor(1000 / targetFPS);
+    //const interval = Math.floor(1000 / targetFPS);
 
-    renderIntervalId = setInterval(() => {
-        self.postMessage({ type: 'render' });
-    }, interval);
+    // renderIntervalId = setInterval(() => {
+    //     self.postMessage({ type: 'render' });
+    // }, interval);
 
     // Confirm start
     self.postMessage({ type: 'status', status: 'started', fps: targetFPS });
@@ -50,10 +49,8 @@ function stopRendering() {
     if (renderIntervalId) {
         clearInterval(renderIntervalId);
         renderIntervalId = null;
-
-        // Confirm stop
-        self.postMessage({ type: 'status', status: 'stopped' });
     }
+    self.postMessage({ type: 'status', status: 'stopped' });
 }
 
 // Update FPS setting

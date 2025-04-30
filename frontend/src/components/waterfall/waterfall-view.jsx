@@ -246,8 +246,8 @@ const MainWaterfallDisplay = React.memo(() => {
         socket.on('sdr-status', (data) => {
             console.info(`sdr-status`, data);
             if (data['streaming'] === true) {
-                //dispatch(setIsStreaming(true));
-                //dispatch(setStartStreamingLoading(false));
+                dispatch(setIsStreaming(true));
+                dispatch(setStartStreamingLoading(false));
             } else if (data['streaming'] === false) {
                 dispatch(setIsStreaming(false));
                 dispatch(setStartStreamingLoading(false));
@@ -256,11 +256,6 @@ const MainWaterfallDisplay = React.memo(() => {
 
         // Modify the socket event handler for FFT data
         socket.on('sdr-fft-data', (binaryData) => {
-            if (!isStreaming) {
-                dispatch(setIsStreaming(true));
-                dispatch(setStartStreamingLoading(false));
-            }
-
             const floatArray = new Float32Array(binaryData);
 
             // Increment event counter
