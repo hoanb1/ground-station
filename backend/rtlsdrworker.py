@@ -279,11 +279,14 @@ def calculate_samples_per_scan(sample_rate):
     Calculate the number of samples required per scan based on the provided sample rate.
     """
     # Default value for high sample rates
-    base_samples = 64 * 1024
-    if sample_rate < 1e6:  # Less than 1 MHz
+    base_samples = 128 * 1024
+
+    if sample_rate <= 5e5:  # Less than 500KHz
         return base_samples // 4
-    elif sample_rate < 2e6:  # Less than 2 MHz
+    elif sample_rate <= 1e6:  # Less than 1 MHz
         return base_samples // 2
+    elif sample_rate <= 2e6:  # Less than 2 MHz
+        return base_samples // 1
     else:
         return base_samples
 
