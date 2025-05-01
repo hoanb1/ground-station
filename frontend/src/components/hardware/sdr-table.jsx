@@ -316,19 +316,6 @@ export default function SDRsPage() {
 
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
-            {soapyServers && Object.keys(soapyServers).length > 0 ? (
-                <Alert severity="success" sx={{mb: 2}}>
-                    <AlertTitle>Discovered SoapySDR Servers</AlertTitle>
-                    {Object.entries(soapyServers).map(([key, server], index) => (
-                        <Box key={key} sx={{pl: 2, mt: 1}}>
-                            <Typography component="div" variant="body2" color="text.secondary"
-                                        sx={{fontFamily: 'monospace'}}>
-                                {key}: {server[0]}:{server[1]}
-                            </Typography>
-                        </Box>
-                    ))}
-                </Alert>
-            ) : null}
             <Alert severity="info" sx={{mb: 2}}>
                 <AlertTitle>Configuring RTL-SDR Serial Numbers</AlertTitle>
                 Use these commands in terminal to change device serial numbers:
@@ -342,8 +329,21 @@ export default function SDRsPage() {
                     </Typography>
                 </Box>
             </Alert>
+            {soapyServers && Object.keys(soapyServers).length > 0 ? (
+                <Alert severity="success" sx={{mb: 2}}>
+                    <AlertTitle>Discovered SoapySDR Servers</AlertTitle>
+                    {Object.entries(soapyServers).map(([key, server], index) => (
+                        <Box key={key} sx={{pl: 2, mt: 1}}>
+                            <Typography component="div" variant="body2" color="text.secondary"
+                                        sx={{fontFamily: 'monospace'}}>
+                                {key}: {server['ip']}:{server['port']} with {server['sdrs'].length} SDRs
+                            </Typography>
+                        </Box>
+                    ))}
+                </Alert>
+            ) : null}
             <Box component="form" sx={{mt: 2}}>
-                <Box sx={{ width: '100%' }}>
+                <Box sx={{width: '100%'}}>
                     <DataGrid
                         loading={loading}
                         rows={sdrs.map(row => ({

@@ -114,7 +114,7 @@ loggers:
     propagate: no
 
   soapysdr:
-    level: WARNING
+    level: INFO
     handlers:
       - default
     propagate: no
