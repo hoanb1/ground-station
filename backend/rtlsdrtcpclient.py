@@ -6,6 +6,8 @@ import numpy as np
 from typing import Optional, Tuple
 
 
+
+
 class RtlSdrTcpClient:
     """
     A client for interacting with an RTL-SDR device via an rtl_tcp server.
@@ -116,7 +118,7 @@ class RtlSdrTcpClient:
 
             self._logger.info(f"Connected successfully. Tuner: {self._tuner_type_name}, Gain Count: {self._tuner_gain_count}")
             self._connected = True
-            self._sock.settimeout(None) # Disable timeout for normal operation
+            self._sock.settimeout(None) # Disable the timeout for normal operation
 
             # Reset internal state upon successful connection (as device state is unknown)
             self._center_freq = None
@@ -191,7 +193,7 @@ class RtlSdrTcpClient:
             self._sock.sendall(packed_cmd)
         except (OSError, IOError) as e:
             self._logger.error(f"Failed to send command 0x{command:02X}: {e}")
-            self.close() # Assume connection is broken
+            self.close() # Assume the connection is broken
             raise IOError(f"Socket error while sending command: {e}") from e
         except Exception as e:
             self._logger.error(f"Unexpected error sending command 0x{command:02X}: {e}")
@@ -267,11 +269,16 @@ class RtlSdrTcpClient:
     def set_gain_mode(self, manual: bool = True) -> None:
         """Sets the gain mode (Manual or Auto)."""
         # rtl_tcp: 0 = manual, 1 = auto
-        mode = 0 if manual else 1
+        #mode = 0 if manual else 1
+        mode = 1 if manual else 0
         self._logger.info(f"Setting gain mode to {'Manual' if manual else 'Auto'}")
         self._send_command(self._CMD_SET_GAIN_MODE, mode)
         # Update internal state *after* successful send
         self._gain_mode_manual = manual
+
+    def set_manual_gain_enabled(self, enabled: bool = True) -> None:
+        """Sets manual gain mode. Wrapper for set_gain_mode() for compatibility."""
+        self.set_gain_mode(manual=enabled)
 
     # Expose gain_mode as a property
     @property
@@ -311,26 +318,29 @@ class RtlSdrTcpClient:
         """Gets the last set state of the RTL AGC (True if enabled). Returns None if never set."""
         return self._agc_mode_enabled
 
-
     def set_tuner_agc(self, enable: bool = True) -> None:
         """Enables or disables the Tuner's Automatic Gain Control (AGC)."""
-        # Note: May require specific gain mode settings and might not be supported by all servers/tuners.
-        value = 1 if enable else 0
+        value = int(enable)  # Convert boolean to 0/1
         self._logger.info(f"{'Enabling' if enable else 'Disabling'} Tuner AGC")
+
         try:
-            # Consider setting manual gain mode first if needed: self.set_gain_mode(manual=True)
+            # Set gain mode to manual first
+            self.set_gain_mode(manual=True)
+            # Then set tuner AGC
             self._send_command(self._CMD_SET_TUNER_AGC, value)
-            # Update internal state *only if* command succeeds
             self._tuner_agc_enabled = enable
+
         except (IOError, ConnectionError) as e:
-            # Catch potential errors if command fails or isn't supported
-            self._logger.warning(f"Could not set Tuner AGC: {e}. Command may not be supported. State not updated.")
-            # Do not update _tuner_agc_enabled state if command failed
+            self._logger.warning(f"Could not set Tuner AGC: {e}. Command may not be supported.")
+            # Reset internal state since command failed
+            self._tuner_agc_enabled = None
+            raise
+
         except Exception as e:
             self._logger.error(f"Unexpected error setting Tuner AGC: {e}")
-            # Do not update _tuner_agc_enabled state if command failed
-            raise # Re-raise unexpected errors
-
+            self._tuner_agc_enabled = None
+            raise 
+    
     # Expose tuner_agc as a property
     @property
     def tuner_agc(self) -> Optional[bool]:
@@ -443,7 +453,7 @@ class RtlSdrTcpClient:
                         raise ConnectionError("Connection closed by server while reading samples.")
                     buffer.extend(data)
                     # Reset start time slightly if data received to allow continuous streams
-                    # Or keep original start_time for strict overall timeout
+                    # Or keep original start_time for a strict overall timeout
                     # start_time = time.monotonic() # Uncomment to reset timeout on activity
 
                 except socket.timeout:
@@ -451,14 +461,15 @@ class RtlSdrTcpClient:
                     # Log it but continue the loop to check overall timeout.
                     self._logger.debug(f"Socket recv timed out waiting for chunk, elapsed {elapsed_time:.2f}s.")
                     continue # Let the outer loop check the main timeout
+
                 except (OSError, IOError) as e:
                     self._logger.error(f"Socket error during sample read: {e}")
-                    self.close() # Assume connection is broken
+                    self.close() # Assume the connection is broken
                     raise IOError(f"Socket error while reading samples: {e}") from e
 
             # If we exit the loop, we should have enough bytes
             if len(buffer) < bytes_to_read:
-                # This case should ideally be caught by timeout or connection errors, but handle defensively.
+                # This case should ideally be caught by a timeout or connection errors, but handle defensively.
                 raise IOError(f"Insufficient data received: got {len(buffer)}, expected {bytes_to_read}.")
 
             self._logger.debug(f"Successfully read {len(buffer)} bytes.")

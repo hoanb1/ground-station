@@ -123,8 +123,18 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                     old_config = new_config
 
             except Exception as e:
-                logger.error(f"Error processing configuration: {str(e)}")
+                error_msg = f"Error processing configuration: {str(e)}"
+                logger.error(error_msg)
                 logger.exception(e)
+
+                # Send error back to the main process
+                if data_queue:
+                    data_queue.put({
+                        'type': 'error',
+                        'client_id': client_id,
+                        'message': error_msg,
+                        'timestamp': time.time()
+                    })
 
             try:
                 # Calculate the number of samples based on sample rate

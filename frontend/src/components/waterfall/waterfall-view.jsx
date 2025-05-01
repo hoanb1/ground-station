@@ -239,7 +239,6 @@ const MainWaterfallDisplay = React.memo(() => {
             cancelAnimations();
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
-            dispatch(setIsStreaming(false));
             enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
                 variant: 'error'
             });
@@ -251,6 +250,7 @@ const MainWaterfallDisplay = React.memo(() => {
                 dispatch(setIsStreaming(true));
                 dispatch(setStartStreamingLoading(false));
             } else if (data['streaming'] === false) {
+                cancelAnimations();
                 dispatch(setIsStreaming(false));
                 dispatch(setStartStreamingLoading(false));
             }
