@@ -43,7 +43,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     avahi-daemon \
     libavahi-client-dev \
     cmake g++ libpython3-dev python3-numpy \
+    avahi-daemon \
+    avahi-utils \
+    libnss-mdns \
+    dbus \
     && rm -rf /var/lib/apt/lists/*
+
+# Create required directories for Avahi and D-Bus
+RUN mkdir -p /var/run/avahi-daemon /var/run/dbus
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
 
@@ -131,4 +138,11 @@ EXPOSE 7000
 WORKDIR backend/
 
 # Command to run the application
-CMD ["python", "app.py", "--secret-key=AuZ9theig2geu4wu", "--log-level=INFO", "--host=0.0.0.0", "--port=7000"]
+#CMD ["python", "app.py", "--secret-key=AuZ9theig2geu4wu", "--log-level=INFO", "--host=0.0.0.0", "--port=7000"]
+
+CMD dbus-daemon --system --nofork --nopidfile & \
+    sleep 2 && \
+    avahi-daemon --no-chroot -D & \
+    sleep 2 && \
+    python backend/app.py --secret-key=AuZ9theig2geu4wu --log-level=INFO --host=0.0.0.0 --port=7000
+
