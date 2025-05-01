@@ -113,6 +113,12 @@ loggers:
       - default
     propagate: no
 
+  soapysdr:
+    level: WARNING
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

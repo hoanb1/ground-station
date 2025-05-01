@@ -27,7 +27,7 @@ import PreferencesForm from "./preferences-form.jsx";
 import MaintenanceForm from "./maintenance-form.jsx";
 import CameraTable from "../hardware/camera-table.jsx";
 import {AntTab, AntTabs} from "../common/common.jsx";
-import SDRTable from "../hardware/sdr-table.jsx";
+import SDRsPage from "../hardware/sdr-table.jsx";
 
 
 export function SettingsTabSatellites() {
@@ -179,7 +179,7 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             activeTabContent = <CameraForm/>;
             break;
         case "sdrs":
-            activeTabContent = <SDRForm/>;
+            activeTabContent = <SDRsPage/>;
             break;
         case "tlesources":
             activeTabContent = <TLESourcesForm/>;
@@ -264,31 +264,6 @@ const CameraForm = () => {
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <CameraTable/>
-            </Box>
-        </Paper>
-    );
-};
-
-
-const SDRForm = () => {
-
-    return (
-        <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
-            <Alert severity="info" sx={{mb: 2}}>
-                <AlertTitle>Configuring RTL-SDR Serial Numbers</AlertTitle>
-                Use these commands in terminal to change device serial numbers:
-                <Box sx={{pl: 2, mt: 1}}>
-                    <Typography component="div" variant="body2" color="text.secondary">
-                        1. View current ID: <code>rtl_eeprom -d 0</code>
-                        <br/>
-                        2. Set new serial: <code>rtl_eeprom -d 0 -s NEWSERIAL</code>
-                        <br/>
-                        3. Verify changes: <code>rtl_test</code>
-                    </Typography>
-                </Box>
-            </Alert>
-            <Box component="form" sx={{mt: 2}}>
-                <SDRTable/>
             </Box>
         </Paper>
     );

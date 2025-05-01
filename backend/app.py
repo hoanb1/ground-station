@@ -25,6 +25,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
 from waterfall import waterfall_socket_app, cleanup_sdr_session
 from sdrprocessmanager import sdr_process_manager
+from soapysdr import discover_soapy_servers
 
 
 Payload.max_decode_packets = 50
@@ -62,6 +63,7 @@ AsyncSessionLocal = sessionmaker(
     class_=AsyncSession
 )
 
+
 @asynccontextmanager
 async def lifespan(fastapiapp: FastAPI):
     """
@@ -69,19 +71,27 @@ async def lifespan(fastapiapp: FastAPI):
     Create and cleanup background tasks or other
     resources in this context manager.
     """
-    # Start the background task
+    # Start the background tasks
     tracking_task = asyncio.create_task(satellite_tracking_task(sio))
+
+    async def run_discover_soapy():
+        while True:
+            await discover_soapy_servers()
+            await asyncio.sleep(60)
+
+    discover_task = asyncio.create_task(run_discover_soapy())
 
     try:
         yield
     finally:
-        # Cancel the background task on shutdown
+        # Cancel the background tasks on shutdown
         tracking_task.cancel()
+        discover_task.cancel()
         try:
             await tracking_task
+            await discover_task
         except asyncio.CancelledError:
             pass
-
 
 # Create an asynchronous Socket.IO server using ASGI mode.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True)

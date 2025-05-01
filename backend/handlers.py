@@ -14,6 +14,7 @@ from common import is_geostationary
 from tracking import compiled_satellite_data
 from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdrprocessmanager import sdr_process_manager
+from soapysdr import discovered_servers
 
 
 # Create a global thread pool executor
@@ -193,6 +194,10 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             logger.debug(f'Fetching map settings, data: {data}')
             map_settings = await crud.get_map_settings(dbsession, name=data)
             reply = {'success': map_settings['success'], 'data': map_settings.get('data', [])}
+
+        elif cmd == "get-soapy-servers":
+            logger.debug(f'Getting discovered SoapySDR servers')
+            reply = {'success': True, 'data': discovered_servers}
 
         else:
             logger.error(f'Unknown command: {cmd}')
@@ -512,7 +517,7 @@ async def auth_request_routing(sio, cmd, data, logger, sid):
     :param data: Payload of the authentication request containing data required for
         processing.
     :type data: dict
-    :param logger: Logger instance for logging the events, errors or general
+    :param logger: Logger instance for logging the events, errors, or general
         information related to the processing of the request.
     :type logger: Logger
     :return: A dictionary containing the success status of the operation and

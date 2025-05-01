@@ -1,5 +1,26 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
+
+export const fetchSoapySDRServers = createAsyncThunk(
+    'sdrs/fetchSoapySDRServers',
+    async ({socket}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-soapy-servers', null, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to fetch SoapySDR servers'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+
 export const fetchSDRs = createAsyncThunk(
     'sdrs/fetchAll',
     async ({ socket }, { rejectWithValue }) => {
@@ -84,6 +105,7 @@ const sdrsSlice = createSlice({
         loading: false,
         pageSize: 10,
         formValues: defaultSDR,
+        soapyServers: {},
     },
     reducers: {
         setSDRs: (state, action) => {
@@ -178,6 +200,22 @@ const sdrsSlice = createSlice({
             })
             // Rejected: store the error message
             .addCase(submitOrEditSDR.rejected, (state, action) => {
+                state.loading = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            })
+            // Handle fetchSoapySDRServers states
+            .addCase(fetchSoapySDRServers.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(fetchSoapySDRServers.fulfilled, (state, action) => {
+                state.loading = false;
+                state.status = 'succeeded';
+                state.soapyServers = action.payload;
+            })
+            .addCase(fetchSoapySDRServers.rejected, (state, action) => {
                 state.loading = false;
                 state.status = 'failed';
                 state.error = action.payload;

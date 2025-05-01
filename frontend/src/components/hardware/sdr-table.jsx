@@ -2,7 +2,17 @@ import * as React from 'react';
 import Box from '@mui/material/Box';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import Stack from "@mui/material/Stack";
-import {Button, FormControl, InputLabel, MenuItem, Select, TextField} from "@mui/material";
+import {
+    Alert,
+    AlertTitle,
+    Button,
+    FormControl,
+    InputLabel,
+    MenuItem,
+    Select,
+    TextField,
+    Typography
+} from "@mui/material";
 import {useEffect, useState} from "react";
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
@@ -18,7 +28,9 @@ import {
     setOpenDeleteConfirm,
     setOpenAddDialog,
     setFormValues,
+    fetchSoapySDRServers,
 } from './sdr-slice.jsx';
+import Paper from "@mui/material/Paper";
 
 // SDR type field configurations with default values
 const sdrTypeFields = {
@@ -68,7 +80,7 @@ const sdrTypeFields = {
     }
 };
 
-export default function SDRTable() {
+export default function SDRsPage() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
@@ -80,8 +92,13 @@ export default function SDRTable() {
         error,
         openAddDialog,
         openDeleteConfirm,
-        formValues
+        formValues,
+        soapyServers,
     } = useSelector((state) => state.sdrs);
+
+    useEffect(() => {
+        dispatch(fetchSoapySDRServers({socket}));
+    }, []);
 
     const columns = [
         {
@@ -298,112 +315,142 @@ export default function SDRTable() {
     };
 
     return (
-        <Box sx={{ width: '100%' }}>
-            <DataGrid
-                loading={loading}
-                rows={sdrs.map(row => ({
-                    ...row,
-                    host: row.host || '-',
-                    port: row.port || '-',
-                    serial: row.serial || '-'
-                }))}
-                columns={columns}
-                checkboxSelection
-                disableSelectionOnClick
-                onRowSelectionModelChange={(selected) => {
-                    setSelected(selected);
-                }}
-                initialState={{
-                    pagination: {paginationModel: {pageSize: 5}},
-                    sorting: {
-                        sortModel: [{field: 'name', sort: 'desc'}],
-                    },
-                }}
-                selectionModel={selected}
-                pageSize={pageSize}
-                pageSizeOptions={[5, 10, 25, {value: -1, label: 'All'}]}
-                onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
-                rowsPerPageOptions={[5, 10, 25]}
-                getRowId={(row) => row.id}
-                sx={{
-                    border: 0,
-                    marginTop: 2,
-                    [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                        outline: 'none',
-                    },
-                    [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                        {
-                            outline: 'none',
-                        },
-                }}
-            />
-            <Stack direction="row" spacing={2} style={{marginTop: 15}}>
-                <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
-                    Add
-                </Button>
-                <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                    <DialogTitle>Add SDR</DialogTitle>
-                    <DialogContent>
-                    <Stack spacing={2}>
-                            {renderFormFields()}
-                        </Stack>
-                    </DialogContent>
-                    <DialogActions style={{padding: '0px 24px 20px 20px'}}>
-                        <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error" variant="outlined">
-                            Cancel
+        <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
+            {soapyServers && Object.keys(soapyServers).length > 0 ? (
+                <Alert severity="success" sx={{mb: 2}}>
+                    <AlertTitle>Discovered SoapySDR Servers</AlertTitle>
+                    {Object.entries(soapyServers).map(([key, server], index) => (
+                        <Box key={key} sx={{pl: 2, mt: 1}}>
+                            <Typography component="div" variant="body2" color="text.secondary"
+                                        sx={{fontFamily: 'monospace'}}>
+                                {key}: {server[0]}:{server[1]}
+                            </Typography>
+                        </Box>
+                    ))}
+                </Alert>
+            ) : null}
+            <Alert severity="info" sx={{mb: 2}}>
+                <AlertTitle>Configuring RTL-SDR Serial Numbers</AlertTitle>
+                Use these commands in terminal to change device serial numbers:
+                <Box sx={{pl: 2, mt: 1}}>
+                    <Typography component="div" variant="body2" color="text.secondary">
+                        1. View current ID: <code>rtl_eeprom -d 0</code>
+                        <br/>
+                        2. Set new serial: <code>rtl_eeprom -d 0 -s NEWSERIAL</code>
+                        <br/>
+                        3. Verify changes: <code>rtl_test</code>
+                    </Typography>
+                </Box>
+            </Alert>
+            <Box component="form" sx={{mt: 2}}>
+                <Box sx={{ width: '100%' }}>
+                    <DataGrid
+                        loading={loading}
+                        rows={sdrs.map(row => ({
+                            ...row,
+                            host: row.host || '-',
+                            port: row.port || '-',
+                            serial: row.serial || '-'
+                        }))}
+                        columns={columns}
+                        checkboxSelection
+                        disableSelectionOnClick
+                        onRowSelectionModelChange={(selected) => {
+                            setSelected(selected);
+                        }}
+                        initialState={{
+                            pagination: {paginationModel: {pageSize: 5}},
+                            sorting: {
+                                sortModel: [{field: 'name', sort: 'desc'}],
+                            },
+                        }}
+                        selectionModel={selected}
+                        pageSize={pageSize}
+                        pageSizeOptions={[5, 10, 25, {value: -1, label: 'All'}]}
+                        onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
+                        rowsPerPageOptions={[5, 10, 25]}
+                        getRowId={(row) => row.id}
+                        sx={{
+                            border: 0,
+                            marginTop: 2,
+                            [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                                outline: 'none',
+                            },
+                            [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                                {
+                                    outline: 'none',
+                                },
+                        }}
+                    />
+                    <Stack direction="row" spacing={2} style={{marginTop: 15}}>
+                        <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
+                            Add
                         </Button>
+                        <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
+                            <DialogTitle>Add SDR</DialogTitle>
+                            <DialogContent>
+                                <Stack spacing={2}>
+                                    {renderFormFields()}
+                                </Stack>
+                            </DialogContent>
+                            <DialogActions style={{padding: '0px 24px 20px 20px'}}>
+                                <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error" variant="outlined">
+                                    Cancel
+                                </Button>
+                                <Button
+                                    color="success"
+                                    variant="contained"
+                                    onClick={handleSubmit}
+                                >
+                                    Submit
+                                </Button>
+                            </DialogActions>
+                        </Dialog>
                         <Button
-                            color="success"
                             variant="contained"
-                            onClick={handleSubmit}
+                            disabled={selected.length !== 1}
+                            onClick={() => {
+                                const selectedRow = sdrs.find(row => row.id === selected[0]);
+                                if (selectedRow) {
+                                    dispatch(setFormValues(selectedRow));
+                                    dispatch(setOpenAddDialog(true));
+                                }
+                            }}
                         >
-                            Submit
-                        </Button>
-                    </DialogActions>
-                </Dialog>
-                <Button
-                    variant="contained"
-                    disabled={selected.length !== 1}
-                    onClick={() => {
-                        const selectedRow = sdrs.find(row => row.id === selected[0]);
-                        if (selectedRow) {
-                            dispatch(setFormValues(selectedRow));
-                            dispatch(setOpenAddDialog(true));
-                        }
-                    }}
-                >
-                    Edit
-                </Button>
-                <Button
-                    variant="contained"
-                    disabled={selected.length < 1}
-                    color="error"
-                    onClick={() => dispatch(setOpenDeleteConfirm(true))}
-                >
-                    Delete
-                </Button>
-                <Dialog
-                    open={openDeleteConfirm}
-                    onClose={() => dispatch(setOpenDeleteConfirm(false))}
-                >
-                    <DialogTitle>Confirm Deletion</DialogTitle>
-                    <DialogContent>
-                        Are you sure you want to delete the selected item(s)?
-                    </DialogContent>
-                    <DialogActions>
-                        <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error" variant="outlined">
-                            Cancel
+                            Edit
                         </Button>
                         <Button
                             variant="contained"
-                            onClick={handleDelete}
+                            disabled={selected.length < 1}
                             color="error"
+                            onClick={() => dispatch(setOpenDeleteConfirm(true))}
                         >
                             Delete
                         </Button>
-                    </DialogActions>
-                </Dialog>
-            </Stack>
-        </Box>
+                        <Dialog
+                            open={openDeleteConfirm}
+                            onClose={() => dispatch(setOpenDeleteConfirm(false))}
+                        >
+                            <DialogTitle>Confirm Deletion</DialogTitle>
+                            <DialogContent>
+                                Are you sure you want to delete the selected item(s)?
+                            </DialogContent>
+                            <DialogActions>
+                                <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error" variant="outlined">
+                                    Cancel
+                                </Button>
+                                <Button
+                                    variant="contained"
+                                    onClick={handleDelete}
+                                    color="error"
+                                >
+                                    Delete
+                                </Button>
+                            </DialogActions>
+                        </Dialog>
+                    </Stack>
+                </Box>
+            </Box>
+        </Paper>
     );
 }
