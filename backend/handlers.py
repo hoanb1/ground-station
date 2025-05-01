@@ -12,8 +12,7 @@ from auth import *
 from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state, get_satellite_position_from_tle
 from common import is_geostationary
 from tracking import compiled_satellite_data
-from sdr import rtlsdr_devices, active_sdr_clients, process_rtlsdr_data
-from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session
+from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdrprocessmanager import sdr_process_manager
 
 

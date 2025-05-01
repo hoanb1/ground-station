@@ -23,7 +23,6 @@ from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
-from sdr import process_rtlsdr_data, active_sdr_clients, rtlsdr_devices
 from waterfall import waterfall_socket_app, cleanup_sdr_session
 from sdrprocessmanager import sdr_process_manager
 
