@@ -34,7 +34,7 @@ const FrequencyDisplay = ({
         digits: `${1.5 * scaleFactor}rem`,
         unit: `${1.2 * scaleFactor}rem`,
         label: `${0.875 * scaleFactor}rem`,
-        unitLabel: `${0.7 * scaleFactor}rem`
+        unitLabel: `${0.9 * scaleFactor}rem`
     };
     
     const iconSize = scaleFactor <= 0.8 ? 'small' : 'medium';
