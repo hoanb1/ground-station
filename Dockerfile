@@ -40,6 +40,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-full \
     librtlsdr-dev \
     swig \
+    avahi-daemon \
+    libavahi-client-dev \
+    cmake g++ libpython3-dev python3-numpy \
     && rm -rf /var/lib/apt/lists/*
 
 RUN ln -sf /usr/bin/python3 /usr/bin/python
@@ -56,9 +59,28 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /src
 
+# compile SoapySDR
+RUN git clone https://github.com/pothosware/SoapySDR.git
+WORKDIR SoapySDR/
+RUN mkdir build
+WORKDIR build/
+RUN cmake ..
+RUN make -j`nproc`
+RUN sudo make install -j`nproc`
+RUN sudo ldconfig
+
+# compile SoapySDRRemote
+RUN git clone https://github.com/pothosware/SoapyRemote.git
+WORKDIR SoapyRemote/
+RUN mkdir build
+WORKDIR build/
+RUN cmake ..
+RUN make -j`nproc`
+RUN sudo make install -j`nproc`
+RUN sudo ldconfig
+
 # compile Hamlib
 RUN git clone https://github.com/Hamlib/Hamlib.git
-
 WORKDIR Hamlib/
 RUN ./bootstrap
 RUN ./configure --with-python-binding
@@ -83,6 +105,7 @@ RUN which python3
 RUN cat /etc/os-release
 
 RUN cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12/site-packages/Hamlib
+RUN cp /usr/local/lib/python3.12/site-packages/*SoapySDR* /app/venv/lib/python3.12/site-packages/
 
 RUN ls -la /app/venv/lib/python3.12/site-packages/Hamlib
 
