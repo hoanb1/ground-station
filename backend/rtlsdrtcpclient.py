@@ -118,7 +118,9 @@ class RtlSdrTcpClient:
 
             self._logger.info(f"Connected successfully. Tuner: {self._tuner_type_name}, Gain Count: {self._tuner_gain_count}")
             self._connected = True
-            self._sock.settimeout(None) # Disable the timeout for normal operation
+
+            # Disable the timeout for normal operation
+            self._sock.settimeout(None)
 
             # Reset internal state upon successful connection (as device state is unknown)
             self._center_freq = None
@@ -136,19 +138,37 @@ class RtlSdrTcpClient:
 
         except socket.timeout:
             self._logger.error(f"Connection timed out after {self.CONNECT_TIMEOUT} seconds.")
+            self._cleanup()
+            raise
+
         except ConnectionRefusedError:
             self._logger.error("Connection refused. Is the rtl_tcp server running?")
+            self._cleanup()
+            raise
+
         except socket.gaierror:
             self._logger.error(f"Could not resolve hostname: {self.server_host}")
+            self._cleanup()
+
+            raise
+
         except (OSError, IOError) as e:
             self._logger.error(f"Connection failed: {e}")
+            self._cleanup()
+
+            raise
+
         except Exception as e:
             self._logger.error(f"An unexpected error occurred during connection: {e}")
+            self._cleanup()
+            raise
 
+    def _cleanup(self):
         # Cleanup on failure
         if self._sock:
             self._sock.close()
             self._sock = None
+
         self._connected = False
         # Ensure state is None if connection failed
         self._center_freq = None
@@ -161,7 +181,6 @@ class RtlSdrTcpClient:
         self._direct_sampling_mode = None
         self._offset_tuning_enabled = None
         self._bias_tee_enabled = None
-        return False
 
     def _ensure_connected(self) -> None:
         """Checks connection status and attempts to reconnect if necessary."""
@@ -191,16 +210,16 @@ class RtlSdrTcpClient:
             packed_cmd = struct.pack('>BI', command, value)
             self._logger.debug(f"Sending command 0x{command:02X} with value {value} ({packed_cmd.hex()})")
             self._sock.sendall(packed_cmd)
+
         except (OSError, IOError) as e:
             self._logger.error(f"Failed to send command 0x{command:02X}: {e}")
             self.close() # Assume the connection is broken
             raise IOError(f"Socket error while sending command: {e}") from e
+
         except Exception as e:
             self._logger.error(f"Unexpected error sending command 0x{command:02X}: {e}")
             self.close()
             raise
-
-    # --- Public API Methods ---
 
     @property
     def center_freq(self) -> Optional[float]:
@@ -533,7 +552,7 @@ class RtlSdrTcpClient:
         self._sock = None
         # Ensure connected is False even if sock was None
         self._connected = False
-        self._logger.info("Connection closed.")
+        self._logger.info(f"Connection to {self.server_host}:{self.server_port} closed.")
 
     # --- Context Manager ---
     def __enter__(self):

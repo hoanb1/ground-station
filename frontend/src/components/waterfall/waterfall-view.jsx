@@ -234,13 +234,25 @@ const MainWaterfallDisplay = React.memo(() => {
             dispatch(setIsStreaming(false));
         });
 
+        socket.on('sdr-config-error', (error) => {
+            console.error(`sdr-config-error`, error);
+            dispatch(setErrorMessage(error.message));
+            dispatch(setErrorDialogOpen(true));
+            dispatch(setStartStreamingLoading(false));
+            enqueueSnackbar(`Failed to configure SDR: ${error.message}`, {
+                variant: 'error'
+            });
+        });
+
         socket.on('sdr-error', (error) => {
             console.error(`sdr-error`, error);
             cancelAnimations();
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
-            enqueueSnackbar(`Failed to connect to SDR: ${error.message}`, {
-                variant: 'error'
+            dispatch(setIsStreaming(false));
+            dispatch(setStartStreamingLoading(false));
+            enqueueSnackbar(`Error occurred while streaming from SDR: ${error.message}`, {
+                 variant: 'error'
             });
         });
 
@@ -287,6 +299,7 @@ const MainWaterfallDisplay = React.memo(() => {
             cancelAnimations();
 
             // Clean up socket listeners
+            socket.off('sdr-config-error');
             socket.off('sdr-error');
             socket.off('sdr-fft-data');
             socket.off('sdr-status');
@@ -363,7 +376,7 @@ const MainWaterfallDisplay = React.memo(() => {
         };
     }, []);
 
-// Modify startStreaming and cancelAnimations
+    // Configure SDR and start streaming
     const startStreaming = () => {
 
         if (!isStreaming) {
@@ -381,20 +394,22 @@ const MainWaterfallDisplay = React.memo(() => {
                 tunerAgc,
                 rtlAgc,
                 fftWindow,
-            }, () => {
-                // Start streaming after configuration is acknowledged
-                socket.emit('sdr_data', 'start-streaming', {selectedSDRId});
+            }, (response) => {
+                // Check response
+                if (response['success']) {
+                    // Start streaming after configuration is acknowledged
+                    socket.emit('sdr_data', 'start-streaming', {selectedSDRId});
 
-                // Start the worker
-                if (workerRef.current) {
-                    workerRef.current.postMessage({
-                        cmd: 'start',
-                        data: {fps: targetFPSRef.current}
-                    });
+                    // Start the worker
+                    if (workerRef.current) {
+                        workerRef.current.postMessage({
+                            cmd: 'start',
+                            data: {fps: targetFPSRef.current}
+                        });
+                    }
+                    // auto range the dB scale
+                    setTimeout(() => autoScaleDbRange(), 1500);
                 }
-
-                // auto range the dB scale
-                setTimeout(() => autoScaleDbRange(), 1500);
             });
         }
     };

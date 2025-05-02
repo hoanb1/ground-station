@@ -5,6 +5,7 @@ import json
 import rtlsdr
 import concurrent.futures
 import functools
+from typing import Union
 from db import engine, AsyncSessionLocal
 from sync import *
 from datetime import date, datetime
@@ -525,7 +526,8 @@ async def auth_request_routing(sio, cmd, data, logger, sid):
     :rtype: dict
     """
 
-    reply = {'success': None, 'user': None, 'token': None}
+    reply: dict[str, Union[bool, None, dict, str]] = {'success': None, 'user': None, 'token': None}
+    
     async with AsyncSessionLocal() as dbsession:
 
         logger.debug(f'Auth request, cmd: {cmd}, data: {data}')
@@ -548,7 +550,7 @@ async def auth_request_routing(sio, cmd, data, logger, sid):
 async def sdr_data_request_routing(sio, cmd, data, logger, sid):
 
     async with AsyncSessionLocal() as dbsession:
-        reply: dict = {'success': None, 'data': None}
+        reply: dict[str, Union[bool, None, dict, list, str]] = {'success': False, 'data': None}
 
         if cmd == "configure-rtlsdr":
             try:
@@ -629,8 +631,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
             except Exception as e:
                 logger.error(f"Error configuring SDR: {str(e)}")
                 logger.exception(e)
-                await sio.emit('sdr-error', {'message': f"Failed to configure SDR: {str(e)}"}, room=sid)
+                await sio.emit('sdr-config-error', {'message': f"Failed to configure SDR: {str(e)}"}, room=sid)
                 reply['success'] = False
+
 
         elif cmd == "start-streaming":
 
@@ -682,8 +685,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                     await sdr_process_manager.stop_sdr_process(sdr_id, sid)
 
                 if sid not in active_sdr_clients:
-                    logger.error(f"Client not registered: {sid}")
-                    await sio.emit('sdr-error', {'message': "Client not registered"}, room=sid)
+                    logger.error(f"Client {sid} not registered while stopping SDR stream")
                     reply['success'] = False
 
                 # cleanup

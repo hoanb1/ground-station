@@ -61,6 +61,7 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
             port = config.get('port', 1234)
             logger.info(f"Connecting to RTL-SDR TCP server at {hostname}:{port}...")
             sdr = RtlSdrTcpClient(hostname=hostname, port=port)
+            sdr.connect()
 
         else:
             serial_number = config.get('serial_number', 0)
@@ -74,6 +75,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         sdr.gain = config.get('gain', 25.4)
 
         logger.info(f"RTL-SDR configured: sample_rate={sdr.sample_rate}, center_freq={sdr.center_freq}, gain={sdr.gain}")
+
+        # if we reached here, we can set the UI to streaming
+        data_queue.put({
+            'type': 'streamingstart',
+            'client_id': client_id,
+            'message': None,
+            'timestamp': time.time()
+        })
 
         # Main processing loop
         while not stop_event.is_set():
@@ -216,27 +225,25 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.exception(e)
 
         # Send error back to the main process
-        if data_queue:
-            data_queue.put({
-                'type': 'error',
-                'client_id': client_id,
-                'message': error_msg,
-                'timestamp': time.time()
-            })
+        data_queue.put({
+            'type': 'error',
+            'client_id': client_id,
+            'message': error_msg,
+            'timestamp': time.time()
+        })
 
     except json.decoder.JSONDecodeError as e:
-        error_msg = f"Invalid response from RTL-SDR TCP server: {str(e)}"
+        error_msg = f"Invalid response from RTL-SDR TCP server at {hostname}:{port}: {str(e)}"
         logger.error(error_msg)
         logger.exception(e)
 
         # Send error back to the main process
-        if data_queue:
-            data_queue.put({
-                'type': 'error',
-                'client_id': client_id,
-                'message': error_msg,
-                'timestamp': time.time()
-            })
+        data_queue.put({
+            'type': 'error',
+            'client_id': client_id,
+            'message': error_msg,
+            'timestamp': time.time()
+        })
 
     except Exception as e:
         error_msg = f"Error in RTL-SDR worker process: {str(e)}"
@@ -244,32 +251,33 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.exception(e)
 
         # Send error back to the main process
-        if data_queue:
-            data_queue.put({
-                'type': 'error',
-                'client_id': client_id,
-                'message': error_msg,
-                'timestamp': time.time()
-            })
+        data_queue.put({
+            'type': 'error',
+            'client_id': client_id,
+            'message': error_msg,
+            'timestamp': time.time()
+        })
 
     finally:
+        # Sleep for 1 second to allow the main process to read the data queue messages
+        time.sleep(1)
+
         # Clean up resources
-        logger.info("Cleaning up resources...")
+        logger.info(f"Cleaning up resources for SDR {sdr_id}...")
         if sdr:
             try:
                 sdr.close()
-                logger.info("RTL-SDR device closed")
+                logger.info(f"RTL-SDR device with id {sdr_id} closed")
             except Exception as e:
-                logger.error(f"Error closing RTL-SDR device: {str(e)}")
+                logger.error(f"Error closing RTL-SDR device with id {sdr_id}: {str(e)}")
 
         # Send termination signal
-        if data_queue:
-            data_queue.put({
-                'type': 'terminated',
-                'client_id': client_id,
-                'sdr_id': sdr_id,
-                'timestamp': time.time()
-            })
+        data_queue.put({
+            'type': 'terminated',
+            'client_id': client_id,
+            'sdr_id': sdr_id,
+            'timestamp': time.time()
+        })
 
         logger.info("RTL-SDR worker process terminated")
 

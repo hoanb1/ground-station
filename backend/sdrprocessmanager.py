@@ -152,7 +152,7 @@ class SDRProcessManager:
             # Start async task to monitor the data queue
             asyncio.create_task(self._monitor_data_queue(sdr_id))
 
-            await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
+            #await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
 
             return sdr_id
 
@@ -277,6 +277,19 @@ class SDRProcessManager:
                                 # Get client's Socket.IO room
                                 await self.sio.emit('sdr-fft-data', data['data'], room=client_id)
 
+                        if data_type == 'streamingstart' and client_id:
+                            if client_id in process_info['clients']:
+                                # Sent a message to the UI, streaming started
+                                await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
+
+                        elif data_type == 'config_error' and client_id:
+                            # Send config error to the client
+                            if client_id in process_info['clients']:
+                                await self.sio.emit('sdr-config-error',
+                                                    {'message': f"SDR error: {data['message']}"},
+                                                    room=client_id)
+                                self.logger.error(f"Config error from SDR process for client {client_id}: {data['message']}")
+
                         elif data_type == 'error' and client_id:
                             # Send error to the client
                             if client_id in process_info['clients']:
@@ -302,6 +315,7 @@ class SDRProcessManager:
 
                     except Exception as e:
                         self.logger.error(f"Error processing data from SDR process: {str(e)}")
+                        self.logger.exception(e)
 
                 # Short sleep to avoid CPU hogging
                 await asyncio.sleep(0.01)
