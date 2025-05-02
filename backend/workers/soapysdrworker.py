@@ -22,7 +22,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
     """
 
     # Configure logging for the worker process
-    logger = logging.getLogger('soapyremote-worker')
+    logger = logging.getLogger('soapysdr-worker')
 
     # Map window function names to numpy functions
     window_functions = {
@@ -38,6 +38,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
     sdr_id = None
     client_id = None
     rx_stream = None
+    mtu = 0
 
     logger.info(f"SoapySDR worker process started for SDR {sdr_id} for client {client_id}")
 
@@ -55,9 +56,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         client_id = config.get('client_id')
         fft_size = config.get('fft_size', 16384)
         fft_window = config.get('fft_window', 'hanning')
-        device_args = ""
-        hostname = ''
-        port = 0
         connection_type = config.get('connection_type', '')
         driver = config.get('driver', '')
         serial_number = config.get('serial_number', '')
@@ -68,7 +66,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
             port = config.get('port', 55132)
 
             # The format should be 'remote:host=HOSTNAME:port=PORT,driver=DRIVER,serial=SERIAL'
-            device_args = f"remote=tcp://{hostname}:{port},remote:driver=rtlsdr,serial={serial_number}"
+            device_args = f"remote=tcp://{hostname}:{port},remote:driver={driver}"
 
             # Add a serial number if provided
             if serial_number:
@@ -97,18 +95,18 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
             supported_rates = get_supported_sample_rates(sdr, channel)
             logger.info(f"Supported sample rate ranges: {supported_rates}")
 
-            # Get RTL-SDR common sample rates
-            common_rtlsdr_rates = [0.25e6, 1.024e6, 1.8e6, 1.92e6, 2.048e6, 2.4e6, 2.56e6, 3.2e6]
+            # Add some extra sample rates to the list
+            extra_sample_rates = []
             usable_rates = []
 
-            for rate in common_rtlsdr_rates:
+            for rate in extra_sample_rates:
                 for rate_range in supported_rates:
                     if 'minimum' in rate_range and 'maximum' in rate_range:
                         if rate_range['minimum'] <= rate <= rate_range['maximum']:
                             usable_rates.append(rate)
                             break
 
-            logger.info(f"Common usable RTL-SDR sample rates: {[rate/1e6 for rate in usable_rates]} MHz")
+            logger.info(f"Usable sample rates: {[rate/1e6 for rate in usable_rates]} MHz")
 
             # Now choose a sample rate that is supported
             sample_rate = config.get('sample_rate', 2.048e6)
@@ -164,6 +162,14 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
 
         # Setup the streaming
         rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+
+        # Now check MTU - after setupStream but before activateStream
+        try:
+            mtu = sdr.getStreamMTU(rx_stream)
+            logger.info(f"Stream MTU: {mtu}")
+        except Exception as e:
+            logger.warning(f"Could not get stream MTU: {e}")
+
         sdr.activateStream(rx_stream)
         logger.info("Stream activated")
 
@@ -252,32 +258,60 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                         'message': error_msg,
                         'timestamp': time.time()
                     })
-
+                
             try:
-                # Calculate the number of samples based on sample rate
+                # Calculate the number of samples needed for the FFT
                 num_samples = calculate_samples_per_scan(actual_sample_rate)
+                actual_fft_size = fft_size * 1
 
-                # Create buffer for samples
-                buffer = np.zeros(num_samples, dtype=np.complex64)
+                # Use the MTU value to determine read size if available, otherwise use a sensible default
+                read_size = mtu if mtu > 0 else 1024
+                logger.info(f"Using read_size of {read_size} samples (MTU: {mtu})")
 
-                # Read samples from the device
-                sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=1000000)
+                # Create a buffer for the individual reads
+                buffer = np.zeros(read_size, dtype=np.complex64)
 
-                if sr.ret > 0:
-                    # We got samples
-                    logger.info(f"Requested {len(buffer)} samples, received {sr.ret} samples")
-                    samples = buffer[:sr.ret]
-                else:
-                    # Error or timeout
-                    logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
+                # Create an accumulation buffer for collecting enough samples
+                samples_buffer = np.zeros(num_samples, dtype=np.complex64)
+                buffer_position = 0
+
+                # Loop until we have enough samples or encounter an error
+                while buffer_position < num_samples and not stop_event.is_set():
+                    # Read samples from the device
+                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=1000000)
+
+                    if sr.ret > 0:
+                        # We got samples - measure how many we actually received
+                        samples_read = sr.ret
+                        logger.debug(f"Read {samples_read}/{read_size} samples")
+
+                        # Calculate how many samples we can still add to our buffer
+                        samples_remaining = num_samples - buffer_position
+                        samples_to_add = min(samples_read, samples_remaining)
+
+                        # Add the samples to our accumulation buffer
+                        samples_buffer[buffer_position:buffer_position + samples_to_add] = buffer[:samples_to_add]
+                        buffer_position += samples_to_add
+
+                        # Log progress
+                        logger.debug(f"Accumulated {buffer_position}/{num_samples} samples")
+
+                        # If we've filled our buffer, break out of the loop
+                        if buffer_position >= num_samples:
+                            break
+                    else:
+                        # Error or timeout
+                        logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
+                        time.sleep(0.1)
+
+                # Check if we have enough samples for processing
+                if buffer_position < actual_fft_size:
+                    logger.warning(f"Not enough samples accumulated: {buffer_position}/{actual_fft_size}")
                     time.sleep(0.1)
                     continue
 
-                # Remove DC offset
-                #samples = remove_dc_offset(samples)
-
-                # Optionally increase virtual resolution
-                actual_fft_size = fft_size * 1
+                # We have enough samples to process
+                samples = samples_buffer[:buffer_position]
 
                 # Apply window function
                 window_func = window_functions.get(fft_window.lower(), np.hanning)
@@ -286,7 +320,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                 # Calculate FFT with 50% overlap
                 num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
                 if num_segments <= 0:
-                    logger.warning(f"Not enough samples for FFT: {len(samples)} < {actual_fft_size}")
+                    logger.warning(f"Not enough samples for FFT with overlap: {len(samples)} < {actual_fft_size}")
                     continue
 
                 fft_result = np.zeros(actual_fft_size)
@@ -401,7 +435,7 @@ def calculate_samples_per_scan(sample_rate):
     Calculate the number of samples required per scan based on the provided sample rate.
     """
     # Default value for high sample rates
-    base_samples = 128 * 1024
+    base_samples = 64 * 1024
 
     if sample_rate <= 5e5:  # Less than 500KHz
         return base_samples // 4

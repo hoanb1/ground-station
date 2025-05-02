@@ -15,7 +15,7 @@ from common import is_geostationary
 from tracking import compiled_satellite_data
 from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdrprocessmanager import sdr_process_manager
-from soapysdr import discovered_servers
+from soapysdrbrowser import discovered_servers
 
 
 # Create a global thread pool executor

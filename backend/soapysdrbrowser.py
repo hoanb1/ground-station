@@ -6,7 +6,7 @@ from zeroconf import ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 
 # Configure logger
-logger = logging.getLogger('soapysdr')
+logger = logging.getLogger('soapysdr-browser')
 
 # Store discovered servers here with a dictionary for each server containing all properties
 discovered_servers: dict[str, dict[str, str | list | int]] = {}

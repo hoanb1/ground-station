@@ -155,8 +155,10 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 # Remove DC offset
                 samples = remove_dc_offset(samples)
 
+                # Optionally increase virtual resolution
+                actual_fft_size = fft_size * 1
+
                 # Apply window function
-                actual_fft_size = fft_size * 1  # Optionally increase virtual resolution
                 window_func = window_functions.get(fft_window.lower(), np.hanning)
                 window = window_func(actual_fft_size)
 

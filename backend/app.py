@@ -24,7 +24,7 @@ from pydantic import BaseModel
 from typing import Optional, Dict, Any, Union
 from waterfall import waterfall_socket_app, cleanup_sdr_session
 from sdrprocessmanager import sdr_process_manager
-from soapysdr import discover_soapy_servers
+from soapysdrbrowser import discover_soapy_servers
 
 
 Payload.max_decode_packets = 50
