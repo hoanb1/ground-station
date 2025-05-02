@@ -88,6 +88,8 @@ class SDRType(str, PyEnum):
     RTLSDRTCPV3 = "rtlsdrtcpv3"
     RTLSDRUSBV4 = "rtlsdrusbv4"
     RTLSDRTCPV4 = "rtlsdrtcpv4"
+    SOAPYSDRLOCAL = "soapysdrlocal"
+    SOAPYSDRREMOTE = "soapysdrremote"
 
 class Satellites(Base):
     __tablename__ = 'satellites'
@@ -165,6 +167,7 @@ class SDRs(Base):
     host = Column(String, nullable=True)
     port = Column(Integer, nullable=True)
     type = Column(Enum(SDRType), nullable=True)
+    driver = Column(String, nullable=True)
     frequency_range = Column(JsonField, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))

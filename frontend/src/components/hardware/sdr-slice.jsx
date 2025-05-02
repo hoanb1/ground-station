@@ -87,6 +87,7 @@ const defaultSDR = {
     port: 1234,
     type: 'rtlsdrusbv3',
     serial: '',
+    driver: '',
     frequency_min: 24,
     frequency_max: 1700,
 };
@@ -106,6 +107,7 @@ const sdrsSlice = createSlice({
         pageSize: 10,
         formValues: defaultSDR,
         soapyServers: {},
+        selectedSdrDevice: "",
     },
     reducers: {
         setSDRs: (state, action) => {
@@ -144,6 +146,9 @@ const sdrsSlice = createSlice({
         setSelectedSDRId: (state, action) => {
             state.selectedSDRId = action.payload;
             state.selectedSDR = state.sdrs.find(sdr => sdr.id === action.payload);
+        },
+        setSelectedSdrDevice: (state, action) => {
+            state.selectedSdrDevice = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -235,6 +240,7 @@ export const {
     setError,
     setStatus,
     setSelectedSDRId,
+    setSelectedSdrDevice,
 } = sdrsSlice.actions;
 
 export default sdrsSlice.reducer;

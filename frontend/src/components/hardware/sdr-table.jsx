@@ -29,13 +29,14 @@ import {
     setOpenAddDialog,
     setFormValues,
     fetchSoapySDRServers,
+    setSelectedSdrDevice,
 } from './sdr-slice.jsx';
 import Paper from "@mui/material/Paper";
 
 // SDR type field configurations with default values
 const sdrTypeFields = {
     rtlsdrusbv3: {
-        excludeFields: ['host', 'port'],
+        excludeFields: ['host', 'port', 'driver'],
         fields: ['name', 'frequency_min', 'frequency_max', 'serial'],
         defaults: {
             name: 'USB SDR v3',
@@ -45,7 +46,7 @@ const sdrTypeFields = {
         }
     },
     rtlsdrtcpv3: {
-        excludeFields: ['serial'],
+        excludeFields: ['serial', 'driver'],
         fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max'],
         defaults: {
             host: '127.0.0.1',
@@ -57,7 +58,7 @@ const sdrTypeFields = {
         }
     },
     rtlsdrusbv4: {
-        excludeFields: ['host', 'port'],
+        excludeFields: ['host', 'port', 'driver'],
         fields: ['name', 'frequency_min', 'frequency_max', 'serial'],
         defaults: {
             name: 'USB SDR v4',
@@ -67,7 +68,7 @@ const sdrTypeFields = {
         }
     },
     rtlsdrtcpv4: {
-        excludeFields: ['serial'],
+        excludeFields: ['serial', 'driver'],
         fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max'],
         defaults: {
             host: '127.0.0.1',
@@ -75,6 +76,19 @@ const sdrTypeFields = {
             name: 'TCP SDR v4',
             frequency_min: 24,
             frequency_max: 1800,
+            serial: ''
+        }
+    },
+    soapysdrremote: {
+        excludeFields: [],
+        fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max', 'driver', 'serial'],
+        defaults: {
+            host: '',
+            port: 1234,
+            name: 'SoapySDR Remote',
+            frequency_min: 24,
+            frequency_max: 1800,
+            driver: '',
             serial: ''
         }
     }
@@ -85,6 +99,7 @@ export default function SDRsPage() {
     const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
+
     const {
         loading,
         sdrs,
@@ -94,6 +109,7 @@ export default function SDRsPage() {
         openDeleteConfirm,
         formValues,
         soapyServers,
+        selectedSdrDevice,
     } = useSelector((state) => state.sdrs);
 
     useEffect(() => {
@@ -124,6 +140,9 @@ export default function SDRsPage() {
                 }
                 return `${params['min'] || 0} - ${params['max'] || 0}`;
             },
+        },
+        {
+            field: 'driver', headerName: 'Driver', flex: 1, minWidth: 100
         },
         {
             field: 'serial', headerName: 'Serial', flex: 1, minWidth: 150
@@ -205,10 +224,9 @@ export default function SDRsPage() {
         return '';
     };
 
-    // Renders form fields based on the selected SDR type
     const renderFormFields = () => {
         const selectedType = formValues.type || '';
-        
+
         // Define common fields that all SDR types have
         const fields = [
             <FormControl key="type-select" fullWidth variant="filled">
@@ -217,12 +235,16 @@ export default function SDRsPage() {
                     name="type"
                     labelId="sdr-type-label"
                     value={formValues.type || ''}
-                    onChange={(e) => handleChange({target: {name: "type", value: e.target.value}})}
+                    onChange={(e) => {
+                        handleChange({target: {name: "type", value: e.target.value}});
+                        dispatch(setSelectedSdrDevice('')); // Reset selected SDR when type changes
+                    }}
                     variant={'filled'}>
                     <MenuItem value="rtlsdrusbv3">RTL-SDR USB v3</MenuItem>
                     <MenuItem value="rtlsdrtcpv3">RTL-SDR TCP v3</MenuItem>
                     <MenuItem value="rtlsdrusbv4">RTL-SDR USB v4</MenuItem>
                     <MenuItem value="rtlsdrtcpv4">RTL-SDR TCP v4</MenuItem>
+                    <MenuItem value="soapysdrremote">SoapySDR Remote</MenuItem>
                 </Select>
             </FormControl>
         ];
@@ -233,30 +255,111 @@ export default function SDRsPage() {
 
             // Host field - only show for types that don't exclude it
             if (!config.excludeFields.includes('host')) {
-                fields.push(
-                    <TextField 
-                        key="host" 
-                        name="host" 
-                        label="Host" 
-                        fullWidth 
-                        variant="filled"
-                        onChange={handleChange} 
-                        value={getFieldValue('host')}
-                    />
-                );
+                if (selectedType === 'soapysdrremote' && soapyServers && Object.keys(soapyServers).length > 0) {
+                    // For SoapySDRRemote, create a dropdown of available servers
+                    fields.push(
+                        <FormControl key="host-select" fullWidth variant="filled">
+                            <InputLabel id="host-label">SoapySDR Server</InputLabel>
+                            <Select
+                                name="host"
+                                labelId="host-label"
+                                value={formValues.host || ''}
+                                onChange={(e) => {
+                                    const serverIp = e.target.value;
+                                    const selectedServerEntry = Object.entries(soapyServers).find(([_, server]) => server.ip === serverIp);
+                                    const serverInfo = selectedServerEntry ? selectedServerEntry[1] : {};
+                                    
+                                    // Reset selected SDR when server changes
+                                    dispatch(setSelectedSdrDevice(''));
+
+                                    // Use a single dispatch call with all values that need to be updated
+                                    dispatch(setFormValues({
+                                        ...formValues,
+                                        host: serverInfo.ip || '',
+                                        port: serverInfo.port || 1234
+                                    }));
+                                }}
+                                variant={'filled'}>
+                                {Object.entries(soapyServers).map(([key, server]) => (
+                                    <MenuItem key={key} value={server.ip}>
+                                        {key}: {server.ip}:{server.port} ({server.sdrs.length} SDRs)
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    );
+
+                    // If a server is selected, add a dropdown to select SDR devices from that server
+                    if (formValues.host) {
+                        const selectedServerEntry = Object.entries(soapyServers).find(([_, server]) => server.ip === formValues.host);
+                        const selectedServerInfo = selectedServerEntry ? selectedServerEntry[1] : null;
+                        
+                        if (selectedServerInfo && selectedServerInfo.sdrs && selectedServerInfo.sdrs.length > 0) {
+                            fields.push(
+                                <FormControl key="sdr-device-select" fullWidth variant="filled">
+                                    <InputLabel id="sdr-device-label">SDR Device</InputLabel>
+                                    <Select
+                                        labelId="sdr-device-label"
+                                        value={selectedSdrDevice}
+                                        onChange={(e) => {
+                                            const selectedSdrIndex = e.target.value;
+                                            dispatch(setSelectedSdrDevice(selectedSdrIndex));
+                                            
+                                            if (selectedSdrIndex !== '') {
+                                                const selectedSdr = selectedServerInfo.sdrs[selectedSdrIndex];
+                                                
+                                                if (selectedSdr) {
+                                                    // Prepare new form values with SDR device information
+                                                    const newValues = {
+                                                        ...formValues,
+                                                        name: selectedSdr.label || 'SoapySDR Device',
+                                                        driver: selectedSdr['remote:driver'] || selectedSdr.driver || '',
+                                                        serial: selectedSdr.serial || ''
+                                                    };
+                                                    
+                                                    dispatch(setFormValues(newValues));
+                                                }
+                                            }
+                                        }}
+                                        variant={'filled'}>
+                                        <MenuItem value="">Select SDR Device</MenuItem>
+                                        {selectedServerInfo.sdrs.map((sdr, index) => (
+                                            <MenuItem key={index} value={index}>
+                                                {sdr.label || sdr.driver || `SDR Device ${index}`}
+                                                {sdr.serial ? ` :: ${sdr.serial}` : ''}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            );
+                        }
+                    }
+                } else {
+                    fields.push(
+                        <TextField
+                            key="host"
+                            name="host"
+                            label="Host"
+                            fullWidth
+                            variant="filled"
+                            onChange={handleChange}
+                            value={getFieldValue('host')}
+                        />
+                    );
+                }
             }
 
             // Port field - only show for types that don't exclude it
             if (!config.excludeFields.includes('port')) {
                 fields.push(
-                    <TextField 
-                        key="port" 
-                        name="port" 
-                        label="Port" 
-                        fullWidth 
+                    <TextField
+                        key="port"
+                        name="port"
+                        label="Port"
+                        fullWidth
                         variant="filled"
-                        type="number" 
-                        onChange={handleChange} 
+                        type="number"
+                        onChange={handleChange}
                         value={getFieldValue('port')}
                     />
                 );
@@ -264,36 +367,51 @@ export default function SDRsPage() {
 
             // Add the common fields that all types have
             fields.push(
-                <TextField 
-                    key="name" 
-                    name="name" 
-                    label="Name" 
-                    fullWidth 
-                    variant="filled" 
+                <TextField
+                    key="name"
+                    name="name"
+                    label="Name"
+                    fullWidth
+                    variant="filled"
                     onChange={handleChange}
                     value={getFieldValue('name')}
                 />,
-                <TextField 
-                    key="frequency_min" 
-                    name="frequency_min" 
-                    label="Minimum Frequency (MHz)" 
-                    fullWidth 
+                <TextField
+                    key="frequency_min"
+                    name="frequency_min"
+                    label="Minimum Frequency (MHz)"
+                    fullWidth
                     variant="filled"
-                    type="number" 
-                    onChange={handleChange} 
+                    type="number"
+                    onChange={handleChange}
                     value={getFieldValue('frequency_min')}
                 />,
-                <TextField 
-                    key="frequency_max" 
-                    name="frequency_max" 
-                    label="Maximum Frequency (MHz)" 
-                    fullWidth 
+                <TextField
+                    key="frequency_max"
+                    name="frequency_max"
+                    label="Maximum Frequency (MHz)"
+                    fullWidth
                     variant="filled"
-                    type="number" 
-                    onChange={handleChange} 
+                    type="number"
+                    onChange={handleChange}
                     value={getFieldValue('frequency_max')}
                 />,
             );
+
+            // Driver field - only show for types that don't exclude it
+            if (!config.excludeFields.includes('driver')) {
+                fields.push(
+                    <TextField
+                        key="driver"
+                        name="driver"
+                        label="Driver"
+                        fullWidth
+                        variant="filled"
+                        onChange={handleChange}
+                        value={getFieldValue('driver')}
+                    />
+                );
+            }
 
             // Serial field - only show for types that don't exclude it
             if (!config.excludeFields.includes('serial')) {
@@ -313,7 +431,6 @@ export default function SDRsPage() {
 
         return fields;
     };
-
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info" sx={{mb: 2}}>
