@@ -1,16 +1,9 @@
 import multiprocessing
-import numpy as np
-import rtlsdr
-import time
 import asyncio
 import logging
 import signal
-from functools import partial
-
-from pydantic.v1.networks import host_regex
-
-from rtlsdrworker import rtlsdr_worker_process
-
+from workers.rtlsdrworker import rtlsdr_worker_process
+from workers.soapysdrworker import soapysdr_worker_process
 
 
 class SDRProcessManager:
@@ -50,33 +43,51 @@ class SDRProcessManager:
 
         assert self.sio is not None, ("Socket.IO server instance not set when setting up SDR process manager."
                                       " Please call set_sio() first.")
-        assert sdr_device['type'] in ['rtlsdrusbv3', 'rtlsdrtcpv3', 'rtlsdrusbv4', 'rtlsdrtcpv4']
+        assert sdr_device['type'] in ['rtlsdrusbv3', 'rtlsdrtcpv3', 'rtlsdrusbv4', 'rtlsdrtcpv4', 'soapysdrremote']
         assert sdr_device['id']
 
         sdr_id = sdr_device['id']
         connection_type = None
         hostname = None
         port = None
+        driver = None
+        worker_process = None
 
         if sdr_device['type'] == 'rtlsdrusbv3':
             serial_number = sdr_device['serial']
             connection_type = "usb"
+            driver = None
+            worker_process = rtlsdr_worker_process
 
         elif sdr_device['type'] == 'rtlsdrtcpv3':
             hostname = sdr_device['host']
             port = sdr_device['port']
             serial_number = 0
             connection_type = "tcp"
+            driver = None
+            worker_process = rtlsdr_worker_process
 
         elif sdr_device['type'] == 'rtlsdrusbv4':
             serial_number = sdr_device['serial']
             connection_type = "usb"
+            driver = None
+            worker_process = rtlsdr_worker_process
 
         elif sdr_device['type'] == 'rtlsdrtcpv4':
             hostname = sdr_device['host']
             port = sdr_device['port']
             serial_number = 0
             connection_type = "tcp"
+            driver = None
+            worker_process = rtlsdr_worker_process
+
+        elif sdr_device['type'] == 'soapysdrremote':
+            hostname = sdr_device['host']
+            port = sdr_device['port']
+            connection_type = "soapysdrremote"
+            driver = sdr_device['driver']
+            serial_number = sdr_device['serial']
+            worker_process = soapysdr_worker_process
 
         # Check if a process for this device already exists
         if sdr_id in self.processes and self.processes[sdr_id]['process'].is_alive():
@@ -117,6 +128,7 @@ class SDRProcessManager:
                 'serial_number': sdr_config.get('serial_number', 0),
                 'hostname': hostname,
                 'port': port,
+                'driver': driver,
                 'sample_rate': sdr_config.get('sample_rate', 2.048e6),
                 'center_freq': sdr_config.get('center_freq', 100e6),
                 'gain': sdr_config.get('gain', 'auto'),
@@ -127,9 +139,12 @@ class SDRProcessManager:
                 'rtl_agc': sdr_config.get('rtl_agc', False),
             }
 
+            if not worker_process:
+                raise Exception(f"Worker process {worker_process} for SDR id: {sdr_id} not found")
+
             # Create and start the process
             process = multiprocessing.Process(
-                target=rtlsdr_worker_process,
+                target=worker_process,
                 args=(config_queue, data_queue, stop_event),
                 daemon=True
             )

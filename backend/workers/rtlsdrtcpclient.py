@@ -6,8 +6,6 @@ import numpy as np
 from typing import Optional, Tuple
 
 
-
-
 class RtlSdrTcpClient:
     """
     A client for interacting with an RTL-SDR device via an rtl_tcp server.

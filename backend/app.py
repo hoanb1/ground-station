@@ -1,5 +1,4 @@
 import sys
-
 import uvicorn
 import socketio
 import os

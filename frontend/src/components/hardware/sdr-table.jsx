@@ -84,7 +84,7 @@ const sdrTypeFields = {
         fields: ['host', 'port', 'name', 'frequency_min', 'frequency_max', 'driver', 'serial'],
         defaults: {
             host: '',
-            port: 1234,
+            port: 55132,
             name: 'SoapySDR Remote',
             frequency_min: 24,
             frequency_max: 1800,

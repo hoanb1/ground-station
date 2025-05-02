@@ -5,7 +5,7 @@ import rtlsdr
 import time
 import logging
 from functools import partial
-from rtlsdrtcpclient import RtlSdrTcpClient
+from .rtlsdrtcpclient import RtlSdrTcpClient
 
 
 def rtlsdr_worker_process(config_queue, data_queue, stop_event):
