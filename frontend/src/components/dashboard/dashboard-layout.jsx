@@ -128,7 +128,7 @@ function CustomAppTitle() {
                         <Typography variant="h6">Ground Station</Typography>
                     </Box>
                     <Box display={{xs: "block", sm: "none"}}>
-                        <Typography variant="h6">GS</Typography>
+                        <Typography variant="h6"></Typography>
                     </Box>
                 </Stack>
             <Grid/>
