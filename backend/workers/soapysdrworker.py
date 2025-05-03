@@ -6,6 +6,8 @@ import logging
 from functools import partial
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
+from .common import window_functions
+
 
 def soapysdr_worker_process(config_queue, data_queue, stop_event):
     """
@@ -23,15 +25,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
 
     # Configure logging for the worker process
     logger = logging.getLogger('soapysdr-worker')
-
-    # Map window function names to numpy functions
-    window_functions = {
-        'hanning': np.hanning,
-        'hamming': np.hamming,
-        'blackman': np.blackman,
-        'kaiser': lambda n: np.kaiser(n, beta=8.6),
-        'bartlett': np.bartlett
-    }
 
     # Default configuration
     sdr = None
@@ -406,8 +399,8 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         })
 
     finally:
-        # Sleep for 1 second to allow the main process to read the data queue messages
-        time.sleep(1)
+        # Sleep for 0.5 second to allow the main process to read the data queue messages
+        time.sleep(0.5)
 
         # Clean up resources
         logger.info(f"Cleaning up resources for SDR {sdr_id}...")

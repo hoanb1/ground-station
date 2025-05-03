@@ -2,6 +2,25 @@ import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {useRef, useState} from "react";
 
+
+
+export const getSDRConfigParameters = createAsyncThunk(
+    'waterfall/getSDRConfigParameters',
+    async ({socket, selectedSDRId}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_request', 'get-sdr-parameters', selectedSDRId, (response) => {
+                console.info(response);
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue("Failed getting the SDR input parameters from the backend"));
+                }
+            });
+        });
+    }
+);
+
+
 const waterfallSlice = createSlice({
     name: 'waterfallState',
     initialState: {
@@ -45,6 +64,14 @@ const waterfallSlice = createSlice({
         expandedPanels: ['sdr', 'freqControl', 'fft'],
         selectedSDRId: "none",
         startStreamingLoading: false,
+        gettingSDRParameters: false,
+        gainValues: [],
+        sampleRateValues: [],
+        hasBiasT: false,
+        hasTunerAgc: false,
+        hasRtlAgc: false,
+        fftSizeValues: [],
+        fftWindowValues: [],
     },
     reducers: {
         setColorMap: (state, action) => {
@@ -133,7 +160,25 @@ const waterfallSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-
+        builder
+            .addCase(getSDRConfigParameters.pending, (state) => {
+                state.gettingSDRParameters = true;
+                state.errorMessage = null;
+            })
+            .addCase(getSDRConfigParameters.fulfilled, (state, action) => {
+                state.gettingSDRParameters = false;
+                state.gainValues = action.payload['gain_values'];
+                state.sampleRateValues = action.payload['sample_rate_values'];
+                state.hasBiasT = action.payload['has_bias_t'];
+                state.hasTunerAgc = action.payload['has_tuner_agc'];
+                state.hasRtlAgc = action.payload['has_rtl_agc'];
+                state.fftSizeValues = action.payload['fft_size_values'];
+                state.fftWindowValues = action.payload['fft_window_values'];
+            })
+            .addCase(getSDRConfigParameters.rejected, (state, action) => {
+                state.gettingSDRParameters = false;
+                state.errorMessage = action.payload;
+            });
     }
 });
 

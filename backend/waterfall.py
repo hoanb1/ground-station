@@ -1,11 +1,13 @@
 import logging
 import socketio
 import rtlsdr
+import crud
 import asyncio
 import numpy as np
 from datetime import time
-from typing import Dict, List, Optional, Any
+from typing import Dict, List, Optional, Any, Union
 from sdrprocessmanager import sdr_process_manager
+from workers.common import window_functions, get_soapy_sdr_parameters
 
 
 logger = logging.getLogger('waterfall-process')
@@ -110,3 +112,101 @@ async def stop_waterfall_streaming(sid):
 
 async def stream_waterfall_data_task(sid, device_index, config):
     """Background task to stream waterfall data to a client"""
+
+async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
+    """Retrieve SDR parameters from the SDR process manager"""
+
+    reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None}
+    sdr = {}
+    params = {}
+
+    try:
+        # Fetch SDR device details from database
+        sdr_device_reply = await crud.fetch_sdr(dbsession, sdr_id)
+        if not sdr_device_reply['success'] or not sdr_device_reply['data']:
+            raise Exception(f"SDR device with id {sdr_id} not found in database")
+
+        sdr = sdr_device_reply['data']
+
+
+        if sdr.get('type') in ['rtlsdrtcpv3', 'rtlsdrusbv3', 'rtlsdrusbv4', 'rtlsdrusbv4']:
+
+            # Common RTL-SDR gain values in dB
+            gain_values = [0.0, 0.9, 1.4, 2.7, 3.7, 7.7, 8.7, 12.5, 14.4, 15.7,
+                           16.6, 19.7, 20.7, 22.9, 25.4, 28.0, 29.7, 32.8, 33.8,
+                           36.4, 37.2, 38.6, 40.2, 42.1, 43.4, 43.9, 44.5, 48.0]
+
+            # Common RTL-SDR sample rates in Hz
+            sample_rate_values = [
+                240000, 300000, 960000, 1024000, 1536000, 1792000, 1920000,
+                2048000, 2304000, 2400000, 2560000, 2880000, 3200000
+            ]
+
+            # Common window functions
+            window_function_names = list(window_functions.keys())
+
+            # Common FFT sizes
+            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384]
+
+            params = {
+                'gain_values': gain_values,
+                'sample_rate_values': sample_rate_values,
+                'fft_size_values': fft_size_values,
+                'fft_window_values': window_function_names,
+                'has_bias_t': True,
+                'has_tuner_agc': True,
+                'has_rtl_agc': True,
+            }
+
+            reply = {'success': True, 'data': params}
+
+        elif sdr.get('type') in ['soapysdrremote', 'soapysdrlocal']:
+
+            logger.info(f'Getting SDR parameters for SoapySDR server: {sdr}')
+            # Get SDR parameters from the SoapySDR server in a separate thread
+            sdr_params = await asyncio.create_subprocess_exec(
+                'python3', '-c',
+                f'from workers.common import get_soapy_sdr_parameters; print(get_soapy_sdr_parameters({sdr}))',
+                stdout=asyncio.subprocess.PIPE
+            )
+            try:
+                stdout, _ = await asyncio.wait_for(sdr_params.communicate(), timeout=timeout)
+            except asyncio.TimeoutError:
+                sdr_params.kill()
+                raise TimeoutError('Timed out while getting SDR parameters from SoapySDR server')
+
+            sdr_params = eval(stdout.decode().strip())
+            logger.debug(f'Got SDR parameters from SoapySDR server: {sdr_params}')
+
+            # Common window functions
+            window_function_names = list(window_functions.keys())
+
+            # Common FFT sizes
+            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384]
+
+            params = {
+                'gain_values': sdr_params['gains'],
+                'sample_rate_values': sdr_params['rates'],
+                'fft_size_values': fft_size_values,
+                'fft_window_values': window_function_names,
+                'has_bias_t': True,
+                'has_tuner_agc': True,
+                'has_rtl_agc': True,
+            }
+
+    except TimeoutError as e:
+        error_msg = (f"Timeout error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} "
+                     f"within {timeout} seconds timeout")
+        reply['success'] = False
+        reply['error'] = error_msg
+
+    except Exception as e:
+        error_msg = f"Error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} within 5 seconds timeout"
+        reply['success'] = False
+        reply['error'] = error_msg
+
+    finally:
+
+        reply = {'success': True, 'data': params}
+        return reply
+

@@ -2,10 +2,13 @@ import sys
 import uvicorn
 import socketio
 import os
+import os.path
 import httpx
 import rtlsdr
 import logging
 import threading
+# Add current directory to Python path
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task

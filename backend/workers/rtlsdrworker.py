@@ -6,6 +6,7 @@ import time
 import logging
 from functools import partial
 from .rtlsdrtcpclient import RtlSdrTcpClient
+from .common import window_functions
 
 
 def rtlsdr_worker_process(config_queue, data_queue, stop_event):
@@ -24,15 +25,6 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
 
     # Configure logging for the worker process
     logger = logging.getLogger('rtlsdr-worker')
-
-    # Map window function names to numpy functions
-    window_functions = {
-        'hanning': np.hanning,
-        'hamming': np.hamming,
-        'blackman': np.blackman,
-        'kaiser': lambda n: np.kaiser(n, beta=8.6),
-        'bartlett': np.bartlett
-    }
 
     # Default configuration
     sdr = None

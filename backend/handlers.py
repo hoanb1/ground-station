@@ -16,10 +16,9 @@ from tracking import compiled_satellite_data
 from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdrprocessmanager import sdr_process_manager
 from soapysdrbrowser import discovered_servers
+from waterfall import get_sdr_parameters
 
 
-# Create a global thread pool executor
-#thread_executor = concurrent.futures.ThreadPoolExecutor(max_workers=10)
 
 # Function to run async code in a thread
 def run_async_in_thread(async_func, *args, **kwargs):
@@ -57,7 +56,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
     async with AsyncSessionLocal() as dbsession:
 
-        reply = {'success': None, 'data': None}
+        reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None}
 
         if cmd == "get-tle-sources":
             logger.debug(f'Getting TLE sources')
@@ -200,6 +199,11 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             logger.debug(f'Getting discovered SoapySDR servers')
             reply = {'success': True, 'data': discovered_servers}
 
+        elif cmd == "get-sdr-parameters":
+            logger.debug(f'Getting SDR parameters')
+            parameters = await get_sdr_parameters(dbsession, data)
+            reply = {'success': parameters['success'], 'data': parameters.get('data', [])}
+
         else:
             logger.error(f'Unknown command: {cmd}')
 
@@ -231,8 +235,9 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
     :rtype: dict
     """
 
-    reply = {'success': None, 'data': None}
     async with AsyncSessionLocal() as dbsession:
+
+        reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None}
 
         if cmd == "submit-tle-sources":
             logger.debug(f'Adding TLE source, data: {data}')

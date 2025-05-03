@@ -9,7 +9,7 @@ import MuiAccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import {useSelector, useDispatch} from 'react-redux';
-import {setGridEditable, setRtlAgc, setTunerAgc} from './waterfall-slice.jsx';
+import {getSDRConfigParameters, setGridEditable, setRtlAgc, setTunerAgc} from './waterfall-slice.jsx';
 import FrequencyControl from "./frequency-control.jsx";
 import {
     setColorMap,
@@ -43,6 +43,7 @@ import {
 } from "@mui/material";
 import FrequencyDisplay from "./frequency-control.jsx";
 import {useEffect, useState} from "react";
+import {useSocket} from "../common/socket.jsx";
 
 
 const Accordion = styled((props) => (
@@ -88,6 +89,7 @@ const AccordionDetails = styled(MuiAccordionDetails)(({theme}) => ({
 
 const WaterfallSettings = React.memo(({deviceId = 0}) => {
     const dispatch = useDispatch();
+    const {socket} = useSocket();
 
     const {
         colorMap,
@@ -112,6 +114,14 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         fftWindows,
         expandedPanels,
         selectedSDRId,
+        gettingSDRParameters,
+        gainValues,
+        sampleRateValues,
+        hasBiasT,
+        hasTunerAgc,
+        hasRtlAgc,
+        fftSizeValues,
+        fftWindowValues,
     } = useSelector((state) => state.waterfall);
 
     const { sdrs } = useSelector((state) => state.sdrs);
@@ -148,6 +158,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
 
     function handleSDRChange(event) {
         dispatch(setSelectedSDRId(event.target.value));
+        dispatch(getSDRConfigParameters({socket, selectedSDRId: event.target.value}));
     }
 
     return (
@@ -213,7 +224,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     }}
                                     disabled={false}
                                     variant={'filled'}>
-                                    {rtlGains.map(gain => (
+                                    {gainValues.map(gain => (
                                         <MenuItem key={gain} value={gain}>
                                             {gain} dB
                                         </MenuItem>
@@ -232,65 +243,70 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     }}
                                     disabled={false}
                                     variant={'filled'}>
-                                    <MenuItem value={225001}>225.001 kHz</MenuItem>
-                                    <MenuItem value={250000}>250 kHz</MenuItem>
-                                    <MenuItem value={275000}>275 kHz</MenuItem>
-                                    <MenuItem value={300000}>300 kHz</MenuItem>
-                                    <MenuItem value={900001}>900.001 kHz</MenuItem>
-                                    <MenuItem value={960000}>960 kHz</MenuItem>
-                                    <MenuItem value={1024000}>1.024 MHz</MenuItem>
-                                    <MenuItem value={1200000}>1.2 MHz</MenuItem>
-                                    <MenuItem value={1440000}>1.44 MHz</MenuItem>
-                                    <MenuItem value={1600000}>1.6 MHz</MenuItem>
-                                    <MenuItem value={1800000}>1.8 MHz</MenuItem>
-                                    <MenuItem value={2000000}>2 MHz</MenuItem>
-                                    <MenuItem value={2048000}>2.048 MHz</MenuItem>
-                                    <MenuItem value={2400000}>2.4 MHz</MenuItem>
-                                    <MenuItem value={2560000}>2.56 MHz</MenuItem>
-                                    <MenuItem value={2880000}>2.88 MHz</MenuItem>
-                                    <MenuItem value={3000000}>3 MHz</MenuItem>
-                                    <MenuItem value={3200000}>3.2 MHz</MenuItem>
+                                    {sampleRateValues.map(rate => {
+                                        // Format the sample rate for display
+                                        let displayValue;
+                                        if (rate >= 1000000) {
+                                            displayValue = `${(rate / 1000000).toFixed(rate % 1000000 === 0 ? 0 : 3)} MHz`;
+                                        } else {
+                                            displayValue = `${(rate / 1000).toFixed(rate % 1000 === 0 ? 0 : 3)} kHz`;
+                                        }
+                                        return (
+                                            <MenuItem key={rate} value={rate}>
+                                                {displayValue}
+                                            </MenuItem>
+                                        );
+                                    })}
                                 </Select>
                             </FormControl>
+
+
                         </Box>
 
                         <Box sx={{mb: 0, ml: 1.5}}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        size={'small'}
-                                        checked={biasT}
-                                        onChange={(e) => {
-                                            dispatch(setBiasT(e.target.checked));
-                                        }}
-                                    />
-                                }
-                                label="Enable Bias T"
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        size={'small'}
-                                        checked={tunerAgc}
-                                        onChange={(e) => {
-                                            dispatch(setTunerAgc(e.target.checked));
-                                        }}
-                                    />
-                                }
-                                label="Enable tuner AGC"
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        size={'small'}
-                                        checked={rtlAgc}
-                                        onChange={(e) => {
-                                            dispatch(setRtlAgc(e.target.checked));
-                                        }}
-                                    />
-                                }
-                                label="Enable RTL AGC"
-                            />
+                            {hasBiasT && (
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size={'small'}
+                                            checked={biasT}
+                                            onChange={(e) => {
+                                                dispatch(setBiasT(e.target.checked));
+                                            }}
+                                        />
+                                    }
+                                    label="Enable Bias T"
+                                />
+                            )}
+                            {hasTunerAgc && (
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size={'small'}
+                                            checked={tunerAgc}
+                                            onChange={(e) => {
+                                                dispatch(setTunerAgc(e.target.checked));
+                                            }}
+                                        />
+                                    }
+                                    label="Enable tuner AGC"
+                                />
+                            )}
+                            {hasRtlAgc && (
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            size={'small'}
+                                            checked={rtlAgc}
+                                            onChange={(e) => {
+                                                dispatch(setRtlAgc(e.target.checked));
+                                            }}
+                                        />
+                                    }
+                                    label="Enable RTL AGC"
+                                />
+                            )}
+
                         </Box>
 
                     </AccordionDetails>
@@ -327,11 +343,31 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     }}
                                     disabled={false}
                                     variant={'filled'}>
-                                    {fftSizeOptions.map(size => (
+                                    {fftSizeValues.map(size => (
                                         <MenuItem key={size} value={size}>{size}</MenuItem>
                                     ))}
                                 </Select>
                             </FormControl>
+
+                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                         variant="filled" size="small">
+                                <InputLabel>FFT Window</InputLabel>
+                                <Select
+                                    size={'small'}
+                                    value={fftWindow}
+                                    onChange={(e) => {
+                                        dispatch(setFFTWindow(e.target.value));
+                                    }}
+                                    disabled={false}
+                                    variant={'filled'}>
+                                    {fftWindowValues.map(window => (
+                                        <MenuItem key={window} value={window}>
+                                            {window.charAt(0).toUpperCase() + window.slice(1)}
+                                        </MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+
                             <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled"
                                          size="small">
@@ -348,24 +384,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     {colorMaps.map(map => (
                                         <MenuItem key={map} value={map}>
                                             {map.charAt(0).toUpperCase() + map.slice(1)}
-                                        </MenuItem>
-                                    ))}
-                                </Select>
-                            </FormControl>
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                         variant="filled" size="small">
-                                <InputLabel>FFT Window</InputLabel>
-                                <Select
-                                    size={'small'}
-                                    value={fftWindow}
-                                    onChange={(e) => {
-                                        dispatch(setFFTWindow(e.target.value));
-                                    }}
-                                    disabled={false}
-                                    variant={'filled'}>
-                                    {fftWindows.map(window => (
-                                        <MenuItem key={window} value={window}>
-                                            {window.charAt(0).toUpperCase() + window.slice(1)}
                                         </MenuItem>
                                     ))}
                                 </Select>
