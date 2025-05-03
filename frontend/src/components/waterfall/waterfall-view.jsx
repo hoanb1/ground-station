@@ -1,4 +1,5 @@
 import React, {useEffect, useRef, useState, useCallback} from 'react';
+import { throttle } from 'lodash';
 import {
     Box,
     Typography,
@@ -1021,9 +1022,11 @@ const WaterfallWithStrictXAxisZoom = ({
     const applyTransform = useCallback(() => {
         if (containerRef.current) {
             containerRef.current.style.transform = `translateX(${positionXRef.current}px) scaleX(${scaleRef.current})`;
-            const newVisualWidth = getScaledWidth(containerRef.current, scaleRef.current);
-            setVisualContainerWidth(newVisualWidth);
-            dispatch(setWaterFallVisualWidth(newVisualWidth));
+
+            // Updating state on mouse wheel is not a good idea
+            //const newVisualWidth = getScaledWidth(containerRef.current, scaleRef.current);
+            //setVisualContainerWidth(newVisualWidth);
+            //dispatch(setWaterFallVisualWidth(newVisualWidth));
         }
     }, []);
 
@@ -1082,12 +1085,15 @@ const WaterfallWithStrictXAxisZoom = ({
         positionXRef.current = newPositionX;
 
         // Set the values on Redux
-        dispatch(setWaterFallScaleX(newScale));
-        dispatch(setWaterFallPositionX(newPositionX));
+        //dispatch(setWaterFallScaleX(newScale));
+        //dispatch(setWaterFallPositionX(newPositionX));
 
-        // Apply transform immediately
+        // Apply the transform immediately
         applyTransform();
-        updateReactState();
+
+        // Updating state on mouse wheel is not a good idea
+        //updateReactState();
+
     }, [applyTransform, updateReactState]);
 
     // Panning functionality
