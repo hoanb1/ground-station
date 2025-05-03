@@ -13,7 +13,7 @@ export const getSDRConfigParameters = createAsyncThunk(
                 if (response.success) {
                     resolve(response.data);
                 } else {
-                    reject(rejectWithValue("Failed getting the SDR input parameters from the backend"));
+                    reject(rejectWithValue(response.error));
                 }
             });
         });
@@ -34,7 +34,7 @@ const waterfallSlice = createSlice({
             'cosmic',
             'greyscale',
         ],
-        colorMap: 'greyscale',
+        colorMap: 'cosmic',
         dbRange: [-80, -20],
         fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
         fftSize: 16384,

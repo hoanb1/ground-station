@@ -3,11 +3,13 @@ import socketio
 import rtlsdr
 import crud
 import asyncio
+import time
 import numpy as np
 from datetime import time
+import multiprocessing as mp
 from typing import Dict, List, Optional, Any, Union
 from sdrprocessmanager import sdr_process_manager
-from workers.common import window_functions, get_soapy_sdr_parameters
+from workers.common import window_functions
 
 
 logger = logging.getLogger('waterfall-process')
@@ -113,12 +115,18 @@ async def stop_waterfall_streaming(sid):
 async def stream_waterfall_data_task(sid, device_index, config):
     """Background task to stream waterfall data to a client"""
 
-async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
+async def get_sdr_parameters(dbsession, sdr_id, timeout=10.0):
     """Retrieve SDR parameters from the SDR process manager"""
 
-    reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None}
+    reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None, 'error': None}
     sdr = {}
-    params = {}
+    params = {
+        'gain_values': [],
+        'sample_rate_values': [],
+        'fft_size_values': [],
+        'fft_window_values': [],
+        'has_agc': False,
+    }
 
     try:
         # Fetch SDR device details from database
@@ -127,7 +135,6 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
             raise Exception(f"SDR device with id {sdr_id} not found in database")
 
         sdr = sdr_device_reply['data']
-
 
         if sdr.get('type') in ['rtlsdrtcpv3', 'rtlsdrusbv3', 'rtlsdrusbv4', 'rtlsdrusbv4']:
 
@@ -163,10 +170,11 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
         elif sdr.get('type') in ['soapysdrremote', 'soapysdrlocal']:
 
             logger.info(f'Getting SDR parameters for SoapySDR server: {sdr}')
+
             # Get SDR parameters from the SoapySDR server in a separate thread
             sdr_params = await asyncio.create_subprocess_exec(
                 'python3', '-c',
-                f'from workers.common import get_soapy_sdr_parameters; print(get_soapy_sdr_parameters({sdr}))',
+                f'from workers.soapysdrprobe import get_soapy_sdr_parameters; print(get_soapy_sdr_parameters({sdr}))',
                 stdout=asyncio.subprocess.PIPE
             )
             try:
@@ -176,6 +184,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
                 raise TimeoutError('Timed out while getting SDR parameters from SoapySDR server')
 
             sdr_params = eval(stdout.decode().strip())
+
             logger.debug(f'Got SDR parameters from SoapySDR server: {sdr_params}')
 
             # Common window functions
@@ -184,29 +193,31 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
             # Common FFT sizes
             fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384]
 
+
+
             params = {
                 'gain_values': sdr_params['gains'],
-                'sample_rate_values': sdr_params['rates'],
+                'sample_rate_values': [rate for rate in sdr_params['rates'] if rate >= 500000],
                 'fft_size_values': fft_size_values,
                 'fft_window_values': window_function_names,
-                'has_bias_t': True,
-                'has_tuner_agc': True,
-                'has_rtl_agc': True,
+                'has_agc': sdr_params['has_agc'],
             }
+
+            reply = {'success': True, 'data': params}
 
     except TimeoutError as e:
         error_msg = (f"Timeout error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} "
                      f"within {timeout} seconds timeout")
+        logger.error(error_msg)
         reply['success'] = False
         reply['error'] = error_msg
 
     except Exception as e:
         error_msg = f"Error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} within 5 seconds timeout"
+        logger.error(error_msg)
         reply['success'] = False
         reply['error'] = error_msg
 
     finally:
-
-        reply = {'success': True, 'data': params}
         return reply
 

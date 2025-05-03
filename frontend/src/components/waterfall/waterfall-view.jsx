@@ -583,7 +583,6 @@ const MainWaterfallDisplay = React.memo(() => {
         const bandScopeCtx = bandScopeCanvas.getContext('2d');
         const dBAxisCtx = dBAxisCanvas.getContext('2d');
 
-
         const width = bandScopeCanvas.width;
         const height = bandScopeCanvas.height;
 

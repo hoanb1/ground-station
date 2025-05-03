@@ -202,7 +202,8 @@ async def data_request_routing(sio, cmd, data, logger, sid):
         elif cmd == "get-sdr-parameters":
             logger.debug(f'Getting SDR parameters')
             parameters = await get_sdr_parameters(dbsession, data)
-            reply = {'success': parameters['success'], 'data': parameters.get('data', [])}
+            reply = {'success': parameters['success'], 'data': parameters.get('data', []),
+                     'error': parameters.get('error', None)}
 
         else:
             logger.error(f'Unknown command: {cmd}')

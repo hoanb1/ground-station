@@ -9,7 +9,13 @@ import MuiAccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import {useSelector, useDispatch} from 'react-redux';
-import {getSDRConfigParameters, setGridEditable, setRtlAgc, setTunerAgc} from './waterfall-slice.jsx';
+import {
+    getSDRConfigParameters,
+    setErrorDialogOpen,
+    setGridEditable,
+    setRtlAgc,
+    setTunerAgc
+} from './waterfall-slice.jsx';
 import FrequencyControl from "./frequency-control.jsx";
 import {
     setColorMap,
@@ -44,6 +50,7 @@ import {
 import FrequencyDisplay from "./frequency-control.jsx";
 import {useEffect, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
+import {enqueueSnackbar} from "notistack";
 
 
 const Accordion = styled((props) => (
@@ -157,8 +164,28 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
     };
 
     function handleSDRChange(event) {
+        // Reset UI values since once we get new values from the backend, they might not be valid anymore
+        dispatch(setSampleRate(""));
+        dispatch(setGain(""));
+
         dispatch(setSelectedSDRId(event.target.value));
-        dispatch(getSDRConfigParameters({socket, selectedSDRId: event.target.value}));
+
+        // Call the backend
+        dispatch(getSDRConfigParameters({socket, selectedSDRId: event.target.value}))
+            .unwrap()
+        .then(response => {
+
+        })
+        .catch(error => {
+            // Error occurred while getting SDR parameters
+            dispatch(setErrorMessage(error));
+            dispatch(setIsStreaming(false));
+            dispatch(setErrorDialogOpen(true));
+            enqueueSnackbar(error, {
+                variant: 'error',
+                autoHideDuration: 5000,
+            });
+        });
     }
 
     return (
@@ -189,7 +216,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     <AccordionDetails>
 
                         <Box sx={{mb: 2}}>
-                            <FormControl disabled={isStreaming}
+                            <FormControl disabled={isStreaming} margin="normal"
                                          sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                          size="small">
                                 <InputLabel htmlFor="sdr-select">SDR</InputLabel>
@@ -212,17 +239,19 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
 
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                            <FormControl disabled={gettingSDRParameters}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                                         fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>Gain (dB)</InputLabel>
                                 <Select
+                                    disabled={gettingSDRParameters}
                                     size={'small'}
-                                    value={localGain}
+                                    value={gainValues.length? localGain: ""}
                                     onChange={(e) => {
                                         setLocalGain(e.target.value);
                                         dispatch(setGain(e.target.value));
                                     }}
-                                    disabled={false}
                                     variant={'filled'}>
                                     {gainValues.map(gain => (
                                         <MenuItem key={gain} value={gain}>
@@ -231,17 +260,19 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     ))}
                                 </Select>
                             </FormControl>
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                            <FormControl disabled={gettingSDRParameters}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                                         fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>Sample Rate</InputLabel>
                                 <Select
+                                    disabled={gettingSDRParameters}
                                     size={'small'}
-                                    value={localSampleRate}
+                                    value={sampleRateValues.length? localSampleRate: ""}
                                     onChange={(e) => {
                                         setLocalSampleRate(e.target.value);
                                         dispatch(setSampleRate(e.target.value));
                                     }}
-                                    disabled={false}
                                     variant={'filled'}>
                                     {sampleRateValues.map(rate => {
                                         // Format the sample rate for display
@@ -268,6 +299,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 <FormControlLabel
                                     control={
                                         <Switch
+                                            disabled={gettingSDRParameters}
                                             size={'small'}
                                             checked={biasT}
                                             onChange={(e) => {
@@ -282,6 +314,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 <FormControlLabel
                                     control={
                                         <Switch
+                                            disabled={gettingSDRParameters}
                                             size={'small'}
                                             checked={tunerAgc}
                                             onChange={(e) => {
@@ -296,6 +329,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 <FormControlLabel
                                     control={
                                         <Switch
+                                            disabled={gettingSDRParameters}
                                             size={'small'}
                                             checked={rtlAgc}
                                             onChange={(e) => {
@@ -317,10 +351,12 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     </AccordionSummary>
                     <AccordionDetails>
                         <Box sx={{mb: 2}}>
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                            <FormControl disabled={gettingSDRParameters}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>Target FPS</InputLabel>
                                 <Select
+                                    disabled={gettingSDRParameters}
                                     size={'small'}
                                     value={targetFPS}
                                     onChange={(e) => dispatch(setTargetFPS(e.target.value))}
@@ -330,18 +366,19 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     ))}
                                 </Select>
                             </FormControl>
-                            <FormControl margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                            <FormControl disabled={gettingSDRParameters}
+                                         margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                          fullWidth={true} variant="filled"
                                          size="small">
                                 <InputLabel>FFT Size</InputLabel>
                                 <Select
+                                    disabled={gettingSDRParameters}
                                     size={'small'}
-                                    value={localFFTSize}
+                                    value={fftSizeValues.length? localFFTSize: ""}
                                     onChange={(e) => {
                                         setLocalFFTSize(e.target.value);
                                         dispatch(setFFTSize(e.target.value));
                                     }}
-                                    disabled={false}
                                     variant={'filled'}>
                                     {fftSizeValues.map(size => (
                                         <MenuItem key={size} value={size}>{size}</MenuItem>
@@ -349,16 +386,17 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
 
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                            <FormControl disabled={gettingSDRParameters}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled" size="small">
                                 <InputLabel>FFT Window</InputLabel>
                                 <Select
+                                    disabled={gettingSDRParameters}
                                     size={'small'}
-                                    value={fftWindow}
+                                    value={fftWindowValues.length? fftWindow: ""}
                                     onChange={(e) => {
                                         dispatch(setFFTWindow(e.target.value));
                                     }}
-                                    disabled={false}
                                     variant={'filled'}>
                                     {fftWindowValues.map(window => (
                                         <MenuItem key={window} value={window}>
@@ -368,11 +406,13 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                 </Select>
                             </FormControl>
 
-                            <FormControl sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                            <FormControl disabled={gettingSDRParameters}
+                                         sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                          variant="filled"
                                          size="small">
                                 <InputLabel>Color Map</InputLabel>
                                 <Select
+                                    disabled={gettingSDRParameters}
                                     size={'small'}
                                     value={localColorMap}
                                     onChange={(e) => {
@@ -393,6 +433,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                             <FormControlLabel
                                 control={
                                     <Switch
+                                        disabled={gettingSDRParameters}
                                         size={'small'}
                                         checked={localAutoDBRange}
                                         onChange={(e) => {
@@ -407,6 +448,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 2 }}>
                             <Typography sx={{ mr: 1, width: '60px', textAlign: 'left', fontFamily: 'Monospace' }}>{dbRange[0]}</Typography>
                             <Slider
+                                disabled={gettingSDRParameters}
                                 size={'small'}
                                 value={localDbRange}
                                 onChange={(e, newValue) => {

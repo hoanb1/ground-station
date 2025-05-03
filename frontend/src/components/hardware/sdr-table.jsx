@@ -476,7 +476,7 @@ export default function SDRsPage() {
                             setSelected(selected);
                         }}
                         initialState={{
-                            pagination: {paginationModel: {pageSize: 5}},
+                            pagination: {paginationModel: {pageSize: 10}},
                             sorting: {
                                 sortModel: [{field: 'name', sort: 'desc'}],
                             },
