@@ -266,7 +266,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
 
                 # Use the MTU value to determine read size if available, otherwise use a sensible default
                 read_size = mtu if mtu > 0 else 1024
-                logger.info(f"Using read_size of {read_size} samples (MTU: {mtu})")
+                logger.debug(f"Using read_size of {read_size} samples (MTU: {mtu})")
 
                 # Create a buffer for the individual reads
                 buffer = np.zeros(read_size, dtype=np.complex64)
@@ -435,7 +435,7 @@ def calculate_samples_per_scan(sample_rate):
     Calculate the number of samples required per scan based on the provided sample rate.
     """
     # Default value for high sample rates
-    base_samples = 64 * 1024
+    base_samples = 128 * 1024
 
     if sample_rate <= 5e5:  # Less than 500KHz
         return base_samples // 4

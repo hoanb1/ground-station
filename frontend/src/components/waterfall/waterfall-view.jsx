@@ -427,28 +427,39 @@ const MainWaterfallDisplay = React.memo(() => {
             return;
         }
 
-        // Find min and max values in recent data
-        let min = Infinity;
-        let max = -Infinity;
-
-        // Look at the last 10 frames (or however many you want)
+        // Collect all values from recent frames
+        const allValues = [];
         const samplesToCheck = Math.min(10, waterfallDataRef.current.length);
 
         for (let i = 0; i < samplesToCheck; i++) {
             const row = waterfallDataRef.current[i];
-            for (let j = 0; j < row.length; j++) {
-                min = Math.min(min, row[j]);
-                max = Math.max(max, row[j]);
-            }
+            allValues.push(...row);
         }
+
+        // Calculate mean and standard deviation
+        const sum = allValues.reduce((acc, val) => acc + val, 0);
+        const mean = sum / allValues.length;
+
+        const squaredDiffs = allValues.map(val => (val - mean) ** 2);
+        const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / allValues.length;
+        const stdDev = Math.sqrt(variance);
+
+        // Filter out values more than X standard deviations from the mean
+        const stdDevMultiplier = 4.5; // Adjust this value as needed
+        const filteredValues = allValues.filter(val =>
+            Math.abs(val - mean) <= stdDevMultiplier * stdDev
+        );
+
+        let min = Math.min(...filteredValues);
+        let max = Math.max(...filteredValues);
 
         // Add some padding to the range
         min = Math.floor(min);
-        //max = Math.ceil(Math.max(max + 1, 0));
         max = Math.ceil(max);
 
         dispatch(setDbRange([min, max]));
     };
+
 
     function drawWaterfall() {
         const waterFallCanvas = waterFallCanvasRef.current;
