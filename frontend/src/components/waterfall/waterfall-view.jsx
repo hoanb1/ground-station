@@ -130,6 +130,7 @@ const MainWaterfallDisplay = React.memo(() => {
         waterFallCanvasHeight,
         selectedSDRId,
         startStreamingLoading,
+        gettingSDRParameters,
     } = useSelector((state) => state.waterfall);
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
@@ -281,7 +282,7 @@ const MainWaterfallDisplay = React.memo(() => {
             // Add new FFT data to the waterfall buffer
             waterfallDataRef.current.unshift(floatArray);
 
-            // Keep only the most recent rows based on canvas height
+                // Keep only the most recent rows based on canvas height
             if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
                 waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
             }
@@ -463,7 +464,6 @@ const MainWaterfallDisplay = React.memo(() => {
 
     function drawWaterfall() {
         const waterFallCanvas = waterFallCanvasRef.current;
-        const waterFallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
 
         if (!waterFallCanvas || waterfallDataRef.current.length === 0) {
             return;
@@ -476,7 +476,6 @@ const MainWaterfallDisplay = React.memo(() => {
             accumulatedRowsRef.current = 0;
 
             const waterFallCtx = waterFallCanvas.getContext('2d');
-            const waterFallLeftMarginCtx = waterFallLeftMarginCanvas.getContext('2d');
 
             // Move existing pixels DOWN (instead of up)
             waterFallCtx.drawImage(waterFallCanvas, 0, 0, waterFallCanvas.width, waterFallCanvas.height - 1, 0, 1, waterFallCanvas.width, waterFallCanvas.height - 1);
@@ -520,7 +519,9 @@ const MainWaterfallDisplay = React.memo(() => {
     }
 
     function updateWaterfallLeftMargin() {
-        if (!waterFallLeftMarginCanvasRef.current) return;
+        if (!waterFallLeftMarginCanvasRef.current) {
+            return;
+        };
 
         const waterFallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
         const waterFallLeftMarginCtx = waterFallLeftMarginCanvas.getContext('2d');
@@ -756,7 +757,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         <Button
                             startIcon={<PlayArrowIcon/>}
                             loading={startStreamingLoading}
-                            disabled={isStreaming || (selectedSDRId === "none")}
+                            disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}
                             color="primary"
                             onClick={startStreaming}
                             sx={{
@@ -841,6 +842,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 height: '21px',
                                 backgroundColor: 'rgba(28, 28, 28, 1)',
                                 borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                                borderRight: '1px solid #535353',
                                 display: 'block',
                             }}
                         />
@@ -852,6 +854,8 @@ const MainWaterfallDisplay = React.memo(() => {
                                 width: '100%',
                                 height: `${waterFallCanvasHeight}px`,
                                 display: 'block',
+                                backgroundColor: 'rgba(28, 28, 28, 1)',
+                                borderRight: '1px solid #535353',
                             }}
 
                         />

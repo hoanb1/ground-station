@@ -3,10 +3,15 @@ import json
 import numpy as np
 import time
 import logging
+import math
 from functools import partial
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
 from .common import window_functions
+
+
+# Configure logging for the worker process
+logger = logging.getLogger('soapysdr-worker')
 
 
 def soapysdr_worker_process(config_queue, data_queue, stop_event):
@@ -22,9 +27,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         data_queue: Queue for sending processed data back to the main process
         stop_event: Event to signal the process to stop
     """
-
-    # Configure logging for the worker process
-    logger = logging.getLogger('soapysdr-worker')
 
     # Default configuration
     sdr = None
@@ -113,6 +115,9 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
             sdr.setSampleRate(SOAPY_SDR_RX, channel, sample_rate)
             actual_sample_rate = sdr.getSampleRate(SOAPY_SDR_RX, channel)
             logger.info(f"Sample rate set to {actual_sample_rate/1e6} MHz")
+
+            # Number of samples required for each iteration
+            num_samples = calculate_samples_per_scan(actual_sample_rate)
 
         except Exception as e:
             error_msg = f"Error connecting to SoapySDR device: {str(e)}"
@@ -254,7 +259,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                 
             try:
                 # Calculate the number of samples needed for the FFT
-                num_samples = calculate_samples_per_scan(actual_sample_rate)
                 actual_fft_size = fft_size * 1
 
                 # Use the MTU value to determine read size if available, otherwise use a sensible default
@@ -423,21 +427,66 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         logger.info("SoapySDR worker process terminated")
 
 
+# def calculate_samples_per_scan(sample_rate):
+#     """
+#     Calculate the number of samples required per scan based on the provided sample rate.
+#     """
+#     # Default value for high sample rates
+#     base_samples = 128 * 1024
+#
+#     if sample_rate <= 5e5:  # Less than 500KHz
+#         return base_samples // 4
+#     elif sample_rate <= 1e6:  # Less than 1 MHz
+#         return base_samples // 2
+#     elif sample_rate <= 2e6:  # Less than 2 MHz
+#         return base_samples // 1
+#     else:
+#         return base_samples
+#
+
+
 def calculate_samples_per_scan(sample_rate):
     """
-    Calculate the number of samples required per scan based on the provided sample rate.
-    """
-    # Default value for high sample rates
-    base_samples = 128 * 1024
+    Calculate the optimal number of samples to read from an SDR based on its sample rate.
 
-    if sample_rate <= 5e5:  # Less than 500KHz
-        return base_samples // 4
-    elif sample_rate <= 1e6:  # Less than 1 MHz
-        return base_samples // 2
-    elif sample_rate <= 2e6:  # Less than 2 MHz
-        return base_samples // 1
-    else:
-        return base_samples
+    The function follows an inverse relationship: as the sample rate increases, we need fewer
+    samples to achieve a reasonable processing time while maintaining adequate resolution.
+
+    Args:
+        sample_rate (float): The sample rate of the SDR in Hz
+
+    Returns:
+        int: The recommended number of samples to read
+    """
+
+    # Base parameters
+    max_samples = 512 * 1024  # Maximum number of samples for lowest sample rates
+    min_samples = max_samples // 16  # Minimum number of samples for highest sample rates
+
+    logger.info(f"max_samples: {max_samples}, min_samples: {min_samples}")
+
+    # Reference sample rates for scaling
+    min_rate = 1e5  # 100 kHz
+    max_rate = 20e6  # 20 MHz
+
+    # Clamp the sample rate within our defined range
+    clamped_rate = max(min(sample_rate, max_rate), min_rate)
+
+    # Calculate samples using an inverse logarithmic relationship
+    # This provides a smoother transition than discrete steps
+    log_factor = (math.log10(clamped_rate) - math.log10(min_rate)) / (math.log10(max_rate) - math.log10(min_rate))
+    samples = int(max_samples * (1 - 0.75 * log_factor))
+
+    # Ensure we're within reasonable bounds
+    samples = max(min(samples, max_samples), min_samples)
+
+    # Round to nearest power of 2 for more efficient FFT processing
+    power_of_2 = 2 ** math.floor(math.log2(samples))
+
+    logger.info(f"power_of_2: {power_of_2}")
+
+    return power_of_2
+
 
 
 def remove_dc_offset(samples):
