@@ -60,7 +60,7 @@ import {
     setWaterFallPositionX,
     setStartStreamingLoading,
     setWaterFallCanvasHeight,
-    setBandScopeHeight,
+    setBandScopeHeight, setAutoDBRange,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -103,6 +103,7 @@ const   MainWaterfallDisplay = React.memo(() => {
     const binCountRef = useRef(0);
     const lastMetricUpdateRef = useRef(Date.now());
     const lastTimestampRef = useRef(null);
+    const mainWaterFallContainer = useRef(null);
     const {
         colorMap,
         colorMaps,
@@ -138,7 +139,7 @@ const   MainWaterfallDisplay = React.memo(() => {
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
-    const [localDbRange, setLocalDbRange] = useState(dbRange);
+    const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
 
     const cancelAnimations = () => {
         // Stop the worker
@@ -157,6 +158,37 @@ const   MainWaterfallDisplay = React.memo(() => {
             bandscopeAnimationFrameRef.current = null;
         }
     }
+
+    // ResizeObserver for the main waterfall container
+    useEffect(() => {
+        if (!mainWaterFallContainer.current) {
+            return;
+        }
+
+        const resizeObserver = new ResizeObserver(entries => {
+            const { contentRect } = entries[0];
+
+            // Check if component is fully visible in viewport
+            const rect = mainWaterFallContainer.current.getBoundingClientRect();
+            const isFullyVisible =
+                rect.top >= 0 &&
+                rect.left >= 0 &&
+                rect.bottom <= window.innerHeight &&
+                rect.right <= window.innerWidth;
+
+            if (!isFullyVisible) {
+                // Calculate new dimensions to make fully visible
+                const newWidth = Math.min(contentRect.width, window.innerWidth - rect.left);
+                const newHeight = Math.min(contentRect.height, window.innerHeight - rect.top);
+                setDimensions({ width: newWidth, height: newHeight });
+            }
+        });
+
+        resizeObserver.observe(mainWaterFallContainer.current?.parentElement);
+        return () => {
+            resizeObserver.disconnect();
+        };
+    }, []);
 
     // Update the ref whenever the Redux state changes
     useEffect(() => {
@@ -736,7 +768,7 @@ const   MainWaterfallDisplay = React.memo(() => {
     }
 
     return (
-        <>
+        <div ref={mainWaterFallContainer}>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall &
                 Spectrum</TitleBar>
             <Box
@@ -779,17 +811,6 @@ const   MainWaterfallDisplay = React.memo(() => {
                             }}
                         >
                             Stop
-                        </Button>
-                        <Button
-                            startIcon={<HeightIcon/>}
-                            disabled={!isStreaming}
-                            color="secondary"
-                            onClick={autoScaleDbRange}
-                            sx={{
-                                borderRadius: 0,
-                            }}
-                        >
-                            Auto Range
                         </Button>
                     </ButtonGroup>
                 </Paper>
@@ -877,7 +898,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                             width: '50px',
                             minWidth: '50px',
                             maxWidth: '50px',
-                            height: `calc(${frequencyScaleHeight}px + ${bandScopeHeight}px + ${waterFallCanvasHeight}px)`,
+                            height: `calc(${dimensions['height']}px - 90px)`,
                             position: 'relative',
                             borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
                             backgroundColor: 'rgba(28, 28, 28, 1)',
@@ -886,6 +907,70 @@ const   MainWaterfallDisplay = React.memo(() => {
                             flexShrink: 0,
                         }}
                     >
+                        <Stack spacing={0}>
+                            <Button
+                                startIcon={<HeightIcon/>}
+                                variant={"filled"}
+                                disabled={!isStreaming}
+                                color={autoDBRange? "success": "info"}
+                                onClick={autoScaleDbRange}
+                                title="Auto range dB scale once"
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                            >
+                            </Button>
+                            <Button
+                                variant={"filled"}
+                                disabled={!isStreaming}
+                                color={"info"}
+                                onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
+                                title="Toggle automatic dB scale"
+                                sx={{
+                                    borderRadius: 0,
+                                    minWidth: '40px',
+                                    padding: '6px'
+                                }}
+                            >
+                                Auto
+                            </Button>
+                        </Stack>
+
+                        <Typography sx={{
+                            mt: 1,
+                            width: '100%',
+                            textAlign: 'center',
+                            fontFamily: 'Monospace'
+                        }}>
+                        {dbRange[1]}
+                        </Typography>
+
+                        <Slider
+                            disabled={!isStreaming}
+                            orientation="vertical"
+                            value={dbRange}
+                            onChange={(e, newValue) => {
+                                dispatch(setDbRange(newValue));
+                            }}
+                            min={-120}
+                            max={30}
+                            step={1}
+                            valueLabelDisplay="auto"
+                            sx={{
+                                width: '23px',
+                                margin: '0 auto',
+                                '& .MuiSlider-thumb': {
+                                    width: 12,
+                                    height: 12,
+                                },
+                                '& .MuiSlider-track': {
+                                    width: 3
+                                },
+                                '& .MuiSlider-rail': {
+                                    width: 3
+                                }
+                            }}
+                        />
                         <Typography sx={{
                             mb: 1,
                             width: '100%',
@@ -894,34 +979,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                         }}>
                             {dbRange[0]}
                         </Typography>
-                        <Slider
-                            disabled={gettingSDRParameters}
-                            orientation="vertical"
-                            value={dBRange}
-                            onChange={(e, newValue) => {
-                                console.info(newValue);
-                                dispatch(setDbRange(newValue));
-                            }}
-                            getAriaLabel={() => 'dB Range'}
-                            valueLabelDisplay="auto"
-                            min={-110}
-                            max={30}
-                            step={1}
-                            sx={{
-                                width: '23px',
-                                height: '500px',
-                                '& .MuiSlider-thumb': {
-                                    width: 12,
-                                    height: 12,
-                                },
-                            }}
-                        />
-                        <Typography sx={{
-                            mt: 1,
-                            width: '100%',
-                            textAlign: 'center',
-                            fontFamily: 'Monospace'
-                        }}>{dbRange[1]}</Typography>
+
                     </Box>
                 </Box>
             </Box>
@@ -970,16 +1028,14 @@ const   MainWaterfallDisplay = React.memo(() => {
                     </Button>
                 </DialogActions>
             </Dialog>
-
             <WaterfallStatusBar>
                 {isStreaming ?
                     `FFTs/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
                     : `stopped`
                 }
             </WaterfallStatusBar>
-
             <WaterFallSettingsDialog/>
-        </>
+        </div>
     );
 });
 
@@ -1009,6 +1065,7 @@ const WaterfallWithStrictXAxisZoom = ({
         waterFallScaleX,
         waterFallPositionX,
         frequencyScaleHeight,
+        autoDBRange,
     } = useSelector((state) => state.waterfall);
     // State for React rendering
     const [customScale, setCustomScale] = useState(1);
@@ -1075,7 +1132,7 @@ const WaterfallWithStrictXAxisZoom = ({
         return element.getBoundingClientRect().width;
     }
 
-    // Apply transform directly to a DOM element
+    // Apply a transform directly to a DOM element
     const applyTransform = useCallback(() => {
         if (containerRef.current) {
             containerRef.current.style.transform = `translateX(${positionXRef.current}px) scaleX(${scaleRef.current})`;
@@ -1259,6 +1316,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 panOnXAxisOnly(deltaX);
                 //e.preventDefault();
             }
+
             // Two touches = pinch zoom
             else if (e.touches.length === 2) {
                 const touch1 = e.touches[0];
@@ -1271,8 +1329,7 @@ const WaterfallWithStrictXAxisZoom = ({
                 const deltaScale = (currentDistance - lastPinchDistanceRef.current) * 0.01;
                 lastPinchDistanceRef.current = currentDistance;
 
-                const currentCenterX = (touch1.clientX + touch2.clientX) / 2;
-                pinchCenterXRef.current = currentCenterX;
+                pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2;;
 
                 zoomOnXAxisOnly(deltaScale, pinchCenterXRef.current);
                 e.preventDefault();

@@ -441,43 +441,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     </Select>
                                 </FormControl>
                             </Box>
-                            <Box sx={{mb: 0, ml: 1.5}}>
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            disabled={gettingSDRParameters}
-                                            size={'small'}
-                                            checked={localAutoDBRange}
-                                            onChange={(e) => {
-                                                setLocalAutoDBRange(e.target.checked);
-                                                dispatch(setAutoDBRange(e.target.checked));
-                                            }}
-                                        />
-                                    }
-                                    label="Auto DB Range"
-                                />
-                            </Box>
-                            <Box sx={{ display: 'flex', alignItems: 'center', width: '100%', mb: 2 }}>
-                                <Typography sx={{ mr: 1, width: '60px', textAlign: 'left', fontFamily: 'Monospace' }}>{dbRange[0]}</Typography>
-                                <Slider
-                                    disabled={gettingSDRParameters}
-                                    size={'small'}
-                                    value={localDbRange}
-                                    onChange={(e, newValue) => {
-                                        setLocalDbRange(newValue);
-                                        dispatch(setDbRange(newValue));
-                                    }}
-                                    onChangeCommitted={(e, newValue) => {
-
-                                    }}
-                                    valueLabelDisplay="auto"
-                                    min={-110}
-                                    max={30}
-                                    step={1}
-                                    sx={{mx: 2}}
-                                />
-                                <Typography sx={{ml: 1, width: '60px', textAlign: 'right', fontFamily: 'Monospace'}}>{dbRange[1]}</Typography>
-                            </Box>
                         </LoadingOverlay>
                     </AccordionDetails>
                 </Accordion>
