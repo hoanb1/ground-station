@@ -640,7 +640,7 @@ const   MainWaterfallDisplay = React.memo(() => {
 
             // Draw a horizontal dotted grid line
             bandScopeCtx.strokeStyle = 'rgba(150, 150, 150, 0.4)';
-            bandScopeCtx.setLineDash([2, 2]);
+            bandScopeCtx.setLineDash([5, 5]);
             bandScopeCtx.beginPath();
             bandScopeCtx.moveTo(0, y);
             bandScopeCtx.lineTo(width, y);
@@ -901,6 +901,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                         waterFallCanvasRef={waterFallCanvasRef}
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
+                        waterFallWindowHeight={dimensions['height']}
                     />
 
                     <Box
@@ -1054,6 +1055,7 @@ const WaterfallWithStrictXAxisZoom = ({
                                           waterFallCanvasRef,
                                           centerFrequency,
                                           sampleRate,
+                                          waterFallWindowHeight,
                                       }) => {
     const containerRef = useRef(null);
     const containerWidthRef = useRef(0);
@@ -1065,7 +1067,6 @@ const WaterfallWithStrictXAxisZoom = ({
     const lastPinchDistanceRef = useRef(0);
     const pinchCenterXRef = useRef(0);
     const dispatch = useDispatch();
-
     const {
         waterFallVisualWidth,
         waterFallCanvasWidth,
@@ -1471,10 +1472,10 @@ const WaterfallWithStrictXAxisZoom = ({
                 <canvas
                     ref={waterFallCanvasRef}
                     width={waterFallCanvasWidth}
-                    height={waterFallCanvasHeight}
+                    height={waterFallWindowHeight-230}
                     style={{
                         width: '100%',
-                        height: `${waterFallCanvasHeight}px`,
+                        height: `${waterFallWindowHeight-230}px`,
                         display: 'block',
                         touchAction: 'pan-y',
                     }}
