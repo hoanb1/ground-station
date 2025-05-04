@@ -165,6 +165,8 @@ const MainWaterfallDisplay = React.memo(() => {
         visualSettingsRef.current.sampleRate = sampleRate;
         visualSettingsRef.current.centerFrequency = centerFrequency;
 
+        drawBandscope();
+
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
     // Initialize the worker when the component mounts
