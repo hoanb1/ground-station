@@ -7,7 +7,6 @@ import httpx
 import rtlsdr
 import logging
 import threading
-# Add current directory to Python path
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
@@ -131,9 +130,8 @@ async def disconnect(sid, environ):
 
 @sio.on('sdr_data')
 async def handle_sdr_data_requests(sid, cmd, data=None):
-    sdrlogger = logging.getLogger('sdr-data-process')
-    sdrlogger.info(f'Received SDR event from: {sid}, with cmd: {cmd}, and data: {data}')
-    reply = await sdr_data_request_routing(sio, cmd, data, sdrlogger, sid)
+    logger.info(f'Received SDR event from: {sid}, with cmd: {cmd}, and data: {data}')
+    reply = await sdr_data_request_routing(sio, cmd, data, logger, sid)
     return reply
 
 @sio.on('data_request')

@@ -119,7 +119,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
 
             # Number of samples required for each iteration
             num_samples = calculate_samples_per_scan(actual_sample_rate)
-            #num_samples = 256 * 1024
 
         except Exception as e:
             error_msg = f"Error connecting to SoapySDR device: {str(e)}"
@@ -451,54 +450,37 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
 
 def calculate_samples_per_scan(sample_rate):
     """
-    Calculate the optimal number of samples to read from an SDR based on its sample rate.
-
-    For low sample rates, we use a higher number of samples to improve frequency resolution.
-    For high sample rates, we use a lower number of samples to maintain processing efficiency.
+    Calculate samples needed to maintain a constant FFT production rate
+    regardless of sample rate.
 
     Args:
         sample_rate (float): The sample rate of the SDR in Hz
 
     Returns:
-        int: The recommended number of samples to read (as a power of 2)
+        int: Number of samples to collect (rounded to power of 2)
     """
-    # Base parameters - increased max_samples for better low-rate resolution
-    max_samples = 512 * 1024  # 1M samples for lowest sample rates
-    min_samples = max_samples // 64  # Minimum samples for highest sample rates
+    # Define your target FFT production rate (FFTs per second)
+    target_fft_rate = 10  # Adjust this value as needed
 
-    logger.info(f"max_samples: {max_samples}, min_samples: {min_samples}")
+    # Calculate time needed per FFT in seconds
+    time_per_fft = 1.0 / target_fft_rate
 
-    # Reference sample rates for scaling
-    min_rate = 5e5  # 500 kHz
-    max_rate = 20e6  # 20 MHz
+    # Calculate samples needed at this sample rate
+    samples_needed = int(sample_rate * time_per_fft)
 
-    # Clamp the sample rate within our defined range
-    clamped_rate = max(min(sample_rate, max_rate), min_rate)
+    # Round to nearest power of 2 for efficient FFT processing
+    power_of_2 = 2 ** math.floor(math.log2(samples_needed))
 
-    # Calculate a scaling factor based on logarithmic scale with stronger weighting
-    # Using an exponential curve to weight low sample rates more heavily
-    log_factor = (math.log10(clamped_rate) - math.log10(min_rate)) / (math.log10(max_rate) - math.log10(min_rate))
+    # Handle edge cases - set minimum and maximum sample counts
+    min_samples = 1024  # Minimum reasonable FFT size
+    max_samples = 1024 * 1024  # Maximum to prevent memory issues
 
-    # Apply stronger non-linear scaling to emphasize more samples at lower rates
-    # Increased exponent from 0.75 to 0.85 to create a steeper curve
-    samples = int(max_samples * (1 - 0.85 * log_factor**0.8))
+    samples = max(min(power_of_2, max_samples), min_samples)
 
-    # Apply a bias factor for very low sample rates (below 500 kHz)
-    if clamped_rate < 5e5:  # Below 500 kHz
-        boost_factor = 1.5 * (1 - (clamped_rate - min_rate) / (5e5 - min_rate))
-        samples = int(samples * (1 + boost_factor))
+    logger.info(f"Sample rate: {sample_rate/1e6:.3f} MHz, samples: {samples}, "
+                f"expected FFT duration: {samples/sample_rate:.3f} sec")
 
-    # Ensure we're within reasonable bounds
-    samples = max(min(samples, max_samples), min_samples)
-
-    # Round to nearest power of 2 for more efficient FFT processing
-    power_of_2 = 2 ** math.floor(math.log2(samples))
-
-    logger.info(f"Sample rate: {clamped_rate/1e6:.3f} MHz, calculated samples: {samples}, "
-                f"power_of_2: {power_of_2}, duration: {power_of_2/clamped_rate:.3f} seconds")
-
-    return power_of_2
-
+    return samples
 
 
 def remove_dc_offset(samples):

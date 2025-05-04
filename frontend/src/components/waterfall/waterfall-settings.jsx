@@ -379,21 +379,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         <LoadingOverlay loading={gettingSDRParameters}>
                             <Box sx={{mb: 2}}>
                                 <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                             variant="filled" size="small">
-                                    <InputLabel>Target FPS</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={targetFPS}
-                                        onChange={(e) => dispatch(setTargetFPS(e.target.value))}
-                                        variant={'filled'}>
-                                        {[5, 10, 15, 20, 30, 40, 50].map(fps => (
-                                            <MenuItem key={fps} value={fps}>{fps}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                                <FormControl disabled={gettingSDRParameters}
                                              margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                              fullWidth={true} variant="filled"
                                              size="small">
