@@ -1,13 +1,11 @@
 import sys
+import os
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+
 import uvicorn
 import socketio
-import os
-import os.path
 import httpx
-import rtlsdr
-import logging
-import threading
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
+import numpy as np
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from tracking import satellite_tracking_task
@@ -27,6 +25,8 @@ from typing import Optional, Dict, Any, Union
 from waterfall import waterfall_socket_app, cleanup_sdr_session
 from sdrprocessmanager import sdr_process_manager
 from soapysdrbrowser import discover_soapy_servers
+
+np.show_config()
 
 
 Payload.max_decode_packets = 50

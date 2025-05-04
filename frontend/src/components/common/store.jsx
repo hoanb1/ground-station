@@ -108,14 +108,14 @@ const synchronizePersistConfig = {
     whitelist: []
 };
 
-// Persist configuration for preferences slice
+// Persist configuration for the 'preferences' slice
 const preferencesPersistConfig = {
     key: 'preferences',
     storage,
     whitelist: []
 };
 
-// Persist configuration for target satellite tracking slice
+// Persist configuration for the target satellite tracking slice
 const targetSatTrackPersistConfig = {
     key: 'targetSatTrack',
     storage,
@@ -129,7 +129,7 @@ const overviewSatTrackPersistConfig = {
     whitelist: []
 };
 
-// Persist configuration for dashboard slice
+// Persist configuration for the dashboard slice
 const dashboardPersistConfig = {
     key: 'dashboard',
     storage,
