@@ -509,6 +509,10 @@ const   MainWaterfallDisplay = React.memo(() => {
 
             const waterFallCtx = waterFallCanvas.getContext('2d');
 
+            // Enable image smoothing (anti-aliasing)
+            waterFallCtx.imageSmoothingEnabled = true;
+            waterFallCtx.imageSmoothingQuality = 'high'; // Options: 'low', 'medium', 'high'
+
             // Move existing pixels DOWN (instead of up)
             waterFallCtx.drawImage(waterFallCanvas, 0, 0, waterFallCanvas.width, waterFallCanvas.height - 1, 0, 1, waterFallCanvas.width, waterFallCanvas.height - 1);
 
@@ -614,7 +618,16 @@ const   MainWaterfallDisplay = React.memo(() => {
         }
 
         const bandScopeCtx = bandScopeCanvas.getContext('2d');
+
+        // Enable image smoothing (anti-aliasing)
+        bandScopeCtx.imageSmoothingEnabled = true;
+        bandScopeCtx.imageSmoothingQuality = 'high'; // Options: 'low', 'medium', 'high'
+
         const dBAxisCtx = dBAxisCanvas.getContext('2d');
+
+        // Enable image smoothing (anti-aliasing)
+        dBAxisCtx.imageSmoothingEnabled = true;
+        dBAxisCtx.imageSmoothingQuality = 'high'; // Options: 'low', 'medium', 'high'
 
         const width = bandScopeCanvas.width;
         const height = bandScopeCanvas.height;
