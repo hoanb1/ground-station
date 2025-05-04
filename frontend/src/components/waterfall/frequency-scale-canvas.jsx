@@ -7,7 +7,7 @@ const getFrequencyScaleWidth = (element) => {
 }
 
 
-const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
+const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHeight = 20 }) => {
     const canvasRef = useRef(null);
     const frequencyScaleContainerRef = useRef(null);
     const [actualWidth, setActualWidth] = useState(4096);
@@ -200,7 +200,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
             ref={frequencyScaleContainerRef}
             style={{
                 width: '100%',
-                height: '20px',
+                height: `${canvasHeight}px`,
                 position: 'relative',
                 boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
             }}
@@ -208,7 +208,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth }) => {
             <canvas
                 ref={canvasRef}
                 width={actualWidth}
-                height={20}
+                height={canvasHeight}
                 style={{
                     display: 'block',
                     width: '100%',

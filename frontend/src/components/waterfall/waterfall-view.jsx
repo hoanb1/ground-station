@@ -12,7 +12,7 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions,
+    DialogActions, Slider,
 } from '@mui/material';
 import ErrorIcon from '@mui/icons-material/Error';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -60,6 +60,7 @@ import {
     setWaterFallPositionX,
     setStartStreamingLoading,
     setWaterFallCanvasHeight,
+    setBandScopeHeight,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -71,7 +72,7 @@ export const createExternalWorker = () => {
     return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
 };
 
-const MainWaterfallDisplay = React.memo(() => {
+const   MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
@@ -123,9 +124,12 @@ const MainWaterfallDisplay = React.memo(() => {
         tunerAgc,
         rtlAgc,
         fftWindow,
+        dBRange,
         waterFallVisualWidth,
         waterFallCanvasWidth,
         waterFallCanvasHeight,
+        bandScopeHeight,
+        frequencyScaleHeight,
         selectedSDRId,
         startStreamingLoading,
         gettingSDRParameters,
@@ -134,6 +138,7 @@ const MainWaterfallDisplay = React.memo(() => {
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
+    const [localDbRange, setLocalDbRange] = useState(dbRange);
 
     const cancelAnimations = () => {
         // Stop the worker
@@ -164,8 +169,6 @@ const MainWaterfallDisplay = React.memo(() => {
         visualSettingsRef.current.colorMap = colorMap;
         visualSettingsRef.current.sampleRate = sampleRate;
         visualSettingsRef.current.centerFrequency = centerFrequency;
-
-        drawBandscope();
 
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
@@ -826,10 +829,10 @@ const MainWaterfallDisplay = React.memo(() => {
                         <canvas
                             ref={dBAxisScopeCanvasRef}
                             width={bandscopeAxisYWidth}
-                            height={110}
+                            height={bandScopeHeight}
                             style={{
                                 width: '100%',
-                                height: '110px',
+                                height: `${bandScopeHeight}px`,
                                 backgroundColor: 'rgba(40, 40, 40, 0.7)',
                                 display: 'block',
                             }}
@@ -868,6 +871,58 @@ const MainWaterfallDisplay = React.memo(() => {
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
                     />
+
+                    <Box
+                        sx={{
+                            width: '50px',
+                            minWidth: '50px',
+                            maxWidth: '50px',
+                            height: `calc(${frequencyScaleHeight}px + ${bandScopeHeight}px + ${waterFallCanvasHeight}px)`,
+                            position: 'relative',
+                            borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
+                            backgroundColor: 'rgba(28, 28, 28, 1)',
+                            display: 'flex',
+                            flexDirection: 'column',
+                            flexShrink: 0,
+                        }}
+                    >
+                        <Typography sx={{
+                            mb: 1,
+                            width: '100%',
+                            textAlign: 'center',
+                            fontFamily: 'Monospace'
+                        }}>
+                            {dbRange[0]}
+                        </Typography>
+                        <Slider
+                            disabled={gettingSDRParameters}
+                            orientation="vertical"
+                            value={dBRange}
+                            onChange={(e, newValue) => {
+                                console.info(newValue);
+                                dispatch(setDbRange(newValue));
+                            }}
+                            getAriaLabel={() => 'dB Range'}
+                            valueLabelDisplay="auto"
+                            min={-110}
+                            max={30}
+                            step={1}
+                            sx={{
+                                width: '23px',
+                                height: '500px',
+                                '& .MuiSlider-thumb': {
+                                    width: 12,
+                                    height: 12,
+                                },
+                            }}
+                        />
+                        <Typography sx={{
+                            mt: 1,
+                            width: '100%',
+                            textAlign: 'center',
+                            fontFamily: 'Monospace'
+                        }}>{dbRange[1]}</Typography>
+                    </Box>
                 </Box>
             </Box>
 
@@ -950,8 +1005,10 @@ const WaterfallWithStrictXAxisZoom = ({
         waterFallVisualWidth,
         waterFallCanvasWidth,
         waterFallCanvasHeight,
+        bandScopeHeight,
         waterFallScaleX,
         waterFallPositionX,
+        frequencyScaleHeight,
     } = useSelector((state) => state.waterfall);
     // State for React rendering
     const [customScale, setCustomScale] = useState(1);
@@ -977,7 +1034,7 @@ const WaterfallWithStrictXAxisZoom = ({
         // Scale the center point positions
         const oldScaledCenter = (oldCenterPoint - positionXRef.current) / scaleRef.current;
 
-        // Calculate the position to maintain the same content at center
+        // Calculate the position to maintain the same content at the center
         const newPositionX = newCenterPoint - (oldScaledCenter * scaleRef.current);
 
         // Apply constraints to keep within bounds
@@ -990,6 +1047,7 @@ const WaterfallWithStrictXAxisZoom = ({
         // Apply transform
         applyTransform();
         updateReactState();
+
     }, []);
 
     // Set up ResizeObserver to detect container size changes
@@ -1022,7 +1080,7 @@ const WaterfallWithStrictXAxisZoom = ({
         if (containerRef.current) {
             containerRef.current.style.transform = `translateX(${positionXRef.current}px) scaleX(${scaleRef.current})`;
 
-            // Updating state on mouse wheel is not a good idea
+            // Updating state on a mouse wheel event is not a good idea
             //const newVisualWidth = getScaledWidth(containerRef.current, scaleRef.current);
             //setVisualContainerWidth(newVisualWidth);
             //dispatch(setWaterFallVisualWidth(newVisualWidth));
@@ -1329,10 +1387,10 @@ const WaterfallWithStrictXAxisZoom = ({
                 <canvas
                     ref={bandscopeCanvasRef}
                     width={waterFallCanvasWidth}
-                    height={110}
+                    height={bandScopeHeight}
                     style={{
                         width: '100%',
-                        height: '110px',
+                        height: `${bandScopeHeight}px`,
                         borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
                         display: 'block',
                         touchAction: 'pan-y',

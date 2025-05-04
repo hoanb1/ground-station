@@ -59,6 +59,8 @@ const waterfallSlice = createSlice({
         waterFallCanvasWidth: 8191,
         waterFallCanvasHeight: 900,
         waterFallVisualWidth: 8191,
+        bandScopeHeight: 110,
+        frequencyScaleHeight: 20,
         waterFallScaleX: 1,
         waterFallPositionX: 0,
         expandedPanels: ['sdr', 'freqControl', 'fft'],
@@ -158,6 +160,12 @@ const waterfallSlice = createSlice({
         setWaterFallCanvasHeight(state, action) {
             state.waterFallCanvasHeight = action.payload;
         },
+        setBandScopeHeight(state, action) {
+            state.bandScopeHeight = action.payload;
+        },
+        setFrequencyScaleHeight(state, action) {
+            state.frequencyScaleHeight = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -211,6 +219,8 @@ export const {
     setStartStreamingLoading,
     setErrorDialogOpen,
     setWaterFallCanvasHeight,
+    setBandScopeHeight,
+    setFrequencyScaleHeight,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;
