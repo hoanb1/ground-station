@@ -164,27 +164,15 @@ const   MainWaterfallDisplay = React.memo(() => {
         if (!mainWaterFallContainer.current) {
             return;
         }
-
         const resizeObserver = new ResizeObserver(entries => {
-            const { contentRect } = entries[0];
+            const {contentRect} = entries[0];
+            console.info(`ResizeObserver: ${contentRect.width}x${contentRect.height}`);
+            setDimensions({width: contentRect.width, height: contentRect.height});
 
-            // Check if component is fully visible in viewport
-            const rect = mainWaterFallContainer.current.getBoundingClientRect();
-            const isFullyVisible =
-                rect.top >= 0 &&
-                rect.left >= 0 &&
-                rect.bottom <= window.innerHeight &&
-                rect.right <= window.innerWidth;
-
-            if (!isFullyVisible) {
-                // Calculate new dimensions to make fully visible
-                const newWidth = Math.min(contentRect.width, window.innerWidth - rect.left);
-                const newHeight = Math.min(contentRect.height, window.innerHeight - rect.top);
-                setDimensions({ width: newWidth, height: newHeight });
-            }
         });
 
         resizeObserver.observe(mainWaterFallContainer.current?.parentElement);
+
         return () => {
             resizeObserver.disconnect();
         };
@@ -921,9 +909,9 @@ const   MainWaterfallDisplay = React.memo(() => {
                             >
                             </Button>
                             <Button
-                                variant={"filled"}
+                                variant={autoDBRange ? "contained" : "filled"}
                                 disabled={!isStreaming}
-                                color={"info"}
+                                color={autoDBRange ? "success" : "info"}
                                 onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
                                 title="Toggle automatic dB scale"
                                 sx={{
@@ -935,14 +923,13 @@ const   MainWaterfallDisplay = React.memo(() => {
                                 Auto
                             </Button>
                         </Stack>
-
                         <Typography sx={{
                             mt: 1,
                             width: '100%',
                             textAlign: 'center',
                             fontFamily: 'Monospace'
                         }}>
-                        {dbRange[1]}
+                            {dbRange[1]}
                         </Typography>
 
                         <Slider
@@ -1067,7 +1054,7 @@ const WaterfallWithStrictXAxisZoom = ({
         frequencyScaleHeight,
         autoDBRange,
     } = useSelector((state) => state.waterfall);
-    // State for React rendering
+
     const [customScale, setCustomScale] = useState(1);
     const [customPositionX, setCustomPositionX] = useState(0);
     const [visualContainerWidth, setVisualContainerWidth] = useState(waterFallCanvasWidth);

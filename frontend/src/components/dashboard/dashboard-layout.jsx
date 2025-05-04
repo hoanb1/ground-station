@@ -57,7 +57,6 @@ function DashboardEditor() {
     );
 }
 
-
 function ConnectionStatus() {
     const socket = useSocket().socket;
     const [transportType, setTransportType] = useState('connecting...');
@@ -345,20 +344,25 @@ export default function Layout() {
     }, [socket]);
     
     return (
-            <DashboardLayout defaultSidebarCollapsed slots={{
+        <DashboardLayout
+            sx={{
+                minHeight: '1000px'
+            }}
+            defaultSidebarCollapsed
+            slots={{
                 appTitle: CustomAppTitle,
                 toolbarActions: ToolbarActions,
                 toolbarAccount: () => {},
                 //sidebarFooter: SidebarFooterAccount
                 sidebarFooter: () => {}
-            }}>
-                {loading ? (
-                    <Backdrop open={loading}>
-                        <CircularProgress color="inherit"/>
-                    </Backdrop>
-                ) : (
-                    <Outlet/>
-                )}
-            </DashboardLayout>
+        }}>
+            {loading ? (
+                <Backdrop open={loading}>
+                    <CircularProgress color="inherit"/>
+                </Backdrop>
+            ) : (
+                <Outlet/>
+            )}
+        </DashboardLayout>
     );
 }
