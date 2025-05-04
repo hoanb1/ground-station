@@ -198,9 +198,12 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                             sdr.setSampleRate(SOAPY_SDR_RX, channel, new_config['sample_rate'])
                             actual_sample_rate = sdr.getSampleRate(SOAPY_SDR_RX, channel)
 
-                            # Setup stream again with new sample rate
+                            # Setup stream again with a new sample rate
                             rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
                             sdr.activateStream(rx_stream)
+
+                            # Number of samples required for each iteration
+                            num_samples = calculate_samples_per_scan(actual_sample_rate)
 
                             logger.info(f"Updated sample rate: {actual_sample_rate}")
 

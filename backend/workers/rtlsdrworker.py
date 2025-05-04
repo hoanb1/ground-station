@@ -4,10 +4,14 @@ import numpy as np
 import rtlsdr
 import time
 import logging
+import math
 from functools import partial
 from .rtlsdrtcpclient import RtlSdrTcpClient
 from .common import window_functions
 
+
+# Configure logging for the worker process
+logger = logging.getLogger('rtlsdr-worker')
 
 def rtlsdr_worker_process(config_queue, data_queue, stop_event):
     """
@@ -22,9 +26,6 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         data_queue: Queue for sending processed data back to the main process
         stop_event: Event to signal the process to stop
     """
-
-    # Configure logging for the worker process
-    logger = logging.getLogger('rtlsdr-worker')
 
     # Default configuration
     sdr = None
@@ -68,6 +69,9 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
 
         logger.info(f"RTL-SDR configured: sample_rate={sdr.sample_rate}, center_freq={sdr.center_freq}, gain={sdr.gain}")
 
+        # Calculate the number of samples based on sample rate
+        num_samples = calculate_samples_per_scan(sdr.sample_rate)
+
         # if we reached here, we can set the UI to streaming
         data_queue.put({
             'type': 'streamingstart',
@@ -86,6 +90,10 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                     if 'sample_rate' in new_config:
                         if sdr.sample_rate != new_config['sample_rate']:
                             sdr.sample_rate = new_config['sample_rate']
+
+                            # Calculate the number of samples based on sample rate
+                            num_samples = calculate_samples_per_scan(sdr.sample_rate)
+
                             logger.info(f"Updated sample rate: {sdr.sample_rate}")
 
                     if 'center_freq' in new_config:
@@ -138,8 +146,6 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                     })
 
             try:
-                # Calculate the number of samples based on sample rate
-                num_samples = calculate_samples_per_scan(sdr.sample_rate)
 
                 # Read samples
                 samples = sdr.read_samples(num_samples)
@@ -276,21 +282,40 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.info("RTL-SDR worker process terminated")
 
 
+
 def calculate_samples_per_scan(sample_rate):
     """
-    Calculate the number of samples required per scan based on the provided sample rate.
-    """
-    # Default value for high sample rates
-    base_samples = 128 * 1024
+    Calculate samples needed to maintain a constant FFT production rate
+    regardless of sample rate.
 
-    if sample_rate <= 5e5:  # Less than 500KHz
-        return base_samples // 4
-    elif sample_rate <= 1e6:  # Less than 1 MHz
-        return base_samples // 2
-    elif sample_rate <= 2e6:  # Less than 2 MHz
-        return base_samples // 1
-    else:
-        return base_samples
+    Args:
+        sample_rate (float): The sample rate of the SDR in Hz
+
+    Returns:
+        int: Number of samples to collect (rounded to power of 2)
+    """
+    # Define your target FFT production rate (FFTs per second)
+    target_fft_rate = 10  # Adjust this value as needed
+
+    # Calculate time needed per FFT in seconds
+    time_per_fft = 1.0 / target_fft_rate
+
+    # Calculate samples needed at this sample rate
+    samples_needed = int(sample_rate * time_per_fft)
+
+    # Round to nearest power of 2 for efficient FFT processing
+    power_of_2 = 2 ** math.floor(math.log2(samples_needed))
+
+    # Handle edge cases - set minimum and maximum sample counts
+    min_samples = 1024  # Minimum reasonable FFT size
+    max_samples = 1024 * 1024  # Maximum to prevent memory issues
+
+    samples = max(min(power_of_2, max_samples), min_samples)
+
+    logger.info(f"Sample rate: {sample_rate/1e6:.3f} MHz, samples: {samples}, "
+                f"expected FFT duration: {samples/sample_rate:.3f} sec")
+
+    return samples
 
 
 def remove_dc_offset(samples):
