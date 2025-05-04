@@ -44,10 +44,157 @@ const rootReducer = combineReducers({
     sdrs: sdrsReducer,
 });
 
-const persistedReducer = persistReducer(persistConfig, rootReducer);
+// Persist configuration for waterfall slice
+const waterfallPersistConfig = {
+    key: 'waterfall',
+    storage,
+    whitelist: ['colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
+        'showLeftSideWaterFallAccessories']
+};
+
+// Persist configuration for the 'rigs' slice
+const rigsPersistConfig = {
+    key: 'rigs',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for the 'rotators' slice
+const rotatorsPersistConfig = {
+    key: 'rotators',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for the 'TLE sources' slice
+const tleSourcesPersistConfig = {
+    key: 'tleSources',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for satellites slice
+const satellitesPersistConfig = {
+    key: 'satellites',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for satellite groups slice
+const satelliteGroupsPersistConfig = {
+    key: 'satelliteGroups',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for the 'users' slice
+const usersPersistConfig = {
+    key: 'users',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for location slice
+const locationPersistConfig = {
+    key: 'location',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for the 'synchronize' slice
+const synchronizePersistConfig = {
+    key: 'synchronize',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for preferences slice
+const preferencesPersistConfig = {
+    key: 'preferences',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for target satellite tracking slice
+const targetSatTrackPersistConfig = {
+    key: 'targetSatTrack',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for overview satellite tracking slice
+const overviewSatTrackPersistConfig = {
+    key: 'overviewSatTrack',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for dashboard slice
+const dashboardPersistConfig = {
+    key: 'dashboard',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for weather slice
+const weatherPersistConfig = {
+    key: 'weather',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for camera slice
+const cameraPersistConfig = {
+    key: 'camera',
+    storage,
+    whitelist: []
+};
+
+// Persist configuration for SDR slice
+const sdrPersistConfig = {
+    key: 'sdr',
+    storage,
+    whitelist: []
+};
+
+// Wrap reducers with persistReducer
+const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
+const persistedRigsReducer = persistReducer(rigsPersistConfig, rigsReducer);
+const persistedRotatorsReducer = persistReducer(rotatorsPersistConfig, rotatorsReducer);
+const persistedTleSourcesReducer = persistReducer(tleSourcesPersistConfig, tleSourcesReducer);
+const persistedSatellitesReducer = persistReducer(satellitesPersistConfig, satellitesReducer);
+const persistedSatelliteGroupsReducer = persistReducer(satelliteGroupsPersistConfig, satelliteGroupReducer);
+const persistedUsersReducer = persistReducer(usersPersistConfig, usersReducer);
+const persistedLocationReducer = persistReducer(locationPersistConfig, locationReducer);
+const persistedSynchronizeReducer = persistReducer(synchronizePersistConfig, synchronizeReducer);
+const persistedPreferencesReducer = persistReducer(preferencesPersistConfig, preferencesReducer);
+const persistedTargetSatTrackReducer = persistReducer(targetSatTrackPersistConfig, targetSatTrackReducer);
+const persistedOverviewSatTrackReducer = persistReducer(overviewSatTrackPersistConfig, overviewSatTrackReducer);
+const persistedDashboardReducer = persistReducer(dashboardPersistConfig, dashboardReducer);
+const persistedWeatherReducer = persistReducer(weatherPersistConfig, weatherReducer);
+const persistedCameraReducer = persistReducer(cameraPersistConfig, cameraReducer);
+const persistedSdrReducer = persistReducer(sdrPersistConfig, sdrsReducer);
+
 
 export const store = configureStore({
-    reducer: persistedReducer,
+    reducer: {
+        waterfall: persistedWaterfallReducer,
+        rigs: persistedRigsReducer,
+        rotators: persistedRotatorsReducer,
+        tleSources: persistedTleSourcesReducer,
+        satellites: persistedSatellitesReducer,
+        satelliteGroups: persistedSatelliteGroupsReducer,
+        users: persistedUsersReducer,
+        location: persistedLocationReducer,
+        syncSatellite: persistedSynchronizeReducer,
+        preferences: persistedPreferencesReducer,
+        targetSatTrack: persistedTargetSatTrackReducer,
+        overviewSatTrack: persistedOverviewSatTrackReducer,
+        dashboard: persistedDashboardReducer,
+        weather: persistedWeatherReducer,
+        cameras: persistedCameraReducer,
+        sdrs: persistedSdrReducer,
+    },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>
         getDefaultMiddleware({
