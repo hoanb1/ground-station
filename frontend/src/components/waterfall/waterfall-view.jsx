@@ -1180,7 +1180,7 @@ const WaterfallWithStrictXAxisZoom = ({
     // Zoom functionality
     const zoomOnXAxisOnly = useCallback((deltaScale, centerX) => {
         const prevScale = scaleRef.current;
-        const newScale = Math.max(1, Math.min(10, prevScale + deltaScale));
+        const newScale = Math.max(1, Math.min(15, prevScale + deltaScale));
 
         // Exit if the scale didn't change
         if (newScale === prevScale) return;

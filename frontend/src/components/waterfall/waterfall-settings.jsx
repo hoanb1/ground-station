@@ -191,28 +191,30 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
     };
 
     function handleSDRChange(event) {
-        // Reset UI values since once we get new values from the backend, they might not be valid anymore
-        dispatch(setSampleRate(""));
-        dispatch(setGain(""));
-
+        // Check what was selected
         dispatch(setSelectedSDRId(event.target.value));
+        if (event.target.value === "none") {
+            // Reset UI values since once we get new values from the backend, they might not be valid anymore
+            dispatch(setSampleRate(""));
+            dispatch(setGain(""));
+        } else {
+            // Call the backend
+            dispatch(getSDRConfigParameters({socket, selectedSDRId: event.target.value}))
+                .unwrap()
+                .then(response => {
 
-        // Call the backend
-        dispatch(getSDRConfigParameters({socket, selectedSDRId: event.target.value}))
-            .unwrap()
-        .then(response => {
-
-        })
-        .catch(error => {
-            // Error occurred while getting SDR parameters
-            dispatch(setErrorMessage(error));
-            dispatch(setIsStreaming(false));
-            dispatch(setErrorDialogOpen(true));
-            enqueueSnackbar(error, {
-                variant: 'error',
-                autoHideDuration: 5000,
-            });
-        });
+                })
+                .catch(error => {
+                    // Error occurred while getting SDR parameters
+                    dispatch(setErrorMessage(error));
+                    dispatch(setIsStreaming(false));
+                    dispatch(setErrorDialogOpen(true));
+                    enqueueSnackbar(error, {
+                        variant: 'error',
+                        autoHideDuration: 5000,
+                    });
+                });
+        }
     }
 
     return (
@@ -275,12 +277,15 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={gainValues.length? localGain: ""}
+                                        value={gainValues.length? localGain: "none"}
                                         onChange={(e) => {
                                             setLocalGain(e.target.value);
                                             dispatch(setGain(e.target.value));
                                         }}
                                         variant={'filled'}>
+                                        <MenuItem value="none">
+                                            [no gain selected]
+                                        </MenuItem>
                                         {gainValues.map(gain => (
                                             <MenuItem key={gain} value={gain}>
                                                 {gain} dB
@@ -296,12 +301,15 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={sampleRateValues.length? localSampleRate: ""}
+                                        value={sampleRateValues.length? localSampleRate: "none"}
                                         onChange={(e) => {
                                             setLocalSampleRate(e.target.value);
                                             dispatch(setSampleRate(e.target.value));
                                         }}
                                         variant={'filled'}>
+                                        <MenuItem value="none">
+                                            [no rate selected]
+                                        </MenuItem>
                                         {sampleRateValues.map(rate => {
                                             // Format the sample rate for display
                                             let displayValue;
