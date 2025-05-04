@@ -12,7 +12,8 @@ import {
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions, Slider,
+    DialogActions, Slider, ToggleButton,
+    ToggleButtonGroup,
 } from '@mui/material';
 import ErrorIcon from '@mui/icons-material/Error';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -34,6 +35,9 @@ import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
 import SettingsIcon from '@mui/icons-material/Settings';
 import HeightIcon from '@mui/icons-material/Height';
+import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
+import AlignHorizontalRightIcon from '@mui/icons-material/AlignHorizontalRight';
+
 import {useSocket} from "../common/socket.jsx";
 import {
     setColorMap,
@@ -60,7 +64,10 @@ import {
     setWaterFallPositionX,
     setStartStreamingLoading,
     setWaterFallCanvasHeight,
-    setBandScopeHeight, setAutoDBRange,
+    setBandScopeHeight,
+    setAutoDBRange,
+    setShowRightSideWaterFallAccessories,
+    setShowLeftSideWaterFallAccessories,
 } from './waterfall-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -134,6 +141,8 @@ const   MainWaterfallDisplay = React.memo(() => {
         selectedSDRId,
         startStreamingLoading,
         gettingSDRParameters,
+        showRightSideWaterFallAccessories,
+        showLeftSideWaterFallAccessories,
     } = useSelector((state) => state.waterfall);
     const targetFPSRef = useRef(targetFPS);
     const [scrollFactor, setScrollFactor] = useState(1);
@@ -777,9 +786,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                     borderRadius: 0,
                 }}>
                     <ButtonGroup variant="contained" size="small">
-                        <Button
-                            startIcon={<PlayArrowIcon/>}
-                            loading={startStreamingLoading}
+                        <IconButton
                             disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}
                             color="primary"
                             onClick={startStreaming}
@@ -787,10 +794,9 @@ const   MainWaterfallDisplay = React.memo(() => {
                                 borderRadius: 0,
                             }}
                         >
-                            Start
-                        </Button>
-                        <Button
-                            startIcon={<StopIcon/>}
+                            <PlayArrowIcon/>
+                        </IconButton>
+                        <IconButton
                             disabled={!isStreaming}
                             color="error"
                             onClick={stopStreaming}
@@ -798,8 +804,24 @@ const   MainWaterfallDisplay = React.memo(() => {
                                 borderRadius: 0,
                             }}
                         >
-                            Stop
-                        </Button>
+                            <StopIcon/>
+                        </IconButton>
+
+                        <IconButton
+                            onClick={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
+                            size="small"
+                            sx={{borderRadius: 0}}
+                        >
+                            <AlignHorizontalLeftIcon/>
+                        </IconButton>
+
+                        <IconButton
+                            onClick={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
+                            size="small"
+                            sx={{borderRadius: 0}}
+                        >
+                            <AlignHorizontalRightIcon/>
+                        </IconButton>
                     </ButtonGroup>
                 </Paper>
             </Box>
@@ -830,7 +852,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                             height: '1000px',
                             position: 'relative',
                             borderRight: '1px solid rgba(255, 255, 255, 0.2)',
-                            display: 'flex',
+                            display: showLeftSideWaterFallAccessories ? 'inherit' : 'none',
                             flexDirection: 'column',
                             flexShrink: 0,
                         }}
@@ -890,7 +912,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                             position: 'relative',
                             borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
                             backgroundColor: 'rgba(28, 28, 28, 1)',
-                            display: 'flex',
+                            display: showRightSideWaterFallAccessories ? 'flex' : 'none',
                             flexDirection: 'column',
                             flexShrink: 0,
                         }}
@@ -1112,6 +1134,7 @@ const WaterfallWithStrictXAxisZoom = ({
         return () => {
             resizeObserver.disconnect();
         };
+
     }, [handleResize]);
 
     // Calculate the visual width including CSS transforms

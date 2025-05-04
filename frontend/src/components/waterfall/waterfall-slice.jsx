@@ -63,6 +63,8 @@ const waterfallSlice = createSlice({
         frequencyScaleHeight: 20,
         waterFallScaleX: 1,
         waterFallPositionX: 0,
+        showRightSideWaterFallAccessories: true,
+        showLeftSideWaterFallAccessories: true,
         expandedPanels: ['sdr', 'freqControl', 'fft'],
         selectedSDRId: "none",
         startStreamingLoading: false,
@@ -166,6 +168,12 @@ const waterfallSlice = createSlice({
         setFrequencyScaleHeight(state, action) {
             state.frequencyScaleHeight = action.payload;
         },
+        setShowRightSideWaterFallAccessories(state, action) {
+            state.showRightSideWaterFallAccessories = action.payload;
+        },
+        setShowLeftSideWaterFallAccessories(state, action) {
+            state.showLeftSideWaterFallAccessories = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -221,6 +229,8 @@ export const {
     setWaterFallCanvasHeight,
     setBandScopeHeight,
     setFrequencyScaleHeight,
+    setShowRightSideWaterFallAccessories,
+    setShowLeftSideWaterFallAccessories,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;
