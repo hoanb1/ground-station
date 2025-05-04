@@ -966,17 +966,17 @@ const   MainWaterfallDisplay = React.memo(() => {
                             step={1}
                             valueLabelDisplay="auto"
                             sx={{
-                                width: '23px',
+                                width: '22px',
                                 margin: '0 auto',
                                 '& .MuiSlider-thumb': {
-                                    width: 12,
-                                    height: 12,
+                                    width: 25,
+                                    height: 25,
                                 },
                                 '& .MuiSlider-track': {
-                                    width: 3
+                                    width: 10
                                 },
                                 '& .MuiSlider-rail': {
-                                    width: 3
+                                    width: 10
                                 }
                             }}
                         />
