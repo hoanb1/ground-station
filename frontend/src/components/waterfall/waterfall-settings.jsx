@@ -16,7 +16,7 @@ import {
     setRtlAgc,
     setTunerAgc
 } from './waterfall-slice.jsx';
-import FrequencyControl from "./frequency-control.jsx";
+
 import {
     setColorMap,
     setColorMaps,

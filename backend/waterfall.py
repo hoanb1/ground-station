@@ -137,7 +137,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
 
         sdr = sdr_device_reply['data']
 
-        if sdr.get('type') in ['rtlsdrtcpv3', 'rtlsdrusbv3', 'rtlsdrusbv4', 'rtlsdrusbv4']:
+        if sdr.get('type') in ['rtlsdrtcpv3', 'rtlsdrusbv3', 'rtlsdrtcpv4', 'rtlsdrusbv4']:
 
             # Common RTL-SDR gain values in dB
             gain_values = [0.0, 0.9, 1.4, 2.7, 3.7, 7.7, 8.7, 12.5, 14.4, 15.7,
@@ -181,7 +181,6 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
 
             try:
                 stdout, _ = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
-                logger.info(stdout)
 
             except asyncio.TimeoutError:
                 probe_process.kill()
@@ -229,5 +228,8 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
         reply['error'] = error_msg
 
     finally:
+
+        logger.info(f"{reply}")
+
         return reply
 
