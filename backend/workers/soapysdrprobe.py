@@ -1,10 +1,19 @@
 import logging
+import logging.config
 import numpy as np
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
+import yaml
+import os
 
+# Load logger configuration
+with open(os.path.join(os.path.dirname(__file__), '../logconfig.yaml'), 'r') as f:
+    config = yaml.safe_load(f)
+    logging.config.dictConfig(config)
 
 logger = logging.getLogger('soapysdr-probe')
+
+
 
 def get_soapy_sdr_parameters(sdr_details):
     """
@@ -87,11 +96,14 @@ def get_soapy_sdr_parameters(sdr_details):
         # Check if automatic gain control is supported
         try:
             has_agc = sdr.hasGainMode(SOAPY_SDR_RX, channel)
+
         except Exception as e:
             logger.warning("Could not determine if automatic gain control is supported")
-            pass
+            logger.exception(e)
 
     except Exception as e:
+        logger.error(f"Error connecting to SoapySDR device: {str(e)}")
+        logger.exception(e)
         raise
 
     finally:

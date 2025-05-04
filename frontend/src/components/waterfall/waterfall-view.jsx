@@ -91,9 +91,6 @@ const MainWaterfallDisplay = React.memo(() => {
     });
     const colorCache = useRef(new Map());
 
-    const lastFrameTimeRef = useRef(0);
-    const lastBandscopeFrameTimeRef = useRef(0); // New ref for bandscope timing
-
     // Add state for tracking metrics
     const [eventMetrics, setEventMetrics] = useState({
         eventsPerSecond: 0,

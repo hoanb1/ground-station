@@ -115,11 +115,12 @@ async def stop_waterfall_streaming(sid):
 async def stream_waterfall_data_task(sid, device_index, config):
     """Background task to stream waterfall data to a client"""
 
-async def get_sdr_parameters(dbsession, sdr_id, timeout=10.0):
+async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
     """Retrieve SDR parameters from the SDR process manager"""
 
     reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None, 'error': None}
     sdr = {}
+    sdr_params = {}
     params = {
         'gain_values': [],
         'sample_rate_values': [],
@@ -153,7 +154,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=10.0):
             window_function_names = list(window_functions.keys())
 
             # Common FFT sizes
-            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384]
+            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
 
             params = {
                 'gain_values': gain_values,
@@ -169,21 +170,30 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=10.0):
 
         elif sdr.get('type') in ['soapysdrremote', 'soapysdrlocal']:
 
-            logger.info(f'Getting SDR parameters for SoapySDR server: {sdr}')
+            logger.info(f'Getting SDR parameters from SoapySDR server for SDR: {sdr}')
 
             # Get SDR parameters from the SoapySDR server in a separate thread
-            sdr_params = await asyncio.create_subprocess_exec(
+            probe_process = await asyncio.create_subprocess_exec(
                 'python3', '-c',
                 f'from workers.soapysdrprobe import get_soapy_sdr_parameters; print(get_soapy_sdr_parameters({sdr}))',
                 stdout=asyncio.subprocess.PIPE
             )
+
             try:
-                stdout, _ = await asyncio.wait_for(sdr_params.communicate(), timeout=timeout)
+                stdout, _ = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
+                logger.info(stdout)
+
             except asyncio.TimeoutError:
-                sdr_params.kill()
+                probe_process.kill()
                 raise TimeoutError('Timed out while getting SDR parameters from SoapySDR server')
 
-            sdr_params = eval(stdout.decode().strip())
+            try:
+                sdr_params = eval(stdout.decode().strip())
+
+            except Exception as e:
+                # something went wrong while parsing output from the probe
+                logger.error(f'Error parsing SDR parameters from SoapySDR server probe at '
+                             f'{sdr['host']}:{sdr['port']} ({e})')
 
             logger.debug(f'Got SDR parameters from SoapySDR server: {sdr_params}')
 
@@ -191,9 +201,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=10.0):
             window_function_names = list(window_functions.keys())
 
             # Common FFT sizes
-            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384]
-
-
+            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
 
             params = {
                 'gain_values': sdr_params['gains'],
@@ -213,8 +221,10 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=10.0):
         reply['error'] = error_msg
 
     except Exception as e:
-        error_msg = f"Error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} within 5 seconds timeout"
+        error_msg = (f"Error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} "
+                     f"within {timeout} seconds timeout")
         logger.error(error_msg)
+        logger.exception(e)
         reply['success'] = False
         reply['error'] = error_msg
 

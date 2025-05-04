@@ -125,6 +125,11 @@ loggers:
       - default
     propagate: no
 
+  soapysdr-probe:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
 
 root:
   level: DEBUG

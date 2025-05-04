@@ -34,6 +34,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
     client_id = None
     rx_stream = None
     mtu = 0
+    config = {}
 
     logger.info(f"SoapySDR worker process started for SDR {sdr_id} for client {client_id}")
 
@@ -114,10 +115,11 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
             # Set sample rate
             sdr.setSampleRate(SOAPY_SDR_RX, channel, sample_rate)
             actual_sample_rate = sdr.getSampleRate(SOAPY_SDR_RX, channel)
-            logger.info(f"Sample rate set to {actual_sample_rate/1e6} MHz")
+            logger.debug(f"Sample rate set to {actual_sample_rate/1e6} MHz")
 
             # Number of samples required for each iteration
             num_samples = calculate_samples_per_scan(actual_sample_rate)
+            #num_samples = 256 * 1024
 
         except Exception as e:
             error_msg = f"Error connecting to SoapySDR device: {str(e)}"
@@ -146,6 +148,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         if config.get('gain_mode', 'manual') == 'automatic':
             sdr.setGainMode(SOAPY_SDR_RX, channel, True)
             logger.info(f"Automatic gain control enabled")
+
         else:
             sdr.setGainMode(SOAPY_SDR_RX, channel, False)
             sdr.setGain(SOAPY_SDR_RX, channel, gain)
@@ -164,12 +167,12 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         # Now check MTU - after setupStream but before activateStream
         try:
             mtu = sdr.getStreamMTU(rx_stream)
-            logger.info(f"Stream MTU: {mtu}")
+            logger.debug(f"Stream MTU: {mtu}")
         except Exception as e:
             logger.warning(f"Could not get stream MTU: {e}")
 
         sdr.activateStream(rx_stream)
-        logger.info("Stream activated")
+        logger.debug("SoapySDR stream activated")
 
         # if we reached here, we can set the UI to streaming
         data_queue.put({
@@ -258,8 +261,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                     })
                 
             try:
-                # Calculate the number of samples needed for the FFT
-                actual_fft_size = fft_size * 1
 
                 # Use the MTU value to determine read size if available, otherwise use a sensible default
                 read_size = mtu if mtu > 0 else 1024
@@ -296,19 +297,23 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                         # If we've filled our buffer, break out of the loop
                         if buffer_position >= num_samples:
                             break
+
                     else:
                         # Error or timeout
                         logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
                         time.sleep(0.1)
 
                 # Check if we have enough samples for processing
-                if buffer_position < actual_fft_size:
-                    logger.warning(f"Not enough samples accumulated: {buffer_position}/{actual_fft_size}")
+                if buffer_position < num_samples:
+                    logger.warning(f"Not enough samples accumulated: {buffer_position}/{num_samples}")
                     time.sleep(0.1)
                     continue
 
                 # We have enough samples to process
                 samples = samples_buffer[:buffer_position]
+
+                # Calculate the number of samples needed for the FFT
+                actual_fft_size = fft_size * 1
 
                 # Apply window function
                 window_func = window_functions.get(fft_window.lower(), np.hanning)
@@ -380,7 +385,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         logger.error(error_msg)
         logger.exception(e)
 
-
         # Send error back to the main process
         data_queue.put({
             'type': 'error',
@@ -449,33 +453,40 @@ def calculate_samples_per_scan(sample_rate):
     """
     Calculate the optimal number of samples to read from an SDR based on its sample rate.
 
-    The function follows an inverse relationship: as the sample rate increases, we need fewer
-    samples to achieve a reasonable processing time while maintaining adequate resolution.
+    For low sample rates, we use a higher number of samples to improve frequency resolution.
+    For high sample rates, we use a lower number of samples to maintain processing efficiency.
 
     Args:
         sample_rate (float): The sample rate of the SDR in Hz
 
     Returns:
-        int: The recommended number of samples to read
+        int: The recommended number of samples to read (as a power of 2)
     """
-
-    # Base parameters
-    max_samples = 512 * 1024  # Maximum number of samples for lowest sample rates
-    min_samples = max_samples // 16  # Minimum number of samples for highest sample rates
+    # Base parameters - increased max_samples for better low-rate resolution
+    max_samples = 512 * 1024  # 1M samples for lowest sample rates
+    min_samples = max_samples // 64  # Minimum samples for highest sample rates
 
     logger.info(f"max_samples: {max_samples}, min_samples: {min_samples}")
 
     # Reference sample rates for scaling
-    min_rate = 1e5  # 100 kHz
+    min_rate = 5e5  # 500 kHz
     max_rate = 20e6  # 20 MHz
 
     # Clamp the sample rate within our defined range
     clamped_rate = max(min(sample_rate, max_rate), min_rate)
 
-    # Calculate samples using an inverse logarithmic relationship
-    # This provides a smoother transition than discrete steps
+    # Calculate a scaling factor based on logarithmic scale with stronger weighting
+    # Using an exponential curve to weight low sample rates more heavily
     log_factor = (math.log10(clamped_rate) - math.log10(min_rate)) / (math.log10(max_rate) - math.log10(min_rate))
-    samples = int(max_samples * (1 - 0.75 * log_factor))
+
+    # Apply stronger non-linear scaling to emphasize more samples at lower rates
+    # Increased exponent from 0.75 to 0.85 to create a steeper curve
+    samples = int(max_samples * (1 - 0.85 * log_factor**0.8))
+
+    # Apply a bias factor for very low sample rates (below 500 kHz)
+    if clamped_rate < 5e5:  # Below 500 kHz
+        boost_factor = 1.5 * (1 - (clamped_rate - min_rate) / (5e5 - min_rate))
+        samples = int(samples * (1 + boost_factor))
 
     # Ensure we're within reasonable bounds
     samples = max(min(samples, max_samples), min_samples)
@@ -483,7 +494,8 @@ def calculate_samples_per_scan(sample_rate):
     # Round to nearest power of 2 for more efficient FFT processing
     power_of_2 = 2 ** math.floor(math.log2(samples))
 
-    logger.info(f"power_of_2: {power_of_2}")
+    logger.info(f"Sample rate: {clamped_rate/1e6:.3f} MHz, calculated samples: {samples}, "
+                f"power_of_2: {power_of_2}, duration: {power_of_2/clamped_rate:.3f} seconds")
 
     return power_of_2
 
