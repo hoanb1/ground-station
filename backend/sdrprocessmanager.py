@@ -6,6 +6,21 @@ from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.soapysdrworker import soapysdr_worker_process
 
 
+def generate_room_name(client_id1, client_id2):
+    """
+    Generate a consistent room name from two client IDs.
+    Sorts the IDs to ensure the same room name regardless of the order they're provided.
+
+    Args:
+        client_id1 (str): First client's socket ID
+        client_id2 (str): Second client's socket ID
+
+    Returns:
+        str: A unique, consistent room name for these two clients
+    """
+    return "_".join(sorted([client_id1, client_id2]))
+
+
 class SDRProcessManager:
     """
     Manager for the SDR worker processes
@@ -91,10 +106,13 @@ class SDRProcessManager:
 
         # Check if a process for this device already exists
         if sdr_id in self.processes and self.processes[sdr_id]['process'].is_alive():
-            self.logger.info(f"SDR process for device {sdr_id} already running")
+            self.logger.info(f"SDR process for device {sdr_id} already running, adding client {client_id} to room")
 
             # Add the client to the existing process
             self.processes[sdr_id]['clients'].add(client_id)
+
+            self.logger.info("CLIENTS : ")
+            self.logger.info(self.processes[sdr_id]['clients'])
 
             # Update the configuration if needed
             config = {
@@ -110,6 +128,10 @@ class SDRProcessManager:
             # Send configuration to the process
             self.processes[sdr_id]['config_queue'].put(config)
 
+            # Add this client to the room
+            await self.sio.enter_room(client_id, sdr_id)
+
+            # Send a message to the UI of the specific client that streaming started
             await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
 
             return sdr_id
@@ -164,10 +186,11 @@ class SDRProcessManager:
             # Send initial configuration
             config_queue.put(config)
 
+            # Add this client to the room
+            await self.sio.enter_room(client_id, sdr_id)
+
             # Start async task to monitor the data queue
             asyncio.create_task(self._monitor_data_queue(sdr_id))
-
-            #await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
 
             return sdr_id
 
@@ -188,7 +211,12 @@ class SDRProcessManager:
         # If client_id is provided, only remove that client
         if client_id:
             if client_id in process_info['clients']:
+                # Remove client from Socket.IO room
                 process_info['clients'].remove(client_id)
+
+                # Make a client leave a specific room
+                await self.sio.leave_room(client_id, sdr_id)
+
                 self.logger.info(f"Removed client {client_id} from SDR process {sdr_id}")
 
             # If there are still other clients, don't stop the process
@@ -290,19 +318,19 @@ class SDRProcessManager:
                             # Send FFT data to the client if still connected
                             if client_id in process_info['clients']:
                                 # Get client's Socket.IO room
-                                await self.sio.emit('sdr-fft-data', data['data'], room=client_id)
+                                await self.sio.emit('sdr-fft-data', data['data'], room=sdr_id)
 
                         if data_type == 'streamingstart' and client_id:
                             if client_id in process_info['clients']:
                                 # Sent a message to the UI, streaming started
-                                await self.sio.emit('sdr-status', {'streaming': True}, room=client_id)
+                                await self.sio.emit('sdr-status', {'streaming': True}, room=sdr_id)
 
                         elif data_type == 'config_error' and client_id:
                             # Send config error to the client
                             if client_id in process_info['clients']:
                                 await self.sio.emit('sdr-config-error',
                                                     {'message': f"SDR error: {data['message']}"},
-                                                    room=client_id)
+                                                    room=sdr_id)
                                 self.logger.error(f"Config error from SDR process for client {client_id}: {data['message']}")
 
                         elif data_type == 'error' and client_id:
@@ -310,7 +338,7 @@ class SDRProcessManager:
                             if client_id in process_info['clients']:
                                 await self.sio.emit('sdr-error',
                                                {'message': f"SDR error: {data['message']}"},
-                                               room=client_id)
+                                               room=sdr_id)
                                 self.logger.error(f"Error from SDR process for client {client_id}: {data['message']}")
 
                         elif data_type == 'terminated':
@@ -319,7 +347,7 @@ class SDRProcessManager:
 
                             # Notify all clients
                             for client_id in process_info['clients']:
-                                await self.sio.emit('sdr-status', {'streaming': False}, room=client_id)
+                                await self.sio.emit('sdr-status', {'streaming': False}, room=sdr_id)
 
                             # Remove process info
                             if sdr_id in self.processes:
