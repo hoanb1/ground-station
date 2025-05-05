@@ -62,7 +62,6 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
             sdr = rtlsdr.RtlSdr(serial_number=serial_number)
 
         # Configure the device
-        logger.info(f"center_freq={config.get('center_freq', 100e6)}, type: {type(config.get('center_freq', 100e6))}")
         sdr.center_freq = config.get('center_freq', 100e6)
         sdr.sample_rate = config.get('sample_rate', 2.048e6)
         sdr.gain = config.get('gain', 25.4)
