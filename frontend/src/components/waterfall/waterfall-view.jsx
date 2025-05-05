@@ -19,6 +19,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import AutoGraphIcon from '@mui/icons-material/AutoGraph';
 import {useDispatch, useSelector} from "react-redux";
 import {
     getClassNamesBasedOnGridEditing,
@@ -67,9 +68,8 @@ import {
     setBandScopeHeight,
     setAutoDBRange,
     setShowRightSideWaterFallAccessories,
-    setShowLeftSideWaterFallAccessories,
+    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId,
 } from './waterfall-slice.jsx'
-import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
 import {enqueueSnackbar} from "notistack";
 import FrequencyScale from "./frequency-scale-canvas.jsx";
 import {getColorForPower} from "./waterfall-colors.jsx";
@@ -289,8 +289,23 @@ const   MainWaterfallDisplay = React.memo(() => {
             });
         });
 
+        socket.on('sdr-config', (data) => {
+            console.info(`sdr-config`, data);
+
+            dispatch(setCenterFrequency(data['center_freq']));
+            dispatch(setSampleRate(data['sample_rate']));
+            dispatch(setGain(data['gain']));
+            dispatch(setFFTSize(data['fft_size']));
+            dispatch(setFFTWindow(data['fft_window']));
+            dispatch(setBiasT(data['bias_t']));
+            dispatch(setTunerAgc(data['tuner_agc']));
+            dispatch(setRtlAgc(data['rtl_agc']));
+
+        });
+
         socket.on('sdr-status', (data) => {
             console.info(`sdr-status`, data);
+
             if (data['streaming'] === true) {
                 dispatch(setIsStreaming(true));
                 dispatch(setStartStreamingLoading(false));
@@ -336,25 +351,26 @@ const   MainWaterfallDisplay = React.memo(() => {
             socket.off('sdr-error');
             socket.off('sdr-fft-data');
             socket.off('sdr-status');
+            socket.off('sdr-config');
         };
     }, []);
 
-    useEffect(() => {
-        // If we are streaming, configure RTL-SDR settings
-        if (isStreaming) {
-            socket.emit('sdr_data', 'configure-rtlsdr', {
-                selectedSDRId,
-                centerFrequency,
-                sampleRate,
-                gain,
-                fftSize,
-                biasT,
-                tunerAgc,
-                rtlAgc,
-                fftWindow,
-            });
-        }
-    }, [centerFrequency, sampleRate, fftSize, gain, biasT, rtlAgc, tunerAgc, fftWindow]);
+    // useEffect(() => {
+    //     // If we are streaming, configure RTL-SDR settings
+    //     if (isStreaming) {
+    //         socket.emit('sdr_data', 'configure-sdr', {
+    //             selectedSDRId,
+    //             centerFrequency,
+    //             sampleRate,
+    //             gain,
+    //             fftSize,
+    //             biasT,
+    //             tunerAgc,
+    //             rtlAgc,
+    //             fftWindow,
+    //         });
+    //     }
+    // }, [centerFrequency, sampleRate, fftSize, gain, biasT, rtlAgc, tunerAgc, fftWindow]);
 
     // Update the worker when FPS changes
     useEffect(() => {
@@ -417,7 +433,7 @@ const   MainWaterfallDisplay = React.memo(() => {
             dispatch(setErrorMessage(''));
 
             // Configure RTL-SDR settings
-            socket.emit('sdr_data', 'configure-rtlsdr', {
+            socket.emit('sdr_data', 'configure-sdr', {
                 selectedSDRId,
                 centerFrequency,
                 sampleRate,
@@ -800,6 +816,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                 }}>
                     <ButtonGroup variant="contained" size="small">
                         <IconButton
+                            loading={startStreamingLoading}
                             disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}
                             color="primary"
                             onClick={startStreaming}
@@ -820,21 +837,40 @@ const   MainWaterfallDisplay = React.memo(() => {
                             <StopIcon/>
                         </IconButton>
 
-                        <IconButton
-                            onClick={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
+                        <ToggleButton
+                            value="showLeft"
+                            selected={showLeftSideWaterFallAccessories}
+                            onChange={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
                             size="small"
-                            sx={{borderRadius: 0}}
+                            sx={{borderRadius: 0, border: 'none'}}
                         >
                             <AlignHorizontalLeftIcon/>
-                        </IconButton>
+                        </ToggleButton>
 
-                        <IconButton
-                            onClick={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
+                        <ToggleButton
+                            value="showRight"
+                            selected={showRightSideWaterFallAccessories}
+                            onChange={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
                             size="small"
-                            sx={{borderRadius: 0}}
+                            sx={{borderRadius: 0, border: 'none'}}
                         >
                             <AlignHorizontalRightIcon/>
-                        </IconButton>
+                        </ToggleButton>
+                        <ToggleButton
+                            value="auto"
+                            selected={autoDBRange}
+                            onChange={() => dispatch(setAutoDBRange(!autoDBRange))}
+                            size="small"
+                            color={autoDBRange ? "success" : "primary"}
+                            sx={{
+                                borderRadius: 0,
+                                border: 'none',
+                            }}
+                        >
+                            <AutoGraphIcon/>
+                        </ToggleButton>
+
+
                     </ButtonGroup>
                 </Paper>
             </Box>
@@ -1057,7 +1093,6 @@ const   MainWaterfallDisplay = React.memo(() => {
                     : `stopped`
                 }
             </WaterfallStatusBar>
-            <WaterFallSettingsDialog/>
         </div>
     );
 });

@@ -26,8 +26,8 @@ from waterfall import waterfall_socket_app, cleanup_sdr_session
 from sdrprocessmanager import sdr_process_manager
 from soapysdrbrowser import discover_soapy_servers
 
-np.show_config()
-
+# Show NumPy configuration
+# np.show_config()
 
 Payload.max_decode_packets = 50
 
@@ -80,17 +80,17 @@ async def lifespan(fastapiapp: FastAPI):
             await discover_soapy_servers()
             await asyncio.sleep(60)
 
-    discover_task = asyncio.create_task(run_discover_soapy())
+    #discover_task = asyncio.create_task(run_discover_soapy())
 
     try:
         yield
     finally:
         # Cancel the background tasks on shutdown
         tracking_task.cancel()
-        discover_task.cancel()
+        #discover_task.cancel()
         try:
             await tracking_task
-            await discover_task
+            #await discover_task
         except asyncio.CancelledError:
             pass
 
@@ -154,7 +154,6 @@ async def handle_frontend_auth_requests(sid, cmd, data):
     logger.info(f'Replying to authentication event from client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}: {reply}')
     return {'success': reply['success'], 'token': reply['token'], 'user': reply['user']}
 
-
 @app.post("/api/webrtc/offer")
 async def create_webrtc_session(request: WebRTCRequest):
     """Relay WebRTC offer to go2rtc and return an answer"""
@@ -189,7 +188,6 @@ async def create_webrtc_session(request: WebRTCRequest):
     except Exception as e:
         logger.error(f"Error creating WebRTC session: {str(e)}")
         raise HTTPException(status_code=500, detail=f"Error creating WebRTC session: {str(e)}")
-
 
 @app.websocket("/ws/webrtc/{client_id}")
 async def webrtc_websocket(websocket: WebSocket, client_id: str):

@@ -190,6 +190,25 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         dispatch(setExpandedPanels(updateExpandedPanels(expandedPanels)));
     };
 
+    function sendSDRConfigToBackend(updates) {
+
+        let SDRSettings = {
+            selectedSDRId,
+            centerFrequency,
+            sampleRate,
+            gain,
+            fftSize,
+            biasT,
+            tunerAgc,
+            rtlAgc,
+            fftWindow,
+        }
+
+        SDRSettings = {...SDRSettings, ...updates};
+        console.info(`Sending SDR freq to backend: `, SDRSettings);
+        socket.emit('sdr_data', 'configure-sdr', SDRSettings);
+    }
+
     function handleSDRChange(event) {
         // Check what was selected
         dispatch(setSelectedSDRId(event.target.value));
@@ -197,6 +216,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
             // Reset UI values since once we get new values from the backend, they might not be valid anymore
             dispatch(setSampleRate(""));
             dispatch(setGain(""));
+
         } else {
             // Call the backend
             dispatch(getSDRConfigParameters({socket, selectedSDRId: event.target.value}))
@@ -217,6 +237,49 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         }
     }
 
+    const updateCenterFrequency = (newFrequency) => (dispatch) => {
+        // Convert kHz to Hz
+        let centerFrequency = newFrequency * 1000.0;
+        dispatch(setCenterFrequency(centerFrequency));
+        return sendSDRConfigToBackend({centerFrequency: centerFrequency});
+    };
+
+    const updateSDRGain = (gain) => (dispatch) => {
+        dispatch(setGain(gain));
+        return sendSDRConfigToBackend({gain: gain});
+    };
+
+    const updateSampleRate = (sampleRate) => (dispatch) => {
+        dispatch(setSampleRate(sampleRate));
+        return sendSDRConfigToBackend({sampleRate: sampleRate});
+    };
+
+    const updateBiasT = (enabled) => (dispatch) => {
+        dispatch(setBiasT(enabled));
+        return sendSDRConfigToBackend({biasT: enabled});
+    };
+
+    const updateTunerAgc = (enabled) => (dispatch) => {
+        dispatch(setTunerAgc(enabled));
+        return sendSDRConfigToBackend({tunerAgc: enabled});
+    };
+
+    const updateRtlAgc = (enabled) => (dispatch) => {
+        dispatch(setRtlAgc(enabled));
+        return sendSDRConfigToBackend({rtlAgc: enabled});
+    };
+
+    const updateFFTSize = (fftSize) => (dispatch) => {
+        dispatch(setFFTSize(fftSize));
+        return sendSDRConfigToBackend({fftSize: fftSize});
+    };
+
+    const updateFFTWindow = (fftWindow) => (dispatch) => {
+        dispatch(setFFTWindow(fftWindow));
+        return sendSDRConfigToBackend({fftWindow: fftWindow});
+    };
+
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
@@ -230,8 +293,11 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     <AccordionDetails>
                         <Box sx={{mb: 0, width: '100%'}}>
                             <FrequencyDisplay
-                                initialFrequency={centerFrequency / 1000} // Convert Hz to kHz
-                                onChange={(newFrequency) => dispatch(setCenterFrequency(newFrequency * 1000))} // Convert kHz back to Hz
+                                initialFrequency={centerFrequency / 1000.0} // Convert Hz to kHz
+                                onChange={(newFrequency) => {
+                                    // Using custom thunk instead of direct dispatch
+                                    dispatch(updateCenterFrequency(newFrequency));
+                                }}
                                 size={"small"}
                             />
                         </Box>
@@ -280,7 +346,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                         value={gainValues.length? localGain: "none"}
                                         onChange={(e) => {
                                             setLocalGain(e.target.value);
-                                            dispatch(setGain(e.target.value));
+                                            dispatch(updateSDRGain(e.target.value));
                                         }}
                                         variant={'filled'}>
                                         <MenuItem value="none">
@@ -304,7 +370,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                         value={sampleRateValues.length? localSampleRate: "none"}
                                         onChange={(e) => {
                                             setLocalSampleRate(e.target.value);
-                                            dispatch(setSampleRate(e.target.value));
+                                            dispatch(updateSampleRate(e.target.value));
                                         }}
                                         variant={'filled'}>
                                         <MenuItem value="none">
@@ -337,7 +403,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                                 size={'small'}
                                                 checked={biasT}
                                                 onChange={(e) => {
-                                                    dispatch(setBiasT(e.target.checked));
+                                                    dispatch(updateBiasT(e.target.checked));
                                                 }}
                                             />
                                         }
@@ -352,7 +418,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                                 size={'small'}
                                                 checked={tunerAgc}
                                                 onChange={(e) => {
-                                                    dispatch(setTunerAgc(e.target.checked));
+                                                    dispatch(updateTunerAgc(e.target.checked));
                                                 }}
                                             />
                                         }
@@ -367,7 +433,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                                 size={'small'}
                                                 checked={rtlAgc}
                                                 onChange={(e) => {
-                                                    dispatch(setRtlAgc(e.target.checked));
+                                                    dispatch(updateRtlAgc(e.target.checked));
                                                 }}
                                             />
                                         }
@@ -397,7 +463,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                         value={fftSizeValues.length? localFFTSize: ""}
                                         onChange={(e) => {
                                             setLocalFFTSize(e.target.value);
-                                            dispatch(setFFTSize(e.target.value));
+                                            dispatch(updateFFTSize(e.target.value));
                                         }}
                                         variant={'filled'}>
                                         {fftSizeValues.map(size => (
@@ -415,7 +481,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                         size={'small'}
                                         value={fftWindowValues.length? fftWindow: ""}
                                         onChange={(e) => {
-                                            dispatch(setFFTWindow(e.target.value));
+                                            dispatch(updateFFTWindow(e.target.value));
                                         }}
                                         variant={'filled'}>
                                         {fftWindowValues.map(window => (
@@ -437,7 +503,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                         value={localColorMap}
                                         onChange={(e) => {
                                             setLocalColorMap(e.target.value);
-                                            dispatch(setColorMap(e.target.value));
+                                            dispatch(updateColorMap(e.target.value));
                                         }}
                                         label="Color Map"
                                         variant={'filled'}>
@@ -452,7 +518,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                         </LoadingOverlay>
                     </AccordionDetails>
                 </Accordion>
-
             </div>
         </>
     );

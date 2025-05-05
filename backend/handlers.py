@@ -553,12 +553,12 @@ async def auth_request_routing(sio, cmd, data, logger, sid):
     return reply
 
 
-async def sdr_data_request_routing(sio, cmd, data, logger, sid):
+async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
     async with AsyncSessionLocal() as dbsession:
         reply: dict[str, Union[bool, None, dict, list, str]] = {'success': False, 'data': None}
 
-        if cmd == "configure-rtlsdr":
+        if cmd == "configure-sdr":
             try:
                 # SDR device id
                 sdr_id = data.get('selectedSDRId', None)
@@ -618,18 +618,27 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
                     'serial_number': sdr_serial,
                     'host': sdr_host,
                     'port': sdr_port,
-                    'client_id': sid,
+                    'client_id': client_id,
                 }
 
                 # Create an SDR session entry in memory
-                logger.info(f"Creating an SDR session for client {sid}")
-                session = add_sdr_session(sid, sdr_config)
+                logger.info(f"Creating an SDR session for client {client_id}")
+                session = add_sdr_session(client_id, sdr_config)
 
-                await sio.emit('sdr-status', session, room=sid)
+                # Check if other clients are already connected in the same room (SDR), if so then send them an update
+                if sdr_process_manager.processes.get(sdr_id, None) is not None:
+                    other_clients = [client for client in sdr_process_manager.processes[sdr_id]['clients'] if client != client_id]
+                    logger.info(f"Other clients: {other_clients}")
+
+                    # For every other client id, send an update
+                    for other_client in other_clients:
+                        await sio.emit('sdr-config', sdr_config, room=other_client)
+
+                #await sio.emit('sdr-config', session, room=client_id)
 
                 is_running = sdr_process_manager.is_sdr_process_running(sdr_id)
                 if is_running:
-                    logger.info(f"Updating SDR configuration for client {sid} with SDR id: {sdr_id}")
+                    logger.info(f"Updating SDR configuration for client {client_id} with SDR id: {sdr_id}")
                     await sdr_process_manager.update_configuration(sdr_id, sdr_config)
 
                 reply['success'] = True
@@ -637,9 +646,8 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
             except Exception as e:
                 logger.error(f"Error configuring SDR: {str(e)}")
                 logger.exception(e)
-                await sio.emit('sdr-config-error', {'message': f"Failed to configure SDR: {str(e)}"}, room=sid)
+                await sio.emit('sdr-config-error', {'message': f"Failed to configure SDR: {str(e)}"}, room=client_id)
                 reply['success'] = False
-
 
         elif cmd == "start-streaming":
 
@@ -654,21 +662,21 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
 
                 sdr_device = sdr_device_reply['data']
 
-                if sid not in active_sdr_clients:
-                    raise Exception(f"Client with id: {sid} not registered")
+                if client_id not in active_sdr_clients:
+                    raise Exception(f"Client with id: {client_id} not registered")
 
-                sdr_config = get_sdr_session(sid)
+                sdr_config = get_sdr_session(client_id)
 
-                logger.info(f"Starting streaming SDR data for client {sid}")
+                logger.info(f"Starting streaming SDR data for client {client_id}")
 
                 # Start or join the SDR process
-                process_sdr_id = await sdr_process_manager.start_sdr_process(sdr_device, sdr_config, sid)
-                logger.info(f"SDR process started for client {sid} with process id: {process_sdr_id}")
+                process_sdr_id = await sdr_process_manager.start_sdr_process(sdr_device, sdr_config, client_id)
+                logger.info(f"SDR process started for client {client_id} with process id: {process_sdr_id}")
 
             except Exception as e:
                 logger.error(f"Error starting SDR stream: {str(e)}")
                 logger.exception(e)
-                await sio.emit('sdr-error', {'message': f"Failed to start SDR stream: {str(e)}"}, room=sid)
+                await sio.emit('sdr-error', {'message': f"Failed to start SDR stream: {str(e)}"}, room=client_id)
                 reply['success'] = False
 
         elif cmd == "stop-streaming":
@@ -684,26 +692,26 @@ async def sdr_data_request_routing(sio, cmd, data, logger, sid):
 
                 sdr_device = sdr_device_reply['data']
 
-                client = get_sdr_session(sid)
+                client = get_sdr_session(client_id)
 
                 if sdr_id:
                     # Stop or leave the SDR process
-                    await sdr_process_manager.stop_sdr_process(sdr_id, sid)
+                    await sdr_process_manager.stop_sdr_process(sdr_id, client_id)
 
-                if sid not in active_sdr_clients:
-                    logger.error(f"Client {sid} not registered while stopping SDR stream")
+                if client_id not in active_sdr_clients:
+                    logger.error(f"Client {client_id} not registered while stopping SDR stream")
                     reply['success'] = False
 
                 # cleanup
-                await cleanup_sdr_session(sid)
+                await cleanup_sdr_session(client_id)
 
-                await sio.emit('sdr-status', {'streaming': False}, room=sid)
-                logger.info(f"Stopped streaming SDR data for client {sid}")
+                await sio.emit('sdr-status', {'streaming': False}, room=client_id)
+                logger.info(f"Stopped streaming SDR data for client {client_id}")
 
             except Exception as e:
                 logger.error(f"Error stopping SDR stream: {str(e)}")
                 logger.exception(e)
-                await sio.emit('sdr-error', {'message': f"Failed to stop SDR stream: {str(e)}"}, room=sid)
+                await sio.emit('sdr-error', {'message': f"Failed to stop SDR stream: {str(e)}"}, room=client_id)
                 reply['success'] = False
 
         else:
