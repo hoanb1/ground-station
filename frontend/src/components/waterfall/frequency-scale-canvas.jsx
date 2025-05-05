@@ -10,7 +10,7 @@ const getFrequencyScaleWidth = (element) => {
 const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHeight = 20 }) => {
     const canvasRef = useRef(null);
     const frequencyScaleContainerRef = useRef(null);
-    const [actualWidth, setActualWidth] = useState(4096);
+    const [actualWidth, setActualWidth] = useState(2048);
     const lastMeasuredWidthRef = useRef(0);
 
     // Calculate start and end frequencies

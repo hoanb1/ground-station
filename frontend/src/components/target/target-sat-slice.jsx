@@ -275,6 +275,7 @@ const targetSatTrackSlice = createSlice({
             'minelevation': false,
             'outofbounds': false,
         },
+        lastRotatorEvent: "",
         rigData: {
             'connected': false,
             'doppler_shift': 0,
@@ -312,10 +313,6 @@ const targetSatTrackSlice = createSlice({
         setSatelliteData(state, action) {
             if (action.payload['tracking_state']) {
                 state.trackingState = action.payload['tracking_state'];
-                //state.groupId = action.payload['tracking_state']['group_id'];
-                //state.satelliteId = action.payload['tracking_state']['norad_id'];
-                //state.selectedRadioRig = action.payload['tracking_state']['rig_id'];
-                //state.selectedRotator = action.payload['tracking_state']['rotator_id'];
             }
 
             if (action.payload['ui_tracker_state']) {
@@ -340,6 +337,16 @@ const targetSatTrackSlice = createSlice({
 
             if (action.payload['rotator_data']) {
                 state.rotatorData = action.payload['rotator_data'];
+
+                if (action.payload['rotator_data']['slewing']) {
+                    state.lastRotatorEvent = 'slewing';
+                } else if (action.payload['rotator_data']['tracking']) {
+                    state.lastRotatorEvent = 'tracking';
+                } else if (action.payload['rotator_data']['outofbounds']) {
+                    state.lastRotatorEvent = 'outofbounds';
+                } else if (action.payload['rotator_data']['minelevation']) {
+                    state.lastRotatorEvent = 'minelevation';
+                }
             }
 
             if (action.payload['rig_data']) {
@@ -496,6 +503,9 @@ const targetSatTrackSlice = createSlice({
         setAutoDBRange: (state, action) => {
             state.autoDBRange = action.payload;
         },
+        setLastRotatorEvent: (state, action) => {
+            state.lastRotatorEvent = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
