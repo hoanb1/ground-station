@@ -351,7 +351,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                     />);
                 }
 
-                if (showTooltip) {
+                if (showTooltip || selectedSatelliteId === noradid) {
                     currentPos.push(<Marker key={"marker-" + satellite['norad_id']} position={[lat, lon]}
                                             icon={satelliteIcon2}
                                             eventHandlers={markerEventHandlers}>

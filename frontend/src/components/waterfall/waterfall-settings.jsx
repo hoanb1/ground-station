@@ -209,6 +209,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
             SDRSettings = {...SDRSettings, ...updates};
             console.info(`Sending SDR freq to backend: `, SDRSettings);
             socket.emit('sdr_data', 'configure-sdr', SDRSettings);
+
         } else {
             console.warn("No SDR selected, not sending SDR settings to backend");
         }

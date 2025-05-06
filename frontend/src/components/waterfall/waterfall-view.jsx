@@ -578,6 +578,8 @@ const   MainWaterfallDisplay = React.memo(() => {
             return;
         }
 
+        const waterFallCanvas = waterFallCanvasRef.current;
+        const waterFallCtx = waterFallCanvas.getContext('2d');
         const waterFallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
         const waterFallLeftMarginCtx = waterFallLeftMarginCanvas.getContext('2d');
 
@@ -609,6 +611,22 @@ const   MainWaterfallDisplay = React.memo(() => {
             waterFallLeftMarginCtx.textAlign = 'center';
             waterFallLeftMarginCtx.textBaseline = 'top';
             waterFallLeftMarginCtx.fillText(newRotatorEvent, bandscopeAxisYWidth / 2, 2);
+
+            // Draw horizontal dotted line in waterfall
+            const imageData = waterFallCtx.getImageData(0, 0, waterFallCanvas.width, 1);
+            const data = imageData.data;
+            for (let i = 0; i < data.length; i += 32) { // Increase step to create dots
+                for (let j = 0; j < 4; j++) { // Dot width of 1 pixel
+                    const idx = i + (j * 4);
+                    if (idx < data.length) {
+                        data[idx] = 255;     // R
+                        data[idx + 1] = 255; // G
+                        data[idx + 2] = 255; // B
+                        data[idx + 3] = 100; // A
+                    }
+                }
+            }
+            waterFallCtx.putImageData(imageData, 0, 0);
         }
 
         // Calculate seconds since the epoch and check if divisible by 15
