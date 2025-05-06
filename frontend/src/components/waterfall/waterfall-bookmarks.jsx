@@ -216,7 +216,7 @@ const BookmarkCanvas = ({
                     ctx.shadowBlur = 1;
                     ctx.globalAlpha = 0.8;
                     ctx.fillStyle = bookmark.color || '#ffff00';
-                    ctx.fillText(bookmark.label, x, labelY + textHeight / 2);
+                    ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
                 }
 
@@ -249,7 +249,7 @@ const BookmarkCanvas = ({
                     ctx.shadowBlur = 1;
                     ctx.globalAlpha = 0.8;
                     ctx.fillStyle = bookmark.color || '#00ffff';
-                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight / 2);
+                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
                 }
 

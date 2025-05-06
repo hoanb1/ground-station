@@ -2,27 +2,27 @@ import json
 import pprint
 import crud
 import asyncio
-import math
 import socketio
 import numpy as np
 from io import StringIO
-from datetime import datetime, UTC
+from datetime import UTC
 import math
-from common import timeit, async_timeit, is_geostationary, serialize_object
-from skyfield.api import Loader, Topos, EarthSatellite
-from db import engine, AsyncSessionLocal
+from common import is_geostationary, serialize_object
+from skyfield.api import Topos
+from db import AsyncSessionLocal
 from logger import logger
 from models import ModelEncoder
 from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevationError
-from rotator import RotatorController
-from rig import RigController
+from controllers.rotator import RotatorController
+from controllers.rig import RigController
+from controllers.sdr import SDRController
 from arguments import arguments as args
 from statetracker import StateTracker
 from skyfield.api import load, wgs84, EarthSatellite
 from datetime import datetime, timedelta
-from typing import List, Dict, Union, Tuple, Optional
+from typing import List, Dict, Union, Tuple
 from footprint import get_satellite_coverage_circle
-from passes import calculate_next_events
+
 
 
 def pretty_dict(d):
@@ -851,6 +851,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
     async def connect_to_rig():
         """
         If rig_controller is not set up yet, set it up.
+        Handles both hardware rigs and SDR devices.
         :return:
         """
         nonlocal rig_controller
@@ -858,11 +859,31 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
         if current_rig_id is not None and rig_controller is None:
             # rig_controller was selected, and a rig_controller is not setup, set it up now
             try:
+                # Try fetching hardware rig details first
                 rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=current_rig_id)
-                rotator_details = rig_details_reply['data']
-                rig_controller = RigController(host=rotator_details['host'], port=rotator_details['port'])
+
+                if rig_details_reply.get('data') is not None:
+                    rig_type = 'radio'
+
+                else:
+                    # If hardware Rig not found, try fetching SDR details
+                    rig_details_reply = await crud.fetch_sdr(dbsession, sdr_id=current_rig_id)
+                    if not rig_details_reply.get('data'):
+                        raise Exception(f"No hardware radio rig or SDR device found with ID: {current_rig_id}")
+                    else:
+                        rig_type = 'sdr'
+
+                rig_details = rig_details_reply['data']
+
+                # Handle different device types
+                if rig_type == 'sdr':
+                    rig_controller = SDRController(sdr_details=rig_details)
+                else:
+                    rig_controller = RigController(host=rig_details['host'], port=rig_details['port'])
+
                 await rig_controller.connect()
                 rig_data['connected'] = True
+                rig_data['device_type'] = rig_details.get('type', 'hardware')
                 await sio.emit('satellite-tracking', {
                     'events': [{'name': "rig_connected"}],
                     'rig_data': rig_data
@@ -890,7 +911,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
         elif new == "disconnected":
             # disconnected rig_controller
             if rig_controller is not None:
-                logger.info(f"Disconnecting from rig_controller at {rig_controller.host}:{rig_controller.port}...")
+                logger.info(f"Disconnecting from rig...")
                 try:
                     await rig_controller.disconnect()
                     rig_data['connected'] = False

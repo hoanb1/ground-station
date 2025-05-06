@@ -202,7 +202,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                 </Grid>
 
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking", "stopped"].includes(trackingState['rig_state'])}
+                    <FormControl disabled={["tracking"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
