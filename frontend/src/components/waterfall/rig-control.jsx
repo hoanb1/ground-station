@@ -65,6 +65,14 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
         rigs
     } = useSelector((state) => state.rigs);
 
+    useEffect(() => {
+        if (selectedRadioRig) {
+            // Call the function in the waterfall settings component to handle the change
+            waterfallSettingsComponentRef.current.handleSDRChange({target: {value: selectedRadioRig}});
+        }
+
+    }, [selectedRadioRig]);
+
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, 'rig_state': "stopped"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
