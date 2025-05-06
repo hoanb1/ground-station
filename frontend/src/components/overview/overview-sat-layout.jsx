@@ -384,23 +384,26 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         dayPoly.push(dayPoly[dayPoly.length - 1]);
         setDaySidePolygon(dayPoly);
 
-        // sun and moon position
+        // Sun and moon position
         const [sunPos, moonPos] = getSunMoonCoords();
         setSunPos(sunPos);
         setMoonPos(moonPos);
     }
 
+    // On component mount, load the map zoom level from localStorage
     useEffect(() => {
         const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
         const initialMapZoom = savedZoomLevel ? parseFloat(savedZoomLevel) : 1;
         dispatch(setMapZoomLevel(initialMapZoom));
+
+
 
         return () => {
 
         };
     }, []);
 
-    // update the satellites position, day/night terminator every 3 seconds
+    // Update the satellites position, day/night terminator every 3 seconds
     useEffect(()=>{
         satelliteUpdate(new Date());
         const satelliteUpdateTimer = setInterval(()=>{
@@ -419,7 +422,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         saveLayoutsToLocalStorage(allLayouts);
     }
 
-    // subscribe to map events
+    // Subscribe to map events
     function MapEventComponent({handleSetMapZoomLevel}) {
         const mapEvents = useMapEvents({
             zoomend: () => {

@@ -53,11 +53,17 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
     } = useSelector((state) => state.targetSatTrack);
 
     const {
+        selectedSDRId,
         gridEditable,
     } = useSelector((state) => state.waterfall);
 
-    const {selectedSDR, selectedSDRId, sdrs} = useSelector((state) => state.sdrs);
-    const {rigs} = useSelector((state) => state.rigs);
+    const {
+        sdrs
+    } = useSelector((state) => state.sdrs);
+
+    const {
+        rigs
+    } = useSelector((state) => state.rigs);
 
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, 'rig_state': "stopped"};

@@ -179,7 +179,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
         setLocalAutoDBRange(autoDBRange);
     }, [centerFrequency, dbRange, fftSize, sampleRate, gain, colorMap, autoDBRange]);
 
-    const handleChange = (panel) => (event, isExpanded) => {
+    const handleAccordionChange = (panel) => (event, isExpanded) => {
         const updateExpandedPanels = (expandedPanels) => {
             if (isExpanded) {
                 return expandedPanels.includes(panel)
@@ -311,7 +311,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                 settings</TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
-                <Accordion expanded={expandedPanels.includes('freqControl')} onChange={handleChange('freqControl')}>
+                <Accordion expanded={expandedPanels.includes('freqControl')} onChange={handleAccordionChange('freqControl')}>
                     <AccordionSummary aria-controls="freq-content" id="freq-header">
                         <Typography component="span">Frequency control</Typography>
                     </AccordionSummary>
@@ -329,7 +329,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                     </AccordionDetails>
                 </Accordion>
 
-                <Accordion expanded={expandedPanels.includes('sdr')} onChange={handleChange('sdr')}>
+                <Accordion expanded={expandedPanels.includes('sdr')} onChange={handleAccordionChange('sdr')}>
                     <AccordionSummary aria-controls="panel3d-content" id="panel3d-header">
                         <Typography component="span">SDR</Typography>
                     </AccordionSummary>
@@ -448,7 +448,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                     </AccordionDetails>
 
                 </Accordion>
-                <Accordion expanded={expandedPanels.includes('fft')} onChange={handleChange('fft')}>
+                <Accordion expanded={expandedPanels.includes('fft')} onChange={handleAccordionChange('fft')}>
                     <AccordionSummary aria-controls="panel2d-content" id="panel2d-header">
                         <Typography component="span">FFT</Typography>
                     </AccordionSummary>
