@@ -503,7 +503,7 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                                         value={localColorMap}
                                         onChange={(e) => {
                                             setLocalColorMap(e.target.value);
-                                            dispatch(updateColorMap(e.target.value));
+                                            dispatch(setColorMap(e.target.value));
                                         }}
                                         label="Color Map"
                                         variant={'filled'}>
