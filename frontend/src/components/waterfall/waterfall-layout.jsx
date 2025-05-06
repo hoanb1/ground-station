@@ -38,7 +38,7 @@ function saveLayoutsToLocalStorage(layouts) {
 }
 
 const WaterfallLayout = React.memo(function () {
-
+    const waterfallComponentSettingsRef = useRef(null);
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const {
@@ -110,10 +110,10 @@ const WaterfallLayout = React.memo(function () {
             <MainWaterfallDisplay/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="settings">
-            <WaterfallSettings/>
+            <WaterfallSettings ref={waterfallComponentSettingsRef}/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rig-control">
-            <RigControl/>
+            <RigControl waterfallSettingsComponentRef={waterfallComponentSettingsRef}/>
         </StyledIslandParentScrollbar>,
     ];
 

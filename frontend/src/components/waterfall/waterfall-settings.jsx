@@ -1,4 +1,4 @@
-import * as React from 'react';
+import React, { useImperativeHandle, forwardRef, useCallback } from 'react';
 import {styled} from '@mui/material/styles';
 import ArrowForwardIosSharpIcon from '@mui/icons-material/ArrowForwardIosSharp';
 import MuiAccordion from '@mui/material/Accordion';
@@ -121,7 +121,8 @@ const AccordionDetails = styled(MuiAccordionDetails)(({theme}) => ({
 }));
 
 
-const WaterfallSettings = React.memo(({deviceId = 0}) => {
+const WaterfallSettings = forwardRef((props, ref) => {
+
     const dispatch = useDispatch();
     const {socket} = useSocket();
 
@@ -190,7 +191,8 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         dispatch(setExpandedPanels(updateExpandedPanels(expandedPanels)));
     };
 
-    function sendSDRConfigToBackend(updates) {
+    // Convert to useCallback to ensure stability of the function reference
+    const sendSDRConfigToBackend = useCallback((updates = {}) => {
         if (selectedSDRId !== "none" && selectedSDRId !== "") {
             let SDRSettings = {
                 selectedSDRId,
@@ -210,22 +212,37 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
         } else {
             console.warn("No SDR selected, not sending SDR settings to backend");
         }
-    }
+    }, [
+            selectedSDRId,
+            centerFrequency,
+            sampleRate,
+            gain,
+            fftSize,
+            biasT,
+            tunerAgc,
+            rtlAgc,
+            fftWindow,
+            socket
+        ]
+    );
 
-    function handleSDRChange(event) {
+    // Convert to useCallback to ensure stability of the function reference
+    const handleSDRChange = useCallback((event) => {
         // Check what was selected
-        dispatch(setSelectedSDRId(event.target.value));
-        if (event.target.value === "none") {
+        const selectedValue = typeof event === 'object' ? event.target.value : event;
+
+        dispatch(setSelectedSDRId(selectedValue));
+        if (selectedValue === "none") {
             // Reset UI values since once we get new values from the backend, they might not be valid anymore
             dispatch(setSampleRate(""));
             dispatch(setGain(""));
 
         } else {
             // Call the backend
-            dispatch(getSDRConfigParameters({socket, selectedSDRId: event.target.value}))
+            dispatch(getSDRConfigParameters({socket, selectedSDRId: selectedValue}))
                 .unwrap()
                 .then(response => {
-
+                    // Handle successful response
                 })
                 .catch(error => {
                     // Error occurred while getting SDR parameters
@@ -238,7 +255,12 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
                     });
                 });
         }
-    }
+    }, []);
+
+    // Expose the function to parent components
+    useImperativeHandle(ref, () => ({
+        sendSDRConfigToBackend, handleSDRChange
+    }));
 
     const updateCenterFrequency = (newFrequency) => (dispatch) => {
         // Convert kHz to Hz
@@ -315,28 +337,6 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
 
                         <LoadingOverlay loading={gettingSDRParameters}>
                             <Box sx={{mb: 2}}>
-                                <FormControl disabled={isStreaming} margin="normal"
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
-                                             size="small">
-                                    <InputLabel htmlFor="sdr-select">SDR</InputLabel>
-                                    <Select
-                                        id="sdr-select"
-                                        value={sdrs.length > 0? selectedSDRId: "none"}
-                                        onChange={(event) => {
-                                            handleSDRChange(event);
-                                        }}
-                                        variant={'filled'}>
-                                        <MenuItem value="none">
-                                            [no SDR selected]
-                                        </MenuItem>
-                                        <MenuItem value="" disabled>
-                                            <em>select a SDR</em>
-                                        </MenuItem>
-                                        {sdrs.map((sdr, index) => {
-                                            return <MenuItem value={sdr.id} key={index}>{sdr.name} ({sdr.type})</MenuItem>;
-                                        })}
-                                    </Select>
-                                </FormControl>
 
                                 <FormControl disabled={gettingSDRParameters}
                                              sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}

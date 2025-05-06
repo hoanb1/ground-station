@@ -28,8 +28,9 @@ import SatelliteList from "../target/target-sat-list.jsx";
 import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
+import {setCenterFrequency} from "./waterfall-slice.jsx";
 
-const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
+const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {
@@ -97,7 +98,11 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
     };
 
     function handleRigChange(event) {
+        // Set the selected radio rig or SDR ID
         dispatch(setRadioRig(event.target.value));
+
+        // Call the function in the waterfall settings component to handle the change
+        waterfallSettingsComponentRef.current.handleSDRChange(event);
     }
 
     function handleTransmitterChange(event) {
@@ -113,6 +118,11 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
             'transmitter_id': event.target.value,
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
+
+        const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
+        const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
+        dispatch(setCenterFrequency(newFrequency));
+        waterfallSettingsComponentRef.current.sendSDRConfigToBackend({centerFrequency: newFrequency});
     }
 
     function connectRig() {
@@ -192,7 +202,7 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
+                    <FormControl disabled={["tracking", "stopped"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>

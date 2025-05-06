@@ -50,12 +50,12 @@ const BookmarkCanvas = ({
     }, []);
 
     // Function to add a bookmark at a specific frequency
-    const makeBookMark = (frequency, label, color = '#ffff00') => {
+    const makeBookMark = (frequency, label, color, metadata = {}) => {
         return {
-            id: Date.now().toString(),
             frequency,
-            label: label || `${(frequency / 1e6).toFixed(3)} MHz`,
-            color
+            label,
+            color,
+            metadata,
         };
     };
 
@@ -67,7 +67,11 @@ const BookmarkCanvas = ({
                 bookMarks.push(makeBookMark(
                     transmitter['downlink_low'],
                     `${transmitter['description']} (${preciseHumanizeFrequency(transmitter['downlink_low'])})`,
-                    '#40ff00'
+                    '#40ff00',
+                    {
+                        type: 'transmitter',
+                        transmitter_id: transmitter['transmitter_id']
+                    }
                 ));
             })
             dispatch(setBookMarks([...bookMarks]));
@@ -92,14 +96,29 @@ const BookmarkCanvas = ({
 
     // Update width when the container width changes
     useEffect(() => {
-        if (rigData['observed_freq'] > 0) {
-            // show a bookmark for the doppler shifted frequency
-            const newBookMark = makeBookMark(
-                rigData['observed_freq'],
-                `Doppler Shifted Frequency: ${humanizeFrequency(rigData['observed_freq'])}`,
-                '#00ffff'
+        if (rigData['observed_freq'] > 0 && rigData['transmitter_id']) {
+            // Get the transmitter ID
+            const transmitterId = rigData['transmitter_id'];
+
+            // Create a new bookmark for the doppler shifted frequency
+            const newBookMark = {
+                frequency: rigData['observed_freq'],
+                label: `Corrected frequency: ${humanizeFrequency(rigData['observed_freq'])}`,
+                color: '#00ffff',
+                metadata: {
+                    type: 'doppler_shift',
+                    transmitter_id: transmitterId
+                }
+            };
+
+            // Filter out any existing Doppler Shifted Frequency bookmark for this specific transmitter
+            const filteredBookmarks = bookmarks.filter(bookmark =>
+                !(bookmark.metadata?.type === 'doppler_shift' &&
+                    bookmark.metadata?.transmitter_id === transmitterId)
             );
-            dispatch(setBookMarks([...bookmarks, newBookMark]));
+
+            // Dispatch the action with the updated bookmarks
+            dispatch(setBookMarks([...filteredBookmarks, newBookMark]));
         }
     }, [rigData]);
 
@@ -122,9 +141,15 @@ const BookmarkCanvas = ({
         // Calculate frequency range
         const freqRange = endFreq - startFreq;
 
+        // Constants for label sizing
+        const textHeight = 14;
+        const padding = 3;
+        const verticalSpacing = textHeight + padding * 2; // Total height of a label
+        const baseY = 16; // Base Y position for the first label
+
         // Draw each bookmark
         if (bookmarks.length) {
-            bookmarks.forEach((bookmark) => {
+            bookmarks.forEach((bookmark, index) => {
                 // Skip if the bookmark is outside the visible range
                 if (bookmark.frequency < startFreq || bookmark.frequency > endFreq) return;
 
@@ -145,15 +170,28 @@ const BookmarkCanvas = ({
                 ctx.setLineDash([]); // Reset dash pattern
                 ctx.globalAlpha = 1.0;
 
-                // Draw a small marker at the top
+                // Draw a downward-pointing arrow at the bottom of the canvas
                 ctx.beginPath();
                 ctx.fillStyle = bookmark.color || '#ffff00';
-                const markerSize = 4;
-                ctx.arc(x, markerSize + 2, markerSize, 0, Math.PI, true);
+                const arrowSize = 6;
+                const arrowY = height - arrowSize; // Position at bottom of canvas
+
+                // Draw the arrow
+                ctx.moveTo(x - arrowSize, arrowY);
+                ctx.lineTo(x + arrowSize, arrowY);
+                ctx.lineTo(x, height);
+                ctx.closePath();
                 ctx.fill();
 
-                // Draw label if provided
-                if (bookmark.label) {
+                // Check if this is a doppler_shift type bookmark
+                const isDopplerShift = bookmark.metadata?.type === 'doppler_shift';
+
+                // For regular bookmarks - display at top with alternating heights
+                if (bookmark.label && !isDopplerShift) {
+                    // Calculate label vertical position based on index
+                    const labelOffset = (index % 2) * verticalSpacing;
+                    const labelY = baseY + labelOffset;
+
                     ctx.font = '11px Arial';
                     ctx.fillStyle = bookmark.color || '#ffff00';
                     ctx.textAlign = 'center';
@@ -161,14 +199,12 @@ const BookmarkCanvas = ({
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);
                     const textWidth = textMetrics.width;
-                    const textHeight = 14;
-                    const padding = 3;
                     const radius = 3;
 
                     ctx.beginPath();
                     ctx.roundRect(
                         x - textWidth / 2 - padding,
-                        16 - padding,
+                        labelY - padding,
                         textWidth + padding * 2,
                         textHeight + padding * 2,
                         radius
@@ -180,7 +216,40 @@ const BookmarkCanvas = ({
                     ctx.shadowBlur = 1;
                     ctx.globalAlpha = 0.8;
                     ctx.fillStyle = bookmark.color || '#ffff00';
-                    ctx.fillText(bookmark.label, x, 16 + textHeight / 2);
+                    ctx.fillText(bookmark.label, x, labelY + textHeight / 2);
+                    ctx.globalAlpha = 1.0;
+                }
+
+                // For doppler_shift bookmarks - display just above the arrow
+                if (bookmark.label && isDopplerShift) {
+                    ctx.font = '11px Arial';
+                    ctx.fillStyle = bookmark.color || '#00ffff';
+                    ctx.textAlign = 'center';
+
+                    // Position the label just above the arrow
+                    const dopplerLabelY = arrowY - padding - textHeight;
+
+                    // Add semi-transparent background
+                    const textMetrics = ctx.measureText(bookmark.label);
+                    const textWidth = textMetrics.width;
+                    const radius = 3;
+
+                    ctx.beginPath();
+                    ctx.roundRect(
+                        x - textWidth / 2 - padding,
+                        dopplerLabelY - padding,
+                        textWidth + padding * 2,
+                        textHeight + padding * 2,
+                        radius
+                    );
+                    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+                    ctx.fill();
+
+                    // Draw the text
+                    ctx.shadowBlur = 1;
+                    ctx.globalAlpha = 0.8;
+                    ctx.fillStyle = bookmark.color || '#00ffff';
+                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight / 2);
                     ctx.globalAlpha = 1.0;
                 }
 
@@ -189,7 +258,6 @@ const BookmarkCanvas = ({
             });
         }
     }, [bookmarks, centerFrequency, sampleRate, actualWidth, height]);
-
     // Handle click events on the canvas
     const handleCanvasClick = useCallback((e) => {
         if (!onBookmarkClick) return;
