@@ -76,6 +76,7 @@ const waterfallSlice = createSlice({
         hasRtlAgc: false,
         fftSizeValues: [],
         fftWindowValues: [],
+        bookmarks: [],
     },
     reducers: {
         setColorMap: (state, action) => {
@@ -174,6 +175,9 @@ const waterfallSlice = createSlice({
         setShowLeftSideWaterFallAccessories(state, action) {
             state.showLeftSideWaterFallAccessories = action.payload;
         },
+        setBookMarks(state, action) {
+            state.bookmarks = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -231,6 +235,7 @@ export const {
     setFrequencyScaleHeight,
     setShowRightSideWaterFallAccessories,
     setShowLeftSideWaterFallAccessories,
+    setBookMarks,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

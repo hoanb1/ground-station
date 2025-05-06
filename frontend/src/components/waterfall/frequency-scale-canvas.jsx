@@ -188,9 +188,6 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                     }
                 }
             }
-            
-            
-            
         }
 
     }, [centerFrequency, sampleRate, actualWidth]);

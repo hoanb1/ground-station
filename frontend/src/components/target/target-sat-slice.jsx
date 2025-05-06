@@ -338,14 +338,14 @@ const targetSatTrackSlice = createSlice({
             if (action.payload['rotator_data']) {
                 state.rotatorData = action.payload['rotator_data'];
 
-                if (action.payload['rotator_data']['slewing']) {
-                    state.lastRotatorEvent = 'slewing';
-                } else if (action.payload['rotator_data']['tracking']) {
-                    state.lastRotatorEvent = 'tracking';
-                } else if (action.payload['rotator_data']['outofbounds']) {
+                if (action.payload['rotator_data']['outofbounds']) {
                     state.lastRotatorEvent = 'outofbounds';
                 } else if (action.payload['rotator_data']['minelevation']) {
                     state.lastRotatorEvent = 'minelevation';
+                } else if (action.payload['rotator_data']['slewing']) {
+                    state.lastRotatorEvent = 'slewing';
+                } else if (action.payload['rotator_data']['tracking']) {
+                    state.lastRotatorEvent = 'tracking';
                 }
             }
 

@@ -10,7 +10,8 @@ from db import engine, AsyncSessionLocal
 from sync import *
 from datetime import date, datetime
 from auth import *
-from tracking import fetch_next_events, fetch_next_events_for_group, get_ui_tracker_state, get_satellite_position_from_tle
+from tracking import (fetch_next_events_for_satellite, fetch_next_events_for_group, get_ui_tracker_state,
+                      get_satellite_position_from_tle)
 from common import is_geostationary
 from tracking import compiled_satellite_data
 from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
@@ -166,7 +167,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "fetch-next-passes":
             logger.debug(f'Fetching next passes, data: {data}')
-            next_passes = await fetch_next_events(norad_id=data.get('norad_id', None), hours=data.get('hours', 6.0))
+            next_passes = await fetch_next_events_for_satellite(norad_id=data.get('norad_id', None), hours=data.get('hours', 6.0))
             reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
 
         elif cmd == "fetch-next-passes-for-group":

@@ -4,7 +4,12 @@ import {Box, IconButton} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
+import BookmarkIcon from "@mui/icons-material/Bookmark";
 import FrequencyScale from "./frequency-scale-canvas.jsx";
+import BookmarkCanvas from "./waterfall-bookmarks.jsx";
+import {
+    setBookMarks
+} from "./waterfall-slice.jsx";
 
 const WaterfallWithStrictXAxisZoom = ({
                                           bandscopeCanvasRef,
@@ -32,8 +37,10 @@ const WaterfallWithStrictXAxisZoom = ({
         waterFallPositionX,
         frequencyScaleHeight,
         autoDBRange,
+        bookmarks,
     } = useSelector((state) => state.waterfall);
 
+    // Add state for bookmarks
     const [customScale, setCustomScale] = useState(1);
     const [customPositionX, setCustomPositionX] = useState(0);
     const [visualContainerWidth, setVisualContainerWidth] = useState(waterFallCanvasWidth);
@@ -70,8 +77,69 @@ const WaterfallWithStrictXAxisZoom = ({
         // Apply transform
         applyTransform();
         updateReactState();
+    }, []);
+
+    // Function to add a bookmark at a specific frequency
+    const addBookmark = useCallback((frequency, label, color = '#ffff00') => {
+        const newBookmark = {
+            id: Date.now().toString(),
+            frequency,
+            label: label || `${(frequency / 1e6).toFixed(3)} MHz`,
+            color
+        };
+        
+        dispatch(setBookMarks([...bookmarks, newBookmark]));
 
     }, []);
+
+    // Add a bookmark at the center frequency
+    const addCenterFrequencyBookmark = useCallback(() => {
+        addBookmark(
+            centerFrequency,
+            `Center ${(centerFrequency / 1e6).toFixed(3)} MHz`, 
+            '#00ffff'
+        );
+    }, [addBookmark, centerFrequency]);
+
+    // Handle clicks on bookmarks
+    const handleBookmarkClick = useCallback((bookmark) => {
+        // Example: You could show a dialog to edit or delete the bookmark
+        console.log('Clicked on bookmark:', bookmark);
+        
+        // For now, just log it, but you could add more advanced features here
+    }, []);
+
+    // Add event handler for bandscope clicks to add bookmarks
+    const handleBandscopeClick = useCallback((e) => {
+        // Only add bookmark if the ctrl / cmd key is pressed
+        if (!(e.ctrlKey || e.metaKey)) return;
+        
+        if (!bandscopeCanvasRef.current) return;
+        
+        const rect = bandscopeCanvasRef.current.getBoundingClientRect();
+        const clickX = e.clientX - rect.left;
+        const clickXRatio = clickX / rect.width;
+        
+        // Calculate the frequency at click position
+        const freqRange = sampleRate;
+        const minFreq = centerFrequency - (freqRange / 2);
+        const clickedFreq = minFreq + (clickXRatio * freqRange);
+        
+        // Add a bookmark at this frequency
+        addBookmark(clickedFreq);
+    }, [addBookmark, centerFrequency, sampleRate]);
+
+    // Add event listener to bandscope for adding bookmarks
+    useEffect(() => {
+        const canvas = bandscopeCanvasRef.current;
+        if (!canvas) return;
+        
+        canvas.addEventListener('click', handleBandscopeClick);
+        
+        return () => {
+            canvas.removeEventListener('click', handleBandscopeClick);
+        };
+    }, [handleBandscopeClick]);
 
     // Set up ResizeObserver to detect container size changes
     useEffect(() => {
@@ -124,7 +192,9 @@ const WaterfallWithStrictXAxisZoom = ({
         scaleRef.current = waterFallScaleX;
         positionXRef.current = waterFallPositionX;
 
-        return () => window.removeEventListener('resize', checkMobile);
+        return () => {
+            window.removeEventListener('resize', checkMobile);
+        }
     }, []);
 
     // Update React state for rendering (but not for calculations)
@@ -393,6 +463,15 @@ const WaterfallWithStrictXAxisZoom = ({
                 >
                     <RestartAltIcon/>
                 </IconButton>
+                {/* Add bookmark button */}
+                <IconButton
+                    size={isMobile ? "medium" : "small"}
+                    onClick={addCenterFrequencyBookmark}
+                    sx={{color: 'white'}}
+                    title="Add bookmark at center frequency"
+                >
+                    <BookmarkIcon/>
+                </IconButton>
             </Box>
 
             {/* Canvases */}
@@ -408,23 +487,37 @@ const WaterfallWithStrictXAxisZoom = ({
                     touchAction: 'pan-y',
                 }}
             >
-                <canvas
-                    ref={bandscopeCanvasRef}
-                    width={waterFallCanvasWidth}
-                    height={bandScopeHeight}
-                    style={{
-                        width: '100%',
-                        height: `${bandScopeHeight}px`,
-                        borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
-                        display: 'block',
-                        touchAction: 'pan-y',
-                    }}
-                />
+                {/* Bandscope container with relative positioning */}
+                <Box sx={{ position: 'relative' }}>
+                    <canvas
+                        ref={bandscopeCanvasRef}
+                        width={waterFallCanvasWidth}
+                        height={bandScopeHeight}
+                        style={{
+                            width: '100%',
+                            height: `${bandScopeHeight}px`,
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                            display: 'block',
+                            touchAction: 'pan-y',
+                        }}
+                    />
+                    
+                    {/* Add BookmarkCanvas on top of the bandscope */}
+                    <BookmarkCanvas
+                        centerFrequency={centerFrequency}
+                        sampleRate={sampleRate}
+                        containerWidth={visualContainerWidth}
+                        height={bandScopeHeight}
+                        onBookmarkClick={handleBookmarkClick}
+                    />
+                </Box>
+                
                 <FrequencyScale
                     centerFrequency={centerFrequency}
                     containerWidth={visualContainerWidth}
                     sampleRate={sampleRate}
                 />
+                
                 <canvas
                     ref={waterFallCanvasRef}
                     width={waterFallCanvasWidth}
