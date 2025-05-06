@@ -48,7 +48,7 @@ const rootReducer = combineReducers({
 const waterfallPersistConfig = {
     key: 'waterfall',
     storage,
-    whitelist: ['colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
+    whitelist: ['centerFrequency', 'colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
         'showLeftSideWaterFallAccessories']
 };
 
@@ -119,7 +119,7 @@ const preferencesPersistConfig = {
 const targetSatTrackPersistConfig = {
     key: 'targetSatTrack',
     storage,
-    whitelist: []
+    whitelist: ['']
 };
 
 // Persist configuration for overview satellite tracking slice

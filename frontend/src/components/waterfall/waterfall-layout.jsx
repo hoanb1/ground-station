@@ -1,5 +1,5 @@
 import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import {Responsive, WidthProvider} from 'react-grid-layout';
 import 'leaflet-fullscreen/dist/Leaflet.fullscreen.js';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
@@ -14,10 +14,12 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import MainWaterfallDisplay from "./waterfall-view.jsx";
 import WaterfallSettings from "./waterfall-settings.jsx";
+import RigControl from "./rig-control.jsx";
 
 
 // global callback for dashboard editing here
-export let handleSetGridEditableWaterfall = function () {};
+export let handleSetGridEditableWaterfall = function () {
+};
 
 export const gridLayoutStoreName = 'waterfall-view-layouts';
 
@@ -47,101 +49,41 @@ const WaterfallLayout = React.memo(function () {
 
     // Default layout if none in localStorage
     const defaultLayouts = {
-        lg: [{
-            "w": 10,
-            "h": 23,
-            "x": 0,
-            "y": 0,
-            "i": "waterfall",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
+        "lg": [{"w": 10, "h": 22, "x": 0, "y": 0, "i": "waterfall"}, {
             "w": 2,
-            "h": 18,
+            "h": 13,
             "x": 10,
-            "y": 0,
+            "y": 9,
             "i": "settings",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
-        md: [{
-            "w": 10,
-            "h": 21,
-            "x": 0,
-            "y": 0,
-            "i": "waterfall",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 10,
-            "h": 11,
-            "x": 0,
-            "y": 21,
-            "i": "settings",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
-        sm: [{
+        }, {"w": 2, "h": 9, "x": 10, "y": 0, "i": "rig-control"}],
+        "md": [{"w": 10, "h": 22, "x": 0, "y": 13, "i": "waterfall"}, {
             "w": 6,
-            "h": 21,
-            "x": 0,
-            "y": 0,
-            "i": "waterfall",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 21,
-            "x": 4,
-            "y": 21,
-            "i": "settings",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
-        xs: [{
-            "w": 2,
-            "h": 21,
-            "x": 0,
-            "y": 7,
-            "i": "waterfall",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 7,
+            "h": 13,
             "x": 0,
             "y": 0,
             "i": "settings",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
-        xxs: [{
-            "w": 2,
-            "h": 21,
+        }, {"w": 4, "h": 13, "x": 6, "y": 0, "i": "rig-control"}],
+        "sm": [{"w": 6, "h": 22, "x": 0, "y": 13, "i": "waterfall"}, {
+            "w": 3,
+            "h": 13,
             "x": 0,
             "y": 0,
-            "i": "waterfall",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 21,
-            "x": 0,
-            "y": 21,
             "i": "settings",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }]
+        }, {"w": 3, "h": 13, "x": 3, "y": 0, "i": "rig-control"}],
+        "xs": [{"w": 2, "h": 22, "x": 0, "y": 22, "i": "waterfall"}, {
+            "w": 2,
+            "h": 13,
+            "x": 0,
+            "y": 9,
+            "i": "settings",
+        }, {"w": 2, "h": 9, "x": 0, "y": 0, "i": "rig-control"}],
+        "xxs": [{"w": 2, "h": 22, "x": 0, "y": 13, "i": "waterfall"}, {
+            "w": 2,
+            "h": 13,
+            "x": 0,
+            "y": 0,
+            "i": "settings"
+        }, {"w": 2, "h": 9, "x": 0, "y": 35, "i": "rig-control"}]
     };
 
     // globalize the callback
@@ -157,7 +99,7 @@ const WaterfallLayout = React.memo(function () {
         return loaded ?? defaultLayouts;
     });
 
-    function handleLayoutsChange(currentLayout, allLayouts){
+    function handleLayoutsChange(currentLayout, allLayouts) {
         setLayouts(allLayouts);
         saveLayoutsToLocalStorage(allLayouts);
     }
@@ -170,6 +112,9 @@ const WaterfallLayout = React.memo(function () {
         <StyledIslandParentScrollbar key="settings">
             <WaterfallSettings/>
         </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="rig-control">
+            <RigControl/>
+        </StyledIslandParentScrollbar>,
     ];
 
     let ResponsiveGridLayoutParent = null;
@@ -181,8 +126,8 @@ const WaterfallLayout = React.memo(function () {
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}
-                breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-                cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
+                breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
+                cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
                 rowHeight={30}
                 isResizable={true}
                 isDraggable={true}
@@ -197,8 +142,8 @@ const WaterfallLayout = React.memo(function () {
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}
-                breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-                cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
+                breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
+                cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
                 rowHeight={30}
                 isResizable={false}
                 isDraggable={false}

@@ -64,7 +64,7 @@ import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import {SimpleTruncatedHtml} from '../common/common.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
 import RotatorControl from "./rotator-control.jsx";
-import RigControl from "./rig-control.jsx";
+import RigControl from "../waterfall/rig-control.jsx";
 import CameraView from "../common/camera-view.jsx";
 import MiniWaterfallDisplay from "./waterfall-view.jsx";
 import {
@@ -718,16 +718,6 @@ const TargetSatelliteLayout = React.memo(function () {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 9,
-            "x": 0,
-            "y": 57,
-            "i": "rig-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }]
     };
 
@@ -1132,9 +1122,7 @@ const TargetSatelliteLayout = React.memo(function () {
         <StyledIslandParentScrollbar key="rotator-control">
             <RotatorControl/>
         </StyledIslandParentScrollbar>,
-        <StyledIslandParentScrollbar key="rig-control">
-            <RigControl/>
-        </StyledIslandParentScrollbar>,
+
     ];
 
     let ResponsiveGridLayoutParent = null;

@@ -14,7 +14,7 @@ import {
     setSelectedTransmitter,
     setStarting,
     setTrackingStateInBackend
-} from "./target-sat-slice.jsx";
+} from "../target/target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {
     getClassNamesBasedOnGridEditing,
@@ -24,7 +24,7 @@ import {
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import SatelliteList from "./target-sat-list.jsx";
+import SatelliteList from "../target/target-sat-list.jsx";
 import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
@@ -49,8 +49,11 @@ const RigControl = React.memo(({initialNoradId, initialGroupId}) => {
         selectedTransmitter,
         availableTransmitters,
         rigData,
-        gridEditable,
     } = useSelector((state) => state.targetSatTrack);
+
+    const {
+        gridEditable,
+    } = useSelector((state) => state.waterfall);
 
     const {selectedSDR, selectedSDRId, sdrs} = useSelector((state) => state.sdrs);
     const {rigs} = useSelector((state) => state.rigs);

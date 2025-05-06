@@ -191,22 +191,25 @@ const WaterfallSettings = React.memo(({deviceId = 0}) => {
     };
 
     function sendSDRConfigToBackend(updates) {
+        if (selectedSDRId !== "none" && selectedSDRId !== "") {
+            let SDRSettings = {
+                selectedSDRId,
+                centerFrequency,
+                sampleRate,
+                gain,
+                fftSize,
+                biasT,
+                tunerAgc,
+                rtlAgc,
+                fftWindow,
+            }
 
-        let SDRSettings = {
-            selectedSDRId,
-            centerFrequency,
-            sampleRate,
-            gain,
-            fftSize,
-            biasT,
-            tunerAgc,
-            rtlAgc,
-            fftWindow,
+            SDRSettings = {...SDRSettings, ...updates};
+            console.info(`Sending SDR freq to backend: `, SDRSettings);
+            socket.emit('sdr_data', 'configure-sdr', SDRSettings);
+        } else {
+            console.warn("No SDR selected, not sending SDR settings to backend");
         }
-
-        SDRSettings = {...SDRSettings, ...updates};
-        console.info(`Sending SDR freq to backend: `, SDRSettings);
-        socket.emit('sdr_data', 'configure-sdr', SDRSettings);
     }
 
     function handleSDRChange(event) {

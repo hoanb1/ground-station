@@ -886,8 +886,6 @@ const   MainWaterfallDisplay = React.memo(() => {
                         >
                             <AutoGraphIcon/>
                         </ToggleButton>
-
-
                     </ButtonGroup>
                 </Paper>
             </Box>

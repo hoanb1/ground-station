@@ -1,5 +1,5 @@
 import React, { useRef, useEffect, useState, useCallback } from 'react';
-import { humanizeFrequency } from "../common/common.jsx";
+import {humanizeFrequency, preciseHumanizeFrequency} from "../common/common.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {
     setBookMarks
@@ -29,6 +29,7 @@ const BookmarkCanvas = ({
 
     const {
         rigData,
+        availableTransmitters
     } = useSelector((state) => state.targetSatTrack);
 
     // Calculate frequency range
@@ -49,17 +50,29 @@ const BookmarkCanvas = ({
     }, []);
 
     // Function to add a bookmark at a specific frequency
-    const addBookmark = useCallback((frequency, label, color = '#ffff00') => {
-        const newBookmark = {
+    const makeBookMark = (frequency, label, color = '#ffff00') => {
+        return {
             id: Date.now().toString(),
             frequency,
             label: label || `${(frequency / 1e6).toFixed(3)} MHz`,
             color
         };
+    };
 
-        dispatch(setBookMarks([...bookmarks, newBookmark]));
-
-    }, []);
+    // Add bookmarks for available transmitters whenever they change
+    useEffect(() => {
+        if (availableTransmitters.length > 0) {
+            const bookMarks = [];
+            availableTransmitters.forEach(transmitter => {
+                bookMarks.push(makeBookMark(
+                    transmitter['downlink_low'],
+                    `${transmitter['description']} (${preciseHumanizeFrequency(transmitter['downlink_low'])})`,
+                    '#40ff00'
+                ));
+            })
+            dispatch(setBookMarks([...bookMarks]));
+        }
+    }, [availableTransmitters]);
 
     // Poll for container width changes
     useEffect(() => {
@@ -79,23 +92,23 @@ const BookmarkCanvas = ({
 
     // Update width when the container width changes
     useEffect(() => {
-        updateActualWidth();
-
         if (rigData['observed_freq'] > 0) {
             // show a bookmark for the doppler shifted frequency
-            addBookmark(
+            const newBookMark = makeBookMark(
                 rigData['observed_freq'],
                 `Doppler Shifted Frequency: ${humanizeFrequency(rigData['observed_freq'])}`,
                 '#00ffff'
             );
+            dispatch(setBookMarks([...bookmarks, newBookMark]));
         }
-
     }, [rigData]);
 
     // Draw the bookmarks on the canvas
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        }
 
         const ctx = canvas.getContext('2d');
 
