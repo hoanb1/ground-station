@@ -34,11 +34,6 @@ function startRendering(fps) {
     stopRendering();
 
     targetFPS = fps;
-    //const interval = Math.floor(1000 / targetFPS);
-
-    // renderIntervalId = setInterval(() => {
-    //     self.postMessage({ type: 'render' });
-    // }, interval);
 
     // Confirm start
     self.postMessage({ type: 'status', status: 'started', fps: targetFPS });

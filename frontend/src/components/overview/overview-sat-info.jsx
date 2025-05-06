@@ -361,6 +361,57 @@ const SatelliteInfoCard = () => {
                             </Box>
                         </Grid>
 
+                        <Grid>
+                            <Box sx={{
+                                height: '100%',
+                                borderRadius: 1,
+                                background: "#121212",
+                                border: "1px solid #4b4b4b",
+                                overflow: 'hidden',
+                                position: 'relative',
+                                display: 'flex',
+                                flexDirection: 'column',
+                                p: 1.25
+                            }}>
+                                <Box sx={{
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: 0,
+                                    right: 0,
+                                    height: 3,
+                                    background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                }}/>
+
+                                <Typography variant="overline" sx={{
+                                    color: (theme) => theme.palette.secondary.main,
+                                    mb: 1,
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    fontSize: '0.65rem',
+                                    letterSpacing: 1
+                                }}>
+                                    <SpeedIcon sx={{fontSize: 14, mr: 0.5}}/>
+                                    TRXs
+                                </Typography>
+
+                                <Box sx={{
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    flex: 1
+                                }}>
+                                    <Typography variant="h5" sx={{
+                                        fontWeight: 'bold',
+                                        textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                    }}>
+                                        {satelliteData['transmitters'].length}
+                                    </Typography>
+                                </Box>
+                            </Box>
+                        </Grid>
+
+
                         {/* Tracking Button */}
                         <Grid>
                             <Box sx={{
