@@ -22,6 +22,7 @@ from skyfield.api import load, wgs84, EarthSatellite
 from datetime import datetime, timedelta
 from typing import List, Dict, Union, Tuple, Optional
 from footprint import get_satellite_coverage_circle
+from passes import calculate_next_events
 
 
 def pretty_dict(d):
@@ -103,132 +104,7 @@ def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, ob
     return round(float(observed_freq_hz), 2), round(float(doppler_shift_hz), 2)
 
 
-@async_timeit
-async def calculate_next_events(norad_id: int, tle_lines: list[str], home_location: dict[str, float], hours: float = 6.0,
-                                above_el=0, step_minutes=0.5) -> dict:
-    """
-    This function calculates upcoming satellite observation events based on TLE lines, observation location,
-    duration, elevation threshold, and time step. The function computes satellite
-    pass details like start and end times, maximum altitude, and relative distances
-    for an observer at the specified ground position.
-
-    :param norad_id:
-    :param tle_lines: List containing two TLE lines for the satellite
-    :param home_location: Dictionary containing 'lat' and 'lon' keys with float values for observer location
-    :param hours: Observation duration in hours.
-    :param above_el: Minimum elevation angle (in degrees) above the horizon for
-        an event to be considered. Default is 0.
-    :param step_minutes: Time step in minutes for evaluating satellite positions.
-        Smaller time steps increase calculation accuracy. Default is 0.5 minutes.
-    :return: Dictionary containing the calculated satellite pass events,
-        parameters used for computation, and a success flag.
-    :rtype: dict
-    """
-
-    reply: dict[str, Union[bool, None, list, None, dict]] = {'success': None, 'data': None, 'parameters': None}
-    events = []
-
-    logger.info("Calculating satellite events for next " + str(hours) + " hours.")
-
-    try:
-        assert len(tle_lines) == 2, "Must provide exactly 2 TLE lines"
-        assert all(isinstance(line, str) for line in tle_lines), "TLE lines must be strings"
-        assert isinstance(home_location, dict), "home_location must be a dictionary"
-        assert 'lat' in home_location and 'lon' in home_location, "home_location must contain 'lat' and 'lon' keys"
-
-        # set a temporary folder for the skyfield library to do its thing
-        skyfieldloader = Loader('/tmp/skyfield-data')  # or any preferred path
-
-        ts = skyfieldloader.timescale()
-
-        satellite = EarthSatellite(
-            tle_lines[0],
-            tle_lines[1],
-            name=f"satellite_{norad_id}"
-        )
-
-        homelat = float(home_location['lat'])
-        homelon = float(home_location['lon'])
-
-        # Coordinates can be in decimal degrees:
-        observer = Topos(latitude_degrees=homelat, longitude_degrees=homelon)
-
-        # Build a time range for pass calculation
-        t0 = ts.now()
-        t1 = ts.now().utc_jpl()  # Just for reference in printing
-        t_end = t0 + (hours / 24.0)
-
-        # Step through times. Typically, you'll choose a reasonable step size (e.g., 1 minute):
-        t_points = t0 + (np.arange(0, int(hours) * 60, step_minutes) / (24.0 * 60.0))
-
-        # For each time, compute altitude above observer. We subtract the observer (Topos) from the satellite to
-        # get the satellite's position relative to the observer, then do `.altaz()` to get altitude.
-        difference = satellite - observer
-        altitudes = []
-        distances = []
-        for t in t_points:
-            topocentric = difference.at(t)
-            alt, az, distance = topocentric.altaz()
-            altitudes.append(alt.degrees)
-            distances.append(distance.km)
-
-        # Now we can find "passes" by looking for intervals where alt > 0
-        above_horizon = np.array(altitudes) > above_el
-
-        # For a simple pass report, find start/end indices of each pass
-        passes = []
-        in_pass = False
-        pass_start_index = None
-
-        for i in range(len(above_horizon)):
-            if above_horizon[i] and not in_pass:
-                # we are just now rising above the horizon
-                in_pass = True
-                pass_start_index = i
-
-            elif not above_horizon[i] and in_pass:
-                # we just fell below the horizon
-                in_pass = False
-                pass_end_index = i - 1  # last index when above the horizon
-                passes.append((pass_start_index, pass_end_index))
-
-        # If the last pass goes until the end of the array, close it out
-        if in_pass:
-            passes.append((pass_start_index, len(above_horizon) - 1))
-
-        # Print out pass start/end times
-        for idx, (start_i, end_i) in enumerate(passes, 1):
-            start_time = t_points[start_i]
-            end_time = t_points[end_i]
-            dist_start = distances[start_i]
-            dist_end = distances[end_i]
-            duration = end_time.utc_datetime() - start_time.utc_datetime()
-
-            events.append({
-                'id': idx,
-                'event_start': start_time.utc_iso(),
-                'event_end': end_time.utc_iso(),
-                'duration': duration,
-                'distance_at_start': dist_start,
-                'distance_at_end': dist_end,
-                'distance_at_peak': max(distances[start_i:end_i + 1]),
-                'peak_altitude': max(altitudes[start_i:end_i + 1])
-            })
-
-        events = json.loads(json.dumps(events, cls=ModelEncoder))
-
-        reply['data'] = events
-        reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el, 'step_minutes': step_minutes}
-        reply['success'] = True
-
-    except Exception as e:
-        logger.error(f"Failed to calculate satellite events, error: {e}")
-        logger.exception(e)
-
-    finally:
-        return reply
-
-async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el = 0, step_minutes = 1):
+async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el=0, step_minutes=1):
     """
     Fetches the next satellite events for a given group of satellites within a specified
     time frame. This function calculates the satellite events for a group identifier over
@@ -255,7 +131,8 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
     reply: dict[str, Union[bool, None, list, dict]] = {'success': None, 'data': None, 'parameters': None}
     events = []
 
-    logger.info("Calculating satellite events for group id: " + str(group_id) + " for next " + str(hours) + " hours")
+    logger.info(
+        "Calculating satellite events for group id: " + str(group_id) + " for next " + str(hours) + " hours")
 
     async with AsyncSessionLocal() as dbsession:
         try:
@@ -268,22 +145,58 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
             satellites = await crud.fetch_satellites_for_group_id(dbsession, group_id)
             satellites = json.loads(json.dumps(satellites['data'], cls=ModelEncoder))
 
+            # Prepare TLE groups list
+            tle_groups = []
             for satellite in satellites:
-                events_reply = await calculate_next_events(norad_id=satellite['norad_id'],
-                                                           tle_lines=[satellite['tle1'], satellite['tle2']],
-                                                           home_location={'lat': homelat, 'lon': homelon},
-                                                           hours=hours, above_el=above_el,
-                                                           step_minutes=step_minutes)
+                tle_groups.append([
+                    satellite['norad_id'],
+                    satellite['tle1'],
+                    satellite['tle2']
+                ])
 
-                events_for_satellite = events_reply.get('data', [])
-                for event in events_for_satellite:
-                    event['name'] = satellite['name']
-                    event['id'] = f"{satellite['norad_id']}_{event['event_start']}"
+            # Create subprocess to run calculate_next_events
+            process = await asyncio.create_subprocess_exec(
+                'python', '-c',
+                f'''
+import asyncio
+import json
+from passes import calculate_next_events
+
+async def run():
+    events = await calculate_next_events(
+        tle_groups={tle_groups},
+        home_location={{"lat": {homelat}, "lon": {homelon}}},
+        hours={hours},
+        above_el={above_el},
+        step_minutes={step_minutes}
+    )
+    print(json.dumps(events))
+
+asyncio.run(run())
+                ''',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            stdout, stderr = await process.communicate()
+
+            if process.returncode == 0:
+                events_reply = json.loads(stdout.decode())
+                events_data = events_reply.get('data', [])
+
+                # Add satellite names to events
+                sat_names = {sat['norad_id']: sat['name'] for sat in satellites}
+                for event in events_data:
+                    event['name'] = sat_names[event['norad_id']]
+                    event['id'] = f"{event['norad_id']}_{event['event_start']}"
                     events.append(event)
 
-            reply['success'] = True
-            reply['parameters'] = {'group_id': group_id, 'hours': hours, 'above_el': above_el, 'step_minutes': step_minutes}
-            reply['data'] = events
+                reply['success'] = True
+                reply['parameters'] = {'group_id': group_id, 'hours': hours, 'above_el': above_el,
+                                       'step_minutes': step_minutes}
+                reply['data'] = events
+            else:
+                raise Exception(f"Subprocess failed: {stderr.decode()}")
 
         except Exception as e:
             logger.error(f'Error fetching next passes for group: {group_id}, error: {e}')
@@ -293,6 +206,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
 
         finally:
             return reply
+
 
 async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, above_el=0, step_minutes=1):
     """
@@ -321,7 +235,6 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
     events = []
 
     logger.info(f"Calculating satellite events for NORAD ID: {norad_id} for next {hours} hours")
-
     async with AsyncSessionLocal() as dbsession:
         try:
             # Get home location
@@ -333,21 +246,57 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
             satellite_reply = await crud.fetch_satellites(dbsession, norad_id=norad_id)
             satellite = json.loads(json.dumps(satellite_reply['data'][0], cls=ModelEncoder))
 
-            events_reply = await calculate_next_events(norad_id=satellite['norad_id'],
-                                                       tle_lines=[satellite['tle1'], satellite['tle2']],
-                                                       home_location={'lat': homelat, 'lon': homelon},
-                                                       hours=hours, above_el=above_el,
-                                                       step_minutes=step_minutes)
+            # Prepare TLE group for single satellite
+            tle_group = [[
+                satellite['norad_id'],
+                satellite['tle1'],
+                satellite['tle2']
+            ]]
 
-            events_for_satellite = events_reply.get('data', [])
-            for event in events_for_satellite:
-                event['name'] = satellite['name']
-                event['id'] = f"{satellite['norad_id']}_{event['event_start']}"
-                events.append(event)
+            # Create subprocess to run calculate_next_events
+            process = await asyncio.create_subprocess_exec(
+                'python', '-c',
+                f'''
+import asyncio
+import json
+from passes import calculate_next_events
 
-            reply['success'] = True
-            reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el, 'step_minutes': step_minutes}
-            reply['data'] = events
+async def run():
+    events = await calculate_next_events(
+        tle_groups={tle_group},
+        home_location={{"lat": {homelat}, "lon": {homelon}}},
+        hours={hours},
+        above_el={above_el}, 
+        step_minutes={step_minutes}
+    )
+    print(json.dumps(events))
+
+asyncio.run(run())
+                ''',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            stdout, stderr = await process.communicate()
+
+            logger.info("******")
+            logger.info(stdout)
+            logger.info("******")
+
+            if process.returncode == 0:
+                events_reply = json.loads(stdout.decode())
+                events_for_satellite = events_reply.get('data', [])
+                for event in events_for_satellite:
+                    event['name'] = satellite['name']
+                    event['id'] = f"{satellite['norad_id']}_{event['event_start']}"
+                    events.append(event)
+
+                reply['success'] = True
+                reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el,
+                                       'step_minutes': step_minutes}
+                reply['data'] = events
+            else:
+                raise Exception(f"Subprocess failed: {stderr.decode()}")
 
         except Exception as e:
             logger.error(f'Error fetching next passes for satellite: {norad_id}, error: {e}')

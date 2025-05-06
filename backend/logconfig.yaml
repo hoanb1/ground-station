@@ -131,6 +131,12 @@ loggers:
       - default
     propagate: no
 
+  passes-worker:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
