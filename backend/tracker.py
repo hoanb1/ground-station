@@ -228,6 +228,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
         'observed_freq': 0, # hz
         'doppler_shift': 0, # hz
         'original_freq': 0, # hz
+        'transmitter_id': 'none',
+        'device_type': ''
     }
     notified = {}
     is_slewing = False
@@ -521,6 +523,23 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 if rig_controller:
                     rig_data['frequency'] = await rig_controller.get_frequency()
 
+                if current_transmitter_id:
+                    current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
+                    current_transmitter = current_transmitter_reply.get('data', {})
+
+                    if current_transmitter:
+                        # calculate doppler shift
+                        rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
+                            satellite_tles[0],
+                            satellite_tles[1],
+                            location['lat'],
+                            location['lon'],
+                            0,
+                            current_transmitter.get('downlink_low', 0)
+                        )
+                        rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
+                        rig_data['transmitter_id'] = current_transmitter_id
+
                 # work on our sky coordinates
                 skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
 
@@ -539,22 +558,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 # everything good, move on
                 logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {round(skypoint[0], 3)}° el: {round(skypoint[1], 3)}°")
 
-                if current_transmitter_id:
-                    current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
-                    current_transmitter = current_transmitter_reply.get('data', {})
-
-                    if current_transmitter:
-                        # calculate doppler shift
-                        rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
-                            satellite_tles[0],
-                            satellite_tles[1],
-                            location['lat'],
-                            location['lon'],
-                            0,
-                            current_transmitter.get('downlink_low', 0)
-                        )
-                        rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
-                        rig_data['transmitter_id'] = current_transmitter_id
 
                 # tune freq
                 if rig_controller and current_rig_state == "tracking":

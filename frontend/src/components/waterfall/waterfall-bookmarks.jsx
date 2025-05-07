@@ -70,7 +70,7 @@ const BookmarkCanvas = ({
                     '#40ff00',
                     {
                         type: 'transmitter',
-                        transmitter_id: transmitter['transmitter_id']
+                        transmitter_id: transmitter['id']
                     }
                 ));
             })
@@ -97,13 +97,14 @@ const BookmarkCanvas = ({
     // Update width when the container width changes
     useEffect(() => {
         if (rigData['observed_freq'] > 0 && rigData['transmitter_id']) {
-            // Get the transmitter ID
+            // Get the transmitter ID and look up transmitter details
             const transmitterId = rigData['transmitter_id'];
+            const transmitter = availableTransmitters.find(t => t.id === transmitterId);
 
             // Create a new bookmark for the doppler shifted frequency
             const newBookMark = {
                 frequency: rigData['observed_freq'],
-                label: `Corrected frequency: ${humanizeFrequency(rigData['observed_freq'])}`,
+                label: `${transmitter?.description || 'Unknown'} - Corrected: ${humanizeFrequency(rigData['observed_freq'])}`,
                 color: '#00ffff',
                 metadata: {
                     type: 'doppler_shift',
@@ -122,7 +123,7 @@ const BookmarkCanvas = ({
         }
     }, [rigData]);
 
-    // Draw the bookmarks on the canvas
+
     useEffect(() => {
         const canvas = canvasRef.current;
         if (!canvas) {
@@ -147,11 +148,30 @@ const BookmarkCanvas = ({
         const verticalSpacing = textHeight + padding * 2; // Total height of a label
         const baseY = 16; // Base Y position for the first label
 
+        // First, identify all transmitter IDs that have doppler shift bookmarks
+        // We'll use this to skip the corresponding transmitter bookmarks
+        const transmitterIdsWithDoppler = new Set();
+        bookmarks.forEach(bookmark => {
+            if (bookmark.metadata?.type === 'doppler_shift' && bookmark.metadata?.transmitter_id) {
+                transmitterIdsWithDoppler.add(bookmark.metadata.transmitter_id);
+            }
+        });
+
         // Draw each bookmark
         if (bookmarks.length) {
-            bookmarks.forEach((bookmark, index) => {
+            let visibleBookmarkIndex = 0;
+            bookmarks.forEach((bookmark) => {
                 // Skip if the bookmark is outside the visible range
-                if (bookmark.frequency < startFreq || bookmark.frequency > endFreq) return;
+                if (bookmark.frequency < startFreq || bookmark.frequency > endFreq) {
+                    return;
+                }
+
+                // Skip transmitter bookmarks that have a corresponding doppler shift bookmark
+                if (bookmark.metadata?.type === 'transmitter' &&
+                    bookmark.metadata?.transmitter_id &&
+                    transmitterIdsWithDoppler.has(bookmark.metadata.transmitter_id)) {
+                    return;
+                }
 
                 // Calculate x position based on frequency
                 const x = ((bookmark.frequency - startFreq) / freqRange) * canvas.width;
@@ -189,7 +209,8 @@ const BookmarkCanvas = ({
                 // For regular bookmarks - display at top with alternating heights
                 if (bookmark.label && !isDopplerShift) {
                     // Calculate label vertical position based on index
-                    const labelOffset = (index % 2) * verticalSpacing;
+                    // Use visibleBookmarkIndex to ensure proper alternating heights
+                    const labelOffset = (visibleBookmarkIndex % 2) * verticalSpacing;
                     const labelY = baseY + labelOffset;
 
                     ctx.font = '11px Arial';
@@ -218,6 +239,9 @@ const BookmarkCanvas = ({
                     ctx.fillStyle = bookmark.color || '#ffff00';
                     ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
+
+                    // Increment the visible bookmark index only for non-doppler bookmarks
+                    visibleBookmarkIndex++;
                 }
 
                 // For doppler_shift bookmarks - display just above the arrow
@@ -258,6 +282,8 @@ const BookmarkCanvas = ({
             });
         }
     }, [bookmarks, centerFrequency, sampleRate, actualWidth, height]);
+
+
     // Handle click events on the canvas
     const handleCanvasClick = useCallback((e) => {
         if (!onBookmarkClick) return;
