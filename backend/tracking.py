@@ -154,7 +154,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
                     satellite['tle2']
                 ])
 
-            # Create subprocess to run calculate_next_events
+            # Create a subprocess to run calculate_next_events
             process = await asyncio.create_subprocess_exec(
                 'python', '-c',
                 f'''
@@ -184,10 +184,18 @@ asyncio.run(run())
                 events_reply = json.loads(stdout.decode())
                 events_data = events_reply.get('data', [])
 
-                # Add satellite names to events
-                sat_names = {sat['norad_id']: sat['name'] for sat in satellites}
+                # Create a lookup dict for satellite names, transmitters and counts
+                satellite_info = {sat['norad_id']: {
+                    'name': sat['name'],
+                    'transmitters': sat.get('transmitters', []),
+                    'transmitter_count': len([t for t in sat.get('transmitters', [])])
+                } for sat in satellites}
+
+                # Add satellite names, transmitters and counts to events 
                 for event in events_data:
-                    event['name'] = sat_names[event['norad_id']]
+                    event['name'] = satellite_info[event['norad_id']]['name']
+                    event['transmitters'] = satellite_info[event['norad_id']]['transmitters']
+                    event['transmitter_count'] = satellite_info[event['norad_id']]['transmitter_count']
                     event['id'] = f"{event['norad_id']}_{event['event_start']}"
                     events.append(event)
 

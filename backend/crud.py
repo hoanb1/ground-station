@@ -850,10 +850,10 @@ async def fetch_system_satellite_group_by_identifier(session: AsyncSession, grou
 
 async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | UUID4) -> dict:
     """
-    Fetch satellite records for the given group id
+    Fetch satellite records for the given group id along with their transmitters
 
     If 'satellite_id' is provided, return a single satellite record.
-    Otherwise, return all satellite records.
+    Otherwise, return all satellite records with their associated transmitters.
     """
     try:
         assert group_id is not None, "group_id is required"
@@ -865,10 +865,18 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
 
         satellite_ids = group['data']['satellite_ids']
 
+        # Fetch satellites
         stmt = select(Satellites).filter(Satellites.norad_id.in_(satellite_ids))
         result = await session.execute(stmt)
         satellites = result.scalars().all()
         satellites = serialize_object(satellites)
+
+        # Fetch transmitters for each satellite
+        for satellite in satellites:
+            stmt = select(Transmitters).filter(Transmitters.norad_cat_id == satellite['norad_id'])
+            result = await session.execute(stmt)
+            transmitters = result.scalars().all()
+            satellite['transmitters'] = serialize_object(transmitters)
 
         return {"success": True, "data": satellites, "error": None}
 

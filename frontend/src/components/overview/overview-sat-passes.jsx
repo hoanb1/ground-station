@@ -20,6 +20,7 @@ import {
 } from './overview-sat-slice.jsx';
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
+import {Chip} from "@mui/material";
 
 
 const TimeFormatter = React.memo(({ value }) => {
@@ -108,6 +109,60 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
         };
     }, []);
 
+    const getFrequencyBand = (frequency) => {
+        // Input validation
+        if (frequency === null || frequency === undefined) return 'Unknown';
+        if (typeof frequency === 'string' && frequency.trim() === '') return 'Unknown';
+
+        const freq = parseFloat(frequency);
+        if (isNaN(freq) || freq <= 0) return 'Unknown';
+
+        // Define bands in ascending order of frequency
+        const BANDS = [
+            { name: 'ELF', min: 3, max: 30 },                // 3 Hz - 30 Hz
+            { name: 'SLF', min: 30, max: 300 },                  // 30 Hz - 300 Hz
+            { name: 'ULF', min: 300, max: 3000 },                // 300 Hz - 3 kHz
+            { name: 'VLF', min: 3000, max: 30000 },               // 3 kHz - 30 kHz
+            { name: 'LF', min: 30000, max: 300000 },                   // 30 kHz - 300 kHz
+            { name: 'MF', min: 300000, max: 3000000 },              // 300 kHz - 3 MHz
+            { name: 'HF', min: 3000000, max: 30000000 },              // 3 MHz - 30 MHz
+            { name: 'VHF', min: 30000000, max: 300000000 },      // 30 MHz - 300 MHz
+            { name: 'UHF', min: 300000000, max: 1000000000 },   // 300 MHz - 1 GHz
+            { name: 'L Band', min: 1000000000, max: 2000000000 },                      // 1 GHz - 2 GHz
+            { name: 'S Band', min: 2000000000, max: 4000000000 },                      // 2 GHz - 4 GHz
+            { name: 'C Band', min: 4000000000, max: 8000000000 },                      // 4 GHz - 8 GHz
+            { name: 'X Band', min: 8000000000, max: 12000000000 },                     // 8 GHz - 12 GHz
+            { name: 'Ku Band', min: 12000000000, max: 18000000000 },                   // 12 GHz - 18 GHz
+            { name: 'K Band', min: 18000000000, max: 27000000000 },                    // 18 GHz - 27 GHz
+            { name: 'Ka Band', min: 27000000000, max: 40000000000 },                   // 27 GHz - 40 GHz
+            { name: 'V Band', min: 40000000000, max: 75000000000 },                    // 40 GHz - 75 GHz
+            { name: 'W Band', min: 75000000000, max: 110000000000 },                   // 75 GHz - 110 GHz
+            { name: 'mm Band', min: 110000000000, max: 300000000000 },                 // 110 GHz - 300 GHz
+        ];
+
+        // Find the appropriate band
+        for (const band of BANDS) {
+            if (freq >= band.min && freq < band.max) {
+                return band.name;
+            }
+        }
+
+        // Handle frequencies outside our defined range
+        if (freq < 3) return 'Below ELF';
+        if (freq >= 300000000000) {
+            if (freq < 3000000000000) return 'Terahertz';
+            if (freq < 30000000000000) return 'Far Infrared';
+            if (freq < 120000000000000) return 'Mid Infrared';
+            if (freq < 400000000000000) return 'Near Infrared';
+            if (freq < 790000000000000) return 'Visible Light';
+            if (freq < 30000000000000000) return 'Ultraviolet';
+            if (freq < 30000000000000000000) return 'X-rays';
+            return 'Gamma rays';
+        }
+
+        return 'Unknown';
+    };
+
 
     const columns = [
         {
@@ -120,11 +175,79 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
             }
         },
         {
+            field: 'transmitter_count',
+            minWidth: 100,
+            headerName: 'Transmitters',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return value ? `${value}` : '0';
+            }
+        },
+        {
+            field: 'transmitters',
+            minWidth: 120,
+            align: 'center',
+            headerAlign: 'center',
+            headerName: 'Bands',
+            flex: 2,
+            renderCell: (params) => {
+                const transmitters = params.value;
+                if (!transmitters) {
+                    return 'No data';
+                }
+
+                const getBandColor = (band) => {
+                    const colors = {
+                        'HF': '#FF6B6B',
+                        'VHF': '#28716d',
+                        'UHF': '#1a4d59',
+                        'L': '#4d6a5c',
+                        'S': '#786948',
+                        'C': '#635c88',
+                        'X': '#885c6c',
+                        'Ku': '#4b7560',
+                        'K': '#7c2e8c',
+                        'Ka': '#433487'
+                    };
+                    return colors[band] || '#666666';
+                };
+
+                const bands = transmitters
+                    .map(t => getFrequencyBand(t['downlink_low']))
+                    .filter((v, i, a) => a.indexOf(v) === i);
+
+                return (
+                    <div style={{display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center'}}>
+                        {bands.map((band, index) => (
+                            <Chip
+                                key={index}
+                                label={band}
+                                size="small"
+                                sx={{
+                                    mt: '8px',
+                                    height: '18px',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 'bold',
+                                    backgroundColor: getBandColor(band),
+                                    color: '#ffffff',
+                                    '&:hover': {
+                                        filter: 'brightness(90%)',
+                                    }
+                                }}
+                            />
+                        ))}
+                    </div>
+                );
+            }
+        },
+        {
             field: 'event_start',
             minWidth: 200,
             headerName: 'Start',
             flex: 2,
-            renderCell: (params) => <TimeFormatter value={params.value} />
+            renderCell: (params) => <TimeFormatter value={params.value}/>
             // valueFormatter: (value) => {
             //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
             // }
