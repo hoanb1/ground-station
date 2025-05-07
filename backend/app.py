@@ -1,14 +1,13 @@
 import sys
 import os
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 import uvicorn
 import socketio
 import httpx
 import numpy as np
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
-from tracking import satellite_tracking_task
+from tracker import satellite_tracking_task
 from fastapi import FastAPI, WebSocket, Request, HTTPException
 from models import Base
 from logger import get_logger, get_logger_config

@@ -3,6 +3,8 @@ import math
 from skyfield.api import load, wgs84, EarthSatellite
 from datetime import datetime, timedelta
 from typing import List, Dict, Union, Tuple, Optional
+
+
 def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
     """
     Returns an array of { "lat": lat, "lon": lon } points representing the satellite's

@@ -1,24 +1,14 @@
-import uuid
-import crud
-import requests
-import json
-import rtlsdr
-import concurrent.futures
-import functools
 from typing import Union
 from db import engine, AsyncSessionLocal
 from sync import *
-from datetime import date, datetime
 from auth import *
-from tracking import (fetch_next_events_for_satellite, fetch_next_events_for_group, get_ui_tracker_state,
-                      get_satellite_position_from_tle)
+from tracking.events import (fetch_next_events_for_satellite, fetch_next_events_for_group)
+from tracker import get_ui_tracker_state, get_satellite_position_from_tle, compiled_satellite_data
 from common import is_geostationary
-from tracking import compiled_satellite_data
 from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdrprocessmanager import sdr_process_manager
 from soapysdrbrowser import discovered_servers
 from waterfall import get_sdr_parameters
-
 
 
 # Function to run async code in a thread
