@@ -131,7 +131,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
             'rotator_id': selectedRotator,
             'transmitter_id': event.target.value,
         };
-        dispatch(setTrackingStateInBackend({ socket, data: data}));
+        dispatch(setTrackingStateInBackend({ socket: socket, data: data}));
 
         const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
         const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;

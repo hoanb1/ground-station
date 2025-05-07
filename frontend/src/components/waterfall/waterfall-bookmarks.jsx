@@ -192,16 +192,25 @@ const BookmarkCanvas = ({
 
                 // Draw a downward-pointing arrow at the bottom of the canvas
                 ctx.beginPath();
-                ctx.fillStyle = bookmark.color || '#ffff00';
                 const arrowSize = 6;
                 const arrowY = height - arrowSize; // Position at bottom of canvas
 
-                // Draw the arrow
+                // Draw the arrow path
                 ctx.moveTo(x - arrowSize, arrowY);
                 ctx.lineTo(x + arrowSize, arrowY);
                 ctx.lineTo(x, height);
                 ctx.closePath();
-                ctx.fill();
+
+                // If the bookmark is a transmitter, draw a hollow arrow with colored outline
+                if (bookmark.metadata?.type === 'transmitter') {
+                    ctx.strokeStyle = bookmark.color || '#ffff00';
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                } else {
+                    // For all other bookmarks, fill the arrow
+                    ctx.fillStyle = bookmark.color || '#ffff00';
+                    ctx.fill();
+                }
 
                 // Check if this is a doppler_shift type bookmark
                 const isDopplerShift = bookmark.metadata?.type === 'doppler_shift';
