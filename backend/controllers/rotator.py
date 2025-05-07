@@ -90,10 +90,10 @@ class RotatorController:
     async def _create_connection(self):
         """Creates a temporary connection if not already connected."""
         if self.connected and self.reader is not None and self.writer is not None:
-            # Use existing connection
+            # Use an existing connection
             yield self.reader, self.writer
         else:
-            # Create temporary connection
+            # Create a temporary connection
             reader = writer = None
             try:
                 # Use asyncio's open_connection with timeout

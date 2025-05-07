@@ -132,7 +132,7 @@ loggers:
     propagate: no
 
   passes-worker:
-    level: ERROR
+    level: INFO
     handlers:
       - default
     propagate: no

@@ -1,10 +1,9 @@
-from concurrent.futures import ProcessPoolExecutor
-
+import logging
 import time
 import asyncio
 import socket
+from concurrent.futures import ProcessPoolExecutor
 from typing import Optional, Tuple, Dict, Any, Union, AsyncGenerator, Generator
-import logging
 from arguments import arguments as args
 from contextlib import asynccontextmanager
 from Hamlib import Hamlib

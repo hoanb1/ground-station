@@ -10,7 +10,7 @@ from typing import List, Dict, Union, Tuple, Optional
 
 logger = logging.getLogger('passes-worker')
 
-async def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, float], hours: float = 6.0,
+def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, float], hours: float = 6.0,
                                 above_el=0, step_minutes=0.5) -> dict:
     """
     This function calculates upcoming satellite observation events based on TLE lines, observation location,  
@@ -30,7 +30,7 @@ async def calculate_next_events(tle_groups: list[list[str]], home_location: dict
     :rtype: dict
     """
 
-    reply: dict[str, Union[bool, None, list, None, dict]] = {'success': None, 'data': None, 'parameters': None}
+    reply: dict[str, Union[bool, None, list, None, dict, str]] = {'success': None, 'data': None, 'parameters': None, 'error': None}
     events = []
 
     logger.info(f"Calculating passes for {len(tle_groups)} satellites for the next {hours} hours.")

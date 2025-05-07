@@ -1,4 +1,5 @@
 import json
+import multiprocessing
 import pprint
 import crud
 import asyncio
@@ -22,6 +23,7 @@ from skyfield.api import load, wgs84, EarthSatellite
 from datetime import datetime, timedelta
 from typing import List, Dict, Union, Tuple
 from footprint import get_satellite_coverage_circle
+from passes import calculate_next_events
 
 
 
@@ -104,6 +106,17 @@ def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, ob
     return round(float(observed_freq_hz), 2), round(float(doppler_shift_hz), 2)
 
 
+def run_calculation(tle_groups, homelat, homelon, hours, above_el, step_minutes):
+    events = calculate_next_events(
+        tle_groups=tle_groups,
+        home_location={"lat": homelat, "lon": homelon},
+        hours=hours,
+        above_el=above_el,
+        step_minutes=step_minutes
+    )
+    return events
+
+
 async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el=0, step_minutes=1):
     """
     Fetches the next satellite events for a given group of satellites within a specified
@@ -154,35 +167,17 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
                     satellite['tle2']
                 ])
 
-            # Create a subprocess to run calculate_next_events
-            process = await asyncio.create_subprocess_exec(
-                'python', '-c',
-                f'''
-import asyncio
-import json
-from passes import calculate_next_events
+            with multiprocessing.Pool(processes=1) as pool:
+                # Submit the calculation task to the pool
+                result = await asyncio.get_event_loop().run_in_executor(
+                    None,
+                    pool.apply,
+                    run_calculation,
+                    (tle_groups, homelat, homelon, hours, above_el, step_minutes)
+                )
 
-async def run():
-    events = await calculate_next_events(
-        tle_groups={tle_groups},
-        home_location={{"lat": {homelat}, "lon": {homelon}}},
-        hours={hours},
-        above_el={above_el},
-        step_minutes={step_minutes}
-    )
-    print(json.dumps(events))
-
-asyncio.run(run())
-                ''',
-                stdout=asyncio.subprocess.PIPE,
-                stderr=asyncio.subprocess.PIPE
-            )
-
-            stdout, stderr = await process.communicate()
-
-            if process.returncode == 0:
-                events_reply = json.loads(stdout.decode())
-                events_data = events_reply.get('data', [])
+            if result.get('success', False):
+                events_data = result.get('data', [])
 
                 # Create a lookup dict for satellite names, transmitters and counts
                 satellite_info = {sat['norad_id']: {
@@ -204,7 +199,7 @@ asyncio.run(run())
                                        'step_minutes': step_minutes}
                 reply['data'] = events
             else:
-                raise Exception(f"Subprocess failed: {stderr.decode()}")
+                raise Exception(f"Subprocess for calculating next passes failed: {result}")
 
         except Exception as e:
             logger.error(f'Error fetching next passes for group: {group_id}, error: {e}')
