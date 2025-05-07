@@ -144,6 +144,7 @@ const   MainWaterfallDisplay = React.memo(() => {
         gettingSDRParameters,
         showRightSideWaterFallAccessories,
         showLeftSideWaterFallAccessories,
+        selectedAntenna,
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
@@ -437,15 +438,16 @@ const   MainWaterfallDisplay = React.memo(() => {
 
             // Configure RTL-SDR settings
             socket.emit('sdr_data', 'configure-sdr', {
-                selectedSDRId,
-                centerFrequency,
-                sampleRate,
-                gain,
-                fftSize,
-                biasT,
-                tunerAgc,
-                rtlAgc,
-                fftWindow,
+                selectedSDRId: selectedSDRId,
+                centerFrequency: centerFrequency,
+                sampleRate: sampleRate,
+                gain: gain,
+                fftSize: fftSize,
+                biasT: biasT,
+                tunerAgc: tunerAgc,
+                rtlAgc: rtlAgc,
+                fftWindow: fftWindow,
+                antenna: selectedAntenna,
             }, (response) => {
                 // Check response
                 if (response['success']) {

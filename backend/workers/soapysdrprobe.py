@@ -2,7 +2,7 @@ import logging
 import logging.config
 import numpy as np
 import SoapySDR
-from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
+from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32, SOAPY_SDR_TX
 import yaml
 import os
 
@@ -31,10 +31,12 @@ def get_soapy_sdr_parameters(sdr_details):
             - rates: List of sample rates in Hz supported by the device
             - gains: List of valid gain values in dB
             - has_agc: Boolean indicating if automatic gain control is supported
+            - antennas: Dictionary of available antennas for RX and TX
     """
     rates = []
     gains = []
     has_agc = False
+    antennas = {'rx': [], 'tx': []}
 
     logger.info(f"Connecting to SoapySDR device with details: {sdr_details}")
 
@@ -96,9 +98,25 @@ def get_soapy_sdr_parameters(sdr_details):
         # Check if automatic gain control is supported
         try:
             has_agc = sdr.hasGainMode(SOAPY_SDR_RX, channel)
-
         except Exception as e:
             logger.warning("Could not determine if automatic gain control is supported")
+            logger.exception(e)
+            
+        # Get information about antennas
+        try:
+            # Get RX antennas
+            antennas['rx'] = sdr.listAntennas(SOAPY_SDR_RX, channel)
+            logger.info(f"RX Antennas: {antennas['rx']}")
+            
+            # Get TX antennas if available
+            try:
+                antennas['tx'] = sdr.listAntennas(SOAPY_SDR_TX, channel)
+                logger.info(f"TX Antennas: {antennas['tx']}")
+            except Exception as e:
+                logger.warning(f"Could not get TX antennas: {e}")
+                # This is not critical as we might only be interested in RX
+        except Exception as e:
+            logger.warning(f"Could not get antenna information: {e}")
             logger.exception(e)
 
     except Exception as e:
@@ -110,5 +128,6 @@ def get_soapy_sdr_parameters(sdr_details):
         return {
             'rates': sorted(rates),
             'gains': gains,
-            'has_agc': has_agc
+            'has_agc': has_agc,
+            'antennas': antennas
         }

@@ -35,6 +35,7 @@ import {
     setFFTWindow,
     setExpandedPanels,
     setSelectedSDRId,
+    setSelectedAntenna,
 } from './waterfall-slice.jsx'
 import {
     Box,
@@ -157,9 +158,13 @@ const WaterfallSettings = forwardRef((props, ref) => {
         hasRtlAgc,
         fftSizeValues,
         fftWindowValues,
+        antennasList,
+        selectedAntenna,
     } = useSelector((state) => state.waterfall);
 
-    const { sdrs } = useSelector((state) => state.sdrs);
+    const {
+        sdrs
+    } = useSelector((state) => state.sdrs);
 
     const [localCenterFrequency, setLocalCenterFrequency] = useState(centerFrequency);
     const [localDbRange, setLocalDbRange] = useState(dbRange);
@@ -195,15 +200,16 @@ const WaterfallSettings = forwardRef((props, ref) => {
     const sendSDRConfigToBackend = useCallback((updates = {}) => {
         if (selectedSDRId !== "none" && selectedSDRId !== "") {
             let SDRSettings = {
-                selectedSDRId,
-                centerFrequency,
-                sampleRate,
-                gain,
-                fftSize,
-                biasT,
-                tunerAgc,
-                rtlAgc,
-                fftWindow,
+                selectedSDRId: selectedSDRId,
+                centerFrequency: centerFrequency,
+                sampleRate: sampleRate,
+                gain: gain,
+                fftSize: fftSize,
+                biasT: biasT,
+                tunerAgc: tunerAgc,
+                rtlAgc: rtlAgc,
+                fftWindow: fftWindow,
+                antenna: selectedAntenna,
             }
 
             SDRSettings = {...SDRSettings, ...updates};
@@ -305,6 +311,10 @@ const WaterfallSettings = forwardRef((props, ref) => {
         return sendSDRConfigToBackend({fftWindow: fftWindow});
     };
 
+    const updateSelectedAntenna = (antenna) => (dispatch) => {
+        dispatch(setSelectedAntenna(antenna));
+        return sendSDRConfigToBackend({antenna: antenna});
+    };
 
     return (
         <>
@@ -396,6 +406,30 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                         })}
                                     </Select>
                                 </FormControl>
+                                <FormControl disabled={gettingSDRParameters}
+                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                                             fullWidth={true}
+                                             variant="filled" size="small">
+                                    <InputLabel>Antenna</InputLabel>
+                                    <Select
+                                        disabled={gettingSDRParameters}
+                                        size={'small'}
+                                        value={selectedAntenna || "none"}
+                                        onChange={(e) => {
+                                            dispatch(updateSelectedAntenna(e.target.value));
+                                        }}
+                                        variant={'filled'}>
+                                        <MenuItem value="none">
+                                            [no antenna selected]
+                                        </MenuItem>
+                                        {antennasList.rx && antennasList.rx.map(antenna => (
+                                            <MenuItem key={antenna} value={antenna}>
+                                                {antenna}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+
                             </Box>
 
                             <Box sx={{mb: 0, ml: 1.5}}>

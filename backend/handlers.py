@@ -554,11 +554,12 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # SDR device id
                 sdr_id = data.get('selectedSDRId', None)
 
+                logger.info(f"Configuring SDR {sdr_id} for client {client_id} with config {data}")
+
                 # Fetch SDR device details from database
                 sdr_device_reply = await crud.fetch_sdr(dbsession, sdr_id)
                 if not sdr_device_reply['success'] or not sdr_device_reply['data']:
                     raise Exception(f"SDR device with id {sdr_id} not found in database")
-
 
                 sdr_device = sdr_device_reply['data']
                 sdr_serial = sdr_device.get('serial', 0)
@@ -596,6 +597,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # Read the FFT window
                 fft_window = data.get('fftWindow', 'hanning')
 
+                # Antenna port
+                antenna = data.get('antenna', None)
+
                 sdr_config = {
                     'center_freq': center_freq,
                     'sample_rate': sample_rate,
@@ -605,6 +609,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     'tuner_agc': tuner_agc,
                     'rtl_agc': rtl_agc,
                     'fft_window': fft_window,
+                    'antenna': antenna,
                     'sdr_id': sdr_id,
                     'serial_number': sdr_serial,
                     'host': sdr_host,

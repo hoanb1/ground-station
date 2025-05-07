@@ -127,6 +127,10 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
         'fft_size_values': [],
         'fft_window_values': [],
         'has_agc': False,
+        'antennas': {
+            'tx': [],
+            'rx': []
+        },
     }
 
     try:
@@ -164,6 +168,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
                 'has_bias_t': True,
                 'has_tuner_agc': True,
                 'has_rtl_agc': True,
+                'antennas': {'tx': [], 'rx': []},
             }
 
             reply = {'success': True, 'data': params}
@@ -208,6 +213,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
                 'fft_size_values': fft_size_values,
                 'fft_window_values': window_function_names,
                 'has_agc': sdr_params['has_agc'],
+                'antennas': sdr_params['antennas'],
             }
 
             reply = {'success': True, 'data': params}
@@ -228,8 +234,5 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
         reply['error'] = error_msg
 
     finally:
-
-        logger.info(f"{reply}")
-
         return reply
 

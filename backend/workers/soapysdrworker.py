@@ -433,24 +433,6 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         logger.info("SoapySDR worker process terminated")
 
 
-# def calculate_samples_per_scan(sample_rate):
-#     """
-#     Calculate the number of samples required per scan based on the provided sample rate.
-#     """
-#     # Default value for high sample rates
-#     base_samples = 128 * 1024
-#
-#     if sample_rate <= 5e5:  # Less than 500KHz
-#         return base_samples // 4
-#     elif sample_rate <= 1e6:  # Less than 1 MHz
-#         return base_samples // 2
-#     elif sample_rate <= 2e6:  # Less than 2 MHz
-#         return base_samples // 1
-#     else:
-#         return base_samples
-#
-
-
 def calculate_samples_per_scan(sample_rate):
     """
     Calculate samples needed to maintain a constant FFT production rate
@@ -471,7 +453,7 @@ def calculate_samples_per_scan(sample_rate):
     # Calculate samples needed at this sample rate
     samples_needed = int(sample_rate * time_per_fft)
 
-    # Round to nearest power of 2 for efficient FFT processing
+    # Round to the nearest power of 2 for efficient FFT processing
     power_of_2 = 2 ** math.floor(math.log2(samples_needed))
 
     # Handle edge cases - set minimum and maximum sample counts

@@ -41,6 +41,52 @@ class SDRProcessManager:
         """
         self.sio = sio
 
+    async def get_center_frequency(self, sdr_id):
+        """
+        Get the current center frequency of an SDR worker process
+
+        Args:
+            sdr_id: Device identifier
+
+        Returns:
+            float: Current center frequency in Hz, or None if process not found/running
+        """
+        if not self.is_sdr_process_running(sdr_id):
+            self.logger.warning(f"No running SDR process found for device {sdr_id}")
+            return None
+
+        process_info = self.processes[sdr_id]
+
+        # Create a temporary queue for receiving the response
+        response_queue = multiprocessing.Queue()
+
+        # Send a request to the worker process to get the center frequency
+        request = {
+            'type': 'get_center_freq',
+            'response_queue': response_queue
+        }
+
+        process_info['config_queue'].put(request)
+
+        # Wait for the response with a timeout
+        try:
+            # Poll the queue for a response with a timeout
+            for _ in range(50):  # Wait up to 5 seconds
+                if not response_queue.empty():
+                    response = response_queue.get()
+                    if 'center_freq' in response:
+                        return response['center_freq']
+                    else:
+                        self.logger.error(f"Invalid response format from SDR process for device {sdr_id}")
+                        return None
+                await asyncio.sleep(0.1)
+
+            self.logger.warning(f"Timeout waiting for center frequency from SDR process for device {sdr_id}")
+            return None
+        except Exception as e:
+            self.logger.error(f"Error getting center frequency from SDR process for device {sdr_id}: {str(e)}")
+            return None
+
     async def start_sdr_process(self, sdr_device, sdr_config, client_id):
         """
         Start an SDR worker process
@@ -159,6 +205,7 @@ class SDRProcessManager:
                 'bias_t': sdr_config.get('bias_t', 0),
                 'tuner_agc': sdr_config.get('tuner_agc', False),
                 'rtl_agc': sdr_config.get('rtl_agc', False),
+                'antenna': sdr_config.get('antenna', 'RX'),
             }
 
             if not worker_process:

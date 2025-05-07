@@ -137,6 +137,12 @@ loggers:
       - default
     propagate: no
 
+  waterfall-process:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
