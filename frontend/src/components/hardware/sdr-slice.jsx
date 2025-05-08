@@ -1,6 +1,27 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 
+// get-local-soapy-sdr-devices
+export const fetchLocalSoapySDRDevices = createAsyncThunk(
+    'sdrs/fetchLocalSoapySDRDevices',
+    async ({socket}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-local-soapy-sdr-devices', null, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to fetch local SoapySDR devices'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+
 export const fetchSoapySDRServers = createAsyncThunk(
     'sdrs/fetchSoapySDRServers',
     async ({socket}, {rejectWithValue}) => {
@@ -108,6 +129,7 @@ const sdrsSlice = createSlice({
         formValues: defaultSDR,
         soapyServers: {},
         selectedSdrDevice: "",
+        localSoapyDevices: [],
     },
     reducers: {
         setSDRs: (state, action) => {
@@ -221,6 +243,22 @@ const sdrsSlice = createSlice({
                 state.soapyServers = action.payload;
             })
             .addCase(fetchSoapySDRServers.rejected, (state, action) => {
+                state.loading = false;
+                state.status = 'failed';
+                state.error = action.payload;
+            })
+            // Handle fetchLocalSoapySDRDevices states
+            .addCase(fetchLocalSoapySDRDevices.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+                state.status = 'loading';
+            })
+            .addCase(fetchLocalSoapySDRDevices.fulfilled, (state, action) => {
+                state.loading = false;
+                state.status = 'succeeded';
+                state.localSoapyDevices = action.payload;
+            })
+            .addCase(fetchLocalSoapySDRDevices.rejected, (state, action) => {
                 state.loading = false;
                 state.status = 'failed';
                 state.error = action.payload;

@@ -125,7 +125,13 @@ loggers:
       - default
     propagate: no
 
-  soapysdr-probe:
+  soapylocal-probe:
+    level: ERROR
+    handlers:
+      - default
+    propagate: no
+
+  soapyremote-probe:
     level: ERROR
     handlers:
       - default

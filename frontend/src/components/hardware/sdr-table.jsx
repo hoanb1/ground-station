@@ -30,6 +30,7 @@ import {
     setFormValues,
     fetchSoapySDRServers,
     setSelectedSdrDevice,
+    fetchLocalSoapySDRDevices,
 } from './sdr-slice.jsx';
 import Paper from "@mui/material/Paper";
 
@@ -91,6 +92,17 @@ const sdrTypeFields = {
             driver: '',
             serial: ''
         }
+    },
+    soapysdrlocal: {
+        excludeFields: ['host', 'port'],
+        fields: ['name', 'frequency_min', 'frequency_max', 'driver', 'serial'],
+        defaults: {
+            name: 'SoapySDR USB',
+            frequency_min: 24,
+            frequency_max: 1800,
+            driver: '',
+            serial: ''
+        }
     }
 };
 
@@ -110,10 +122,12 @@ export default function SDRsPage() {
         formValues,
         soapyServers,
         selectedSdrDevice,
+        localSoapyDevices
     } = useSelector((state) => state.sdrs);
 
     useEffect(() => {
         dispatch(fetchSoapySDRServers({socket}));
+        dispatch(fetchLocalSoapySDRDevices({socket}));
     }, []);
 
     const columns = [
@@ -245,6 +259,7 @@ export default function SDRsPage() {
                     <MenuItem value="rtlsdrusbv4">RTL-SDR USB v4</MenuItem>
                     <MenuItem value="rtlsdrtcpv4">RTL-SDR TCP v4</MenuItem>
                     <MenuItem value="soapysdrremote">SoapySDR Remote</MenuItem>
+                    <MenuItem value="soapysdrlocal">SoapySDR USB</MenuItem>
                 </Select>
             </FormControl>
         ];
@@ -252,6 +267,59 @@ export default function SDRsPage() {
         // If a valid SDR type is selected, add the corresponding fields
         if (selectedType && sdrTypeFields[selectedType]) {
             const config = sdrTypeFields[selectedType];
+
+
+            // Add a dropdown to select local Soapy USB devices
+            if (selectedType === 'soapysdrlocal') {
+
+                if (localSoapyDevices && localSoapyDevices.length > 0) {
+                    fields.push(
+                        <FormControl key="local-sdr-device-select" fullWidth variant="filled">
+                            <InputLabel id="local-sdr-device-label">Local SDR Device</InputLabel>
+                            <Select
+                                labelId="local-sdr-device-label"
+                                value={selectedSdrDevice}
+                                onChange={(e) => {
+                                    const selectedSdrIndex = e.target.value;
+                                    dispatch(setSelectedSdrDevice(selectedSdrIndex));
+
+                                    if (selectedSdrIndex !== '') {
+                                        const selectedSdr = localSoapyDevices[selectedSdrIndex];
+
+                                        if (selectedSdr) {
+                                            // Prepare new form values with SDR device information
+                                            const newValues = {
+                                                ...formValues,
+                                                name: selectedSdr.label || 'SoapySDR USB Device',
+                                                driver: selectedSdr.driver || '',
+                                                serial: selectedSdr.serial || ''
+                                            };
+
+                                            dispatch(setFormValues(newValues));
+                                        }
+                                    }
+                                }}
+                                variant={'filled'}>
+                                <MenuItem value="">Select SDR Device</MenuItem>
+                                {localSoapyDevices.map((sdr, index) => (
+                                    <MenuItem key={index} value={index}>
+                                        {sdr.label || sdr.driver || `SDR Device ${index}`}
+                                        {sdr.serial ? ` :: ${sdr.serial}` : ''}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    );
+                } else {
+                    fields.push(
+                        <Alert key="no-local-devices" severity="info" sx={{ mt: 1 }}>
+                            No local SoapySDR devices detected. Please connect a device and refresh.
+                        </Alert>
+                    );
+                }
+            }
+
+
 
             // Host field - only show for types that don't exclude it
             if (!config.excludeFields.includes('host')) {
@@ -427,6 +495,8 @@ export default function SDRsPage() {
                     />
                 );
             }
+
+
         }
 
         return fields;

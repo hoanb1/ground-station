@@ -13,6 +13,7 @@ export const getSDRConfigParameters = createAsyncThunk(
                 if (response.success) {
                     resolve(response.data);
                 } else {
+                    console.error("rejecting", response.error);
                     reject(rejectWithValue(response.error));
                 }
             });

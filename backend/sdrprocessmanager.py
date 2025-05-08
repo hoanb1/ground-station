@@ -104,7 +104,11 @@ class SDRProcessManager:
 
         assert self.sio is not None, ("Socket.IO server instance not set when setting up SDR process manager."
                                       " Please call set_sio() first.")
-        assert sdr_device['type'] in ['rtlsdrusbv3', 'rtlsdrtcpv3', 'rtlsdrusbv4', 'rtlsdrtcpv4', 'soapysdrremote']
+        assert sdr_device['type'] in [
+            'rtlsdrusbv3', 'rtlsdrtcpv3',
+            'rtlsdrusbv4', 'rtlsdrtcpv4',
+            'soapysdrremote', 'soapysdrlocal'
+        ]
         assert sdr_device['id']
 
         sdr_id = sdr_device['id']
@@ -146,6 +150,12 @@ class SDRProcessManager:
             hostname = sdr_device['host']
             port = sdr_device['port']
             connection_type = "soapysdrremote"
+            driver = sdr_device['driver']
+            serial_number = sdr_device['serial']
+            worker_process = soapysdr_worker_process
+
+        elif sdr_device['type'] == 'soapysdrlocal':
+            connection_type = "soapysdrlocal"
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
             worker_process = soapysdr_worker_process

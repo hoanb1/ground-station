@@ -7,10 +7,13 @@ import time
 import numpy as np
 from datetime import time
 import multiprocessing as mp
+from workers.soapyenum import probe_available_usb_sdrs
+from multiprocessing import Pool
 from typing import Dict, List, Optional, Any, Union
 from sdrprocessmanager import sdr_process_manager
 from workers.common import window_functions
-
+from workers.soapyenum import probe_available_usb_sdrs
+from multiprocessing import Pool
 
 logger = logging.getLogger('waterfall-process')
 
@@ -115,6 +118,37 @@ async def stop_waterfall_streaming(sid):
 async def stream_waterfall_data_task(sid, device_index, config):
     """Background task to stream waterfall data to a client"""
 
+
+def _probe_wrapper():
+    return probe_available_usb_sdrs()
+
+
+async def get_local_soapy_sdr_devices():
+    """Retrieve a list of local SoapySDR devices"""
+
+    reply: dict[str, bool | dict | list | str | None] = {'success': None, 'data': None, 'error': None}
+
+    try:
+        with Pool(processes=1) as pool:
+            result = pool.apply(_probe_wrapper)
+
+        if result['success']:
+            result = result['data']
+        else:
+            raise Exception("Error enumerating local SoapySDR devices:")
+
+        reply['success'] = True
+        reply['data'] = result
+
+    except Exception as e:
+        logger.error(f"Error probing USB SDRs: {str(e)}")
+        reply['success'] = False
+        reply['error'] = str(e)
+
+    finally:
+        return reply
+
+
 async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
     """Retrieve SDR parameters from the SDR process manager"""
 
@@ -125,7 +159,8 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
     try:
         # Fetch SDR device details from database
         sdr_device_reply = await crud.fetch_sdr(dbsession, sdr_id)
-        if not sdr_device_reply['success'] or not sdr_device_reply['data']:
+
+        if not sdr_device_reply['data']:
             raise Exception(f"SDR device with id {sdr_id} not found in database")
 
         sdr = sdr_device_reply['data']
@@ -163,30 +198,43 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
             reply = {'success': True, 'data': params}
 
         elif sdr.get('type') in ['soapysdrremote', 'soapysdrlocal']:
+            if sdr.get('type') == 'soapysdrremote':
+                logger.info(f'Getting SDR parameters from SoapySDR server for SDR: {sdr}')
+                # Get SDR parameters from the SoapySDR server in a separate process
+                probe_process = await asyncio.create_subprocess_exec(
+                    'python3', '-c',
+                    f'from workers.soapysdrremoteprobe import probe_remote_soapy_sdr; print(probe_remote_soapy_sdr({sdr}))',
+                    stdout=asyncio.subprocess.PIPE
+                )
 
-            logger.info(f'Getting SDR parameters from SoapySDR server for SDR: {sdr}')
+                try:
+                    stdout, _ = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
 
-            # Get SDR parameters from the SoapySDR server in a separate thread
-            probe_process = await asyncio.create_subprocess_exec(
-                'python3', '-c',
-                f'from workers.soapysdrprobe import get_soapy_sdr_parameters; print(get_soapy_sdr_parameters({sdr}))',
-                stdout=asyncio.subprocess.PIPE
-            )
+                except asyncio.TimeoutError:
+                    probe_process.kill()
+                    raise TimeoutError('Timed out while getting SDR parameters from SoapySDR server')
+            else:
+                logger.info(f'Getting SDR parameters from local SoapySDR for SDR: {sdr}')
+                # Get SDR parameters from local SoapySDR in a separate process
+                probe_process = await asyncio.create_subprocess_exec(
+                    'python3', '-c',
+                    f'from workers.soapysdrlocalprobe import probe_local_soapy_sdr; print(probe_local_soapy_sdr({sdr}))',
+                    stdout=asyncio.subprocess.PIPE
+                )
 
-            try:
-                stdout, _ = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
+                try:
+                    stdout, _ = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
 
-            except asyncio.TimeoutError:
-                probe_process.kill()
-                raise TimeoutError('Timed out while getting SDR parameters from SoapySDR server')
+                except asyncio.TimeoutError:
+                    probe_process.kill()
+                    raise TimeoutError('Timed out while getting SDR parameters from SoapySDR server')
 
-            try:
-                sdr_params = eval(stdout.decode().strip())
+            sdr_params_reply = eval(stdout.decode().strip())
 
-            except Exception as e:
-                # something went wrong while parsing output from the probe
-                logger.error(f'Error parsing SDR parameters from SoapySDR server probe at '
-                             f'{sdr['host']}:{sdr['port']} ({e})')
+            if sdr_params_reply['success'] is False:
+                raise Exception(sdr_params_reply['error'])
+
+            sdr_params = sdr_params_reply['data']
 
             logger.debug(f'Got SDR parameters from SoapySDR server: {sdr_params}')
 
@@ -208,15 +256,14 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
             reply = {'success': True, 'data': params}
 
     except TimeoutError as e:
-        error_msg = (f"Timeout error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} "
+        error_msg = (f"Timeout occurred while getting parameters from SDR with id {sdr_id} "
                      f"within {timeout} seconds timeout")
         logger.error(error_msg)
         reply['success'] = False
         reply['error'] = error_msg
 
     except Exception as e:
-        error_msg = (f"Error occurred while getting SDR parameters from {sdr['host']}:{sdr['port']} "
-                     f"within {timeout} seconds timeout")
+        error_msg = f"Error occurred while getting parameters from SDR with id {sdr_id}"
         logger.error(error_msg)
         logger.exception(e)
         reply['success'] = False

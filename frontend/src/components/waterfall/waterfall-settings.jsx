@@ -238,16 +238,19 @@ const WaterfallSettings = forwardRef((props, ref) => {
     // Convert to useCallback to ensure stability of the function reference
     const handleSDRChange = useCallback((event) => {
         // Check what was selected
+        console.info(event);
+
         const selectedValue = typeof event === 'object' ? event.target.value : event;
 
         dispatch(setSelectedSDRId(selectedValue));
         if (selectedValue === "none") {
             // Reset UI values since once we get new values from the backend, they might not be valid anymore
-            dispatch(setSampleRate(""));
-            dispatch(setGain(""));
+            dispatch(setSampleRate("none"));
+            dispatch(setGain("none"));
 
         } else {
             // Call the backend
+            console.info(`Getting SDR parameters for SDR ${selectedValue} from the backend`);
             dispatch(getSDRConfigParameters({socket, selectedSDRId: selectedValue}))
                 .unwrap()
                 .then(response => {

@@ -66,7 +66,9 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
     } = useSelector((state) => state.rigs);
 
     useEffect(() => {
-        if (selectedRadioRig) {
+        const selectedType = determineRadioType(selectedRadioRig);
+
+        if (selectedRadioRig && selectedType==="sdr") {
             // Call the function in the waterfall settings component to handle the change
             waterfallSettingsComponentRef.current.handleSDRChange({target: {value: selectedRadioRig}});
         }
@@ -111,12 +113,41 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
             });
     };
 
-    function handleRigChange(event) {
-        // Set the selected radio rig or SDR ID
-        dispatch(setRadioRig(event.target.value));
+    function determineRadioType(selectedRadioRigOrSDR) {
+        let selectedType = "unknown";
 
-        // Call the function in the waterfall settings component to handle the change
-        waterfallSettingsComponentRef.current.handleSDRChange(event);
+        // Check if it's a rig
+        const selectedRig = rigs.find(rig => rig.id === selectedRadioRigOrSDR);
+        if (selectedRig) {
+            selectedType = "rig";
+        }
+
+        // Check if it's an SDR
+        const selectedSDR = sdrs.find(sdr => sdr.id === selectedRadioRigOrSDR);
+        if (selectedSDR) {
+            selectedType = "sdr";
+        }
+
+        return selectedType;
+    }
+
+    function handleRigChange(event) {
+        // Find the selected MenuItem to get its type
+        const selectedValue = event.target.value;
+        const selectedType = determineRadioType(selectedValue);
+
+        // Set the selected radio rig
+        dispatch(setRadioRig(selectedValue));
+
+        // Handle SDR-specific actions
+        if (selectedType === "sdr") {
+            // Call the function in the waterfall settings component to handle the change
+            waterfallSettingsComponentRef.current.handleSDRChange(event);
+        } else if (selectedType === "rig") {
+            // Handle rig-specific actions if needed
+            // Currently commented out in your code:
+            // waterfallSettingsComponentRef.current.handleSDRChange(event);
+        }
     }
 
     function handleTransmitterChange(event) {
@@ -203,13 +234,13 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                                 <em>select a rig</em>
                             </MenuItem>
                             {rigs.map((rig, index) => {
-                                return <MenuItem value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
+                                return <MenuItem type={"rig"} value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
                             })}
                             <MenuItem value="" disabled>
                                 <em>select a SDR</em>
                             </MenuItem>
                             {sdrs.map((sdr, index) => {
-                                return <MenuItem value={sdr.id} key={index}>{sdr.name} ({sdr.host}:{sdr.port})</MenuItem>;
+                                return <MenuItem type={"sdr"} value={sdr.id} key={index}>{sdr.name} ({sdr.host}:{sdr.port})</MenuItem>;
                             })}
                         </Select>
                     </FormControl>

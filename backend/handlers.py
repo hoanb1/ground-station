@@ -8,7 +8,7 @@ from common import is_geostationary
 from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdrprocessmanager import sdr_process_manager
 from soapysdrbrowser import discovered_servers
-from waterfall import get_sdr_parameters
+from waterfall import get_sdr_parameters, get_local_soapy_sdr_devices
 
 
 # Function to run async code in a thread
@@ -195,6 +195,11 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             parameters = await get_sdr_parameters(dbsession, data)
             reply = {'success': parameters['success'], 'data': parameters.get('data', []),
                      'error': parameters.get('error', None)}
+
+        elif cmd == "get-local-soapy-sdr-devices":
+            logger.debug(f'Getting local SoapySDR devices')
+            devices = await get_local_soapy_sdr_devices()
+            reply = {'success': devices['success'], 'data': devices['data'], 'error': devices['error']}
 
         else:
             logger.error(f'Unknown command: {cmd}')

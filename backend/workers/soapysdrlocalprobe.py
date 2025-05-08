@@ -6,24 +6,22 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32, SOAPY_SDR_TX
 import yaml
 import os
 
+
 # Load logger configuration
 with open(os.path.join(os.path.dirname(__file__), '../logconfig.yaml'), 'r') as f:
     config = yaml.safe_load(f)
     logging.config.dictConfig(config)
 
-logger = logging.getLogger('soapysdr-probe')
+logger = logging.getLogger('soapylocal-probe')
 
 
-
-def get_soapy_sdr_parameters(sdr_details):
+def probe_local_soapy_sdr(sdr_details):
     """
-    Connect to a SoapySDR server and retrieve valid sample rates and gain values for a given SDR device.
+    Connect to a locally connected USB SoapySDR device and retrieve valid sample rates and gain values.
 
     Args:
         sdr_details: Dictionary containing SDR connection details with the following keys:
-            - host: Remote server hostname
-            - port: Remote server port
-            - driver: SDR driver name
+            - driver: SDR driver name (e.g., 'rtlsdr', 'hackrf', 'airspy', etc.)
             - serial: SDR serial number (optional)
 
     Returns:
@@ -33,22 +31,23 @@ def get_soapy_sdr_parameters(sdr_details):
             - has_agc: Boolean indicating if automatic gain control is supported
             - antennas: Dictionary of available antennas for RX and TX
     """
+
+    reply: dict[str, bool | dict | str | None] = {'success': None, 'data': None, 'error': None}
+
     rates = []
     gains = []
     has_agc = False
     antennas = {'rx': [], 'tx': []}
 
-    logger.info(f"Connecting to SoapySDR device with details: {sdr_details}")
+    logger.info(f"Connecting to local SoapySDR device with details: {sdr_details}")
 
     try:
-        # Build the device args string for connecting to the remote SoapySDR server
-        hostname = sdr_details.get('host', '127.0.0.1')
-        port = sdr_details.get('port', 55132)
+        # Get device parameters
         driver = sdr_details.get('driver', '')
         serial_number = sdr_details.get('serial', '')
 
-        # Format the device args for remote connection
-        device_args = f"remote=tcp://{hostname}:{port},remote:driver={driver}"
+        # Format the device args for the local connection
+        device_args = f"driver={driver}"
 
         # Add the serial number if provided
         if serial_number:
@@ -100,14 +99,14 @@ def get_soapy_sdr_parameters(sdr_details):
             has_agc = sdr.hasGainMode(SOAPY_SDR_RX, channel)
         except Exception as e:
             logger.warning("Could not determine if automatic gain control is supported")
-            logger.exception(e)
-            
+            #logger.exception(e)
+
         # Get information about antennas
         try:
             # Get RX antennas
             antennas['rx'] = sdr.listAntennas(SOAPY_SDR_RX, channel)
             logger.info(f"RX Antennas: {antennas['rx']}")
-            
+
             # Get TX antennas if available
             try:
                 antennas['tx'] = sdr.listAntennas(SOAPY_SDR_TX, channel)
@@ -115,19 +114,25 @@ def get_soapy_sdr_parameters(sdr_details):
             except Exception as e:
                 logger.warning(f"Could not get TX antennas: {e}")
                 # This is not critical as we might only be interested in RX
+
         except Exception as e:
             logger.warning(f"Could not get antenna information: {e}")
-            logger.exception(e)
+            #logger.exception(e)
+
+        reply['success'] = True
 
     except Exception as e:
-        logger.error(f"Error connecting to SoapySDR device: {str(e)}")
-        logger.exception(e)
-        raise
+        #logger.error(f"Error connecting to local SoapySDR device: {str(e)}")
+        #logger.exception(e)
+        reply['success'] = False
+        reply['error'] = str(e)
 
     finally:
-        return {
+        reply['data'] = {
             'rates': sorted(rates),
             'gains': gains,
             'has_soapy_agc': has_agc,
             'antennas': antennas
         }
+        return reply
+
