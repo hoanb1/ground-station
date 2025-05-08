@@ -160,7 +160,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
             selected_antenna = sdr.getAntenna(SOAPY_SDR_RX, channel)
             logger.info(f"Antenna set to {selected_antenna}")
 
-        # Setup the streaming
+        # Set up the streaming
         rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
 
         # Now check MTU - after setupStream but before activateStream
@@ -170,6 +170,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         except Exception as e:
             logger.warning(f"Could not get stream MTU: {e}")
 
+        # Activate the stream
         sdr.activateStream(rx_stream)
         logger.debug("SoapySDR stream activated")
 

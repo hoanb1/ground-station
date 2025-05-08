@@ -121,17 +121,6 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
     reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None, 'error': None}
     sdr = {}
     sdr_params = {}
-    params = {
-        'gain_values': [],
-        'sample_rate_values': [],
-        'fft_size_values': [],
-        'fft_window_values': [],
-        'has_agc': False,
-        'antennas': {
-            'tx': [],
-            'rx': []
-        },
-    }
 
     try:
         # Fetch SDR device details from database
@@ -212,7 +201,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
                 'sample_rate_values': [rate for rate in sdr_params['rates'] if rate >= 500000],
                 'fft_size_values': fft_size_values,
                 'fft_window_values': window_function_names,
-                'has_agc': sdr_params['has_agc'],
+                'has_soapy_agc': sdr_params['has_soapy_agc'],
                 'antennas': sdr_params['antennas'],
             }
 

@@ -80,6 +80,8 @@ const waterfallSlice = createSlice({
             'tx': [],
             'rx': [],
         },
+        hasSoapyAgc: false,
+        soapyAgc: false,
         selectedAntenna: 'none',
         bookmarks: [],
     },
@@ -186,6 +188,12 @@ const waterfallSlice = createSlice({
         setSelectedAntenna(state, action) {
             state.selectedAntenna = action.payload;
         },
+        setHasSoapyAgc(state, action) {
+            state.hasSoapyAgc = action.payload;
+        },
+        setSoapyAgc(state, action) {
+            state.soapyAgc = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -203,6 +211,7 @@ const waterfallSlice = createSlice({
                 state.fftSizeValues = action.payload['fft_size_values'];
                 state.fftWindowValues = action.payload['fft_window_values'];
                 state.antennasList = action.payload['antennas'];
+                state.hasSoapyAgc = action.payload['has_soapy_agc'];
             })
             .addCase(getSDRConfigParameters.rejected, (state, action) => {
                 state.gettingSDRParameters = false;
@@ -246,6 +255,8 @@ export const {
     setShowLeftSideWaterFallAccessories,
     setBookMarks,
     setSelectedAntenna,
+    setHasSoapyAgc,
+    setSoapyAgc,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

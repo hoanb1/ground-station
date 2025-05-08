@@ -19,37 +19,12 @@ import waterfallReducer from '../waterfall/waterfall-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 
 
-const persistConfig = {
-    key: "root",
-    storage,
-    whitelist: [],
-};
-
-const rootReducer = combineReducers({
-    dashboard: dashboardReducer,
-    rigs: rigsReducer,
-    rotators: rotatorsReducer,
-    tleSources: tleSourcesReducer,
-    satellites: satellitesReducer,
-    satelliteGroups: satelliteGroupReducer,
-    users: usersReducer,
-    location: locationReducer,
-    syncSatellite: synchronizeReducer,
-    preferences: preferencesReducer,
-    targetSatTrack: targetSatTrackReducer,
-    overviewSatTrack: overviewSatTrackReducer,
-    weather: weatherReducer,
-    cameras: cameraReducer,
-    waterfall: waterfallReducer,
-    sdrs: sdrsReducer,
-});
-
 // Persist configuration for waterfall slice
 const waterfallPersistConfig = {
     key: 'waterfall',
     storage,
     whitelist: ['centerFrequency', 'colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
-        'showLeftSideWaterFallAccessories']
+        'showLeftSideWaterFallAccessories', 'selectedAntenna']
 };
 
 // Persist configuration for the 'rigs' slice

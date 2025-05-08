@@ -600,6 +600,10 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # Antenna port
                 antenna = data.get('antenna', None)
 
+                # Soapy AGC
+                soapy_agc = data.get('soapyAgc', False)
+
+                # SDR configuration dictionary
                 sdr_config = {
                     'center_freq': center_freq,
                     'sample_rate': sample_rate,
@@ -615,6 +619,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     'host': sdr_host,
                     'port': sdr_port,
                     'client_id': client_id,
+                    'gain_mode': 'automatic' if soapy_agc else 'manual',
                 }
 
                 # Create an SDR session entry in memory
@@ -624,13 +629,10 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # Check if other clients are already connected in the same room (SDR), if so then send them an update
                 if sdr_process_manager.processes.get(sdr_id, None) is not None:
                     other_clients = [client for client in sdr_process_manager.processes[sdr_id]['clients'] if client != client_id]
-                    logger.info(f"Other clients: {other_clients}")
 
                     # For every other client id, send an update
                     for other_client in other_clients:
                         await sio.emit('sdr-config', sdr_config, room=other_client)
-
-                #await sio.emit('sdr-config', session, room=client_id)
 
                 is_running = sdr_process_manager.is_sdr_process_running(sdr_id)
                 if is_running:

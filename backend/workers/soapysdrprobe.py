@@ -128,6 +128,6 @@ def get_soapy_sdr_parameters(sdr_details):
         return {
             'rates': sorted(rates),
             'gains': gains,
-            'has_agc': has_agc,
+            'has_soapy_agc': has_agc,
             'antennas': antennas
         }

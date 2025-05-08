@@ -36,6 +36,7 @@ import {
     setExpandedPanels,
     setSelectedSDRId,
     setSelectedAntenna,
+    setSoapyAgc,
 } from './waterfall-slice.jsx'
 import {
     Box,
@@ -121,9 +122,7 @@ const AccordionDetails = styled(MuiAccordionDetails)(({theme}) => ({
     borderTop: '1px solid rgba(0, 0, 0, .125)',
 }));
 
-
 const WaterfallSettings = forwardRef((props, ref) => {
-
     const dispatch = useDispatch();
     const {socket} = useSocket();
 
@@ -160,6 +159,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
         fftWindowValues,
         antennasList,
         selectedAntenna,
+        hasSoapyAgc,
+        soapyAgc,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -210,6 +211,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                 rtlAgc: rtlAgc,
                 fftWindow: fftWindow,
                 antenna: selectedAntenna,
+                soapyAgc: soapyAgc,
             }
 
             SDRSettings = {...SDRSettings, ...updates};
@@ -270,7 +272,6 @@ const WaterfallSettings = forwardRef((props, ref) => {
     }));
 
     const updateCenterFrequency = (newFrequency) => (dispatch) => {
-        // Convert kHz to Hz
         let centerFrequency = newFrequency * 1000.0;
         dispatch(setCenterFrequency(centerFrequency));
         return sendSDRConfigToBackend({centerFrequency: centerFrequency});
@@ -314,6 +315,11 @@ const WaterfallSettings = forwardRef((props, ref) => {
     const updateSelectedAntenna = (antenna) => (dispatch) => {
         dispatch(setSelectedAntenna(antenna));
         return sendSDRConfigToBackend({antenna: antenna});
+    };
+
+    const updateSoapyAgc = (enabled) => (dispatch) => {
+        dispatch(setSoapyAgc(enabled));
+        return sendSDRConfigToBackend({soapyAgc: enabled});
     };
 
     return (
@@ -414,7 +420,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={selectedAntenna || "none"}
+                                        value={antennasList.rx.length? selectedAntenna: "none"}
                                         onChange={(e) => {
                                             dispatch(updateSelectedAntenna(e.target.value));
                                         }}
@@ -429,7 +435,6 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                         ))}
                                     </Select>
                                 </FormControl>
-
                             </Box>
 
                             <Box sx={{mb: 0, ml: 1.5}}>
@@ -461,6 +466,21 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                             />
                                         }
                                         label="Enable tuner AGC"
+                                    />
+                                )}
+                                {hasSoapyAgc && (
+                                    <FormControlLabel
+                                        control={
+                                            <Switch
+                                                disabled={gettingSDRParameters}
+                                                size={'small'}
+                                                checked={soapyAgc}
+                                                onChange={(e) => {
+                                                    dispatch(updateSoapyAgc(e.target.checked));
+                                                }}
+                                            />
+                                        }
+                                        label="Enable AGC"
                                     />
                                 )}
                                 {hasRtlAgc && (
