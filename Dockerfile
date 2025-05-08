@@ -39,6 +39,10 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dh-autoreconf \
     python3-full \
     librtlsdr-dev \
+    libairspy-dev \
+    libuhd-dev \
+    libhackrf-dev \
+    libboost-all-dev \
     swig \
     avahi-daemon \
     libavahi-client-dev \
@@ -77,6 +81,7 @@ RUN sudo make install -j`nproc`
 RUN sudo ldconfig
 
 # compile SoapySDRRemote
+WORKDIR /src
 RUN git clone https://github.com/pothosware/SoapyRemote.git
 WORKDIR SoapyRemote/
 RUN mkdir build
@@ -86,7 +91,52 @@ RUN make -j`nproc`
 RUN sudo make install -j`nproc`
 RUN sudo ldconfig
 
+# compile SoapySDR-RTLSDR
+WORKDIR /src
+RUN git clone https://github.com/pothosware/SoapyRTLSDR.git
+WORKDIR SoapyRTLSDR/
+RUN mkdir build
+WORKDIR build/
+RUN cmake ..
+RUN make -j`nproc`
+RUN sudo make install
+RUN sudo ldconfig
+
+# compile SoapySDR-Airspy
+WORKDIR /src
+RUN git clone https://github.com/pothosware/SoapyAirspy.git
+WORKDIR SoapyAirspy/
+RUN mkdir build
+WORKDIR build/
+RUN cmake ..
+RUN make -j`nproc`
+RUN sudo make install
+RUN sudo ldconfig
+
+# compile SoapySDR-UHD
+WORKDIR /src
+RUN git clone https://github.com/pothosware/SoapyUHD.git
+WORKDIR SoapyUHD/
+RUN mkdir build
+WORKDIR build/
+RUN cmake ..
+RUN make -j`nproc`
+RUN sudo make install
+RUN sudo ldconfig
+
+# compile SoapySDR-hackrf
+WORKDIR /src
+RUN git clone https://github.com/pothosware/SoapyHackRF.git
+WORKDIR SoapyHackRF/
+RUN mkdir build
+WORKDIR build/
+RUN cmake ..
+RUN make -j`nproc`
+RUN sudo make install
+RUN sudo ldconfig
+
 # compile Hamlib
+WORKDIR /src
 RUN git clone https://github.com/Hamlib/Hamlib.git
 WORKDIR Hamlib/
 RUN ./bootstrap
@@ -145,4 +195,3 @@ CMD dbus-daemon --system --nofork --nopidfile & \
     avahi-daemon --no-chroot -D & \
     sleep 2 && \
     python app.py --secret-key=AuZ9theig2geu4wu --log-level=INFO --host=0.0.0.0 --port=7000
-
