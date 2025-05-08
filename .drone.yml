@@ -32,11 +32,12 @@ steps:
       # Build the new image directly on the remote host
       - docker build -t ground-station:latest .
 
-      # Stop and remove existing container if it exists
+      # Stop and remove the existing container if it exists
       - docker rm -f ground-station-prod || true
 
       # Run the new container
-      - docker run -d -p 0.0.0.0:7000:7000 --restart=unless-stopped  --privileged -v /dev/bus/usb:/dev/bus/usb --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/db ground-station:latest
+      #- docker run -d -p 0.0.0.0:7000:7000 --restart=unless-stopped  --privileged -v /dev/bus/usb:/dev/bus/usb --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/db ground-station:latest
+      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped  --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/db ground-station:latest
 
       # Check that it's running
       - sleep 5
