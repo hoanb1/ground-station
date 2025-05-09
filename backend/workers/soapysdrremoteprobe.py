@@ -42,6 +42,7 @@ def probe_remote_soapy_sdr(sdr_details):
     gains = []
     has_agc = False
     antennas = {'rx': [], 'tx': []}
+    frequency_ranges = {}
 
     reply['log'].append(f"INFO: Connecting to SoapySDR device with details: {sdr_details}")
 
@@ -72,6 +73,7 @@ def probe_remote_soapy_sdr(sdr_details):
             rates = sdr.listSampleRates(SOAPY_SDR_RX, channel)
             if not rates:
                 raise Exception()
+
         except Exception as e:
             reply['log'].append(f"WARNING: Could not get sample rates: {e}")
 
@@ -102,9 +104,10 @@ def probe_remote_soapy_sdr(sdr_details):
             step = 1.0      # Default to 1.0 dB steps
             reply['log'].append("WARNING: Gain step is zero or too small, defaulting to 1.0 dB steps")
 
-        max_iterations = 1000  # Reasonable upper limit
+        max_iterations = 100
         iteration = 0
 
+        # Calculate gain range with steps
         current = min_gain
         while current <= max_gain and iteration < max_iterations:
             gains.append(float(current))
@@ -138,6 +141,29 @@ def probe_remote_soapy_sdr(sdr_details):
             reply['log'].append(f"WARNING: Could not get antenna information: {e}")
             reply['log'].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
 
+        # Get frequency range information
+        try:
+            # Get frequency range for RX (receiving)
+            rx_freq_ranges = sdr.getFrequencyRange(SOAPY_SDR_RX, channel)
+            min_freq_rx = min([r.minimum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
+            max_freq_rx = max([r.maximum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
+            frequency_ranges['rx'] = {'min': min_freq_rx, 'max': max_freq_rx}
+            reply['log'].append(f"INFO: RX Frequency Range: {min_freq_rx} MHz - {max_freq_rx} MHz")
+
+            # Try to get a frequency range for TX (transmitting) if available
+            try:
+                tx_freq_ranges = sdr.getFrequencyRange(SOAPY_SDR_TX, channel)
+                min_freq_tx = min([r.minimum() for r in tx_freq_ranges]) / 1e6  # Convert to MHz
+                max_freq_tx = max([r.maximum() for r in tx_freq_ranges]) / 1e6  # Convert to MHz
+                frequency_ranges['tx'] = {'min': min_freq_tx, 'max': max_freq_tx}
+                reply['log'].append(f"INFO: TX Frequency Range: {min_freq_tx} MHz - {max_freq_tx} MHz")
+            except Exception as e:
+                reply['log'].append(f"INFO: Could not get TX frequency range: {e}")
+                # This is not critical as we might only be interested in RX
+
+        except Exception as e:
+            reply['log'].append(f"WARNING: Could not get frequency range information: {e}")
+
         reply['success'] = True
 
     except Exception as e:
@@ -152,7 +178,8 @@ def probe_remote_soapy_sdr(sdr_details):
             'rates': sorted(rates),
             'gains': gains,
             'has_soapy_agc': has_agc,
-            'antennas': antennas
+            'antennas': antennas,
+            'frequency_ranges': frequency_ranges
         }
 
     return reply

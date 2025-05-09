@@ -124,13 +124,14 @@ def _probe_wrapper():
 
 
 async def get_local_soapy_sdr_devices():
-    """Retrieve a list of local SoapySDR devices"""
+    """Retrieve a list of local SoapySDR devices with frequency range information"""
 
     reply: dict[str, bool | dict | list | str | None] = {'success': None, 'data': None, 'error': None}
-
     try:
         with Pool(processes=1) as pool:
-            result = pool.apply(_probe_wrapper)
+            # Use apply_async() with get() and timeout instead of apply() with timeout
+            async_result = pool.apply_async(_probe_wrapper)
+            result = async_result.get(timeout=5)  # 5-second timeout
 
         if result['success']:
             result = result['data']
@@ -140,13 +141,17 @@ async def get_local_soapy_sdr_devices():
         reply['success'] = True
         reply['data'] = result
 
+    except TimeoutError:  # Make sure to use multiprocessing.TimeoutError
+        logger.error("Process timed out while probing USB SDRs")
+        reply['success'] = False
+        reply['error'] = "Operation timed out after 5 seconds"
+
     except Exception as e:
         logger.error(f"Error probing USB SDRs: {str(e)}")
         reply['success'] = False
         reply['error'] = str(e)
 
-    finally:
-        return reply
+    return reply
 
 
 async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
