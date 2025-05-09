@@ -140,6 +140,8 @@ WORKDIR /src
 RUN git clone https://github.com/myriadrf/LimeSuite.git
 WORKDIR LimeSuite/
 RUN git checkout stable
+# Fix the missing include for uint8_t
+RUN sed -i '1i\#include <cstdint>' src/lms7002m_mcu/MCU_File.cpp
 RUN mkdir builddir && cd builddir
 WORKDIR builddir/
 RUN cmake ../
