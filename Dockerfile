@@ -135,6 +135,18 @@ RUN make -j`nproc`
 RUN sudo make install
 RUN sudo ldconfig
 
+# compile LimeSuite
+WORKDIR /src
+RUN git clone https://github.com/myriadrf/LimeSuite.git
+WORKDIR LimeSuite/
+RUN git checkout stable
+RUN mkdir builddir && cd builddir
+WORKDIR builddir/
+RUN cmake ../
+RUN make -j4
+RUN sudo make install
+RUN sudo ldconfig
+
 # compile Hamlib
 WORKDIR /src
 RUN git clone https://github.com/Hamlib/Hamlib.git
