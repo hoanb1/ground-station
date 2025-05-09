@@ -78,8 +78,7 @@ def probe_available_usb_sdrs():
                 logger.info(f"Found USB SDR device: {device_entry['label']}")
                 usb_devices.append(device_entry)
 
-        reply['success'] = True
-        reply['data'] = usb_devices
+
 
     except Exception as e:
         logger.error(f"Error enumerating SoapySDR devices: {str(e)}")
@@ -88,4 +87,7 @@ def probe_available_usb_sdrs():
         reply['error'] = str(e)
 
     finally:
-        return reply
+        reply['success'] = True
+        reply['data'] = usb_devices
+
+    return reply

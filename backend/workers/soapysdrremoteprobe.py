@@ -36,14 +36,14 @@ def probe_remote_soapy_sdr(sdr_details):
             - antennas: Dictionary of available antennas for RX and TX
     """
 
-    reply: dict[str, bool | dict | str | None] = {'success': None, 'data': None, 'error': None}
-    
+    reply: dict[str, bool | dict | str | None | list] = {'success': None, 'data': None, 'error': None, 'log': []}
+
     rates = []
     gains = []
     has_agc = False
     antennas = {'rx': [], 'tx': []}
 
-    logger.info(f"Connecting to SoapySDR device with details: {sdr_details}")
+    reply['log'].append(f"INFO: Connecting to SoapySDR device with details: {sdr_details}")
 
     try:
         # Build the device args string for connecting to the remote SoapySDR server
@@ -62,6 +62,8 @@ def probe_remote_soapy_sdr(sdr_details):
         # Create the device instance
         sdr = SoapySDR.Device(device_args)
 
+        reply['log'].append(f"INFO: {sdr}")
+
         # Get channel (default to 0)
         channel = sdr_details.get('channel', 0)
 
@@ -71,7 +73,7 @@ def probe_remote_soapy_sdr(sdr_details):
             if not rates:
                 raise Exception()
         except Exception as e:
-            logger.warning(f"Could not get sample rates: {e}")
+            reply['log'].append(f"WARNING: Could not get sample rates: {e}")
 
             # Fall back to generating rates from ranges
             sample_rate_ranges = sdr.getSampleRateRange(SOAPY_SDR_RX, channel)
@@ -104,31 +106,31 @@ def probe_remote_soapy_sdr(sdr_details):
         try:
             has_agc = sdr.hasGainMode(SOAPY_SDR_RX, channel)
         except Exception as e:
-            logger.warning("Could not determine if automatic gain control is supported")
-            logger.exception(e)
-            
+            reply['log'].append("WARNING: Could not determine if automatic gain control is supported")
+            reply['log'].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
+
         # Get information about antennas
         try:
             # Get RX antennas
             antennas['rx'] = sdr.listAntennas(SOAPY_SDR_RX, channel)
-            logger.info(f"RX Antennas: {antennas['rx']}")
-            
+            reply['log'].append(f"INFO: RX Antennas: {antennas['rx']}")
+
             # Get TX antennas if available
             try:
                 antennas['tx'] = sdr.listAntennas(SOAPY_SDR_TX, channel)
-                logger.info(f"TX Antennas: {antennas['tx']}")
+                reply['log'].append(f"INFO: TX Antennas: {antennas['tx']}")
             except Exception as e:
-                logger.warning(f"Could not get TX antennas: {e}")
+                reply['log'].append(f"WARNING: Could not get TX antennas: {e}")
                 # This is not critical as we might only be interested in RX
         except Exception as e:
-            logger.warning(f"Could not get antenna information: {e}")
-            logger.exception(e)
+            reply['log'].append(f"WARNING: Could not get antenna information: {e}")
+            reply['log'].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
 
         reply['success'] = True
 
     except Exception as e:
-        logger.error(f"Error connecting to SoapySDR device: {str(e)}")
-        logger.exception(e)
+        reply['log'].append(f"ERROR: Error connecting to SoapySDR device: {str(e)}")
+        reply['log'].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
         reply['success'] = False
         reply['error'] = str(e)
 
@@ -141,4 +143,4 @@ def probe_remote_soapy_sdr(sdr_details):
             'antennas': antennas
         }
 
-        return reply
+    return reply

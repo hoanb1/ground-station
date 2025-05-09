@@ -892,7 +892,7 @@ const MainWaterfallDisplay = React.memo(() => {
                     flexWrap: 'wrap',
                 }}
             >
-                <Paper elevation={3} sx={{
+                <Paper elevation={1} sx={{
                     p: 0,
                     display: 'inline-block',
                     width: '100%',
@@ -901,7 +901,9 @@ const MainWaterfallDisplay = React.memo(() => {
                     paddingBottom: '0px',
                     borderRadius: 0,
                 }}>
-                    <ButtonGroup variant="contained" size="small">
+                    <ButtonGroup variant="contained" size="small" sx={{
+                        boxShadow: 'none',
+                    }}>
                         <IconButton
                             loading={startStreamingLoading}
                             disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}

@@ -32,14 +32,14 @@ def probe_local_soapy_sdr(sdr_details):
             - antennas: Dictionary of available antennas for RX and TX
     """
 
-    reply: dict[str, bool | dict | str | None] = {'success': None, 'data': None, 'error': None}
+    reply: dict[str, bool | dict | str | None | list] = {'success': None, 'data': None, 'error': None, 'log': []}
 
     rates = []
     gains = []
     has_agc = False
     antennas = {'rx': [], 'tx': []}
 
-    logger.info(f"Connecting to local SoapySDR device with details: {sdr_details}")
+    reply['log'].append(f"INFO: Connecting to local SoapySDR device with details: {sdr_details}")
 
     try:
         # Get device parameters
@@ -64,8 +64,9 @@ def probe_local_soapy_sdr(sdr_details):
             rates = sdr.listSampleRates(SOAPY_SDR_RX, channel)
             if not rates:
                 raise Exception()
+
         except Exception as e:
-            logger.warning(f"Could not get sample rates: {e}")
+            reply['log'].append(f"WARNING: Could not get sample rates: {e}")
 
             # Fall back to generating rates from ranges
             sample_rate_ranges = sdr.getSampleRateRange(SOAPY_SDR_RX, channel)
@@ -98,32 +99,33 @@ def probe_local_soapy_sdr(sdr_details):
         try:
             has_agc = sdr.hasGainMode(SOAPY_SDR_RX, channel)
         except Exception as e:
-            logger.warning("Could not determine if automatic gain control is supported")
-            #logger.exception(e)
+            reply['log'].append("WARNING: Could not determine if automatic gain control is supported")
+            # Note: original had commented out logger.exception(e)
 
         # Get information about antennas
         try:
             # Get RX antennas
             antennas['rx'] = sdr.listAntennas(SOAPY_SDR_RX, channel)
-            logger.info(f"RX Antennas: {antennas['rx']}")
+            reply['log'].append(f"INFO: RX Antennas: {antennas['rx']}")
 
             # Get TX antennas if available
             try:
                 antennas['tx'] = sdr.listAntennas(SOAPY_SDR_TX, channel)
-                logger.info(f"TX Antennas: {antennas['tx']}")
+                reply['log'].append(f"INFO: TX Antennas: {antennas['tx']}")
             except Exception as e:
-                logger.warning(f"Could not get TX antennas: {e}")
+                reply['log'].append(f"WARNING: Could not get TX antennas: {e}")
                 # This is not critical as we might only be interested in RX
 
         except Exception as e:
-            logger.warning(f"Could not get antenna information: {e}")
-            #logger.exception(e)
+            reply['log'].append(f"WARNING: Could not get antenna information: {e}")
+            # Note: original had commented out logger.exception(e)
 
         reply['success'] = True
 
     except Exception as e:
-        #logger.error(f"Error connecting to local SoapySDR device: {str(e)}")
-        #logger.exception(e)
+        # Note: original had commented out error and exception logging,
+        # but I'm adding to log list for completeness
+        reply['log'].append(f"ERROR: Error connecting to local SoapySDR device: {str(e)}")
         reply['success'] = False
         reply['error'] = str(e)
 
@@ -134,5 +136,5 @@ def probe_local_soapy_sdr(sdr_details):
             'has_soapy_agc': has_agc,
             'antennas': antennas
         }
-        return reply
 
+    return reply
