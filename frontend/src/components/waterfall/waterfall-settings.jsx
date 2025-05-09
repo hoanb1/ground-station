@@ -261,10 +261,6 @@ const WaterfallSettings = forwardRef((props, ref) => {
                     dispatch(setErrorMessage(error));
                     dispatch(setIsStreaming(false));
                     dispatch(setErrorDialogOpen(true));
-                    enqueueSnackbar(error, {
-                        variant: 'error',
-                        autoHideDuration: 5000,
-                    });
                 });
         }
     }, []);
@@ -357,6 +353,29 @@ const WaterfallSettings = forwardRef((props, ref) => {
 
                         <LoadingOverlay loading={gettingSDRParameters}>
                             <Box sx={{mb: 2}}>
+
+                                <FormControl disabled={isStreaming} margin="normal"
+                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                             size="small">
+                                    <InputLabel htmlFor="sdr-select">SDR</InputLabel>
+                                    <Select
+                                        id="sdr-select"
+                                        value={sdrs.length > 0? selectedSDRId: "none"}
+                                        onChange={(event) => {
+                                            handleSDRChange(event);
+                                        }}
+                                        variant={'filled'}>
+                                        <MenuItem value="none">
+                                            [no SDR selected]
+                                        </MenuItem>
+                                        <MenuItem value="" disabled>
+                                            <em>select a SDR</em>
+                                        </MenuItem>
+                                        {sdrs.map((sdr, index) => {
+                                            return <MenuItem value={sdr.id} key={index}>{sdr.name} ({sdr.type})</MenuItem>;
+                                        })}
+                                    </Select>
+                                </FormControl>
 
                                 <FormControl disabled={gettingSDRParameters}
                                              sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}

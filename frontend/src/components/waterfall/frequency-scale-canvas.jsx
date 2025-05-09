@@ -80,9 +80,16 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
         const maxTicks = Math.max(16, Math.min(24, Math.floor(actualWidth / 200)));
         const targetMajorTickCount = Math.max(2, Math.min(Math.floor(actualWidth / minPixelsPerMajorTick), maxTicks));
 
+        // Calculate the approximate step size for ticks based on frequency range and target tick count
         const approxStepSize = freqRange / targetMajorTickCount;
+        // Calculate the magnitude (power of 10) for nice round numbers
         const magnitude = 10 ** Math.floor(Math.log10(approxStepSize));
 
+        // Choose nice rounded tick step values based on magnitude:
+        // - Use 1x magnitude if ratio < 1.5 (e.g. 1000, 1Hz etc)
+        // - Use 2x magnitude if ratio < 3 (e.g. 2000, 2Hz etc)
+        // - Use 5x magnitude if ratio < 7.5 (e.g. 5000, 5Hz etc)
+        // - Use 10x magnitude otherwise (e.g. 10000, 10Hz etc)
         let tickStep;
         if (approxStepSize / magnitude < 1.5) {
             tickStep = magnitude;
@@ -128,15 +135,15 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
             const actualPixelsPerTick = actualWidth / majorTicks.length;
 
             // Determine font size based on available space
-            const fontSizeBase = Math.min(10, Math.max(8, Math.floor(actualWidth / 100 + 8)));
+            const fontSizeBase = Math.min(12, Math.max(8, Math.floor(actualWidth / 100 + 8)));
             ctx.font = `bold ${fontSizeBase}px monospace`;
 
             // Draw minor and major ticks
-            for (let freq = firstTick - (minorTicksPerMajor > 0 ? minorStep : 0);
+            for (let freq = firstTick - (minorTicksPerMajor > 0 ? minorStep * minorTicksPerMajor : 0);
                  freq <= endFreq + tickStep/10; // Small buffer to ensure we include the last tick
                  freq += minorStep > 0 ? minorStep : tickStep) {
 
-                if (freq < startFreq - tickStep/10) {
+                if (freq < startFreq) {
                     continue;
                 }
 

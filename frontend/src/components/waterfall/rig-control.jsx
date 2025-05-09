@@ -65,15 +65,15 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
         rigs
     } = useSelector((state) => state.rigs);
 
-    useEffect(() => {
-        const selectedType = determineRadioType(selectedRadioRig);
-
-        if (selectedRadioRig && selectedType==="sdr") {
-            // Call the function in the waterfall settings component to handle the change
-            waterfallSettingsComponentRef.current.handleSDRChange({target: {value: selectedRadioRig}});
-        }
-
-    }, [selectedRadioRig]);
+    // useEffect(() => {
+    //     const selectedType = determineRadioType(selectedRadioRig);
+    //
+    //     if (selectedRadioRig && selectedType==="sdr") {
+    //         // Call the function in the waterfall settings component to handle the change
+    //         waterfallSettingsComponentRef.current.handleSDRChange({target: {value: selectedRadioRig}});
+    //     }
+    //
+    // }, [selectedRadioRig]);
 
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, 'rig_state': "stopped"};
@@ -139,15 +139,15 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
         // Set the selected radio rig
         dispatch(setRadioRig(selectedValue));
 
-        // Handle SDR-specific actions
-        if (selectedType === "sdr") {
-            // Call the function in the waterfall settings component to handle the change
-            waterfallSettingsComponentRef.current.handleSDRChange(event);
-        } else if (selectedType === "rig") {
-            // Handle rig-specific actions if needed
-            // Currently commented out in your code:
-            // waterfallSettingsComponentRef.current.handleSDRChange(event);
-        }
+        // // Handle SDR-specific actions
+        // if (selectedType === "sdr") {
+        //     // Call the function in the waterfall settings component to handle the change
+        //     waterfallSettingsComponentRef.current.handleSDRChange(event);
+        // } else if (selectedType === "rig") {
+        //     // Handle rig-specific actions if needed
+        //     // Currently commented out in your code:
+        //     // waterfallSettingsComponentRef.current.handleSDRChange(event);
+        // }
     }
 
     function handleTransmitterChange(event) {

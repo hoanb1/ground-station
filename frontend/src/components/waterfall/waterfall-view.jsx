@@ -20,6 +20,9 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
+import { FullScreen, useFullScreenHandle } from 'react-full-screen';
+import FullscreenIcon from '@mui/icons-material/Fullscreen';
+import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import {useDispatch, useSelector} from "react-redux";
 import {
     getClassNamesBasedOnGridEditing,
@@ -80,7 +83,7 @@ export const createExternalWorker = () => {
 };
 
 
-const   MainWaterfallDisplay = React.memo(() => {
+const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
@@ -176,6 +179,15 @@ const   MainWaterfallDisplay = React.memo(() => {
             bandscopeAnimationFrameRef.current = null;
         }
     }
+
+    // Add this for fullscreen functionality
+    const fullscreenHandle = useFullScreenHandle();
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    // Add this function to track fullscreen changes
+    const handleFullscreenChange = useCallback((state) => {
+        setIsFullscreen(state);
+    }, []);
 
     // Monitor rotator event changes
     useEffect(() => {
@@ -831,6 +843,7 @@ const   MainWaterfallDisplay = React.memo(() => {
     }
 
     return (
+        <FullScreen handle={fullscreenHandle} onChange={handleFullscreenChange}>
         <div ref={mainWaterFallContainer}>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall &
                 Spectrum</TitleBar>
@@ -874,38 +887,57 @@ const   MainWaterfallDisplay = React.memo(() => {
                             <StopIcon/>
                         </IconButton>
 
-                        <ToggleButton
-                            value="showLeft"
-                            selected={showLeftSideWaterFallAccessories}
-                            onChange={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
+                        <IconButton
+                            color={showLeftSideWaterFallAccessories ? "primary" : "default"}
+                            onClick={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
                             size="small"
-                            sx={{borderRadius: 0, border: 'none'}}
+                            sx={{
+                                borderRadius: 0,
+                                backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                                }
+                            }}
                         >
                             <AlignHorizontalLeftIcon/>
-                        </ToggleButton>
+                        </IconButton>
 
-                        <ToggleButton
-                            value="showRight"
-                            selected={showRightSideWaterFallAccessories}
-                            onChange={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
+                        <IconButton
+                            color={showRightSideWaterFallAccessories ? "primary" : "default"}
+                            onClick={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
                             size="small"
-                            sx={{borderRadius: 0, border: 'none'}}
+                            sx={{
+                                borderRadius: 0,
+                                backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                                }
+                            }}
                         >
                             <AlignHorizontalRightIcon/>
-                        </ToggleButton>
-                        <ToggleButton
-                            value="auto"
-                            selected={autoDBRange}
-                            onChange={() => dispatch(setAutoDBRange(!autoDBRange))}
+                        </IconButton>
+                        <IconButton
+                            onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
                             size="small"
                             color={autoDBRange ? "success" : "primary"}
                             sx={{
                                 borderRadius: 0,
-                                border: 'none',
+                                backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.2)' : 'rgba(25, 118, 210, 0.1)'
+                                }
                             }}
                         >
                             <AutoGraphIcon/>
-                        </ToggleButton>
+                        </IconButton>
+                        <IconButton
+                            onClick={isFullscreen ? fullscreenHandle.exit : fullscreenHandle.enter}
+                            color="primary"
+                            sx={{borderRadius: 0}}
+                        >
+                            {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
+                        </IconButton>
+
                     </ButtonGroup>
                 </Paper>
             </Box>
@@ -1129,6 +1161,7 @@ const   MainWaterfallDisplay = React.memo(() => {
                 }
             </WaterfallStatusBar>
         </div>
+        </FullScreen>
     );
 });
 
