@@ -97,10 +97,22 @@ def probe_remote_soapy_sdr(sdr_details):
         max_gain = gain_range.maximum()
         step = gain_range.step() if hasattr(gain_range, 'step') else 1.0
 
+        # Ensure step is a positive value to prevent infinite loops
+        if step <= 0.0001:  # Threshold for considering a step too small
+            step = 1.0      # Default to 1.0 dB steps
+            reply['log'].append("WARNING: Gain step is zero or too small, defaulting to 1.0 dB steps")
+
+        max_iterations = 1000  # Reasonable upper limit
+        iteration = 0
+
         current = min_gain
-        while current <= max_gain:
+        while current <= max_gain and iteration < max_iterations:
             gains.append(float(current))
             current += step
+            iteration += 1
+
+        if iteration >= max_iterations:
+            reply['log'].append(f"WARNING: Reached maximum iterations ({max_iterations}) when calculating gain values. Check gain range.")
 
         # Check if automatic gain control is supported
         try:

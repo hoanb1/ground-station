@@ -149,7 +149,7 @@ async def get_local_soapy_sdr_devices():
         return reply
 
 
-async def get_sdr_parameters(dbsession, sdr_id, timeout=5.0):
+async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
     """Retrieve SDR parameters from the SDR process manager"""
 
     reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None, 'error': None}

@@ -6,6 +6,16 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32, SOAPY_SDR_TX
 import yaml
 import os
 
+"""
+Example input:
+
+{'id': 'faf61065-2f90-43e4-a541-e89c28ddb37e', 'name': 'LimeSDR Mini [USB 2.0] 1D393786C41058',
+ 'serial': '1D393786C41058', 'host': None, 'port': None, 'type': 'soapysdrlocal', 'driver': 'lime',
+ 'frequency_range': {'min': 24, 'max': 1800}, 'added': '2025-05-08T20:04:54.432736+00:00',
+ 'updated': '2025-05-08T20:04:54.432761+00:00'}
+
+"""
+
 
 # Load logger configuration
 with open(os.path.join(os.path.dirname(__file__), '../logconfig.yaml'), 'r') as f:
@@ -62,6 +72,7 @@ def probe_local_soapy_sdr(sdr_details):
         # Get sample rates
         try:
             rates = sdr.listSampleRates(SOAPY_SDR_RX, channel)
+
             if not rates:
                 raise Exception()
 
@@ -88,16 +99,34 @@ def probe_local_soapy_sdr(sdr_details):
         gain_range = sdr.getGainRange(SOAPY_SDR_RX, channel)
         min_gain = gain_range.minimum()
         max_gain = gain_range.maximum()
-        step = gain_range.step() if hasattr(gain_range, 'step') else 1.0
+
+        # Debug step value
+        has_step = hasattr(gain_range, 'step')
+
+        if has_step:
+            step_value = gain_range.step()
+
+        step = gain_range.step() if has_step else 1.0
+
+        # Ensure the step is positive and non-zero
+        if step <= 0.0001:
+            step = 1.0
+
+        max_iterations = 1000  # Reasonable upper limit
+        iteration = 0
 
         current = min_gain
-        while current <= max_gain:
+
+        # Continue with the loop
+        while current <= max_gain and iteration < max_iterations:
             gains.append(float(current))
             current += step
+            iteration += 1
 
         # Check if automatic gain control is supported
         try:
             has_agc = sdr.hasGainMode(SOAPY_SDR_RX, channel)
+
         except Exception as e:
             reply['log'].append("WARNING: Could not determine if automatic gain control is supported")
             # Note: original had commented out logger.exception(e)
