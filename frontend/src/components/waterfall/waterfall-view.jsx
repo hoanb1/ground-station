@@ -20,7 +20,6 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import AutoGraphIcon from '@mui/icons-material/AutoGraph';
-import { FullScreen, useFullScreenHandle } from 'react-full-screen';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import {useDispatch, useSelector} from "react-redux";
@@ -161,6 +160,54 @@ const MainWaterfallDisplay = React.memo(() => {
     const accumulatedRowsRef = useRef(0);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
+    const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const toggleFullscreen = () => {
+        if (!document.fullscreenElement) {
+            // Enter fullscreen
+            if (mainWaterFallContainer.current.requestFullscreen) {
+                mainWaterFallContainer.current.requestFullscreen();
+            } else if (mainWaterFallContainer.current.mozRequestFullScreen) { /* Firefox */
+                mainWaterFallContainer.current.mozRequestFullScreen();
+            } else if (mainWaterFallContainer.current.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                mainWaterFallContainer.current.webkitRequestFullscreen();
+            } else if (mainWaterFallContainer.current.msRequestFullscreen) { /* IE/Edge */
+                mainWaterFallContainer.current.msRequestFullscreen();
+            }
+            setIsFullscreen(true);
+        } else {
+            // Exit fullscreen
+            if (document.exitFullscreen) {
+                document.exitFullscreen();
+            } else if (document.mozCancelFullScreen) { /* Firefox */
+                document.mozCancelFullScreen();
+            } else if (document.webkitExitFullscreen) { /* Chrome, Safari & Opera */
+                document.webkitExitFullscreen();
+            } else if (document.msExitFullscreen) { /* IE/Edge */
+                document.msExitFullscreen();
+            }
+            setIsFullscreen(false);
+        }
+    };
+
+    // Add event listener for fullscreen change
+    useEffect(() => {
+        const handleFullscreenChange = () => {
+            setIsFullscreen(!!document.fullscreenElement);
+        };
+
+        document.addEventListener('fullscreenchange', handleFullscreenChange);
+        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
+        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
+        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
+
+        return () => {
+            document.removeEventListener('fullscreenchange', handleFullscreenChange);
+            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
+            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+        };
+    }, []);
 
     const cancelAnimations = () => {
         // Stop the worker
@@ -179,15 +226,6 @@ const MainWaterfallDisplay = React.memo(() => {
             bandscopeAnimationFrameRef.current = null;
         }
     }
-
-    // Add this for fullscreen functionality
-    const fullscreenHandle = useFullScreenHandle();
-    const [isFullscreen, setIsFullscreen] = useState(false);
-
-    // Add this function to track fullscreen changes
-    const handleFullscreenChange = useCallback((state) => {
-        setIsFullscreen(state);
-    }, []);
 
     // Monitor rotator event changes
     useEffect(() => {
@@ -843,7 +881,6 @@ const MainWaterfallDisplay = React.memo(() => {
     }
 
     return (
-        <FullScreen handle={fullscreenHandle} onChange={handleFullscreenChange}>
         <div ref={mainWaterFallContainer}>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall &
                 Spectrum</TitleBar>
@@ -930,12 +967,9 @@ const MainWaterfallDisplay = React.memo(() => {
                         >
                             <AutoGraphIcon/>
                         </IconButton>
-                        <IconButton
-                            onClick={isFullscreen ? fullscreenHandle.exit : fullscreenHandle.enter}
-                            color="primary"
-                            sx={{borderRadius: 0}}
-                        >
-                            {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
+
+                        <IconButton onClick={toggleFullscreen} color="primary">
+                            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
                         </IconButton>
 
                     </ButtonGroup>
@@ -1161,7 +1195,6 @@ const MainWaterfallDisplay = React.memo(() => {
                 }
             </WaterfallStatusBar>
         </div>
-        </FullScreen>
     );
 });
 
