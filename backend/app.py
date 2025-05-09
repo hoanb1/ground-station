@@ -77,16 +77,16 @@ async def lifespan(fastapiapp: FastAPI):
     async def run_discover_soapy():
         while True:
             await discover_soapy_servers()
-            await asyncio.sleep(60)
+            await asyncio.sleep(120)
 
-    #discover_task = asyncio.create_task(run_discover_soapy())
+    discover_task = asyncio.create_task(run_discover_soapy())
 
     try:
         yield
     finally:
         # Cancel the background tasks on shutdown
         tracking_task.cancel()
-        #discover_task.cancel()
+        discover_task.cancel()
         try:
             await tracking_task
             #await discover_task
