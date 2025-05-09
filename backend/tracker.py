@@ -523,7 +523,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 if rig_controller:
                     rig_data['frequency'] = await rig_controller.get_frequency()
 
-                if current_transmitter_id:
+                if current_transmitter_id != "none":
                     current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
                     current_transmitter = current_transmitter_reply.get('data', {})
 
@@ -539,6 +539,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                         )
                         rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
                         rig_data['transmitter_id'] = current_transmitter_id
+                else:
+                    logger.debug(f"No satellite transmitter selected")
+                    rig_data['transmitter_id'] = current_transmitter_id
 
                 # work on our sky coordinates
                 skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])

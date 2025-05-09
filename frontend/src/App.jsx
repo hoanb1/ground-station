@@ -37,6 +37,7 @@ import { fetchCameras } from './components/hardware/camera-slice.jsx'
 import { fetchSDRs } from './components/hardware/sdr-slice.jsx'
 import { getOverviewMapSettings } from './components/overview/overview-sat-slice.jsx';
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
+import LoginForm from './components/common/login.jsx';
 
 
 const BRANDING = {
@@ -68,7 +69,7 @@ function uponConnectionToBackEnd(socket) {
 
 export default function App(props) {
     const { socket } = useSocket();
-    const [loggedIn, setLoggedIn] = useState(false);
+    const [loggedIn, setLoggedIn] = useState(true);
     const dashboardTheme = setupTheme();
     const { session, logIn, logOut } = useAuth();
 
@@ -277,7 +278,7 @@ export default function App(props) {
                 session={session}
                 branding={BRANDING}
             >
-                <Outlet/>
+                {loggedIn ? <Outlet/> : <LoginForm/>}
             </ReactRouterAppProvider>
         </SnackbarProvider>
     );

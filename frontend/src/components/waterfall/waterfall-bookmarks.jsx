@@ -96,7 +96,7 @@ const BookmarkCanvas = ({
 
     // Update width when the container width changes
     useEffect(() => {
-        if (rigData['observed_freq'] > 0 && rigData['transmitter_id']) {
+        if (rigData['observed_freq'] > 0 && rigData['transmitter_id'] !== "none") {
             // Get the transmitter ID and look up transmitter details
             const transmitterId = rigData['transmitter_id'];
             const transmitter = availableTransmitters.find(t => t.id === transmitterId);
@@ -105,7 +105,7 @@ const BookmarkCanvas = ({
             const newBookMark = {
                 frequency: rigData['observed_freq'],
                 label: `${transmitter?.description || 'Unknown'} - Corrected: ${humanizeFrequency(rigData['observed_freq'])}`,
-                color: '#00ffff',
+                color: '#ff3c00',
                 metadata: {
                     type: 'doppler_shift',
                     transmitter_id: transmitterId
@@ -144,7 +144,7 @@ const BookmarkCanvas = ({
 
         // Constants for label sizing
         const textHeight = 14;
-        const padding = 3;
+        const padding = 4;
         const verticalSpacing = textHeight + padding * 2; // Total height of a label
         const baseY = 16; // Base Y position for the first label
 
@@ -206,6 +206,7 @@ const BookmarkCanvas = ({
                     ctx.strokeStyle = bookmark.color || '#ffff00';
                     ctx.lineWidth = 1;
                     ctx.stroke();
+
                 } else {
                     // For all other bookmarks, fill the arrow
                     ctx.fillStyle = bookmark.color || '#ffff00';
@@ -220,7 +221,7 @@ const BookmarkCanvas = ({
                     // Calculate label vertical position based on index
                     // Use visibleBookmarkIndex to ensure proper alternating heights
                     const labelOffset = (visibleBookmarkIndex % 2) * verticalSpacing;
-                    const labelY = baseY + labelOffset;
+                    const labelY = baseY + labelOffset + 10;
 
                     ctx.font = '11px Arial';
                     ctx.fillStyle = bookmark.color || '#ffff00';
@@ -244,7 +245,7 @@ const BookmarkCanvas = ({
 
                     // Draw the text
                     ctx.shadowBlur = 1;
-                    ctx.globalAlpha = 0.8;
+                    ctx.globalAlpha = 0.6;
                     ctx.fillStyle = bookmark.color || '#ffff00';
                     ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
@@ -255,12 +256,12 @@ const BookmarkCanvas = ({
 
                 // For doppler_shift bookmarks - display just above the arrow
                 if (bookmark.label && isDopplerShift) {
-                    ctx.font = '11px Arial';
+                    ctx.font = 'bold 11px Arial';
                     ctx.fillStyle = bookmark.color || '#00ffff';
                     ctx.textAlign = 'center';
 
                     // Position the label just above the arrow
-                    const dopplerLabelY = arrowY - padding - textHeight;
+                    const dopplerLabelY = 25 - padding - textHeight;
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);

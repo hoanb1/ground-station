@@ -151,7 +151,9 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
     }
 
     function handleTransmitterChange(event) {
-        dispatch(setSelectedTransmitter(event.target.value));
+        const transmitterId = event.target.value;
+        dispatch(setSelectedTransmitter(transmitterId));
+
         const data = {
             ...trackingState,
             'norad_id': satelliteId,
@@ -164,10 +166,13 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
         };
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}));
 
-        const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
-        const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
-        dispatch(setCenterFrequency(newFrequency));
-        waterfallSettingsComponentRef.current.sendSDRConfigToBackend({centerFrequency: newFrequency});
+        // If a transmitter was selected, then set the SDR center frequency
+        if (transmitterId !== "none") {
+            const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
+            const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
+            dispatch(setCenterFrequency(newFrequency));
+            waterfallSettingsComponentRef.current.sendSDRConfigToBackend({centerFrequency: newFrequency});
+        }
     }
 
     function connectRig() {
