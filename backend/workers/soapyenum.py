@@ -1,8 +1,17 @@
 import numpy as np
 import SoapySDR
 import yaml
+import json
 import os
+import pprint
+import logging
 from enum import Enum, auto
+
+# Configure logging
+logger = logging.getLogger("soapysdr-usbenum")
+
+# Check for frequency range or not
+check_freq_range = True
 
 class SoapySDRDirection(Enum):
     """Enumeration for SoapySDR direction types"""
@@ -26,6 +35,8 @@ class SoapySDRDriverType(Enum):
     LIME = "lime"
     UHD = "uhd"
     UNKNOWN = "unknown"
+
+
 
 def probe_available_usb_sdrs():
     """
@@ -93,63 +104,70 @@ def probe_available_usb_sdrs():
 
                 reply['log'].append(f"Found USB SDR device: {device_entry['label']}")
 
-                # Probe device for frequency ranges
-                try:
-                    # Make a device instance to query its capabilities
-                    sdr = SoapySDR.Device(device_dict)
-
-                    # Get frequency ranges for all available channels (both RX and TX)
-                    frequency_ranges = {}
-
-                    # Check RX capabilities
+                if check_freq_range:
+                    # Probe device for frequency ranges
                     try:
-                        num_rx_channels = sdr.getNumChannels(SoapySDRDirection.RX.value)
-                        if num_rx_channels > 0:
-                            frequency_ranges['rx'] = []
-                            for channel in range(num_rx_channels):
-                                # Get the frequency range for this channel
-                                ranges = sdr.getFrequencyRange(SoapySDRDirection.RX.value, channel)
-                                parsed_ranges = []
-                                for freq_range in ranges:
-                                    # Convert range to dict with min, max and step values
-                                    parsed_ranges.append({
-                                        'min': freq_range.minimum(),
-                                        'max': freq_range.maximum(),
-                                        'step': freq_range.step()
-                                    })
-                                frequency_ranges['rx'].append(parsed_ranges)
+                        # Make a device instance to query its capabilities
+                        simple_args = {'driver': device_dict['driver']}
+                        if 'serial' in device_dict:
+                            simple_args['serial'] = device_dict['serial']
+
+                        sdr = SoapySDR.Device(simple_args)
+
+                        # Get frequency ranges for all available channels (both RX and TX)
+                        frequency_ranges = {}
+
+                        # Check RX capabilities
+                        try:
+                            num_rx_channels = sdr.getNumChannels(SoapySDRDirection.RX.value)
+                            if num_rx_channels > 0:
+                                frequency_ranges['rx'] = []
+                                for channel in range(num_rx_channels):
+                                    # Get the frequency range for this channel
+                                    ranges = sdr.getFrequencyRange(SoapySDRDirection.RX.value, channel)
+                                    parsed_ranges = []
+                                    for freq_range in ranges:
+                                        # Convert range to dict with min, max and step values
+                                        parsed_ranges.append({
+                                            'min': freq_range.minimum(),
+                                            'max': freq_range.maximum(),
+                                            'step': freq_range.step()
+                                        })
+                                    frequency_ranges['rx'].append(parsed_ranges)
+
+                        except Exception as e:
+                            reply['log'].append(f"Warning: Error probing RX frequency range: {str(e)}")
+
+                        # Check TX capabilities
+                        try:
+                            num_tx_channels = sdr.getNumChannels(SoapySDRDirection.TX.value)
+                            if num_tx_channels > 0:
+                                frequency_ranges['tx'] = []
+                                for channel in range(num_tx_channels):
+                                    # Get the frequency range for this channel
+                                    ranges = sdr.getFrequencyRange(SoapySDRDirection.TX.value, channel)
+                                    parsed_ranges = []
+                                    for freq_range in ranges:
+                                        # Convert range to dict with min, max and step values
+                                        parsed_ranges.append({
+                                            'min': freq_range.minimum(),
+                                            'max': freq_range.maximum(),
+                                            'step': freq_range.step()
+                                        })
+                                    frequency_ranges['tx'].append(parsed_ranges)
+
+                        except Exception as e:
+                            reply['log'].append(f"Warning: Error probing TX frequency range: {str(e)}")
+
+                        # Add frequency range information to device entry
+                        device_entry['frequency_ranges'] = frequency_ranges
+
+                        # Close the device
+                        sdr.close()
+
                     except Exception as e:
-                        reply['log'].append(f"Warning: Error probing RX frequency range: {str(e)}")
-
-                    # Check TX capabilities
-                    try:
-                        num_tx_channels = sdr.getNumChannels(SoapySDRDirection.TX.value)
-                        if num_tx_channels > 0:
-                            frequency_ranges['tx'] = []
-                            for channel in range(num_tx_channels):
-                                # Get the frequency range for this channel
-                                ranges = sdr.getFrequencyRange(SoapySDRDirection.TX.value, channel)
-                                parsed_ranges = []
-                                for freq_range in ranges:
-                                    # Convert range to dict with min, max and step values
-                                    parsed_ranges.append({
-                                        'min': freq_range.minimum(),
-                                        'max': freq_range.maximum(),
-                                        'step': freq_range.step()
-                                    })
-                                frequency_ranges['tx'].append(parsed_ranges)
-                    except Exception as e:
-                        reply['log'].append(f"Warning: Error probing TX frequency range: {str(e)}")
-
-                    # Add frequency range information to device entry
-                    device_entry['frequency_ranges'] = frequency_ranges
-
-                    # Close the device
-                    sdr.close()
-
-                except Exception as e:
-                    reply['log'].append(f"Warning: Error probing device capabilities: {str(e)}")
-                    device_entry['frequency_ranges'] = {'error': str(e)}
+                        reply['log'].append(f"Warning: Error probing device capabilities: {str(e)}")
+                        device_entry['frequency_ranges'] = {'error': str(e)}
 
                 usb_devices.append(device_entry)
 
@@ -165,4 +183,4 @@ def probe_available_usb_sdrs():
     finally:
         pass
 
-    return reply
+    return json.dumps(reply)

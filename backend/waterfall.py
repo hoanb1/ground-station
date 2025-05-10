@@ -152,22 +152,18 @@ async def get_local_soapy_sdr_devices():
     """Retrieve a list of local SoapySDR devices with frequency range information"""
 
     reply: dict[str, bool | dict | list | str | None] = {'success': None, 'data': None, 'error': None}
+
     try:
         # Call probe_available_usb_sdrs using a subprocess instead of multiprocessing.Pool
         probe_process = await asyncio.create_subprocess_exec(
             'python3', '-c',
-            'from workers.soapyenum import probe_available_usb_sdrs; import json; print(json.dumps(probe_available_usb_sdrs()))',
+            'from workers.soapyenum import probe_available_usb_sdrs; import json; print(probe_available_usb_sdrs())',
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE
         )
 
         try:
-            stdout, stderr = await asyncio.wait_for(probe_process.communicate(), timeout=5)
-
-            if stderr:
-                logger.error(f"Error from probe subprocess: {stderr.decode().strip()}")
-                raise Exception("Error enumerating local SoapySDR devices")
-
+            stdout, stderr = await asyncio.wait_for(probe_process.communicate(), timeout=35)
             result = json.loads(stdout.decode().strip())
 
             if result['success']:
@@ -187,6 +183,7 @@ async def get_local_soapy_sdr_devices():
 
     except Exception as e:
         logger.error(f"Error probing USB SDRs: {str(e)}")
+        logger.exception(e)
         reply['success'] = False
         reply['error'] = str(e)
 
