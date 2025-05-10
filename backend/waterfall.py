@@ -3,17 +3,10 @@ import socketio
 import rtlsdr
 import crud
 import asyncio
-import time
-import numpy as np
-from datetime import time
-import multiprocessing as mp
-from workers.soapyenum import probe_available_usb_sdrs
-from multiprocessing import Pool
+import json
 from typing import Dict, List, Optional, Any, Union
 from sdrprocessmanager import sdr_process_manager
 from workers.common import window_functions
-from workers.soapyenum import probe_available_usb_sdrs
-from multiprocessing import Pool
 
 logger = logging.getLogger('waterfall-process')
 
@@ -119,8 +112,40 @@ async def stream_waterfall_data_task(sid, device_index, config):
     """Background task to stream waterfall data to a client"""
 
 
-def _probe_wrapper():
-    return probe_available_usb_sdrs()
+# def _probe_wrapper():
+#     return probe_available_usb_sdrs()
+#
+#
+# async def get_local_soapy_sdr_devices():
+#     """Retrieve a list of local SoapySDR devices with frequency range information"""
+#
+#     reply: dict[str, bool | dict | list | str | None] = {'success': None, 'data': None, 'error': None}
+#     try:
+#         with Pool(processes=1) as pool:
+#             # Use apply_async() with get() and timeout instead of apply() with timeout
+#             async_result = pool.apply_async(_probe_wrapper)
+#             result = async_result.get(timeout=5)  # 5-second timeout
+#
+#         if result['success']:
+#             result = result['data']
+#         else:
+#             raise Exception("Error enumerating local SoapySDR devices:")
+#
+#         reply['success'] = True
+#         reply['data'] = result
+#
+#     except TimeoutError:  # Make sure to use multiprocessing.TimeoutError
+#         logger.error("Process timed out while probing USB SDRs")
+#         reply['success'] = False
+#         reply['error'] = "Operation timed out after 5 seconds"
+#
+#     except Exception as e:
+#         logger.error(f"Error probing USB SDRs: {str(e)}")
+#         reply['success'] = False
+#         reply['error'] = str(e)
+#
+#     return reply
+
 
 
 async def get_local_soapy_sdr_devices():
@@ -128,23 +153,37 @@ async def get_local_soapy_sdr_devices():
 
     reply: dict[str, bool | dict | list | str | None] = {'success': None, 'data': None, 'error': None}
     try:
-        with Pool(processes=1) as pool:
-            # Use apply_async() with get() and timeout instead of apply() with timeout
-            async_result = pool.apply_async(_probe_wrapper)
-            result = async_result.get(timeout=5)  # 5-second timeout
+        # Call probe_available_usb_sdrs using a subprocess instead of multiprocessing.Pool
+        probe_process = await asyncio.create_subprocess_exec(
+            'python3', '-c',
+            'from workers.soapyenum import probe_available_usb_sdrs; import json; print(json.dumps(probe_available_usb_sdrs()))',
+            stdout=asyncio.subprocess.PIPE,
+            stderr=asyncio.subprocess.PIPE
+        )
 
-        if result['success']:
-            result = result['data']
-        else:
-            raise Exception("Error enumerating local SoapySDR devices:")
+        try:
+            stdout, stderr = await asyncio.wait_for(probe_process.communicate(), timeout=5)
 
-        reply['success'] = True
-        reply['data'] = result
+            if stderr:
+                logger.error(f"Error from probe subprocess: {stderr.decode().strip()}")
+                raise Exception("Error enumerating local SoapySDR devices")
 
-    except TimeoutError:  # Make sure to use multiprocessing.TimeoutError
-        logger.error("Process timed out while probing USB SDRs")
-        reply['success'] = False
-        reply['error'] = "Operation timed out after 5 seconds"
+            result = json.loads(stdout.decode().strip())
+
+            if result['success']:
+                result = result['data']
+            else:
+                raise Exception("Error enumerating local SoapySDR devices")
+
+            reply['success'] = True
+            reply['data'] = result
+
+        except asyncio.TimeoutError:
+            # Kill the process if it times out
+            probe_process.kill()
+            logger.error("Process timed out while probing USB SDRs")
+            reply['success'] = False
+            reply['error'] = "Operation timed out after 5 seconds"
 
     except Exception as e:
         logger.error(f"Error probing USB SDRs: {str(e)}")
@@ -152,6 +191,7 @@ async def get_local_soapy_sdr_devices():
         reply['error'] = str(e)
 
     return reply
+
 
 
 async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
@@ -277,5 +317,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
         reply['error'] = error_msg
 
     finally:
-        return reply
+        pass
+
+    return reply
 
