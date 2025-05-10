@@ -4,6 +4,8 @@ import { FormControl, InputLabel, MenuItem, Select, Button, CircularProgress, Sl
 import Grid from "@mui/material/Grid2";
 import { v4 as uuidv4 } from 'uuid';
 import ReplayIcon from '@mui/icons-material/Replay';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
 import {useSelector} from 'react-redux';
 
 const VideoWebRTCPlayer = ({ src, config = {} }) => {
@@ -11,14 +13,18 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
     const videoContainerRef = useRef(null);
     const peerConnectionRef = useRef(null);
     const clientIdRef = useRef(uuidv4());
+    const hideTimeoutRef = useRef(null);
     const [error, setError] = useState(null);
     const [isConnected, setIsConnected] = useState(false);
     const [isLoading, setIsLoading] = useState(false);
     const [cameras, setCameras] = useState([]);
     const [selectedCamera, setSelectedCamera] = useState("");
+    const [isPlaying, setIsPlaying] = useState(true);
+    const [showControls, setShowControls] = useState(false);
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
-    
+
     const RELAY_SERVER = `${window.location.protocol}//${window.location.hostname}:${window.location.port}`;
+    const CONTROLS_HIDE_DELAY = 2000; // 2 seconds
 
     useEffect(() => {
         if (!videoRef.current || !src) return;
@@ -46,9 +52,20 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
         if (!videoElement) return;
 
         const handlePlay = () => {
+            setIsPlaying(true);
+            // When video starts playing, show controls briefly then hide
+            setShowControls(true);
+            startHideControlsTimer();
         };
         const handlePause = () => {
-
+            setIsPlaying(false);
+            // When video is paused/stopped, always show controls
+            setShowControls(true);
+            // Clear any hide timers
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+                hideTimeoutRef.current = null;
+            }
         };
 
         videoElement.addEventListener('play', handlePlay);
@@ -59,6 +76,74 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
             videoElement.removeEventListener('pause', handlePause);
         };
     }, [videoRef.current]);
+
+    // Clean up timeout on unmount
+    useEffect(() => {
+        return () => {
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+            }
+        };
+    }, []);
+
+    // Start the timer to hide controls
+    const startHideControlsTimer = () => {
+        // Only start the timer if the video is playing
+        if (isPlaying) {
+            // Clear any existing timeout
+            if (hideTimeoutRef.current) {
+                clearTimeout(hideTimeoutRef.current);
+            }
+
+            // Set new timeout
+            hideTimeoutRef.current = setTimeout(() => {
+                setShowControls(false);
+            }, CONTROLS_HIDE_DELAY);
+        }
+    };
+
+    // Handle mouse enter/leave and control visibility
+    const handleMouseEnter = () => {
+        setShowControls(true);
+        // Only set hide timer if video is playing
+        if (isPlaying) {
+            startHideControlsTimer();
+        }
+    };
+
+    const handleMouseLeave = () => {
+        // Only hide controls if video is playing
+        if (isPlaying) {
+            startHideControlsTimer();
+        }
+    };
+
+    const handleMouseMove = () => {
+        // Show controls on any mouse movement inside the video
+        if (!showControls) {
+            setShowControls(true);
+        }
+
+        // Only reset the hide timeout if video is playing
+        if (isPlaying) {
+            startHideControlsTimer();
+        }
+    };
+
+    // Handle video toggle play/stop
+    const handleTogglePlayStop = () => {
+        const video = videoRef.current;
+        if (!video) return;
+
+        if (isPlaying) {
+            video.pause();
+            video.currentTime = 0;
+            // The pause event will set isPlaying to false and ensure controls remain visible
+        } else {
+            video.play();
+            // The play event will set isPlaying to true and start the hide timer
+        }
+    };
 
     // Handle reconnect/replay
     const handleReconnect = () => {
@@ -93,6 +178,10 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
                     videoRef.current.srcObject = event.streams[0];
                     setIsConnected(true);
                     setIsLoading(false);
+                    setIsPlaying(true);
+                    // Show controls initially when video loads, then hide after delay
+                    setShowControls(true);
+                    startHideControlsTimer();
                 }
             };
 
@@ -169,6 +258,11 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
         setIsConnected(false);
     };
 
+    // Calculate whether to show controls:
+    // - Always show if video is stopped (not playing)
+    // - Show based on mouse interaction if video is playing
+    const shouldShowControls = !isPlaying || showControls;
+
     return (
         <>
             <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}
@@ -178,13 +272,6 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
                   sx={{
                       position: 'relative',
                       width: '100%',
-                      '&:hover .video-controls': {
-                          opacity: 1,
-                      },
-                  }}
-                  onMouseEnter={() => {
-                  }}
-                  onMouseLeave={() => {
                   }}
             >
                 {isLoading && (
@@ -226,8 +313,63 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
                         </Button>
                     </Grid>
                 )}
-                <Grid>
-                    <video ref={videoRef} autoPlay playsInline style={{width: '100%', display: 'block'}}/>
+                <Grid
+                    sx={{ position: 'relative' }}
+                    onMouseEnter={handleMouseEnter}
+                    onMouseLeave={handleMouseLeave}
+                    onMouseMove={handleMouseMove}
+                >
+                    {/* Video element */}
+                    <video
+                        ref={videoRef}
+                        autoPlay
+                        playsInline
+                        style={{
+                            width: '100%',
+                            display: 'block',
+                            cursor: 'pointer'
+                        }}
+                    />
+
+                    {/* Full-size play/stop overlay button */}
+                    {shouldShowControls && !isLoading && !error && (
+                        <Box
+                            onClick={handleTogglePlayStop}
+                            sx={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                backgroundColor: 'rgba(0, 0, 0, 0.2)',
+                                cursor: 'pointer',
+                                '&:hover': {
+                                    backgroundColor: 'rgba(0, 0, 0, 0.4)',
+                                },
+                                transition: 'opacity 0.3s ease, background-color 0.3s ease',
+                                zIndex: 5
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                    borderRadius: '50%',
+                                    padding: '10px',
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                }}
+                            >
+                                {isPlaying ?
+                                    <StopIcon sx={{ color: 'white', fontSize: '3rem' }} /> :
+                                    <PlayArrowIcon sx={{ color: 'white', fontSize: '3rem' }} />
+                                }
+                            </Box>
+                        </Box>
+                    )}
                 </Grid>
             </Grid>
         </>
