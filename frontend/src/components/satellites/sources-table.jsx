@@ -141,7 +141,7 @@ export default function SourcesTable() {
         <Box sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">
                 <AlertTitle>TLE sources</AlertTitle>
-                TLE sources are loaded from Celestrak.org in TLE format
+                TLE sources are loaded from Celestrak.org in TLE format and frequency data is loaded from the Satnogs API
             </Alert>
             <SynchronizeTLEsCard/>
             <Box sx={{marginTop: 4}}>

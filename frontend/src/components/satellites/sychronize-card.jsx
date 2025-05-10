@@ -308,19 +308,6 @@ const SynchronizeTLEsCard = function () {
                         )}
                     </Box>
 
-                    {/* Status message box */}
-                    <Box sx={{
-                        display: 'flex',
-                        flexDirection: 'column',
-                        width: '100%',
-                        p: 1.5,
-                        borderRadius: 2,
-                        backgroundColor: 'rgba(0,0,0,0.2)',
-                        border: '1px solid #2d4856',
-                        minHeight: { xs: '50px', sm: '60px' },
-                        position: 'relative',
-                        overflow: 'hidden',
-                    }}>
                         {/* Terminal effect for the status message */}
                         <Box sx={{
                             position: 'absolute',
@@ -360,7 +347,6 @@ const SynchronizeTLEsCard = function () {
                                         : 'Synchronizing satellite data...'
                             )}
                         </Typography>
-                    </Box>
                 </Box>
             </Box>
         </Card>

@@ -255,6 +255,7 @@ const SatelliteTable = React.memo(function () {
                     }}
                 />
 
+
                 <SatelliteInfoModal open={openSatelliteInfoDialog} handleClose={handleDialogClose}
                                     selectedSatellite={clickedSatellite}/>
             </div>
