@@ -229,18 +229,32 @@ const SatelliteTable = React.memo(function () {
                         border: 0,
                         marginTop: 2,
                         minHeight: '629px',
+                        width: '100%',
+                        overflowX: 'auto',
+                        '& .MuiDataGrid-main': {
+                            // Add horizontal scrolling for table content
+                            overflow: 'auto !important',
+                        },
+                        '& .MuiDataGrid-virtualScroller': {
+                            // Ensure content doesn't get cut off
+                            overflow: 'visible !important',
+                        },
+                        '& .MuiDataGrid-virtualScrollerContent': {
+                            // Ensure wide content is accommodated
+                            minWidth: 'auto !important',
+                        },
                         [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                             outline: 'none',
                         },
-                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                            {
-                                outline: 'none',
-                            },
+                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]: {
+                            outline: 'none',
+                        },
                         [`& .MuiDataGrid-row`]: {
                             cursor: 'pointer',
                         }
                     }}
                 />
+
                 <SatelliteInfoModal open={openSatelliteInfoDialog} handleClose={handleDialogClose}
                                     selectedSatellite={clickedSatellite}/>
             </div>

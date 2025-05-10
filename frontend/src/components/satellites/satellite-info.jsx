@@ -15,23 +15,32 @@ import * as React from "react";
 import Grid from "@mui/material/Grid2";
 import {DataGrid} from "@mui/x-data-grid";
 
-const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
+const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth="lg" fullWidth={true}>
+        <Dialog open={open} onClose={handleClose} maxWidth={"xl"} fullWidth={true}>
             <DialogTitle>Satellite Information</DialogTitle>
             <DialogContent>
                 {selectedSatellite ? (
                     <Box>
-                        <Grid container spacing={3}>
+                        <Grid
+                            container
+                            spacing={3}
+                            sx={{
+                                width: '100%',
+                                flexDirection: {xs: 'column', md: 'row'}
+                            }}
+                        >
                             <Grid
+                                xs={12}
                                 sx={{
                                     backgroundColor: '#1e1e1e',
                                     borderRadius: '8px',
                                     padding: 3,
-                                    boxShadow: '0 2px 4px rgba(255, 255, 255, 0.1)',
                                     minHeight: '300px',
-                                    width: '60%',
                                     color: '#ffffff',
+                                    width: {xs: '100%', md: '60%'},
+                                    mb: {xs: 3, md: 0},
+                                    boxSizing: 'border-box'
                                 }}
                             >
                                 <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
@@ -142,16 +151,17 @@ const SatelliteInfoModal = ({ open, handleClose, selectedSatellite }) => {
                                 </Box>
                             </Grid>
                             <Grid
+                                xs={12}
                                 sx={{
                                     textAlign: 'center',
                                     minHeight: '300px',
-                                    width: '37%',
                                     display: 'flex',
                                     justifyContent: 'center',
                                     alignItems: 'center',
                                     backgroundColor: '#1e1e1e',
                                     borderRadius: '8px',
-                                    boxShadow: '0 2px 4px rgba(255, 255, 255, 0.1)',
+                                    width: {xs: '100%', md: '36%'},
+                                    boxSizing: 'border-box'
                                 }}
                             >
                                 <Box sx={{textAlign: 'right'}}>

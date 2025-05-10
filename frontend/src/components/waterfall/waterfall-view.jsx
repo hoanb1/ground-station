@@ -353,7 +353,7 @@ const MainWaterfallDisplay = React.memo(() => {
             cancelAnimations();
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
-            dispatch(setIsStreaming(false));
+            //dispatch(setIsStreaming(false));
             dispatch(setStartStreamingLoading(false));
             enqueueSnackbar(`Error occurred while streaming from SDR: ${error.message}`, {
                  variant: 'error'
