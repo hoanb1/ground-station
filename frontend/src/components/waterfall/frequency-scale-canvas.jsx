@@ -135,7 +135,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
             const actualPixelsPerTick = actualWidth / majorTicks.length;
 
             // Determine font size based on available space
-            const fontSizeBase = Math.min(12, Math.max(8, Math.floor(actualWidth / 100 + 8)));
+            const fontSizeBase = Math.min(11, Math.max(8, Math.floor(actualWidth / 100 + 8)));
             ctx.font = `bold ${fontSizeBase}px monospace`;
 
             // Draw minor and major ticks
@@ -160,7 +160,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                     ctx.stroke();
 
                     // Draw frequency label
-                    const freqText = humanizeFrequency(freq);
+                    const freqText = preciseHumanizeFrequency(freq);
                     ctx.fillStyle = 'white';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'top';

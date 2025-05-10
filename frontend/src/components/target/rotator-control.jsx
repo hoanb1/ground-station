@@ -420,7 +420,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                             <Paper
                                 elevation={1}
                                 sx={{
-                                    padding: '2px 12px',
+                                    padding: '2px 0px',
                                     backgroundColor: theme => {
                                         const rotatorStatus = getCurrentStatusofRotator();
                                         if (rotatorStatus['key'] === "tracking") {
@@ -449,7 +449,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                                 }}
                             >
                                 <Typography
-                                    variant="body1"
+                                    variant="body2"
                                     sx={{
                                         fontFamily: "Monospace, monospace",
                                         fontWeight: "bold",

@@ -18,7 +18,7 @@ import createTerminatorLine from '../common/terminator-line.jsx';
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import {moonIcon, sunIcon, homeIcon, satelliteIcon, satelliteIcon2} from '../common/icons.jsx';
 import MapSettingsIsland from "../common/map-settings.jsx";
-import {Box, Button, Fab} from "@mui/material";
+import {Box, Button, Fab, Tabs, Tab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
@@ -447,14 +447,16 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
 
     useEffect(() => {
         // zoom in and out a bit to fix the zoom factor issue
-        const zoomLevel = MapObject.getZoom();
-        const loc = MapObject.getCenter();
-        setTimeout(() => {
-            MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
+        if (MapObject) {
+            const zoomLevel = MapObject.getZoom();
+            const loc = MapObject.getCenter();
             setTimeout(() => {
-                MapObject.setView([loc.lat, loc.lng], zoomLevel);
-            }, 500);
-        }, 0);
+                MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
+                setTimeout(() => {
+                    MapObject.setView([loc.lat, loc.lng], zoomLevel);
+                }, 500);
+            }, 0);
+        }
 
         return () => {
 
