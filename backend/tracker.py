@@ -219,11 +219,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
         'tracking': False,
         'slewing': False,
         'outofbounds': False,
-        'minelevation': False
+        'minelevation': False,
+        'stopped': False
     }
     rig_data = {
         'connected': False,
         'tracking': False,
+        'stopped': False,
         'frequency': 0,
         'observed_freq': 0, # hz
         'doppler_shift': 0, # hz
@@ -231,6 +233,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
         'transmitter_id': 'none',
         'device_type': ''
     }
+
     notified = {}
     is_slewing = False
 
@@ -294,6 +297,10 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             # check what hardware was chosen and set it up
             await connect_to_rotator()
             rotator_data['connected'] = True
+            rotator_data['tracking'] = False
+            rotator_data['slewing'] = False
+            rotator_data['outofbounds'] = False
+            rotator_data['stopped'] = True
 
         elif new == "tracking":
             # check what hardware was chosen and set it up
@@ -302,11 +309,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
         elif new == "stopped":
             # check what hardware was chosen and set it up
-            await connect_to_rotator()
+            #await connect_to_rotator()
             rotator_data['tracking'] = False
+            rotator_data['slewing'] = False
+            rotator_data['stopped'] = True
 
         elif new == "disconnected":
-
+            # disconnect from the controller
             if rotator_controller is not None:
                 logger.info(f"Disconnecting from rotator_controller at {rotator_controller.host}:{rotator_controller.port}...")
                 try:
@@ -327,6 +336,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
         elif new == "parked":
             rotator_data['tracking'] = False
+            rotator_data['slewing'] = False
 
             try:
                 # going to park position
@@ -412,6 +422,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             # check what hardware was chosen and set it up
             await connect_to_rig()
             rig_data['connected'] = True
+            rig_data['tracking'] = False
+            rig_data['is_slewing'] = False
 
         elif new == "disconnected":
             # disconnected rig_controller
@@ -420,6 +432,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 try:
                     await rig_controller.disconnect()
                     rig_data['connected'] = False
+                    rig_data['tracking'] = False
+                    rig_data['is_slewing'] = False
                     await sio.emit('satellite-tracking', {
                         'events': [{'name': "rig_disconnected"}],
                         'rig_data': rig_data
@@ -440,8 +454,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
         elif new == "stopped":
             # check what hardware was chosen and set it up
-            await connect_to_rig()
-            rotator_data['tracking'] = False
+            rig_data['tracking'] = False
+            rig_data['tuning'] = False
+            rig_data['stopped'] = True
 
 
     async def handle_transmitter_id_change(old, new):
@@ -561,7 +576,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 # everything good, move on
                 logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {round(skypoint[0], 3)}° el: {round(skypoint[1], 3)}°")
 
-
                 # tune freq
                 if rig_controller and current_rig_state == "tracking":
                     frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])
@@ -593,7 +607,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     await sio.emit('satellite-tracking', {'events': [
                         {'name': "azimuth_out_of_bounds"}
                     ]})
-                    notified['azimuth_out_of_bounds'] = True
+                notified['azimuth_out_of_bounds'] = True
+                rotator_data['minelevation'] = False
+                rotator_data['outofbounds'] = True
 
             except ElevationOutOfBounds as e:
                 logger.warning(f"Elevation out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
@@ -601,7 +617,9 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     await sio.emit('satellite-tracking', {'events': [
                         {'name': "elevation_out_of_bounds"}
                     ]})
-                    notified['elevation_out_of_bounds'] = True
+                notified['elevation_out_of_bounds'] = True
+                rotator_data['minelevation'] = False
+                rotator_data['outofbounds'] = True
 
             except MinimumElevationError as e:
                 logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{current_norad_id} {satellite_name}: {e}")
@@ -609,15 +627,16 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     await sio.emit('satellite-tracking', {'events': [
                         {'name': "minelevation_error"}
                     ]})
-                    notified['minelevation_error'] = True
-                    rotator_data['minelevation'] = True
+                notified['minelevation_error'] = True
+                rotator_data['minelevation'] = True
+                rotator_data['outofbounds'] = False
 
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")
                 logger.exception(e)
 
             finally:
-                # lastly send updates to the UI
+                # Lastly send updates to the UI
                 try:
                     data = {
                         'satellite_data': satellite_data,
@@ -643,6 +662,14 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                                    f"interval ({args.track_interval})")
 
                 remaining_time_to_sleep = max((args.track_interval - loop_duration), 0)
+
+                # Clean up rotator_data
+                rotator_data['slewing'] = False
+                rotator_data['outofbounds'] = False
+                rotator_data['minelevation'] = False
+
+                # Clean up rig_data
+                rig_data['is_tuning'] = False
 
                 logger.info(f"Waiting for {remaining_time_to_sleep} seconds before next update (already spent {loop_duration})...")
                 await asyncio.sleep(remaining_time_to_sleep)

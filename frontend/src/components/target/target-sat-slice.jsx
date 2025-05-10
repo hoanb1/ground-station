@@ -346,6 +346,8 @@ const targetSatTrackSlice = createSlice({
                     state.lastRotatorEvent = 'slewing';
                 } else if (action.payload['rotator_data']['tracking']) {
                     state.lastRotatorEvent = 'tracking';
+                } else if (action.payload['rotator_data']['stopped']) {
+                    state.lastRotatorEvent = 'stopped';
                 }
             }
 

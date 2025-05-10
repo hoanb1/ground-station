@@ -185,6 +185,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         rotatorData,
         gridEditable,
         satelliteData,
+        lastRotatorEvent,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -198,23 +199,39 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
     function getRotatorStateFromTracking() {
         return trackingState?.rotator_state || "unknown";
     }
-    
+
     function getCurrentStatusofRotator() {
+        // Define a status mapping
+        const statusMap = {
+            'minelevation': "Target below elevation limit",
+            'slewing': "Slewing",
+            'tracking': "Tracking",
+            'stopped': "Stopped",
+            'outofbounds': "Out of bounds",
+        };
 
         if (rotatorData['connected'] === true) {
-            if (rotatorData['minelevation'] === true) {
-                return "Target below elevation limit";
-            } else if (rotatorData['slewing'] === true) {
-                return "Slewing";
-            } else  if (rotatorData['tracking'] === true) {
-                return "Tracking";
+            if (lastRotatorEvent) {
+                // If the event exists in our map, use it, otherwise return "Idle"
+                const statusText = statusMap[lastRotatorEvent] || "Idle";
+                return {
+                    key: lastRotatorEvent,
+                    value: statusText
+                };
             } else {
-                return "Idle";
+                return {
+                    key: 'unknown',
+                    value: "Unknown"
+                };
             }
         } else {
-            return "Not connected";
+            return {
+                key: 'disconnected',
+                value: "-"
+            };
         }
     }
+
 
     function getConnectionStatusofRotator() {
         if (rotatorData['connected'] === true) {
@@ -333,7 +350,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                 </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rotator_state'])}
+                    <FormControl disabled={["tracking", "connected", "stopped", "parked"].includes(trackingState['rotator_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
                         <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
@@ -400,10 +417,68 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant={"body1"} style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {getCurrentStatusofRotator()}
-                            </Typography>
+                            <Paper
+                                elevation={1}
+                                sx={{
+                                    padding: '2px 12px',
+                                    backgroundColor: theme => {
+                                        const rotatorStatus = getCurrentStatusofRotator();
+                                        if (rotatorStatus['key'] === "tracking") {
+                                            return theme.palette.success.light;
+                                        }
+                                        if (rotatorStatus['key'] === "slewing") {
+                                            return theme.palette.warning.light;
+                                        }
+                                        if (rotatorStatus['key'] === "minelevation" || rotatorStatus['key'] === "disconnected") {
+                                            return theme.palette.error.light;
+                                        }
+                                        if (rotatorStatus['key'] === "stopped") {
+                                            return theme.palette.info.light;
+                                        }
+                                        if (rotatorStatus['key'] === "outofbounds") {
+                                            return theme.palette.warning.light;
+                                        }
+                                        return theme.palette.grey[200];
+                                    },
+                                    display: 'inline-flex',
+                                    alignItems: 'center',
+                                    justifyContent: 'center',
+                                    borderRadius: '4px',
+                                    minWidth: '180px',
+                                    width: '100%',
+                                }}
+                            >
+                                <Typography
+                                    variant="body1"
+                                    sx={{
+                                        fontFamily: "Monospace, monospace",
+                                        fontWeight: "bold",
+                                        color: theme => {
+                                            const rotatorStatus = getCurrentStatusofRotator();
+                                            if (rotatorStatus['key'] === "tracking") {
+                                                return theme.palette.success.dark;
+                                            }
+                                            if (rotatorStatus['key'] === "slewing") {
+                                                return theme.palette.warning.dark;
+                                            }
+                                            if (rotatorStatus['key'] === "minelevation" || rotatorStatus['key'] === "disconnected") {
+                                                return theme.palette.error.dark;
+                                            }
+                                            if (rotatorStatus['key'] === "stopped") {
+                                                return theme.palette.info.dark;
+                                            }
+                                            if (rotatorStatus['key'] === "outofbounds") {
+                                                return theme.palette.warning.dark;
+                                            }
+                                            return theme.palette.grey[800];
+                                        }
+                                    }}
+                                >
+                                    {getCurrentStatusofRotator().value}
+                                </Typography>
+                            </Paper>
                         </Grid>
+
                     </Grid>
                 </Grid>
 
