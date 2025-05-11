@@ -48,15 +48,31 @@ function GaugePointer() {
     };
     return (
         <g>
-            <circle cx={cx} cy={cy} r={5} fill="red" />
+            {/* Define the filter for drop shadow */}
+            <defs>
+                <filter id="gauge-pointer-shadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feDropShadow dx="2" dy="2" stdDeviation="2" floodOpacity="0.5" floodColor="rgba(0,0,0,0.5)" />
+                </filter>
+            </defs>
+
+            {/* Apply the filter to both circle and path */}
+            <circle
+                cx={cx}
+                cy={cy}
+                r={5}
+                fill="red"
+                filter="url(#gauge-pointer-shadow)"
+            />
             <path
                 d={`M ${cx} ${cy} L ${target.x} ${target.y}`}
                 stroke="red"
                 strokeWidth={3}
+                filter="url(#gauge-pointer-shadow)"
             />
         </g>
     );
 }
+
 
 const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forElevation = false}) => {
     const {outerRadius, cx, cy} = useGaugeState();
@@ -340,8 +356,8 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
             return {
                 key: 'disconnected',
                 value: "-",
-                bgColor: 'error.light',
-                fgColor: 'error.dark'
+                bgColor: 'grey.600',
+                fgColor: 'grey.800'
             };
         }
     }

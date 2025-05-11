@@ -38,7 +38,6 @@ import {
     setSettingsDialogOpen,
 } from './target-sat-slice.jsx'
 import WaterFallSettingsDialog from "./waterfall-dialog.jsx";
-import IQVisualizer from "./iq-visualizer.jsx";
 import {enqueueSnackbar} from "notistack";
 
 const MiniWaterfallDisplay = React.memo(({deviceId = 0}) => {
