@@ -229,6 +229,7 @@ const targetSatTrackSlice = createSlice({
             transmitters: [],
         },
         satellitePasses: [],
+        activePass: {},
         passesLoading: false,
         passesError: null,
         loading: false,
@@ -529,11 +530,21 @@ const targetSatTrackSlice = createSlice({
                 state.passesError = null;
             })
             .addCase(fetchNextPasses.fulfilled, (state, action) => {
-                // cache the result for a few hours
+                // Cache the result for a few hours
                 state.cachedPasses[getCacheKeyForSatelliteId(state.satelliteId)] = action.payload;
                 state.passesLoading = false;
                 state.satellitePasses = action.payload;
                 state.passesError = null;
+
+                // Look through the passes and determine which one is active right now
+                if (state.satellitePasses) {
+                    const now = new Date().getTime();
+                    state.activePass = state.satellitePasses.find(pass => {
+                       const startTime = new Date(pass['event_start']).getTime();
+                       const endTime = new Date(pass['event_end']).getTime();
+                       return now >= startTime && now <= endTime;
+                    });
+                }
             })
             .addCase(fetchNextPasses.rejected, (state, action) => {
                 state.passesLoading = false;

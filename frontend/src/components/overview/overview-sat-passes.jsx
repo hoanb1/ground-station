@@ -244,7 +244,7 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
         },
         {
             field: 'event_start',
-            minWidth: 200,
+            minWidth: 170,
             headerName: 'Start',
             flex: 2,
             renderCell: (params) => <TimeFormatter value={params.value}/>
@@ -254,7 +254,7 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
         },
         {
             field: 'event_end',
-            minWidth: 200,
+            minWidth: 170,
             headerName: 'End',
             flex: 2,
             renderCell: (params) => <TimeFormatter value={params.value} />

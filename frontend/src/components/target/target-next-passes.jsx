@@ -103,9 +103,9 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
     const columns = [
         {
             field: 'event_start',
-            minWidth: 200,
+            minWidth: 160,
             headerName: 'Start',
-            flex: 2,
+            flex: 1,
             renderCell: (params) => <TimeFormatter value={params.value} />
             // valueFormatter: (value) => {
             //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
@@ -113,9 +113,9 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
         },
         {
             field: 'event_end',
-            minWidth: 200,
+            minWidth: 160,
             headerName: 'End',
-            flex: 2,
+            flex: 1,
             renderCell: (params) => <TimeFormatter value={params.value} />
             // valueFormatter: (value) => {
             //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;

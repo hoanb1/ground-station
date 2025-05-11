@@ -79,6 +79,71 @@ const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forEl
     );
 };
 
+const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939", strokeWidth = 1, opacity = 1, forElevation = false }) => {
+    const { outerRadius, cx, cy } = useGaugeState();
+
+    // Convert startAngle and endAngle to radians based on forElevation flag
+    const startAngleRad = forElevation
+        ? ((90 - startAngle) * Math.PI) / 180
+        : (startAngle * Math.PI) / 180;
+
+    const endAngleRad = forElevation
+        ? ((90 - endAngle) * Math.PI) / 180
+        : (endAngle * Math.PI) / 180;
+
+    // Calculate the start and end points on the circle
+    const start = {
+        x: cx + outerRadius * Math.sin(startAngleRad),
+        y: cy - outerRadius * Math.cos(startAngleRad),
+    };
+
+    const end = {
+        x: cx + outerRadius * Math.sin(endAngleRad),
+        y: cy - outerRadius * Math.cos(endAngleRad),
+    };
+
+    // Determine if we need to draw the arc clockwise or counterclockwise
+    // For SVG arcs: 0 = small arc, 1 = large arc
+    const largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+
+    // For SVG arcs: 0 = counterclockwise, 1 = clockwise
+    // This depends on how angles are interpreted
+    const sweepFlag = endAngle > startAngle ? 1 : 0;
+
+    // Create the SVG path for a slice
+    // M: Move to center
+    // L: Line to start point
+    // A: Arc from start to end point
+    // Z: Close path (line back to center)
+    const pathData = `
+        M ${cx} ${cy}
+        L ${start.x} ${start.y}
+        A ${outerRadius} ${outerRadius} 0 ${largeArcFlag} ${sweepFlag} ${end.x} ${end.y}
+        Z
+    `;
+
+    return (
+        <g>
+            <path
+                d={pathData}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                fill={fill}
+                opacity={opacity}
+            />
+        </g>
+    );
+};
+
+const rescaleToRange = (value, originalMin, originalMax, targetMin, targetMax) => {
+    // Calculate what percentage the value is in its original range
+    const percentage = (value - originalMin) / (originalMax - originalMin);
+
+    // Map that percentage to the target range
+    return targetMin + percentage * (targetMax - targetMin);
+};
+
+
 function GaugeAz({az, limits = [null, null]}) {
     const [maxAz, minAz] = limits;
 
@@ -107,8 +172,15 @@ function GaugeAz({az, limits = [null, null]}) {
         >
             <GaugeReferenceArc/>
             {minAz !== null && maxAz !== null && <>
-                <Pointer angle={minAz} stroke={"#393939"} strokeWidth={1}/>
                 <Pointer angle={maxAz} stroke={"#393939"} strokeWidth={1}/>
+                <Pointer angle={minAz} stroke={"#393939"} strokeWidth={1}/>
+                <CircleSlice
+                    startAngle={maxAz}
+                    endAngle={minAz}
+                    stroke={'#abff45'}
+                    fill={'#abff45'}
+                    opacity={0.2}
+                />
             </>}
             <Pointer angle={270}/>
             <Pointer angle={180}/>
@@ -147,10 +219,16 @@ function GaugeEl({el, maxElevation = null}) {
                 e.stopPropagation();
             }}
         >
-            <GaugeReferenceArc />
+            <GaugeReferenceArc/>
             {maxElevation !== null && <>
-                <Pointer angle={0} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
-                <Pointer angle={maxElevation} stroke={"#393939"} strokeWidth={1} forElevation={true}/>
+                <Pointer angle={rescaleToRange(maxElevation, 0, 90, 90, 0)} stroke={"#393939"} strokeWidth={1}/>
+                <CircleSlice
+                    startAngle={90}
+                    endAngle={rescaleToRange(maxElevation, 0, 90, 90, 0)}
+                    stroke={'#abff45'}
+                    fill={'#abff45'}
+                    opacity={0.2}
+                />
             </>}
             <Pointer angle={90}/>
             <Pointer angle={0}/>
@@ -186,6 +264,8 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         gridEditable,
         satelliteData,
         lastRotatorEvent,
+        satellitePasses,
+        activePass,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -196,47 +276,72 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
-    function getRotatorStateFromTracking() {
-        return trackingState?.rotator_state || "unknown";
-    }
-
     function getCurrentStatusofRotator() {
-        // Define a status mapping
+        // Define a status mapping with colors
         const statusMap = {
-            'minelevation': "Target below elevation limit",
-            'slewing': "Slewing",
-            'tracking': "Tracking",
-            'stopped': "Stopped",
-            'outofbounds': "Out of bounds",
+            'minelevation': {
+                text: "Target below elevation limit",
+                bgColor: 'error.light',
+                fgColor: 'error.dark'
+            },
+            'slewing': {
+                text: "Slewing",
+                bgColor: 'warning.light',
+                fgColor: 'warning.dark'
+            },
+            'tracking': {
+                text: "Tracking",
+                bgColor: 'success.light',
+                fgColor: 'success.dark'
+            },
+            'stopped': {
+                text: "Stopped",
+                bgColor: 'info.light',
+                fgColor: 'info.dark'
+            },
+            'outofbounds': {
+                text: "Out of bounds",
+                bgColor: 'warning.light',
+                fgColor: 'warning.dark'
+            }
         };
 
         if (rotatorData['connected'] === true) {
             if (lastRotatorEvent) {
                 // If the event exists in our map, use it, otherwise return "Idle"
-                const statusText = statusMap[lastRotatorEvent] || "Idle";
+                const status = statusMap[lastRotatorEvent] || {
+                    text: "Idle",
+                    bgColor: 'grey.200',
+                    fgColor: 'grey.800'
+                };
                 return {
                     key: lastRotatorEvent,
-                    value: statusText
+                    value: status.text,
+                    bgColor: status.bgColor,
+                    fgColor: status.fgColor
                 };
             } else {
                 return {
                     key: 'unknown',
-                    value: "Unknown"
+                    value: "Unknown",
+                    bgColor: 'grey.200',
+                    fgColor: 'grey.800'
                 };
             }
         } else {
             return {
                 key: 'disconnected',
-                value: "-"
+                value: "-",
+                bgColor: 'error.light',
+                fgColor: 'error.dark'
             };
         }
     }
 
-
     function getConnectionStatusofRotator() {
         if (rotatorData['connected'] === true) {
             return "Connected";
-        } else  if (rotatorData['connected'] === false) {
+        } else if (rotatorData['connected'] === false) {
             return "Not connected";
         } else {
             return "unknown";
@@ -257,7 +362,6 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
-                console.info('response', response);
 
             })
             .catch((error) => {
@@ -388,10 +492,10 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                         alignItems: "center",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <GaugeAz az={rotatorData['az']} limits={[null, null]}/>
+                            <GaugeAz az={rotatorData['az']} limits={[activePass?.['max_azimuth'], activePass?.['min_azimuth']]}/>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <GaugeEl el={rotatorData['el']} maxElevation={null}/>
+                            <GaugeEl el={rotatorData['el']} maxElevation={activePass?.['peak_altitude']}/>
                         </Grid>
 
                     </Grid>
@@ -423,22 +527,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                                     padding: '2px 0px',
                                     backgroundColor: theme => {
                                         const rotatorStatus = getCurrentStatusofRotator();
-                                        if (rotatorStatus['key'] === "tracking") {
-                                            return theme.palette.success.light;
-                                        }
-                                        if (rotatorStatus['key'] === "slewing") {
-                                            return theme.palette.warning.light;
-                                        }
-                                        if (rotatorStatus['key'] === "minelevation" || rotatorStatus['key'] === "disconnected") {
-                                            return theme.palette.error.light;
-                                        }
-                                        if (rotatorStatus['key'] === "stopped") {
-                                            return theme.palette.info.light;
-                                        }
-                                        if (rotatorStatus['key'] === "outofbounds") {
-                                            return theme.palette.warning.light;
-                                        }
-                                        return theme.palette.grey[200];
+                                        return rotatorStatus.bgColor
                                     },
                                     display: 'inline-flex',
                                     alignItems: 'center',
@@ -455,22 +544,7 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
                                         fontWeight: "bold",
                                         color: theme => {
                                             const rotatorStatus = getCurrentStatusofRotator();
-                                            if (rotatorStatus['key'] === "tracking") {
-                                                return theme.palette.success.dark;
-                                            }
-                                            if (rotatorStatus['key'] === "slewing") {
-                                                return theme.palette.warning.dark;
-                                            }
-                                            if (rotatorStatus['key'] === "minelevation" || rotatorStatus['key'] === "disconnected") {
-                                                return theme.palette.error.dark;
-                                            }
-                                            if (rotatorStatus['key'] === "stopped") {
-                                                return theme.palette.info.dark;
-                                            }
-                                            if (rotatorStatus['key'] === "outofbounds") {
-                                                return theme.palette.warning.dark;
-                                            }
-                                            return theme.palette.grey[800];
+                                            return rotatorStatus.fgColor;
                                         }
                                     }}
                                 >

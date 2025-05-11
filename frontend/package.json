@@ -14,6 +14,7 @@
     "@emotion/styled": "^11.14.0",
     "@mui/icons-material": "^6.4.5",
     "@mui/joy": "^5.0.0-beta.51",
+    "@mui/lab": "^6.0.1-beta.34",
     "@mui/material": "^6.4.8",
     "@mui/x-charts": "^7.28.0",
     "@mui/x-data-grid": "^7.28.1",

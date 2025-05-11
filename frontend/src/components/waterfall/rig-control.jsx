@@ -245,7 +245,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                                 <em>select a SDR</em>
                             </MenuItem>
                             {sdrs.map((sdr, index) => {
-                                return <MenuItem type={"sdr"} value={sdr.id} key={index}>{sdr.name} ({sdr.host}:{sdr.port})</MenuItem>;
+                                return <MenuItem type={"sdr"} value={sdr.id} key={index}>{sdr.name}</MenuItem>;
                             })}
                         </Select>
                     </FormControl>

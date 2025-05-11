@@ -11,11 +11,11 @@ from typing import List, Dict, Union, Tuple, Optional
 logger = logging.getLogger('passes-worker')
 
 def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, float], hours: float = 6.0,
-                                above_el=0, step_minutes=0.5) -> dict:
+                          above_el=0, step_minutes=0.5) -> dict:
     """
-    This function calculates upcoming satellite observation events based on TLE lines, observation location,  
+    This function calculates upcoming satellite observation events based on TLE lines, observation location,
     duration, elevation threshold, and time step. The function computes satellite
-    pass details like start and end times, maximum altitude, and relative distances 
+    pass details like start and end times, maximum altitude, and relative distances
     for an observer at the specified ground position.
 
     :param tle_groups: List of lists containing three strings each: [norad_id, TLE line 1, TLE line 2]
@@ -73,11 +73,13 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
             # get the satellite's position relative to the observer, then do `.altaz()` to get altitude.
             difference = satellite - observer
             altitudes = []
+            azimuths = []
             distances = []
             for t in t_points:
                 topocentric = difference.at(t)
                 alt, az, distance = topocentric.altaz()
                 altitudes.append(alt.degrees)
+                azimuths.append(az.degrees)
                 distances.append(distance.km)
 
             # Now we can find "passes" by looking for intervals where alt > 0
@@ -104,13 +106,23 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
             if in_pass:
                 passes.append((pass_start_index, len(above_horizon) - 1))
 
-            # Print out pass start/end times 
+            # Print out pass start/end times
             for start_i, end_i in passes:
                 start_time = t_points[start_i]
                 end_time = t_points[end_i]
                 dist_start = distances[start_i]
                 dist_end = distances[end_i]
                 duration = end_time.utc_datetime() - start_time.utc_datetime()
+
+                # Extract the slice of data for this pass
+                pass_altitudes = altitudes[start_i:end_i + 1]
+                pass_azimuths = azimuths[start_i:end_i + 1]
+                pass_distances = distances[start_i:end_i + 1]
+
+                # Calculate max elevation and max/min azimuth
+                max_elevation = max(pass_altitudes)
+                min_azimuth = min(pass_azimuths)
+                max_azimuth = max(pass_azimuths)
 
                 events.append({
                     'id': event_id,
@@ -120,8 +132,10 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                     'duration': duration,
                     'distance_at_start': dist_start,
                     'distance_at_end': dist_end,
-                    'distance_at_peak': max(distances[start_i:end_i + 1]),
-                    'peak_altitude': max(altitudes[start_i:end_i + 1])
+                    'distance_at_peak': max(pass_distances),
+                    'peak_altitude': max_elevation,
+                    'max_azimuth': max_azimuth,
+                    'min_azimuth': min_azimuth
                 })
                 event_id += 1
 
@@ -139,4 +153,6 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
         reply['error'] = str(e)
 
     finally:
-        return reply
+        pass
+
+    return reply

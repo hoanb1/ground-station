@@ -34,7 +34,6 @@ def pretty_dict(d):
     return output.getvalue().rstrip()
 
 
-
 async def get_ui_tracker_state(group_id: str, norad_id: int):
     """
     Fetches the current tracker state for a specified group ID and satellite ID. This function
@@ -50,7 +49,8 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         if the operation fails.
     :rtype: dict
     """
-    reply = {'success': False, 'data': None}
+    reply: dict[str, Union[bool, None, dict]] = {'success': False, 'data': None}
+
     data = {
         'groups': [],
         'satellites': [],
@@ -84,7 +84,9 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         logger.exception(e)
 
     finally:
-        return reply
+        pass
+
+    return reply
 
 
 async def compiled_satellite_data(dbsession, norad_id) -> dict:
@@ -636,7 +638,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 logger.exception(e)
 
             finally:
-                # Lastly send updates to the UI
+                # Lastly, send updates to the UI
                 try:
                     data = {
                         'satellite_data': satellite_data,
