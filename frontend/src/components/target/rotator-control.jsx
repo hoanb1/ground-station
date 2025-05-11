@@ -252,9 +252,9 @@ function GaugeEl({el, maxElevation = null}) {
                 endAngle={80}
                 stroke={'#ff4545'}
                 fill={'#ff4545'}
-                opacity={0.6}
+                opacity={0.2}
             />
-            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={1} opacity={0.7}/>
+            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={0.8} opacity={0.7}/>
             <Pointer angle={0}/>
             <GaugePointer/>
             <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
