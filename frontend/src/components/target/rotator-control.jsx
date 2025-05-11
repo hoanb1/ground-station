@@ -14,7 +14,8 @@ import {
     setSatGroupId,
     setSelectedTransmitter,
     setStarting,
-    setTrackingStateInBackend
+    setTrackingStateInBackend,
+    setActivePass,
 } from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
@@ -265,7 +266,7 @@ function GaugeEl({el, maxElevation = null}) {
 }
 
 
-const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
+const RotatorControl = React.memo(({}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {
@@ -299,6 +300,20 @@ const RotatorControl = React.memo(({initialNoradId, initialGroupId}) => {
         const newTrackingState = {...trackingState, 'rotator_state': "stopped"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
+
+    useEffect(() => {
+        // Look through the passes and determine which one is active right now
+        if (satellitePasses) {
+            const now = new Date().getTime();
+            const activePass = satellitePasses.find(pass => {
+               const startTime = new Date(pass['event_start']).getTime();
+               const endTime = new Date(pass['event_end']).getTime();
+               return now >= startTime && now <= endTime;
+            });
+            dispatch(setActivePass(activePass));
+        }
+    },[rotatorData]);
+
 
     function getCurrentStatusofRotator() {
         // Define a status mapping with colors

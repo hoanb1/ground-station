@@ -494,7 +494,10 @@ const targetSatTrackSlice = createSlice({
         },
         setLastRotatorEvent: (state, action) => {
             state.lastRotatorEvent = action.payload;
-        }
+        },
+        setActivePass: (state, action) => {
+            state.activePass = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -520,16 +523,6 @@ const targetSatTrackSlice = createSlice({
                 state.passesLoading = false;
                 state.satellitePasses = action.payload;
                 state.passesError = null;
-
-                // Look through the passes and determine which one is active right now
-                if (state.satellitePasses) {
-                    const now = new Date().getTime();
-                    state.activePass = state.satellitePasses.find(pass => {
-                       const startTime = new Date(pass['event_start']).getTime();
-                       const endTime = new Date(pass['event_end']).getTime();
-                       return now >= startTime && now <= endTime;
-                    });
-                }
             })
             .addCase(fetchNextPasses.rejected, (state, action) => {
                 state.passesLoading = false;
@@ -678,7 +671,8 @@ export const {
     setTargetFPS,
     setIsPlaying,
     setSettingsDialogOpen,
-    setAutoDBRange
+    setAutoDBRange,
+    setActivePass,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;
