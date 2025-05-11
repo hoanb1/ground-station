@@ -346,7 +346,8 @@ export default function Layout() {
     return (
         <DashboardLayout
             sx={{
-                minHeight: '1000px'
+                //minHeight: '1000px',
+
             }}
             defaultSidebarCollapsed
             slots={{

@@ -258,7 +258,7 @@ class RotatorController:
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
     async def set_position(self, target_az: float, target_el: float, update_interval: float = 2,
-                           az_tolerance: float = 1.0, el_tolerance: float = 1.0) -> AsyncGenerator[
+                           az_tolerance: float = 2.0, el_tolerance: float = 2.0) -> AsyncGenerator[
         Tuple[float, float, bool], None]:
 
         # Start the slew operation
