@@ -157,13 +157,23 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "fetch-next-passes":
             logger.debug(f'Fetching next passes, data: {data}')
-            next_passes = await fetch_next_events_for_satellite(norad_id=data.get('norad_id', None), hours=data.get('hours', 6.0))
-            reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
+            next_passes = await fetch_next_events_for_satellite(norad_id=data.get('norad_id', None), hours=data.get('hours', 4.0))
+            reply = {
+                'success': next_passes['success'],
+                'data': next_passes.get('data', []),
+                'cached': next_passes.get('cached', False),
+                'forecast_hours': next_passes.get('forecast_hours', 4.0),
+            }
 
         elif cmd == "fetch-next-passes-for-group":
             logger.debug(f'Fetching next passes for group, data: {data}')
             next_passes = await fetch_next_events_for_group(group_id=data.get('group_id', None), hours=data.get('hours', 2.0))
-            reply = {'success': next_passes['success'], 'data': next_passes.get('data', [])}
+            reply = {
+                'success': next_passes['success'],
+                'data': next_passes.get('data', []),
+                'cached': next_passes.get('cached', False),
+                'forecast_hours': next_passes.get('forecast_hours', 4.0),
+            }
 
         elif cmd == "get-satellite-search":
             logger.debug(f'Searching satellites, data: {data}')

@@ -330,7 +330,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                             weight: selectedSatelliteId === noradid? 2: 1,
                             fill: true,
                             opacity: 0.9,
-                            fillOpacity: selectedSatelliteId === noradid? 0.5: 0.05,
+                            fillOpacity: selectedSatelliteId === noradid? 0.5: 0.1,
                             dashArray: "3 4",
                         }}
                         positions={coverage}

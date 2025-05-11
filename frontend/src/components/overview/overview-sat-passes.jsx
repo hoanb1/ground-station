@@ -38,7 +38,7 @@ const TimeFormatter = React.memo(({ value }) => {
 });
 
 
-const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }) => {
+const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, passesAreCached=false }) => {
     const apiRef = useGridApiRef();
 
     const getBackgroundColor = (color, theme, coefficient) => ({
@@ -175,9 +175,40 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
             }
         },
         {
-            field: 'transmitter_count',
+            field: 'peak_altitude',
+            minWidth: 80,
+            headerName: 'Max elevation',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return `${parseFloat(value).toFixed(2)}°`;
+            },
+            cellClassName: (params) => {
+                if (params.value < 10.0) {
+                    return "passes-cell-warning";
+                } else if (params.value > 45.0) {
+                    return "passes-cell-success";
+                } else {
+                    return '';
+                }
+            }
+        },
+        {
+            field: 'duration',
             minWidth: 100,
-            headerName: 'Transmitters',
+            headerName: 'Duration',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return `${value}`;
+            }
+        },
+        {
+            field: 'transmitter_count',
+            minWidth: 70,
+            headerName: 'TRXs',
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -263,17 +294,6 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
             // }
         },
         {
-            field: 'duration',
-            minWidth: 100,
-            headerName: 'Duration',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            valueFormatter: (value) => {
-                return `${value}`;
-            }
-        },
-        {
             field: 'distance_at_start',
             minWidth: 100,
             headerName: 'Distance at AOS',
@@ -304,26 +324,6 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick }
             flex: 1,
             valueFormatter: (value) => {
                 return `${parseFloat(value).toFixed(2)} km`
-            }
-        },
-        {
-            field: 'peak_altitude',
-            minWidth: 100,
-            headerName: 'Max elevation',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            valueFormatter: (value) => {
-                return `${parseFloat(value).toFixed(2)}°`;
-            },
-            cellClassName: (params) => {
-                if (params.value < 10.0) {
-                    return "passes-cell-warning";
-                } else if (params.value > 45.0) {
-                    return "passes-cell-success";
-                } else {
-                    return '';
-                }
             }
         },
     ];
@@ -384,7 +384,15 @@ const NextPassesGroupIsland = React.memo(() => {
     const dispatch = useDispatch();
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
-    const { selectedSatGroupId, passes, passesLoading, nextPassesHours, gridEditable } = useSelector(state => state.overviewSatTrack);
+    const {
+        selectedSatGroupId,
+        passes,
+        passesAreCached,
+        passesLoading,
+        nextPassesHours,
+        gridEditable
+    } = useSelector(state => state.overviewSatTrack);
+
     const minHeight = 200;
     const maxHeight = 400;
     const [columnUpdateKey, setColumnUpdateKey] = useState(0);
@@ -418,7 +426,9 @@ const NextPassesGroupIsland = React.memo(() => {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Passes for the next {nextPassesHours} hours</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>
+                Passes for the next {nextPassesHours} hours {passesAreCached? "(cached)": ""}
+            </TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',

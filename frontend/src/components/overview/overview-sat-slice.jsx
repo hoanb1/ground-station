@@ -107,7 +107,7 @@ export const fetchNextPassesForGroup = createAsyncThunk(
         return new Promise((resolve, reject) => {
             socket.emit('data_request', 'fetch-next-passes-for-group', {group_id: selectedSatGroupId, hours: hours}, (response) => {
                 if (response.success) {
-                    resolve(response.data);
+                    resolve({passes: response.data, cached: response.cached, forecast_hours: response.forecast_hours});
                 } else {
                     reject(rejectWithValue('Failed getting next passes'));
                 }
@@ -176,6 +176,7 @@ const overviewSlice = createSlice({
         formGroupSelectError: false,
         selectedSatGroupId: "",
         passes: [],
+        passesAreCached: false,
         passesLoading: false,
         openMapSettingsDialog: false,
         nextPassesHours: 4.0,
@@ -290,7 +291,9 @@ const overviewSlice = createSlice({
                 state.passesLoading = true;
             })
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
-                state.passes = action.payload;
+                const {passes, cached, forecast_hours} = action.payload;
+                state.passes = passes;
+                state.passesAreCached = cached;
                 state.passesLoading = false;
             })
             .addCase(fetchNextPassesForGroup.rejected, (state, action) => {
@@ -316,7 +319,6 @@ const overviewSlice = createSlice({
             })
             .addCase(setOverviewMapSetting.fulfilled, (state, action) => {
                 state.loading = false;
-                console.info('setOverviewMapSetting.fulfilled', action.payload);
             })
             .addCase(setOverviewMapSetting.rejected, (state, action) => {
                 state.loading = false;

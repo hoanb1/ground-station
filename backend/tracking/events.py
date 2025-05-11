@@ -61,10 +61,11 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
                 return {
                     "success": cached_result["success"],
                     "forecast_hours": hours,  # Return the requested hours
-                    "data": cached_result["data"]  # Keep all the data
+                    "data": cached_result["data"],  # Keep all the data
+                    "cached": True,
                 }
         else:
-            logger.info(f"Cache miss, {cache_key[:8]}... not found in cache")
+            logger.info(f"Passes cache miss, {cache_key[:8]}... not found in cache")
 
     # Calculate events as before if no cache hit or cache disabled
     logger.info("Calculating satellite passes (cache miss or disabled)")
@@ -75,6 +76,8 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
         above_el=above_el,
         step_minutes=step_minutes
     )
+
+    events['cached'] = False
 
     # Enrich the events result with the forecast window
     if isinstance(events, dict):
@@ -177,6 +180,9 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
                 reply['parameters'] = {'group_id': group_id, 'hours': hours, 'above_el': above_el,
                                        'step_minutes': step_minutes}
                 reply['data'] = events
+                reply['forecast_hours'] = result.get('forecast_hours', hours)
+                reply['cached'] = result.get('cached', False)
+
             else:
                 raise Exception(f"Subprocess for calculating next passes failed: {result}")
 
@@ -189,7 +195,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
         finally:
             pass
 
-        return reply
+    return reply
 
 
 async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, above_el=0, step_minutes=1):
@@ -215,7 +221,7 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
 
     assert norad_id, f"NORAD ID is required ({norad_id}, {type(norad_id)})"
 
-    reply: dict[str, Union[bool, None, list, dict]] = {'success': None, 'data': None, 'parameters': None}
+    reply: dict[str, Union[bool, None, list, dict]] = {'success': None, 'data': None, 'parameters': None, 'cached': False}
     events = []
 
     logger.info(f"Calculating satellite events for NORAD ID: {norad_id} for next {hours} hours")
@@ -253,9 +259,15 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
                     events.append(event)
 
                 reply['success'] = True
-                reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el,
-                                       'step_minutes': step_minutes}
+                reply['parameters'] = {
+                    'norad_id': norad_id,
+                    'hours': hours,
+                    'above_el': above_el,
+                    'step_minutes': step_minutes
+                }
                 reply['data'] = events
+                reply['cached'] = result.get('cached', False)
+                reply['forecast_hours'] = result.get('forecast_hours', hours)
 
             else:
                 raise Exception(f"Subprocess for calculating next passes failed: {result}")
@@ -269,4 +281,4 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
         finally:
             pass
 
-        return reply
+    return reply
