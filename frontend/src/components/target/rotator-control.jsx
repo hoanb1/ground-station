@@ -172,8 +172,8 @@ function GaugeAz({az, limits = [null, null]}) {
         >
             <GaugeReferenceArc/>
             {minAz !== null && maxAz !== null && <>
-                <Pointer angle={maxAz} stroke={"#393939"} strokeWidth={1}/>
-                <Pointer angle={minAz} stroke={"#393939"} strokeWidth={1}/>
+                <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1}/>
+                <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1}/>
                 <CircleSlice
                     startAngle={maxAz}
                     endAngle={minAz}
@@ -196,6 +196,7 @@ function GaugeAz({az, limits = [null, null]}) {
 }
 
 function GaugeEl({el, maxElevation = null}) {
+    const angle = rescaleToRange(maxElevation, 0, 90, 90, 0);
     return (
         <GaugeContainer
             style={{
@@ -221,10 +222,11 @@ function GaugeEl({el, maxElevation = null}) {
         >
             <GaugeReferenceArc/>
             {maxElevation !== null && <>
-                <Pointer angle={rescaleToRange(maxElevation, 0, 90, 90, 0)} stroke={"#393939"} strokeWidth={1}/>
+                <Pointer angle={angle} stroke={"#676767"} strokeWidth={1} opacity={1}/>
+                <Pointer angle={90} stroke={"#676767"} strokeWidth={1} opacity={1}/>
                 <CircleSlice
                     startAngle={90}
-                    endAngle={rescaleToRange(maxElevation, 0, 90, 90, 0)}
+                    endAngle={angle}
                     stroke={'#abff45'}
                     fill={'#abff45'}
                     opacity={0.2}
