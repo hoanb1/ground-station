@@ -1,4 +1,4 @@
-import React, { useImperativeHandle, forwardRef, useCallback } from 'react';
+import React, {useImperativeHandle, forwardRef, useCallback, useEffect, useState} from 'react';
 import {styled} from '@mui/material/styles';
 import ArrowForwardIosSharpIcon from '@mui/icons-material/ArrowForwardIosSharp';
 import MuiAccordion from '@mui/material/Accordion';
@@ -7,7 +7,7 @@ import MuiAccordionSummary, {
 } from '@mui/material/AccordionSummary';
 import MuiAccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
-import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
 import {useSelector, useDispatch} from 'react-redux';
 import {
     getSDRConfigParameters,
@@ -37,6 +37,7 @@ import {
     setSelectedSDRId,
     setSelectedAntenna,
     setSoapyAgc,
+    setSelectedTransmitterId,
 } from './waterfall-slice.jsx'
 import {
     Box,
@@ -51,7 +52,6 @@ import {
     TextField
 } from "@mui/material";
 import FrequencyDisplay from "./frequency-control.jsx";
-import {useEffect, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 
@@ -161,7 +161,12 @@ const WaterfallSettings = forwardRef((props, ref) => {
         selectedAntenna,
         hasSoapyAgc,
         soapyAgc,
+        selectedTransmitterId,
     } = useSelector((state) => state.waterfall);
+
+    const {
+        availableTransmitters,
+    } = useSelector((state) => state.targetSatTrack);
 
     const {
         sdrs
@@ -184,6 +189,12 @@ const WaterfallSettings = forwardRef((props, ref) => {
         setLocalColorMap(colorMap);
         setLocalAutoDBRange(autoDBRange);
     }, [centerFrequency, dbRange, fftSize, sampleRate, gain, colorMap, autoDBRange]);
+
+    useEffect(() => {
+        if (selectedSDRId) {
+            handleSDRChange({target: {value: selectedSDRId}});
+        }
+    }, []);
 
     const handleAccordionChange = (panel) => (event, isExpanded) => {
         const updateExpandedPanels = (expandedPanels) => {
@@ -321,6 +332,15 @@ const WaterfallSettings = forwardRef((props, ref) => {
         return sendSDRConfigToBackend({soapyAgc: enabled});
     };
 
+    function handleTransmitterChange(event) {
+        // If a transmitter was selected, then set the SDR center frequency
+        dispatch(setSelectedTransmitterId(event.target.value));
+        const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
+        const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
+        dispatch(setCenterFrequency(newFrequency));
+        sendSDRConfigToBackend({centerFrequency: newFrequency});
+    }
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
@@ -342,6 +362,30 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 size={"small"}
                             />
                         </Box>
+                        <FormControl disabled={false}
+                                     sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
+                                     size="small">
+                            <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
+                            <Select
+                                id="transmitter-select"
+                                value={availableTransmitters.length > 0 ? selectedTransmitterId : "none"}
+                                onChange={(event) => {
+                                    handleTransmitterChange(event);
+                                }}
+                                variant={'filled'}>
+                                <MenuItem value="none">
+                                    [no frequency control]
+                                </MenuItem>
+                                <MenuItem value="" disabled>
+                                    <em>select a transmitter</em>
+                                </MenuItem>
+                                {availableTransmitters.map((transmitter, index) => {
+                                    return <MenuItem value={transmitter.id} key={transmitter.id}>
+                                        {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
+                                    </MenuItem>;
+                                })}
+                            </Select>
+                        </FormControl>
                     </AccordionDetails>
                 </Accordion>
 

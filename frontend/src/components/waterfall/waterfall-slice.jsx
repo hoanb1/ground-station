@@ -1,6 +1,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {useRef, useState} from "react";
+import {setSelectedTransmitter} from "../target/target-sat-slice.jsx";
 
 
 
@@ -68,6 +69,7 @@ const waterfallSlice = createSlice({
         showLeftSideWaterFallAccessories: true,
         expandedPanels: ['sdr', 'freqControl', 'fft'],
         selectedSDRId: "none",
+        selectedTransmitterId: "none",
         startStreamingLoading: false,
         gettingSDRParameters: false,
         gainValues: [],
@@ -194,7 +196,10 @@ const waterfallSlice = createSlice({
         },
         setSoapyAgc(state, action) {
             state.soapyAgc = action.payload;
-        }
+        },
+        setSelectedTransmitterId(state, action) {
+            state.selectedTransmitterId = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -258,6 +263,7 @@ export const {
     setSelectedAntenna,
     setHasSoapyAgc,
     setSoapyAgc,
+    setSelectedTransmitterId,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

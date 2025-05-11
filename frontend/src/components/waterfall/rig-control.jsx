@@ -164,15 +164,23 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
             'rotator_id': selectedRotator,
             'transmitter_id': event.target.value,
         };
-        dispatch(setTrackingStateInBackend({ socket: socket, data: data}));
 
-        // If a transmitter was selected, then set the SDR center frequency
-        if (transmitterId !== "none") {
-            const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
-            const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
-            dispatch(setCenterFrequency(newFrequency));
-            waterfallSettingsComponentRef.current.sendSDRConfigToBackend({centerFrequency: newFrequency});
-        }
+        dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
+            .unwrap()
+            .then((response) => {
+
+            })
+            .catch((error) => {
+
+            });
+
+        // // If a transmitter was selected, then set the SDR center frequency
+        // if (transmitterId !== "none") {
+        //     const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
+        //     const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
+        //     dispatch(setCenterFrequency(newFrequency));
+        //     waterfallSettingsComponentRef.current.sendSDRConfigToBackend({centerFrequency: newFrequency});
+        // }
     }
 
     function connectRig() {
