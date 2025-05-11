@@ -223,7 +223,6 @@ function GaugeEl({el, maxElevation = null}) {
             <GaugeReferenceArc/>
             {maxElevation !== null && <>
                 <Pointer angle={angle} stroke={"#676767"} strokeWidth={1} opacity={1}/>
-                <Pointer angle={90} stroke={"#676767"} strokeWidth={1} opacity={1}/>
                 <CircleSlice
                     startAngle={90}
                     endAngle={angle}
@@ -232,7 +231,14 @@ function GaugeEl({el, maxElevation = null}) {
                     opacity={0.2}
                 />
             </>}
-            <Pointer angle={90}/>
+            <CircleSlice
+                startAngle={90}
+                endAngle={80}
+                stroke={'#ff4545'}
+                fill={'#ff4545'}
+                opacity={0.6}
+            />
+            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={1} opacity={0.7}/>
             <Pointer angle={0}/>
             <GaugePointer/>
             <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
