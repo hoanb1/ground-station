@@ -1,12 +1,6 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 
-
-function getCacheKeyForSatelliteId(satelliteId) {
-    return `${satelliteId}_${Math.floor(Date.now() / (2 * 60 * 60 * 1000))}`;
-}
-
-
 export const setTargetMapSetting = createAsyncThunk(
     'targetSatTrack/setTargetMapSetting',
     async ({socket, key}, {getState, rejectWithValue}) => {
@@ -106,14 +100,6 @@ export const fetchNextPasses = createAsyncThunk(
     'targetSatTrack/fetchNextPasses',
     async ({socket, noradId, hours}, {getState, rejectWithValue}) => {
         return new Promise((resolve, reject) => {
-
-            // let's check first if we have something cached
-            const state = getState();
-            const cacheKey = getCacheKeyForSatelliteId(noradId);
-            if (cacheKey in state.targetSatTrack.cachedPasses) {
-                resolve(state.targetSatTrack.cachedPasses[cacheKey]);
-            }
-
             socket.emit('data_request', 'fetch-next-passes', {'norad_id': noradId, 'hours': hours}, (response) => {
                 if (response.success) {
                     resolve(response.data);
@@ -531,7 +517,6 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(fetchNextPasses.fulfilled, (state, action) => {
                 // Cache the result for a few hours
-                state.cachedPasses[getCacheKeyForSatelliteId(state.satelliteId)] = action.payload;
                 state.passesLoading = false;
                 state.satellitePasses = action.payload;
                 state.passesError = null;

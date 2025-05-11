@@ -1,16 +1,81 @@
-
 import json
+import time
+import hashlib
 import multiprocessing
 import crud
 import asyncio
+import logging
+from functools import lru_cache
 from db import AsyncSessionLocal
-from logger import logger
 from models import ModelEncoder
 from typing import List, Dict, Union, Tuple
 from .passes import calculate_next_events
 
+# Create logger
+logger = logging.getLogger("passes-worker")
 
-def run_calculation(tle_groups, homelat, homelon, hours, above_el, step_minutes):
+# Global cache dictionary with timestamps and valid-until time
+_cache = {}
+
+def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minutes):
+    """Generate a unique cache key from function parameters, excluding hours"""
+    # Create a string representation of the parameters, excluding hours
+    # since we'll handle time separately
+    params_str = json.dumps({
+        "tle_groups": tle_groups,
+        "homelat": homelat,
+        "homelon": homelon,
+        "above_el": above_el,
+        "step_minutes": step_minutes
+    }, sort_keys=True)
+
+    # Hash the parameters string to create a compact key
+    return hashlib.md5(params_str.encode()).hexdigest()
+
+def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_minutes, use_cache=True):
+    cache_key = None
+
+    if use_cache:
+        # Generate a unique cache key (without hours)
+        cache_key = _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minutes)
+
+        # Get current time
+        current_time = time.time()
+
+        # Check if we have a cached result
+        if cache_key in _cache:
+            calculation_time, valid_until, cached_result = _cache[cache_key]
+
+            # Check if the cache is still valid (current time < valid_until)
+            if current_time < valid_until:
+                # Check if the requested forecast window (hours) is covered by our cached data
+                # We need to determine if our cached calculation still covers the requested time period
+                cached_end_time = calculation_time + (cached_result["forecast_hours"] * 3600)
+                requested_end_time = current_time + (hours * 3600)
+
+                if requested_end_time <= cached_end_time:
+                    logger.info(f"Using cached satellite pass calculation (key: {cache_key[:8]}...)")
+
+                    # If needed, we could filter the cached events to only include
+                    # those that haven't happened yet and are within the requested time window
+                    filtered_result = {
+                        "success": cached_result["success"],
+                        "forecast_hours": hours,
+                        "data": []
+                    }
+
+                    # Filter events that are still in the future and within the requested hours
+                    for event in cached_result["data"]:
+                        event_start_time = event["event_start"]
+                        # Only include future events within requested window
+                        if (event_start_time > current_time and
+                                event_start_time <= current_time + (hours * 3600)):
+                            filtered_result["data"].append(event)
+
+                    return filtered_result
+
+    # Calculate events as before if no cache hit or cache disabled
+    logger.info("Calculating satellite passes (cache miss or disabled)")
     events = calculate_next_events(
         tle_groups=tle_groups,
         home_location={"lat": homelat, "lon": homelon},
@@ -18,7 +83,26 @@ def run_calculation(tle_groups, homelat, homelon, hours, above_el, step_minutes)
         above_el=above_el,
         step_minutes=step_minutes
     )
+
+    # Enrich the events result with the forecast window
+    if isinstance(events, dict):
+        events["forecast_hours"] = hours
+
+    # Store result in cache if caching is enabled
+    if use_cache:
+        # Calculate how long this calculation is valid for, hours / 2
+        validity_period = (hours / 2) * 3600
+        valid_until = time.time() + validity_period
+
+        _cache[cache_key] = (time.time(), valid_until, events)
+
+        # Optional: Clean up expired cache entries
+        for k in list(_cache.keys()):
+            if time.time() > _cache[k][1]:  # If current time is past valid_until
+                del _cache[k]
+
     return events
+
 
 
 async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el=0, step_minutes=1):
@@ -76,7 +160,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
                     pool.apply,
-                    run_calculation,
+                    run_events_calculation,
                     (tle_groups, homelat, homelon, hours, above_el, step_minutes)
                 )
 
@@ -112,7 +196,9 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
             reply['data'] = []
 
         finally:
-            return reply
+            pass
+
+        return reply
 
 
 async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, above_el=0, step_minutes=1):
@@ -164,7 +250,7 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
                     pool.apply,
-                    run_calculation,
+                    run_events_calculation,
                     (tle_group, homelat, homelon, hours, above_el, step_minutes)
                 )
 
@@ -179,6 +265,7 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
                 reply['parameters'] = {'norad_id': norad_id, 'hours': hours, 'above_el': above_el,
                                        'step_minutes': step_minutes}
                 reply['data'] = events
+
             else:
                 raise Exception(f"Subprocess for calculating next passes failed: {result}")
 
@@ -189,4 +276,6 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
             reply['data'] = []
 
         finally:
-            return reply
+            pass
+
+        return reply
