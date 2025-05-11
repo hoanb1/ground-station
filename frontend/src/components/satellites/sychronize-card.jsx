@@ -319,34 +319,37 @@ const SynchronizeTLEsCard = function () {
                             opacity: 0.5,
                             pointerEvents: 'none',
                         }}/>
-
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                fontFamily: 'monospace',
-                                color: '#bbbbbb',
-                                position: 'relative',
-                                zIndex: 1,
-                                fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                                '&::after': progress > 0 && progress < 100 ? {
-                                    content: '"|"',
-                                    animation: 'blink 1s infinite',
-                                    '@keyframes blink': {
-                                        '0%': { opacity: 0 },
-                                        '50%': { opacity: 1 },
-                                        '100%': { opacity: 0 }
-                                    }
-                                } : {},
-                            }}
-                        >
-                            {message || (
-                                progress === 0
-                                    ? 'Ready to synchronize. Click the button to start.'
-                                    : progress === 100
-                                        ? 'Synchronization complete!'
-                                        : 'Synchronizing satellite data...'
-                            )}
-                        </Typography>
+                        <Box sx={{
+                            height: '40px',
+                        }}>
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    fontFamily: 'monospace',
+                                    color: '#bbbbbb',
+                                    position: 'relative',
+                                    zIndex: 1,
+                                    fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                                    '&::after': progress > 0 && progress < 100 ? {
+                                        content: '"█"',
+                                        animation: 'blink 1s infinite',
+                                        '@keyframes blink': {
+                                            '0%': { opacity: 0 },
+                                            '50%': { opacity: 1 },
+                                            '100%': { opacity: 0 }
+                                        }
+                                    } : {},
+                                }}
+                            >
+                                {message || (
+                                    progress === 0
+                                        ? 'Ready to synchronize. Click the button to start.'
+                                        : progress === 100
+                                            ? 'Synchronization complete!'
+                                            : 'Synchronizing satellite data...'
+                                )}
+                            </Typography>
+                        </Box>
                 </Box>
             </Box>
         </Card>
