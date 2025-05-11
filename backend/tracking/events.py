@@ -10,12 +10,18 @@ from db import AsyncSessionLocal
 from models import ModelEncoder
 from typing import List, Dict, Union, Tuple
 from .passes import calculate_next_events
+from multiprocessing import Manager
+
 
 # Create logger
 logger = logging.getLogger("passes-worker")
 
-# Global cache dictionary with timestamps and valid-until time
-_cache = {}
+# Create a manager for shared objects
+manager = Manager()
+
+# Create a shared dictionary
+_cache = manager.dict()
+
 
 def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minutes):
     """Generate a unique cache key from function parameters, excluding hours"""
@@ -31,6 +37,7 @@ def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minu
 
     # Hash the parameters string to create a compact key
     return hashlib.md5(params_str.encode()).hexdigest()
+
 
 def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_minutes, use_cache=True):
     cache_key = None
@@ -48,31 +55,16 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
 
             # Check if the cache is still valid (current time < valid_until)
             if current_time < valid_until:
-                # Check if the requested forecast window (hours) is covered by our cached data
-                # We need to determine if our cached calculation still covers the requested time period
-                cached_end_time = calculation_time + (cached_result["forecast_hours"] * 3600)
-                requested_end_time = current_time + (hours * 3600)
+                logger.info(f"Using cached satellite pass calculation (key: {cache_key[:8]}...)")
 
-                if requested_end_time <= cached_end_time:
-                    logger.info(f"Using cached satellite pass calculation (key: {cache_key[:8]}...)")
-
-                    # If needed, we could filter the cached events to only include
-                    # those that haven't happened yet and are within the requested time window
-                    filtered_result = {
-                        "success": cached_result["success"],
-                        "forecast_hours": hours,
-                        "data": []
-                    }
-
-                    # Filter events that are still in the future and within the requested hours
-                    for event in cached_result["data"]:
-                        event_start_time = event["event_start"]
-                        # Only include future events within requested window
-                        if (event_start_time > current_time and
-                                event_start_time <= current_time + (hours * 3600)):
-                            filtered_result["data"].append(event)
-
-                    return filtered_result
+                # Return the cached result, adjusting the forecast hours if needed
+                return {
+                    "success": cached_result["success"],
+                    "forecast_hours": hours,  # Return the requested hours
+                    "data": cached_result["data"]  # Keep all the data
+                }
+        else:
+            logger.info(f"Cache miss, {cache_key[:8]}... not found in cache")
 
     # Calculate events as before if no cache hit or cache disabled
     logger.info("Calculating satellite passes (cache miss or disabled)")
@@ -98,11 +90,10 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
 
         # Optional: Clean up expired cache entries
         for k in list(_cache.keys()):
-            if time.time() > _cache[k][1]:  # If current time is past valid_until
+            if time.time() > _cache[k][1]:  # If the current time is past valid_until
                 del _cache[k]
 
     return events
-
 
 
 async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el=0, step_minutes=1):

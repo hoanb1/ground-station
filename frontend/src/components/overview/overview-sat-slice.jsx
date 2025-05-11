@@ -2,10 +2,6 @@ import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 import {getTargetMapSettings} from "../target/target-sat-slice.jsx";
 
 
-function getCacheKeyForGroupId(groupId) {
-    return `${groupId}_${Math.floor(Date.now() / (2 * 60 * 60 * 1000))}`;
-}
-
 export const getOverviewMapSettings = createAsyncThunk(
     'overviewGroups/getOverviewMapSettings',
     async ({socket}, {rejectWithValue}) => {
@@ -109,14 +105,6 @@ export const fetchNextPassesForGroup = createAsyncThunk(
     'overviewPasses/fetchNextPassesForGroup',
     async ({ socket, selectedSatGroupId, hours }, { getState, rejectWithValue }) => {
         return new Promise((resolve, reject) => {
-
-            // let's check first if we have something cached
-            const state = getState();
-            const cacheKey = getCacheKeyForGroupId(selectedSatGroupId);
-            if (cacheKey in state.overviewSatTrack.cachedPasses) {
-                resolve(state.overviewSatTrack.cachedPasses[cacheKey]);
-            }
-
             socket.emit('data_request', 'fetch-next-passes-for-group', {group_id: selectedSatGroupId, hours: hours}, (response) => {
                 if (response.success) {
                     resolve(response.data);
@@ -188,7 +176,6 @@ const overviewSlice = createSlice({
         formGroupSelectError: false,
         selectedSatGroupId: "",
         passes: [],
-        cachedPasses: {},
         passesLoading: false,
         openMapSettingsDialog: false,
         nextPassesHours: 4.0,
@@ -303,7 +290,6 @@ const overviewSlice = createSlice({
                 state.passesLoading = true;
             })
             .addCase(fetchNextPassesForGroup.fulfilled, (state, action) => {
-                state.cachedPasses[getCacheKeyForGroupId(state.selectedSatGroupId)] = action.payload;
                 state.passes = action.payload;
                 state.passesLoading = false;
             })
