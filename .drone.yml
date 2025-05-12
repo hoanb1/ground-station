@@ -47,8 +47,8 @@ steps:
         fi
         echo "Building version: $VERSION"
 
-      # Login to Docker Hub
-      - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+      # Login to Docker Hub - fixed for non-TTY environment
+      - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
 
       # Build the new image for arm64
       - docker build --platform linux/arm64 -t ground-station:$VERSION .
