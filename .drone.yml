@@ -26,6 +26,22 @@ steps:
       skip_verify: true
       tags: true
 
+  - name: build-and-push
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: sgoudelis
+      password:
+        from_secret: ZT97q#iJ6rDM
+      repo: sgoudelis/ground-station
+      auto_tag: true
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+        - linux/amd64
+      build_args:
+        - BUILDKIT_MULTI_PLATFORM=1
+
   - name: build-and-deploy
     image: docker:cli
     environment:
@@ -47,19 +63,12 @@ steps:
         fi
         echo "Building version: $VERSION"
 
-      # Login to Docker Hub - fixed for non-TTY environment
-      - docker login -u $DOCKER_USERNAME -p $DOCKER_PASSWORD
-
       # Build the new image for arm64
       - docker build --platform linux/arm64 -t ground-station:$VERSION .
 
       # Tag the image for Docker Hub
-      - docker tag ground-station:$VERSION yourusername/ground-station:$VERSION
-      - docker tag ground-station:$VERSION yourusername/ground-station:latest
-
-      # Push to Docker Hub
-      - docker push yourusername/ground-station:$VERSION
-      - docker push yourusername/ground-station:latest
+      - docker tag ground-station:$VERSION sgoudelis/ground-station:$VERSION
+      - docker tag ground-station:$VERSION sgoudelis/ground-station:latest
 
       # Stop and remove the existing container if it exists
       - docker rm -f ground-station-prod || true
