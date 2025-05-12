@@ -12,6 +12,7 @@ trigger:
   event:
     - push
     - pull_request
+    - tag
     - custom
 
 clone:
@@ -23,21 +24,48 @@ steps:
     settings:
       depth: 50
       skip_verify: true
+      tags: true
 
-  - name: deploy
+  - name: build-and-deploy
     image: docker:cli
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
+      DOCKER_USERNAME:
+        from_secret: sgoudelis
+      DOCKER_PASSWORD:
+        from_secret: ZT97q#iJ6rDM
     commands:
-      # Build the new image directly on the remote host
-      - docker build -t ground-station:latest .
+      # Determine version
+      - |
+        if [ -n "$DRONE_TAG" ]; then
+          # If this is a tagged build, use the tag
+          VERSION=$DRONE_TAG
+        else
+          # Otherwise use branch-commit format
+          GIT_SHA=$(git rev-parse --short HEAD)
+          VERSION=${DRONE_BRANCH:-main}-$GIT_SHA
+        fi
+        echo "Building version: $VERSION"
+
+      # Login to Docker Hub
+      - echo $DOCKER_PASSWORD | docker login -u $DOCKER_USERNAME --password-stdin
+
+      # Build the new image for arm64
+      - docker build --platform linux/arm64 -t ground-station:$VERSION .
+
+      # Tag the image for Docker Hub
+      - docker tag ground-station:$VERSION yourusername/ground-station:$VERSION
+      - docker tag ground-station:$VERSION yourusername/ground-station:latest
+
+      # Push to Docker Hub
+      - docker push yourusername/ground-station:$VERSION
+      - docker push yourusername/ground-station:latest
 
       # Stop and remove the existing container if it exists
       - docker rm -f ground-station-prod || true
 
-      # Run the new container
-      #- docker run -d -p 0.0.0.0:7000:7000 --restart=unless-stopped  --privileged -v /dev/bus/usb:/dev/bus/usb --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/db ground-station:latest
-      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped  --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/db ground-station:latest
+      # Run the new container with the versioned image
+      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/db yourusername/ground-station:$VERSION
 
       # Check that it's running
       - sleep 5
@@ -49,8 +77,8 @@ steps:
           exit 1
         fi
 
-      # Display container info
-      - echo "✅ New container is running on host port 7000"
+      # Display container info and version
+      - echo "✅ New container version $VERSION is running on host port 7000"
       - docker ps | grep ground-station-prod
 
 volumes:
