@@ -149,6 +149,12 @@ loggers:
       - default
     propagate: no
 
+  tracker-worker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

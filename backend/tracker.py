@@ -7,9 +7,9 @@ import socketio
 from io import StringIO
 from datetime import UTC
 import math
+import logging
 from common import is_geostationary, serialize_object
 from db import AsyncSessionLocal
-from logger import logger
 from models import ModelEncoder
 from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevationError
 from controllers.rotator import RotatorController
@@ -24,6 +24,9 @@ from tracking.footprint import get_satellite_coverage_circle
 from tracking.doppler import calculate_doppler_shift
 from tracking.passes import calculate_next_events
 from tracking.satellite import get_satellite_position_from_tle, get_satellite_az_el, get_satellite_path
+
+
+logger = logging.getLogger("tracker-worker")
 
 
 def pretty_dict(d):
@@ -87,6 +90,53 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         pass
 
     return reply
+
+
+def start_tracker_process():
+    """
+    Starts the satellite tracking task in a separate process using multiprocessing.
+
+    This function creates the necessary queues for communication between the main process
+    and the tracker process, and handles the lifecycle of the tracker process.
+
+    :return: A tuple containing (process, queue_in, queue_out, stop_event)
+    """
+    # Create queues for bi-directional communication
+    queue_to_tracker = multiprocessing.Queue()
+    queue_from_tracker = multiprocessing.Queue()
+
+    # Create a stop event to signal the process to terminate
+    stop_event = multiprocessing.Event()
+
+    # Define the process target function that will run the async tracking task
+    def run_tracking_task():
+        import asyncio
+        # Create a new event loop for this process
+        loop = asyncio.new_event_loop()
+        asyncio.set_event_loop(loop)
+
+        try:
+            # Run the tracking task
+            loop.run_until_complete(
+                satellite_tracking_task(queue_from_tracker, queue_to_tracker, stop_event)
+            )
+        except Exception as e:
+            logger.error(f"Error in tracker process: {e}")
+            logger.exception(e)
+        finally:
+            loop.close()
+
+    # Create and start the process
+    tracker_process = multiprocessing.Process(
+        target=run_tracking_task,
+        name="SatelliteTracker"
+    )
+    tracker_process.daemon = True  # Process will terminate when main process exits
+    tracker_process.start()
+
+    logger.info(f"Started satellite tracker process with PID {tracker_process.pid}")
+
+    return tracker_process, queue_to_tracker, queue_from_tracker, stop_event
 
 
 async def compiled_satellite_data(dbsession, norad_id) -> dict:
@@ -179,20 +229,22 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     return satellite_data
 
 
-async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
+async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: multiprocessing.Queue, stop_event=None):
     """
     Periodically tracks and transmits satellite position and details along with user location data
-    to the browser using Socket.IO.
+    using multiprocessing Queue instead of Socket.IO for inter-process communication.
 
     This function performs satellite tracking by retrieving tracking states, determining current
     satellite position, and calculating azimuth and elevation values based on user geographic
     location. Data retrieval is achieved through database queries for satellite and user
-    information, and updates are transmitted via a Socket.IO communication channel.
+    information, and updates are transmitted via the queue_out Queue.
 
-    :param stop_event:
-    :param stop_event:
-    :param sio: The Socket.IO server instance for emitting satellite tracking data asynchronously.
-    :type sio: socketio.AsyncServer
+    :param queue_out: Queue to send tracking data to the main process
+    :type queue_out: multiprocessing.Queue
+    :param queue_in: Queue to receive commands from the main process
+    :type queue_in: multiprocessing.Queue
+    :param stop_event: Event to signal this function to stop execution
+    :type stop_event: multiprocessing.Event
     :return: None
     """
 
@@ -231,8 +283,6 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
     }
 
     notified = {}
-    is_slewing = False
-
 
     def in_tracking_state():
         if current_rotator_state == "tracking":
@@ -249,9 +299,14 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
         rotator_data['minelevation'] = False
 
         notified = {}
-        await sio.emit('satellite-tracking', {'events': [
-            {'name': "norad_id_change", 'old': old, 'new': new},
-        ]})
+        queue_out.put({
+            'event': 'satellite-tracking',
+            'data': {
+                'events': [
+                    {'name': "norad_id_change", 'old': old, 'new': new},
+                ]
+            }
+        })
 
 
     async def connect_to_rotator():
@@ -268,17 +323,26 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
                 await rotator_controller.connect()
                 rotator_data['connected'] = True
-                await sio.emit('satellite-tracking', {
-                    'events': [{'name': "rotator_connected"}],
-                    'rotator_data': rotator_data
+                queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [{'name': "rotator_connected"}],
+                        'rotator_data': rotator_data
+                    }
                 })
 
             except Exception as e:
                 logger.error(f"Failed to connect to rotator_controller: {e}")
                 logger.exception(e)
-                await sio.emit('satellite-tracking', {'events': [
-                    {'name': "rotator_error", "error": str(e)}
-                ]})
+                rotator_data['connected'] = False
+                queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [
+                            {'name': "rotator_error", "error": str(e)}
+                        ]
+                    }
+                })
                 rotator_controller = None
 
 
@@ -317,9 +381,12 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 try:
                     await rotator_controller.disconnect()
                     rotator_data['connected'] = False
-                    await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rotator_disconnected"}],
-                        'rotator_data': rotator_data
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'events': [{'name': "rotator_disconnected"}],
+                            'rotator_data': rotator_data
+                        }
                     })
 
                 except Exception as e:
@@ -340,9 +407,12 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
                 if park_reply:
                     rotator_data['parked'] = True
-                    await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rotator_parked"}],
-                        'rotator_data': rotator_data
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'events': [{'name': "rotator_parked"}],
+                            'rotator_data': rotator_data
+                        }
                     })
                 else:
                     raise Exception("Failed to park rotator")
@@ -395,17 +465,26 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 await rig_controller.connect()
                 rig_data['connected'] = True
                 rig_data['device_type'] = rig_details.get('type', 'hardware')
-                await sio.emit('satellite-tracking', {
-                    'events': [{'name': "rig_connected"}],
-                    'rig_data': rig_data
+                queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [{'name': "rig_connected"}],
+                        'rig_data': rig_data
+                    }
                 })
 
             except Exception as e:
                 logger.error(f"Failed to connect to rig_controller: {e}")
                 logger.exception(e)
-                await sio.emit('satellite-tracking', {'events': [
-                    {'name': "rig_error", "error": str(e)}
-                ]})
+                rig_data['connected'] = False
+                queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [
+                            {'name': "rig_error", "error": str(e)}
+                        ]
+                    }
+                })
                 rig_controller = None
 
 
@@ -419,7 +498,7 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             await connect_to_rig()
             rig_data['connected'] = True
             rig_data['tracking'] = False
-            rig_data['is_slewing'] = False
+            rig_data['tuning'] = False
 
         elif new == "disconnected":
             # disconnected rig_controller
@@ -429,10 +508,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                     await rig_controller.disconnect()
                     rig_data['connected'] = False
                     rig_data['tracking'] = False
-                    rig_data['is_slewing'] = False
-                    await sio.emit('satellite-tracking', {
-                        'events': [{'name': "rig_disconnected"}],
-                        'rig_data': rig_data
+                    rig_data['tuning'] = False
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'events': [{'name': "rig_disconnected"}],
+                            'rig_data': rig_data
+                        }
                     })
 
                 except Exception as e:
@@ -487,6 +569,19 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
     async with (AsyncSessionLocal() as dbsession):
         while True:
+            # Check for any incoming commands from the main process
+            try:
+                if not queue_in.empty():
+                    command = queue_in.get_nowait()
+                    logger.info(f"Received command from main process: {command}")
+                    # Process the command based on its type
+                    if command.get('command') == 'stop':
+                        logger.info("Received stop command, exiting tracking task")
+                        break
+                    # Handle other command types as needed
+            except Exception as e:
+                logger.error(f"Error processing command from queue: {e}")
+
             try:
                 start_loop_date = datetime.now(UTC)
                 events = []
@@ -605,9 +700,12 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
                 if in_tracking_state() and notified.get('azimuth_out_of_bounds', False) is not True:
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "azimuth_out_of_bounds"}
-                    ]})
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'events': [{'name': "azimuth_out_of_bounds"}]
+                        }
+                    })
                 notified['azimuth_out_of_bounds'] = True
                 rotator_data['minelevation'] = False
                 rotator_data['outofbounds'] = True
@@ -615,9 +713,12 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             except ElevationOutOfBounds as e:
                 logger.warning(f"Elevation out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
                 if in_tracking_state() and notified.get('elevation_out_of_bounds', False) is not True:
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "elevation_out_of_bounds"}
-                    ]})
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'events': [{'name': "elevation_out_of_bounds"}]
+                        }
+                    })
                 notified['elevation_out_of_bounds'] = True
                 rotator_data['minelevation'] = False
                 rotator_data['outofbounds'] = True
@@ -625,9 +726,12 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
             except MinimumElevationError as e:
                 logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{current_norad_id} {satellite_name}: {e}")
                 if in_tracking_state() and notified.get('minelevation_error', False) is not True:
-                    await sio.emit('satellite-tracking', {'events': [
-                        {'name': "minelevation_error"}
-                    ]})
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'events': [{'name': "minelevation_error"}]
+                        }
+                    })
                 notified['minelevation_error'] = True
                 rotator_data['minelevation'] = True
                 rotator_data['outofbounds'] = False
@@ -637,21 +741,22 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 logger.exception(e)
 
             finally:
-                # Lastly, send updates to the UI
+                # Lastly, send updates via the queue
                 try:
-                    data = {
-                        'satellite_data': satellite_data,
-                        #'tracking_state': tracker,
-                        'events': events,
-                        'rotator_data': rotator_data,
-                        'rig_data': rig_data,
+                    full_msg = {
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'satellite_data': satellite_data,
+                            'events': events.copy(),              # copy(), because it will be modified later
+                            'rotator_data': rotator_data.copy(),  # copy(), because it will be modified later
+                            'rig_data': rig_data.copy(),          # copy(), because it will be modified later
+                        }
                     }
-
-                    logger.debug(f"Sending satellite tracking data to the browser: \n%s", pretty_dict(data))
-                    await sio.emit('satellite-tracking', data)
+                    logger.debug(f"Sending satellite tracking data: \n%s", pretty_dict(full_msg))
+                    queue_out.put(full_msg)
 
                 except Exception as e:
-                    logger.critical(f"Error sending satellite tracking data to the browser: {e}")
+                    logger.critical(f"Error sending satellite tracking data: {e}")
                     logger.exception(e)
 
                 # calculate sleep time
@@ -670,10 +775,13 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 rotator_data['minelevation'] = False
 
                 # Clean up rig_data
-                rig_data['is_tuning'] = False
+                rig_data['tuning'] = False
 
-                logger.info(f"Waiting for {remaining_time_to_sleep} seconds before next update (already spent {loop_duration})...")
+                # Check if stop_event is set before sleeping
+                if stop_event and stop_event.is_set():
+                    logger.info("Stop event detected, exiting tracking task")
+                    break
+
+                logger.info(f"Waiting for {remaining_time_to_sleep} seconds before next update "
+                            f"(already spent {loop_duration})...")
                 await asyncio.sleep(remaining_time_to_sleep)
-
-
-

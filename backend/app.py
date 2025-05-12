@@ -24,6 +24,8 @@ from typing import Optional, Dict, Any, Union
 from waterfall import waterfall_socket_app, cleanup_sdr_session
 from sdrprocessmanager import sdr_process_manager
 from soapysdrbrowser import discover_soapy_servers
+from tracker import start_tracker_process
+
 
 # Show NumPy configuration
 # np.show_config()
@@ -64,6 +66,12 @@ AsyncSessionLocal = sessionmaker(
 )
 
 
+async def run_discover_soapy():
+    while True:
+        await discover_soapy_servers()
+        await asyncio.sleep(120)
+
+
 @asynccontextmanager
 async def lifespan(fastapiapp: FastAPI):
     """
@@ -71,25 +79,34 @@ async def lifespan(fastapiapp: FastAPI):
     Create and cleanup background tasks or other
     resources in this context manager.
     """
-    # Start the background tasks
-    tracking_task = asyncio.create_task(satellite_tracking_task(sio))
+    # Start the tracking task
+    #tracking_task = asyncio.create_task(satellite_tracking_task(sio))
 
-    async def run_discover_soapy():
-        while True:
-            await discover_soapy_servers()
-            await asyncio.sleep(120)
-
+    # Start the Soapy server discovery task
     #discover_task = asyncio.create_task(run_discover_soapy())
+
+    # Start the message handler in your tracker process event loop
+    asyncio.create_task(handle_tracker_messages(sio))
 
     try:
         yield
     finally:
-        # Cancel the background tasks on shutdown
-        tracking_task.cancel()
+        # Cancel the tracking task
+        #tracking_task.cancel()
+
+        # Cancel the Soapy server discovery task
         #discover_task.cancel()
+
         try:
-            await tracking_task
+            pass
+            # Start the tracking task (to be removed)
+            #await tracking_task
+
+            # Stop the Soapy server discovery task
             #await discover_task
+
+            # Stop the tracker process
+            stop_tracker()
         except asyncio.CancelledError:
             pass
 
@@ -112,6 +129,51 @@ app.add_middleware(
 
 # Feed in the Socket.IO server instance to the SDR process manager
 sdr_process_manager.set_sio(sio)
+
+# Start the tracker process
+tracker_process, queue_to_tracker, queue_from_tracker, stop_event = start_tracker_process()
+
+def stop_tracker():
+    """
+    Send a command to the tracker process to stop it.
+    """
+    stop_event.set()
+
+    # Send a stop command through the queue as well
+    queue_to_tracker.put({'command': 'stop'})
+
+    # Wait for the process to terminate
+    tracker_process.join(timeout=5)
+
+    # Force terminate if it's still running
+    if tracker_process.is_alive():
+        logger.warning("Tracker process didn't terminate gracefully, forcing termination")
+        tracker_process.terminate()
+
+
+async def handle_tracker_messages(sockio):
+    """
+    Continuously checks for messages from the tracker process and forwards them to Socket.IO
+    """
+    while True:
+        try:
+            if not queue_from_tracker.empty():
+                message = queue_from_tracker.get_nowait()
+                event = message.get('event')
+                data = message.get('data', {})
+
+                # Forward the message to Socket.IO clients
+                if event:
+                    await sockio.emit(event, data)
+
+            # Don't busy-wait
+            await asyncio.sleep(0.1)
+
+        except Exception as e:
+            logger.error(f"Error handling tracker messages: {e}")
+            # Wait a bit longer on error
+            await asyncio.sleep(1)
+
 
 @sio.on('connect')
 async def connect(sid, environ, auth=None):
