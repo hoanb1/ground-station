@@ -483,10 +483,15 @@ const MainWaterfallDisplay = React.memo(() => {
     const startStreaming = () => {
 
         if (!isStreaming) {
+
+            // Clean up the rotatorEventQueueRef from any previous events that might have accumulated
+            rotatorEventQueueRef.current = [];
+
+            // Set the loading flags and clear errors
             dispatch(setStartStreamingLoading(true));
             dispatch(setErrorMessage(''));
 
-            // Configure RTL-SDR settings
+            // Send command to backend to configure the SDR settings
             socket.emit('sdr_data', 'configure-sdr', {
                 selectedSDRId: selectedSDRId,
                 centerFrequency: centerFrequency,
@@ -664,7 +669,7 @@ const MainWaterfallDisplay = React.memo(() => {
             waterFallLeftMarginCtx.textBaseline = 'top';
             waterFallLeftMarginCtx.fillText(newRotatorEvent, bandscopeAxisYWidth / 2, 2);
 
-            // Draw horizontal dotted line in waterfall
+            // Draw horizontal dotted line in main waterfall
             const imageData = waterFallCtx.getImageData(0, 0, waterFallCanvas.width, 1);
             const data = imageData.data;
             for (let i = 0; i < data.length; i += 32) { // Increase step to create dots
