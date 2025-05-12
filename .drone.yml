@@ -89,6 +89,9 @@ steps:
         - linux/amd64
       build_args:
         - BUILDKIT_MULTI_PLATFORM=1
+      # Remote Docker host configuration
+      daemon_off: true
+      docker_host: tcp://192.168.60.98:2375
 
 volumes:
   - name: dockersock
