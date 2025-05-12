@@ -220,7 +220,13 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         // map is ready
         MapObject = map.target;
         setInterval(()=>{
-            MapObject.invalidateSize();
+            if (MapObject) {
+                try {
+                    MapObject.invalidateSize();
+                } catch (e) {
+                    console.error(`Error while updating map: ${e}`);
+                }
+            }
         }, 1000);
     };
 
@@ -397,9 +403,6 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
         const initialMapZoom = savedZoomLevel ? parseFloat(savedZoomLevel) : 1;
         dispatch(setMapZoomLevel(initialMapZoom));
-
-
-
         return () => {
 
         };

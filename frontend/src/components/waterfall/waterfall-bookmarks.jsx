@@ -105,7 +105,7 @@ const BookmarkCanvas = ({
             const newBookMark = {
                 frequency: rigData['observed_freq'],
                 label: `${transmitter?.description || 'Unknown'} - Corrected: ${humanizeFrequency(rigData['observed_freq'])}`,
-                color: '#ff3c00',
+                color: '#ff6900',
                 metadata: {
                     type: 'doppler_shift',
                     transmitter_id: transmitterId

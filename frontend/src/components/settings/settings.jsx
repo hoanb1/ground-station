@@ -176,7 +176,7 @@ export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
             activeTabContent = <RotatorControlForm/>;
             break;
         case "camera":
-            activeTabContent = <CameraForm/>;
+            activeTabContent = <CameraPage/>;
             break;
         case "sdrs":
             activeTabContent = <SDRsPage/>;
@@ -254,7 +254,7 @@ const RotatorControlForm = () => {
 };
 
 
-const CameraForm = () => {
+const CameraPage = () => {
 
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>

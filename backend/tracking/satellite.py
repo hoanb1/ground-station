@@ -39,7 +39,7 @@ def get_satellite_az_el(home_lat: float, home_lon: float, satellite_tle_line1: s
     # Get the altitude (elevation) and azimuth in degrees
     alt, az, _ = difference.at(t).altaz()
 
-    return az.degrees, alt.degrees
+    return round(az.degrees, 4), round(alt.degrees, 4)
 
 
 def get_satellite_position_from_tle(tle_lines):

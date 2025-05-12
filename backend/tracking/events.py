@@ -83,7 +83,7 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
     if isinstance(events, dict):
         events["forecast_hours"] = hours
 
-    # Store result in cache if caching is enabled
+    # Store the result in cache if caching is enabled
     if use_cache:
         # Calculate how long this calculation is valid for, hours / 2
         validity_period = (hours / 2) * 3600

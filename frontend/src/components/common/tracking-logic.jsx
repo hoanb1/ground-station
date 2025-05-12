@@ -61,85 +61,90 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
  * @return {Array<{lat: number, lon: number}>} The polygon (in degrees) for the coverage area.
  */
 export function getSatelliteCoverageCircle(satLat, satLon, altitudeKm, numPoints = 36) {
-    // Mean Earth radius in kilometers (WGS-84 approximate)
-    const R_EARTH = 6378.137;
+    try {
+        // Mean Earth radius in kilometers (WGS-84 approximate)
+        const R_EARTH = 6378.137;
 
-    // Convert satellite subpoint to radians
-    const lat0 = (satLat * Math.PI) / 180;
-    const lon0 = (satLon * Math.PI) / 180;
+        // Convert satellite subpoint to radians
+        const lat0 = (satLat * Math.PI) / 180;
+        const lon0 = (satLon * Math.PI) / 180;
 
-    // Compute angular radius of the coverage circle (in radians)
-    // d = arccos(R_EARTH / (R_EARTH + altitudeKm))
-    const d = Math.acos(R_EARTH / (R_EARTH + altitudeKm));
+        // Compute angular radius of the coverage circle (in radians)
+        // d = arccos(R_EARTH / (R_EARTH + altitudeKm))
+        const d = Math.acos(R_EARTH / (R_EARTH + altitudeKm));
 
-    // Generate the circle points (closed polygon)
-    const circlePoints = [];
-    for (let i = 0; i <= numPoints; i++) {
-        const theta = (2 * Math.PI * i) / numPoints;
+        // Generate the circle points (closed polygon)
+        const circlePoints = [];
+        for (let i = 0; i <= numPoints; i++) {
+            const theta = (2 * Math.PI * i) / numPoints;
 
-        // Using spherical trigonometry to compute a point d away from (lat0,lon0)
-        const lat_i = Math.asin(
-            Math.sin(lat0) * Math.cos(d) +
-            Math.cos(lat0) * Math.sin(d) * Math.cos(theta)
-        );
-        const lon_i = lon0 + Math.atan2(
-            Math.sin(d) * Math.sin(theta) * Math.cos(lat0),
-            Math.cos(d) - Math.sin(lat0) * Math.sin(lat_i)
-        );
+            // Using spherical trigonometry to compute a point d away from (lat0,lon0)
+            const lat_i = Math.asin(
+                Math.sin(lat0) * Math.cos(d) +
+                Math.cos(lat0) * Math.sin(d) * Math.cos(theta)
+            );
+            const lon_i = lon0 + Math.atan2(
+                Math.sin(d) * Math.sin(theta) * Math.cos(lat0),
+                Math.cos(d) - Math.sin(lat0) * Math.sin(lat_i)
+            );
 
-        // Convert back to degrees and normalize longitude to [-180, 180)
-        const latDeg = (lat_i * 180) / Math.PI;
-        let lonDeg = (lon_i * 180) / Math.PI;
-        //lonDeg = ((lonDeg + 540) % 360) - 180;
+            // Convert back to degrees and normalize longitude to [-180, 180)
+            const latDeg = (lat_i * 180) / Math.PI;
+            let lonDeg = (lon_i * 180) / Math.PI;
+            //lonDeg = ((lonDeg + 540) % 360) - 180;
 
-        circlePoints.push({ lat: latDeg, lon: lonDeg });
-    }
-
-    // Adjust the polygon if it should include a pole.
-    // Condition for North Pole inclusion: the spherical cap extends beyond the North Pole.
-    // (That is, if d > (π/2 - lat0)). Similarly, for the South Pole: d > (π/2 + lat0) when lat0 is negative.
-    let adjustedPoints = circlePoints.slice();
-
-    // North Pole case (for satellites in the northern hemisphere or whose cap covers the north)
-    if (d > (Math.PI / 2 - lat0)) {
-        // Find the index with the maximum latitude (the highest point in our computed circle)
-        let maxIndex = 0, maxLat = -Infinity;
-        for (let i = 0; i < circlePoints.length; i++) {
-            if (circlePoints[i].lat > maxLat) {
-                maxLat = circlePoints[i].lat;
-                maxIndex = i;
-            }
+            circlePoints.push({ lat: latDeg, lon: lonDeg });
         }
-        // Insert the North Pole as an extra vertex immediately after the highest point.
-        // (Using the same longitude as that highest point.)
-        adjustedPoints = [
-            { lat: 90, lon: circlePoints[0].lon },
-            ...circlePoints.slice(0, maxIndex + 1),
-            ...circlePoints.slice(maxIndex + 1),
-            { lat: 90, lon: circlePoints[circlePoints.length - 1].lon },
-        ];
-    }
 
-    // South Pole case (for satellites in the southern hemisphere or whose cap covers the south)
-    if (d > (Math.PI / 2 + lat0)) {
-        // Find the index with the minimum latitude (the lowest point in our computed circle)
-        let minIndex = 0, minLat = Infinity;
-        for (let i = 0; i < circlePoints.length; i++) {
-            if (circlePoints[i].lat < minLat) {
-                minLat = circlePoints[i].lat;
-                minIndex = i;
+        // Adjust the polygon if it should include a pole.
+        // Condition for North Pole inclusion: the spherical cap extends beyond the North Pole.
+        // (That is, if d > (π/2 - lat0)). Similarly, for the South Pole: d > (π/2 + lat0) when lat0 is negative.
+        let adjustedPoints = circlePoints.slice();
+
+        // North Pole case (for satellites in the northern hemisphere or whose cap covers the north)
+        if (d > (Math.PI / 2 - lat0)) {
+            // Find the index with the maximum latitude (the highest point in our computed circle)
+            let maxIndex = 0, maxLat = -Infinity;
+            for (let i = 0; i < circlePoints.length; i++) {
+                if (circlePoints[i].lat > maxLat) {
+                    maxLat = circlePoints[i].lat;
+                    maxIndex = i;
+                }
             }
+            // Insert the North Pole as an extra vertex immediately after the highest point.
+            // (Using the same longitude as that highest point.)
+            adjustedPoints = [
+                { lat: 90, lon: circlePoints[0].lon },
+                ...circlePoints.slice(0, maxIndex + 1),
+                ...circlePoints.slice(maxIndex + 1),
+                { lat: 90, lon: circlePoints[circlePoints.length - 1].lon },
+            ];
         }
-        // Insert the South Pole as an extra vertex immediately after the lowest point.
-        adjustedPoints = [
-            ...adjustedPoints.slice(0, minIndex + 1),
-            { lat: -90, lon: circlePoints[minIndex].lon },
-            { lat: -90, lon: circlePoints[minIndex + 1].lon },
-            ...adjustedPoints.slice(minIndex + 1),
-        ];
-    }
 
-    return adjustedPoints;
+        // South Pole case (for satellites in the southern hemisphere or whose cap covers the south)
+        if (d > (Math.PI / 2 + lat0)) {
+            // Find the index with the minimum latitude (the lowest point in our computed circle)
+            let minIndex = 0, minLat = Infinity;
+            for (let i = 0; i < circlePoints.length; i++) {
+                if (circlePoints[i].lat < minLat) {
+                    minLat = circlePoints[i].lat;
+                    minIndex = i;
+                }
+            }
+            // Insert the South Pole as an extra vertex immediately after the lowest point.
+            adjustedPoints = [
+                ...adjustedPoints.slice(0, minIndex + 1),
+                { lat: -90, lon: circlePoints[minIndex].lon },
+                { lat: -90, lon: circlePoints[minIndex + 1].lon },
+                ...adjustedPoints.slice(minIndex + 1),
+            ];
+        }
+
+        return adjustedPoints;
+    } catch (error) {
+        console.error("Error computing satellite coverage circle:", error);
+        return [];
+    }
 }
 
 /**

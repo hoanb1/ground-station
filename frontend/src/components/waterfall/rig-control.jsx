@@ -266,7 +266,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                         <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
                         <Select
                             id="transmitter-select"
-                            value={availableTransmitters.length > 0 ? selectedTransmitter : "none"}
+                            value={availableTransmitters.length > 0 && availableTransmitters.some(t => t.id === selectedTransmitter) ? selectedTransmitter : "none"}
                             onChange={(event) => {
                                 handleTransmitterChange(event);
                             }}

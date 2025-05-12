@@ -30,7 +30,7 @@ const TimeFormatter = React.memo(({ value }) => {
     useEffect(() => {
         const interval = setInterval(() => {
             setForceUpdate(prev => prev + 1);
-        }, 1000); // Every minute
+        }, 1000);
         return () => clearInterval(interval);
     }, []);
 
@@ -206,17 +206,6 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             }
         },
         {
-            field: 'transmitter_count',
-            minWidth: 70,
-            headerName: 'TRXs',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            valueFormatter: (value) => {
-                return value ? `${value}` : '0';
-            }
-        },
-        {
             field: 'transmitters',
             minWidth: 120,
             align: 'center',
@@ -271,6 +260,17 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
                         ))}
                     </div>
                 );
+            }
+        },
+        {
+            field: 'transmitter_count',
+            minWidth: 70,
+            headerName: 'TRXs',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return value ? `${value}` : '0';
             }
         },
         {
@@ -405,6 +405,19 @@ const NextPassesGroupIsland = React.memo(() => {
 
         };
     }, [selectedSatGroupId]);
+
+    useEffect(() => {
+        // Update the passes every two hours plus 5 mins to wait until the cache is invalidated
+        const interval = setInterval(() => {
+            if (selectedSatGroupId) {
+                dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
+            }
+        }, 7200000 + (60000 * 5));
+
+        return () => {
+            clearInterval(interval);
+        }
+    }, []);
 
     useEffect(() => {
         const target = containerRef.current;

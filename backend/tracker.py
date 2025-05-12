@@ -174,14 +174,6 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     position['az'] = sky_point[0]
     position['el'] = sky_point[1]
 
-    # # calculate elevation and azimuth on LOS and AOS
-    # satellite_data['nextPass'] = await asyncio.to_thread(calculate_next_pass,
-    #     [satellite_data['details']['tle1'], satellite_data['details']['tle2']],
-    #     location['data']['lat'],
-    #     location['data']['lon'],
-    #     0,
-    # )
-
     satellite_data = serialize_object(satellite_data)
     
     return satellite_data
@@ -210,6 +202,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
     azimuthlimits = (0, 360)
     eleveationlimits = (0, 90)
     minelevation = 10.0
+    az_tolerance = 1.0
+    el_tolerance = 1.0
     previous_rotator_state = None
     rotator_controller = None
     rig_controller = None
@@ -575,8 +569,8 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
                 if skypoint[1] < minelevation:
                     raise MinimumElevationError(f"target has not reached minimum elevation {minelevation}° degrees")
 
-                # everything good, move on
-                logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {round(skypoint[0], 3)}° el: {round(skypoint[1], 3)}°")
+                # everything good, move on to actual rotator and rig tracking
+                logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°")
 
                 # tune freq
                 if rig_controller and current_rig_state == "tracking":
@@ -593,15 +587,20 @@ async def satellite_tracking_task(sio: socketio.AsyncServer, stop_event=None):
 
                 # slew rotator
                 if rotator_controller and current_rotator_state == "tracking":
-                    position_gen = rotator_controller.set_position(round(skypoint[0], 3), round(skypoint[1], 3))
 
-                    try:
-                        az, el, is_slewing = await anext(position_gen)
-                        rotator_data['slewing'] = is_slewing
-                        logger.info(f"Current position: AZ={round(az, 3)}°, EL={round(el, 3)}°, slewing={is_slewing}")
+                    # Check if the target position is within tolerance of the current position
+                    if (abs(skypoint[0] - rotator_data['az']) > az_tolerance or
+                            abs(skypoint[1] - rotator_data['el']) > el_tolerance):
+                        position_gen = rotator_controller.set_position(skypoint[0], skypoint[1])
 
-                    except StopAsyncIteration:
-                        logger.info(f"Slewing to AZ={round(az, 3)}° EL={round(el, 3)}° complete")
+                        # go through the yields while it is slewing
+                        try:
+                            az, el, is_slewing = await anext(position_gen)
+                            rotator_data['slewing'] = is_slewing
+                            logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
+
+                        except StopAsyncIteration:
+                            logger.info(f"Slewing to AZ={az}° EL={el}° complete")
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
