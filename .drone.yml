@@ -47,8 +47,8 @@ steps:
         fi
         echo "Building version: $VERSION"
 
-      # Build the new image for arm64
-      - docker build --platform linux/arm64 -t ground-station:$VERSION .
+      # Build the new image for amd64
+      - docker build --platform linux/amd64 -t ground-station:$VERSION .
 
       # Tag the image for Docker Hub
       - docker tag ground-station:$VERSION sgoudelis/ground-station:$VERSION
