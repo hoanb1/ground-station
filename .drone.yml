@@ -26,25 +26,6 @@ steps:
       skip_verify: true
       tags: true
 
-  - name: build-and-push
-    image: plugins/docker
-    settings:
-      username:
-        from_secret: sgoudelis
-      password:
-        from_secret: ZT97q#iJ6rDM
-      repo: sgoudelis/ground-station
-      auto_tag: true
-      dockerfile: Dockerfile
-      platforms:
-        - linux/arm64
-        - linux/amd64
-      build_args:
-        - BUILDKIT_MULTI_PLATFORM=1
-      # Remote Docker host configuration
-      daemon_off: true
-      docker_host: tcp://192.168.60.98:2375
-
   - name: build-and-deploy
     image: docker:cli
     environment:
@@ -93,6 +74,24 @@ steps:
       - echo "✅ New container version $VERSION is running on host port 7000"
       - docker ps | grep ground-station-prod
 
+  - name: build-and-push
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: sgoudelis
+      password:
+        from_secret: ZT97q#iJ6rDM
+      repo: sgoudelis/ground-station
+      auto_tag: true
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
+        - linux/amd64
+      build_args:
+        - BUILDKIT_MULTI_PLATFORM=1
+      # Remote Docker host configuration
+      daemon_off: true
+      docker_host: tcp://192.168.60.98:2375
 
 volumes:
   - name: dockersock
