@@ -323,11 +323,15 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
                 await rotator_controller.connect()
                 rotator_data['connected'] = True
+                rotator_data['tracking'] = False
+                rotator_data['slewing'] = False
+                rotator_data['outofbounds'] = False
+                rotator_data['stopped'] = True
                 queue_out.put({
                     'event': 'satellite-tracking',
                     'data': {
                         'events': [{'name': "rotator_connected"}],
-                        'rotator_data': rotator_data
+                        'rotator_data': rotator_data.copy()
                     }
                 })
 
@@ -335,12 +339,16 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 logger.error(f"Failed to connect to rotator_controller: {e}")
                 logger.exception(e)
                 rotator_data['connected'] = False
+                rotator_data['tracking'] = False
+                rotator_data['slewing'] = False
+                rotator_data['stopped'] = False
                 queue_out.put({
                     'event': 'satellite-tracking',
                     'data': {
                         'events': [
                             {'name': "rotator_error", "error": str(e)}
-                        ]
+                        ],
+                        'rotator_data': rotator_data.copy(),
                     }
                 })
                 rotator_controller = None
@@ -356,11 +364,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         if new == "connected":
             # check what hardware was chosen and set it up
             await connect_to_rotator()
-            rotator_data['connected'] = True
-            rotator_data['tracking'] = False
-            rotator_data['slewing'] = False
-            rotator_data['outofbounds'] = False
-            rotator_data['stopped'] = True
+
 
         elif new == "tracking":
             # check what hardware was chosen and set it up
@@ -369,7 +373,6 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
 
         elif new == "stopped":
             # check what hardware was chosen and set it up
-            #await connect_to_rotator()
             rotator_data['tracking'] = False
             rotator_data['slewing'] = False
             rotator_data['stopped'] = True
@@ -385,7 +388,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                         'event': 'satellite-tracking',
                         'data': {
                             'events': [{'name': "rotator_disconnected"}],
-                            'rotator_data': rotator_data
+                            'rotator_data': rotator_data.copy()
                         }
                     })
 
@@ -411,7 +414,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                         'event': 'satellite-tracking',
                         'data': {
                             'events': [{'name': "rotator_parked"}],
-                            'rotator_data': rotator_data
+                            'rotator_data': rotator_data.copy()
                         }
                     })
                 else:
@@ -464,12 +467,15 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
 
                 await rig_controller.connect()
                 rig_data['connected'] = True
+                rig_data['tracking'] = False
+                rig_data['tuning'] = False
+
                 rig_data['device_type'] = rig_details.get('type', 'hardware')
                 queue_out.put({
                     'event': 'satellite-tracking',
                     'data': {
                         'events': [{'name': "rig_connected"}],
-                        'rig_data': rig_data
+                        'rig_data': rig_data.copy()
                     }
                 })
 
@@ -477,12 +483,15 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 logger.error(f"Failed to connect to rig_controller: {e}")
                 logger.exception(e)
                 rig_data['connected'] = False
+                rig_data['tracking'] = False
+                rig_data['tuning'] = False
                 queue_out.put({
                     'event': 'satellite-tracking',
                     'data': {
                         'events': [
                             {'name': "rig_error", "error": str(e)}
-                        ]
+                        ],
+                        'rig_data': rig_data.copy(),
                     }
                 })
                 rig_controller = None
@@ -496,9 +505,6 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         if new == "connected":
             # check what hardware was chosen and set it up
             await connect_to_rig()
-            rig_data['connected'] = True
-            rig_data['tracking'] = False
-            rig_data['tuning'] = False
 
         elif new == "disconnected":
             # disconnected rig_controller
@@ -513,7 +519,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                         'event': 'satellite-tracking',
                         'data': {
                             'events': [{'name': "rig_disconnected"}],
-                            'rig_data': rig_data
+                            'rig_data': rig_data.copy()
                         }
                     })
 

@@ -86,7 +86,7 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
     # Store the result in cache if caching is enabled
     if use_cache:
         # Calculate how long this calculation is valid for, hours / 2
-        validity_period = (hours / 2) * 3600
+        validity_period = int((hours / 4) * 3600)
         valid_until = time.time() + validity_period
 
         _cache[cache_key] = (time.time(), valid_until, events)
