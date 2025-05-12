@@ -347,7 +347,9 @@ export default function Layout() {
         <DashboardLayout
             sx={{
                 //minHeight: '1000px',
-
+                '& .MuiToolbar-root': {
+                    boxShadow: '4px 8px 8px rgba(0, 0, 0, 0.35)',
+                },
             }}
             defaultSidebarCollapsed
             slots={{
