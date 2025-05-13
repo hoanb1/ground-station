@@ -74,25 +74,54 @@ steps:
       - echo "✅ New container version $VERSION is running on host port 7000"
       - docker ps | grep ground-station-prod
 
-  - name: build-and-push
-    image: plugins/docker
+  - name: verify-docker-connection
+    image: docker:cli
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
-    settings:
-      username:
-        from_secret: sgoudelis
-      password:
-        from_secret: ZT97q#iJ6rDM
-      repo: sgoudelis/ground-station
-      auto_tag: true
-      dockerfile: Dockerfile
-      platforms:
-        - linux/arm64
-        - linux/amd64
-      build_args:
-        - BUILDKIT_MULTI_PLATFORM=1
-      daemon_off: true
+    commands:
+      - docker info
+      - echo "Docker connection verified"
 
+  - name: docker-auth
+    image: docker:cli
+    environment:
+      DOCKER_HOST: tcp://192.168.60.98:2375
+      DOCKER_USERNAME:
+        from_secret: sgoudelis
+      DOCKER_PASSWORD:
+        from_secret: ZT97q#iJ6rDM
+    commands:
+      - echo "Attempting Docker Hub authentication..."
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
+      - echo "✅ Docker Hub authentication successful"
+
+  - name: build-and-push-manual
+    image: docker:cli
+    environment:
+      DOCKER_HOST: tcp://192.168.60.98:2375
+    commands:
+      # Setup buildx for multi-arch builds
+      - docker buildx create --use --name multiarch-builder
+      - docker buildx inspect --bootstrap
+
+      # Determine version
+      - |
+        if [ -n "$DRONE_TAG" ]; then
+          VERSION=$DRONE_TAG
+        else
+          VERSION=${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}
+        fi
+        echo "Building version $VERSION"
+
+      # Build and push with detailed output
+      - echo "Building for multiple architectures..."
+      - |
+        docker buildx build \
+          --platform linux/arm64,linux/amd64 \
+          -t sgoudelis/ground-station:$VERSION \
+          -t sgoudelis/ground-station:latest \
+          --push \
+          .
 
 volumes:
   - name: dockersock
