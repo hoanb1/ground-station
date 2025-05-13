@@ -31,9 +31,9 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
       DOCKER_USERNAME:
-        from_secret: sgoudelis
+        from_secret: docker_username
       DOCKER_PASSWORD:
-        from_secret: ZT97q#iJ6rDM
+        from_secret: docker_password
     commands:
       # Determine version
       - |
@@ -87,9 +87,9 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
       DOCKER_USERNAME:
-        from_secret: sgoudelis
+        from_secret: docker_username
       DOCKER_PASSWORD:
-        from_secret: ZT97q#iJ6rDM
+        from_secret: docker_password
     commands:
       - echo "Attempting Docker Hub authentication..."
       - echo "$DOCKER_PASSWORD" | docker login -username "$DOCKER_USERNAME" --password-stdin
