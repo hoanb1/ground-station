@@ -1,3 +1,19 @@
+# Copyright (c) 2024 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
 import multiprocessing
 import json
 import numpy as np
@@ -315,6 +331,9 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                 # We have enough samples to process
                 samples = samples_buffer[:buffer_position]
 
+                # Remove DC offset spike
+                samples = remove_dc_offset(samples)
+
                 # Calculate the number of samples needed for the FFT
                 actual_fft_size = fft_size * 1
 
@@ -515,7 +534,6 @@ def get_supported_sample_rates(sdr, channel=0):
         return [{'error': str(e)}]
 
 
-
 def list_available_devices(hostname, port):
     """
     List all available SoapySDR devices on the remote server.
@@ -536,3 +554,4 @@ def list_available_devices(hostname, port):
         return available_devices
     except Exception as e:
         return [{'error': str(e)}]
+
