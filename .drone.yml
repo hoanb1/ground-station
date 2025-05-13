@@ -30,10 +30,6 @@ steps:
     image: docker:cli
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
-      DOCKER_USERNAME:
-        from_secret: docker_username
-      DOCKER_PASSWORD:
-        from_secret: docker_password
     commands:
       # Determine version
       - |
@@ -93,7 +89,7 @@ steps:
     commands:
       - echo "Attempting Docker Hub authentication..."
       - echo "$DOCKER_USERNAME $DOCKER_PASSWORD"
-      - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
+      - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - echo "✅ Docker Hub authentication successful"
 
   - name: build-and-push-manual
