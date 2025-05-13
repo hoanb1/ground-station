@@ -94,6 +94,7 @@ steps:
 
   - name: build-and-push-manual
     image: docker:cli
+    timeout: 120
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     commands:
