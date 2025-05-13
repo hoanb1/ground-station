@@ -92,6 +92,7 @@ steps:
         from_secret: docker_password
     commands:
       - echo "Attempting Docker Hub authentication..."
+      - echo "$DOCKER_USERNAME $DOCKER_PASSWORD"
       - echo "$DOCKER_PASSWORD" | docker login --username "$DOCKER_USERNAME" --password-stdin
       - echo "✅ Docker Hub authentication successful"
 
