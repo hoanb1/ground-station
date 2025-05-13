@@ -93,49 +93,49 @@ steps:
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - echo "✅ Docker Hub authentication successful"
 
-  - name: build-and-push-manual
-    image: docker:cli
-    environment:
-      DOCKER_HOST: tcp://192.168.60.98:2375
-    commands:
-      # Determine version
-      - |
-        if [ -n "$DRONE_TAG" ]; then
-          VERSION=$DRONE_TAG
-        else
-          VERSION=${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}
-        fi
-        echo "Building version $VERSION"
+  # AMD64 Build
+  - name: build-amd64
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      repo: sgoudelis/ground-station
+      tags:
+        - ${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-amd64
+      dockerfile: Dockerfile
+      platforms:
+        - linux/amd64
 
-      # Build and push AMD64 first (faster)
-      - docker buildx create --use --name builder
-      - docker buildx inspect --bootstrap
-      - |
-        docker buildx build \
-          --platform linux/amd64 \
-          -t sgoudelis/ground-station:$VERSION-amd64 \
-          --push \
-          .
+  # ARM64 Build
+  - name: build-arm64
+    image: plugins/docker
+    settings:
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      repo: sgoudelis/ground-station
+      tags:
+        - ${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-arm64
+      dockerfile: Dockerfile
+      platforms:
+        - linux/arm64
 
-      # Then build and push ARM64
-      - |
-        docker buildx build \
-          --platform linux/arm64 \
-          -t sgoudelis/ground-station:$VERSION-arm64 \
-          --push \
-          .
-
-      # Create and push manifest
-      - |
-        docker manifest create sgoudelis/ground-station:$VERSION \
-          sgoudelis/ground-station:$VERSION-amd64 \
-          sgoudelis/ground-station:$VERSION-arm64
-      - docker manifest push sgoudelis/ground-station:$VERSION
-      - |
-        docker manifest create sgoudelis/ground-station:latest \
-          sgoudelis/ground-station:$VERSION-amd64 \
-          sgoudelis/ground-station:$VERSION-arm64
-      - docker manifest push sgoudelis/ground-station:latest
+  # Create manifest for multi-arch
+  - name: manifest
+    image: plugins/manifest
+    settings:
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      target: sgoudelis/ground-station:${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}
+      template: sgoudelis/ground-station:${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-ARCH
+      platforms:
+        - linux/amd64
+        - linux/arm64
 
 volumes:
   - name: dockersock
