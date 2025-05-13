@@ -89,7 +89,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
             # Query supported sample rates
             channel = config.get('channel', 0)
             supported_rates = get_supported_sample_rates(sdr, channel)
-            logger.info(f"Supported sample rate ranges: {supported_rates}")
+            logger.debug(f"Supported sample rate ranges: {supported_rates}")
 
             # Add some extra sample rates to the list
             extra_sample_rates = []

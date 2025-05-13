@@ -914,6 +914,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}
                             color="primary"
                             onClick={startStreaming}
+                            title="Start streaming"
                             sx={{
                                 borderRadius: 0,
                             }}
@@ -924,6 +925,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             disabled={!isStreaming}
                             color="error"
                             onClick={stopStreaming}
+                            title="Stop streaming"
                             sx={{
                                 borderRadius: 0,
                             }}
@@ -932,9 +934,10 @@ const MainWaterfallDisplay = React.memo(() => {
                         </IconButton>
 
                         <IconButton
-                            color={showLeftSideWaterFallAccessories ? "primary" : "default"}
+                            color={showLeftSideWaterFallAccessories ? "warning" : "default"}
                             onClick={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
                             size="small"
+                            title="Toggle left side panel"
                             sx={{
                                 borderRadius: 0,
                                 backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
@@ -947,9 +950,10 @@ const MainWaterfallDisplay = React.memo(() => {
                         </IconButton>
 
                         <IconButton
-                            color={showRightSideWaterFallAccessories ? "primary" : "default"}
+                            color={showRightSideWaterFallAccessories ? "warning" : "default"}
                             onClick={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
                             size="small"
+                            title="Toggle right side panel"
                             sx={{
                                 borderRadius: 0,
                                 backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
@@ -963,7 +967,8 @@ const MainWaterfallDisplay = React.memo(() => {
                         <IconButton
                             onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
                             size="small"
-                            color={autoDBRange ? "success" : "primary"}
+                            color={autoDBRange ? "warning" : "primary"}
+                            title="Toggle automatic dB range"
                             sx={{
                                 borderRadius: 0,
                                 backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
@@ -975,8 +980,21 @@ const MainWaterfallDisplay = React.memo(() => {
                             <AutoGraphIcon/>
                         </IconButton>
 
-                        <IconButton onClick={toggleFullscreen} color="primary">
-                            {isFullscreen ? <FullscreenExitIcon /> : <FullscreenIcon />}
+                        <IconButton
+                            onClick={() => autoScaleDbRange()}
+                            size="small"
+                            color={"primary"}
+                            title="Auto scale dB range once"
+                        >
+                            <HeightIcon/>
+                        </IconButton>
+
+                        <IconButton
+                            onClick={toggleFullscreen}
+                            color="primary"
+                            title="Toggle fullscreen"
+                        >
+                            {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
                         </IconButton>
 
                     </ButtonGroup>

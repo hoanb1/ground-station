@@ -1505,6 +1505,7 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
     Upserts a record in the satellite_tracking_state table
     based on the provided data dictionary via SQLAlchemy's merge operation.
     """
+
     try:
         assert data.get('name', None) is not None, "name is required when setting tracking state"
         assert data.get('value', None) is not None, "value is required when setting tracking state"

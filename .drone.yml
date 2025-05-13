@@ -2,6 +2,8 @@ kind: pipeline
 type: docker
 name: default
 
+timeout: 360
+
 platform:
   os: linux
   arch: arm64
@@ -88,20 +90,14 @@ steps:
         from_secret: docker_password
     commands:
       - echo "Attempting Docker Hub authentication..."
-      - echo "$DOCKER_USERNAME $DOCKER_PASSWORD"
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - echo "✅ Docker Hub authentication successful"
 
   - name: build-and-push-manual
     image: docker:cli
-    timeout: 120
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     commands:
-      # Setup buildx for multi-arch builds
-      - docker buildx create --use --name multiarch-builder
-      - docker buildx inspect --bootstrap
-
       # Determine version
       - |
         if [ -n "$DRONE_TAG" ]; then
@@ -111,15 +107,35 @@ steps:
         fi
         echo "Building version $VERSION"
 
-      # Build and push with detailed output
-      - echo "Building for multiple architectures..."
+      # Build and push AMD64 first (faster)
+      - docker buildx create --use --name builder
+      - docker buildx inspect --bootstrap
       - |
         docker buildx build \
-          --platform linux/arm64,linux/amd64 \
-          -t sgoudelis/ground-station:$VERSION \
-          -t sgoudelis/ground-station:latest \
+          --platform linux/amd64 \
+          -t sgoudelis/ground-station:$VERSION-amd64 \
           --push \
           .
+
+      # Then build and push ARM64
+      - |
+        docker buildx build \
+          --platform linux/arm64 \
+          -t sgoudelis/ground-station:$VERSION-arm64 \
+          --push \
+          .
+
+      # Create and push manifest
+      - |
+        docker manifest create sgoudelis/ground-station:$VERSION \
+          sgoudelis/ground-station:$VERSION-amd64 \
+          sgoudelis/ground-station:$VERSION-arm64
+      - docker manifest push sgoudelis/ground-station:$VERSION
+      - |
+        docker manifest create sgoudelis/ground-station:latest \
+          sgoudelis/ground-station:$VERSION-amd64 \
+          sgoudelis/ground-station:$VERSION-arm64
+      - docker manifest push sgoudelis/ground-station:latest
 
 volumes:
   - name: dockersock

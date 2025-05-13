@@ -260,6 +260,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     rotator_controller = None
     rig_controller = None
     current_rotator_id = None
+    current_transmitter_id = "none"
     rotator_data = {
         'az': 0,
         'el': 0,
@@ -291,7 +292,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
             return False
 
     async def handle_satellite_change(old, new):
-        nonlocal notified, rotator_data
+        nonlocal notified, rotator_data, current_transmitter_id
 
         logger.info(f"Target satellite change detected from '{old}' to '{new}'")
 
@@ -308,6 +309,8 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
             }
         })
 
+        # since the satellite changed, reset the transmitter_id too
+        current_transmitter_id = "none"
 
     async def connect_to_rotator():
         """
@@ -364,7 +367,6 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         if new == "connected":
             # check what hardware was chosen and set it up
             await connect_to_rotator()
-
 
         elif new == "tracking":
             # check what hardware was chosen and set it up
@@ -635,26 +637,6 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 if rig_controller:
                     rig_data['frequency'] = await rig_controller.get_frequency()
 
-                if current_transmitter_id != "none":
-                    current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
-                    current_transmitter = current_transmitter_reply.get('data', {})
-
-                    if current_transmitter:
-                        # calculate doppler shift
-                        rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
-                            satellite_tles[0],
-                            satellite_tles[1],
-                            location['lat'],
-                            location['lon'],
-                            0,
-                            current_transmitter.get('downlink_low', 0)
-                        )
-                        rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
-                        rig_data['transmitter_id'] = current_transmitter_id
-                else:
-                    logger.debug(f"No satellite transmitter selected")
-                    rig_data['transmitter_id'] = current_transmitter_id
-
                 # work on our sky coordinates
                 skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
 
@@ -673,7 +655,37 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 # everything good, move on to actual rotator and rig tracking
                 logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°")
 
-                # tune freq
+                # check if we have a transmitter selected
+                if current_transmitter_id != "none":
+                    current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
+                    current_transmitter = current_transmitter_reply.get('data', {})
+
+                    if current_transmitter:
+                        if current_rig_state == "tracking":
+                            # calculate doppler shift
+                            rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
+                                satellite_tles[0],
+                                satellite_tles[1],
+                                location['lat'],
+                                location['lon'],
+                                0,
+                                current_transmitter.get('downlink_low', 0)
+                            )
+                            rig_data['tracking'] = True
+
+                        else:
+                            rig_data['observed_freq'] = 0
+                            rig_data['doppler_shift'] = 0
+                            rig_data['tracking'] = False
+
+                    rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
+                    rig_data['transmitter_id'] = current_transmitter_id
+
+                else:
+                    logger.debug(f"No satellite transmitter selected")
+                    rig_data['transmitter_id'] = current_transmitter_id
+
+                # tune freq to observed frequency
                 if rig_controller and current_rig_state == "tracking":
                     frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])
 
@@ -715,6 +727,9 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 notified['azimuth_out_of_bounds'] = True
                 rotator_data['minelevation'] = False
                 rotator_data['outofbounds'] = True
+                rotator_data['stopped'] = True
+                rig_data['tracking'] = False
+                rig_data['tuning'] = False
 
             except ElevationOutOfBounds as e:
                 logger.warning(f"Elevation out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
@@ -728,6 +743,9 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 notified['elevation_out_of_bounds'] = True
                 rotator_data['minelevation'] = False
                 rotator_data['outofbounds'] = True
+                rotator_data['stopped'] = True
+                rig_data['tracking'] = False
+                rig_data['tuning'] = False
 
             except MinimumElevationError as e:
                 logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{current_norad_id} {satellite_name}: {e}")
@@ -741,6 +759,9 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 notified['minelevation_error'] = True
                 rotator_data['minelevation'] = True
                 rotator_data['outofbounds'] = False
+                rotator_data['stopped'] = True
+                rig_data['tracking'] = False
+                rig_data['tuning'] = False
 
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")

@@ -61,21 +61,19 @@ const BookmarkCanvas = ({
 
     // Add bookmarks for available transmitters whenever they change
     useEffect(() => {
-        if (availableTransmitters.length > 0) {
-            const bookMarks = [];
-            availableTransmitters.forEach(transmitter => {
-                bookMarks.push(makeBookMark(
-                    transmitter['downlink_low'],
-                    `${transmitter['description']} (${preciseHumanizeFrequency(transmitter['downlink_low'])})`,
-                    '#40ff00',
-                    {
-                        type: 'transmitter',
-                        transmitter_id: transmitter['id']
-                    }
-                ));
-            })
-            dispatch(setBookMarks([...bookMarks]));
-        }
+        const bookMarks = [];
+        availableTransmitters.forEach(transmitter => {
+            bookMarks.push(makeBookMark(
+                transmitter['downlink_low'],
+                `${transmitter['description']} (${preciseHumanizeFrequency(transmitter['downlink_low'])})`,
+                '#40ff00',
+                {
+                    type: 'transmitter',
+                    transmitter_id: transmitter['id']
+                }
+            ));
+        })
+        dispatch(setBookMarks([...bookMarks]));
     }, [availableTransmitters]);
 
     // Poll for container width changes
