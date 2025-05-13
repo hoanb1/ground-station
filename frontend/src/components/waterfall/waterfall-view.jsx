@@ -18,9 +18,7 @@
  */
 
 
-
 import React, {useEffect, useRef, useState, useCallback} from 'react';
-import { throttle } from 'lodash';
 import {
     Box,
     Typography,
@@ -1142,15 +1140,20 @@ const MainWaterfallDisplay = React.memo(() => {
                                 Auto
                             </Button>
                         </Stack>
-                        <Typography sx={{
-                            mt: 1,
-                            width: '100%',
-                            textAlign: 'center',
-                            fontFamily: 'Monospace'
+                        <Box sx={{
+                            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                            p: 0,
+                            m: 0
                         }}>
-                            {dbRange[1]}
-                        </Typography>
-
+                            <Typography sx={{
+                                width: '100%',
+                                textAlign: 'center',
+                                fontFamily: 'Monospace'
+                            }}>
+                                {dbRange[1]}
+                            </Typography>
+                        </Box>
                         <Slider
                             disabled={!isStreaming}
                             orientation="vertical"
@@ -1177,14 +1180,20 @@ const MainWaterfallDisplay = React.memo(() => {
                                 }
                             }}
                         />
-                        <Typography sx={{
-                            mb: 1,
-                            width: '100%',
-                            textAlign: 'center',
-                            fontFamily: 'Monospace'
+
+                        <Box sx={{
+                            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                            p: 0,
+                            m: 0
                         }}>
-                            {dbRange[0]}
-                        </Typography>
+                            <Typography sx={{
+                                width: '100%',
+                                textAlign: 'center',
+                                fontFamily: 'Monospace'
+                            }}>
+                                {dbRange[0]}
+                            </Typography>
+                        </Box>
 
                     </Box>
                 </Box>
