@@ -107,6 +107,11 @@ steps:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
+      # Specify the remote Docker host
+      daemon_off: true
+      custom_dns: 8.8.8.8
+    environment:
+      DOCKER_HOST: tcp://192.168.60.98:2375
 
   # ARM64 Build
   - name: build-arm64
