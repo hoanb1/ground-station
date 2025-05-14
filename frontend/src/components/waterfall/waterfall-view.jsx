@@ -1103,7 +1103,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             width: '50px',
                             minWidth: '50px',
                             maxWidth: '50px',
-                            height: `calc(${dimensions['height']}px - 90px)`,
+                            height: `calc(${dimensions['height']}px - 98px)`,
                             position: 'relative',
                             borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
                             backgroundColor: 'rgba(28, 28, 28, 1)',
@@ -1115,7 +1115,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         <Stack spacing={0}>
                             <Button
                                 startIcon={<HeightIcon/>}
-                                variant={"filled"}
+                                variant="filled"
                                 disabled={!isStreaming}
                                 color={autoDBRange? "success": "info"}
                                 onClick={autoScaleDbRange}
@@ -1142,14 +1142,16 @@ const MainWaterfallDisplay = React.memo(() => {
                         </Stack>
                         <Box sx={{
                             borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
                             p: 0,
                             m: 0
                         }}>
-                            <Typography sx={{
-                                width: '100%',
-                                textAlign: 'center',
-                                fontFamily: 'Monospace'
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    mt: 0.5,
+                                    width: '100%',
+                                    textAlign: 'center',
+                                    fontFamily: 'Monospace'
                             }}>
                                 {dbRange[1]}
                             </Typography>
@@ -1182,14 +1184,15 @@ const MainWaterfallDisplay = React.memo(() => {
                         />
 
                         <Box sx={{
-                            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
                             p: 0,
                             m: 0
                         }}>
-                            <Typography sx={{
-                                width: '100%',
-                                textAlign: 'center',
-                                fontFamily: 'Monospace'
+                            <Typography
+                                variant="body2"
+                                sx={{
+                                    width: '100%',
+                                    textAlign: 'center',
+                                    fontFamily: 'Monospace'
                             }}>
                                 {dbRange[0]}
                             </Typography>
