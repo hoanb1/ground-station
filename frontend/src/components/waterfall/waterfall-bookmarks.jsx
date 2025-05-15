@@ -50,7 +50,8 @@ const BookmarkCanvas = ({
 
     const {
         rigData,
-        availableTransmitters
+        availableTransmitters,
+        satelliteData,
     } = useSelector((state) => state.targetSatTrack);
 
     // Calculate frequency range
@@ -123,8 +124,8 @@ const BookmarkCanvas = ({
             // Create a new bookmark for the doppler shifted frequency
             const newBookMark = {
                 frequency: rigData['observed_freq'],
-                label: `${transmitter?.description || 'Unknown'} - Corrected: ${humanizeFrequency(rigData['observed_freq'])}`,
-                color: '#ff6900',
+                label: `${satelliteData['details']['name']} - ${transmitter?.description || 'Unknown'} - Corrected: ${humanizeFrequency(rigData['observed_freq'])}`,
+                color: '#ffea00',
                 metadata: {
                     type: 'doppler_shift',
                     transmitter_id: transmitterId
@@ -283,7 +284,7 @@ const BookmarkCanvas = ({
                     const dopplerLabelY = 25 - padding - textHeight;
 
                     // Add semi-transparent background
-                    const textMetrics = ctx.measureText(bookmark.label);
+                    const textMetrics = `${ctx.measureText(bookmark.label)}`;
                     const textWidth = textMetrics.width;
                     const radius = 3;
 
