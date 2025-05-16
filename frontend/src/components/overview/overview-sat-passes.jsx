@@ -59,6 +59,50 @@ const TimeFormatter = React.memo(({ value }) => {
 });
 
 
+const DurationFormatter = React.memo(({value, event_start, event_end, params}) => {
+    const [, setForceUpdate] = useState(0);
+
+    // Force component to update regularly
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setForceUpdate(prev => prev + 1);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const now = new Date();
+    const startDate = new Date(event_start);
+    const endDate = new Date(event_end);
+
+    if (startDate > now) {
+        // Pass is in the future
+        const diffInSeconds = Math.floor((endDate - startDate) / 1000);
+        const minutes = Math.floor(diffInSeconds / 60);
+        const seconds = diffInSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    } else if(endDate < now) {
+        // Pass ended
+        const diffInSeconds = Math.floor((endDate - startDate) / 1000);
+        const minutes = Math.floor(diffInSeconds / 60);
+        const seconds = diffInSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    } else if (startDate < now < endDate) {
+        // Passing now
+        const diffInSeconds = Math.floor((endDate - now) / 1000);
+        const minutes = Math.floor(diffInSeconds / 60);
+        const seconds = diffInSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    } else {
+        return `no value`;
+    }
+
+
+});
+
+
 const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, passesAreCached=false }) => {
     const apiRef = useGridApiRef();
 
@@ -222,9 +266,14 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             align: 'center',
             headerAlign: 'center',
             flex: 1,
-            valueFormatter: (value) => {
-                return `${value}`;
-            }
+            renderCell: (params) => (
+                <div>
+                    <DurationFormatter params={params} value={params.value} event_start={params.row.event_start} event_end={params.row.event_end}/>
+                </div>
+            )
+            // valueFormatter: (value) => {
+            //     return value.split('.')[0];
+            // }
         },
         {
             field: 'transmitters',
