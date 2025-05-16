@@ -18,7 +18,6 @@
  */
 
 
-
 import React, {useEffect, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -46,6 +45,52 @@ const TimeFormatter = React.memo(({ value }) => {
     }, []);
 
     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
+});
+
+
+const DurationFormatter = React.memo(({params, value, event_start, event_end}) => {
+    const [, setForceUpdate] = useState(0);
+
+    // Force component to update regularly
+    useEffect(() => {
+        const interval = setInterval(() => {
+            setForceUpdate(prev => prev + 1);
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
+
+    const now = new Date();
+    const startDate = new Date(event_start);
+    const endDate = new Date(event_end);
+
+    if (params.row.is_geostationary || params.row.is_geosynchronous) {
+        return "∞";
+    }
+
+    if (startDate > now) {
+        // Pass is in the future
+        const diffInSeconds = Math.floor((endDate - startDate) / 1000);
+        const minutes = Math.floor(diffInSeconds / 60);
+        const seconds = diffInSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    } else if(endDate < now) {
+        // Pass ended
+        const diffInSeconds = Math.floor((endDate - startDate) / 1000);
+        const minutes = Math.floor(diffInSeconds / 60);
+        const seconds = diffInSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    } else if (startDate < now < endDate) {
+        // Passing now
+        const diffInSeconds = Math.floor((endDate - now) / 1000);
+        const minutes = Math.floor(diffInSeconds / 60);
+        const seconds = diffInSeconds % 60;
+        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+
+    } else {
+        return `no value`;
+    }
 });
 
 
@@ -149,9 +194,14 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
             align: 'center',
             headerAlign: 'center',
             flex: 1,
-            valueFormatter: (value) => {
-                return `${value}`;
-            }
+            renderCell: (params) => (
+                <div>
+                    <DurationFormatter params={params} value={params.value} event_start={params.row.event_start} event_end={params.row.event_end}/>
+                </div>
+            ),
+            // valueFormatter: (value) => {
+            //     return `${value}`;
+            // }
         },
         {
             field: 'distance_at_start',
@@ -204,6 +254,30 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
                 }
             }
         },
+        {
+            field: 'is_geostationary',
+            minWidth: 70,
+            headerName: 'GEO Stat',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return value ? 'Yes' : 'No';
+            },
+            hide: true,
+        },
+        {
+            field: 'is_geosynchronous',
+            minWidth: 70,
+            headerName: 'GEO Sync',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return value ? 'Yes' : 'No';
+            },
+            hide: true,
+        },
     ];
 
     return (
@@ -240,6 +314,12 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
                 pagination: { paginationModel: { pageSize: 15 } },
                 sorting: {
                     sortModel: [{ field: 'event_start', sort: 'asc' }],
+                },
+                columns: {
+                    columnVisibilityModel: {
+                        is_geostationary: false,
+                        is_geosynchronous: false,
+                    },
                 },
             }}
             columns={columns}

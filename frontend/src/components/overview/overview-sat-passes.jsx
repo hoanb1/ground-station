@@ -470,7 +470,6 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
                         is_geosynchronous: false,
                     },
                 },
-
             }}
             columns={columns}
             pageSize={10}
