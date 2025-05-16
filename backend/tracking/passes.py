@@ -88,6 +88,11 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                 name=f"satellite_{norad_id}"
             )
 
+            # Check if it is geo stationary
+            satellite_orbit_info = analyze_satellite_orbit(satellite)
+            is_geostationary = satellite_orbit_info['is_geostationary']
+            is_geosynchronous = satellite_orbit_info['is_geosynchronous']
+
             # APPROACH 1: Use traditional time-step method to ensure we don't miss any passes
             difference = satellite - observer
             altitudes = []
@@ -144,6 +149,8 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                 events.append({
                     'id': event_id,
                     'norad_id': norad_id,
+                    'is_geostationary': is_geostationary,
+                    'is_geosynchronous': is_geosynchronous,
                     'event_start': start_time.utc_iso(),
                     'event_end': end_time.utc_iso(),
                     'duration': duration,
@@ -319,6 +326,8 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                 events.append({
                     'id': event_id,
                     'norad_id': norad_id,
+                    'is_geostationary': is_geostationary,
+                    'is_geosynchronous': is_geosynchronous,
                     'event_start': current_pass['start_time'].utc_iso(),
                     'event_end': current_pass['end_time'].utc_iso(),
                     'duration': duration,
@@ -409,3 +418,45 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
         reply['error'] = str(e)
 
     return reply
+
+
+def analyze_satellite_orbit(satellite):
+    """
+    Analyze a satellite's orbit to determine if it's geosynchronous or geostationary.
+
+    :param satellite: A Skyfield EarthSatellite object
+    :return: Dictionary with orbit analysis results
+    """
+    try:
+        # In Skyfield, the orbital elements are accessed differently
+        # Semi-major axis is in earth radii, convert to km
+        semi_major_axis = satellite.model.a * 6378.137  # Earth radius in km
+        eccentricity = satellite.model.ecco
+        inclination = np.degrees(satellite.model.inclo)  # Convert radians to degrees
+
+        # Calculate orbital period (in minutes)
+        # Using Kepler's Third Law: T² ∝ a³
+        period_minutes = 2 * np.pi * np.sqrt(semi_major_axis**3 / 398600.4418) / 60
+
+        # Check if period matches sidereal day (~23h 56m or 1436 minutes)
+        # Use 30 minutes tolerance to account for orbital variations
+        period_ok = abs(period_minutes - 1436) < 30
+
+        # Determine orbit type
+        is_geosynchronous = period_ok
+        is_geostationary = is_geosynchronous and (abs(inclination) < 5) and (eccentricity < 0.1)
+
+        return {
+            "is_geosynchronous": is_geosynchronous,
+            "is_geostationary": is_geostationary,
+            "orbital_period_minutes": round(period_minutes, 2),
+            "inclination": round(inclination, 2),
+            "eccentricity": round(eccentricity, 4)
+        }
+    except (AttributeError, ValueError, TypeError) as e:
+        logger.warning(f"Error analyzing satellite orbit: {e}")
+        return {
+            "is_geosynchronous": False,
+            "is_geostationary": False,
+            "error": str(e)
+        }

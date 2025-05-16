@@ -44,7 +44,7 @@ import { darken, lighten, styled } from '@mui/material/styles';
 import {Chip} from "@mui/material";
 
 
-const TimeFormatter = React.memo(({ value }) => {
+const TimeFormatter = React.memo(({ params, value }) => {
     const [, setForceUpdate] = useState(0);
 
     // Force component to update regularly
@@ -55,11 +55,15 @@ const TimeFormatter = React.memo(({ value }) => {
         return () => clearInterval(interval);
     }, []);
 
+    if (params.row.is_geostationary || params.row.is_geosynchronous) {
+        return "∞";
+    }
+
     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
 });
 
 
-const DurationFormatter = React.memo(({value, event_start, event_end, params}) => {
+const DurationFormatter = React.memo(({params, value, event_start, event_end}) => {
     const [, setForceUpdate] = useState(0);
 
     // Force component to update regularly
@@ -73,6 +77,10 @@ const DurationFormatter = React.memo(({value, event_start, event_end, params}) =
     const now = new Date();
     const startDate = new Date(event_start);
     const endDate = new Date(event_end);
+
+    if (params.row.is_geostationary || params.row.is_geosynchronous) {
+        return "∞";
+    }
 
     if (startDate > now) {
         // Pass is in the future
@@ -98,8 +106,6 @@ const DurationFormatter = React.memo(({value, event_start, event_end, params}) =
     } else {
         return `no value`;
     }
-
-
 });
 
 
@@ -348,7 +354,7 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             minWidth: 170,
             headerName: 'Start',
             flex: 2,
-            renderCell: (params) => <TimeFormatter value={params.value}/>
+            renderCell: (params) => <TimeFormatter params={params} value={params.value}/>
             // valueFormatter: (value) => {
             //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
             // }
@@ -358,7 +364,7 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             minWidth: 170,
             headerName: 'End',
             flex: 2,
-            renderCell: (params) => <TimeFormatter value={params.value} />
+            renderCell: (params) => <TimeFormatter params={params} value={params.value}/>
             // valueFormatter: (value) => {
             //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
             // }
@@ -395,6 +401,30 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             valueFormatter: (value) => {
                 return `${parseFloat(value).toFixed(2)} km`
             }
+        },
+        {
+            field: 'is_geostationary',
+            minWidth: 70,
+            headerName: 'GEO Stat',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return value ? 'Yes' : 'No';
+            },
+            hide: true,
+        },
+        {
+            field: 'is_geosynchronous',
+            minWidth: 70,
+            headerName: 'GEO Sync',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            valueFormatter: (value) => {
+                return value ? 'Yes' : 'No';
+            },
+            hide: true,
         },
     ];
 
@@ -434,6 +464,13 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
                 sorting: {
                     sortModel: [{ field: 'event_start', sort: 'asc' }],
                 },
+                columns: {
+                    columnVisibilityModel: {
+                        is_geostationary: false,
+                        is_geosynchronous: false,
+                    },
+                },
+
             }}
             columns={columns}
             pageSize={10}
