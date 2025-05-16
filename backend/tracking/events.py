@@ -189,7 +189,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
                     event['name'] = satellite_info[event['norad_id']]['name']
                     event['transmitters'] = satellite_info[event['norad_id']]['transmitters']
                     event['transmitter_count'] = satellite_info[event['norad_id']]['transmitter_count']
-                    event['id'] = f"{event['norad_id']}_{event['event_start']}"
+                    event['id'] = f"{event['id']}_{event['norad_id']}_{event['event_start']}"
                     events.append(event)
 
                 reply['success'] = True
@@ -271,7 +271,7 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
                 events_for_satellite = result.get('data', [])
                 for event in events_for_satellite:
                     event['name'] = satellite['name']
-                    event['id'] = f"{satellite['norad_id']}_{event['event_start']}"
+                    event['id'] = f"{event['id']}_{satellite['norad_id']}_{event['event_start']}"
                     events.append(event)
 
                 reply['success'] = True

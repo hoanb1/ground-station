@@ -407,8 +407,12 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
         events = json.loads(json.dumps(events, cls=ModelEncoder))
 
         reply['data'] = events
-        reply['parameters'] = {'tle_count': len(tle_groups), 'hours': hours, 'above_el': above_el,
-                               'step_minutes': step_minutes}
+        reply['parameters'] = {
+            'tle_count': len(tle_groups),
+            'hours': hours,
+            'above_el': above_el,
+            'step_minutes': step_minutes
+        }
         reply['success'] = True
 
     except Exception as e:

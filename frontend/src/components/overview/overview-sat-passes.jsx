@@ -18,7 +18,6 @@
  */
 
 
-
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
@@ -446,6 +445,9 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
                 }
             }}
             onRowClick={onRowClick}
+            getRowId={(params) => {
+                return params.id;
+            }}
             sx={{
                 border: 0,
                 marginTop: 0,
