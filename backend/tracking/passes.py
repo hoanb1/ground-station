@@ -146,6 +146,10 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
                 duration = end_time.utc_datetime() - start_time.utc_datetime()
 
+                # For the time-step approach
+                pass_azimuths = azimuths[start_i:end_i + 1]
+                min_az, max_az, spans_north = calculate_azimuth_range(pass_azimuths)
+
                 events.append({
                     'id': event_id,
                     'norad_id': norad_id,
@@ -158,9 +162,10 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                     'distance_at_end': float(distances[end_i]),
                     'distance_at_peak': float(pass_distances[peak_i]),
                     'peak_altitude': float(pass_altitudes[peak_i]),
-                    'max_azimuth': float(max(pass_azimuths)),
-                    'min_azimuth': float(min(pass_azimuths)),
-                    'method': 'time-step'  # Mark the method used to find this pass
+                    'max_azimuth': float(max_az),
+                    'min_azimuth': float(min_az),
+                    'spans_north': spans_north,
+                    'method': 'time-step'
                 })
                 event_id += 1
 
@@ -247,6 +252,10 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
                     duration = current_pass['end_time'].utc_datetime() - current_pass['start_time'].utc_datetime()
 
+                    # For the find_events approach
+                    az_values = [float(az_start.degrees), float(az_peak_value), float(az_end.degrees)]
+                    min_az, max_az, spans_north = calculate_azimuth_range(az_values)
+
                     events.append({
                         'id': event_id,
                         'norad_id': norad_id,
@@ -257,13 +266,10 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                         'distance_at_end': float(dist_end.km),
                         'distance_at_peak': float(dist_peak_value),
                         'peak_altitude': float(alt_peak_value),
-                        'max_azimuth': float(max(float(az_start.degrees),
-                                                 float(az_peak_value),
-                                                 float(az_end.degrees))),
-                        'min_azimuth': float(min(float(az_start.degrees),
-                                                 float(az_peak_value),
-                                                 float(az_end.degrees))),
-                        'method': 'find_events'  # Mark the method used to find this pass
+                        'max_azimuth': float(max_az),
+                        'min_azimuth': float(min_az),
+                        'spans_north': spans_north,
+                        'method': 'find_events'
                     })
 
                     event_id += 1
@@ -464,3 +470,35 @@ def analyze_satellite_orbit(satellite):
             "is_geostationary": False,
             "error": str(e)
         }
+
+
+def calculate_azimuth_range(azimuths):
+    """
+    Calculate the correct azimuth range accounting for the 0/360 degrees boundary.
+
+    :param azimuths: List of azimuth values in degrees
+    :return: Tuple of (min_azimuth, max_azimuth, spans_north)
+    """
+    if not azimuths:
+        return 0, 0, False
+
+    # Normalize all azimuths to 0-360 range
+    normalized = [az % 360 for az in azimuths]
+
+    # Check if the values span across the north direction (0/360 degrees)
+    max_diff = max([abs(a - b) for a in normalized for b in normalized])
+    spans_north = max_diff > 180
+
+    if spans_north:
+        # Convert to 0-360 range for calculation
+        # For values that cross 0/360, we convert to a continuous range
+        # by adding 360 to values < 180 to make the range continuous
+        adjusted = [(az + 360 if az < 180 else az) for az in normalized]
+        min_az = min(adjusted) % 360
+        max_az = max(adjusted) % 360
+    else:
+        # Simple case - no boundary crossing
+        min_az = min(normalized)
+        max_az = max(normalized)
+
+    return min_az, max_az, spans_north

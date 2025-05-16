@@ -18,7 +18,6 @@
  */
 
 
-
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
@@ -117,7 +116,7 @@ const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forEl
     );
 };
 
-const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939", strokeWidth = 1, opacity = 1, forElevation = false }) => {
+const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939", strokeWidth = 1, opacity = 1, forElevation = false, spansNorth = false }) => {
     const { outerRadius, cx, cy } = useGaugeState();
 
     // Convert startAngle and endAngle to radians based on forElevation flag
@@ -142,10 +141,23 @@ const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939
 
     // Determine if we need to draw the arc clockwise or counterclockwise
     // For SVG arcs: 0 = small arc, 1 = large arc
+    //    let largeArcFlag = 1;
+    //     if (forElevation) {
+    //         largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+    //     } else {
+    //         largeArcFlag = spansNorth ? 1 : 0;
+    //     }
     const largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
 
     // For SVG arcs: 0 = counterclockwise, 1 = clockwise
     // This depends on how angles are interpreted
+    //const sweepFlag = endAngle > startAngle ? 1 : 0;
+    // let sweepFlag = 1;
+    // if (forElevation) {
+    //     sweepFlag = endAngle > startAngle ? 1 : 0;
+    // } else {
+    //     sweepFlag = spansNorth ? 0 : 1;
+    // }
     const sweepFlag = endAngle > startAngle ? 1 : 0;
 
     // Create the SVG path for a slice
@@ -182,8 +194,14 @@ const rescaleToRange = (value, originalMin, originalMax, targetMin, targetMax) =
 };
 
 
-function GaugeAz({az, limits = [null, null]}) {
-    const [maxAz, minAz] = limits;
+function GaugeAz({az, limits = [null, null]}, spansNorth=false) {
+    let [maxAz, minAz] = limits;
+
+    if (minAz > maxAz) {
+        const temp = minAz;
+        minAz = maxAz;
+        maxAz = temp;
+    }
 
     return (
         <GaugeContainer
@@ -213,6 +231,7 @@ function GaugeAz({az, limits = [null, null]}) {
                 <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1}/>
                 <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1}/>
                 <CircleSlice
+                    spansNorth={spansNorth}
                     startAngle={maxAz}
                     endAngle={minAz}
                     stroke={'#abff45'}
@@ -267,6 +286,8 @@ function GaugeEl({el, maxElevation = null}) {
                     stroke={'#abff45'}
                     fill={'#abff45'}
                     opacity={0.2}
+                    forElevation={false}
+                    spansNorth={false}
                 />
             </>}
             <CircleSlice
@@ -552,7 +573,7 @@ const RotatorControl = React.memo(({}) => {
                         alignItems: "center",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <GaugeAz az={rotatorData['az']} limits={[activePass?.['max_azimuth'], activePass?.['min_azimuth']]}/>
+                            <GaugeAz az={rotatorData['az']} limits={[activePass?.['max_azimuth'], activePass?.['min_azimuth']]} spansNorth={activePass?.['spans_north']}/>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             <GaugeEl el={rotatorData['el']} maxElevation={activePass?.['peak_altitude']}/>
