@@ -146,10 +146,6 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
                 duration = end_time.utc_datetime() - start_time.utc_datetime()
 
-                # For the time-step approach
-                pass_azimuths = azimuths[start_i:end_i + 1]
-                min_az, max_az, spans_north = calculate_azimuth_range(pass_azimuths)
-
                 events.append({
                     'id': event_id,
                     'norad_id': norad_id,
@@ -162,12 +158,18 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                     'distance_at_end': float(distances[end_i]),
                     'distance_at_peak': float(pass_distances[peak_i]),
                     'peak_altitude': float(pass_altitudes[peak_i]),
-                    'max_azimuth': float(max_az),
-                    'min_azimuth': float(min_az),
-                    'spans_north': spans_north,
+                    'start_azimuth': float(azimuths[start_i]),
+                    'end_azimuth': float(azimuths[end_i]),
+                    'peak_azimuth': float(pass_azimuths[peak_i]),
                     'method': 'time-step'
                 })
                 event_id += 1
+
+
+            else:
+                logger.debug(f"No passes found for satellite {norad_id}")
+
+            logger.debug(f"Approach #1: Found {len(passes)} passes for satellite {norad_id}")
 
             # APPROACH 2: Also use find_events method for more precise timing
             # Find all rise/culminate/set events in the time window
@@ -177,6 +179,8 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                 t_end,
                 altitude_degrees=above_el
             )
+
+            logger.debug(f"Approach #2: Found {times} times and events {events_type} for satellite {norad_id}")
 
             # First, check if the satellite is already visible at the start time
             topocentric = difference.at(t0)
@@ -206,6 +210,7 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                 elif event_type == 1 and 'start_time' in current_pass:  # Culmination event
                     # This is the peak of the current pass
                     current_pass['peak_time'] = time
+
                 elif event_type == 2 and 'start_time' in current_pass:  # Set event
                     # This completes the current pass
                     current_pass['end_time'] = time
@@ -213,6 +218,7 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                     # Calculate additional information for this pass
                     topocentric = difference.at(current_pass['start_time'])
                     alt_start, az_start, dist_start = topocentric.altaz()
+                    start_az_value = float(az_start.degrees)
 
                     if 'peak_time' in current_pass:
                         topocentric = difference.at(current_pass['peak_time'])
@@ -251,16 +257,15 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
                     topocentric = difference.at(current_pass['end_time'])
                     alt_end, az_end, dist_end = topocentric.altaz()
+                    end_az_value = float(az_end.degrees)
 
                     duration = current_pass['end_time'].utc_datetime() - current_pass['start_time'].utc_datetime()
-
-                    # For the find_events approach
-                    az_values = [float(az_start.degrees), float(az_peak_value), float(az_end.degrees)]
-                    min_az, max_az, spans_north = calculate_azimuth_range(az_values)
 
                     events.append({
                         'id': event_id,
                         'norad_id': norad_id,
+                        'is_geostationary': is_geostationary,
+                        'is_geosynchronous': is_geosynchronous,
                         'event_start': current_pass['start_time'].utc_iso(),
                         'event_end': current_pass['end_time'].utc_iso(),
                         'duration': duration,
@@ -268,9 +273,9 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                         'distance_at_end': float(dist_end.km),
                         'distance_at_peak': float(dist_peak_value),
                         'peak_altitude': float(alt_peak_value),
-                        'max_azimuth': float(max_az),
-                        'min_azimuth': float(min_az),
-                        'spans_north': spans_north,
+                        'start_azimuth': start_az_value,
+                        'end_azimuth': end_az_value,
+                        'peak_azimuth': float(az_peak_value),
                         'method': 'find_events'
                     })
 
@@ -293,6 +298,7 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
                     topocentric = difference.at(current_pass['start_time'])
                     alt_start, az_start, dist_start = topocentric.altaz()
+                    start_az_value = float(az_start.degrees)
 
                     max_alt = float(alt_start.degrees)
                     peak_time = current_pass['start_time']
@@ -325,9 +331,11 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                 # Calculate metrics
                 topocentric = difference.at(current_pass['start_time'])
                 alt_start, az_start, dist_start = topocentric.altaz()
+                start_az_value = float(az_start.degrees)
 
                 topocentric = difference.at(current_pass['end_time'])
                 alt_end, az_end, dist_end = topocentric.altaz()
+                end_az_value = float(az_end.degrees)
 
                 duration = current_pass['end_time'].utc_datetime() - current_pass['start_time'].utc_datetime()
 
@@ -343,65 +351,65 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                     'distance_at_end': float(dist_end.km),
                     'distance_at_peak': float(dist_peak_value),
                     'peak_altitude': float(alt_peak_value),
-                    'max_azimuth': float(max(float(az_start.degrees),
-                                             float(az_peak_value),
-                                             float(az_end.degrees))),
-                    'min_azimuth': float(min(float(az_start.degrees),
-                                             float(az_peak_value),
-                                             float(az_end.degrees))),
+                    'start_azimuth': start_az_value,
+                    'end_azimuth': end_az_value,
+                    'peak_azimuth': float(az_peak_value),
                     'method': 'find_events',
                     'estimated_end': True
                 })
 
                 event_id += 1
 
-        # Deduplicate events by looking for overlapping passes for the same satellite
-        # Sort events by start time
-        events.sort(key=lambda e: e['event_start'])
+        # Deduplicate events using a clustering approach
+        events_by_norad = {}
+        for event in events:
+            norad_id = event['norad_id']
+            if norad_id not in events_by_norad:
+                events_by_norad[norad_id] = []
+            events_by_norad[norad_id].append(event)
 
-        # Find overlapping passes for the same satellite and keep the better one
-        # (usually the one found by find_events, which has more precise timing)
         deduplicated_events = []
-        i = 0
-        while i < len(events):
-            current = events[i]
-
-            # Look ahead for overlapping passes of the same satellite
-            overlaps = []
-            j = i + 1
-            while j < len(events):
-                if events[j]['norad_id'] != current['norad_id']:
-                    j += 1
-                    continue
-
-                # Check if start/end times overlap
-                if (events[j]['event_start'] < current['event_end'] and
-                        events[j]['event_end'] > current['event_start']):
-                    overlaps.append(j)
-
-                j += 1
-
-            # If we found overlaps, choose the best event
-            if overlaps:
-                candidates = [current] + [events[j] for j in overlaps]
-
-                # Prefer the find_events method if available
-                find_events_candidates = [e for e in candidates if e.get('method') == 'find_events']
+        for norad_id, satellite_events in events_by_norad.items():
+            # Sort events by start time
+            satellite_events.sort(key=lambda e: e['event_start'])
+            
+            # Cluster overlapping events
+            clusters = []
+            current_cluster = [satellite_events[0]]
+            
+            for i in range(1, len(satellite_events)):
+                current_event = satellite_events[i]
+                last_event = current_cluster[-1]
+                
+                # Check if current event overlaps with the last event in current cluster
+                if (current_event['event_start'] < last_event['event_end'] and 
+                        current_event['event_end'] > last_event['event_start']):
+                    # Add to current cluster
+                    current_cluster.append(current_event)
+                else:
+                    # Start a new cluster
+                    clusters.append(current_cluster)
+                    current_cluster = [current_event]
+            
+            # Add the last cluster
+            if current_cluster:
+                clusters.append(current_cluster)
+            
+            # Select the best event from each cluster
+            for cluster in clusters:
+                find_events_candidates = [e for e in cluster if e.get('method') == 'find_events']
                 if find_events_candidates:
                     best = max(find_events_candidates, key=lambda e: e['peak_altitude'])
                 else:
-                    best = max(candidates, key=lambda e: e['peak_altitude'])
-
+                    best = max(cluster, key=lambda e: e['peak_altitude'])
+            
                 deduplicated_events.append(best)
-
-                # Skip all the overlapping events
-                i = max(overlaps) + 1
-            else:
-                deduplicated_events.append(current)
-                i += 1
 
         # Apply final sorting and ID renumbering
         deduplicated_events.sort(key=lambda e: e['event_start'])
+
+        # Apply final sorting and ID renumbering
+        # deduplicated_events.sort(key=lambda e: e['event_start'])
         for i, event in enumerate(deduplicated_events, 1):
             event['id'] = i
 
@@ -413,7 +421,9 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
         # Convert to JSON
         events = json.loads(json.dumps(events, cls=ModelEncoder))
-
+        
+        
+        
         reply['data'] = events
         reply['parameters'] = {
             'tle_count': len(tle_groups),
@@ -473,37 +483,79 @@ def analyze_satellite_orbit(satellite):
             "error": str(e)
         }
 
-
-def calculate_azimuth_range(azimuths):
+def calculate_azimuth_path(azimuths):
     """
-    Calculate the correct azimuth range accounting for the 0/360 degrees boundary.
+    Calculate the display parameters for a satellite path on a clockwise-only radar widget.
 
-    :param azimuths: List of azimuth values in degrees
-    :return: Tuple of (min_azimuth, max_azimuth, spans_north)
+    This function determines the correct start and end points to draw a clockwise arc
+    that accurately represents the satellite's path, regardless of the actual direction
+    of movement.
+
+    Args:
+        azimuths: List of azimuth values in degrees representing a satellite pass
+
+    Returns:
+        Tuple of (display_start, display_end, arc_angle)
+        - display_start: The starting azimuth for drawing the clockwise arc (0-360)
+        - display_end: The ending azimuth for drawing the clockwise arc (0-360)
+        - arc_angle: The angle to draw in clockwise direction (0-360)
     """
-    if not azimuths:
-        return 0, 0, False
+    if not azimuths or len(azimuths) < 2:
+        return 0, 0, 0
 
     # Normalize all azimuths to 0-360 range
     normalized = [az % 360 for az in azimuths]
 
-    # Check if the values span across the north direction (0/360 degrees)
-    max_diff = max([abs(a - b) for a in normalized for b in normalized])
-    spans_north = max_diff > 180
+    # Get the actual start and end azimuths
+    actual_start = normalized[0]
+    actual_end = normalized[-1]
 
-    if spans_north:
-        # Convert to 0-360 range for calculation
-        # For values that cross 0/360, we convert to a continuous range
-        # by adding 360 to values < 180 to make the range continuous
-        adjusted = [(az + 360 if az < 180 else az) for az in normalized]
-        min_az = min(adjusted) % 360
-        max_az = max(adjusted) % 360
+    # Determine if the satellite is actually moving clockwise or counterclockwise
+    is_clockwise = False
+    total_movement = 0
+
+    for i in range(len(normalized) - 1):
+        current = normalized[i]
+        next_az = normalized[i+1]
+
+        # Calculate difference, handling north crossing
+        diff = next_az - current
+
+        # Adjust for crossing north
+        if diff > 180:
+            diff -= 360
+        elif diff < -180:
+            diff += 360
+
+        total_movement += diff
+
+    # If total movement is negative, the satellite is moving clockwise
+    is_clockwise = total_movement < 0
+
+    # For a clockwise-only display, we need to adjust based on actual movement:
+    if is_clockwise:
+        # Already clockwise, display as is
+        display_start = actual_start
+        display_end = actual_end
+
+        # Calculate the clockwise angle
+        if display_end > display_start:
+            arc_angle = 360 - (display_end - display_start)
+        else:
+            arc_angle = display_start - display_end
     else:
-        # Simple case - no boundary crossing
-        min_az = min(normalized)
-        max_az = max(normalized)
+        # Counterclockwise movement; reverse start and end for clockwise display
+        display_start = actual_end
+        display_end = actual_start
 
-    return min_az, max_az, spans_north
+        # Calculate the clockwise angle
+        if display_end > display_start:
+            arc_angle = 360 - (display_end - display_start)
+        else:
+            arc_angle = display_start - display_end
+
+    return display_start, display_end, arc_angle
+
 
 
 def backtrack_rise_time(satellite, observer, t0, above_el, backtrack_hours=6.0):

@@ -116,17 +116,21 @@ const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forEl
     );
 };
 
-const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939", strokeWidth = 1, opacity = 1, forElevation = false, spansNorth = false }) => {
+const CircleSlice = ({
+                         startAngle,
+                         endAngle,
+                         stroke = "#393939",
+                         fill = "#393939",
+                         strokeWidth = 1,
+                         opacity = 1,
+                         forElevation = false,
+                         peakAz = null
+}) => {
     const { outerRadius, cx, cy } = useGaugeState();
 
-    // Convert startAngle and endAngle to radians based on forElevation flag
-    const startAngleRad = forElevation
-        ? ((90 - startAngle) * Math.PI) / 180
-        : (startAngle * Math.PI) / 180;
-
-    const endAngleRad = forElevation
-        ? ((90 - endAngle) * Math.PI) / 180
-        : (endAngle * Math.PI) / 180;
+    // Convert startAngle and endAngle to radians
+    const startAngleRad = (startAngle * Math.PI) / 180;
+    const endAngleRad = (endAngle * Math.PI) / 180;
 
     // Calculate the start and end points on the circle
     const start = {
@@ -139,6 +143,36 @@ const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939
         y: cy - outerRadius * Math.cos(endAngleRad),
     };
 
+    function determineArcToDisplay(startAz, peakAz, endAz) {
+        // Normalize angles to 0-360 range
+        startAz = (startAz + 360) % 360;
+        endAz = (endAz + 360) % 360;
+
+        if (peakAz !== null) {
+            peakAz = (peakAz + 360) % 360;
+
+            // Check if peak is within the shorter arc between start and end
+            const diff = Math.abs(endAz - startAz);
+            const shortArc = Math.min(diff, 360 - diff);
+
+            // Calculate angles from start to peak and peak to end
+            const toPeak = (peakAz - startAz + 360) % 360;
+            const fromPeak = (endAz - peakAz + 360) % 360;
+
+            // If peak is within the shorter arc, use small arc (0)
+            if (toPeak <= shortArc && fromPeak <= shortArc) {
+                return 0;
+            }
+            return 1;
+        }
+
+        // Without peak azimuth, use standard arc determination
+        const angleDiff = (endAz - startAz + 360) % 360;
+        return angleDiff > 180 ? 1 : 0;
+    }
+
+
+
     // Determine if we need to draw the arc clockwise or counterclockwise
     // For SVG arcs: 0 = small arc, 1 = large arc
     //    let largeArcFlag = 1;
@@ -147,7 +181,14 @@ const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939
     //     } else {
     //         largeArcFlag = spansNorth ? 1 : 0;
     //     }
-    const largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+    //const largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
+    let largeArcFlag = 0;
+    if (!forElevation) {
+        largeArcFlag = determineArcToDisplay(startAngle, peakAz, endAngle);
+        console.info(`largeArcFlag: ${largeArcFlag}`);
+    } else {
+        largeArcFlag = 0;
+    }
 
     // For SVG arcs: 0 = counterclockwise, 1 = clockwise
     // This depends on how angles are interpreted
@@ -158,7 +199,13 @@ const CircleSlice = ({ startAngle, endAngle, stroke = "#393939", fill = "#393939
     // } else {
     //     sweepFlag = spansNorth ? 0 : 1;
     // }
-    const sweepFlag = endAngle > startAngle ? 1 : 0;
+    //let sweepFlag = endAngle > startAngle ? 1 : 0;
+    let sweepFlag = 1;
+    if (!forElevation) {
+        sweepFlag = 1;
+    } else {
+        sweepFlag = 0;
+    }
 
     // Create the SVG path for a slice
     // M: Move to center
@@ -194,7 +241,7 @@ const rescaleToRange = (value, originalMin, originalMax, targetMin, targetMax) =
 };
 
 
-function GaugeAz({az, limits = [null, null]}, spansNorth=false) {
+function GaugeAz({az, limits = [null, null]}, peakAz = null) {
     let [maxAz, minAz] = limits;
 
     if (minAz > maxAz) {
@@ -231,9 +278,9 @@ function GaugeAz({az, limits = [null, null]}, spansNorth=false) {
                 <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1}/>
                 <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1}/>
                 <CircleSlice
-                    spansNorth={spansNorth}
                     startAngle={maxAz}
                     endAngle={minAz}
+                    peakAz={peakAz}
                     stroke={'#abff45'}
                     fill={'#abff45'}
                     opacity={0.2}
@@ -286,7 +333,7 @@ function GaugeEl({el, maxElevation = null}) {
                     stroke={'#abff45'}
                     fill={'#abff45'}
                     opacity={0.2}
-                    forElevation={false}
+                    forElevation={true}
                     spansNorth={false}
                 />
             </>}
@@ -295,14 +342,15 @@ function GaugeEl({el, maxElevation = null}) {
                 endAngle={80}
                 stroke={'#ff4545'}
                 fill={'#ff4545'}
+                forElevation={true}
                 opacity={0.2}
             />
             <Pointer angle={80} stroke={"#ff0101"} strokeWidth={0.8} opacity={0.7}/>
             <Pointer angle={0}/>
-            <GaugePointer/>
             <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
             <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
             <text x="10" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
+            <GaugePointer/>
         </GaugeContainer>
     );
 }
@@ -573,7 +621,11 @@ const RotatorControl = React.memo(({}) => {
                         alignItems: "center",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <GaugeAz az={rotatorData['az']} limits={[activePass?.['max_azimuth'], activePass?.['min_azimuth']]} spansNorth={activePass?.['spans_north']}/>
+                            <GaugeAz
+                                az={rotatorData['az']}
+                                limits={[activePass?.['start_azimuth'], activePass?.['end_azimuth']]}
+                                peakAz={activePass?.['peak_azimuth']}
+                            />
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             <GaugeEl el={rotatorData['el']} maxElevation={activePass?.['peak_altitude']}/>
