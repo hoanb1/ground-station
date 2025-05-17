@@ -125,7 +125,7 @@ const CircleSlice = ({
                          opacity = 1,
                          forElevation = false,
                          peakAz = null
-}) => {
+                     }) => {
     const { outerRadius, cx, cy } = useGaugeState();
 
     // Convert startAngle and endAngle to radians
@@ -143,67 +143,103 @@ const CircleSlice = ({
         y: cy - outerRadius * Math.cos(endAngleRad),
     };
 
-    function determineArcToDisplay(startAz, peakAz, endAz) {
-        // Normalize angles to 0-360 range
-        startAz = (startAz + 360) % 360;
-        endAz = (endAz + 360) % 360;
-
-        if (peakAz !== null) {
-            peakAz = (peakAz + 360) % 360;
-
-            // Check if peak is within the shorter arc between start and end
-            const diff = Math.abs(endAz - startAz);
-            const shortArc = Math.min(diff, 360 - diff);
-
-            // Calculate angles from start to peak and peak to end
-            const toPeak = (peakAz - startAz + 360) % 360;
-            const fromPeak = (endAz - peakAz + 360) % 360;
-
-            // If peak is within the shorter arc, use small arc (0)
-            if (toPeak <= shortArc && fromPeak <= shortArc) {
+    function determineClockwiseDirection(arcArray) {
+        if (arcArray.length > 0 && arcArray.length > 1) {
+            if (arcArray[0] < arcArray[1]) {
+                return 1;
+            } else {
                 return 0;
             }
-            return 1;
+        } else {
+            return 1; // Default to clockwise
+        }
+    }
+
+    function determineArcToDisplay(startAz, endAz, peakAz) {
+        // Normalize angles to 0-360 range
+        startAz = Math.round((startAz + 360) % 360);
+        endAz = Math.round((endAz + 360) % 360);
+
+        if (peakAz !== null) {
+            peakAz = Math.round((peakAz + 360) % 360);
+
+            // Create lists for the small arc and big arc degrees
+            let smallArcDegrees = [];
+            let bigArcDegrees = [];
+
+            // Calculate the angle difference
+            const angleDiff = (endAz - startAz + 360) % 360;
+
+            // Determine which arc is the small one
+            if (angleDiff <= 180) {
+                // Small arc is clockwise from start to end
+                let current = startAz;
+                while (current !== endAz) {
+                    smallArcDegrees.push(current);
+                    current = (current + 1) % 360;
+                }
+
+                // Big arc is counter-clockwise from start to end
+                current = startAz;
+                while (current !== endAz) {
+                    current = (current - 1 + 360) % 360;
+                    bigArcDegrees.push(current);
+                }
+            } else {
+                // Small arc is counter-clockwise from start to end
+                let current = startAz;
+                while (current !== endAz) {
+                    current = (current - 1 + 360) % 360;
+                    smallArcDegrees.push(current);
+                }
+
+                // Big arc is clockwise from start to end
+                current = startAz;
+                while (current !== endAz) {
+                    current = (current + 1) % 360;
+                    bigArcDegrees.push(current);
+                }
+            }
+            console.info(`smallArcDegrees: ${smallArcDegrees.length > 0 ? smallArcDegrees[0] + '...' + smallArcDegrees[smallArcDegrees.length-1] : 'empty'}`);
+            console.info(`bigArcDegrees: ${bigArcDegrees.length > 0 ? bigArcDegrees[0] + '...' + bigArcDegrees[bigArcDegrees.length-1] : 'empty'}`);
+
+            // Check which arc contains the peak azimuth
+            if (smallArcDegrees.includes(peakAz)) {
+                // Get x-wise direction for arc
+                const clockwiseDirection = determineClockwiseDirection(smallArcDegrees);
+
+                // Use 0 for a small arc
+                return [0, clockwiseDirection];
+
+            } else if (bigArcDegrees.includes(peakAz)) {
+                // Get x-wise direction for arc
+                const clockwiseDirection = determineClockwiseDirection(bigArcDegrees);
+
+                // Use 1 for a big arc
+                return [1, clockwiseDirection];
+            } else {
+                // Default values if peak is not in either list
+                return [angleDiff > 180 ? 1 : 0, 1];
+            }
         }
 
         // Without peak azimuth, use standard arc determination
         const angleDiff = (endAz - startAz + 360) % 360;
-        return angleDiff > 180 ? 1 : 0;
+        return [angleDiff > 180 ? 1 : 0, 1];
     }
 
-
-
-    // Determine if we need to draw the arc clockwise or counterclockwise
-    // For SVG arcs: 0 = small arc, 1 = large arc
-    //    let largeArcFlag = 1;
-    //     if (forElevation) {
-    //         largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
-    //     } else {
-    //         largeArcFlag = spansNorth ? 1 : 0;
-    //     }
-    //const largeArcFlag = Math.abs(endAngle - startAngle) > 180 ? 1 : 0;
     let largeArcFlag = 0;
+    let sweepFlag = 1;
+
     if (!forElevation) {
-        largeArcFlag = determineArcToDisplay(startAngle, peakAz, endAngle);
-        console.info(`largeArcFlag: ${largeArcFlag}`);
+        // Get arc flags for SVG path
+        const result = determineArcToDisplay(startAngle, endAngle, peakAz);
+        if (result && result.length === 2) {
+            [largeArcFlag, sweepFlag] = result;
+        }
+        console.info(`largeArcFlag: ${largeArcFlag}, sweepFlag: ${sweepFlag}`);
     } else {
         largeArcFlag = 0;
-    }
-
-    // For SVG arcs: 0 = counterclockwise, 1 = clockwise
-    // This depends on how angles are interpreted
-    //const sweepFlag = endAngle > startAngle ? 1 : 0;
-    // let sweepFlag = 1;
-    // if (forElevation) {
-    //     sweepFlag = endAngle > startAngle ? 1 : 0;
-    // } else {
-    //     sweepFlag = spansNorth ? 0 : 1;
-    // }
-    //let sweepFlag = endAngle > startAngle ? 1 : 0;
-    let sweepFlag = 1;
-    if (!forElevation) {
-        sweepFlag = 1;
-    } else {
         sweepFlag = 0;
     }
 
@@ -241,14 +277,8 @@ const rescaleToRange = (value, originalMin, originalMax, targetMin, targetMax) =
 };
 
 
-function GaugeAz({az, limits = [null, null]}, peakAz = null) {
+function GaugeAz({az, limits = [null, null], peakAz = null}) {
     let [maxAz, minAz] = limits;
-
-    if (minAz > maxAz) {
-        const temp = minAz;
-        minAz = maxAz;
-        maxAz = temp;
-    }
 
     return (
         <GaugeContainer
@@ -278,8 +308,8 @@ function GaugeAz({az, limits = [null, null]}, peakAz = null) {
                 <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1}/>
                 <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1}/>
                 <CircleSlice
-                    startAngle={maxAz}
-                    endAngle={minAz}
+                    startAngle={minAz}
+                    endAngle={maxAz}
                     peakAz={peakAz}
                     stroke={'#abff45'}
                     fill={'#abff45'}
@@ -290,11 +320,11 @@ function GaugeAz({az, limits = [null, null]}, peakAz = null) {
             <Pointer angle={180}/>
             <Pointer angle={90}/>
             <Pointer angle={0}/>
-            <GaugePointer/>
             <text x="70" y="18" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
             <text x="124" y="70" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
             <text x="70" y="125" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
             <text x="15" y="70" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
+            <GaugePointer/>
         </GaugeContainer>
     );
 }
@@ -554,6 +584,8 @@ const RotatorControl = React.memo(({}) => {
     function handleRotatorChange(event) {
         dispatch(setRotator(event.target.value));
     }
+
+    console.info("activePass", activePass);
 
     return (
         <>
