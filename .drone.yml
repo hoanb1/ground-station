@@ -96,6 +96,7 @@ steps:
   # AMD64 Build
   - name: build-amd64
     image: plugins/docker
+    timeout: 240
     settings:
       username:
         from_secret: docker_username
