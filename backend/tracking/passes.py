@@ -88,7 +88,7 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
                 name=f"satellite_{norad_id}"
             )
 
-            # Check if it is geo stationary
+            # Check if it is geostationary or geosynchronous
             satellite_orbit_info = analyze_satellite_orbit(satellite)
             is_geostationary = satellite_orbit_info['is_geostationary']
             is_geosynchronous = satellite_orbit_info['is_geosynchronous']
@@ -188,8 +188,10 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
             # If already visible at start time and first event is not a rise event
             if already_visible and (len(times) == 0 or events_type[0] != 0):
+                # Find the actual rise time by looking backward
+                actual_rise_time = backtrack_rise_time(satellite, observer, t0, above_el)
                 current_pass = {
-                    'start_time': t0,
+                    'start_time': actual_rise_time,
                     'norad_id': norad_id
                 }
 
@@ -502,3 +504,54 @@ def calculate_azimuth_range(azimuths):
         max_az = max(normalized)
 
     return min_az, max_az, spans_north
+
+
+def backtrack_rise_time(satellite, observer, t0, above_el, backtrack_hours=6.0):
+    """
+    Work backward in time to find when a satellite actually rose above the horizon
+    when it's already visible at start time.
+    """
+    # Create a timescale that goes backward from t0
+    ts = t0.ts
+    t_start = t0 - (backtrack_hours / 24.0)
+
+    # Use find_events to find any rise events in the past
+    times, events_type = satellite.find_events(
+        observer,
+        t_start,
+        t0,
+        altitude_degrees=above_el
+    )
+
+    # If we found any rise events, the last one is the start of the current pass
+    rise_events = [(time, event_type) for time, event_type in zip(times, events_type) if event_type == 0]
+    if rise_events:
+        # Return the most recent rise event
+        return rise_events[-1][0]
+
+    # If no rise events found, use coarse timestep method to approximate
+    difference = satellite - observer
+    step_minutes = 5  # Use a coarser timestep for efficiency
+    t_points = t_start + (np.arange(0, int(backtrack_hours * 60), step_minutes) / (24.0 * 60.0))
+
+    # Calculate altitudes going backward
+    altitudes = []
+    for t in t_points:
+        topocentric = difference.at(t)
+        alt, _, _ = topocentric.altaz()
+        altitudes.append(float(alt.degrees))
+
+    # Find transitions from below to above elevation threshold
+    above_threshold = np.array(altitudes) > above_el
+
+    # Walk through backward and find first point where satellite is below threshold
+    for i in range(len(above_threshold)):
+        if not above_threshold[i]:
+            # Return the time just after this point (when it first appeared)
+            if i < len(t_points) - 1:
+                # Interpolate to find a more precise time
+                return t_points[i+1]
+            break
+
+    # If we get here, we couldn't find a rise time, so return t0
+    return t0

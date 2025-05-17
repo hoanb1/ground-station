@@ -40,13 +40,20 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
     # Mean Earth radius in kilometers (WGS-84 approximate)
     R_EARTH = 6378.137
 
+    # Validate altitude to prevent math domain errors
+    if altitude_km <= -R_EARTH:
+        # Handle invalid altitude (satellite below Earth's center)
+        return [{"lat": sat_lat, "lon": sat_lon}]  # Return just the subpoint
+
     # Convert satellite subpoint to radians
     lat0 = (sat_lat * math.pi) / 180
     lon0 = (sat_lon * math.pi) / 180
 
-    # Compute angular radius of the coverage circle (in radians)
-    # d = arccos(R_EARTH / (R_EARTH + altitude_km))
-    d = math.acos(R_EARTH / (R_EARTH + altitude_km))
+    # Compute the angular radius of the coverage circle (in radians)
+    # Ensure the argument to acos stays within [-1, 1]
+    arg = R_EARTH / (R_EARTH + altitude_km)
+    arg = max(-1.0, min(1.0, arg))  # Clamp value to valid range
+    d = math.acos(arg)
 
     # Check if coverage includes the North or South Pole
     north_pole_included = lat0 + d > math.pi / 2
@@ -54,7 +61,6 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
 
     # Generate the circle points (closed polygon)
     circle_points = []
-
 
     # Add the regular circle points
     for i in range(num_points + 1):
@@ -82,7 +88,7 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
 
         circle_points.append({"lat": lat_deg, "lon": lon_deg})
 
-    # If North Pole is included, do some corrective stuff
+    # If the North Pole is included, do some corrective stuff
     if north_pole_included:
         # remove the first element from the list
         circle_points.pop(0)
@@ -91,7 +97,7 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
         circle_points.insert(0,{"lat": 90.0, "lon": circle_points[0]["lon"]})
         circle_points.append({"lat": 90.0, "lon": circle_points[-1]["lon"]})
 
-    # If South Pole is included, do some corrective stuff
+    # If the South Pole is included, do some corrective stuff
     if south_pole_included:
         # find the index of the coord in the list with the lowest latitude
         min_lat_index = min(range(len(circle_points)), key=lambda idx: circle_points[idx]["lat"])
@@ -101,4 +107,3 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
         circle_points.insert(min_lat_index + 2, {"lat": -90.0, "lon": circle_points[min_lat_index+2]["lon"]})
 
     return circle_points
-
