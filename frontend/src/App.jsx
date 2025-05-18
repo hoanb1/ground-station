@@ -18,7 +18,6 @@
  */
 
 
-
 import * as React from 'react';
 import {Outlet} from "react-router";
 import PublicIcon from '@mui/icons-material/Public';
@@ -45,7 +44,7 @@ import { useAuth } from "./components/common/auth.jsx";
 import { store, persistor } from './components/common/store.jsx';
 import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
-import { setMessage, setProgress } from './components/satellites/synchronize-slice.jsx';
+import { setSyncState } from './components/satellites/synchronize-slice.jsx';
 import { setStatus } from "./components/hardware/rig-slice.jsx";
 import { setSatelliteData, getTargetMapSettings } from './components/target/target-sat-slice.jsx';
 import { fetchRigs } from './components/hardware/rig-slice.jsx'
@@ -228,9 +227,14 @@ export default function App(props) {
             });
 
             socket.on("sat-sync-events", (data) => {
-                store.dispatch(setProgress(data.progress));
-                store.dispatch(setMessage(data.message));
-                store.dispatch(setStatus(data.status));
+                store.dispatch(setSyncState(data));
+
+                if (data.success === false) {
+                    enqueueSnackbar("Satellite data synchronization failed", {
+                        variant: 'error',
+                        autoHideDuration: 4000,
+                    });
+                }
 
                 if (data.status === 'complete') {
                     enqueueSnackbar("Satellite data synchronization completed successfully", {

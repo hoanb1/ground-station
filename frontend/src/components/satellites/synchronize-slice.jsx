@@ -40,23 +40,37 @@ export const startSatelliteSync = createAsyncThunk(
     }
 );
 
+
+export const fetchSyncState = createAsyncThunk(
+    'syncSatellite/fetchState',
+    async ({socket}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'fetch-sync-state', null, (response) => {
+                    if (response.success === true) {
+                        resolve(response.data);
+                    } else {
+                        reject(response.error);
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error);
+        }
+    }
+);
+
+
 const syncSatelliteSlice = createSlice({
     name: 'syncSatellite',
     initialState: {
-        progress: 0,
-        message: '',
-        status: 'idle', // "idle", "loading", "succeeded", "failed"
-        error: null,
+        syncState: {
+
+        }
     },
     reducers: {
-        setProgress: (state, action) => {
-            state.progress = action.payload;
-        },
-        setMessage: (state, action) => {
-            state.message = action.payload;
-        },
-        setStatus: (state, action) => {
-            state.status = action.payload;
+        setSyncState: (state, action) => {
+            state.syncState = action.payload;
         },
     },
     extraReducers: (builder) => {
@@ -71,14 +85,24 @@ const syncSatelliteSlice = createSlice({
             .addCase(startSatelliteSync.rejected, (state, action) => {
                 state.status = 'failed';
                 state.error = action.payload || 'Failed to synchronize satellites';
+            })
+            .addCase(fetchSyncState.pending, (state) => {
+                state.status = 'loading';
+                state.error = null;
+            })
+            .addCase(fetchSyncState.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.syncState = action.payload;
+            })
+            .addCase(fetchSyncState.rejected, (state, action) => {
+                state.status = 'failed';
+                state.error = action.payload || 'Failed to fetch sync state';
             });
     },
 });
 
 export const {
-    setProgress,
-    setMessage,
-    setStatus
+    setSyncState,
 } = syncSatelliteSlice.actions;
 
 export default syncSatelliteSlice.reducer;

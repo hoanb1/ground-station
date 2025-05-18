@@ -670,14 +670,34 @@ const RotatorControl = React.memo(({}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            AZ: <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                               {rotatorData['az']}°
-                            </Typography>
+                            AZ: <Typography
+                            variant="h7"
+                            sx={{
+                                fontFamily: "Monospace, monospace",
+                                fontWeight: "bold",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                minWidth: "80px",
+                                justifyContent: "center"
+                            }}
+                        >
+                            {rotatorData['az'].toFixed(1)}°
+                        </Typography>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            EL: <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {rotatorData['el']}°
-                            </Typography>
+                             EL: <Typography
+                            variant="h7"
+                            sx={{
+                                fontFamily: "Monospace, monospace",
+                                fontWeight: "bold",
+                                display: "inline-flex",
+                                alignItems: "center",
+                                minWidth: "80px",
+                                justifyContent: "center"
+                            }}
+                        >
+                            {rotatorData['el'].toFixed(1)}°
+                        </Typography>
                         </Grid>
                     </Grid>
 

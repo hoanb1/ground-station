@@ -13,10 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-
+import asyncio
+import crud
 from typing import Union
 from db import engine, AsyncSessionLocal
-from sync import *
+from models import SatelliteGroupType
+from sync import sync_state, synchronize_satellite_data
+from syncstate import sync_state_manager
 from auth import *
 from tracking.events import (fetch_next_events_for_satellite, fetch_next_events_for_group)
 from tracker import get_ui_tracker_state, get_satellite_position_from_tle, compiled_satellite_data
@@ -226,6 +229,10 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             logger.debug(f'Getting local SoapySDR devices')
             devices = await get_local_soapy_sdr_devices()
             reply = {'success': devices['success'], 'data': devices['data'], 'error': devices['error']}
+
+        elif cmd == "fetch-sync-state":
+            logger.debug(f'Getting TLE synchronization state')
+            reply = {'success': True, 'data': sync_state_manager.get_state()}
 
         else:
             logger.error(f'Unknown command: {cmd}')

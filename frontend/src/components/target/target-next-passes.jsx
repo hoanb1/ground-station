@@ -353,21 +353,28 @@ const NextPassesIsland = React.memo(() => {
     const maxHeight = 400;
 
     useEffect(() => {
-        if (satelliteId) {
-            dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
-                .unwrap()
-                .then(data => {
+        const fetchPasses = () => {
+            if (satelliteId) {
+                dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
+                    .unwrap()
+                    .then(data => {
 
-                })
-                .catch(error => {
-                    enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
-                        variant: 'error',
-                        autoHideDuration: 5000,
                     })
-                });
-        }
-        return () => {
+                    .catch(error => {
+                        enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
+                            variant: 'error',
+                            autoHideDuration: 5000,
+                        })
+                    });
+            }
+        };
 
+        fetchPasses();
+
+        const interval = setInterval(fetchPasses, 60 * 60 * 1000); // Every hour
+
+        return () => {
+            clearInterval(interval);
         };
     }, [satelliteId]);
 

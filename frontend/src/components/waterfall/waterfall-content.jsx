@@ -484,15 +484,6 @@ const WaterfallWithStrictXAxisZoom = ({
                 >
                     <RestartAltIcon/>
                 </IconButton>
-                {/* Add bookmark button */}
-                <IconButton
-                    size={isMobile ? "medium" : "small"}
-                    onClick={addCenterFrequencyBookmark}
-                    sx={{color: 'white'}}
-                    title="Add bookmark at center frequency"
-                >
-                    <BookmarkIcon/>
-                </IconButton>
             </Box>
 
             {/* Canvases */}
