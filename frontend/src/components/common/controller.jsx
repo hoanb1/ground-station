@@ -42,15 +42,28 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
                         textColor="primary"
                         indicatorColor="primary"
                         sx={{
+                            '& .MuiTabs-indicator': {
+                                position: 'absolute',
+                                top: 0,
+                                height: 3,
+                                backgroundColor: 'primary.main',
+                                '&.Mui-disabled': {
+                                    display: 'none',
+                                },
+                            },
                             '& .MuiTab-root': {
-                                textTransform: 'none',
-                                fontSize: '1rem',
+                                textTransform: 'uppercase',
+                                fontSize: '0.75rem',
                                 fontWeight: 500,
                                 minHeight: 48,
+                                backgroundColor: '#1c1c1c',
                                 '&:hover': {
                                     backgroundColor: 'action.hover',
                                 },
                             },
+                            '& .Mui-selected' : {
+                                backgroundColor: '#2b2b2b',
+                            }
                         }}
                     >
                         <Tab label="Rotator" sx={{borderRadius: '4px 4px 0 0'}}/>
