@@ -39,12 +39,13 @@ import {
     setSelectedSatelliteId,
 } from './overview-sat-slice.jsx';
 import {Typography} from '@mui/material';
-import { useGridApiRef } from '@mui/x-data-grid';
-import { darken, lighten, styled } from '@mui/material/styles';
+import {useGridApiRef} from '@mui/x-data-grid';
+import {darken, lighten, styled} from '@mui/material/styles';
 import {Chip} from "@mui/material";
+import {useStore} from 'react-redux';
 
 
-const TimeFormatter = React.memo(({ params, value }) => {
+const TimeFormatter = React.memo(({params, value}) => {
     const [, setForceUpdate] = useState(0);
 
     // Force component to update regularly
@@ -89,7 +90,7 @@ const DurationFormatter = React.memo(({params, value, event_start, event_end}) =
         const seconds = diffInSeconds % 60;
         return `${minutes}:${seconds.toString().padStart(2, '0')}`;
 
-    } else if(endDate < now) {
+    } else if (endDate < now) {
         // Pass ended
         const diffInSeconds = Math.floor((endDate - startDate) / 1000);
         const minutes = Math.floor(diffInSeconds / 60);
@@ -109,12 +110,15 @@ const DurationFormatter = React.memo(({params, value, event_start, event_end}) =
 });
 
 
-const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, passesAreCached=false }) => {
+const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, passesAreCached = false}) => {
     const apiRef = useGridApiRef();
-    const {
-        satelliteId,
-        satelliteData,
-    } = useSelector((state) => state.targetSatTrack);
+    const store = useStore();
+
+    // This method allows us to reference values in redux without a re-render, crucial in the next passes table
+    const targetSatTrackRef = useRef(() => {
+        const state = store.getState();
+        return state.targetSatTrack;
+    });
 
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -123,7 +127,7 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
         }),
     });
 
-    const StyledDataGrid = styled(DataGrid)(({ theme }) => ({
+    const StyledDataGrid = styled(DataGrid)(({theme}) => ({
         '& .passes-cell-passing': {
             ...getBackgroundColor(theme.palette.success.main, theme, 0.7),
             '&:hover': {
@@ -194,25 +198,25 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
 
         // Define bands in ascending order of frequency
         const BANDS = [
-            { name: 'ELF', min: 3, max: 30 },                // 3 Hz - 30 Hz
-            { name: 'SLF', min: 30, max: 300 },                  // 30 Hz - 300 Hz
-            { name: 'ULF', min: 300, max: 3000 },                // 300 Hz - 3 kHz
-            { name: 'VLF', min: 3000, max: 30000 },               // 3 kHz - 30 kHz
-            { name: 'LF', min: 30000, max: 300000 },                   // 30 kHz - 300 kHz
-            { name: 'MF', min: 300000, max: 3000000 },              // 300 kHz - 3 MHz
-            { name: 'HF', min: 3000000, max: 30000000 },              // 3 MHz - 30 MHz
-            { name: 'VHF', min: 30000000, max: 300000000 },      // 30 MHz - 300 MHz
-            { name: 'UHF', min: 300000000, max: 1000000000 },   // 300 MHz - 1 GHz
-            { name: 'L Band', min: 1000000000, max: 2000000000 },                      // 1 GHz - 2 GHz
-            { name: 'S Band', min: 2000000000, max: 4000000000 },                      // 2 GHz - 4 GHz
-            { name: 'C Band', min: 4000000000, max: 8000000000 },                      // 4 GHz - 8 GHz
-            { name: 'X Band', min: 8000000000, max: 12000000000 },                     // 8 GHz - 12 GHz
-            { name: 'Ku Band', min: 12000000000, max: 18000000000 },                   // 12 GHz - 18 GHz
-            { name: 'K Band', min: 18000000000, max: 27000000000 },                    // 18 GHz - 27 GHz
-            { name: 'Ka Band', min: 27000000000, max: 40000000000 },                   // 27 GHz - 40 GHz
-            { name: 'V Band', min: 40000000000, max: 75000000000 },                    // 40 GHz - 75 GHz
-            { name: 'W Band', min: 75000000000, max: 110000000000 },                   // 75 GHz - 110 GHz
-            { name: 'mm Band', min: 110000000000, max: 300000000000 },                 // 110 GHz - 300 GHz
+            {name: 'ELF', min: 3, max: 30},                // 3 Hz - 30 Hz
+            {name: 'SLF', min: 30, max: 300},                  // 30 Hz - 300 Hz
+            {name: 'ULF', min: 300, max: 3000},                // 300 Hz - 3 kHz
+            {name: 'VLF', min: 3000, max: 30000},               // 3 kHz - 30 kHz
+            {name: 'LF', min: 30000, max: 300000},                   // 30 kHz - 300 kHz
+            {name: 'MF', min: 300000, max: 3000000},              // 300 kHz - 3 MHz
+            {name: 'HF', min: 3000000, max: 30000000},              // 3 MHz - 30 MHz
+            {name: 'VHF', min: 30000000, max: 300000000},      // 30 MHz - 300 MHz
+            {name: 'UHF', min: 300000000, max: 1000000000},   // 300 MHz - 1 GHz
+            {name: 'L Band', min: 1000000000, max: 2000000000},                      // 1 GHz - 2 GHz
+            {name: 'S Band', min: 2000000000, max: 4000000000},                      // 2 GHz - 4 GHz
+            {name: 'C Band', min: 4000000000, max: 8000000000},                      // 4 GHz - 8 GHz
+            {name: 'X Band', min: 8000000000, max: 12000000000},                     // 8 GHz - 12 GHz
+            {name: 'Ku Band', min: 12000000000, max: 18000000000},                   // 12 GHz - 18 GHz
+            {name: 'K Band', min: 18000000000, max: 27000000000},                    // 18 GHz - 27 GHz
+            {name: 'Ka Band', min: 27000000000, max: 40000000000},                   // 27 GHz - 40 GHz
+            {name: 'V Band', min: 40000000000, max: 75000000000},                    // 40 GHz - 75 GHz
+            {name: 'W Band', min: 75000000000, max: 110000000000},                   // 75 GHz - 110 GHz
+            {name: 'mm Band', min: 110000000000, max: 300000000000},                 // 110 GHz - 300 GHz
         ];
 
         // Find the appropriate band
@@ -244,17 +248,18 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             minWidth: 120,
             headerName: 'Name',
             flex: 2,
-            renderCell: (params) => (
-                <div>
+            renderCell: (params) => {
+                const targetSatTrack = targetSatTrackRef.current();
+                return <>
                     {params.value}
-                    {satelliteData?.details?.name === params.value && (
+                    {targetSatTrack.satelliteData['details']['name'] === params.value && (
                         <Typography component="span" sx={{
                             ml: 0.5,
                             fontSize: '1.25rem',
                         }}>⦿</Typography>
                     )}
-                </div>
-            )
+                </>;
+            }
         },
         {
             field: 'peak_altitude',
@@ -285,7 +290,8 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             flex: 1,
             renderCell: (params) => (
                 <div>
-                    <DurationFormatter params={params} value={params.value} event_start={params.row.event_start} event_end={params.row.event_end}/>
+                    <DurationFormatter params={params} value={params.value} event_start={params.row.event_start}
+                                       event_end={params.row.event_end}/>
                 </div>
             )
             // valueFormatter: (value) => {
@@ -474,9 +480,9 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             density={"compact"}
             rows={passes}
             initialState={{
-                pagination: { paginationModel: { pageSize: 20 } },
+                pagination: {paginationModel: {pageSize: 20}},
                 sorting: {
-                    sortModel: [{ field: 'event_start', sort: 'asc' }],
+                    sortModel: [{field: 'event_start', sort: 'asc'}],
                 },
                 columns: {
                     columnVisibilityModel: {
@@ -490,7 +496,7 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
             rowsPerPageOptions={[5, 10, 20]}
         />
     );
-},  (prevProps, nextProps) => {
+}, (prevProps, nextProps) => {
     // Custom comparison function - return true if props haven't changed in ways that matter
     return (
         prevProps.passes === nextProps.passes &&
@@ -559,18 +565,19 @@ const NextPassesGroupIsland = React.memo(() => {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>
-                Passes for the next {nextPassesHours} hours {passesAreCached? "(cached)": ""}
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
+                Passes for the next {nextPassesHours} hours {passesAreCached ? "(cached)" : ""}
             </TitleBar>
-            <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
+            <div style={{position: 'relative', display: 'block', height: '100%'}} ref={containerRef}>
                 <div style={{
-                    padding:'0rem 0rem 0rem 0rem',
+                    padding: '0rem 0rem 0rem 0rem',
                     display: 'flex',
                     flexDirection: 'column',
                     height: containerHeight - 25,
                     minHeight,
                 }}>
-                    <MemoizedStyledDataGrid passes={passes} passesLoading={passesLoading} onRowClick={handleOnRowClick}/>
+                    <MemoizedStyledDataGrid passes={passes} passesLoading={passesLoading}
+                                            onRowClick={handleOnRowClick}/>
                 </div>
             </div>
         </>

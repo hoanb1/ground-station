@@ -38,7 +38,7 @@ import WaterfallSettings from "./waterfall-settings.jsx";
 import RigControl from "./rig-control.jsx";
 
 
-// global callback for dashboard editing here
+// A global callback for dashboard editing here
 export let handleSetGridEditableWaterfall = function () {
 };
 
