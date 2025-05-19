@@ -589,7 +589,7 @@ const RotatorControl = React.memo(({}) => {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Rotator control</TitleBar>
+            {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Rotator control</TitleBar>*/}
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
                 <Grid container direction="row" sx={{
@@ -671,7 +671,7 @@ const RotatorControl = React.memo(({}) => {
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             AZ: <Typography
-                            variant="h7"
+                            variant="h5"
                             sx={{
                                 fontFamily: "Monospace, monospace",
                                 fontWeight: "bold",
@@ -686,7 +686,7 @@ const RotatorControl = React.memo(({}) => {
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                              EL: <Typography
-                            variant="h7"
+                            variant="h5"
                             sx={{
                                 fontFamily: "Monospace, monospace",
                                 fontWeight: "bold",
@@ -709,6 +709,7 @@ const RotatorControl = React.memo(({}) => {
                             <Paper
                                 elevation={1}
                                 sx={{
+                                    height: '30px',
                                     padding: '2px 0px',
                                     backgroundColor: theme => {
                                         const rotatorStatus = getCurrentStatusofRotator();
@@ -750,7 +751,7 @@ const RotatorControl = React.memo(({}) => {
                             <Button disabled={
                                 ["tracking", "connected", "stopped", "parked"].includes(trackingState['rotator_state']) ||
                                 ["none", ""].includes(selectedRotator)
-                            } fullWidth={true} variant="contained" color="success" style={{height: '35px'}}
+                            } fullWidth={true} variant="contained" color="success" style={{height: '50px'}}
                                     onClick={() => {
                                         connectRotator()
                                     }}>
@@ -760,7 +761,7 @@ const RotatorControl = React.memo(({}) => {
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1.5}}>
                             <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
                                     fullWidth={true}
-                                    variant="contained" color="error" style={{height: '35px'}}
+                                    variant="contained" color="error" style={{height: '50px'}}
                                     onClick={() => {
                                         disconnectRotator()
                                     }}>
@@ -769,7 +770,7 @@ const RotatorControl = React.memo(({}) => {
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
                             <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
-                                    fullWidth={true} variant="contained" color="warning" style={{height: '35px'}}
+                                    fullWidth={true} variant="contained" color="warning" style={{height: '50px'}}
                                     onClick={() => {
                                         parkRotator()
                                     }}>

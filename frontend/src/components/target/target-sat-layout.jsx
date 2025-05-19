@@ -95,6 +95,7 @@ import {
     satellitePathsSelector,
     satelliteTransmittersSelector
 } from './state-selectors.jsx';
+import ControllerTabs from "../common/controller.jsx";
 
 
 // global leaflet map object
@@ -1140,7 +1141,8 @@ const TargetSatelliteLayout = React.memo(function () {
             <CameraView/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rotator-control">
-            <RotatorControl/>
+            {/*<RotatorControl/>*/}
+            <ControllerTabs waterfallSettingsComponentRef={null}/>
         </StyledIslandParentScrollbar>,
 
     ];

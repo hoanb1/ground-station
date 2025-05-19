@@ -223,7 +223,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>
+            {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>*/}
 
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid container direction="row" sx={{
@@ -305,39 +305,77 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                         </Select>
                     </FormControl>
                 </Grid>
-
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <Grid container direction="row" sx={{
-                        justifyContent: "space-between",
-                        alignItems: "stretch",
-                    }}>
-                        <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="body1">
-                                Frequency
-                            </Typography>
+                <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '145px', overflow: 'auto'}}>
+                    <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '2rem 0.5rem 0rem 0.5rem'}}>
+                        <Grid container direction="row" sx={{
+                            justifyContent: "space-between",
+                            alignItems: "stretch",
+                        }}>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="body2">
+                                    Frequency on Rig
+                                </Typography>
+                            </Grid>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="body2">
+                                    Doppler shift
+                                </Typography>
+                            </Grid>
                         </Grid>
-                        <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="body1" >
-                                Doppler shift
-                            </Typography>
+                        <Grid container direction="row" sx={{
+                            justifyContent: "space-between",
+                            alignItems: "stretch",
+                        }}>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="h7"
+                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                    {preciseHumanizeFrequency(rigData['frequency'])}
+                                </Typography>
+                            </Grid>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="h7"
+                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                    {preciseHumanizeFrequency(rigData['doppler_shift'])}
+                                </Typography>
+                            </Grid>
                         </Grid>
                     </Grid>
-                    <Grid container direction="row" sx={{
-                        justifyContent: "space-between",
-                        alignItems: "stretch",
-                    }}>
-                        <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {preciseHumanizeFrequency(rigData['frequency'])}
-                            </Typography>
+                    <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                        <Grid container direction="row" sx={{
+                            justifyContent: "space-between",
+                            alignItems: "stretch",
+                        }}>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="body2">
+                                    Original frequency
+                                </Typography>
+                            </Grid>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="body2">
+                                    Observed frequency
+                                </Typography>
+                            </Grid>
                         </Grid>
-                        <Grid size="grow" style={{textAlign: 'center'}}>
-                            <Typography variant="h7" style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                {preciseHumanizeFrequency(rigData['doppler_shift'])}
-                            </Typography>
+                        <Grid container direction="row" sx={{
+                            justifyContent: "space-between",
+                            alignItems: "stretch",
+                        }}>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="h7"
+                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                    {preciseHumanizeFrequency(rigData['original_freq'])}
+                                </Typography>
+                            </Grid>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="h7"
+                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                    {preciseHumanizeFrequency(rigData['observed_freq'])}
+                                </Typography>
+                            </Grid>
                         </Grid>
                     </Grid>
                 </Grid>
+
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <Grid container direction="row" sx={{
@@ -348,7 +386,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                             <Button disabled={
                                 ["tracking", "connected", "stopped"].includes(trackingState['rig_state']) ||
                                 ["none", ""].includes(selectedRotator)
-                            } fullWidth={true} variant="contained" color="success" style={{height: '35px'}}
+                            } fullWidth={true} variant="contained" color="success" style={{height: '60px'}}
                                     onClick={() => {
                                         connectRig()
                                     }}>
@@ -358,7 +396,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
                             <Button disabled={["disconnected"].includes(trackingState['rig_state'])}
                                     fullWidth={true}
-                                    variant="contained" color="error" style={{height: '35px'}}
+                                    variant="contained" color="error" style={{height: '60px'}}
                                     onClick={() => {
                                         disconnectRig()
                                     }}>

@@ -36,6 +36,7 @@ import {useDispatch, useSelector} from "react-redux";
 import MainWaterfallDisplay from "./waterfall-view.jsx";
 import WaterfallSettings from "./waterfall-settings.jsx";
 import RigControl from "./rig-control.jsx";
+import ControllerTabs from '../common/controller.jsx';
 
 
 // A global callback for dashboard editing here
@@ -134,7 +135,8 @@ const WaterfallLayout = React.memo(function () {
             <WaterfallSettings ref={waterfallComponentSettingsRef}/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rig-control">
-            <RigControl waterfallSettingsComponentRef={waterfallComponentSettingsRef}/>
+            {/*<RigControl waterfallSettingsComponentRef={waterfallComponentSettingsRef}/>*/}
+            <ControllerTabs waterfallSettingsComponentRef={waterfallComponentSettingsRef}/>
         </StyledIslandParentScrollbar>,
     ];
 
