@@ -16,10 +16,10 @@
 import asyncio
 import crud
 from typing import Union
-from db import engine, AsyncSessionLocal
+from db import AsyncSessionLocal
 from models import SatelliteGroupType
-from sync import sync_state, synchronize_satellite_data
-from syncstate import sync_state_manager
+from tlesync.logic import synchronize_satellite_data
+from tlesync.state import sync_state_manager
 from auth import *
 from tracking.events import (fetch_next_events_for_satellite, fetch_next_events_for_group)
 from tracker import get_ui_tracker_state, get_satellite_position_from_tle, compiled_satellite_data

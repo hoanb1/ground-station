@@ -18,7 +18,7 @@ import crud
 import requests
 import json
 import asyncio
-from syncstate import SatelliteSyncState
+from .state import SatelliteSyncState
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 from models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType

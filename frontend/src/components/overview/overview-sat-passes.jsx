@@ -38,6 +38,7 @@ import {
     setPasses,
     setSelectedSatelliteId,
 } from './overview-sat-slice.jsx';
+import {Typography} from '@mui/material';
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
 import {Chip} from "@mui/material";
@@ -110,6 +111,10 @@ const DurationFormatter = React.memo(({params, value, event_start, event_end}) =
 
 const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, passesAreCached=false }) => {
     const apiRef = useGridApiRef();
+    const {
+        satelliteId,
+        satelliteData,
+    } = useSelector((state) => state.targetSatTrack);
 
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -233,16 +238,23 @@ const MemoizedStyledDataGrid = React.memo(({ passes, passesLoading, onRowClick, 
         return 'Unknown';
     };
 
-
     const columns = [
         {
             field: 'name',
             minWidth: 120,
             headerName: 'Name',
             flex: 2,
-            valueFormatter: (value) => {
-                return `${value}`;
-            }
+            renderCell: (params) => (
+                <div>
+                    {params.value}
+                    {satelliteData?.details?.name === params.value && (
+                        <Typography component="span" sx={{
+                            ml: 0.5,
+                            fontSize: '1.25rem',
+                        }}>⦿</Typography>
+                    )}
+                </div>
+            )
         },
         {
             field: 'peak_altitude',
