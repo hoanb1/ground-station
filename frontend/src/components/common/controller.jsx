@@ -33,11 +33,28 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(isTargetGridEditable || isWaterfallGridEditable, ["window-title-bar"])}>Hardware
                 control</TitleBar>
-            <Box sx={{width: '100%'}}>
+            <Box sx={{width: '100%', bgcolor: 'background.paper'}}>
                 <Box sx={{borderBottom: 1, borderColor: 'divider'}}>
-                    <Tabs value={activeTab} onChange={handleTabChange} variant="fullWidth">
-                        <Tab label="Rotator"/>
-                        <Tab label="Rig"/>
+                    <Tabs
+                        value={activeTab}
+                        onChange={handleTabChange}
+                        variant="fullWidth"
+                        textColor="primary"
+                        indicatorColor="primary"
+                        sx={{
+                            '& .MuiTab-root': {
+                                textTransform: 'none',
+                                fontSize: '1rem',
+                                fontWeight: 500,
+                                minHeight: 48,
+                                '&:hover': {
+                                    backgroundColor: 'action.hover',
+                                },
+                            },
+                        }}
+                    >
+                        <Tab label="Rotator" sx={{borderRadius: '4px 4px 0 0'}}/>
+                        <Tab label="Rig" sx={{borderRadius: '4px 4px 0 0'}}/>
                     </Tabs>
                 </Box>
                 <TabPanel value={activeTab} index={0}>
