@@ -1,6 +1,6 @@
-import React, { useEffect } from 'react';
-import { useDispatch, useSelector } from 'react-redux';
-import { fetchSatelliteData } from './overview-sat-slice.jsx';
+import React, {useEffect} from 'react';
+import {useDispatch, useSelector} from 'react-redux';
+import {fetchSatelliteData} from './overview-sat-slice.jsx';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ExploreIcon from '@mui/icons-material/Explore';
 import HeightIcon from '@mui/icons-material/Height';
@@ -30,13 +30,13 @@ import {
     getBandColor,
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
-import { useSocket } from "../common/socket.jsx";
-import { setTrackingStateInBackend } from "../target/target-sat-slice.jsx";
-import { enqueueSnackbar } from "notistack";
+import {useSocket} from "../common/socket.jsx";
+import {setTrackingStateInBackend} from "../target/target-sat-slice.jsx";
+import {enqueueSnackbar} from "notistack";
 
 const SatelliteInfoCard = () => {
     const dispatch = useDispatch();
-    const { socket } = useSocket();
+    const {socket} = useSocket();
     const {
         satelliteData,
         selectedSatelliteId,
@@ -55,7 +55,7 @@ const SatelliteInfoCard = () => {
 
     useEffect(() => {
         if (selectedSatelliteId) {
-            dispatch(fetchSatelliteData({ socket, noradId: selectedSatelliteId }));
+            dispatch(fetchSatelliteData({socket, noradId: selectedSatelliteId}));
         }
     }, [selectedSatelliteId, dispatch]);
 
@@ -70,7 +70,7 @@ const SatelliteInfoCard = () => {
             'transmitter_id': selectedTransmitter,
         };
 
-        dispatch(setTrackingStateInBackend({ socket, data: newTrackingState }))
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
                 // Success handling
@@ -111,27 +111,27 @@ const SatelliteInfoCard = () => {
     };
 
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: "#1a1a1a" }}>
+        <Box sx={{height: '100%', display: 'flex', flexDirection: 'column', bgcolor: "#1a1a1a"}}>
             {/* Header */}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
-                sx={{ bgcolor: "#0a0a0a", borderBottom: "1px solid #333" }}
+                sx={{bgcolor: "#0a0a0a", borderBottom: "1px solid #333"}}
             >
-                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
-                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                        <SatelliteIcon fontSize="small" sx={{ mr: 1, color: 'secondary.light' }}/>
-                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <SatelliteIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
+                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             Satellite Monitor
                         </Typography>
                     </Box>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                    <Typography variant="caption" sx={{color: 'text.secondary'}}>
                         ID: {satelliteData['details']['norad_id']}
                     </Typography>
                 </Box>
             </TitleBar>
 
             {/* Satellite Name */}
-            <Box sx={{ p: 1, borderBottom: "1px solid #333", display: 'flex', alignItems: 'center' }}>
+            <Box sx={{p: 1, borderBottom: "1px solid #333", display: 'flex', alignItems: 'center'}}>
                 <Box sx={{
                     width: 8,
                     height: 8,
@@ -139,19 +139,19 @@ const SatelliteInfoCard = () => {
                     mr: 1,
                     bgcolor: satelliteData['details']['status'] === 'active' ? 'success.main' : 'warning.main'
                 }}/>
-                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                <Typography variant="h6" sx={{fontWeight: 'bold'}}>
                     {satelliteData['details']['name'] || "- - - - - - - - - - -"}
                 </Typography>
-                <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                <Box sx={{flex: 1, display: 'flex', justifyContent: 'flex-end'}}>
                     {betterStatusValue(satelliteData['details']['status'])}
                 </Box>
             </Box>
 
             {/* Main Content */}
-            <Box sx={{ p: 1, flex: 1, overflow: 'auto' }}>
-                <Grid container spacing={2}>
+            <Box sx={{p: 1, flex: 1, overflow: 'auto'}}>
+                <Grid container spacing={1}>
                     {/* Position Data */}
-                    <Grid xs={12}>
+                    <Grid>
                         <Card sx={cardStyle}>
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 POSITION DATA
@@ -159,7 +159,7 @@ const SatelliteInfoCard = () => {
                             <Grid container spacing={2}>
                                 <Grid xs={6} sm={3}>
                                     <Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <ExploreIcon sx={iconStyle}/>
                                             <Typography variant="caption" color="text.secondary">LAT</Typography>
                                         </Box>
@@ -170,7 +170,7 @@ const SatelliteInfoCard = () => {
                                 </Grid>
                                 <Grid xs={6} sm={3}>
                                     <Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <ExploreIcon sx={iconStyle}/>
                                             <Typography variant="caption" color="text.secondary">LON</Typography>
                                         </Box>
@@ -181,7 +181,7 @@ const SatelliteInfoCard = () => {
                                 </Grid>
                                 <Grid xs={6} sm={3}>
                                     <Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <MyLocationIcon sx={iconStyle}/>
                                             <Typography variant="caption" color="text.secondary">AZIMUTH</Typography>
                                         </Box>
@@ -192,7 +192,7 @@ const SatelliteInfoCard = () => {
                                 </Grid>
                                 <Grid xs={6} sm={3}>
                                     <Box>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <HeightIcon sx={iconStyle}/>
                                             <Typography variant="caption" color="text.secondary">ELEVATION</Typography>
                                         </Box>
@@ -212,8 +212,8 @@ const SatelliteInfoCard = () => {
                                 <HeightIcon sx={iconStyle}/>
                                 ALTITUDE
                             </Typography>
-                            <Box sx={{ textAlign: 'center', mt: 1 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                            <Box sx={{textAlign: 'center', mt: 1}}>
+                                <Typography variant="h6" sx={{fontWeight: 'bold'}}>
                                     {humanizeAltitude(satelliteData['position']['alt'], 0)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">kilometers</Typography>
@@ -227,8 +227,8 @@ const SatelliteInfoCard = () => {
                                 <SpeedIcon sx={iconStyle}/>
                                 VELOCITY
                             </Typography>
-                            <Box sx={{ textAlign: 'center', mt: 1 }}>
-                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                            <Box sx={{textAlign: 'center', mt: 1}}>
+                                <Typography variant="h6" sx={{fontWeight: 'bold'}}>
                                     {humanizeVelocity(satelliteData['position']['vel'])}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary">km/s</Typography>
@@ -236,12 +236,12 @@ const SatelliteInfoCard = () => {
                         </Card>
                     </Grid>
 
-                    <Grid xs={12} md={4}>
+                    <Grid md={4}>
                         <Card sx={cardStyle}>
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 COUNTRIES
                             </Typography>
-                            <Box sx={{ textAlign: 'center', mt: 1 }}>
+                            <Box sx={{textAlign: 'center', mt: 1}}>
                                 <Typography variant="body1">
                                     {renderCountryFlagsCSV(satelliteData['details']['countries']) || 'Unknown'}
                                 </Typography>
@@ -254,7 +254,7 @@ const SatelliteInfoCard = () => {
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 BANDS
                             </Typography>
-                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                            <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1}}>
                                 {bands.map((band, index) => (
                                     <Chip
                                         key={index}
@@ -276,7 +276,7 @@ const SatelliteInfoCard = () => {
                                 <UpdateIcon sx={iconStyle}/>
                                 LAST UPDATE
                             </Typography>
-                            <Box sx={{ textAlign: 'center', mt: 1 }}>
+                            <Box sx={{textAlign: 'center', mt: 1}}>
                                 <Typography variant="body2">
                                     {betterDateTimes(satelliteData['details']['updated'])}
                                 </Typography>
@@ -284,19 +284,6 @@ const SatelliteInfoCard = () => {
                         </Card>
                     </Grid>
 
-                    {/* Tracking Button */}
-                    <Grid xs={12}>
-                        <Button
-                            disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
-                            variant="contained"
-                            color="primary"
-                            onClick={handleSetTrackingOnBackend}
-                            fullWidth
-                            sx={{ py: 1 }}
-                        >
-                            {trackingSatelliteId === selectedSatelliteId ? "TRACKING NOW" : "START TRACKING"}
-                        </Button>
-                    </Grid>
                 </Grid>
             </Box>
 
@@ -304,23 +291,40 @@ const SatelliteInfoCard = () => {
             <Box sx={{
                 p: 1,
                 display: 'flex',
-                justifyContent: 'space-between',
-                alignItems: 'center',
+                flexDirection: 'column',
+                gap: 1,
                 borderTop: "1px solid #333",
                 bgcolor: "#0a0a0a"
             }}>
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <RocketLaunchIcon sx={{ fontSize: 14, mr: 0.5, color: 'secondary.main' }}/>
-                    <Typography variant="caption" sx={{ color: 'secondary.main' }}>
-                        NORAD: {satelliteData['details']['norad_id']}
-                    </Typography>
-                </Box>
+                <Button
+                    disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
+                    variant="contained"
+                    color="primary"
+                    onClick={handleSetTrackingOnBackend}
+                    fullWidth
+                    sx={{py: 1}}
+                >
+                    {trackingSatelliteId === selectedSatelliteId ? "TRACKING NOW" : "START TRACKING"}
+                </Button>
 
-                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                    <UpdateIcon sx={{ fontSize: 12, mr: 0.5, color: 'text.secondary' }}/>
-                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
-                        {humanizeDate(satelliteData['details']['updated'])}
-                    </Typography>
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                }}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <RocketLaunchIcon sx={{fontSize: 14, mr: 0.5, color: 'secondary.main'}}/>
+                        <Typography variant="caption" sx={{color: 'secondary.main'}}>
+                            NORAD: {satelliteData['details']['norad_id']}
+                        </Typography>
+                    </Box>
+
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <UpdateIcon sx={{fontSize: 12, mr: 0.5, color: 'text.secondary'}}/>
+                        <Typography variant="caption" sx={{color: 'text.secondary'}}>
+                            {humanizeDate(satelliteData['details']['updated'])}
+                        </Typography>
+                    </Box>
                 </Box>
             </Box>
         </Box>

@@ -974,7 +974,7 @@ const TargetSatelliteLayout = React.memo(function () {
         if (coverageRef.current) {
             // Fit the map to the polygon's bounds
             MapObject.fitBounds(coverageRef.current.getBounds(), {
-                    padding: [30, 15],
+                    padding: [15, 15],
                 }
             );
         }
