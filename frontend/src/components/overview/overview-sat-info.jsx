@@ -1,26 +1,6 @@
-/**
- * @license
- * Copyright (c) 2024 Efstratios Goudelis
- *
- * This program is free software: you can redistribute it and/or modify
- * it under the terms of the GNU General Public License as published by
- * the Free Software Foundation, either version 3 of the License, or
- * (at your option) any later version.
- *
- * This program is distributed in the hope that it will be useful,
- * but WITHOUT ANY WARRANTY; without even the implied warranty of
- * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
- * GNU General Public License for more details.
- *
- * You should have received a copy of the GNU General Public License
- * along with this program. If not, see <https://www.gnu.org/licenses/>.
- *
- */
-
-
-import React, {useEffect} from 'react';
-import {useDispatch, useSelector} from 'react-redux';
-import {fetchSatelliteData} from './overview-sat-slice.jsx';
+import React, { useEffect } from 'react';
+import { useDispatch, useSelector } from 'react-redux';
+import { fetchSatelliteData } from './overview-sat-slice.jsx';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ExploreIcon from '@mui/icons-material/Explore';
 import HeightIcon from '@mui/icons-material/Height';
@@ -28,35 +8,35 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import UpdateIcon from '@mui/icons-material/Update';
 import SatelliteIcon from '@mui/icons-material/Satellite';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
-import {alpha} from '@mui/material/styles';
 import {
     Box,
     Typography,
-    CircularProgress,
     Card,
-    CardContent,
-    Paper,
-    Chip, Button
+    Chip,
+    Button
 } from '@mui/material';
 import {
     betterDateTimes,
-    betterStatusValue, getClassNamesBasedOnGridEditing,
-    humanizeAltitude, humanizeDate,
+    betterStatusValue,
+    getClassNamesBasedOnGridEditing,
+    humanizeAltitude,
+    humanizeDate,
     humanizeLatitude,
     humanizeLongitude,
-    humanizeVelocity, renderCountryFlagsCSV,
+    humanizeVelocity,
+    renderCountryFlagsCSV,
     TitleBar,
     getFrequencyBand,
     getBandColor,
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
-import {useSocket} from "../common/socket.jsx";
-import {setTrackingStateInBackend} from "../target/target-sat-slice.jsx";
-import {enqueueSnackbar} from "notistack";
+import { useSocket } from "../common/socket.jsx";
+import { setTrackingStateInBackend } from "../target/target-sat-slice.jsx";
+import { enqueueSnackbar } from "notistack";
 
 const SatelliteInfoCard = () => {
     const dispatch = useDispatch();
-    const {socket} = useSocket();
+    const { socket } = useSocket();
     const {
         satelliteData,
         selectedSatelliteId,
@@ -75,7 +55,7 @@ const SatelliteInfoCard = () => {
 
     useEffect(() => {
         if (selectedSatelliteId) {
-            dispatch(fetchSatelliteData({socket, noradId: selectedSatelliteId}));
+            dispatch(fetchSatelliteData({ socket, noradId: selectedSatelliteId }));
         }
     }, [selectedSatelliteId, dispatch]);
 
@@ -90,10 +70,10 @@ const SatelliteInfoCard = () => {
             'transmitter_id': selectedTransmitter,
         };
 
-        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
+        dispatch(setTrackingStateInBackend({ socket, data: newTrackingState }))
             .unwrap()
             .then((response) => {
-
+                // Success handling
             })
             .catch((error) => {
                 enqueueSnackbar(`Failed to start tracking with the rotator: ${error.message}`, {
@@ -106,556 +86,244 @@ const SatelliteInfoCard = () => {
         .map(t => getFrequencyBand(t['downlink_low']))
         .filter((v, i, a) => a.indexOf(v) === i);
 
+    // Common styles
+    const cardStyle = {
+        p: 0.75,
+        bgcolor: "#121212",
+        border: "1px solid #333",
+        borderRadius: 1,
+        height: '100%'
+    };
+
+    const cardHeaderStyle = {
+        fontSize: '0.7rem',
+        fontWeight: 'bold',
+        color: 'secondary.main',
+        mb: 1,
+        display: 'flex',
+        alignItems: 'center'
+    };
+
+    const iconStyle = {
+        fontSize: 16,
+        mr: 0.5,
+        color: 'secondary.main'
+    };
+
     return (
-        <>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', bgcolor: "#1a1a1a" }}>
+            {/* Header */}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
-                sx={{
-                    background: "#071318",
-                    borderBottom: "1px solid #4b4b4b"
-                }}
+                sx={{ bgcolor: "#0a0a0a", borderBottom: "1px solid #333" }}
             >
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'space-between',
-                    width: '100%',
-                }}>
-                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                        <SatelliteIcon fontSize="small" sx={{mr: 1, color: (theme) => theme.palette.secondary.light}}/>
-                        <Typography variant="subtitle2" sx={{fontWeight: 'bold', letterSpacing: 0.5}}>
-                            Satellite monitor
+                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                        <SatelliteIcon fontSize="small" sx={{ mr: 1, color: 'secondary.light' }}/>
+                        <Typography variant="subtitle2" sx={{ fontWeight: 'bold' }}>
+                            Satellite Monitor
                         </Typography>
                     </Box>
-                    <Typography variant="caption"
-                                sx={{color: (theme) => alpha(theme.palette.common.white, 0.7), mr: 1}}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
                         ID: {satelliteData['details']['norad_id']}
                     </Typography>
                 </Box>
             </TitleBar>
 
-            <Box sx={{
-                p: 0,
-                height: '100%',
-                display: 'flex',
-                flexDirection: 'column',
-                bgcolor: "#1e1e1e",
-                color: (theme) => theme.palette.text.primary,
-                backgroundImage: (theme) => `radial-gradient(${alpha(theme.palette.secondary.main, 0.1)} 1px, transparent 1px)`,
-                backgroundSize: '20px 20px',
-                overflow: 'hidden'
-            }}>
-                {/* Satellite Name Header */}
-                <Box sx={{p: 2, pb: 1, borderBottom: "1px solid #4b4b4b", display: 'flex', alignItems: 'center'}}>
-                    <Typography variant="h6" sx={{
-                        fontWeight: 'bold',
-                        color: (theme) => theme.palette.text.primary,
-                        textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.5)}`,
-                        display: 'flex',
-                        alignItems: 'center',
-                        '&::before': {
-                            content: '""',
-                            display: 'inline-block',
-                            width: 10,
-                            height: 10,
-                            borderRadius: '50%',
-                            bgcolor: (theme) => satelliteData['details']['status'] === 'active'
-                                ? theme.palette.success.main
-                                : theme.palette.warning.main,
-                            mr: 1.5,
-                            boxShadow: (theme) => satelliteData['details']['status'] === 'active'
-                                ? `0 0 8px ${theme.palette.success.main}`
-                                : `0 0 8px ${theme.palette.warning.main}`
-                        }
-                    }}>
-                        {satelliteData['details']['name'] || "- - - - - - - - - - -"}
-                    </Typography>
-                    <div style={{flex: 1, display: 'flex', justifyContent: 'flex-end'}}>
-                        {betterStatusValue(satelliteData['details']['status'])}
-                    </div>
-                </Box>
-
-                {/* Main Telemetry Data Section */}
-                <Box sx={{p: 1, flex: 1}}>
-                    <Grid container spacing={1}>
-                        {/* Position Data */}
-                        <Grid>
-                            <Box sx={{
-                                p: 1.5,
-                                borderRadius: 1,
-                                background: "#121212",
-                                border: "1px solid #4b4b4b",
-                                position: 'relative',
-                                boxShadow: (theme) => `0 4px 12px ${alpha(theme.palette.common.black, 0.3)}`,
-                            }}>
-                                <Box sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: 3,
-                                    background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                }}/>
-                                <Typography variant="overline" sx={{
-                                    color: (theme) => theme.palette.secondary.main,
-                                    display: 'block',
-                                    fontSize: '0.65rem',
-                                    mb: 0.5,
-                                    letterSpacing: 1
-                                }}>
-                                    POSITION DATA
-                                </Typography>
-
-                                <Grid container spacing={1.5}>
-                                    <Grid>
-                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.25}}>
-                                            <ExploreIcon sx={{
-                                                color: (theme) => theme.palette.secondary.main,
-                                                fontSize: 16,
-                                                mr: 0.5
-                                            }}/>
-                                            <Typography variant="caption"
-                                                        sx={{color: (theme) => alpha(theme.palette.text.primary, 0.7)}}>
-                                                LAT
-                                            </Typography>
-                                        </Box>
-                                        <Typography variant="body1" sx={{fontWeight: 'medium', ml: 2.5}}>
-                                            {humanizeLatitude(satelliteData['position']['lat'])}
-                                        </Typography>
-                                    </Grid>
-
-                                    <Grid>
-                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.25}}>
-                                            <ExploreIcon sx={{
-                                                color: (theme) => theme.palette.secondary.main,
-                                                fontSize: 16,
-                                                mr: 0.5
-                                            }}/>
-                                            <Typography variant="caption"
-                                                        sx={{color: (theme) => alpha(theme.palette.text.primary, 0.7)}}>
-                                                LON
-                                            </Typography>
-                                        </Box>
-                                        <Typography variant="body1" sx={{fontWeight: 'medium', ml: 2.5}}>
-                                            {humanizeLongitude(satelliteData['position']['lon'])}
-                                        </Typography>
-                                    </Grid>
-
-                                    <Grid>
-                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.25}}>
-                                            <MyLocationIcon sx={{
-                                                color: (theme) => theme.palette.secondary.main,
-                                                fontSize: 16,
-                                                mr: 0.5
-                                            }}/>
-                                            <Typography variant="caption"
-                                                        sx={{color: (theme) => alpha(theme.palette.text.primary, 0.7)}}>
-                                                AZIMUTH
-                                            </Typography>
-                                        </Box>
-                                        <Typography variant="body1" sx={{fontWeight: 'medium', ml: 2.5}}>
-                                            {satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
-                                        </Typography>
-                                    </Grid>
-
-                                    <Grid>
-                                        <Box sx={{display: 'flex', alignItems: 'center', mb: 0.25}}>
-                                            <HeightIcon sx={{
-                                                color: (theme) => theme.palette.secondary.main,
-                                                fontSize: 16,
-                                                mr: 0.5
-                                            }}/>
-                                            <Typography variant="caption"
-                                                        sx={{color: (theme) => alpha(theme.palette.text.primary, 0.7)}}>
-                                                ELEVATION
-                                            </Typography>
-                                        </Box>
-                                        <Typography variant="body1" sx={{fontWeight: 'medium', ml: 2.5}}>
-                                            {satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
-                                        </Typography>
-                                    </Grid>
-                                </Grid>
-                            </Box>
-                        </Grid>
-
-                        {/* Altitude and Velocity */}
-                        <Grid container spacing={1}>
-                            <Grid xs={6}>
-                                <Box sx={{
-                                    height: '100%',
-                                    borderRadius: 1,
-                                    background: "#121212",
-                                    border: "1px solid #4b4b4b",
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    p: 1
-                                }}>
-                                    <Box sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 3,
-                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                    }}/>
-
-                                    <Typography variant="overline" sx={{
-                                        color: (theme) => theme.palette.secondary.main,
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '0.65rem',
-                                        letterSpacing: 1
-                                    }}>
-                                        <HeightIcon sx={{fontSize: 14, mr: 0.5}}/>
-                                        ALTITUDE
-                                    </Typography>
-
-                                    <Box sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flex: 1
-                                    }}>
-                                        <Typography variant="h5" sx={{
-                                            fontWeight: 'bold',
-                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
-                                        }}>
-                                            {humanizeAltitude(satelliteData['position']['alt'], 0)}
-                                        </Typography>
-                                        <Typography variant="caption"
-                                                    sx={{color: (theme) => alpha(theme.palette.text.primary, 0.6)}}>
-                                            kilometers
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Grid>
-
-                            <Grid xs={6}>
-                                <Box sx={{
-                                    height: '100%',
-                                    borderRadius: 1,
-                                    background: "#121212",
-                                    border: "1px solid #4b4b4b",
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    p: 1
-                                }}>
-                                    <Box sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 3,
-                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                    }}/>
-
-                                    <Typography variant="overline" sx={{
-                                        color: (theme) => theme.palette.secondary.main,
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '0.65rem',
-                                        letterSpacing: 1
-                                    }}>
-                                        COUNTRIES
-                                    </Typography>
-
-                                    <Box sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flex: 1
-                                    }}>
-                                        <Typography variant="h6" sx={{
-                                            fontWeight: 'bold',
-                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
-                                        }}>
-                                            {renderCountryFlagsCSV(satelliteData['details']['countries']) || 'Unknown'}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Grid>
-
-                            <Grid xs={6}>
-                                <Box sx={{
-                                    height: '100%',
-                                    borderRadius: 1,
-                                    background: "#121212",
-                                    border: "1px solid #4b4b4b",
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    p: 1
-                                }}>
-                                    <Box sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 3,
-                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                    }}/>
-
-                                    <Typography variant="overline" sx={{
-                                        color: (theme) => theme.palette.secondary.main,
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '0.65rem',
-                                        letterSpacing: 1
-                                    }}>
-                                        LAST UPDATE
-                                    </Typography>
-
-                                    <Box sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flex: 1
-                                    }}>
-                                        <Typography variant="body2" sx={{
-                                            fontWeight: 'medium',
-                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
-                                        }}>
-                                            {betterDateTimes(satelliteData['details']['updated'])}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Grid>
-
-                            <Grid xs={6}>
-                                <Box sx={{
-                                    height: '100%',
-                                    borderRadius: 1,
-                                    background: "#121212",
-                                    border: "1px solid #4b4b4b",
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    p: 1
-                                }}>
-                                    <Box sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 3,
-                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                    }}/>
-
-                                    <Typography variant="overline" sx={{
-                                        color: (theme) => theme.palette.secondary.main,
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '0.65rem',
-                                        letterSpacing: 1
-                                    }}>
-                                        BANDS
-                                    </Typography>
-
-                                    <Box sx={{
-                                        display: 'flex',
-                                        flexWrap: 'wrap',
-                                        gap: 0.5,
-                                        justifyContent: 'center',
-                                        alignItems: 'center',
-                                        flex: 1
-                                    }}>
-                                        {bands.map((band, index) => (
-                                            <Chip
-                                                key={index}
-                                                label={band}
-                                                size="small"
-                                                sx={{
-                                                    mt: '8px',
-                                                    height: '18px',
-                                                    fontSize: '0.65rem',
-                                                    fontWeight: 'bold',
-                                                    backgroundColor: getBandColor(band),
-                                                    color: '#ffffff',
-                                                    '&:hover': {
-                                                        filter: 'brightness(90%)',
-                                                    }
-                                                }}
-                                            />
-                                        ))}
-                                    </Box>
-                                </Box>
-                            </Grid>
-
-                            <Grid xs={6}>
-                                <Box sx={{
-                                    height: '100%',
-                                    borderRadius: 1,
-                                    background: "#121212",
-                                    border: "1px solid #4b4b4b",
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    p: 1.25
-                                }}>
-                                    <Box sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 3,
-                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                    }}/>
-
-                                    <Typography variant="overline" sx={{
-                                        color: (theme) => theme.palette.secondary.main,
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '0.65rem',
-                                        letterSpacing: 1
-                                    }}>
-                                        <SpeedIcon sx={{fontSize: 14, mr: 0.5}}/>
-                                        VELOCITY
-                                    </Typography>
-
-                                    <Box sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flex: 1
-                                    }}>
-                                        <Typography variant="body1" sx={{
-                                            fontWeight: 'bold',
-                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
-                                        }}>
-                                            {humanizeVelocity(satelliteData['position']['vel'])}
-                                        </Typography>
-                                        <Typography variant="caption"
-                                                    sx={{color: (theme) => alpha(theme.palette.text.primary, 0.6)}}>
-                                            km/s
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Grid>
-
-                            <Grid xs={6}>
-                                <Box sx={{
-                                    height: '100%',
-                                    borderRadius: 1,
-                                    background: "#121212",
-                                    border: "1px solid #4b4b4b",
-                                    overflow: 'hidden',
-                                    position: 'relative',
-                                    display: 'flex',
-                                    flexDirection: 'column',
-                                    p: 1.25
-                                }}>
-                                    <Box sx={{
-                                        position: 'absolute',
-                                        top: 0,
-                                        left: 0,
-                                        right: 0,
-                                        height: 3,
-                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                    }}/>
-
-                                    <Typography variant="overline" sx={{
-                                        color: (theme) => theme.palette.secondary.main,
-                                        mb: 1,
-                                        display: 'flex',
-                                        alignItems: 'center',
-                                        fontSize: '0.65rem',
-                                        letterSpacing: 1
-                                    }}>
-                                        <SpeedIcon sx={{fontSize: 14, mr: 0.5}}/>
-                                        TRXs
-                                    </Typography>
-
-                                    <Box sx={{
-                                        display: 'flex',
-                                        flexDirection: 'column',
-                                        alignItems: 'center',
-                                        justifyContent: 'center',
-                                        flex: 1
-                                    }}>
-                                        <Typography variant="h5" sx={{
-                                            fontWeight: 'bold',
-                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
-                                        }}>
-                                            {satelliteData['transmitters'].length}
-                                        </Typography>
-                                    </Box>
-                                </Box>
-                            </Grid>
-                            {/* Tracking Button */}
-                            <Grid>
-                                <Box sx={{
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    p: 1,
-                                    borderRadius: 1,
-                                    background: "#121212",
-                                    border: "1px solid #4b4b4b",
-                                }}>
-                                    <Button
-                                        disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
-                                        variant="contained" color="primary"
-                                        onClick={handleSetTrackingOnBackend} fullWidth={true} sx={{py: 0.75}}>
-                                        {trackingSatelliteId === selectedSatelliteId ? "TRACKING NOW" : "START TRACKING"}
-                                    </Button>
-                                </Box>
-                            </Grid>
-                        </Grid>
-                    </Grid>
-                </Box>
-
-                {/* Footer */}
+            {/* Satellite Name */}
+            <Box sx={{ p: 1, borderBottom: "1px solid #333", display: 'flex', alignItems: 'center' }}>
                 <Box sx={{
-                    bottom: 0,
-                    position: 'absolute',
-                    width: '100%',
-                    display: 'flex',
-                    justifyContent: 'space-between',
-                    alignItems: 'center',
-                    p: 1,
-                    borderTop: "1px solid #4b4b4b",
-                    background: "#121212",
-                    backdropFilter: 'blur(8px)'
-                }}>
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        px: 1,
-                        py: 0.25,
-                        borderRadius: 0.5,
-                        background: (theme) => alpha(theme.palette.secondary.main, 0.1),
-                    }}>
-                        <RocketLaunchIcon sx={{fontSize: 14, mr: 0.5, color: (theme) => theme.palette.secondary.main}}/>
-                        <Typography variant="caption" sx={{color: (theme) => theme.palette.secondary.main}}>
-                            NORAD: {satelliteData['details']['norad_id']}
-                        </Typography>
-                    </Box>
-
-                    <Box sx={{display: 'flex', alignItems: 'center'}}>
-                        <UpdateIcon
-                            sx={{fontSize: 12, mr: 0.5, color: (theme) => alpha(theme.palette.text.primary, 0.5)}}/>
-                        <Typography variant="caption" sx={{color: (theme) => alpha(theme.palette.text.primary, 0.5)}}>
-                            {humanizeDate(satelliteData['details']['updated'])}
-                        </Typography>
-                    </Box>
+                    width: 8,
+                    height: 8,
+                    borderRadius: '50%',
+                    mr: 1,
+                    bgcolor: satelliteData['details']['status'] === 'active' ? 'success.main' : 'warning.main'
+                }}/>
+                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                    {satelliteData['details']['name'] || "- - - - - - - - - - -"}
+                </Typography>
+                <Box sx={{ flex: 1, display: 'flex', justifyContent: 'flex-end' }}>
+                    {betterStatusValue(satelliteData['details']['status'])}
                 </Box>
             </Box>
-        </>
+
+            {/* Main Content */}
+            <Box sx={{ p: 1, flex: 1, overflow: 'auto' }}>
+                <Grid container spacing={2}>
+                    {/* Position Data */}
+                    <Grid xs={12}>
+                        <Card sx={cardStyle}>
+                            <Typography variant="overline" sx={cardHeaderStyle}>
+                                POSITION DATA
+                            </Typography>
+                            <Grid container spacing={2}>
+                                <Grid xs={6} sm={3}>
+                                    <Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <ExploreIcon sx={iconStyle}/>
+                                            <Typography variant="caption" color="text.secondary">LAT</Typography>
+                                        </Box>
+                                        <Typography variant="body2">
+                                            {humanizeLatitude(satelliteData['position']['lat'])}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                                <Grid xs={6} sm={3}>
+                                    <Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <ExploreIcon sx={iconStyle}/>
+                                            <Typography variant="caption" color="text.secondary">LON</Typography>
+                                        </Box>
+                                        <Typography variant="body2">
+                                            {humanizeLongitude(satelliteData['position']['lon'])}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                                <Grid xs={6} sm={3}>
+                                    <Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <MyLocationIcon sx={iconStyle}/>
+                                            <Typography variant="caption" color="text.secondary">AZIMUTH</Typography>
+                                        </Box>
+                                        <Typography variant="body2">
+                                            {satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                                <Grid xs={6} sm={3}>
+                                    <Box>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                            <HeightIcon sx={iconStyle}/>
+                                            <Typography variant="caption" color="text.secondary">ELEVATION</Typography>
+                                        </Box>
+                                        <Typography variant="body2">
+                                            {satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
+                                        </Typography>
+                                    </Box>
+                                </Grid>
+                            </Grid>
+                        </Card>
+                    </Grid>
+
+                    {/* Status Info Cards */}
+                    <Grid xs={6} md={4}>
+                        <Card sx={cardStyle}>
+                            <Typography variant="overline" sx={cardHeaderStyle}>
+                                <HeightIcon sx={iconStyle}/>
+                                ALTITUDE
+                            </Typography>
+                            <Box sx={{ textAlign: 'center', mt: 1 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                    {humanizeAltitude(satelliteData['position']['alt'], 0)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">kilometers</Typography>
+                            </Box>
+                        </Card>
+                    </Grid>
+
+                    <Grid xs={6} md={4}>
+                        <Card sx={cardStyle}>
+                            <Typography variant="overline" sx={cardHeaderStyle}>
+                                <SpeedIcon sx={iconStyle}/>
+                                VELOCITY
+                            </Typography>
+                            <Box sx={{ textAlign: 'center', mt: 1 }}>
+                                <Typography variant="h6" sx={{ fontWeight: 'bold' }}>
+                                    {humanizeVelocity(satelliteData['position']['vel'])}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary">km/s</Typography>
+                            </Box>
+                        </Card>
+                    </Grid>
+
+                    <Grid xs={12} md={4}>
+                        <Card sx={cardStyle}>
+                            <Typography variant="overline" sx={cardHeaderStyle}>
+                                COUNTRIES
+                            </Typography>
+                            <Box sx={{ textAlign: 'center', mt: 1 }}>
+                                <Typography variant="body1">
+                                    {renderCountryFlagsCSV(satelliteData['details']['countries']) || 'Unknown'}
+                                </Typography>
+                            </Box>
+                        </Card>
+                    </Grid>
+
+                    <Grid xs={6}>
+                        <Card sx={cardStyle}>
+                            <Typography variant="overline" sx={cardHeaderStyle}>
+                                BANDS
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1 }}>
+                                {bands.map((band, index) => (
+                                    <Chip
+                                        key={index}
+                                        label={band}
+                                        size="small"
+                                        sx={{
+                                            backgroundColor: getBandColor(band),
+                                            color: '#ffffff',
+                                        }}
+                                    />
+                                ))}
+                            </Box>
+                        </Card>
+                    </Grid>
+
+                    <Grid xs={6}>
+                        <Card sx={cardStyle}>
+                            <Typography variant="overline" sx={cardHeaderStyle}>
+                                <UpdateIcon sx={iconStyle}/>
+                                LAST UPDATE
+                            </Typography>
+                            <Box sx={{ textAlign: 'center', mt: 1 }}>
+                                <Typography variant="body2">
+                                    {betterDateTimes(satelliteData['details']['updated'])}
+                                </Typography>
+                            </Box>
+                        </Card>
+                    </Grid>
+
+                    {/* Tracking Button */}
+                    <Grid xs={12}>
+                        <Button
+                            disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
+                            variant="contained"
+                            color="primary"
+                            onClick={handleSetTrackingOnBackend}
+                            fullWidth
+                            sx={{ py: 1 }}
+                        >
+                            {trackingSatelliteId === selectedSatelliteId ? "TRACKING NOW" : "START TRACKING"}
+                        </Button>
+                    </Grid>
+                </Grid>
+            </Box>
+
+            {/* Footer */}
+            <Box sx={{
+                p: 1,
+                display: 'flex',
+                justifyContent: 'space-between',
+                alignItems: 'center',
+                borderTop: "1px solid #333",
+                bgcolor: "#0a0a0a"
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <RocketLaunchIcon sx={{ fontSize: 14, mr: 0.5, color: 'secondary.main' }}/>
+                    <Typography variant="caption" sx={{ color: 'secondary.main' }}>
+                        NORAD: {satelliteData['details']['norad_id']}
+                    </Typography>
+                </Box>
+
+                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                    <UpdateIcon sx={{ fontSize: 12, mr: 0.5, color: 'text.secondary' }}/>
+                    <Typography variant="caption" sx={{ color: 'text.secondary' }}>
+                        {humanizeDate(satelliteData['details']['updated'])}
+                    </Typography>
+                </Box>
+            </Box>
+        </Box>
     );
 };
 
