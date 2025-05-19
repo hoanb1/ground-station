@@ -18,7 +18,6 @@
  */
 
 
-
 import React, {useEffect} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchSatelliteData} from './overview-sat-slice.jsx';
@@ -45,8 +44,10 @@ import {
     humanizeAltitude, humanizeDate,
     humanizeLatitude,
     humanizeLongitude,
-    humanizeVelocity,
-    TitleBar
+    humanizeVelocity, renderCountryFlagsCSV,
+    TitleBar,
+    getFrequencyBand,
+    getBandColor,
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {useSocket} from "../common/socket.jsx";
@@ -100,6 +101,10 @@ const SatelliteInfoCard = () => {
                 });
             });
     };
+
+    const bands = satelliteData['transmitters']
+        .map(t => getFrequencyBand(t['downlink_low']))
+        .filter((v, i, a) => a.indexOf(v) === i);
 
     return (
         <>
@@ -274,182 +279,342 @@ const SatelliteInfoCard = () => {
                         </Grid>
 
                         {/* Altitude and Velocity */}
-                        <Grid>
-                            <Box sx={{
-                                height: '100%',
-                                borderRadius: 1,
-                                background: "#121212",
-                                border: "1px solid #4b4b4b",
-                                overflow: 'hidden',
-                                position: 'relative',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                p: 1
-                            }}>
+                        <Grid container spacing={1}>
+                            <Grid xs={6}>
                                 <Box sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: 3,
-                                    background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                }}/>
-
-                                <Typography variant="overline" sx={{
-                                    color: (theme) => theme.palette.secondary.main,
-                                    mb: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    fontSize: '0.65rem',
-                                    letterSpacing: 1
-                                }}>
-                                    <HeightIcon sx={{fontSize: 14, mr: 0.5}}/>
-                                    ALTITUDE
-                                </Typography>
-
-                                <Box sx={{
+                                    height: '100%',
+                                    borderRadius: 1,
+                                    background: "#121212",
+                                    border: "1px solid #4b4b4b",
+                                    overflow: 'hidden',
+                                    position: 'relative',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flex: 1
+                                    p: 1
                                 }}>
-                                    <Typography variant="h5" sx={{
-                                        fontWeight: 'bold',
-                                        textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 3,
+                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                    }}/>
+
+                                    <Typography variant="overline" sx={{
+                                        color: (theme) => theme.palette.secondary.main,
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.65rem',
+                                        letterSpacing: 1
                                     }}>
-                                        {humanizeAltitude(satelliteData['position']['alt'], 0)}
+                                        <HeightIcon sx={{fontSize: 14, mr: 0.5}}/>
+                                        ALTITUDE
                                     </Typography>
-                                    <Typography variant="caption"
-                                                sx={{color: (theme) => alpha(theme.palette.text.primary, 0.6)}}>
-                                        kilometers
-                                    </Typography>
+
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flex: 1
+                                    }}>
+                                        <Typography variant="h5" sx={{
+                                            fontWeight: 'bold',
+                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                        }}>
+                                            {humanizeAltitude(satelliteData['position']['alt'], 0)}
+                                        </Typography>
+                                        <Typography variant="caption"
+                                                    sx={{color: (theme) => alpha(theme.palette.text.primary, 0.6)}}>
+                                            kilometers
+                                        </Typography>
+                                    </Box>
                                 </Box>
-                            </Box>
-                        </Grid>
+                            </Grid>
 
-                        <Grid>
-                            <Box sx={{
-                                height: '100%',
-                                borderRadius: 1,
-                                background: "#121212",
-                                border: "1px solid #4b4b4b",
-                                overflow: 'hidden',
-                                position: 'relative',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                p: 1.25
-                            }}>
+                            <Grid xs={6}>
                                 <Box sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: 3,
-                                    background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                }}/>
-
-                                <Typography variant="overline" sx={{
-                                    color: (theme) => theme.palette.secondary.main,
-                                    mb: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    fontSize: '0.65rem',
-                                    letterSpacing: 1
-                                }}>
-                                    <SpeedIcon sx={{fontSize: 14, mr: 0.5}}/>
-                                    VELOCITY
-                                </Typography>
-
-                                <Box sx={{
+                                    height: '100%',
+                                    borderRadius: 1,
+                                    background: "#121212",
+                                    border: "1px solid #4b4b4b",
+                                    overflow: 'hidden',
+                                    position: 'relative',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flex: 1
+                                    p: 1
                                 }}>
-                                    <Typography variant="h5" sx={{
-                                        fontWeight: 'bold',
-                                        textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 3,
+                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                    }}/>
+
+                                    <Typography variant="overline" sx={{
+                                        color: (theme) => theme.palette.secondary.main,
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.65rem',
+                                        letterSpacing: 1
                                     }}>
-                                        {humanizeVelocity(satelliteData['position']['vel'])}
+                                        COUNTRIES
                                     </Typography>
-                                    <Typography variant="caption"
-                                                sx={{color: (theme) => alpha(theme.palette.text.primary, 0.6)}}>
-                                        km/s
-                                    </Typography>
+
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flex: 1
+                                    }}>
+                                        <Typography variant="h6" sx={{
+                                            fontWeight: 'bold',
+                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                        }}>
+                                            {renderCountryFlagsCSV(satelliteData['details']['countries']) || 'Unknown'}
+                                        </Typography>
+                                    </Box>
                                 </Box>
-                            </Box>
-                        </Grid>
+                            </Grid>
 
-                        <Grid>
-                            <Box sx={{
-                                height: '100%',
-                                borderRadius: 1,
-                                background: "#121212",
-                                border: "1px solid #4b4b4b",
-                                overflow: 'hidden',
-                                position: 'relative',
-                                display: 'flex',
-                                flexDirection: 'column',
-                                p: 1.25
-                            }}>
+                            <Grid xs={6}>
                                 <Box sx={{
-                                    position: 'absolute',
-                                    top: 0,
-                                    left: 0,
-                                    right: 0,
-                                    height: 3,
-                                    background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
-                                }}/>
-
-                                <Typography variant="overline" sx={{
-                                    color: (theme) => theme.palette.secondary.main,
-                                    mb: 1,
-                                    display: 'flex',
-                                    alignItems: 'center',
-                                    fontSize: '0.65rem',
-                                    letterSpacing: 1
-                                }}>
-                                    <SpeedIcon sx={{fontSize: 14, mr: 0.5}}/>
-                                    TRXs
-                                </Typography>
-
-                                <Box sx={{
+                                    height: '100%',
+                                    borderRadius: 1,
+                                    background: "#121212",
+                                    border: "1px solid #4b4b4b",
+                                    overflow: 'hidden',
+                                    position: 'relative',
                                     display: 'flex',
                                     flexDirection: 'column',
-                                    alignItems: 'center',
-                                    justifyContent: 'center',
-                                    flex: 1
+                                    p: 1
                                 }}>
-                                    <Typography variant="h5" sx={{
-                                        fontWeight: 'bold',
-                                        textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 3,
+                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                    }}/>
+
+                                    <Typography variant="overline" sx={{
+                                        color: (theme) => theme.palette.secondary.main,
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.65rem',
+                                        letterSpacing: 1
                                     }}>
-                                        {satelliteData['transmitters'].length}
+                                        LAST UPDATE
                                     </Typography>
+
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flex: 1
+                                    }}>
+                                        <Typography variant="body2" sx={{
+                                            fontWeight: 'medium',
+                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                        }}>
+                                            {betterDateTimes(satelliteData['details']['updated'])}
+                                        </Typography>
+                                    </Box>
                                 </Box>
-                            </Box>
-                        </Grid>
+                            </Grid>
 
+                            <Grid xs={6}>
+                                <Box sx={{
+                                    height: '100%',
+                                    borderRadius: 1,
+                                    background: "#121212",
+                                    border: "1px solid #4b4b4b",
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    p: 1
+                                }}>
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 3,
+                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                    }}/>
 
-                        {/* Tracking Button */}
-                        <Grid>
-                            <Box sx={{
-                                display: 'flex',
-                                justifyContent: 'center',
-                                p: 1,
-                                borderRadius: 1,
-                                background: "#121212",
-                                border: "1px solid #4b4b4b",
-                                mt: 0.5
-                            }}>
-                                <Button disabled={!selectedSatelliteId || trackingSatelliteId===selectedSatelliteId}
+                                    <Typography variant="overline" sx={{
+                                        color: (theme) => theme.palette.secondary.main,
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.65rem',
+                                        letterSpacing: 1
+                                    }}>
+                                        BANDS
+                                    </Typography>
+
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexWrap: 'wrap',
+                                        gap: 0.5,
+                                        justifyContent: 'center',
+                                        alignItems: 'center',
+                                        flex: 1
+                                    }}>
+                                        {bands.map((band, index) => (
+                                            <Chip
+                                                key={index}
+                                                label={band}
+                                                size="small"
+                                                sx={{
+                                                    mt: '8px',
+                                                    height: '18px',
+                                                    fontSize: '0.65rem',
+                                                    fontWeight: 'bold',
+                                                    backgroundColor: getBandColor(band),
+                                                    color: '#ffffff',
+                                                    '&:hover': {
+                                                        filter: 'brightness(90%)',
+                                                    }
+                                                }}
+                                            />
+                                        ))}
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            <Grid xs={6}>
+                                <Box sx={{
+                                    height: '100%',
+                                    borderRadius: 1,
+                                    background: "#121212",
+                                    border: "1px solid #4b4b4b",
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    p: 1.25
+                                }}>
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 3,
+                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                    }}/>
+
+                                    <Typography variant="overline" sx={{
+                                        color: (theme) => theme.palette.secondary.main,
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.65rem',
+                                        letterSpacing: 1
+                                    }}>
+                                        <SpeedIcon sx={{fontSize: 14, mr: 0.5}}/>
+                                        VELOCITY
+                                    </Typography>
+
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flex: 1
+                                    }}>
+                                        <Typography variant="body1" sx={{
+                                            fontWeight: 'bold',
+                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                        }}>
+                                            {humanizeVelocity(satelliteData['position']['vel'])}
+                                        </Typography>
+                                        <Typography variant="caption"
+                                                    sx={{color: (theme) => alpha(theme.palette.text.primary, 0.6)}}>
+                                            km/s
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            <Grid xs={6}>
+                                <Box sx={{
+                                    height: '100%',
+                                    borderRadius: 1,
+                                    background: "#121212",
+                                    border: "1px solid #4b4b4b",
+                                    overflow: 'hidden',
+                                    position: 'relative',
+                                    display: 'flex',
+                                    flexDirection: 'column',
+                                    p: 1.25
+                                }}>
+                                    <Box sx={{
+                                        position: 'absolute',
+                                        top: 0,
+                                        left: 0,
+                                        right: 0,
+                                        height: 3,
+                                        background: (theme) => `linear-gradient(90deg, ${theme.palette.secondary.main}, ${theme.palette.secondary.dark})`
+                                    }}/>
+
+                                    <Typography variant="overline" sx={{
+                                        color: (theme) => theme.palette.secondary.main,
+                                        mb: 1,
+                                        display: 'flex',
+                                        alignItems: 'center',
+                                        fontSize: '0.65rem',
+                                        letterSpacing: 1
+                                    }}>
+                                        <SpeedIcon sx={{fontSize: 14, mr: 0.5}}/>
+                                        TRXs
+                                    </Typography>
+
+                                    <Box sx={{
+                                        display: 'flex',
+                                        flexDirection: 'column',
+                                        alignItems: 'center',
+                                        justifyContent: 'center',
+                                        flex: 1
+                                    }}>
+                                        <Typography variant="h5" sx={{
+                                            fontWeight: 'bold',
+                                            textShadow: (theme) => `0 0 10px ${alpha(theme.palette.primary.main, 0.3)}`
+                                        }}>
+                                            {satelliteData['transmitters'].length}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+                            {/* Tracking Button */}
+                            <Grid>
+                                <Box sx={{
+                                    display: 'flex',
+                                    justifyContent: 'center',
+                                    p: 1,
+                                    borderRadius: 1,
+                                    background: "#121212",
+                                    border: "1px solid #4b4b4b",
+                                }}>
+                                    <Button
+                                        disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
                                         variant="contained" color="primary"
                                         onClick={handleSetTrackingOnBackend} fullWidth={true} sx={{py: 0.75}}>
-                                    {trackingSatelliteId===selectedSatelliteId? "TRACKING NOW": "START TRACKING"}
-                                </Button>
-                            </Box>
+                                        {trackingSatelliteId === selectedSatelliteId ? "TRACKING NOW" : "START TRACKING"}
+                                    </Button>
+                                </Box>
+                            </Grid>
                         </Grid>
                     </Grid>
                 </Box>
