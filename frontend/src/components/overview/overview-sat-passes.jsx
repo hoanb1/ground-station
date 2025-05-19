@@ -163,6 +163,19 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
             color: theme.palette.success.main,
             fontWeight: 'bold',
             textDecoration: 'underline',
+        },
+        '& .passes-cell-active': {
+            ...getBackgroundColor(theme.palette.secondary.dark, theme, 0.7),
+            fontWeight: 'bold',
+            '&:hover': {
+                ...getBackgroundColor(theme.palette.secondary.main, theme, 0.6),
+            },
+            '&.Mui-selected': {
+                ...getBackgroundColor(theme.palette.secondary.main, theme, 0.5),
+                '&:hover': {
+                    ...getBackgroundColor(theme.palette.secondary.main, theme, 0.4),
+                },
+            },
         }
     }));
 
@@ -203,7 +216,7 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                     {targetSatTrack.satelliteData['details']['name'] === params.value && (
                         <Typography component="span" sx={{
                             ml: 0.5,
-                            fontSize: '1.25rem',
+                            fontSize: '1rem',
                         }}>⦿</Typography>
                     )}
                 </>;
@@ -386,7 +399,10 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
             loading={passesLoading}
             getRowClassName={(param) => {
                 if (param.row) {
-                    if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+                    const targetSatTrack = targetSatTrackRef.current();
+                    if (targetSatTrack.satelliteData['details']['name'] === param.row['name']) {
+                        return "passes-cell-active pointer-cursor";
+                    } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
                         return "passes-cell-passed pointer-cursor";
                     } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
                         return "passes-cell-passing pointer-cursor";
