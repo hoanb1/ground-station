@@ -285,18 +285,20 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         'slewing': False,
         'outofbounds': False,
         'minelevation': False,
-        'stopped': False
+        'stopped': False,
+        'error': False
     }
     rig_data = {
         'connected': False,
         'tracking': False,
         'stopped': False,
+        'error': False,
         'frequency': 0,
         'observed_freq': 0, # hz
         'doppler_shift': 0, # hz
         'original_freq': 0, # hz
         'transmitter_id': 'none',
-        'device_type': ''
+        'device_type': '',
     }
 
     notified = {}
@@ -333,7 +335,8 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         Check if rotator_controller is set up, if not set it up.
         :return:
         """
-        nonlocal rotator_controller
+        nonlocal rotator_controller, current_rotator_state
+
         if current_rotator_id is not None and rotator_controller is None:
             # rotator_controller was selected, and a rotator_controller is not setup, set it up now
             try:
@@ -361,6 +364,15 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 rotator_data['tracking'] = False
                 rotator_data['slewing'] = False
                 rotator_data['stopped'] = False
+                rotator_data['error'] = True
+
+                # change the rotator_state in the tracking_state in the db
+                _new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                    'name': 'satellite-tracking',
+                    'value': {'rotator_state': 'disconnected'}
+                })
+
+                # report to the main thread
                 queue_out.put({
                     'event': 'satellite-tracking',
                     'data': {
@@ -368,8 +380,11 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                             {'name': "rotator_error", "error": str(e)}
                         ],
                         'rotator_data': rotator_data.copy(),
+                        'tracking_state': _new_tracking_state['data']['value'],
                     }
                 })
+
+                # dereference object
                 rotator_controller = None
 
 
@@ -503,6 +518,14 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 rig_data['connected'] = False
                 rig_data['tracking'] = False
                 rig_data['tuning'] = False
+                rig_data['error'] = True
+
+                # change the rig_state in the tracking_state in the db
+                _new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                    'name': 'satellite-tracking',
+                    'value': {'rig_state': 'disconnected'}
+                })
+
                 queue_out.put({
                     'event': 'satellite-tracking',
                     'data': {
@@ -510,8 +533,11 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                             {'name': "rig_error", "error": str(e)}
                         ],
                         'rig_data': rig_data.copy(),
+                        'tracking_state': _new_tracking_state['data']['value'],
                     }
                 })
+
+                # dereference object
                 rig_controller = None
 
 
@@ -591,6 +617,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     rig_id_state_tracker = StateTracker(initial_state="")
     rig_id_state_tracker.register_async_callback(handle_rig_id_change)
 
+    # main loop
     async with (AsyncSessionLocal() as dbsession):
         while True:
             # Check for any incoming commands from the main process
@@ -644,6 +671,42 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
 
                 # check rig id state change
                 await rig_id_state_tracker.update_state(current_rig_id)
+
+                # check if the rotator is actually supposed to be connected
+                if current_rotator_state == "connected" and rotator_controller is None:
+                    logger.warning(f"Tracking state said rotator must be connected but it is not")
+
+                    # change the rig_state in the tracking_state in the db
+                    new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                        'name': 'satellite-tracking',
+                        'value': {'rotator_state': 'disconnected'}
+                    })
+
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'rotator_data': rotator_data.copy(),
+                            'tracking_state': new_tracking_state['data']['value'],
+                        }
+                    })
+
+                # check if the rig is actually supposed to be connected
+                if current_rig_state == "connected" and rig_controller is None:
+                    logger.warning(f"Tracking state said rig must be connected but it is not")
+
+                    # change the rig_state in the tracking_state in the db
+                    new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                        'name': 'satellite-tracking',
+                        'value': {'rig_state': 'disconnected'}
+                    })
+
+                    queue_out.put({
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'rig_data': rig_data.copy(),
+                            'tracking_state': new_tracking_state['data']['value'],
+                        }
+                    })
 
                 # get rotator controller position
                 if rotator_controller:
@@ -816,9 +879,11 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 rotator_data['slewing'] = False
                 rotator_data['outofbounds'] = False
                 rotator_data['minelevation'] = False
+                rotator_data['error'] = False
 
                 # Clean up rig_data
                 rig_data['tuning'] = False
+                rig_data['error'] = False
 
                 # Check if stop_event is set before sleeping
                 if stop_event and stop_event.is_set():

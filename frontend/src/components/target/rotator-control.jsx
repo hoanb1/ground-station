@@ -36,6 +36,8 @@ import {
     setStarting,
     setTrackingStateInBackend,
     setActivePass,
+    setRotatorConnecting,
+    setRotatorDisconnecting,
 } from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
@@ -302,8 +304,8 @@ function GaugeAz({az, limits = [null, null], peakAz = null}) {
         >
             <GaugeReferenceArc/>
             {minAz !== null && maxAz !== null && <>
-                <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1}/>
-                <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1}/>
+                <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
+                <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
                 <CircleSlice
                     startAngle={minAz}
                     endAngle={maxAz}
@@ -325,6 +327,7 @@ function GaugeAz({az, limits = [null, null], peakAz = null}) {
         </GaugeContainer>
     );
 }
+
 
 function GaugeEl({el, maxElevation = null}) {
     const angle = rescaleToRange(maxElevation, 0, 90, 90, 0);
@@ -353,9 +356,9 @@ function GaugeEl({el, maxElevation = null}) {
         >
             <GaugeReferenceArc/>
             {maxElevation !== null && <>
-                <Pointer angle={angle} stroke={"#676767"} strokeWidth={1} opacity={1}/>
+                <Pointer angle={angle} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
                 <CircleSlice
-                    startAngle={90}
+                    startAngle={80}
                     endAngle={angle}
                     stroke={'#abff45'}
                     fill={'#abff45'}
@@ -372,7 +375,7 @@ function GaugeEl({el, maxElevation = null}) {
                 forElevation={true}
                 opacity={0.2}
             />
-            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={0.8} opacity={0.7}/>
+            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={0.8} opacity={0.2}/>
             <Pointer angle={0}/>
             <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
             <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
@@ -408,6 +411,8 @@ const RotatorControl = React.memo(({}) => {
         lastRotatorEvent,
         satellitePasses,
         activePass,
+        rotatorConnecting,
+        rotatorDisconnecting,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -548,6 +553,8 @@ const RotatorControl = React.memo(({}) => {
     }
 
     function connectRotator() {
+        //dispatch(setRotatorConnecting(true));
+
         const newTrackingState = {
             'norad_id': satelliteId,
             'group_id': groupId,
@@ -560,11 +567,16 @@ const RotatorControl = React.memo(({}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
+                console.info("Response connecting", response);
 
-            });
+            })
+        .catch((error) => {
+            dispatch(setRotatorConnecting(false));
+        });
     }
 
     function disconnectRotator() {
+        //dispatch(setRotatorDisconnecting(true));
         const newTrackingState = {
             'norad_id': satelliteId,
             'group_id': groupId,
@@ -577,8 +589,11 @@ const RotatorControl = React.memo(({}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
-
-            });
+                console.info("Response disconnecting", response);
+            })
+        .catch((error) => {
+            dispatch(setRotatorDisconnecting(false));
+        });
     }
 
     function handleRotatorChange(event) {
@@ -590,27 +605,6 @@ const RotatorControl = React.memo(({}) => {
             {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Rotator control</TitleBar>*/}
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
-                <Grid container direction="row" sx={{
-                    backgroundColor: theme => rotatorData['connected'] ? theme.palette.success.main : theme.palette.info.main,
-                    padding: '0.1rem',
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    width: '100%',
-                }}>
-                    <Typography variant="body1" sx={{
-                        color: theme => theme.palette.success.contrastText,
-                        width: '90%',
-                        textAlign: 'center',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}>
-                        {rotatorData['connected']
-                            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>
-                            : <ErrorOutlineIcon sx={{mr: 1}}/>}
-                        {getConnectionStatusofRotator()}
-                    </Typography>
-                </Grid>
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={["tracking", "connected", "stopped", "parked"].includes(trackingState['rotator_state'])}
@@ -636,6 +630,28 @@ const RotatorControl = React.memo(({}) => {
                         </Select>
                     </FormControl>
                 </Grid>
+
+                {/*<Grid container direction="row" sx={{*/}
+                {/*    backgroundColor: theme => rotatorData['connected'] ? theme.palette.success.main : theme.palette.info.main,*/}
+                {/*    padding: '0.1rem',*/}
+                {/*    justifyContent: "space-between",*/}
+                {/*    alignItems: "center",*/}
+                {/*    width: '100%',*/}
+                {/*}}>*/}
+                {/*    <Typography variant="body1" sx={{*/}
+                {/*        color: theme => theme.palette.success.contrastText,*/}
+                {/*        width: '90%',*/}
+                {/*        textAlign: 'center',*/}
+                {/*        display: 'inline-flex',*/}
+                {/*        alignItems: 'center',*/}
+                {/*        justifyContent: 'center',*/}
+                {/*    }}>*/}
+                {/*        {rotatorData['connected']*/}
+                {/*            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>*/}
+                {/*            : <ErrorOutlineIcon sx={{mr: 1}}/>}*/}
+                {/*        {getConnectionStatusofRotator()}*/}
+                {/*    </Typography>*/}
+                {/*</Grid>*/}
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
 
@@ -746,10 +762,12 @@ const RotatorControl = React.memo(({}) => {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>
-                            <Button disabled={
-                                ["tracking", "connected", "stopped", "parked"].includes(trackingState['rotator_state']) ||
+                            <Button
+                            loading={rotatorConnecting}
+                            disabled={
+                                rotatorData['connected'] ||
                                 ["none", ""].includes(selectedRotator)
-                            } fullWidth={true} variant="contained" color="success" style={{height: '50px'}}
+                            } fullWidth={true} variant="contained" color="success" style={{height: '40px'}}
                                     onClick={() => {
                                         connectRotator()
                                     }}>
@@ -757,18 +775,20 @@ const RotatorControl = React.memo(({}) => {
                             </Button>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1.5}}>
-                            <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
-                                    fullWidth={true}
-                                    variant="contained" color="error" style={{height: '50px'}}
-                                    onClick={() => {
-                                        disconnectRotator()
-                                    }}>
+                            <Button
+                                loading={rotatorDisconnecting}
+                                disabled={["disconnected"].includes(trackingState['rotator_state'])}
+                                fullWidth={true}
+                                variant="contained" color="error" style={{height: '40px'}}
+                                onClick={() => {
+                                     disconnectRotator()
+                                }}>
                                 DISCONNECT
                             </Button>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
                             <Button disabled={["disconnected"].includes(trackingState['rotator_state'])}
-                                    fullWidth={true} variant="contained" color="warning" style={{height: '50px'}}
+                                    fullWidth={true} variant="contained" color="warning" style={{height: '40px'}}
                                     onClick={() => {
                                         parkRotator()
                                     }}>

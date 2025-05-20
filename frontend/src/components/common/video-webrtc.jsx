@@ -59,12 +59,28 @@ const VideoWebRTCPlayer = ({ src, config = {} }) => {
     }, []);
 
     useEffect(() => {
-        connect();
+        connect().then(r => {
+            console.info("Connected to WebRTC stream", r);
+        });
 
         return () => {
             disconnect();
         };
     }, []);
+
+    useEffect(() => {
+        if (!videoRef.current || !src) return;
+
+        // Connect to the new source URL when src changes
+        connect().then(r => {
+            console.info("Connected to WebRTC stream", r);
+        });
+
+        // Clean up previous connection when src changes or component unmounts
+        return () => {
+            disconnect();
+        };
+    }, [src]);
 
     // Add event listeners for playing and pausing
     useEffect(() => {

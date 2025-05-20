@@ -188,6 +188,8 @@ export const fetchSatellite = createAsyncThunk(
 const targetSatTrackSlice = createSlice({
     name: 'targetSatTrack',
     initialState: {
+        rotatorConnecting: false,
+        rotatorDisconnecting: false,
         groupId: "",
         satelliteId: "",
         satGroups: [],
@@ -318,6 +320,14 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
+            // // If we are either connecting of disconnecting ignore any satellite, rotator or rig data updates
+            // if (state.rotatorConnecting || state.rotatorDisconnecting) {
+            //     state.rotatorConnecting = false;
+            //     state.rotatorDisconnecting = false;
+            //     console.info(`returning....`)
+            //     return;
+            // }
+
             if (action.payload['tracking_state']) {
                 state.trackingState = action.payload['tracking_state'];
             }
@@ -342,9 +352,29 @@ const targetSatTrackSlice = createSlice({
                 state.satelliteData.nextPass = action.payload['satellite_data']['nextPass'];
             }
 
+            // Detect state change for the rotator and do stuff there
             if (action.payload['rotator_data']) {
+                if (state.rotatorData['connected'] === true) {
+                    if (action.payload['rotator_data']['connected'] === false) {
+                        state.rotatorDisconnecting = false;
+                    }
+
+                } else if (state.rotatorData['connected'] === false) {
+                    if (action.payload['rotator_data']['connected'] === true) {
+                        state.rotatorConnecting = false;
+                    }
+                }
+
+                // In case of error connecting or disconnecting, reset ui flags
+                if (state.rotatorData['error']) {
+                    state.rotatorConnecting = false;
+                    state.rotatorDisconnecting = false;
+                }
+
+                // Update the whole rotatorData object
                 state.rotatorData = action.payload['rotator_data'];
 
+                // Update rotator events
                 if (action.payload['rotator_data']['outofbounds']) {
                     state.lastRotatorEvent = 'outofbounds';
                 } else if (action.payload['rotator_data']['minelevation']) {
@@ -518,6 +548,12 @@ const targetSatTrackSlice = createSlice({
         setActivePass: (state, action) => {
             state.activePass = action.payload;
         },
+        setRotatorConnecting: (state, action) => {
+            state.rotatorConnecting = action.payload;
+        },
+        setRotatorDisconnecting: (state, action) => {
+            state.rotatorDisconnecting = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -539,7 +575,6 @@ const targetSatTrackSlice = createSlice({
                 state.passesError = null;
             })
             .addCase(fetchNextPasses.fulfilled, (state, action) => {
-                // Cache the result for a few hours
                 state.passesLoading = false;
                 state.satellitePasses = action.payload;
                 state.passesError = null;
@@ -693,6 +728,8 @@ export const {
     setSettingsDialogOpen,
     setAutoDBRange,
     setActivePass,
+    setRotatorConnecting,
+    setRotatorDisconnecting,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

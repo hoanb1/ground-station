@@ -1,10 +1,26 @@
 import React, {useState} from 'react';
 import {Box, Tab, Tabs} from '@mui/material';
+import {styled} from "@mui/material/styles";
 import RotatorControl from '../target/rotator-control.jsx'
 import RigControl from '../waterfall/rig-control.jsx'
 import {getClassNamesBasedOnGridEditing, TitleBar} from "./common.jsx";
 import {useSelector} from "react-redux";
-import {styled} from "@mui/material/styles";
+
+
+const LedIcon = ({color = '#666666'}) => (
+    <Box
+        component="span"
+        sx={{
+            display: 'inline-block',
+            width: 10,
+            height: 10,
+            borderRadius: '50%',
+            backgroundColor: color,
+            marginRight: 1,
+            boxShadow: `0 0 5px ${color}`,
+        }}
+    />
+);
 
 
 function TabPanel({children, value, index}) {
@@ -16,9 +32,8 @@ function TabPanel({children, value, index}) {
 }
 
 export const HardwareTabs = styled(Tabs)({
-    '&.MuiTabs-root': {
-        //minHeight: 38,
-        //height: 38,
+    '& .MuiTabs-root': {
+        overflow: 'hidden'
     },
     '& .MuiTabs-indicator': {
         position: 'absolute',
@@ -28,19 +43,22 @@ export const HardwareTabs = styled(Tabs)({
         '&.Mui-disabled': {
             display: 'none',
         },
+        display: 'none',
     },
     '& .MuiTab-root': {
         textTransform: 'uppercase',
         fontSize: '0.9rem',
         fontWeight: 500,
-        //minHeight: 38,
-        backgroundColor: '#1c1c1c',
+        minHeight: 48,
+        backgroundColor: '#171717',
+        borderBottom: '1px solid #494949',
         '&:hover': {
             backgroundColor: 'action.hover',
         },
     },
-    '&.Mui-selected' : {
-        backgroundColor: '#2b2b2b',
+    '& .Mui-selected' : {
+        backgroundColor: '#1e1e1e',
+        borderBottom: 'none',
     },
     '& .MuiButtonBase-root' : {
         //minHeight: 38,
@@ -53,6 +71,8 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
     const [activeTab, setActiveTab] = useState(0);
     const {
         gridEditable: isTargetGridEditable,
+        rotatorData,
+        rigData,
     } = useSelector(state => state.targetSatTrack);
 
     const {
@@ -70,11 +90,10 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
                 control</TitleBar>
             <Box sx={{
                 width: '100%',
-                bgcolor: 'background.paper'
+                bgcolor: 'background.paper.main',
             }}>
                 <Box sx={{
-                    borderBottom: 1,
-                    borderColor: 'divider'
+
                 }}>
                     <HardwareTabs
                         value={activeTab}
@@ -83,8 +102,16 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
                         textColor="primary"
                         indicatorColor="primary"
                     >
-                        <Tab label="Rotator" sx={{}}/>
-                        <Tab label="Rig" sx={{}}/>
+                        <Tab icon={<LedIcon color={rotatorData?.connected ? "#00ff00" : "#ff0000"}/>}
+                             iconPosition="start" label="Rotator"
+                             sx={{
+                                 borderRight: '1px solid #494949',
+
+
+
+                             }}/>
+                        <Tab icon={<LedIcon color={rigData?.connected ? "#00ff00" : "#ff0000"}/>} iconPosition="start"
+                             label="Rig" sx={{}}/>
                     </HardwareTabs>
                 </Box>
                 <TabPanel value={activeTab} index={0}>

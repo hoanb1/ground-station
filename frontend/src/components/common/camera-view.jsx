@@ -20,12 +20,15 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import {getClassNamesBasedOnGridEditing, TitleBar} from "./common.jsx";
-import { FormControl, InputLabel, MenuItem, Select, Button, CircularProgress, Slider, Stack, IconButton, Box, Typography } from "@mui/material";
+import { FormControl, InputLabel, MenuItem, Select, Button,
+    CircularProgress, Slider, Stack, IconButton, Box, Typography } from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import { v4 as uuidv4 } from 'uuid';
 import ReplayIcon from '@mui/icons-material/Replay';
 import {useDispatch, useSelector} from 'react-redux';
-import {setSelectedCameraId} from "../hardware/camera-slice.jsx";
+import {
+    setSelectedCameraId
+} from "../hardware/camera-slice.jsx";
 import VideoWebRTCPlayer from './video-webrtc.jsx';
 import VideoHLS from './video-hls.jsx';
 import VideoMJPEG from './video-mjpeg.jsx';
@@ -33,7 +36,13 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt';
 
 const CameraView = () => {
     const dispatch = useDispatch();
-    const {cameras, selectedCameraId, selectedCamera} = useSelector((state) => state.cameras);
+    const {
+        cameras,
+        selectedCameraId,
+        selectedCamera,
+        setSelectedCamera,
+    } = useSelector((state) => state.cameras);
+
     const {gridEditable} = useSelector((state) => state.targetSatTrack);
 
     useEffect(() => {
@@ -45,7 +54,8 @@ const CameraView = () => {
     }, [cameras]);
 
     const handleCameraChange = (event) => {
-        dispatch(setSelectedCameraId(event.target.value));
+        const cameraId = event.target.value;
+        dispatch(setSelectedCameraId(cameraId));
     };
 
     return (
@@ -54,7 +64,7 @@ const CameraView = () => {
                 view</TitleBar>
             <Grid container spacing={{xs: 1, md: 1}} columns={{xs: 12, sm: 12, md: 12}}>
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl size={"small"} variant={"filled"} fullWidth={true}
+                    <FormControl size="small" variant={"filled"} fullWidth={true}
                                  sx={{minWidth: 200, marginTop: 0.5, marginBottom: 1}}>
                         <InputLabel htmlFor={"camera-select"} id="camera-select">camera</InputLabel>
                         <Select
@@ -65,6 +75,9 @@ const CameraView = () => {
                             }}
                             label="select camera"
                             variant={'filled'}>
+                            <MenuItem value="none">
+                                <em>[no camera]</em>
+                            </MenuItem>
                             {cameras.map((camera) => (
                                 <MenuItem key={camera.id} value={camera.id}>
                                     {camera.name}
@@ -81,7 +94,7 @@ const CameraView = () => {
                 )}
                 {selectedCamera['type'] === 'hls' && (
                     <React.Suspense fallback={<CircularProgress/>}>
-                        <VideoHLS/>
+                    <VideoHLS/>
                     </React.Suspense>
                 )}
                 {selectedCamera['type'] === 'mjpeg' && (

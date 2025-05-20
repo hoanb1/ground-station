@@ -226,27 +226,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
             {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>*/}
 
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid container direction="row" sx={{
-                    backgroundColor: theme => rigData['connected'] ? theme.palette.success.main : theme.palette.info.main,
-                    padding: '0.1rem',
-                    justifyContent: "space-between",
-                    alignItems: "center",
-                    width: '100%',
-                }}>
-                    <Typography variant="body1" sx={{
-                        color: theme => theme.palette.success.contrastText,
-                        width: '90%',
-                        textAlign: 'center',
-                        display: 'inline-flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                    }}>
-                        {rigData['connected']
-                            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>
-                            : <ErrorOutlineIcon sx={{mr: 1}}/>}
-                        {getConnectionStatusofRig()}
-                    </Typography>
-                </Grid>
+
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
@@ -279,6 +259,8 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                     </FormControl>
                 </Grid>
 
+
+
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={["tracking"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
@@ -305,6 +287,29 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                         </Select>
                     </FormControl>
                 </Grid>
+
+                {/*<Grid container direction="row" sx={{*/}
+                {/*    backgroundColor: theme => rigData['connected'] ? theme.palette.success.main : theme.palette.info.main,*/}
+                {/*    padding: '0.1rem',*/}
+                {/*    justifyContent: "space-between",*/}
+                {/*    alignItems: "center",*/}
+                {/*    width: '100%',*/}
+                {/*}}>*/}
+                {/*    <Typography variant="body1" sx={{*/}
+                {/*        color: theme => theme.palette.success.contrastText,*/}
+                {/*        width: '90%',*/}
+                {/*        textAlign: 'center',*/}
+                {/*        display: 'inline-flex',*/}
+                {/*        alignItems: 'center',*/}
+                {/*        justifyContent: 'center',*/}
+                {/*    }}>*/}
+                {/*        {rigData['connected']*/}
+                {/*            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>*/}
+                {/*            : <ErrorOutlineIcon sx={{mr: 1}}/>}*/}
+                {/*        {getConnectionStatusofRig()}*/}
+                {/*    </Typography>*/}
+                {/*</Grid>*/}
+
                 <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '145px', overflow: 'auto'}}>
                     <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '2rem 0.5rem 0rem 0.5rem'}}>
                         <Grid container direction="row" sx={{
@@ -386,7 +391,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                             <Button disabled={
                                 ["tracking", "connected", "stopped"].includes(trackingState['rig_state']) ||
                                 ["none", ""].includes(selectedRotator)
-                            } fullWidth={true} variant="contained" color="success" style={{height: '60px'}}
+                            } fullWidth={true} variant="contained" color="success" style={{height: '50px'}}
                                     onClick={() => {
                                         connectRig()
                                     }}>
@@ -396,7 +401,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
                             <Button disabled={["disconnected"].includes(trackingState['rig_state'])}
                                     fullWidth={true}
-                                    variant="contained" color="error" style={{height: '60px'}}
+                                    variant="contained" color="error" style={{height: '50px'}}
                                     onClick={() => {
                                         disconnectRig()
                                     }}>

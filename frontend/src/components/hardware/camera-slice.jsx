@@ -139,7 +139,7 @@ const camerasSlice = createSlice({
         },
         setSelectedCameraId: (state, action) => {
             state.selectedCameraId = action.payload;
-            state.selectedCamera = state.cameras.find(camera => camera.id === action.payload);
+            state.selectedCamera = state.cameras.find(camera => camera.id === action.payload) || defaultCamera;
         },
     },
     extraReducers: (builder) => {

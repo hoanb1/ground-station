@@ -1522,16 +1522,27 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
     based on the provided data dictionary via SQLAlchemy's merge operation.
     """
 
+    """
+    name: 
+    "satellite-tracking"
+    
+    value:
+    {
+        "norad_id": 53109, 
+        "rotator_state": "connected", 
+        "rig_state": "disconnected",
+        "group_id": "c23d5955-ec14-4c91-8a19-935243cb2a9f", 
+        "rotator_id": "7f714673-e661-4bc4-98e4-ac7620097aa7",
+        "rig_id": "c7aa9cb8-360c-4976-928c-c836bf93af1a", 
+        "transmitter_id": "C4SzpxhvuwzpKRVRQTbAWR"
+    }
+    """
+
     try:
+        # Basic validation for all operations
         assert data.get('name', None) is not None, "name is required when setting tracking state"
         assert data.get('value', None) is not None, "value is required when setting tracking state"
         value = data.get('value', {})
-        assert value.get('norad_id', None), "norad_id is required when setting tracking state"
-        assert value.get('group_id', None), "group_id is required when setting tracking state"
-        assert value.get('rotator_state', None) is not None, "rotator_state is required when setting tracking state"
-        assert value.get('rig_state', None) is not None, "rig_state is required when setting tracking state"
-        assert value.get('rig_id') is not None, "rig_id is required when setting tracking state"
-        assert value.get('rotator_id', None) is not None, "rotator_id is required when setting tracking state"
 
         now = datetime.now(UTC)
         data["updated"] = now
@@ -1542,10 +1553,29 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
         existing_record = existing_record.scalar_one_or_none()
 
         if existing_record:
+            # Merge the new value JSON with the existing value JSON
+            if hasattr(existing_record, 'value') and existing_record.value:
+                # Create a copy of the existing value to avoid modifying it directly
+                merged_value = existing_record.value.copy() if isinstance(existing_record.value, dict) else {}
+                # Update with the new values
+                merged_value.update(data['value'])
+                # Replace the incoming value with the merged one
+                data['value'] = merged_value
+
+            # Update other fields
             for key, value in data.items():
                 setattr(existing_record, key, value)
             new_record = existing_record
+
         else:
+            # Full validation only for new records
+            assert value.get('norad_id', None), "norad_id is required when creating new tracking state"
+            assert value.get('group_id', None), "group_id is required when creating new tracking state"
+            assert value.get('rotator_state', None) is not None, "rotator_state is required when creating new tracking state"
+            assert value.get('rig_state', None) is not None, "rig_state is required when creating new tracking state"
+            assert value.get('rig_id') is not None, "rig_id is required when creating new tracking state"
+            assert value.get('rotator_id', None) is not None, "rotator_id is required when creating new tracking state"
+
             new_record = SatelliteTrackingState(**data)
 
         await session.merge(new_record)
@@ -1588,7 +1618,9 @@ async def get_satellite_tracking_state(session: AsyncSession, name: str) -> dict
         reply["error"] = str(e)
 
     finally:
-        return reply
+        pass
+
+    return reply
 
 
 async def fetch_cameras(session: AsyncSession, camera_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
