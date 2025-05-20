@@ -137,6 +137,11 @@ steps:
         - sgoudelis/ground-station:latest-arm64
         - sgoudelis/ground-station:latest
       pull: true  # Ensure we pull the latest cache images
+      # Specify the remote Docker host
+      daemon_off: true
+      custom_dns: 8.8.8.8
+    environment:
+      DOCKER_HOST: tcp://192.168.60.98:2375
 
   # Create manifest for multi-arch
   - name: manifest
