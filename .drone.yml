@@ -108,7 +108,6 @@ steps:
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
-      # Specify the remote Docker host
       daemon_off: true
       custom_dns: 8.8.8.8
     environment:
@@ -126,18 +125,17 @@ steps:
       repo: sgoudelis/ground-station
       tags:
         - ${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-arm64
-        - ${DRONE_BRANCH:-main}-latest-arm64  # Added latest tag to enable future caching
+        - ${DRONE_BRANCH:-main}-latest-arm64
       dockerfile: Dockerfile
       platforms:
         - linux/arm64
       buildkit: true
       cache_from:
         - sgoudelis/ground-station:${DRONE_BRANCH:-main}-latest-arm64
-        - sgoudelis/ground-station:main-latest-arm64  # Fallback to main branch cache
+        - sgoudelis/ground-station:main-latest-arm64
         - sgoudelis/ground-station:latest-arm64
         - sgoudelis/ground-station:latest
-      pull: true  # Ensure we pull the latest cache images
-      # Specify the remote Docker host
+      pull: true
       daemon_off: true
       custom_dns: 8.8.8.8
     environment:
