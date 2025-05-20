@@ -200,8 +200,6 @@ const CircleSlice = ({
                     bigArcDegrees.push(current);
                 }
             }
-            console.info(`smallArcDegrees: ${smallArcDegrees.length > 0 ? smallArcDegrees[0] + '...' + smallArcDegrees[smallArcDegrees.length-1] : 'empty'}`);
-            console.info(`bigArcDegrees: ${bigArcDegrees.length > 0 ? bigArcDegrees[0] + '...' + bigArcDegrees[bigArcDegrees.length-1] : 'empty'}`);
 
             // Check which arc contains the peak azimuth
             if (smallArcDegrees.includes(peakAz)) {
@@ -237,7 +235,6 @@ const CircleSlice = ({
         if (result && result.length === 2) {
             [largeArcFlag, sweepFlag] = result;
         }
-        console.info(`largeArcFlag: ${largeArcFlag}, sweepFlag: ${sweepFlag}`);
     } else {
         largeArcFlag = 0;
         sweepFlag = 0;
@@ -430,10 +427,13 @@ const RotatorControl = React.memo(({}) => {
                const endTime = new Date(pass['event_end']).getTime();
                return now >= startTime && now <= endTime;
             });
-            dispatch(setActivePass(activePass));
+            if (activePass) {
+                dispatch(setActivePass(activePass));
+            } else {
+                dispatch(setActivePass({}));
+            }
         }
     },[rotatorData]);
-
 
     function getCurrentStatusofRotator() {
         // Define a status mapping with colors
@@ -584,8 +584,6 @@ const RotatorControl = React.memo(({}) => {
     function handleRotatorChange(event) {
         dispatch(setRotator(event.target.value));
     }
-
-    console.info("activePass", activePass);
 
     return (
         <>

@@ -157,7 +157,7 @@ const SatelliteInfoCard = () => {
                                 POSITION DATA
                             </Typography>
                             <Grid container spacing={2}>
-                                <Grid xs={6} sm={3}>
+                                <Grid>
                                     <Box>
                                         <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <ExploreIcon sx={iconStyle}/>
@@ -168,7 +168,7 @@ const SatelliteInfoCard = () => {
                                         </Typography>
                                     </Box>
                                 </Grid>
-                                <Grid xs={6} sm={3}>
+                                <Grid>
                                     <Box>
                                         <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <ExploreIcon sx={iconStyle}/>
@@ -179,7 +179,7 @@ const SatelliteInfoCard = () => {
                                         </Typography>
                                     </Box>
                                 </Grid>
-                                <Grid xs={6} sm={3}>
+                                <Grid>
                                     <Box>
                                         <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <MyLocationIcon sx={iconStyle}/>
@@ -190,7 +190,7 @@ const SatelliteInfoCard = () => {
                                         </Typography>
                                     </Box>
                                 </Grid>
-                                <Grid xs={6} sm={3}>
+                                <Grid>
                                     <Box>
                                         <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
                                             <HeightIcon sx={iconStyle}/>
@@ -206,7 +206,7 @@ const SatelliteInfoCard = () => {
                     </Grid>
 
                     {/* Status Info Cards */}
-                    <Grid xs={6} md={4}>
+                    <Grid>
                         <Card sx={cardStyle}>
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 <HeightIcon sx={iconStyle}/>
@@ -221,7 +221,7 @@ const SatelliteInfoCard = () => {
                         </Card>
                     </Grid>
 
-                    <Grid xs={6} md={4}>
+                    <Grid>
                         <Card sx={cardStyle}>
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 <SpeedIcon sx={iconStyle}/>
@@ -236,7 +236,7 @@ const SatelliteInfoCard = () => {
                         </Card>
                     </Grid>
 
-                    <Grid md={4}>
+                    <Grid>
                         <Card sx={cardStyle}>
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 COUNTRIES
@@ -249,7 +249,7 @@ const SatelliteInfoCard = () => {
                         </Card>
                     </Grid>
 
-                    <Grid xs={6}>
+                    <Grid>
                         <Card sx={cardStyle}>
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 BANDS
@@ -270,7 +270,7 @@ const SatelliteInfoCard = () => {
                         </Card>
                     </Grid>
 
-                    <Grid xs={6}>
+                    <Grid>
                         <Card sx={cardStyle}>
                             <Typography variant="overline" sx={cardHeaderStyle}>
                                 <UpdateIcon sx={iconStyle}/>

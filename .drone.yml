@@ -126,13 +126,17 @@ steps:
       repo: sgoudelis/ground-station
       tags:
         - ${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-arm64
+        - ${DRONE_BRANCH:-main}-latest-arm64  # Added latest tag to enable future caching
       dockerfile: Dockerfile
       platforms:
         - linux/arm64
       buildkit: true
       cache_from:
         - sgoudelis/ground-station:${DRONE_BRANCH:-main}-latest-arm64
+        - sgoudelis/ground-station:main-latest-arm64  # Fallback to main branch cache
+        - sgoudelis/ground-station:latest-arm64
         - sgoudelis/ground-station:latest
+      pull: true  # Ensure we pull the latest cache images
 
   # Create manifest for multi-arch
   - name: manifest
