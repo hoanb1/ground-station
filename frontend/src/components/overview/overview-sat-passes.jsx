@@ -272,44 +272,39 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                     return 'No data';
                 }
 
+                // Count transmitters per band
+                const bandCounts = transmitters.reduce((acc, t) => {
+                    const band = getFrequencyBand(t['downlink_low']);
+                    acc[band] = (acc[band] || 0) + 1;
+                    return acc;
+                }, {});
 
-                const bands = transmitters
-                    .map(t => getFrequencyBand(t['downlink_low']))
-                    .filter((v, i, a) => a.indexOf(v) === i);
+                const bands = Object.keys(bandCounts);
 
                 return (
                     <div style={{display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center'}}>
                         {bands.map((band, index) => (
-                            <Chip
-                                key={index}
-                                label={band}
-                                size="small"
-                                sx={{
-                                    mt: '8px',
-                                    height: '18px',
-                                    fontSize: '0.65rem',
-                                    fontWeight: 'bold',
-                                    backgroundColor: getBandColor(band),
-                                    color: '#ffffff',
-                                    '&:hover': {
-                                        filter: 'brightness(90%)',
-                                    }
-                                }}
-                            />
+                            <>
+                                 <Chip
+                                    key={index}
+                                    label={`${band}`}
+                                    size="small"
+                                    sx={{
+                                        mt: '8px',
+                                        height: '18px',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 'bold',
+                                        backgroundColor: getBandColor(band),
+                                        color: '#ffffff',
+                                        '&:hover': {
+                                            filter: 'brightness(90%)',
+                                        }
+                                    }}
+                                /> x {bandCounts[band]}
+                            </>
                         ))}
                     </div>
                 );
-            }
-        },
-        {
-            field: 'transmitter_count',
-            minWidth: 70,
-            headerName: 'TRXs',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            valueFormatter: (value) => {
-                return value ? `${value}` : '0';
             }
         },
         {
