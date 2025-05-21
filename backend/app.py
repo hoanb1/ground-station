@@ -95,11 +95,15 @@ async def lifespan(fastapiapp: FastAPI):
     Create and cleanup background tasks or other
     resources in this context manager.
     """
-    # Start the tracking task
-    #tracking_task = asyncio.create_task(satellite_tracking_task(sio))
 
-    # Start the Soapy server discovery task
-    #discover_task = asyncio.create_task(run_discover_soapy())
+    if arguments.runonce_soapy_discovery:
+        # Run SoapyDR discovery task on startup
+        await discover_soapy_servers()
+
+    # Start the Soapy server discovery task only if continuous discovery enabled
+    discover_task = None
+    if arguments.enable_soapy_discovery:
+        discover_task = asyncio.create_task(run_discover_soapy())
 
     # Start the message handler in your tracker process event loop
     asyncio.create_task(handle_tracker_messages(sio))
@@ -107,24 +111,21 @@ async def lifespan(fastapiapp: FastAPI):
     try:
         yield
     finally:
-        # Cancel the tracking task
-        #tracking_task.cancel()
+        # Cancel the Soapy server discovery task if it was started
+        if discover_task:
+            discover_task.cancel()
+            try:
+                await discover_task
+            except asyncio.CancelledError:
+                pass
 
-        # Cancel the Soapy server discovery task
-        #discover_task.cancel()
-
+        # Cancel the separate process tracker, used for satellite tracking
         try:
-            pass
-            # Start the tracking task (to be removed)
-            #await tracking_task
-
-            # Stop the Soapy server discovery task
-            #await discover_task
-
             # Stop the tracker process
             stop_tracker()
         except asyncio.CancelledError:
             pass
+
 
 # Create an asynchronous Socket.IO server using ASGI mode.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True)

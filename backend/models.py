@@ -184,7 +184,8 @@ class SDRs(Base):
     port = Column(Integer, nullable=True)
     type = Column(Enum(SDRType), nullable=True)
     driver = Column(String, nullable=True)
-    frequency_range = Column(JsonField, nullable=True)
+    frequency_min = Column(Integer, nullable=True)
+    frequency_max = Column(Integer, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 

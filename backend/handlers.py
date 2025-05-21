@@ -431,7 +431,6 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             logger.info(add_reply)
 
             sdrs = await crud.fetch_sdrs(dbsession)
-            logger.info(sdrs)
 
             reply = {'success': (sdrs['success'] & add_reply['success']),
                      'data': sdrs.get('data', [])}

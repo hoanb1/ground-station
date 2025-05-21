@@ -149,7 +149,6 @@ export default function SDRsPage() {
         dispatch(fetchSoapySDRServers({socket}));
         dispatch(fetchLocalSoapySDRDevices({socket}));
     }, []);
-
     const columns = [
         {
             field: 'name', headerName: 'Name', flex: 1, minWidth: 150
@@ -164,16 +163,16 @@ export default function SDRsPage() {
             field: 'port', headerName: 'Port', flex: 1, minWidth: 100
         },
         {
-            field: 'frequency_range',
+            field: 'frequency_min',
             headerName: 'Frequency Range (MHz)',
             flex: 1,
             minWidth: 200,
-            valueGetter: (params) => {
-                if (!params) {
+            renderCell: (params) => {
+                if (!params.row) {
                     return "-";
                 }
-                return `${params['min'] || 0} - ${params['max'] || 0}`;
-            },
+                return `${params.row.frequency_min || 0} MHz - ${params.row.frequency_max || 0} MHz`;
+            }
         },
         {
             field: 'driver', headerName: 'Driver', flex: 1, minWidth: 100
@@ -241,13 +240,14 @@ export default function SDRsPage() {
     const getFieldValue = (fieldName) => {
         const selectedType = formValues.type;
 
-        // Special case for frequency fields to use frequency_range values
-        if (fieldName === 'frequency_max' && formValues['frequency_range']?.['max'] !== undefined) {
-            return formValues['frequency_range']['max'];
-        }
-        if (fieldName === 'frequency_min' && formValues['frequency_range']?.['min'] !== undefined) {
-            return formValues['frequency_range']['min'];
-        }
+        // // Special case for frequency fields to use frequency_range values
+        // if (fieldName === 'frequency_max' && formValues['frequency_range']?.['max'] !== undefined) {
+        //     return formValues['frequency_range']['max'];
+        // }
+        //
+        // if (fieldName === 'frequency_min' && formValues['frequency_range']?.['min'] !== undefined) {
+        //     return formValues['frequency_range']['min'];
+        // }
 
         // If we have a value in formValues, use it
         if (formValues[fieldName] !== undefined) {

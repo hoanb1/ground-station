@@ -24,5 +24,7 @@ parser.add_argument("--log-level", type=str, default="INFO", choices=["DEBUG", "
 parser.add_argument("--log-config", type=str, default="logconfig.yaml", help="Path to the logger configuration file")
 parser.add_argument("--secret-key", type=str, default="YOUR_RANDOM_SECRET_KEY", help="Secret key used for user authentication" )
 parser.add_argument("--track-interval", type=int, default=3, help="Seconds between track updates")
+parser.add_argument("--enable-soapy-discovery", type=bool, default=False, help="Enable periodic SoapySDR server discovery")
+parser.add_argument("--runonce-soapy-discovery", type=bool, default=True, help="Run the SoapySDR server discovery once on startup")
 
 arguments = parser.parse_args()

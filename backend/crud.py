@@ -1942,16 +1942,6 @@ async def add_sdr(session: AsyncSession, data: dict) -> dict:
                 if 'port' not in data or data['port'] is None:
                     raise AssertionError("Field 'port' is required for TCP type SDRs")
 
-        # Extract frequency values and create frequency_range dict
-        frequency_min = data.pop('frequency_min', 0)
-        frequency_max = data.pop('frequency_max', 10000000000)
-
-        if frequency_min is not None and frequency_max is not None:
-            data['frequency_range'] = {
-                'min': int(frequency_min),
-                'max': int(frequency_max),
-            }
-
         new_sdr = SDRs(
             **{key: value for key, value in data.items() if hasattr(SDRs, key)}
         )
@@ -1996,16 +1986,6 @@ async def edit_sdr(session: AsyncSession, data: dict) -> dict:
 
         data.pop("updated", None)
         data.pop("added", None)
-
-        # Extract frequency values and create frequency_range dict
-        frequency_min = data.pop('frequency_min', 0)
-        frequency_max = data.pop('frequency_max', 10000000000)
-
-        if frequency_min is not None and frequency_max is not None:
-            data['frequency_range'] = {
-                'min': int(frequency_min),
-                'max': int(frequency_max),
-            }
 
         # Get the existing SDR
         stmt = select(SDRs).filter(SDRs.id == sdr_id)
