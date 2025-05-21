@@ -227,7 +227,6 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
 
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
-
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
@@ -259,8 +258,6 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                     </FormControl>
                 </Grid>
 
-
-
                 <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={["tracking"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
@@ -288,29 +285,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                     </FormControl>
                 </Grid>
 
-                {/*<Grid container direction="row" sx={{*/}
-                {/*    backgroundColor: theme => rigData['connected'] ? theme.palette.success.main : theme.palette.info.main,*/}
-                {/*    padding: '0.1rem',*/}
-                {/*    justifyContent: "space-between",*/}
-                {/*    alignItems: "center",*/}
-                {/*    width: '100%',*/}
-                {/*}}>*/}
-                {/*    <Typography variant="body1" sx={{*/}
-                {/*        color: theme => theme.palette.success.contrastText,*/}
-                {/*        width: '90%',*/}
-                {/*        textAlign: 'center',*/}
-                {/*        display: 'inline-flex',*/}
-                {/*        alignItems: 'center',*/}
-                {/*        justifyContent: 'center',*/}
-                {/*    }}>*/}
-                {/*        {rigData['connected']*/}
-                {/*            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>*/}
-                {/*            : <ErrorOutlineIcon sx={{mr: 1}}/>}*/}
-                {/*        {getConnectionStatusofRig()}*/}
-                {/*    </Typography>*/}
-                {/*</Grid>*/}
-
-                <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '145px', overflow: 'auto'}}>
+                <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '185px', overflow: 'auto'}}>
                     <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '2rem 0.5rem 0rem 0.5rem'}}>
                         <Grid container direction="row" sx={{
                             justifyContent: "space-between",
@@ -379,8 +354,54 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                             </Grid>
                         </Grid>
                     </Grid>
+
+                    <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                        <Grid container direction="row" sx={{
+                            justifyContent: "space-between",
+                            alignItems: "stretch",
+                        }}>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="body2">
+                                    -
+                                </Typography>
+                            </Grid>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="body2">
+                                    -
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                        <Grid container direction="row" sx={{
+                            justifyContent: "space-between",
+                            alignItems: "stretch",
+                        }}>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="h7"
+                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                    -
+                                </Typography>
+                            </Grid>
+                            <Grid size="grow" style={{textAlign: 'center'}}>
+                                <Typography variant="h7"
+                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                    -
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+
                 </Grid>
 
+                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>*/}
+                {/*    <Grid container direction="row" sx={{*/}
+                {/*        justifyContent: "space-between",*/}
+                {/*        alignItems: "stretch",*/}
+                {/*    }}>*/}
+                {/*        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>*/}
+
+                {/*        </Grid>*/}
+                {/*    </Grid>*/}
+                {/*</Grid>*/}
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <Grid container direction="row" sx={{

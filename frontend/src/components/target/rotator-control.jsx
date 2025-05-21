@@ -719,6 +719,75 @@ const RotatorControl = React.memo(({}) => {
                         justifyContent: "space-between",
                         alignItems: "stretch",
                     }}>
+                        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1, paddingBottom: '0.5rem',  paddingTop: '0.2rem'}} container spacing={1}>
+                            <Grid item>
+                                <Button
+                                    size="small"
+                                    disabled={!rotatorData['connected']}
+                                    fullWidth={true}
+                                    variant="contained"
+                                    color="primary"
+                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    onClick={() => {
+
+                                    }}>
+                                    ⟲ CCW
+                                </Button>
+                            </Grid>
+                            <Grid item>
+                                <Button
+                                    size="small"
+                                    disabled={!rotatorData['connected']}
+                                    fullWidth={true}
+                                    variant="contained"
+                                    color="primary"
+                                    sx={{}}
+                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    onClick={() => {
+
+
+                                    }}>
+                                    CW ⟳
+                                </Button>
+                            </Grid>
+                        </Grid>
+                        <Grid size="grow" style={{paddingRight: '0rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}} container
+                              spacing={1} justifyContent="flex-end">
+                            <Grid item>
+                                <Button
+                                    size="small"
+                                    disabled={!rotatorData['connected']}
+                                    fullWidth={true}
+                                    variant="contained"
+                                    color="primary"
+                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    onClick={() => {
+
+                                    }}>
+                                    ↑ UP
+                                </Button>
+                            </Grid>
+                            <Grid item>
+                                <Button
+                                    size="small"
+                                    disabled={!rotatorData['connected']}
+                                    fullWidth={true}
+                                    variant="contained"
+                                    color="primary"
+                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    onClick={() => {
+
+                                    }}>
+                                    DOWN ↓
+                                </Button>
+                            </Grid>
+                        </Grid>
+                    </Grid>
+
+                    <Grid container direction="row" sx={{
+                        justifyContent: "space-between",
+                        alignItems: "stretch",
+                    }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
                             <Paper
                                 elevation={1}

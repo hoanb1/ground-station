@@ -50,7 +50,7 @@ class SDRController:
         self.sdr_host = sdr_details['host']
         self.sdr_port = sdr_details['port']
         self.sdr_driver = sdr_details['driver']
-        self.frequency_range = sdr_details['frequency_range']
+        self.frequency_range = {'min': sdr_details['frequency_min'], 'max': sdr_details['frequency_max']}
 
         self.logger.info(f"Initialized SDRController for SDR with id {self.sdr_id}")
 
