@@ -320,7 +320,7 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
-            // // If we are either connecting of disconnecting ignore any satellite, rotator or rig data updates
+            // // If we are either connecting of disconnecting, ignore any satellite, rotator or rig data updates
             // if (state.rotatorConnecting || state.rotatorDisconnecting) {
             //     state.rotatorConnecting = false;
             //     state.rotatorDisconnecting = false;
