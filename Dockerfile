@@ -214,8 +214,10 @@ WORKDIR backend/
 # Command to run the application
 #CMD ["python", "app.py", "--secret-key=AuZ9theig2geu4wu", "--log-level=INFO", "--host=0.0.0.0", "--port=7000"]
 
+# Command to run the application with UHD images downloader
 CMD dbus-daemon --system --nofork --nopidfile & \
     sleep 2 && \
     avahi-daemon --no-chroot -D & \
     sleep 2 && \
+    /usr/bin/uhd_images_downloader && \
     python app.py --secret-key=AuZ9theig2geu4wu --log-level=INFO --host=0.0.0.0 --port=7000
