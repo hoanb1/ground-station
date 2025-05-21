@@ -61,7 +61,7 @@ RUN apt-get update && \
     apt-get update
 
 # Install UHD packages
-RUN apt-get install -y libuhd-dev libuhd003 uhd-host
+RUN apt-get install -y libuhd-dev uhd-host
 
 # Create required directories for Avahi and D-Bus
 RUN mkdir -p /var/run/avahi-daemon /var/run/dbus
