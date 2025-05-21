@@ -38,9 +38,9 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-pip \
     dh-autoreconf \
     python3-full \
+    software-properties-common \
     librtlsdr-dev \
     libairspy-dev \
-    libuhd-dev \
     libhackrf-dev \
     libboost-all-dev \
     swig \
@@ -51,7 +51,17 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     avahi-utils \
     libnss-mdns \
     dbus \
+    gpg-agent \
     && rm -rf /var/lib/apt/lists/*
+
+# Add Ettus Research UHD Repository
+RUN apt-get update && \
+    apt-get install -y software-properties-common && \
+    add-apt-repository ppa:ettusresearch/uhd && \
+    apt-get update
+
+# Install UHD packages
+RUN apt-get install -y libuhd-dev libuhd003 uhd-host
 
 # Create required directories for Avahi and D-Bus
 RUN mkdir -p /var/run/avahi-daemon /var/run/dbus
