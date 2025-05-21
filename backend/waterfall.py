@@ -254,6 +254,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             sdr_params_reply = eval(stdout.decode().strip())
 
             if sdr_params_reply['success'] is False:
+                logger.error(sdr_params_reply)
                 raise Exception(sdr_params_reply['error'])
 
             sdr_params = sdr_params_reply['data']
