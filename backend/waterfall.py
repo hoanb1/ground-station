@@ -23,6 +23,7 @@ import json
 from typing import Dict, List, Optional, Any, Union
 from sdrprocessmanager import sdr_process_manager
 from workers.common import window_functions
+from functools import lru_cache
 
 logger = logging.getLogger('waterfall-process')
 
@@ -31,6 +32,9 @@ active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 
 # Store active RTLSDR devices and client connections
 rtlsdr_devices: Dict[str, rtlsdr.RtlSdr] = {}
+
+# Create a cache dictionary to store SDR parameters by SDR ID
+sdr_parameters_cache: Dict[str, Dict] = {}
 
 # Create a second Socket.IO server instance specifically for waterfall data
 waterfall_sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
@@ -172,11 +176,16 @@ async def get_local_soapy_sdr_devices():
 
 
 async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
-    """Retrieve SDR parameters from the SDR process manager"""
+    """Retrieve SDR parameters from the SDR process manager with caching"""
 
     reply: dict[str, Union[bool, None, dict, list, str]] = {'success': None, 'data': None, 'error': None}
     sdr = {}
     sdr_params = {}
+
+    # Check if parameters for this SDR are already cached
+    if sdr_id in sdr_parameters_cache:
+        logger.info(f'Using cached parameters for SDR with id {sdr_id}')
+        return {'success': True, 'data': sdr_parameters_cache[sdr_id]}
 
     try:
         # Fetch SDR device details from database
@@ -217,6 +226,8 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 'antennas': {'tx': [], 'rx': []},
             }
 
+            # Cache the parameters
+            sdr_parameters_cache[sdr_id] = params
             reply = {'success': True, 'data': params}
 
         elif sdr.get('type') in ['soapysdrremote', 'soapysdrlocal']:
@@ -276,6 +287,8 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 'antennas': sdr_params['antennas'],
             }
 
+            # Cache the parameters
+            sdr_parameters_cache[sdr_id] = params
             reply = {'success': True, 'data': params}
 
     except TimeoutError as e:
@@ -296,4 +309,3 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
         pass
 
     return reply
-
