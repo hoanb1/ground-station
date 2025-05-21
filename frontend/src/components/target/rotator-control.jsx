@@ -163,7 +163,7 @@ const CircleSlice = ({
         endAz = Math.round((endAz + 360) % 360);
 
         if (peakAz !== null) {
-            peakAz = Math.round((peakAz + 360) % 360);
+            peakAz = parseInt(peakAz + 360) % 360;
 
             // Create lists for the small arc and big arc degrees
             let smallArcDegrees = [];
