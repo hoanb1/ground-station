@@ -727,7 +727,7 @@ const RotatorControl = React.memo(({}) => {
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
                                     onClick={() => {
 
                                     }}>
@@ -742,7 +742,7 @@ const RotatorControl = React.memo(({}) => {
                                     variant="contained"
                                     color="primary"
                                     sx={{}}
-                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
                                     onClick={() => {
 
 
@@ -760,7 +760,7 @@ const RotatorControl = React.memo(({}) => {
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
                                     onClick={() => {
 
                                     }}>
@@ -774,7 +774,7 @@ const RotatorControl = React.memo(({}) => {
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.7rem', fontWeight: 'bold'}}
+                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
                                     onClick={() => {
 
                                     }}>
