@@ -78,7 +78,8 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
             sdr = rtlsdr.RtlSdr(serial_number=serial_number)
 
         # Configure the device
-        sdr.center_freq = config.get('center_freq', 100e6)
+        offset_freq = config.get('offset_freq', 0)
+        sdr.center_freq = config.get('center_freq', 100e6) + offset_freq
         sdr.sample_rate = config.get('sample_rate', 2.048e6)
         sdr.gain = config.get('gain', 25.4)
 
@@ -113,7 +114,7 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
 
                     if 'center_freq' in new_config:
                         if sdr.center_freq != new_config['center_freq']:
-                            sdr.center_freq = new_config['center_freq']
+                            sdr.center_freq = new_config['center_freq'] + offset_freq
                             logger.info(f"Updated center frequency: {sdr.center_freq}")
 
                     if 'fft_size' in new_config:
@@ -143,6 +144,12 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
 
                         if not new_config['tuner_agc']:
                             sdr.gain = new_config['gain']
+
+                    if 'offset_freq' in new_config:
+                        if old_config.get('offset_freq', 0) != new_config['offset_freq']:
+                            offset_freq = new_config['offset_freq']
+                            sdr.center_freq = new_config['center_freq'] + offset_freq
+                            logger.info(f"Updated offset frequency: {offset_freq}")
 
                     old_config = new_config
 

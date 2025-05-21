@@ -58,6 +58,8 @@ import {
     setSelectedAntenna,
     setSoapyAgc,
     setSelectedTransmitterId,
+    setSelectedOffsetMode,
+    setSelectedOffsetValue,
 } from './waterfall-slice.jsx'
 import {
     Box,
@@ -155,6 +157,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
         gain,
         sampleRate,
         centerFrequency,
+        selectedOffsetMode,
+        selectedOffsetValue,
         errorMessage,
         isStreaming,
         targetFPS,
@@ -243,6 +247,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                 fftWindow: fftWindow,
                 antenna: selectedAntenna,
                 soapyAgc: soapyAgc,
+                offsetFrequency: selectedOffsetValue,
             }
 
             SDRSettings = {...SDRSettings, ...updates};
@@ -262,18 +267,18 @@ const WaterfallSettings = forwardRef((props, ref) => {
             tunerAgc,
             rtlAgc,
             fftWindow,
-            socket
+            socket,
+            selectedOffsetValue,
         ]
     );
 
     // Convert to useCallback to ensure stability of the function reference
     const handleSDRChange = useCallback((event) => {
         // Check what was selected
-        console.info(event);
-
         const selectedValue = typeof event === 'object' ? event.target.value : event;
 
         dispatch(setSelectedSDRId(selectedValue));
+
         if (selectedValue === "none") {
             // Reset UI values since once we get new values from the backend, they might not be valid anymore
             dispatch(setSampleRate("none"));
@@ -361,6 +366,29 @@ const WaterfallSettings = forwardRef((props, ref) => {
         sendSDRConfigToBackend({centerFrequency: newFrequency});
     }
 
+    function handleOffsetModeChange(event) {
+        const offsetValue = event.target.value;
+
+        if (offsetValue === "none") {
+            dispatch(setSelectedOffsetMode(offsetValue));
+            dispatch(setSelectedOffsetMode(0));
+            return sendSDRConfigToBackend({offsetFrequency: 0});
+        } else if (offsetValue === "manual") {
+            dispatch(setSelectedOffsetMode(offsetValue));
+            return sendSDRConfigToBackend({offsetFrequency: selectedOffsetValue});
+        } else {
+            dispatch(setSelectedOffsetValue(offsetValue));
+            dispatch(setSelectedOffsetMode(offsetValue));
+            return sendSDRConfigToBackend({offsetFrequency: offsetValue});
+        }
+    }
+
+    function handleOffsetValueChange(param) {
+        const offsetValue = param.target.value;
+        dispatch(setSelectedOffsetValue(offsetValue));
+        return sendSDRConfigToBackend({offsetFrequency: offsetValue});
+    }
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
@@ -385,7 +413,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                         <FormControl disabled={false}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
                                      size="small">
-                            <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
+                            <InputLabel htmlFor="transmitter-select">Go to transmitter</InputLabel>
                             <Select
                                 id="transmitter-select"
                                 value={availableTransmitters.length > 0 ? selectedTransmitterId : "none"}
@@ -406,6 +434,55 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 })}
                             </Select>
                         </FormControl>
+
+                        <FormControl
+                            disabled={false}
+                            sx={{minWidth: 200, marginTop: 0, marginBottom: 0}}
+                            fullWidth
+                            variant="filled"
+                            size="small">
+                            <InputLabel htmlFor="frequency-offset-select">Frequency Offset</InputLabel>
+                            <Select
+                                id="frequency-offset-select"
+                                value={selectedOffsetMode || "none"}
+                                onChange={(event) => {
+                                    handleOffsetModeChange(event);
+                                }}
+                                variant={'filled'}>
+                                <MenuItem value="none">
+                                    [no frequency offset]
+                                </MenuItem>
+                                <MenuItem value="manual">Manual</MenuItem>
+                                <MenuItem value="" disabled>
+                                    <em>select an offset</em>
+                                </MenuItem>
+                                <MenuItem value="-6800000000">DK5AV X-Band (-6800MHz)</MenuItem>
+                                <MenuItem value="125000000">Ham-it-Up (+125MHz)</MenuItem>
+                                <MenuItem value="-10700000000">Ku LNB (-10700MHz)</MenuItem>
+                                <MenuItem value="-9750000000">Ku LNB (-9750MHz)</MenuItem>
+                                <MenuItem value="-1998000000">MMDS S-Band (-1998MHz)</MenuItem>
+                                <MenuItem value="120000000">SpyVerter (+120MHz)</MenuItem>
+                            </Select>
+                        </FormControl>
+
+                        <FormControl disabled={selectedOffsetMode !== "manual"} sx={{minWidth: 200, marginTop: 1}} fullWidth variant="filled"
+                                     size="small">
+                            <TextField
+                                disabled={selectedOffsetMode !== "manual"}
+                                label="Manual Offset (Hz)"
+                                value={selectedOffsetValue}
+                                variant="filled"
+                                size="small"
+                                type="number"
+                                onChange={(e) => {
+                                    const offset = parseFloat(e.target.value);
+                                    if (!isNaN(offset)) {
+                                        handleOffsetValueChange({target: {value: offset.toString()}});
+                                    }
+                                }}
+                            />
+                        </FormControl>
+
                     </AccordionDetails>
                 </Accordion>
 

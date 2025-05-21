@@ -1943,13 +1943,13 @@ async def add_sdr(session: AsyncSession, data: dict) -> dict:
                     raise AssertionError("Field 'port' is required for TCP type SDRs")
 
         # Extract frequency values and create frequency_range dict
-        frequency_min = data.pop('frequency_min', None)
-        frequency_max = data.pop('frequency_max', None)
+        frequency_min = data.pop('frequency_min', 0)
+        frequency_max = data.pop('frequency_max', 10000000000)
 
         if frequency_min is not None and frequency_max is not None:
             data['frequency_range'] = {
-                'min': frequency_min,
-                'max': frequency_max
+                'min': int(frequency_min),
+                'max': int(frequency_max),
             }
 
         new_sdr = SDRs(
@@ -1998,13 +1998,13 @@ async def edit_sdr(session: AsyncSession, data: dict) -> dict:
         data.pop("added", None)
 
         # Extract frequency values and create frequency_range dict
-        frequency_min = data.pop('frequency_min', None)
-        frequency_max = data.pop('frequency_max', None)
+        frequency_min = data.pop('frequency_min', 0)
+        frequency_max = data.pop('frequency_max', 10000000000)
 
         if frequency_min is not None and frequency_max is not None:
             data['frequency_range'] = {
-                'min': frequency_min,
-                'max': frequency_max
+                'min': int(frequency_min),
+                'max': int(frequency_max),
             }
 
         # Get the existing SDR

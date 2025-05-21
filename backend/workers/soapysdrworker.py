@@ -118,7 +118,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                             usable_rates.append(rate)
                             break
 
-            logger.info(f"Usable sample rates: {[rate/1e6 for rate in usable_rates]} MHz")
+            logger.debug(f"Usable sample rates: {[rate/1e6 for rate in usable_rates]} MHz")
 
             # Now choose a sample rate that is supported
             sample_rate = config.get('sample_rate', 2.048e6)
@@ -148,6 +148,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         gain = config.get('gain', 25.4)
         antenna = config.get('antenna', '')
         channel = config.get('channel', 0)
+        offset_freq = int(config.get('offset_freq', 0))
 
         # Set sample rate
         sdr.setSampleRate(SOAPY_SDR_RX, channel, sample_rate)
@@ -155,7 +156,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         logger.info(f"Sample rate set to {actual_sample_rate/1e6} MHz")
 
         # Set center frequency
-        sdr.setFrequency(SOAPY_SDR_RX, channel, center_freq)
+        sdr.setFrequency(SOAPY_SDR_RX, channel, center_freq + offset_freq)
         actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
         logger.info(f"Center frequency set to {actual_freq/1e6} MHz")
 
@@ -226,9 +227,8 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
 
                     if 'center_freq' in new_config:
                         if actual_freq != new_config['center_freq']:
-                            sdr.setFrequency(SOAPY_SDR_RX, channel, new_config['center_freq'])
+                            sdr.setFrequency(SOAPY_SDR_RX, channel, new_config['center_freq'] + offset_freq)
                             actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
-                            logger.info(f"Updated center frequency: {actual_freq}")
 
                     if 'fft_size' in new_config:
                         if old_config.get('fft_size', 0) != new_config['fft_size']:
@@ -262,6 +262,13 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                             sdr.setAntenna(SOAPY_SDR_RX, channel, new_config['antenna'])
                             selected_antenna = sdr.getAntenna(SOAPY_SDR_RX, channel)
                             logger.info(f"Updated antenna: {selected_antenna}")
+
+                    if 'offset_freq' in new_config:
+                        if old_config.get('offset_freq', 0) != new_config['offset_freq']:
+                            offset_freq = int(new_config['offset_freq'])
+                            sdr.setFrequency(SOAPY_SDR_RX, channel, new_config['center_freq'] + offset_freq)
+                            actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
+                            logger.info(f"Updated offset frequency: {actual_freq}")
 
                     old_config = new_config
 

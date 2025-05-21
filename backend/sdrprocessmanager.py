@@ -233,6 +233,7 @@ class SDRProcessManager:
                 'rtl_agc': sdr_config.get('rtl_agc', False),
                 'antenna': sdr_config.get('antenna', 'RX'),
                 'gain_mode': 'automatic' if sdr_config.get('soapy_agc', True) else 'manual',
+                'offset_freq': int(sdr_config.get('offset_freq', 0)),
             }
 
             if not worker_process:

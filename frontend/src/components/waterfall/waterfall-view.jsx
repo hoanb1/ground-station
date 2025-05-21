@@ -89,7 +89,7 @@ import {
     setBandScopeHeight,
     setAutoDBRange,
     setShowRightSideWaterFallAccessories,
-    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId,
+    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue,
 } from './waterfall-slice.jsx'
 import {enqueueSnackbar} from "notistack";
 import FrequencyScale from "./frequency-scale-canvas.jsx";
@@ -166,6 +166,7 @@ const MainWaterfallDisplay = React.memo(() => {
         showRightSideWaterFallAccessories,
         showLeftSideWaterFallAccessories,
         selectedAntenna,
+        selectedOffsetValue,
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
@@ -522,6 +523,7 @@ const MainWaterfallDisplay = React.memo(() => {
                 rtlAgc: rtlAgc,
                 fftWindow: fftWindow,
                 antenna: selectedAntenna,
+                offsetFrequency: selectedOffsetValue,
             }, (response) => {
                 // Check response
                 if (response['success']) {

@@ -31,11 +31,9 @@ export const getSDRConfigParameters = createAsyncThunk(
     async ({socket, selectedSDRId}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
             socket.emit('data_request', 'get-sdr-parameters', selectedSDRId, (response) => {
-                console.info(response);
                 if (response.success) {
                     resolve(response.data);
                 } else {
-                    console.error("rejecting", response.error);
                     reject(rejectWithValue(response.error));
                 }
             });
@@ -71,6 +69,8 @@ const waterfallSlice = createSlice({
         rtlAgc: false,
         sampleRate: "none",
         centerFrequency: 100000000,
+        selectedOffsetMode: "",
+        selectedOffsetValue: 0,
         errorMessage: null,
         errorDialogOpen: false,
         isStreaming: false,
@@ -133,6 +133,12 @@ const waterfallSlice = createSlice({
         },
         setCenterFrequency: (state, action) => {
             state.centerFrequency = action.payload;
+        },
+        setSelectedOffsetMode: (state, action) => {
+            state.selectedOffsetMode = action.payload;
+        },
+        setSelectedOffsetValue: (state, action) => {
+            state.selectedOffsetValue = action.payload;
         },
         setErrorMessage: (state, action) => {
             state.errorMessage = action.payload;
@@ -285,6 +291,8 @@ export const {
     setHasSoapyAgc,
     setSoapyAgc,
     setSelectedTransmitterId,
+    setSelectedOffsetMode,
+    setSelectedOffsetValue,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

@@ -240,20 +240,28 @@ export default function SDRsPage() {
     // Get the field value or its default from the SDR type configuration
     const getFieldValue = (fieldName) => {
         const selectedType = formValues.type;
-        
+
+        // Special case for frequency fields to use frequency_range values
+        if (fieldName === 'frequency_max' && formValues['frequency_range']?.['max'] !== undefined) {
+            return formValues['frequency_range']['max'];
+        }
+        if (fieldName === 'frequency_min' && formValues['frequency_range']?.['min'] !== undefined) {
+            return formValues['frequency_range']['min'];
+        }
+
         // If we have a value in formValues, use it
         if (formValues[fieldName] !== undefined) {
             return formValues[fieldName];
         }
-        
+
         // Otherwise check for default in the type configuration
-        if (selectedType && 
-            sdrTypeFields[selectedType] && 
-            sdrTypeFields[selectedType].defaults && 
+        if (selectedType &&
+            sdrTypeFields[selectedType] &&
+            sdrTypeFields[selectedType].defaults &&
             sdrTypeFields[selectedType].defaults[fieldName] !== undefined) {
             return sdrTypeFields[selectedType].defaults[fieldName];
         }
-        
+
         // Fallback to empty string/value
         return '';
     };
@@ -287,7 +295,6 @@ export default function SDRsPage() {
         // If a valid SDR type is selected, add the corresponding fields
         if (selectedType && sdrTypeFields[selectedType]) {
             const config = sdrTypeFields[selectedType];
-
 
             // Add a dropdown to select local Soapy USB devices
             if (selectedType === 'soapysdrlocal') {

@@ -641,6 +641,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # Soapy AGC
                 soapy_agc = data.get('soapyAgc', False)
 
+                # Offset frequency for downconverters and upconverters
+                offset_freq = data.get('offsetFrequency', 0)
+
                 # SDR configuration dictionary
                 sdr_config = {
                     'center_freq': center_freq,
@@ -658,6 +661,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     'port': sdr_port,
                     'client_id': client_id,
                     'gain_mode': 'automatic' if soapy_agc else 'manual',
+                    'offset_freq': offset_freq,
                 }
 
                 # Create an SDR session entry in memory
