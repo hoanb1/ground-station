@@ -724,7 +724,9 @@ const RotatorControl = React.memo(({}) => {
                         justifyContent: "space-between",
                         alignItems: "stretch",
                     }}>
-                        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1, paddingBottom: '0.5rem',  paddingTop: '0.2rem'}} container spacing={1}>
+                        <Grid size="grow"
+                              style={{paddingRight: '0.5rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}}
+                              container spacing={1} justifyContent="center">
                             <Grid item>
                                 <Button
                                     size="small"
@@ -755,8 +757,10 @@ const RotatorControl = React.memo(({}) => {
                                 </Button>
                             </Grid>
                         </Grid>
-                        <Grid size="grow" style={{paddingRight: '0rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}} container
-                              spacing={1} justifyContent="flex-end">
+                        <Grid size="grow"
+                              style={{paddingRight: '0rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}}
+                              container
+                              spacing={1} justifyContent="center">
                             <Grid item>
                                 <Button
                                     size="small"

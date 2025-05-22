@@ -19,7 +19,7 @@
 
 
 import * as React from 'react';
-import {Alert, AlertTitle, Box, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
+import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {useEffect} from "react";
 import {useDispatch, useSelector} from "react-redux";
 import {enqueueSnackbar} from "notistack";
@@ -37,7 +37,7 @@ import {
     humanizeDate,
     betterStatusValue,
     renderCountryFlagsCSV,
-    humanizeFrequency
+    humanizeFrequency, getFrequencyBand, getBandColor
 } from '../common/common.jsx';
 import SatelliteInfoModal from "./satellite-info.jsx";
 import {
@@ -127,14 +127,75 @@ const SatelliteTable = React.memo(function () {
                 }
             },
         },
+        
+        // {
+        //     field: 'transmitters',
+        //     headerName: 'Transmitters',
+        //     width: 150,
+        //     headerAlign: 'center',
+        //     align: 'center',
+        //     valueGetter: (value, row) => row['transmitters'].length
+        // },
+
         {
             field: 'transmitters',
-            headerName: 'Transmitters',
-            width: 150,
-            headerAlign: 'center',
+            minWidth: 220,
             align: 'center',
-            valueGetter: (value, row) => row['transmitters'].length
+            headerAlign: 'center',
+            headerName: 'Bands',
+            sortComparator: (v1, v2) => {
+                // Get total transmitter count for comparison
+                const count1 = v1 ? v1.length : 0;
+                const count2 = v2 ? v2.length : 0;
+                return count1 - count2;
+            },
+            renderCell: (params) => {
+                const transmitters = params.value;
+                if (!transmitters) {
+                    return 'No data';
+                }
+
+                // Count transmitters per band
+                const bandCounts = transmitters.reduce((acc, t) => {
+                    const band = getFrequencyBand(t['downlink_low']);
+                    acc[band] = (acc[band] || 0) + 1;
+                    return acc;
+                }, {});
+
+                const bands = Object.keys(bandCounts);
+
+                return (
+                    <div style={{
+                        display: 'flex',
+                        gap: 4,
+                        flexWrap: 'wrap',
+                        justifyContent: 'center',
+                        alignItems: 'center'
+                    }}>
+                        {bands.map((band, index) => (
+                            <div key={index} style={{display: 'flex', alignItems: 'center', gap: 2}}>
+                                <Chip
+                                    label={`${band}`}
+                                    size="small"
+                                    sx={{
+                                        height: '18px',
+                                        fontSize: '0.65rem',
+                                        fontWeight: 'bold',
+                                        backgroundColor: getBandColor(band),
+                                        color: '#ffffff',
+                                        '&:hover': {
+                                            filter: 'brightness(90%)',
+                                        }
+                                    }}
+                                />
+                                <span>x {bandCounts[band]}</span>
+                            </div>
+                        ))}
+                    </div>
+                );
+            }
         },
+
         {
             field: 'decayed',
             headerName: 'Decayed',
@@ -237,7 +298,7 @@ const SatelliteTable = React.memo(function () {
                     pageSizeOptions={[5, 10, 20, 50, 100]}
                     checkboxSelection={false}
                     initialState={{
-                        pagination: {paginationModel: {pageSize: 10}},
+                        pagination: {paginationModel: {pageSize: 5}},
                         sorting: {
                             sortModel: [{field: 'transmitters', sort: 'desc'}],
                         },
@@ -248,7 +309,7 @@ const SatelliteTable = React.memo(function () {
                     sx={{
                         border: 0,
                         marginTop: 2,
-                        minHeight: '629px',
+                        minHeight: '429px',
                         width: '100%',
                         overflowX: 'auto',
                         '& .MuiDataGrid-main': {
@@ -274,7 +335,6 @@ const SatelliteTable = React.memo(function () {
                         }
                     }}
                 />
-
 
                 <SatelliteInfoModal open={openSatelliteInfoDialog} handleClose={handleDialogClose}
                                     selectedSatellite={clickedSatellite}/>

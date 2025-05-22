@@ -142,7 +142,7 @@ const weatherPersistConfig = {
 const cameraPersistConfig = {
     key: 'camera',
     storage,
-    whitelist: ['setSelectedCameraId']
+    whitelist: ['selectedCameraId', 'selectedCamera']
 };
 
 // Persist configuration for SDR slice
