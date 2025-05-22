@@ -98,9 +98,9 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
             data['satellites'] = satellites['data']
             data['group_id'] = group_id
             data['norad_id'] = norad_id
-            data['rig_id'] = tracking_state['data']['value'].get('rig_id', "")
-            data['rotator_id'] = tracking_state['data']['value'].get('rotator_id', "")
-            data['transmitter_id'] = tracking_state['data']['value'].get('transmitter_id', "")
+            data['rig_id'] = tracking_state['data']['value'].get('rig_id', "none")
+            data['rotator_id'] = tracking_state['data']['value'].get('rotator_id', "none")
+            data['transmitter_id'] = tracking_state['data']['value'].get('transmitter_id', "none")
             data['transmitters'] = transmitters['data']
             reply['success'] = True
             reply['data'] = data

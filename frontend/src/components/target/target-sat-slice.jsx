@@ -349,16 +349,16 @@ const targetSatTrackSlice = createSlice({
                 state.trackingState = action.payload['tracking_state'];
             }
 
-            if (action.payload['ui_tracker_state']) {
-                state.satGroups = action.payload['ui_tracker_state']['groups'];
-                state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
-                state.availableTransmitters = action.payload['ui_tracker_state']['transmitters'];
-                state.satelliteId = action.payload['ui_tracker_state']['norad_id'];
-                state.groupId = action.payload['ui_tracker_state']['group_id'];
-                state.selectedRadioRig = action.payload['ui_tracker_state']['rig_id'];
-                state.selectedRotator = action.payload['ui_tracker_state']['rotator_id'];
-                state.selectedTransmitter = action.payload['ui_tracker_state']['transmitter_id'];
-            }
+            // if (action.payload['ui_tracker_state']) {
+            //     state.satGroups = action.payload['ui_tracker_state']['groups'];
+            //     state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
+            //     state.availableTransmitters = action.payload['ui_tracker_state']['transmitters'];
+            //     state.satelliteId = action.payload['ui_tracker_state']['norad_id'];
+            //     state.groupId = action.payload['ui_tracker_state']['group_id'];
+            //     state.selectedRadioRig = action.payload['ui_tracker_state']['rig_id'];
+            //     state.selectedRotator = action.payload['ui_tracker_state']['rotator_id'];
+            //     state.selectedTransmitter = action.payload['ui_tracker_state']['transmitter_id'];
+            // }
 
             if (action.payload['satellite_data']) {
                 state.satelliteData.details = action.payload['satellite_data']['details'];
@@ -408,6 +408,17 @@ const targetSatTrackSlice = createSlice({
             if (action.payload['rig_data']) {
                 state.rigData = action.payload['rig_data'];
             }
+        },
+        setUITrackerValues(state, action) {
+            console.info("redux setUITrackerValues", action.payload);
+            state.satGroups = action.payload['groups'];
+            state.groupOfSats = action.payload['satellites'];
+            state.availableTransmitters = action.payload['transmitters'];
+            state.satelliteId = action.payload['norad_id'];
+            state.groupId = action.payload['group_id'];
+            state.selectedRadioRig = action.payload['rig_id'];
+            state.selectedRotator = action.payload['rotator_id'];
+            state.selectedTransmitter = action.payload['transmitter_id'];
         },
         setSatellitePasses(state, action) {
             state.satellitePasses = action.payload;
@@ -594,6 +605,17 @@ const targetSatTrackSlice = createSlice({
             .addCase(fetchNextPasses.fulfilled, (state, action) => {
                 state.passesLoading = false;
                 state.satellitePasses = action.payload;
+
+                // Find the current pass and mark it
+                const now = new Date().getTime();
+                const activePass = action.payload.find(pass => {
+                    const startTime = new Date(pass['event_start']).getTime();
+                    const endTime = new Date(pass['event_end']).getTime();
+                    return now >= startTime && now <= endTime;
+                });
+
+                console.info("activePass", activePass);
+                state.activePass = activePass;
                 state.passesError = null;
             })
             .addCase(fetchNextPasses.rejected, (state, action) => {
@@ -759,6 +781,7 @@ export const {
     setActivePass,
     setRotatorConnecting,
     setRotatorDisconnecting,
+    setUITrackerValues,
 } = targetSatTrackSlice.actions;
 
 export default targetSatTrackSlice.reducer;

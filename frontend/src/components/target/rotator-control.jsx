@@ -424,22 +424,22 @@ const RotatorControl = React.memo(({}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
-    useEffect(() => {
-        // Look through the passes and determine which one is active right now
-        if (satellitePasses) {
-            const now = new Date().getTime();
-            const activePass = satellitePasses.find(pass => {
-               const startTime = new Date(pass['event_start']).getTime();
-               const endTime = new Date(pass['event_end']).getTime();
-               return now >= startTime && now <= endTime;
-            });
-            if (activePass) {
-                dispatch(setActivePass(activePass));
-            } else {
-                dispatch(setActivePass({}));
-            }
-        }
-    },[rotatorData]);
+    // useEffect(() => {
+    //     // Look through the passes and determine which one is active right now
+    //     if (satellitePasses) {
+    //         const now = new Date().getTime();
+    //         const activePass = satellitePasses.find(pass => {
+    //            const startTime = new Date(pass['event_start']).getTime();
+    //            const endTime = new Date(pass['event_end']).getTime();
+    //            return now >= startTime && now <= endTime;
+    //         });
+    //         if (activePass) {
+    //             dispatch(setActivePass(activePass));
+    //         } else {
+    //             dispatch(setActivePass({}));
+    //         }
+    //     }
+    // },[rotatorData]);
 
     function getCurrentStatusofRotator() {
         // Define a status mapping with colors
@@ -568,7 +568,7 @@ const RotatorControl = React.memo(({}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
-                console.info("Response connecting", response);
+                console.info("Response on setTrackingStateInBackend (connect): ", response);
 
             })
         .catch((error) => {
@@ -590,7 +590,7 @@ const RotatorControl = React.memo(({}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
-                console.info("Response disconnecting", response);
+                console.info("Response on setTrackingStateInBackend (disconnect): ", response);
             })
         .catch((error) => {
             dispatch(setRotatorDisconnecting(false));

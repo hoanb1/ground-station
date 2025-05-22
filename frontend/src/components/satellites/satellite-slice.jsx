@@ -35,6 +35,44 @@ const defaultSatellite = {
     updated: null,
 };
 
+export const submitTransmitter = createAsyncThunk(
+    'satellites/submitTransmitter',
+    async ({socket, transmitterData}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'submit-transmitter', transmitterData, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to submit transmitter'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const deleteTransmitter = createAsyncThunk(
+    'satellites/deleteTransmitter',
+    async ({socket, transmitterId}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'delete-transmitter', transmitterId, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to delete transmitter'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 export const fetchSatellites = createAsyncThunk(
     'satellites/fetchAll',
     async ({ socket, satGroupId }, { rejectWithValue }) => {
@@ -157,6 +195,34 @@ const satellitesSlice = createSlice({
                 state.satellitesGroups = action.payload;
             })
             .addCase(fetchSatelliteGroups.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.error?.message;
+            })
+            .addCase(submitTransmitter.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(submitTransmitter.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+            })
+            .addCase(submitTransmitter.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.error?.message;
+            })
+            .addCase(deleteTransmitter.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(deleteTransmitter.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+            })
+            .addCase(deleteTransmitter.rejected, (state, action) => {
                 state.status = 'failed';
                 state.loading = false;
                 state.error = action.error?.message;

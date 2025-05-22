@@ -58,7 +58,10 @@ import { fetchSDRs } from './components/hardware/sdr-slice.jsx'
 import { getOverviewMapSettings } from './components/overview/overview-sat-slice.jsx';
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 import LoginForm from './components/common/login.jsx';
-
+import {useSelector} from "react-redux";
+import {
+    setUITrackerValues
+} from "./components/target/target-sat-slice.jsx";
 
 const BRANDING = {
     logo: (
@@ -244,6 +247,11 @@ export default function App(props) {
                 }
             });
 
+            socket.on("ui-tracker-state", (data) => {
+                console.info("Received UI tracker state", data);
+                store.dispatch(setUITrackerValues(data))
+            });
+
             socket.on("satellite-tracking", (data) => {
                 store.dispatch(setSatelliteData(data));
                 if (data['events']) {
@@ -282,6 +290,7 @@ export default function App(props) {
                 socket.off('disconnect');
                 socket.off("sat-sync-events");
                 socket.off("satellite-tracking");
+                socket.off("ui-tracker-state");
             };
         }
     }, [socket]);

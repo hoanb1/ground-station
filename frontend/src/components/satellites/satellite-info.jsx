@@ -35,7 +35,13 @@ import Button from "@mui/material/Button";
 import * as React from "react";
 import {useEffect, useState, useCallback} from "react";
 import Grid from "@mui/material/Grid2";
-import {DataGrid, GridActionsCellItem, GridRowModes, GridToolbarContainer} from "@mui/x-data-grid";
+import { 
+    DataGrid, 
+    GridActionsCellItem, 
+    GridRowModes, 
+    GridToolbarContainer, 
+    useGridApiContext
+} from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
@@ -43,6 +49,11 @@ import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import {useDispatch} from "react-redux";
 import {v4 as uuidv4} from "uuid";
+import Select from "@mui/material/Select";
+import MenuItem from "@mui/material/MenuItem";
+import FormControl from "@mui/material/FormControl";
+import {submitTransmitter} from "./satellite-slice.jsx";
+import {useSocket} from "../common/socket.jsx";
 
 function EditToolbar({onAddClick}) {
     return (
@@ -58,10 +69,105 @@ function EditToolbar({onAddClick}) {
     );
 }
 
+// Define the dropdown options
+const STATUS_OPTIONS = [
+    {name: "active", value: "active"},
+    {name: "inactive", value: "inactive"},
+    {name: "dead", value: "dead"}
+];
+const TYPE_OPTIONS = [
+    {name: "Telemetry", value: "Telemetry"},
+    {name: "Transmitter", value: "Transmitter"},
+    {name: "Beacon", value: "Beacon"}
+];
+const ALIVE_OPTIONS = [
+    {name: "true", value: true},
+    {name: "false", value: false}
+];
+const INVERT_OPTIONS = [
+    {name: "true", value: true},
+    {name: "false", value: false},
+];
+const MODE_OPTIONS = [
+    {name: "FM", value: "FM"},
+    {name: "AM", value: "AM"},
+    {name: "SSB", value: "SSB"},
+    {name: "CW", value: "CW"},
+    {name: "AFSK", value: "AFSK"},
+    {name: "PSK", value: "PSK"},
+    {name: "BPSK", value: "BPSK"},
+    {name: "QPSK", value: "QPSK"},
+    {name: "FSK", value: "FSK"},
+    {name: "GMSK", value: "GMSK"}
+];
+
+
+// Custom editor for dropdown selects
+function SelectEditInputCell(props) {
+    const { id, value, field, options } = props;
+    const apiRef = useGridApiContext();
+
+    const handleChange = (event) => {
+        apiRef.current.setEditCellValue({ id, field, value: event.target.value });
+    };
+
+    return (
+        <FormControl fullWidth variant="standard" size="small">
+            <Select
+                value={value}
+                onChange={handleChange}
+                autoFocus
+                sx={{
+                    height: '70px',
+                    backgroundColor: "transparent",
+                    color: "#FFFFFF",
+                    fontSize: "0.875rem",
+                    '& .MuiSelect-select': {
+                        paddingY: '4px',
+                        paddingX: '8px'
+                    },
+                    '&:before': {
+                        borderColor: 'rgba(255, 255, 255, 0.2)'
+                    },
+                    '&:hover:not(.Mui-disabled):before': {
+                        borderColor: 'rgba(255, 255, 255, 0.4)'
+                    }
+                }}
+                variant={'standard'}>
+                {options.map((option) => (
+                    <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                ))}
+            </Select>
+        </FormControl>
+    );
+}
+
+// Create render components for each dropdown type
+function renderStatusEditCell(params) {
+    return <SelectEditInputCell {...params} options={STATUS_OPTIONS}/>;
+}
+
+function renderTypeEditCell(params) {
+    return <SelectEditInputCell {...params} options={TYPE_OPTIONS} />;
+}
+
+function renderAliveEditCell(params) {
+    return <SelectEditInputCell {...params} options={ALIVE_OPTIONS} />;
+}
+
+function renderInvertEditCell(params) {
+    return <SelectEditInputCell {...params} options={INVERT_OPTIONS} />;
+}
+
+function renderModeEditCell(params) {
+    return <SelectEditInputCell {...params} options={MODE_OPTIONS}/>;
+}
+
 const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
     const [rows, setRows] = useState([]);
     const [rowModesModel, setRowModesModel] = useState({});
     const dispatch = useDispatch();
+    const {socket} = useSocket();
 
     useEffect(() => {
         if (selectedSatellite && selectedSatellite.transmitters) {
@@ -95,6 +201,7 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
 
     const handleRowEditStop = (params, event) => {
         event.defaultMuiPrevented = true;
+        console.info("params", params);
     };
 
     const handleEditClick = (id) => () => {
@@ -136,7 +243,8 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
     };
 
     const handleAddClick = () => {
-        const id = `new-${uuidv4()}`;
+        //const id = `new-${uuidv4()}`;
+        const id = `new`;
         setRows((oldRows) => [
             ...oldRows,
             {
@@ -167,8 +275,12 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
     const saveTransmittersToBackend = useCallback((currentRows) => {
         if (!selectedSatellite || !selectedSatellite.norad_id) return;
 
+        // Separate new and existing transmitters
+        const newTransmitters = currentRows.filter(row => row.id === 'new');
+        const existingTransmitters = currentRows.filter(row => row.id !== 'new');
+
         // Map rows back to transmitter format
-        const transmitters = currentRows.map(row => {
+        const transmitters = existingTransmitters.map(row => {
             // If we have the original data, use it as a base
             const base = row._original || {};
 
@@ -191,26 +303,77 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
             };
         });
 
-        // Update backend here
+        // Create new transmitter data
+        const newTransmitterData = newTransmitters.map(row => ({
+            norad_cat_id: selectedSatellite.norad_id,
+            description: row.description !== "-" ? row.description : null,
+            type: row.type !== "-" ? row.type : null,
+            status: row.status !== "-" ? row.status : null,
+            alive: row.alive !== "-" ? row.alive : null,
+            uplink_low: row.uplinkLow !== "-" ? row.uplinkLow : null,
+            uplink_high: row.uplinkHigh !== "-" ? row.uplinkHigh : null,
+            uplink_drift: row.uplinkDrift !== "-" ? row.uplinkDrift : null,
+            downlink_low: row.downlinkLow !== "-" ? row.downlinkLow : null,
+            downlink_high: row.downlinkHigh !== "-" ? row.downlinkHigh : null,
+            downlink_drift: row.downlinkDrift !== "-" ? row.downlinkDrift : null,
+            mode: row.mode !== "-" ? row.mode : null,
+            uplink_mode: row.uplinkMode !== "-" ? row.uplinkMode : null,
+            invert: row.invert !== "-" ? row.invert : null,
+            baud: row.baud !== "-" ? row.baud : null,
+        }));
+
+        if (newTransmitterData) {
+            // Update backend here
+            dispatch(submitTransmitter({socket: socket, transmitterData: newTransmitterData[0]}));
+        }
 
         
     }, [selectedSatellite, dispatch]);
 
+    function onProcessRowUpdateError (error) {
+        console.error("Error updating row", error);
+    }
+
     const columns = [
         {field: "description", headerName: "Description", flex: 1, editable: true},
-        {field: "type", headerName: "Type", flex: 1, editable: true},
-        {field: "status", headerName: "Status", flex: 1, editable: true},
-        {field: "alive", headerName: "Alive", flex: 1, editable: true},
+        {
+            field: "type", 
+            headerName: "Type", 
+            flex: 1, 
+            editable: true,
+            renderEditCell: renderTypeEditCell
+        },
+        {
+            field: "status", 
+            headerName: "Status", 
+            flex: 1, 
+            editable: true,
+            renderEditCell: renderStatusEditCell
+        },
+        {
+            field: "alive", 
+            headerName: "Alive", 
+            flex: 1, 
+            editable: true,
+            renderEditCell: renderAliveEditCell
+        },
         {field: "uplinkLow", headerName: "Uplink low", flex: 1, editable: true},
         {field: "uplinkHigh", headerName: "Uplink high", flex: 1, editable: true},
         {field: "uplinkDrift", headerName: "Uplink drift", flex: 1, editable: true},
         {field: "downlinkLow", headerName: "Downlink low", flex: 1, editable: true},
         {field: "downlinkHigh", headerName: "Downlink high", flex: 1, editable: true},
         {field: "downlinkDrift", headerName: "Downlink drift", flex: 1, editable: true},
-        {field: "mode", headerName: "Mode", flex: 1, editable: true},
-        {field: "uplinkMode", headerName: "Uplink mode", flex: 1, editable: true},
-        {field: "invert", headerName: "Invert", flex: 1, editable: true},
+        {field: "mode", headerName: "Mode", flex: 1, editable: true, renderEditCell: renderModeEditCell},
+        {field: "uplinkMode", headerName: "Uplink mode", flex: 1, editable: true, renderEditCell: renderModeEditCell},
+        {
+            field: "invert", 
+            headerName: "Invert", 
+            flex: 1, 
+            editable: true,
+            renderEditCell: renderInvertEditCell
+        },
         {field: "baud", headerName: "Baud", flex: 1, editable: true},
+        // Actions column remains the same
         {
             field: "actions",
             type: "actions",
@@ -266,7 +429,6 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                             }}
                         >
                             <Grid
-                                xs={12}
                                 sx={{
                                     backgroundColor: '#1e1e1e',
                                     borderRadius: '8px',
@@ -386,7 +548,6 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                                 </Box>
                             </Grid>
                             <Grid
-                                xs={12}
                                 sx={{
                                     textAlign: 'center',
                                     minHeight: '300px',
@@ -425,6 +586,7 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                                     onRowEditStart={handleRowEditStart}
                                     onRowEditStop={handleRowEditStop}
                                     processRowUpdate={processRowUpdate}
+                                    onProcessRowUpdateError={onProcessRowUpdateError}
                                     slots={{
                                         toolbar: EditToolbar,
                                     }}
@@ -456,8 +618,12 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                                                 backgroundColor: '#3a3a3a',
                                             },
                                         },
+                                        '& .MuiFormControl-fullWidth': {
+                                            borderBottom: '1px solid #414141',
+                                            borderRight: '1px solid #414141',
+                                        },
                                         '& .MuiDataGrid-footerContainer': {
-                                            backgroundColor: '#333333',
+                                            backgroundColor: '#121212',
                                             color: '#ffffff',
                                         },
                                         '& .MuiDataGrid-cell:focus': {
@@ -471,8 +637,40 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                                         },
                                         '& .MuiDataGrid-editInputCell': {
                                             color: '#FFFFFF',
-                                            backgroundColor: '#2c2c2c',
+                                            backgroundColor: '#121212',
+                                            borderBottom: '1px solid #414141',
+                                            borderRight: '1px solid #414141',
                                         },
+                                        '& .MuiInputBase-input': {
+                                            backgroundColor: '#121212',
+                                            color: '#ffffff',
+                                        },
+                                        '& .MuiInput-root': {
+                                            backgroundColor: '#121212',
+                                            borderColor: '#414141',
+                                        },
+                                        '& .MuiOutlinedInput-root': {
+                                            backgroundColor: '#121212',
+                                            '& fieldset': {
+                                                borderColor: '#444444',
+                                            },
+                                            '&:hover fieldset': {
+                                                borderColor: '#666666',
+                                            },
+                                            '&.Mui-focused fieldset': {
+                                                borderColor: '#90caf9',
+                                            },
+                                        },
+                                        '& .MuiFilledInput-root': {
+                                            backgroundColor: '#2c2c2c',
+                                            '&:hover': {
+                                                backgroundColor: '#3c3c3c',
+                                            },
+                                            '&.Mui-focused': {
+                                                backgroundColor: '#3c3c3c',
+                                            },
+                                        },
+
                                     }}
                                 />
                             ) : (

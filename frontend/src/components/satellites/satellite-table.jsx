@@ -298,7 +298,7 @@ const SatelliteTable = React.memo(function () {
                     pageSizeOptions={[5, 10, 20, 50, 100]}
                     checkboxSelection={false}
                     initialState={{
-                        pagination: {paginationModel: {pageSize: 5}},
+                        pagination: {paginationModel: {pageSize: 10}},
                         sorting: {
                             sortModel: [{field: 'transmitters', sort: 'desc'}],
                         },

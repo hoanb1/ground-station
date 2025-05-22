@@ -968,57 +968,24 @@ async def fetch_satellites(session: AsyncSession, norad_id: Union[str, int, list
         return {"success": False, "error": str(e)}
 
 
-async def add_satellite(
-        session: AsyncSession,
-        name: str,
-        sat_id: str,
-        norad_id: int,
-        status: str,
-        is_frequency_violator: bool,
-        name_other: str = None,
-        alternative_name: str = None,
-        image: str = None,
-        tle1: str = None,
-        tle2: str = None,
-        decayed: datetime = None,
-        launched: datetime = None,
-        deployed: datetime = None,
-        website: str = None,
-        operator: str = None,
-        countries: str = None,
-        citation: str = None,
-        associated_satellites: str = None
-) -> dict:
+async def add_satellite(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new satellite record.
     """
     try:
-        new_id = uuid.uuid4()
+        # Validate required fields
+        required_fields = ['name', 'sat_id', 'norad_id', 'status', 'is_frequency_violator']
+        for field in required_fields:
+            if field not in data:
+                raise ValueError(f"Missing required field: {field}")
+
         now = datetime.now(UTC)
+        data['added'] = now
+        data['updated'] = now
+
         stmt = (
             insert(Satellites)
-            .values(
-                norad_id=norad_id,
-                name=name,
-                name_other=name_other,
-                alternative_name=alternative_name,
-                image=image,
-                sat_id=sat_id,
-                tle1=tle1,
-                tle2=tle2,
-                status=status,
-                decayed=decayed,
-                launched=launched,
-                deployed=deployed,
-                website=website,
-                operator=operator,
-                countries=countries,
-                citation=citation,
-                is_frequency_violator=is_frequency_violator,
-                associated_satellites=associated_satellites,
-                added=now,
-                updated=now
-            )
+            .values(**data)
             .returning(Satellites)
         )
         result = await session.execute(stmt)
@@ -1126,70 +1093,22 @@ async def fetch_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) ->
         return {"success": False, "error": str(e)}
 
 
-async def add_transmitter(
-        session: AsyncSession,
-        description: str,
-        alive: bool,
-        type: str,
-        uplink_low: int,
-        uplink_high: int,
-        uplink_drift: int,
-        downlink_low: int,
-        downlink_high: int,
-        downlink_drift: int,
-        mode: str,
-        mode_id: int,
-        uplink_mode: str,
-        invert: bool,
-        baud: int,
-        sat_id: str,
-        norad_cat_id: int,
-        norad_follow_id: int,
-        status: str,
-        service: str,
-        citation: str = None,
-        iaru_coordination: str = None,
-        iaru_coordination_url: str = None,
-        itu_notification=None,
-        frequency_violation: bool = False,
-        unconfirmed: bool = False
-) -> dict:
+async def add_transmitter(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new transmitter record.
     """
     try:
         new_id = uuid.uuid4()
         now = datetime.now(UTC)
-        stmt = insert(Transmitters).values(
-            id=new_id,
-            description=description,
-            alive=alive,
-            type=type,
-            uplink_low=uplink_low,
-            uplink_high=uplink_high,
-            uplink_drift=uplink_drift,
-            downlink_low=downlink_low,
-            downlink_high=downlink_high,
-            downlink_drift=downlink_drift,
-            mode=mode,
-            mode_id=mode_id,
-            uplink_mode=uplink_mode,
-            invert=invert,
-            baud=baud,
-            sat_id=sat_id,
-            norad_cat_id=norad_cat_id,
-            norad_follow_id=norad_follow_id,
-            status=status,
-            service=service,
-            citation=citation,
-            iaru_coordination=iaru_coordination,
-            iaru_coordination_url=iaru_coordination_url,
-            itu_notification=itu_notification,
-            frequency_violation=frequency_violation,
-            unconfirmed=unconfirmed,
-            added=now,
-            updated=now
-        ).returning(Transmitters)
+        data["id"] = str(new_id)
+        data["added"] = now
+        data["updated"] = now
+
+        stmt = (
+            insert(Transmitters)
+            .values(**data)
+            .returning(Transmitters)
+        )
 
         result = await session.execute(stmt)
         await session.commit()
@@ -1199,28 +1118,37 @@ async def add_transmitter(
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error adding transmitter: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def edit_transmitter(session: AsyncSession, transmitter_id: uuid.UUID, **kwargs) -> dict:
+async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
     """
     Edit an existing transmitter record by updating provided fields.
     """
     try:
-        # Optionally ensure the record exists first:
+        transmitter_id = data.pop('id')
+        if isinstance(transmitter_id, str):
+            transmitter_id = uuid.UUID(transmitter_id)
+
+        data.pop('added', None)
+        data.pop('updated', None)
+
+        # Ensure the record exists first
         stmt = select(Transmitters).filter(Transmitters.id == transmitter_id)
         result = await session.execute(stmt)
         existing = result.scalar_one_or_none()
         if not existing:
             return {"success": False, "error": f"Transmitter with id {transmitter_id} not found."}
 
-        # Ensure the updated timestamp is set.
-        kwargs["updated"] = datetime.now(UTC)
+        # Add updated timestamp
+        data["updated"] = datetime.now(UTC)
 
         upd_stmt = (
             update(Transmitters)
             .where(Transmitters.id == transmitter_id)
-            .values(**kwargs)
+            .values(**data)
             .returning(Transmitters)
         )
         upd_result = await session.execute(upd_stmt)
@@ -1231,14 +1159,19 @@ async def edit_transmitter(session: AsyncSession, transmitter_id: uuid.UUID, **k
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error editing transmitter: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 
-async def delete_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) -> dict:
+async def delete_transmitter(session: AsyncSession, transmitter_id: Union[uuid.UUID, str]) -> dict:
     """
-    Delete a transmitter record by its UUID.
+    Delete a transmitter record by its UUID or string representation of UUID.
     """
     try:
+        if isinstance(transmitter_id, str):
+            transmitter_id = uuid.UUID(transmitter_id)
+
         del_stmt = (
             delete(Transmitters)
             .where(Transmitters.id == transmitter_id)
@@ -1253,6 +1186,8 @@ async def delete_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) -
 
     except Exception as e:
         await session.rollback()
+        logger.error(f"Error deleting transmitter: {e}")
+        logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
 

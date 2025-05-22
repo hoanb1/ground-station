@@ -208,6 +208,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             logger.debug(f'Fetching tracking state, data: {data}')
             tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
             await emit_tracker_data(dbsession, sio, logger)
+            await emit_ui_tracker_values(dbsession, sio, logger)
             reply = {'success': tracking_state['success'], 'data': tracking_state.get('data', [])}
 
         elif cmd == "get-map-settings":
@@ -484,6 +485,7 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
+            await emit_ui_tracker_values(dbsession, sio, logger)
             reply = {'success': tracking_state_reply['success'], 'data': tracking_state_reply['data']['value']}
 
         elif cmd == "set-map-settings":
@@ -491,6 +493,7 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             map_settings_reply = await crud.set_map_settings(dbsession, data)
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
+            await emit_ui_tracker_values(dbsession, sio, logger)
             reply = {'success': map_settings_reply['success'], 'data': map_settings_reply['data']}
 
         elif cmd == "nudge-rotator":
@@ -498,6 +501,20 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             # Put command into the tracker queue
             queue_to_tracker.put({'command': data.get('cmd', None), 'data': None})
             reply = {'success': True, 'data': None}
+
+        elif cmd == "submit-transmitter":
+            logger.debug(f'Adding transmitter, data: {data}')
+            add_reply = await crud.add_transmitter(dbsession, data)
+            transmitters = await crud.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
+            reply = {'success': (transmitters['success'] & add_reply['success']),
+                     'data': transmitters.get('data', [])}
+
+        elif cmd == "delete-transmitter":
+            logger.debug(f'Deleting transmitter, data: {data}')
+            delete_reply = await crud.delete_transmitter(dbsession, data.get('id'))
+            transmitters = await crud.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
+            reply = {'success': (transmitters['success'] & delete_reply['success']),
+                     'data': transmitters.get('data', [])}
 
         else:
             logger.error(f'Unknown command: {cmd}')
@@ -525,19 +542,41 @@ async def emit_tracker_data(dbsession, sio, logger):
         logger.debug("Sending tracker data to clients...")
 
         tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
-        group_id = tracking_state_reply['data']['value'].get('group_id', None)
         norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
         satellite_data = await compiled_satellite_data(dbsession, norad_id)
-        ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
         data = {
             'satellite_data': satellite_data,
-            'ui_tracker_state': ui_tracker_state['data'],
             'tracking_state':tracking_state_reply['data']['value'],
         }
         await sio.emit('satellite-tracking', data)
 
     except Exception as e:
         logger.error(f'Error emitting tracker data: {e}')
+        logger.exception(e)
+
+
+async def emit_ui_tracker_values(dbsession, sio, logger):
+    """
+    Call this when UI tracker values are updated
+
+    :param dbsession:
+    :param sio:
+    :param logger:
+    :return:
+    """
+
+    try:
+        logger.debug("Sending UI tracker value to clients...")
+
+        tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+        group_id = tracking_state_reply['data']['value'].get('group_id', None)
+        norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
+        ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
+        data = ui_tracker_state['data']
+        await sio.emit('ui-tracker-state', data)
+
+    except Exception as e:
+        logger.error(f'Error emitting UI tracker values: {e}')
         logger.exception(e)
 
 
