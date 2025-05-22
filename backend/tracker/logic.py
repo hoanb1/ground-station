@@ -32,7 +32,7 @@ from controllers.rotator import RotatorController
 from controllers.rig import RigController
 from controllers.sdr import SDRController
 from arguments import arguments as args
-from statetracker import StateTracker
+from .state import StateTracker
 from skyfield.api import load, wgs84, EarthSatellite
 from datetime import datetime, timedelta
 from typing import List, Dict, Union, Tuple
@@ -44,6 +44,13 @@ from tracking.satellite import get_satellite_position_from_tle, get_satellite_az
 
 logger = logging.getLogger("tracker-worker")
 
+
+# Create queues for bi-directional communication
+queue_to_tracker = multiprocessing.Queue()
+queue_from_tracker = multiprocessing.Queue()
+
+# Create a stop event to signal the process to terminate
+stop_event = multiprocessing.Event()
 
 def pretty_dict(d):
     # Create a string buffer and pretty print the dict to it
@@ -117,12 +124,6 @@ def start_tracker_process():
 
     :return: A tuple containing (process, queue_in, queue_out, stop_event)
     """
-    # Create queues for bi-directional communication
-    queue_to_tracker = multiprocessing.Queue()
-    queue_from_tracker = multiprocessing.Queue()
-
-    # Create a stop event to signal the process to terminate
-    stop_event = multiprocessing.Event()
 
     # Define the process target function that will run the async tracking task
     def run_tracking_task():
@@ -263,6 +264,8 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     :type stop_event: multiprocessing.Event
     :return: None
     """
+
+    logger.info(f"Starting satellite tracker-worker...")
 
     # check interval value, should be between 2 and 5 (including)
     assert 1 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
@@ -617,21 +620,53 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     rig_id_state_tracker = StateTracker(initial_state="")
     rig_id_state_tracker.register_async_callback(handle_rig_id_change)
 
+    # nudge command queue
+    nudge_commands = []
+
     # main loop
     async with (AsyncSessionLocal() as dbsession):
         while True:
+
             # Check for any incoming commands from the main process
             try:
-                if not queue_in.empty():
+                # Process all available commands in the queue
+                while not queue_in.empty():
                     command = queue_in.get_nowait()
                     logger.info(f"Received command from main process: {command}")
+
                     # Process the command based on its type
                     if command.get('command') == 'stop':
                         logger.info("Received stop command, exiting tracking task")
-                        break
-                    # Handle other command types as needed
+                        return
+
+                    elif command.get('command') == 'nudge_clockwise':
+                        nudge_commands.append(command)
+
+                    elif command.get('command') == 'nudge_counter_clockwise':
+                        nudge_commands.append(command)
+
+                    elif command.get('command') == 'nudge_up':
+                        nudge_commands.append(command)
+
+                    elif command.get('command') == 'nudge_down':
+                        nudge_commands.append(command)
+
+            # Handle other command types as needed
             except Exception as e:
                 logger.error(f"Error processing command from queue: {e}")
+
+            # try:
+            #     if not queue_in.empty():
+            #         command = queue_in.get_nowait()
+            #         logger.info(f"Received command from main process: {command}")
+            #         # Process the command based on its type
+            #         if command.get('command') == 'stop':
+            #             logger.info("Received stop command, exiting tracking task")
+            #             break
+            #         # Handle other command types as needed
+            #
+            # except Exception as e:
+            #     logger.error(f"Error processing command from queue: {e}")
 
             try:
                 start_loop_date = datetime.now(UTC)
@@ -777,7 +812,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                         # generator is done (tuning complete)
                         logger.info(f"Tuning to frequency {rig_data['observed_freq']} complete")
 
-                # slew rotator
+                # slew rotator to the new target location in the sky
                 if rotator_controller and current_rotator_state == "tracking":
 
                     # Check if the target position is within tolerance of the current position
@@ -793,6 +828,35 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
 
                         except StopAsyncIteration:
                             logger.info(f"Slewing to AZ={az}° EL={el}° complete")
+                            
+                elif rotator_controller and current_rotator_state != "tracking":
+                    # since we are not tracking process those nudge commands if there are any
+                    if nudge_commands:
+                        nudge_command = nudge_commands.pop(0)
+
+                        if nudge_command:
+                            new_az = rotator_data['az']
+                            new_el = rotator_data['el']
+
+                            if nudge_command['command'] == 'nudge_clockwise':
+                                new_az = new_az + 2
+                            elif nudge_command['command'] == 'nudge_counter_clockwise':
+                                new_az = new_az - 2
+                            elif nudge_command['command'] == 'nudge_up':
+                                new_el = new_el + 2
+                            elif nudge_command['command'] == 'nudge_down':
+                                new_el = new_el - 2
+
+                            position_gen = rotator_controller.set_position(new_az, new_el)
+
+                            # go through the yields while it is slewing
+                            try:
+                                az, el, is_slewing = await anext(position_gen)
+                                rotator_data['slewing'] = is_slewing
+                                logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
+
+                            except StopAsyncIteration:
+                                logger.info(f"Slewing to AZ={az}° EL={el}° complete")
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
@@ -890,6 +954,10 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                     logger.info("Stop event detected, exiting tracking task")
                     break
 
-                logger.info(f"Waiting for {remaining_time_to_sleep} seconds before next update "
-                            f"(already spent {loop_duration})...")
+                logger.info(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
+                            f"(already spent {round(loop_duration, 2)})...")
                 await asyncio.sleep(remaining_time_to_sleep)
+
+
+# Start the tracker process
+tracker_process, _, _, _ = start_tracker_process()

@@ -37,7 +37,7 @@ import {
     setTrackingStateInBackend,
     setActivePass,
     setRotatorConnecting,
-    setRotatorDisconnecting,
+    setRotatorDisconnecting, sendNudgeCommand,
 } from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
@@ -69,6 +69,7 @@ function GaugePointer() {
         x: cx + outerRadius * Math.sin(valueAngle),
         y: cy - outerRadius * Math.cos(valueAngle),
     };
+
     return (
         <g>
             {/* Define the filter for drop shadow */}
@@ -600,6 +601,10 @@ const RotatorControl = React.memo(({}) => {
         dispatch(setRotator(event.target.value));
     }
 
+    function handleNudgeCommand(cmd) {
+        dispatch(sendNudgeCommand({socket: socket, cmd: {'cmd': cmd}}));
+    }
+
     return (
         <>
             {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Rotator control</TitleBar>*/}
@@ -723,13 +728,13 @@ const RotatorControl = React.memo(({}) => {
                             <Grid item>
                                 <Button
                                     size="small"
-                                    disabled={!rotatorData['connected']}
+                                    disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
+                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
                                     onClick={() => {
-
+                                        handleNudgeCommand("nudge_counter_clockwise");
                                     }}>
                                     ⟲ CCW
                                 </Button>
@@ -737,15 +742,14 @@ const RotatorControl = React.memo(({}) => {
                             <Grid item>
                                 <Button
                                     size="small"
-                                    disabled={!rotatorData['connected']}
+                                    disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
                                     sx={{}}
-                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
+                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
                                     onClick={() => {
-
-
+                                        handleNudgeCommand("nudge_clockwise");
                                     }}>
                                     CW ⟳
                                 </Button>
@@ -756,13 +760,13 @@ const RotatorControl = React.memo(({}) => {
                             <Grid item>
                                 <Button
                                     size="small"
-                                    disabled={!rotatorData['connected']}
+                                    disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
+                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
                                     onClick={() => {
-
+                                        handleNudgeCommand("nudge_up");
                                     }}>
                                     ↑ UP
                                 </Button>
@@ -770,13 +774,13 @@ const RotatorControl = React.memo(({}) => {
                             <Grid item>
                                 <Button
                                     size="small"
-                                    disabled={!rotatorData['connected']}
+                                    disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}
                                     fullWidth={true}
                                     variant="contained"
                                     color="primary"
-                                    style={{height: '30px', fontSize: '0.9rem', fontWeight: 'bold', padding: 0}}
+                                    style={{height: '30px', fontSize: '0.9rem', padding: 0}}
                                     onClick={() => {
-
+                                        handleNudgeCommand("nudge_down");
                                     }}>
                                     DOWN ↓
                                 </Button>

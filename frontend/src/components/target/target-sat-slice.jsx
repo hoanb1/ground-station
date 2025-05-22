@@ -21,6 +21,23 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 
+
+export const sendNudgeCommand = createAsyncThunk(
+    'targetSatTrack/sendNudgeCommand',
+    async ({socket, cmd}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_submission', 'nudge-rotator', cmd, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue("Failed to send nudge command"));
+                }
+            });
+        });
+    }
+);
+
+
 export const setTargetMapSetting = createAsyncThunk(
     'targetSatTrack/setTargetMapSetting',
     async ({socket, key}, {getState, rejectWithValue}) => {
@@ -669,6 +686,18 @@ const targetSatTrackSlice = createSlice({
                 state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
             })
             .addCase(getTargetMapSettings.rejected, (state, action) => {
+                state.loading = false;
+                state.error = action.payload;
+            })
+            .addCase(sendNudgeCommand.pending, (state) => {
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(sendNudgeCommand.fulfilled, (state, action) => {
+                state.loading = false;
+                state.error = null;
+            })
+            .addCase(sendNudgeCommand.rejected, (state, action) => {
                 state.loading = false;
                 state.error = action.payload;
             });

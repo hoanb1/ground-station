@@ -22,7 +22,7 @@ from tlesync.logic import synchronize_satellite_data
 from tlesync.state import sync_state_manager
 from auth import *
 from tracking.events import (fetch_next_events_for_satellite, fetch_next_events_for_group)
-from tracker import get_ui_tracker_state, get_satellite_position_from_tle, compiled_satellite_data
+from tracker.logic import get_ui_tracker_state, get_satellite_position_from_tle, compiled_satellite_data, queue_to_tracker
 from common import is_geostationary
 from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdrprocessmanager import sdr_process_manager
@@ -482,23 +482,25 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
         elif cmd == "set-tracking-state":
             logger.debug(f'Updating satellite tracking state, data: {data}')
             tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
-
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
-
             reply = {'success': tracking_state_reply['success'], 'data': tracking_state_reply['data']['value']}
 
         elif cmd == "set-map-settings":
             logger.debug(f'Updating map settings, data: {data}')
             map_settings_reply = await crud.set_map_settings(dbsession, data)
-
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
-
             reply = {'success': map_settings_reply['success'], 'data': map_settings_reply['data']}
 
+        elif cmd == "nudge-rotator":
+            logger.info(f'Nudging rotator, data: {data}')
+            # Put command into the tracker queue
+            queue_to_tracker.put({'command': data.get('cmd', None), 'data': None})
+            reply = {'success': True, 'data': None}
+
         else:
-            logger.error(f'Unknown command 1: {cmd}')
+            logger.error(f'Unknown command: {cmd}')
 
     return reply
 

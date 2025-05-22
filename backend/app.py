@@ -23,7 +23,6 @@ import httpx
 import numpy as np
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
-from tracker import satellite_tracking_task
 from fastapi import FastAPI, WebSocket, Request, HTTPException
 from models import Base
 from logger import get_logger, get_logger_config
@@ -40,7 +39,7 @@ from typing import Optional, Dict, Any, Union
 from waterfall import waterfall_socket_app, cleanup_sdr_session
 from sdrprocessmanager import sdr_process_manager
 from soapysdrbrowser import discover_soapy_servers
-from tracker import start_tracker_process
+from tracker.logic import tracker_process, queue_to_tracker, queue_from_tracker, stop_event
 
 
 # Show NumPy configuration
@@ -148,7 +147,7 @@ app.add_middleware(
 sdr_process_manager.set_sio(sio)
 
 # Start the tracker process
-tracker_process, queue_to_tracker, queue_from_tracker, stop_event = start_tracker_process()
+#tracker_process, queue_to_tracker, queue_from_tracker, stop_event = start_tracker_process()
 
 def stop_tracker():
     """
