@@ -623,6 +623,9 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     # nudge command queue
     nudge_commands = []
 
+    # nudge command offset values
+    nudge_offset = {'az': 0, 'el': 0}
+
     # main loop
     async with (AsyncSessionLocal() as dbsession):
         while True:
@@ -640,16 +643,16 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                         return
 
                     elif command.get('command') == 'nudge_clockwise':
-                        nudge_commands.append(command)
+                        nudge_offset['az']  = nudge_offset['az'] + 2
 
                     elif command.get('command') == 'nudge_counter_clockwise':
-                        nudge_commands.append(command)
+                        nudge_offset['az']  = nudge_offset['az'] - 2
 
                     elif command.get('command') == 'nudge_up':
-                        nudge_commands.append(command)
+                        nudge_offset['el']  = nudge_offset['el'] + 2
 
                     elif command.get('command') == 'nudge_down':
-                        nudge_commands.append(command)
+                        nudge_offset['el']  = nudge_offset['el'] - 2
 
             # Handle other command types as needed
             except Exception as e:
@@ -830,33 +833,21 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                             logger.info(f"Slewing to AZ={az}° EL={el}° complete")
                             
                 elif rotator_controller and current_rotator_state != "tracking":
-                    # since we are not tracking process those nudge commands if there are any
-                    if nudge_commands:
-                        nudge_command = nudge_commands.pop(0)
+                    # since we are not tracking, process those nudge commands if there are any
+                    if nudge_offset['az'] != 0 or nudge_offset['el'] != 0:
+                        new_az = rotator_data['az'] + nudge_offset['az']
+                        new_el = rotator_data['el'] + nudge_offset['el']
 
-                        if nudge_command:
-                            new_az = rotator_data['az']
-                            new_el = rotator_data['el']
+                        position_gen = rotator_controller.set_position(new_az, new_el)
 
-                            if nudge_command['command'] == 'nudge_clockwise':
-                                new_az = new_az + 2
-                            elif nudge_command['command'] == 'nudge_counter_clockwise':
-                                new_az = new_az - 2
-                            elif nudge_command['command'] == 'nudge_up':
-                                new_el = new_el + 2
-                            elif nudge_command['command'] == 'nudge_down':
-                                new_el = new_el - 2
+                        # go through the yields while it is slewing
+                        try:
+                            az, el, is_slewing = await anext(position_gen)
+                            rotator_data['slewing'] = is_slewing
+                            logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
 
-                            position_gen = rotator_controller.set_position(new_az, new_el)
-
-                            # go through the yields while it is slewing
-                            try:
-                                az, el, is_slewing = await anext(position_gen)
-                                rotator_data['slewing'] = is_slewing
-                                logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
-
-                            except StopAsyncIteration:
-                                logger.info(f"Slewing to AZ={az}° EL={el}° complete")
+                        except StopAsyncIteration:
+                            logger.info(f"Slewing to AZ={az}° EL={el}° complete")
 
             except AzimuthOutOfBounds as e:
                 logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
@@ -948,6 +939,9 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 # Clean up rig_data
                 rig_data['tuning'] = False
                 rig_data['error'] = False
+
+                # reset those nudge offset values
+                nudge_offset = {'az': 0, 'el': 0}
 
                 # Check if stop_event is set before sleeping
                 if stop_event and stop_event.is_set():
