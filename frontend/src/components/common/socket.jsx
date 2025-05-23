@@ -38,8 +38,9 @@ export const SocketProvider = ({ children }) => {
     useEffect(() => {
         // Initialize socket connection (replace URL with your server's URL)
         console.info(import.meta.env.VITE_GS_BACKEND_PORT);
-        const port = import.meta.env.VITE_GS_BACKEND_PORT || 5000;
+        //const port = import.meta.env.VITE_GS_BACKEND_PORT || 5000;
         const host = window.location.hostname;
+        const port = window.location.port;
         // Determine protocol based on current page protocol
         const protocol = window.location.protocol === 'https:' ? 'wss' : 'ws';
         const backendURL = `${protocol}://${host}:${port}/ws`;
