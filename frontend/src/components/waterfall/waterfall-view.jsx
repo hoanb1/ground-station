@@ -155,6 +155,7 @@ const MainWaterfallDisplay = React.memo(() => {
         rtlAgc,
         fftWindow,
         dBRange,
+        soapyAgc,
         waterFallVisualWidth,
         waterFallCanvasWidth,
         waterFallCanvasHeight,
@@ -511,7 +512,7 @@ const MainWaterfallDisplay = React.memo(() => {
             dispatch(setStartStreamingLoading(true));
             dispatch(setErrorMessage(''));
 
-            // Send command to backend to configure the SDR settings
+            // Send command to the backend to configure the SDR settings
             socket.emit('sdr_data', 'configure-sdr', {
                 selectedSDRId: selectedSDRId,
                 centerFrequency: centerFrequency,
@@ -524,8 +525,8 @@ const MainWaterfallDisplay = React.memo(() => {
                 fftWindow: fftWindow,
                 antenna: selectedAntenna,
                 offsetFrequency: selectedOffsetValue,
+                soapyAgc: soapyAgc,
             }, (response) => {
-                // Check response
                 if (response['success']) {
                     // Start streaming after configuration is acknowledged
                     socket.emit('sdr_data', 'start-streaming', {selectedSDRId});
@@ -942,6 +943,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         >
                             <PlayArrowIcon/>
                         </IconButton>
+
                         <IconButton
                             disabled={!isStreaming}
                             color="error"

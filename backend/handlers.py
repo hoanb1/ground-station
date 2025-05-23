@@ -700,7 +700,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     'host': sdr_host,
                     'port': sdr_port,
                     'client_id': client_id,
-                    'gain_mode': 'automatic' if soapy_agc else 'manual',
+                    'soapy_agc': soapy_agc,
                     'offset_freq': offset_freq,
                 }
 

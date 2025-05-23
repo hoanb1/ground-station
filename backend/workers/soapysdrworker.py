@@ -161,7 +161,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
         logger.info(f"Center frequency set to {actual_freq/1e6} MHz")
 
         # Set gain
-        if config.get('gain_mode', 'manual') == 'automatic':
+        if config.get('soapy_agc', False):
             sdr.setGainMode(SOAPY_SDR_RX, channel, True)
             logger.info(f"Automatic gain control enabled")
 
@@ -240,9 +240,9 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                             fft_window = new_config['fft_window']
                             logger.info(f"Updated FFT window: {fft_window}")
 
-                    if 'gain_mode' in new_config:
-                        if old_config.get('gain_mode', 'manual') != new_config['gain_mode']:
-                            if new_config['gain_mode'] == 'automatic':
+                    if 'soapy_agc' in new_config:
+                        if old_config.get('soapy_agc', False) != new_config['soapy_agc']:
+                            if new_config['soapy_agc']:
                                 sdr.setGainMode(SOAPY_SDR_RX, channel, True)
                                 logger.info("Enabled automatic gain control")
                             else:
@@ -251,7 +251,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
                                     sdr.setGain(SOAPY_SDR_RX, channel, new_config['gain'])
                                     logger.info(f"Set manual gain to {new_config['gain']} dB")
 
-                    if 'gain' in new_config and new_config.get('gain_mode', 'manual') == 'manual':
+                    if 'gain' in new_config and new_config.get('soapy_agc', False) is False:
                         if old_config.get('gain', 0) != new_config['gain']:
                             sdr.setGain(SOAPY_SDR_RX, channel, new_config['gain'])
                             actual_gain = sdr.getGain(SOAPY_SDR_RX, channel)

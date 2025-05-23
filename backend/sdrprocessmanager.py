@@ -193,7 +193,7 @@ class SDRProcessManager:
 
             # Add optional parameters
             for param in ['fft_size', 'fft_window', 'sample_rate', 'center_freq', 'gain',
-                          'bias_t', 'tuner_agc', 'rtl_agc']:
+                          'bias_t', 'tuner_agc', 'rtl_agc', 'soapy_agc']:
                 if param in sdr_device:
                     config[param] = sdr_config[param]
 
@@ -232,7 +232,7 @@ class SDRProcessManager:
                 'tuner_agc': sdr_config.get('tuner_agc', False),
                 'rtl_agc': sdr_config.get('rtl_agc', False),
                 'antenna': sdr_config.get('antenna', 'RX'),
-                'gain_mode': 'automatic' if sdr_config.get('soapy_agc', True) else 'manual',
+                'soapy_agc': sdr_config.get('soapy_agc', False),
                 'offset_freq': int(sdr_config.get('offset_freq', 0)),
             }
 
