@@ -479,8 +479,8 @@ const TargetSatelliteLayout = React.memo(function () {
     // default layout if none in localStorage
     const defaultLayouts = {
         "lg": [{
-            "w": 6,
-            "h": 15,
+            "w": 7,
+            "h": 18,
             "x": 0,
             "y": 0,
             "i": "map",
@@ -488,38 +488,38 @@ const TargetSatelliteLayout = React.memo(function () {
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
+            "w": 3,
             "h": 11,
-            "x": 6,
-            "y": 0,
+            "x": 7,
+            "y": 4,
             "i": "info",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 6,
+            "w": 7,
             "h": 7,
             "x": 0,
-            "y": 15,
+            "y": 18,
             "i": "passes",
             "minH": 6,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
+            "w": 3,
             "h": 4,
-            "x": 8,
+            "x": 7,
             "y": 0,
             "i": "satselector",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
-            "h": 7,
-            "x": 8,
-            "y": 4,
+            "w": 3,
+            "h": 10,
+            "x": 7,
+            "y": 15,
             "i": "video",
             "minH": 4,
             "moved": false,
@@ -527,20 +527,10 @@ const TargetSatelliteLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 11,
+            "h": 13,
             "x": 10,
             "y": 0,
             "i": "rotator-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 10,
-            "x": 10,
-            "y": 11,
-            "i": "rig-control",
             "minH": 6,
             "moved": false,
             "static": false,
@@ -603,16 +593,6 @@ const TargetSatelliteLayout = React.memo(function () {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 5,
-            "h": 11,
-            "x": 5,
-            "y": 26,
-            "i": "rig-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }],
         "sm": [{
             "w": 6,
@@ -654,8 +634,8 @@ const TargetSatelliteLayout = React.memo(function () {
         }, {
             "w": 2,
             "h": 7,
-            "x": 0,
-            "y": 39,
+            "x": 2,
+            "y": 28,
             "i": "video",
             "minH": 4,
             "moved": false,
@@ -667,16 +647,6 @@ const TargetSatelliteLayout = React.memo(function () {
             "x": 0,
             "y": 28,
             "i": "rotator-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 9,
-            "x": 2,
-            "y": 28,
-            "i": "rig-control",
             "minH": 6,
             "moved": false,
             "static": false,
@@ -721,7 +691,7 @@ const TargetSatelliteLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 7,
+            "h": 11,
             "x": 0,
             "y": 39,
             "i": "video",
@@ -733,7 +703,7 @@ const TargetSatelliteLayout = React.memo(function () {
             "w": 2,
             "h": 11,
             "x": 0,
-            "y": 46,
+            "y": 50,
             "i": "rotator-control",
             "minH": 6,
             "moved": false,

@@ -18,7 +18,6 @@
  */
 
 
-
 import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
 import {Responsive, WidthProvider} from 'react-grid-layout';
 import 'leaflet-fullscreen/dist/Leaflet.fullscreen.js';
@@ -71,41 +70,51 @@ const WaterfallLayout = React.memo(function () {
 
     // Default layout if none in localStorage
     const defaultLayouts = {
-        "lg": [{"w": 10, "h": 22, "x": 0, "y": 0, "i": "waterfall"}, {
+        "lg": [{"w": 10, "h": 25, "x": 0, "y": 0, "i": "waterfall", "moved": false, "static": false}, {
             "w": 2,
-            "h": 13,
+            "h": 12,
             "x": 10,
-            "y": 9,
+            "y": 13,
             "i": "settings",
-        }, {"w": 2, "h": 9, "x": 10, "y": 0, "i": "rig-control"}],
-        "md": [{"w": 10, "h": 22, "x": 0, "y": 13, "i": "waterfall"}, {
+            "moved": false,
+            "static": false
+        }, {"w": 2, "h": 13, "x": 10, "y": 0, "i": "rig-control", "moved": false, "static": false}],
+        "md": [{"w": 10, "h": 22, "x": 0, "y": 13, "i": "waterfall", "moved": false, "static": false}, {
             "w": 6,
             "h": 13,
             "x": 0,
             "y": 0,
             "i": "settings",
-        }, {"w": 4, "h": 13, "x": 6, "y": 0, "i": "rig-control"}],
-        "sm": [{"w": 6, "h": 22, "x": 0, "y": 13, "i": "waterfall"}, {
+            "moved": false,
+            "static": false
+        }, {"w": 4, "h": 13, "x": 6, "y": 0, "i": "rig-control", "moved": false, "static": false}],
+        "sm": [{"w": 6, "h": 22, "x": 0, "y": 13, "i": "waterfall", "moved": false, "static": false}, {
             "w": 3,
             "h": 13,
             "x": 0,
             "y": 0,
             "i": "settings",
-        }, {"w": 3, "h": 13, "x": 3, "y": 0, "i": "rig-control"}],
-        "xs": [{"w": 2, "h": 22, "x": 0, "y": 22, "i": "waterfall"}, {
+            "moved": false,
+            "static": false
+        }, {"w": 3, "h": 13, "x": 3, "y": 0, "i": "rig-control", "moved": false, "static": false}],
+        "xs": [{"w": 2, "h": 22, "x": 0, "y": 22, "i": "waterfall", "moved": false, "static": false}, {
             "w": 2,
             "h": 13,
             "x": 0,
             "y": 9,
             "i": "settings",
-        }, {"w": 2, "h": 9, "x": 0, "y": 0, "i": "rig-control"}],
-        "xxs": [{"w": 2, "h": 22, "x": 0, "y": 13, "i": "waterfall"}, {
+            "moved": false,
+            "static": false
+        }, {"w": 2, "h": 9, "x": 0, "y": 0, "i": "rig-control", "moved": false, "static": false}],
+        "xxs": [{"w": 2, "h": 22, "x": 0, "y": 13, "i": "waterfall", "moved": false, "static": false}, {
             "w": 2,
             "h": 13,
             "x": 0,
             "y": 0,
-            "i": "settings"
-        }, {"w": 2, "h": 9, "x": 0, "y": 35, "i": "rig-control"}]
+            "i": "settings",
+            "moved": false,
+            "static": false
+        }, {"w": 2, "h": 9, "x": 0, "y": 35, "i": "rig-control", "moved": false, "static": false}]
     };
 
     // globalize the callback

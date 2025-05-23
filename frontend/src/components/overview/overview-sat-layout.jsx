@@ -19,7 +19,7 @@
 
 
 import React, {useState, useEffect, useRef, useCallback, useMemo} from 'react';
-import { Responsive, WidthProvider } from 'react-grid-layout';
+import {Responsive, WidthProvider} from 'react-grid-layout';
 import {
     MapContainer,
     TileLayer,
@@ -92,7 +92,8 @@ const viewSatelliteLimit = 100;
 let MapObject = null;
 
 // global callback for dashboard editing here
-export let handleSetGridEditableOverview = function () {};
+export let handleSetGridEditableOverview = function () {
+};
 
 export const gridLayoutStoreName = 'global-sat-track-layouts';
 
@@ -156,7 +157,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         showGrid,
         selectedSatelliteId,
     } = useSelector(state => state.overviewSatTrack);
-    const { location, } = useSelector((state) => state.location);
+    const {location,} = useSelector((state) => state.location);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -170,7 +171,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
 
     // Default layout if none in localStorage
     const defaultLayouts = {
-        lg: [{
+        "lg": [{
             "w": 8,
             "h": 17,
             "x": 0,
@@ -190,7 +191,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 8,
-            "h": 7,
+            "h": 9,
             "x": 0,
             "y": 17,
             "i": "passes",
@@ -210,9 +211,58 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 14,
+            "h": 17,
             "x": 8,
             "y": 0,
+            "i": "sat-info",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
+        "xs": [{
+            "w": 2,
+            "h": 17,
+            "x": 0,
+            "y": 0,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 3,
+            "x": 0,
+            "y": 17,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 9,
+            "x": 0,
+            "y": 20,
+            "i": "passes",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 5,
+            "x": 0,
+            "y": 29,
+            "i": "weather",
+            "minH": 5,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 14,
+            "x": 0,
+            "y": 34,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
@@ -239,7 +289,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
     const handleWhenReady = (map) => {
         // map is ready
         MapObject = map.target;
-        setInterval(()=>{
+        setInterval(() => {
             if (MapObject) {
                 try {
                     MapObject.invalidateSize();
@@ -255,8 +305,10 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         const handleClick = () => {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
-        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
-            <HomeIcon />
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
+            handleClick()
+        }}>
+            <HomeIcon/>
         </Fab>;
     }
 
@@ -265,8 +317,10 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         const handleClick = () => {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
-        return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={()=>{handleClick()}}>
-            <FilterCenterFocusIcon />
+        return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={() => {
+            handleClick()
+        }}>
+            <FilterCenterFocusIcon/>
         </Fab>;
     }
 
@@ -274,8 +328,10 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         const handleMapFullscreen = () => {
             MapObject.toggleFullscreen();
         };
-        return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={()=>{handleMapFullscreen()}}>
-            <FullscreenIcon />
+        return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={() => {
+            handleMapFullscreen()
+        }}>
+            <FullscreenIcon/>
         </Fab>;
     }
 
@@ -351,12 +407,12 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                         noClip={true}
                         key={"coverage-" + satellite['name']}
                         pathOptions={{
-                            color: selectedSatelliteId === noradid? "#d875ff": satelliteCoverageColor,
+                            color: selectedSatelliteId === noradid ? "#d875ff" : satelliteCoverageColor,
                             fillColor: satelliteCoverageColor,
-                            weight: selectedSatelliteId === noradid? 2: 1,
+                            weight: selectedSatelliteId === noradid ? 2 : 1,
                             fill: true,
                             opacity: 0.9,
-                            fillOpacity: selectedSatelliteId === noradid? 0.5: 0.1,
+                            fillOpacity: selectedSatelliteId === noradid ? 0.5 : 0.1,
                             dashArray: "3 4",
                         }}
                         positions={coverage}
@@ -429,20 +485,20 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
     }, []);
 
     // Update the satellites position, day/night terminator every 3 seconds
-    useEffect(()=>{
+    useEffect(() => {
         satelliteUpdate(new Date());
-        const satelliteUpdateTimer = setInterval(()=>{
+        const satelliteUpdateTimer = setInterval(() => {
             satelliteUpdate(new Date())
         }, 3000);
 
-        return ()=> {
+        return () => {
             clearInterval(satelliteUpdateTimer);
         };
-    },[selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
+    }, [selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
         mapZoomLevel, showTooltip, selectedSatelliteId]);
 
-    function handleLayoutsChange(currentLayout, allLayouts){
+    function handleLayoutsChange(currentLayout, allLayouts) {
         setLayouts(allLayouts);
         saveLayoutsToLocalStorage(allLayouts);
     }
@@ -465,8 +521,10 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
             dispatch(setOpenMapSettingsDialog(true));
         };
 
-        return <Fab size="small" color="primary" aria-label="Go home" onClick={()=>{handleClick()}}>
-            <SettingsIcon />
+        return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
+            handleClick()
+        }}>
+            <SettingsIcon/>
         </Fab>;
     }
 
@@ -495,7 +553,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 fullscreenControl={true}
                 center={[0, 0]}
                 zoom={mapZoomLevel}
-                style={{ width:'100%', height:'100%' }}
+                style={{width: '100%', height: '100%'}}
                 dragging={false}
                 scrollWheelZoom={false}
                 maxZoom={10}
@@ -505,7 +563,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 zoomDelta={0.25}
             >
                 <MapTitleBar
-                    className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>
+                    className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
                     Birds eye view
                 </MapTitleBar>
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
@@ -513,20 +571,20 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                     url={getTileLayerById(tileLayerID)['url']}
                     attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                 />
-                <Box sx={{ '& > :not(style)': { m: 1 } }} style={{right: 5, top: 30, position: 'absolute'}}>
+                <Box sx={{'& > :not(style)': {m: 1}}} style={{right: 5, top: 30, position: 'absolute'}}>
                     <MapSettingsButton/>
                     <CenterHomeButton/>
                     <CenterMapButton/>
                     <FullscreenMapButton/>
                 </Box>
-                <MapSettingsIslandDialog updateBackend={()=>{
+                <MapSettingsIslandDialog updateBackend={() => {
                     const key = 'overview-map-settings';
                     dispatch(setOverviewMapSetting({socket, key: key}));
                 }}/>
-                {sunPos && showSunIcon? <Marker position={sunPos} icon={sunIcon} opacity={0.5}></Marker>: null}
-                {moonPos && showMoonIcon? <Marker position={moonPos} icon={moonIcon} opacity={0.5}></Marker>: null}
+                {sunPos && showSunIcon ? <Marker position={sunPos} icon={sunIcon} opacity={0.5}></Marker> : null}
+                {moonPos && showMoonIcon ? <Marker position={moonPos} icon={moonIcon} opacity={0.5}></Marker> : null}
 
-                {daySidePolygon.length>1 && showTerminatorLine && (
+                {daySidePolygon.length > 1 && showTerminatorLine && (
                     <Polygon
                         positions={daySidePolygon}
                         pathOptions={{
@@ -540,11 +598,11 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                     />
                 )}
 
-                {terminatorLine.length>1 && showTerminatorLine && (
+                {terminatorLine.length > 1 && showTerminatorLine && (
                     <Polyline
                         positions={terminatorLine}
                         pathOptions={{
-                            color:'white',
+                            color: 'white',
                             weight: 1,
                             opacity: 0.1,
                         }}
@@ -552,10 +610,10 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 )}
                 {InternationalDateLinePolyline()}
                 <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
-                {showPastOrbitPath? currentPastSatellitesPaths: null}
-                {showFutureOrbitPath? currentFutureSatellitesPaths: null}
+                {showPastOrbitPath ? currentPastSatellitesPaths : null}
+                {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
                 {currentSatellitesPosition}
-                {showSatelliteCoverage? currentSatellitesCoverage: null}
+                {showSatelliteCoverage ? currentSatellitesCoverage : null}
                 <MapStatusBar>
                     <SimpleTruncatedHtml className={"attribution"} htmlString={`<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
                        rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}/>
@@ -575,13 +633,13 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key={"satselector"}>
-            <OverviewSatelliteGroupSelector />
+            <OverviewSatelliteGroupSelector/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesGroupIsland/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="weather">
-            <WeatherDisplay latitude={location.lat} longitude={location.lon} />
+            <WeatherDisplay latitude={location.lat} longitude={location.lon}/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="sat-info">
             <SatelliteInfoCard/>
@@ -598,8 +656,8 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}
-                breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-                cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
+                breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
+                cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
                 rowHeight={30}
                 isResizable={true}
                 isDraggable={true}
@@ -614,8 +672,8 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}
-                breakpoints={{ lg:1200, md:996, sm:768, xs:480, xxs:0 }}
-                cols={{ lg:12, md:10, sm:6, xs:2, xxs:2 }}
+                breakpoints={{lg: 1200, md: 996, sm: 768, xs: 480, xxs: 0}}
+                cols={{lg: 12, md: 10, sm: 6, xs: 2, xxs: 2}}
                 rowHeight={30}
                 isResizable={false}
                 isDraggable={false}
