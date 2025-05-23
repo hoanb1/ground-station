@@ -614,7 +614,8 @@ const targetSatTrackSlice = createSlice({
                     return now >= startTime && now <= endTime;
                 });
 
-                console.info("activePass", activePass);
+                //console.info("activePass", activePass);
+
                 state.activePass = activePass;
                 state.passesError = null;
             })

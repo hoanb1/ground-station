@@ -98,6 +98,69 @@ function GaugePointer() {
 }
 
 
+const EdgeArrow = ({angle, stroke = "#ffffff", strokeWidth = 1, opacity = 1, forElevation = false, arrowLength: lineLength = 0}) => {
+    const {outerRadius, cx, cy} = useGaugeState();
+
+    if (angle === null) {
+        return;
+    }
+
+    const angleInRad = forElevation ?
+        ((90 - angle) * Math.PI) / 180 :
+        (angle * Math.PI) / 180;
+
+    // Calculate point at the edge of the circle
+    const edgePoint = {
+        x: cx + outerRadius * Math.sin(angleInRad),
+        y: cy - outerRadius * Math.cos(angleInRad),
+    };
+
+    // Calculate the inner point (inward from the edge)
+    const innerPoint = {
+        x: edgePoint.x - lineLength * Math.sin(angleInRad),
+        y: edgePoint.y + lineLength * Math.cos(angleInRad),
+    };
+
+    // Calculate arrowhead points
+    const arrowHeadSize = 10;
+    // Angle for arrowhead lines (30 degrees from main line)
+    const arrowAngle1 = angleInRad + Math.PI/6;
+    const arrowAngle2 = angleInRad - Math.PI/6;
+
+    const arrowHead1 = {
+        x: edgePoint.x + arrowHeadSize * Math.sin(arrowAngle1),
+        y: edgePoint.y - arrowHeadSize * Math.cos(arrowAngle1),
+    };
+
+    const arrowHead2 = {
+        x: edgePoint.x + arrowHeadSize * Math.sin(arrowAngle2),
+        y: edgePoint.y - arrowHeadSize * Math.cos(arrowAngle2),
+    };
+
+    // Create a path for the arrow (line with arrowhead)
+    const arrowPath = `
+        M ${innerPoint.x} ${innerPoint.y} 
+        L ${edgePoint.x} ${edgePoint.y}
+        M ${edgePoint.x} ${edgePoint.y} 
+        L ${arrowHead1.x} ${arrowHead1.y}
+        M ${edgePoint.x} ${edgePoint.y} 
+        L ${arrowHead2.x} ${arrowHead2.y}
+    `;
+
+    return (
+        <g>
+            <path
+                d={arrowPath}
+                stroke={stroke}
+                strokeWidth={strokeWidth}
+                opacity={opacity}
+                fill="none"
+            />
+        </g>
+    );
+};
+
+
 const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forElevation = false}) => {
     const {outerRadius, cx, cy} = useGaugeState();
     const angleInRad = forElevation ?
@@ -277,7 +340,10 @@ const rescaleToRange = (value, originalMin, originalMax, targetMin, targetMax) =
 };
 
 
-function GaugeAz({az, limits = [null, null], peakAz = null}) {
+function GaugeAz({az, limits = [null, null],
+                     peakAz = null, targetCurrentAz = null,
+                     isGeoStationary = false, isGeoSynchronous = false
+}) {
     let [maxAz, minAz] = limits;
 
     return (
@@ -307,14 +373,14 @@ function GaugeAz({az, limits = [null, null], peakAz = null}) {
             {minAz !== null && maxAz !== null && <>
                 <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
                 <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
-                <CircleSlice
+                {!isGeoStationary && !isGeoSynchronous && <CircleSlice
                     startAngle={minAz}
                     endAngle={maxAz}
                     peakAz={peakAz}
                     stroke={'#abff45'}
                     fill={'#abff45'}
                     opacity={0.2}
-                />
+                />}
             </>}
             <Pointer angle={270}/>
             <Pointer angle={180}/>
@@ -325,13 +391,19 @@ function GaugeAz({az, limits = [null, null], peakAz = null}) {
             <text x="70" y="125" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
             <text x="15" y="70" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
             <GaugePointer/>
+            <EdgeArrow angle={targetCurrentAz} />
         </GaugeContainer>
     );
 }
 
 
-function GaugeEl({el, maxElevation = null}) {
+function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
     const angle = rescaleToRange(maxElevation, 0, 90, 90, 0);
+
+    const rescaleValue = (value) => {
+        return 90 - value;
+    };
+
     return (
         <GaugeContainer
             style={{
@@ -382,6 +454,7 @@ function GaugeEl({el, maxElevation = null}) {
             <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
             <text x="10" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
             <GaugePointer/>
+            <EdgeArrow angle={rescaleValue(targetCurrentEl)} />
         </GaugeContainer>
     );
 }
@@ -423,23 +496,6 @@ const RotatorControl = React.memo(({}) => {
         const newTrackingState = {...trackingState, 'rotator_state': "stopped"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
-
-    // useEffect(() => {
-    //     // Look through the passes and determine which one is active right now
-    //     if (satellitePasses) {
-    //         const now = new Date().getTime();
-    //         const activePass = satellitePasses.find(pass => {
-    //            const startTime = new Date(pass['event_start']).getTime();
-    //            const endTime = new Date(pass['event_end']).getTime();
-    //            return now >= startTime && now <= endTime;
-    //         });
-    //         if (activePass) {
-    //             dispatch(setActivePass(activePass));
-    //         } else {
-    //             dispatch(setActivePass({}));
-    //         }
-    //     }
-    // },[rotatorData]);
 
     function getCurrentStatusofRotator() {
         // Define a status mapping with colors
@@ -676,10 +732,17 @@ const RotatorControl = React.memo(({}) => {
                                 az={rotatorData['az']}
                                 limits={[activePass?.['start_azimuth'], activePass?.['end_azimuth']]}
                                 peakAz={activePass?.['peak_azimuth']}
+                                targetCurrentAz={satelliteData?.['position']['az']}
+                                isGeoStationary={activePass?.['is_geostationary']}
+                                isGeoSynchronous={activePass?.['is_geosynchronous']}
                             />
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            <GaugeEl el={rotatorData['el']} maxElevation={activePass?.['peak_altitude']}/>
+                            <GaugeEl
+                                el={rotatorData['el']}
+                                maxElevation={activePass?.['peak_altitude']}
+                                targetCurrentEl={satelliteData?.['position']['el']}
+                            />
                         </Grid>
 
                     </Grid>

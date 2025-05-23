@@ -46,7 +46,7 @@ import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
 import { setSyncState } from './components/satellites/synchronize-slice.jsx';
 import { setStatus } from "./components/hardware/rig-slice.jsx";
-import { setSatelliteData, getTargetMapSettings } from './components/target/target-sat-slice.jsx';
+import {setSatelliteData, getTargetMapSettings, fetchNextPasses} from './components/target/target-sat-slice.jsx';
 import { fetchRigs } from './components/hardware/rig-slice.jsx'
 import { fetchRotators } from './components/hardware/rotaror-slice.jsx'
 import { fetchTLESources } from './components/satellites/sources-slice.jsx'
@@ -58,10 +58,11 @@ import { fetchSDRs } from './components/hardware/sdr-slice.jsx'
 import { getOverviewMapSettings } from './components/overview/overview-sat-slice.jsx';
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 import LoginForm from './components/common/login.jsx';
-import {useSelector} from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {
     setUITrackerValues
 } from "./components/target/target-sat-slice.jsx";
+
 
 const BRANDING = {
     logo: (
@@ -95,6 +96,11 @@ export default function App(props) {
     const [loggedIn, setLoggedIn] = useState(true);
     const dashboardTheme = setupTheme();
     const { session, logIn, logOut } = useAuth();
+    const {
+        satelliteId,
+        nextPassesHours,
+    } = useSelector((state) => state.targetSatTrack);
+    const dispatch = useDispatch();
 
     const authentication = useMemo(() => {
         return {
@@ -110,6 +116,32 @@ export default function App(props) {
             },
         };
     }, []);
+
+    useEffect(() => {
+        const fetchPasses = () => {
+            if (satelliteId) {
+                dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
+                    .unwrap()
+                    .then(data => {
+
+                    })
+                    .catch(error => {
+                        enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
+                            variant: 'error',
+                            autoHideDuration: 5000,
+                        })
+                    });
+            }
+        };
+
+        fetchPasses();
+
+        const interval = setInterval(fetchPasses, 60 * 60 * 1000); // Every hour
+
+        return () => {
+            clearInterval(interval);
+        };
+    }, [satelliteId]);
 
     const NAVIGATION = [
         {
