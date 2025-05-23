@@ -34,6 +34,8 @@ import Grid from "@mui/material/Grid2";
 import {useSocket} from "../common/socket.jsx";
 import {setTrackingStateInBackend} from "../target/target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
+import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
+import PublicIcon from "@mui/icons-material/Public";
 
 const SatelliteInfoCard = () => {
     const dispatch = useDispatch();
@@ -259,12 +261,11 @@ const SatelliteInfoCard = () => {
                             <Grid>
                                 <Card sx={cardStyle}>
                                     <Typography variant="overline" sx={cardHeaderStyle}>
+                                        <PublicIcon sx={iconStyle}/>
                                         COUNTRIES
                                     </Typography>
                                     <Box sx={{textAlign: 'center', mt: 1}}>
-                                        <Typography variant="body1">
-                                            {satelliteData && satelliteData['details'] ? (renderCountryFlagsCSV(satelliteData['details']['countries']) || 'Unknown') : 'Unknown'}
-                                        </Typography>
+                                        {satelliteData && satelliteData['details'] ? (renderCountryFlagsCSV(satelliteData['details']['countries']) || 'Unknown') : 'Unknown'}
                                     </Box>
                                 </Card>
                             </Grid>
@@ -272,6 +273,7 @@ const SatelliteInfoCard = () => {
                             <Grid>
                                 <Card sx={cardStyle}>
                                     <Typography variant="overline" sx={cardHeaderStyle}>
+                                        <SettingsInputAntennaIcon sx={iconStyle}/>
                                         BANDS
                                     </Typography>
                                     <Box sx={{display: 'flex', flexWrap: 'wrap', gap: 1, mt: 1}}>

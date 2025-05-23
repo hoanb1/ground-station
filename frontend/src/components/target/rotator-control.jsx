@@ -790,7 +790,7 @@ const RotatorControl = React.memo(({}) => {
                         <Grid size="grow"
                               style={{paddingRight: '0.5rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}}
                               container spacing={1} justifyContent="center">
-                            <Grid item>
+                            <Grid>
                                 <Button
                                     size="small"
                                     disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}
@@ -804,7 +804,7 @@ const RotatorControl = React.memo(({}) => {
                                     ⟲ CCW
                                 </Button>
                             </Grid>
-                            <Grid item>
+                            <Grid>
                                 <Button
                                     size="small"
                                     disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}
@@ -824,7 +824,7 @@ const RotatorControl = React.memo(({}) => {
                               style={{paddingRight: '0rem', flex: 1, paddingBottom: '0.5rem', paddingTop: '0.2rem'}}
                               container
                               spacing={1} justifyContent="center">
-                            <Grid item>
+                            <Grid>
                                 <Button
                                     size="small"
                                     disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}
@@ -838,7 +838,7 @@ const RotatorControl = React.memo(({}) => {
                                     ↑ UP
                                 </Button>
                             </Grid>
-                            <Grid item>
+                            <Grid>
                                 <Button
                                     size="small"
                                     disabled={!rotatorData['connected'] || trackingState['rotator_state'] === "tracking"}

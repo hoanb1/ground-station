@@ -69,7 +69,7 @@ const CameraView = () => {
                         <InputLabel htmlFor={"camera-select"} id="camera-select">camera</InputLabel>
                         <Select
                             labelId="camera-select"
-                            value={selectedCameraId}
+                            value={cameras.length > 0 ? selectedCameraId : 'none'}
                             onChange={(e) => {
                                 handleCameraChange(e);
                             }}
