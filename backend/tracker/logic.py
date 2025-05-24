@@ -273,8 +273,8 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     azimuthlimits = (0, 360)
     eleveationlimits = (0, 90)
     minelevation = 10.0
-    az_tolerance = 1.0
-    el_tolerance = 1.0
+    az_tolerance = 2.0
+    el_tolerance = 2.0
     previous_rotator_state = None
     rotator_controller = None
     rig_controller = None
@@ -859,7 +859,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                         logger.info(f"Tuning to frequency {rig_data['observed_freq']} complete")
 
                 # slew rotator to the new target location in the sky
-                if rotator_controller and current_rotator_state == "tracking":
+                if rotator_controller and current_rotator_state == "tracking" and rotator_data['outofbounds'] is False and rotator_data['minelevation'] is False:
 
                     # Check if the target position is within tolerance of the current position
                     if (abs(skypoint[0] - rotator_data['az']) > az_tolerance or
@@ -891,54 +891,6 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
 
                         except StopAsyncIteration:
                             logger.info(f"Slewing to AZ={az}° EL={el}° complete")
-
-            # except AzimuthOutOfBounds as e:
-            #     logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
-            #     if in_tracking_state() and notified.get('azimuth_out_of_bounds', False) is not True:
-            #         queue_out.put({
-            #             'event': 'satellite-tracking',
-            #             'data': {
-            #                 'events': [{'name': "azimuth_out_of_bounds"}]
-            #             }
-            #         })
-            #     notified['azimuth_out_of_bounds'] = True
-            #     rotator_data['minelevation'] = False
-            #     rotator_data['outofbounds'] = True
-            #     rotator_data['stopped'] = True
-            #     rig_data['tracking'] = False
-            #     rig_data['tuning'] = False
-            #
-            # except ElevationOutOfBounds as e:
-            #     logger.warning(f"Elevation out of bounds for satellite #{current_norad_id} {satellite_name}: {e}")
-            #     if in_tracking_state() and notified.get('elevation_out_of_bounds', False) is not True:
-            #         queue_out.put({
-            #             'event': 'satellite-tracking',
-            #             'data': {
-            #                 'events': [{'name': "elevation_out_of_bounds"}]
-            #             }
-            #         })
-            #     notified['elevation_out_of_bounds'] = True
-            #     rotator_data['minelevation'] = False
-            #     rotator_data['outofbounds'] = True
-            #     rotator_data['stopped'] = True
-            #     rig_data['tracking'] = False
-            #     rig_data['tuning'] = False
-            #
-            # except MinimumElevationError as e:
-            #     logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{current_norad_id} {satellite_name}: {e}")
-            #     if in_tracking_state() and notified.get('minelevation_error', False) is not True:
-            #         queue_out.put({
-            #             'event': 'satellite-tracking',
-            #             'data': {
-            #                 'events': [{'name': "minelevation_error"}]
-            #             }
-            #         })
-            #     notified['minelevation_error'] = True
-            #     rotator_data['minelevation'] = True
-            #     rotator_data['outofbounds'] = False
-            #     rotator_data['stopped'] = True
-            #     rig_data['tracking'] = False
-            #     rig_data['tuning'] = False
 
             except Exception as e:
                 logger.error(f"Error in satellite tracking task: {e}")

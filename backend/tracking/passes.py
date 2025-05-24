@@ -67,8 +67,6 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
         homelat = float(home_location['lat'])
         homelon = float(home_location['lon'])
 
-        logger.info(f"************** from location {home_location}")
-
         # Coordinates can be in decimal degrees:
         observer = Topos(latitude_degrees=homelat, longitude_degrees=homelon)
 
