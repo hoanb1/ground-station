@@ -56,6 +56,7 @@ def probe_local_soapy_sdr(sdr_details):
             - gains: List of valid gain values in dB
             - has_agc: Boolean indicating if automatic gain control is supported
             - antennas: Dictionary of available antennas for RX and TX
+            - clock_info: Information about reference clock status and source
     """
 
     reply: dict[str, bool | dict | str | None | list] = {'success': None, 'data': None, 'error': None, 'log': []}
@@ -65,6 +66,7 @@ def probe_local_soapy_sdr(sdr_details):
     has_agc = False
     antennas = {'rx': [], 'tx': []}
     frequency_ranges = {}
+    clock_info = {}
 
     reply['log'].append(f"INFO: Connecting to local SoapySDR device with details: {sdr_details}")
 
@@ -184,6 +186,67 @@ def probe_local_soapy_sdr(sdr_details):
         except Exception as e:
             reply['log'].append(f"WARNING: Could not get frequency range information: {e}")
 
+        # Check reference clock status and source
+        try:
+            # Initialize clock_info dictionary
+            clock_info = {
+                'ref_locked': None,
+                'clock_source': None,
+                'available_sensors': [],
+                'available_settings': {}
+            }
+
+            # Get list of available sensors
+            try:
+                sensors = sdr.listSensors()
+                clock_info['available_sensors'] = sensors
+                reply['log'].append(f"INFO: Available sensors: {sensors}")
+            except Exception as e:
+                reply['log'].append(f"INFO: Could not list sensors: {e}")
+
+            # Check if the device has a ref_locked sensor
+            if sdr.hasSensor("ref_locked"):
+                try:
+                    ref_locked = sdr.getSensorValue("ref_locked")
+                    clock_info['ref_locked'] = ref_locked
+                    reply['log'].append(f"INFO: External reference clock locked: {ref_locked}")
+                except Exception as e:
+                    reply['log'].append(f"WARNING: Error reading ref_locked sensor: {e}")
+
+            # Check if the device has a clock_source sensor
+            if sdr.hasSensor("clock_source"):
+                try:
+                    clock_source = sdr.getSensorValue("clock_source")
+                    clock_info['clock_source'] = clock_source
+                    reply['log'].append(f"INFO: Current clock source: {clock_source}")
+                except Exception as e:
+                    reply['log'].append(f"WARNING: Error reading clock_source sensor: {e}")
+
+            # Try to get clock source from device settings
+            try:
+                clock_source = sdr.readSetting("clock_source")
+                if clock_info['clock_source'] is None:  # Only set if not already set from sensor
+                    clock_info['clock_source'] = clock_source
+                reply['log'].append(f"INFO: Clock source from settings: {clock_source}")
+            except Exception as e:
+                reply['log'].append(f"INFO: Could not read clock_source setting: {e}")
+
+            # Try to get available settings
+            try:
+                settings = sdr.getSettingInfo()
+                for setting in settings:
+                    if 'clock' in setting.key.lower() or 'ref' in setting.key.lower():
+                        clock_info['available_settings'][setting.key] = {
+                            'description': setting.description,
+                            'value': sdr.readSetting(setting.key) if hasattr(sdr, 'readSetting') else None
+                        }
+                reply['log'].append(f"INFO: Available clock-related settings: {list(clock_info['available_settings'].keys())}")
+            except Exception as e:
+                reply['log'].append(f"INFO: Could not get setting info: {e}")
+
+        except Exception as e:
+            reply['log'].append(f"WARNING: Could not get reference clock information: {e}")
+
         reply['success'] = True
 
     except Exception as e:
@@ -199,7 +262,8 @@ def probe_local_soapy_sdr(sdr_details):
             'gains': gains,
             'has_soapy_agc': has_agc,
             'antennas': antennas,
-            'frequency_ranges': frequency_ranges
+            'frequency_ranges': frequency_ranges,
+            'clock_info': clock_info
         }
 
     return reply
