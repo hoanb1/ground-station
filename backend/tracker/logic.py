@@ -92,7 +92,7 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         async with (AsyncSessionLocal() as dbsession):
             groups = await crud.fetch_satellite_group(dbsession)
             satellites = await crud.fetch_satellites_for_group_id(dbsession, group_id=group_id)
-            tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+            tracking_state = await crud.get_tracking_state(dbsession, name='satellite-tracking')
             transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
             data['groups'] = groups['data']
             data['satellites'] = satellites['data']
@@ -313,7 +313,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
             return False
 
     async def handle_satellite_change(old, new):
-        nonlocal notified, rotator_data, current_transmitter_id
+        nonlocal notified, rotator_data, current_transmitter_id, current_rig_state, new_tracking_state
 
         logger.info(f"Target satellite change detected from '{old}' to '{new}'")
 
@@ -330,8 +330,17 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
             }
         })
 
+        # change the rig_state in the tracking_state in the db
+        new_tracking_state = await crud.set_tracking_state(dbsession, {
+            'name': 'satellite-tracking',
+            'value': {
+                'rig_state': 'connected',
+                'transmitter_id': "none"
+            }
+        })
+
         # since the satellite changed, reset the transmitter_id too
-        current_transmitter_id = "none"
+        #current_transmitter_id = "none"
 
     async def connect_to_rotator():
         """
@@ -370,7 +379,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 rotator_data['error'] = True
 
                 # change the rotator_state in the tracking_state in the db
-                _new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                _new_tracking_state = await crud.set_tracking_state(dbsession, {
                     'name': 'satellite-tracking',
                     'value': {'rotator_state': 'disconnected'}
                 })
@@ -475,6 +484,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         :return:
         """
         nonlocal rig_controller
+
         # check what hardware was chosen and set it up
         if current_rig_id is not None and rig_controller is None:
             # rig_controller was selected, and a rig_controller is not setup, set it up now
@@ -488,7 +498,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 else:
                     # If hardware Rig not found, try fetching SDR details
                     rig_details_reply = await crud.fetch_sdr(dbsession, sdr_id=current_rig_id)
-                    if not rig_details_reply.get('data'):
+                    if not rig_details_reply.get('data', None):
                         raise Exception(f"No hardware radio rig or SDR device found with ID: {current_rig_id}")
                     else:
                         rig_type = 'sdr'
@@ -524,7 +534,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 rig_data['error'] = True
 
                 # change the rig_state in the tracking_state in the db
-                _new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                _new_tracking_state = await crud.set_tracking_state(dbsession, {
                     'name': 'satellite-tracking',
                     'value': {'rig_state': 'disconnected'}
                 })
@@ -658,23 +668,10 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
             except Exception as e:
                 logger.error(f"Error processing command from queue: {e}")
 
-            # try:
-            #     if not queue_in.empty():
-            #         command = queue_in.get_nowait()
-            #         logger.info(f"Received command from main process: {command}")
-            #         # Process the command based on its type
-            #         if command.get('command') == 'stop':
-            #             logger.info("Received stop command, exiting tracking task")
-            #             break
-            #         # Handle other command types as needed
-            #
-            # except Exception as e:
-            #     logger.error(f"Error processing command from queue: {e}")
-
             try:
                 start_loop_date = datetime.now(UTC)
                 events = []
-                tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+                tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
                 assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                 assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
@@ -715,7 +712,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                     logger.warning(f"Tracking state said rotator must be connected but it is not")
 
                     # change the rig_state in the tracking_state in the db
-                    new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                    new_tracking_state = await crud.set_tracking_state(dbsession, {
                         'name': 'satellite-tracking',
                         'value': {'rotator_state': 'disconnected'}
                     })
@@ -733,7 +730,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                     logger.warning(f"Tracking state said rig must be connected but it is not")
 
                     # change the rig_state in the tracking_state in the db
-                    new_tracking_state = await crud.set_satellite_tracking_state(dbsession, {
+                    new_tracking_state = await crud.set_tracking_state(dbsession, {
                         'name': 'satellite-tracking',
                         'value': {'rig_state': 'disconnected'}
                     })

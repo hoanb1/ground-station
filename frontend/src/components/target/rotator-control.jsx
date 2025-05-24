@@ -370,17 +370,17 @@ function GaugeAz({az, limits = [null, null],
             }}
         >
             <GaugeReferenceArc/>
-            {minAz !== null && maxAz !== null && <>
+            {minAz !== null && maxAz !== null && (!isGeoStationary && !isGeoSynchronous) && <>
                 <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
                 <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
-                {!isGeoStationary && !isGeoSynchronous && <CircleSlice
+                <CircleSlice
                     startAngle={minAz}
                     endAngle={maxAz}
                     peakAz={peakAz}
                     stroke={'#abff45'}
                     fill={'#abff45'}
                     opacity={0.2}
-                />}
+                />
             </>}
             <Pointer angle={270}/>
             <Pointer angle={180}/>
@@ -952,7 +952,7 @@ const RotatorControl = React.memo(({}) => {
                                     variant="contained" color="success" style={{height: '60px'}}
                                     onClick={()=>{handleTrackingStart()}}
                             >
-                                TRACK ROTATOR
+                                TRACK
                             </Button>
                         </Grid>
                         <Grid size="grow">

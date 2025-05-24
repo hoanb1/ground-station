@@ -702,6 +702,9 @@ async def fetch_rigs(session: AsyncSession, rig_id: Optional[Union[uuid.UUID | s
     Fetch a single rig by its UUID or all rigs if UUID is not provided.
     """
     try:
+        if rig_id == "none":
+            return {"success": False, "data": None, "error": "'none' was given as rig_id"}
+
         if rig_id is None:
             stmt = select(Rigs)
         else:
@@ -1451,7 +1454,7 @@ async def delete_satellite_group(session: AsyncSession, satellite_group_ids: Uni
         return {"success": False, "data": None, "error": str(e)}
 
 
-async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dict:
+async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
     """
     Upserts a record in the satellite_tracking_state table
     based on the provided data dictionary via SQLAlchemy's merge operation.
@@ -1525,7 +1528,7 @@ async def set_satellite_tracking_state(session: AsyncSession, data: dict) -> dic
         return {"success": False, "error": str(e)}
 
 
-async def get_satellite_tracking_state(session: AsyncSession, name: str) -> dict:
+async def get_tracking_state(session: AsyncSession, name: str) -> dict:
     """
     Fetches a SatelliteTrackingState row based on the provided key (name).
     Returns a dictionary with the data or an error message if not found.
@@ -1818,6 +1821,9 @@ async def fetch_sdr(session: AsyncSession, sdr_id: Optional[Union[uuid.UUID, str
     :rtype: dict
     """
     try:
+        if sdr_id == "none":
+            return {"success": False, "data": None, "error": "'none' was given as sdr_id"}
+
         if sdr_id is None:
             stmt = select(SDRs)
             result = await session.execute(stmt)

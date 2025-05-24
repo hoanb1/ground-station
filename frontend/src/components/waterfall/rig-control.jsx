@@ -85,16 +85,6 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
         rigs
     } = useSelector((state) => state.rigs);
 
-    // useEffect(() => {
-    //     const selectedType = determineRadioType(selectedRadioRig);
-    //
-    //     if (selectedRadioRig && selectedType==="sdr") {
-    //         // Call the function in the waterfall settings component to handle the change
-    //         waterfallSettingsComponentRef.current.handleSDRChange({target: {value: selectedRadioRig}});
-    //     }
-    //
-    // }, [selectedRadioRig]);
-
     const handleTrackingStop = () => {
         const newTrackingState = {...trackingState, 'rig_state': "stopped"};
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
@@ -389,19 +379,7 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                             </Grid>
                         </Grid>
                     </Grid>
-
                 </Grid>
-
-                {/*<Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>*/}
-                {/*    <Grid container direction="row" sx={{*/}
-                {/*        justifyContent: "space-between",*/}
-                {/*        alignItems: "stretch",*/}
-                {/*    }}>*/}
-                {/*        <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1}}>*/}
-
-                {/*        </Grid>*/}
-                {/*    </Grid>*/}
-                {/*</Grid>*/}
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <Grid container direction="row" sx={{

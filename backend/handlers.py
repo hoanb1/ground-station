@@ -206,7 +206,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "get-tracking-state":
             logger.debug(f'Fetching tracking state, data: {data}')
-            tracking_state = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+            tracking_state = await crud.get_tracking_state(dbsession, name='satellite-tracking')
             await emit_tracker_data(dbsession, sio, logger)
             await emit_ui_tracker_values(dbsession, sio, logger)
             reply = {'success': tracking_state['success'], 'data': tracking_state.get('data', [])}
@@ -482,7 +482,7 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "set-tracking-state":
             logger.debug(f'Updating satellite tracking state, data: {data}')
-            tracking_state_reply = await crud.set_satellite_tracking_state(dbsession, data)
+            tracking_state_reply = await crud.set_tracking_state(dbsession, data)
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
             await emit_ui_tracker_values(dbsession, sio, logger)
@@ -541,7 +541,7 @@ async def emit_tracker_data(dbsession, sio, logger):
     try:
         logger.debug("Sending tracker data to clients...")
 
-        tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+        tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
         norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
         satellite_data = await compiled_satellite_data(dbsession, norad_id)
         data = {
@@ -568,7 +568,7 @@ async def emit_ui_tracker_values(dbsession, sio, logger):
     try:
         logger.debug("Sending UI tracker value to clients...")
 
-        tracking_state_reply = await crud.get_satellite_tracking_state(dbsession, name='satellite-tracking')
+        tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
         group_id = tracking_state_reply['data']['value'].get('group_id', None)
         norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
         ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
