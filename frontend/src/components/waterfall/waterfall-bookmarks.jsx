@@ -140,7 +140,15 @@ const BookmarkCanvas = ({
 
             // Dispatch the action with the updated bookmarks
             dispatch(setBookMarks([...filteredBookmarks, newBookMark]));
+        } else if (rigData['transmitter_id'] === "none") {
+            // If no transmitters are selected, then make sure all doppler_shift bookmarks are gone
+            const filteredBookmarks = bookmarks.filter(bookmark =>
+                !(bookmark.metadata?.type === 'doppler_shift')
+            );
+            dispatch(setBookMarks([...filteredBookmarks]));
+
         }
+
     }, [rigData]);
 
 
@@ -274,7 +282,7 @@ const BookmarkCanvas = ({
                     visibleBookmarkIndex++;
                 }
 
-                // For doppler_shift bookmarks - display just above the arrow
+                // For doppler_shift bookmarks
                 if (bookmark.label && isDopplerShift) {
                     ctx.font = 'bold 11px Arial';
                     ctx.fillStyle = bookmark.color || '#00ffff';
