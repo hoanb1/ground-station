@@ -161,7 +161,7 @@ const EdgeArrow = ({angle, stroke = "#ffffff", strokeWidth = 1, opacity = 1, for
 };
 
 
-const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forElevation = false}) => {
+const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forElevation = false, dotted = false}) => {
     const {outerRadius, cx, cy} = useGaugeState();
     const angleInRad = forElevation ?
         ((90 - angle) * Math.PI) / 180 :
@@ -177,6 +177,7 @@ const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forEl
                 stroke={stroke}
                 strokeWidth={strokeWidth}
                 opacity={opacity}
+                strokeDasharray={dotted ? "4,4" : "none"}
             />
         </g>
     );
@@ -369,6 +370,10 @@ function GaugeAz({az, limits = [null, null],
                 e.stopPropagation();
             }}
         >
+            <Pointer angle={270} dotted={true}/>
+            <Pointer angle={180} dotted={true}/>
+            <Pointer angle={90} dotted={true}/>
+            <Pointer angle={0} dotted={true}/>
             <GaugeReferenceArc/>
             {minAz !== null && maxAz !== null && (!isGeoStationary && !isGeoSynchronous) && <>
                 <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
@@ -382,10 +387,7 @@ function GaugeAz({az, limits = [null, null],
                     opacity={0.2}
                 />
             </>}
-            <Pointer angle={270}/>
-            <Pointer angle={180}/>
-            <Pointer angle={90}/>
-            <Pointer angle={0}/>
+
             <text x="70" y="18" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
             <text x="124" y="70" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
             <text x="70" y="125" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>180</text>
@@ -427,6 +429,8 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
                 e.stopPropagation();
             }}
         >
+            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={0.8} opacity={0.2} dotted={true}/>
+            <Pointer angle={0} dotted={true}/>
             <GaugeReferenceArc/>
             {maxElevation !== null && <>
                 <Pointer angle={angle} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
@@ -448,8 +452,7 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
                 forElevation={true}
                 opacity={0.2}
             />
-            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={0.8} opacity={0.2}/>
-            <Pointer angle={0}/>
+
             <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
             <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
             <text x="10" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
