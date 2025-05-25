@@ -25,7 +25,6 @@ import {useRef, useState} from "react";
 import {setSelectedTransmitter} from "../target/target-sat-slice.jsx";
 
 
-
 export const getSDRConfigParameters = createAsyncThunk(
     'waterfall/getSDRConfigParameters',
     async ({socket, selectedSDRId}, {rejectWithValue}) => {

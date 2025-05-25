@@ -18,7 +18,6 @@
  */
 
 
-
 import React, { useRef, useEffect, useState, useCallback } from 'react';
 import {humanizeFrequency, preciseHumanizeFrequency} from "../common/common.jsx";
 import {useDispatch, useSelector} from "react-redux";
@@ -43,13 +42,16 @@ const BookmarkCanvas = ({
     const bookmarkContainerRef = useRef(null);
     const [actualWidth, setActualWidth] = useState(2048);
     const lastMeasuredWidthRef = useRef(0);
+    const rigDataRef = useRef({});
+
+    // Update the ref when rigData changes (but don't react to these changes)
+    const rigData = useSelector(state => state.targetSatTrack.rigData);
 
     const {
         bookmarks,
     } = useSelector((state) => state.waterfall);
 
     const {
-        rigData,
         availableTransmitters,
         satelliteData,
     } = useSelector((state) => state.targetSatTrack);
@@ -114,8 +116,30 @@ const BookmarkCanvas = ({
         updateActualWidth();
     }, [containerWidth, updateActualWidth]);
 
+    // Helper function to compare bookmarks arrays
+    function areBookmarksEqual(bookmarksA, bookmarksB) {
+        if (bookmarksA.length !== bookmarksB.length) return false;
+
+        // Deep comparison of each bookmark
+        for (let i = 0; i < bookmarksA.length; i++) {
+            const a = bookmarksA[i];
+            const b = bookmarksB[i];
+
+            // Simple comparison of important fields
+            if (a.frequency !== b.frequency ||
+                a.label !== b.label ||
+                a.color !== b.color ||
+                a.metadata?.type !== b.metadata?.type ||
+                a.metadata?.transmitter_id !== b.metadata?.transmitter_id) {
+                return false;
+            }
+        }
+        return true;
+    }
+
     // Update width when the container width changes
     useEffect(() => {
+        // First, check if we need to update based on rigData conditions
         if (rigData['observed_freq'] > 0 && rigData['transmitter_id'] !== "none") {
             // Get the transmitter ID and look up transmitter details
             const transmitterId = rigData['transmitter_id'];
@@ -132,25 +156,56 @@ const BookmarkCanvas = ({
                 }
             };
 
-            // Filter out any existing Doppler Shifted Frequency bookmark for this specific transmitter
-            const filteredBookmarks = bookmarks.filter(bookmark =>
-                !(bookmark.metadata?.type === 'doppler_shift' &&
-                    bookmark.metadata?.transmitter_id === transmitterId)
+            // Check if this bookmark already exists with the same frequency
+            const existingBookmarkIndex = bookmarks.findIndex(bookmark =>
+                bookmark.metadata?.type === 'doppler_shift' &&
+                bookmark.metadata?.transmitter_id === transmitterId
             );
 
-            // Dispatch the action with the updated bookmarks
-            dispatch(setBookMarks([...filteredBookmarks, newBookMark]));
+            // Only update if necessary
+            if (existingBookmarkIndex === -1 ||
+                bookmarks[existingBookmarkIndex].frequency !== newBookMark.frequency) {
+
+                // Make a direct modification to the Redux store
+                const updatedBookmarks = [...bookmarks]; // One unavoidable copy
+
+                if (existingBookmarkIndex !== -1) {
+                    // Replace the existing bookmark
+                    updatedBookmarks[existingBookmarkIndex] = newBookMark;
+                } else {
+                    // Remove any old doppler shift bookmarks for this transmitter (shouldn't be any)
+                    // and add the new one
+                    const filteredIndex = updatedBookmarks.findIndex(bookmark =>
+                        bookmark.metadata?.type === 'doppler_shift' &&
+                        bookmark.metadata?.transmitter_id === transmitterId
+                    );
+
+                    if (filteredIndex !== -1) {
+                        updatedBookmarks[filteredIndex] = newBookMark;
+                    } else {
+                        updatedBookmarks.push(newBookMark);
+                    }
+                }
+
+                // Only dispatch if bookmarks actually changed
+                if (!areBookmarksEqual(bookmarks, updatedBookmarks)) {
+                    dispatch(setBookMarks(updatedBookmarks));
+                }
+            }
+
         } else if (rigData['transmitter_id'] === "none") {
-            // If no transmitters are selected, then make sure all doppler_shift bookmarks are gone
-            const filteredBookmarks = bookmarks.filter(bookmark =>
-                !(bookmark.metadata?.type === 'doppler_shift')
-            );
-            dispatch(setBookMarks([...filteredBookmarks]));
+            // If no transmitters are selected, check if we need to remove doppler_shift bookmarks
+            const hasDopplerShiftBookmarks = bookmarks.some(bookmark => bookmark.metadata?.type === 'doppler_shift');
 
+            if (hasDopplerShiftBookmarks) {
+                // Only create a new array if we need to remove items
+                const filteredBookmarks = bookmarks.filter(bookmark =>
+                    !(bookmark.metadata?.type === 'doppler_shift')
+                );
+                dispatch(setBookMarks(filteredBookmarks));
+            }
         }
-
     }, [rigData]);
-
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -158,7 +213,7 @@ const BookmarkCanvas = ({
             return;
         }
 
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { willReadFrequently: true});
 
         // Set canvas width based on actual measured width
         canvas.width = actualWidth;
@@ -320,7 +375,6 @@ const BookmarkCanvas = ({
             });
         }
     }, [bookmarks, centerFrequency, sampleRate, actualWidth, height]);
-
 
     // Handle click events on the canvas
     const handleCanvasClick = useCallback((e) => {

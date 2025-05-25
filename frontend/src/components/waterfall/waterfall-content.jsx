@@ -130,38 +130,6 @@ const WaterfallWithStrictXAxisZoom = ({
         // For now, just log it, but you could add more advanced features here
     }, []);
 
-    // Add event handler for bandscope clicks to add bookmarks
-    const handleBandscopeClick = useCallback((e) => {
-        // Only add bookmark if the ctrl / cmd key is pressed
-        if (!(e.ctrlKey || e.metaKey)) return;
-        
-        if (!bandscopeCanvasRef.current) return;
-        
-        const rect = bandscopeCanvasRef.current.getBoundingClientRect();
-        const clickX = e.clientX - rect.left;
-        const clickXRatio = clickX / rect.width;
-        
-        // Calculate the frequency at click position
-        const freqRange = sampleRate;
-        const minFreq = centerFrequency - (freqRange / 2);
-        const clickedFreq = minFreq + (clickXRatio * freqRange);
-        
-        // Add a bookmark at this frequency
-        addBookmark(clickedFreq);
-    }, [addBookmark, centerFrequency, sampleRate]);
-
-    // Add event listener to bandscope for adding bookmarks
-    useEffect(() => {
-        const canvas = bandscopeCanvasRef.current;
-        if (!canvas) return;
-        
-        canvas.addEventListener('click', handleBandscopeClick);
-        
-        return () => {
-            canvas.removeEventListener('click', handleBandscopeClick);
-        };
-    }, [handleBandscopeClick]);
-
     // Set up ResizeObserver to detect container size changes
     useEffect(() => {
         if (!containerRef.current) return;
