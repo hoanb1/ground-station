@@ -511,6 +511,9 @@ const WaterfallWithStrictXAxisZoom = ({
                             borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
                             display: 'block',
                             touchAction: 'pan-y',
+                            transform: 'translateZ(0)',
+                            backfaceVisibility: 'hidden',
+                            perspective: '1000px',
                         }}
                     />
                     
@@ -539,6 +542,9 @@ const WaterfallWithStrictXAxisZoom = ({
                         height: `${waterFallWindowHeight-230}px`,
                         display: 'block',
                         touchAction: 'pan-y',
+                        transform: 'translateZ(0)',
+                        backfaceVisibility: 'hidden',
+                        perspective: '1000px',
                     }}
                 />
             </Box>

@@ -105,13 +105,14 @@ const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
-    const bandscopeCanvasRef = useRef(null); // New ref for bandscope canvas
+    const bandscopeCanvasRef = useRef(null);
     const dBAxisScopeCanvasRef = useRef(null);
     const waterFallLeftMarginCanvasRef = useRef(null);
     const waterfallDataRef = useRef(new Array(1024).fill(-120));
     const animationFrameRef = useRef(null);
     const workerRef = useRef(null);
-    const bandscopeAnimationFrameRef = useRef(null); // New ref for bandscope animation
+    const bandscopeAnimationFrameRef = useRef(null);
+    const dottedLineImageDataRef = useRef(null);
     const visualSettingsRef = useRef({
         dbRange: [-120, 30],
         colorMap: 'magma',
@@ -342,14 +343,14 @@ const MainWaterfallDisplay = React.memo(() => {
         // Initialize canvases
         if (waterFallCanvasRef.current) {
             const canvas = waterFallCanvasRef.current;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
 
         if (bandscopeCanvasRef.current) {
             const canvas = bandscopeCanvasRef.current;
-            const ctx = canvas.getContext('2d');
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
             ctx.fillStyle = 'black';
             ctx.fillRect(0, 0, canvas.width, canvas.height);
         }
@@ -591,7 +592,6 @@ const MainWaterfallDisplay = React.memo(() => {
         dispatch(setDbRange([min, max]));
     };
 
-
     function drawWaterfall() {
         const waterFallCanvas = waterFallCanvasRef.current;
 
@@ -605,14 +605,18 @@ const MainWaterfallDisplay = React.memo(() => {
         if (accumulatedRowsRef.current >= scrollFactor) {
             accumulatedRowsRef.current = 0;
 
-            const waterFallCtx = waterFallCanvas.getContext('2d');
+            const waterFallCtx = waterFallCanvas.getContext('2d', { alpha: true });
 
             // Enable image smoothing (anti-aliasing)
             waterFallCtx.imageSmoothingEnabled = true;
             waterFallCtx.imageSmoothingQuality = 'high'; // Options: 'low', 'medium', 'high'
 
             // Move existing pixels DOWN (instead of up)
-            waterFallCtx.drawImage(waterFallCanvas, 0, 0, waterFallCanvas.width, waterFallCanvas.height - 1, 0, 1, waterFallCanvas.width, waterFallCanvas.height - 1);
+            waterFallCtx.drawImage(
+                waterFallCanvas,
+                0, 0, waterFallCanvas.width, waterFallCanvas.height - 1,
+                0, 1, waterFallCanvas.width, waterFallCanvas.height - 1
+            );
 
             // Get imageData for the new row only
             const imageData = waterFallCtx.createImageData(waterFallCanvas.width, 1);
@@ -645,10 +649,20 @@ const MainWaterfallDisplay = React.memo(() => {
                     data[pixelIndex + 3] = 255;   // Alpha
                 }
 
-                // Put the new row at the TOP of the canvas
-                waterFallCtx.putImageData(imageData, 0, 0);
+                // Try to use createImageBitmap for better performance
+                createImageBitmap(imageData)
+                    .then(bitmap => {
+                        waterFallCtx.drawImage(bitmap, 0, 0);
+                        bitmap.close(); // Clean up the bitmap
+                    })
+                    .catch(() => {
+                        // Fallback to putImageData if createImageBitmap is not supported
+                        waterFallCtx.putImageData(imageData, 0, 0);
+                    })
+                    .finally(() => {
+                        updateWaterfallLeftMargin();
+                    });
             }
-            updateWaterfallLeftMargin();
         }
     }
 
@@ -658,9 +672,9 @@ const MainWaterfallDisplay = React.memo(() => {
         }
 
         const waterFallCanvas = waterFallCanvasRef.current;
-        const waterFallCtx = waterFallCanvas.getContext('2d');
+        const waterFallCtx = waterFallCanvas.getContext('2d', { willReadFrequently: true });
         const waterFallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
-        const waterFallLeftMarginCtx = waterFallLeftMarginCanvas.getContext('2d');
+        const waterFallLeftMarginCtx = waterFallLeftMarginCanvas.getContext('2d', { willReadFrequently: true });
 
         // This part should run on EVERY frame, not just when minutes change
         // Move existing pixels DOWN by 1 pixel
@@ -691,20 +705,35 @@ const MainWaterfallDisplay = React.memo(() => {
             waterFallLeftMarginCtx.textBaseline = 'top';
             waterFallLeftMarginCtx.fillText(newRotatorEvent, bandscopeAxisYWidth / 2, 2);
 
-            // Draw horizontal dotted line in main waterfall
-            const imageData = waterFallCtx.getImageData(0, 0, waterFallCanvas.width, 1);
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 32) { // Increase step to create dots
-                for (let j = 0; j < 4; j++) { // Dot width of 1 pixel
-                    const idx = i + (j * 4);
-                    if (idx < data.length) {
-                        data[idx] = 255;     // R
-                        data[idx + 1] = 255; // G
-                        data[idx + 2] = 255; // B
-                        data[idx + 3] = 100; // A
+            // Get or create the imageData for the dotted line
+            let imageData;
+
+            // Check if we have a cached imageData for the dotted line
+            if (!dottedLineImageDataRef.current ||
+                dottedLineImageDataRef.current.width !== waterFallCanvas.width) {
+                // Create new ImageData if none exists or if width changed
+                imageData = waterFallCtx.createImageData(waterFallCanvas.width, 1);
+                dottedLineImageDataRef.current = imageData;
+
+                // Pre-fill the dotted line pattern
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 32) { // Increase step to create dots
+                    for (let j = 0; j < 4; j++) { // Dot width of 1 pixel
+                        const idx = i + (j * 4);
+                        if (idx < data.length) {
+                            data[idx] = 255;     // R
+                            data[idx + 1] = 255; // G
+                            data[idx + 2] = 255; // B
+                            data[idx + 3] = 100; // A
+                        }
                     }
                 }
+            } else {
+                // Reuse the cached imageData
+                imageData = dottedLineImageDataRef.current;
             }
+
+            // Draw the dotted line
             waterFallCtx.putImageData(imageData, 0, 0);
         }
 
@@ -747,13 +776,13 @@ const MainWaterfallDisplay = React.memo(() => {
             return;
         }
 
-        const bandScopeCtx = bandScopeCanvas.getContext('2d');
+        const bandScopeCtx = bandScopeCanvas.getContext('2d', { willReadFrequently: true });
 
         // Enable image smoothing (anti-aliasing)
         bandScopeCtx.imageSmoothingEnabled = true;
         bandScopeCtx.imageSmoothingQuality = 'high'; // Options: 'low', 'medium', 'high'
 
-        const dBAxisCtx = dBAxisCanvas.getContext('2d');
+        const dBAxisCtx = dBAxisCanvas.getContext('2d', { willReadFrequently: true });
 
         // Enable image smoothing (anti-aliasing)
         dBAxisCtx.imageSmoothingEnabled = true;
@@ -1064,6 +1093,9 @@ const MainWaterfallDisplay = React.memo(() => {
                                 height: `${bandScopeHeight}px`,
                                 backgroundColor: 'rgba(40, 40, 40, 0.7)',
                                 display: 'block',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
                             }}
                         />
                         <canvas
@@ -1076,6 +1108,9 @@ const MainWaterfallDisplay = React.memo(() => {
                                 borderTop: '1px solid rgba(255, 255, 255, 0.2)',
                                 borderRight: '1px solid #535353',
                                 display: 'block',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
                             }}
                         />
                         <canvas
@@ -1088,6 +1123,9 @@ const MainWaterfallDisplay = React.memo(() => {
                                 display: 'block',
                                 backgroundColor: 'rgba(28, 28, 28, 1)',
                                 borderRight: '1px solid #535353',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
                             }}
 
                         />

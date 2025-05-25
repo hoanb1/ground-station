@@ -78,7 +78,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
             port = config.get('port', 55132)
 
             # The format should be 'remote:host=HOSTNAME:port=PORT,driver=DRIVER,serial=SERIAL'
-            device_args = f"remote=tcp://{hostname}:{port},remote:driver={driver}"
+            device_args = f"remote=tcp://{hostname}:{port},driver=remote,remote:driver={driver}"
 
             # Add a serial number if provided
             if serial_number:

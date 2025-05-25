@@ -226,7 +226,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                 width: '100%',
                 height: `${canvasHeight}px`,
                 position: 'relative',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.3)',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.6)',
             }}
         >
             <canvas
@@ -239,6 +239,9 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                     height: '100%',
                     backgroundColor: 'rgba(36, 36, 36, 1)',
                     touchAction: 'pan-y',
+                    transform: 'translateZ(0)',
+                    backfaceVisibility: 'hidden',
+                    perspective: '1000px',
                 }}
             />
         </div>
