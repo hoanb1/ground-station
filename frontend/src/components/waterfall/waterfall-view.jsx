@@ -92,13 +92,19 @@ import {
     setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue,
 } from './waterfall-slice.jsx'
 import {enqueueSnackbar} from "notistack";
-import FrequencyScale from "./frequency-scale-canvas.jsx";
+import { useStore } from 'react-redux';
 import {getColorForPower} from "./waterfall-colors.jsx";
 
-
+// Make a new worker
 export const createExternalWorker = () => {
     return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
 };
+
+// Custom hook to reference state value without re-renders
+function useStoreSelector(selector) {
+    const store = useStore();
+    return () => selector(store.getState());
+}
 
 
 const MainWaterfallDisplay = React.memo(() => {
@@ -172,12 +178,12 @@ const MainWaterfallDisplay = React.memo(() => {
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
-    const {
-        lastRotatorEvent
-    } = useSelector((state) => state.targetSatTrack);
+
+    // Handle the last rotator events, using a hook to prevent unnecessary re-renders
+    const getLastRotatorEvent = useStoreSelector(state => state.targetSatTrack.lastRotatorEvent);
 
     const targetFPSRef = useRef(targetFPS);
-    const rotatorEventQueueRef = useRef([]);
+    const lastRotatorEventRef = useRef(getLastRotatorEvent());
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
@@ -248,11 +254,6 @@ const MainWaterfallDisplay = React.memo(() => {
             bandscopeAnimationFrameRef.current = null;
         }
     }
-
-    // Monitor rotator event changes
-    useEffect(() => {
-        rotatorEventQueueRef.current.push(lastRotatorEvent);
-    }, [lastRotatorEvent]);
 
     // Update refs when Redux state changes
     useEffect(() => {
@@ -361,7 +362,8 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-config-error', (error) => {
-            console.error(`sdr-config-error`, error);
+            //console.error(`sdr-config-error`, error);
+
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
             dispatch(setStartStreamingLoading(false));
@@ -371,7 +373,8 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-error', (error) => {
-            console.error(`sdr-error`, error);
+            //console.error(`sdr-error`, error);
+
             cancelAnimations();
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
@@ -383,7 +386,7 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-config', (data) => {
-            console.info(`sdr-config`, data);
+            //console.info(`sdr-config`, data);
 
             dispatch(setCenterFrequency(data['center_freq']));
             dispatch(setSampleRate(data['sample_rate']));
@@ -397,7 +400,7 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-status', (data) => {
-            console.info(`sdr-status`, data);
+            //console.info(`sdr-status`, data);
 
             if (data['streaming'] === true) {
                 dispatch(setIsStreaming(true));
@@ -506,8 +509,8 @@ const MainWaterfallDisplay = React.memo(() => {
 
         if (!isStreaming) {
 
-            // Clean up the rotatorEventQueueRef from any previous events that might have accumulated
-            rotatorEventQueueRef.current = [];
+            // Clean up last rotator event
+            lastRotatorEventRef.current = "";
 
             // Set the loading flags and clear errors
             dispatch(setStartStreamingLoading(true));
@@ -690,10 +693,9 @@ const MainWaterfallDisplay = React.memo(() => {
         waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
         waterFallLeftMarginCtx.fillRect(0, 0, waterFallLeftMarginCanvas.width, 1);
 
-        const now = new Date();
-
-        const newRotatorEvent = rotatorEventQueueRef.current.pop();
-        if (newRotatorEvent) {
+        // Process last rotator events, if there are any print a line
+        const newRotatorEvent = getLastRotatorEvent();
+        if (newRotatorEvent !== lastRotatorEventRef.current) {
             // Draw a more visible background for the timestamp
             waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
             waterFallLeftMarginCtx.fillRect(0, 0, bandscopeAxisYWidth, 14);
@@ -735,9 +737,12 @@ const MainWaterfallDisplay = React.memo(() => {
 
             // Draw the dotted line
             waterFallCtx.putImageData(imageData, 0, 0);
+
+            lastRotatorEventRef.current = newRotatorEvent;
         }
 
         // Calculate seconds since the epoch and check if divisible by 15
+        const now = new Date();
         const currentSeconds = Math.floor(now.getTime() / 1000);
         const shouldUpdate = !lastTimestampRef.current ||
             currentSeconds % 15 === 0 ||
