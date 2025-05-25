@@ -472,7 +472,7 @@ def calculate_samples_per_scan(sample_rate):
         int: Number of samples to collect (rounded to power of 2)
     """
     # Define your target FFT production rate (FFTs per second)
-    target_fft_rate = 10  # Adjust this value as needed
+    target_fft_rate = 5  # Adjust this value as needed
 
     # Calculate time needed per FFT in seconds
     time_per_fft = 1.0 / target_fft_rate
