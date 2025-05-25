@@ -100,12 +100,6 @@ export const createExternalWorker = () => {
     return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
 };
 
-// Custom hook to reference state value without re-renders
-function useStoreSelector(selector) {
-    const store = useStore();
-    return () => selector(store.getState());
-}
-
 
 const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
@@ -181,9 +175,6 @@ const MainWaterfallDisplay = React.memo(() => {
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
-
-    // Handle the last rotator events, using a hook to prevent unnecessary re-renders
-    //const getLastRotatorEvent = useStoreSelector(state => state.targetSatTrack.lastRotatorEvent);
 
     const {
         lastRotatorEvent

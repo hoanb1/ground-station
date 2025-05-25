@@ -79,7 +79,7 @@ const waterfallSlice = createSlice({
         autoDBRange: false,
         gridEditable: false,
         waterFallCanvasWidth: 8191,
-        waterFallCanvasHeight: 900,
+        waterFallCanvasHeight: 800,
         waterFallVisualWidth: 8191,
         bandScopeHeight: 110,
         frequencyScaleHeight: 20,

@@ -36,10 +36,10 @@ self.onmessage = function(eventMessage) {
             bandscopeCanvas = eventMessage.data.bandscopeCanvas;
             dBAxisCanvas = eventMessage.data.dBAxisCanvas;
             waterfallLeftMarginCanvas = eventMessage.data.waterfallLeftMarginCanvas;
-            waterfallCtx = waterfallCanvas.getContext('2d');
-            bandscopeCtx = bandscopeCanvas.getContext('2d');
-            dBAxisCtx = dBAxisCanvas.getContext('2d');
-            waterFallLeftMarginCtx = waterfallLeftMarginCanvas.getContext('2d');
+            waterfallCtx = waterfallCanvas.getContext('2d', { alpha: true, desynchronized: true, willReadFrequently: true });
+            bandscopeCtx = bandscopeCanvas.getContext('2d', { alpha: true, desynchronized: true, willReadFrequently: true });
+            dBAxisCtx = dBAxisCanvas.getContext('2d', { alpha: true, desynchronized: false, willReadFrequently: true });
+            waterFallLeftMarginCtx = waterfallLeftMarginCanvas.getContext('2d', { alpha: true, desynchronized: true, willReadFrequently: true });
             setupCanvas(eventMessage.data.config);
 
             // Start monitoring when canvas is initialized
