@@ -44,7 +44,7 @@ const waterfallPersistConfig = {
     key: 'waterfall',
     storage,
     whitelist: ['centerFrequency', 'colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
-        'showLeftSideWaterFallAccessories', 'selectedAntenna', 'selectedSDRId']
+        'showLeftSideWaterFallAccessories', 'selectedAntenna', 'selectedSDRId', 'selectedOffsetMode', 'selectedOffsetValue']
 };
 
 // Persist configuration for the 'rigs' slice

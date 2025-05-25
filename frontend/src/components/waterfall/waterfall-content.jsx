@@ -68,7 +68,6 @@ const WaterfallWithStrictXAxisZoom = ({
 
     // Function to recalculate position when the container resizes
     const handleResize = useCallback(() => {
-        console.log("handleResize main waterfall container");
         if (!containerRef.current || scaleRef.current <= 1) return;
 
         const newWidth = containerRef.current.clientWidth;

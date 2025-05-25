@@ -119,6 +119,7 @@ const MainWaterfallDisplay = React.memo(() => {
     const workerRef = useRef(null);
     const bandscopeAnimationFrameRef = useRef(null);
     const dottedLineImageDataRef = useRef(null);
+    const canvasTransferredRef = useRef(false);
     const visualSettingsRef = useRef({
         dbRange: [-120, 30],
         colorMap: 'magma',
@@ -130,8 +131,10 @@ const MainWaterfallDisplay = React.memo(() => {
 
     // Add state for tracking metrics
     const [eventMetrics, setEventMetrics] = useState({
-        eventsPerSecond: 0,
-        binsPerSecond: 0
+        fftUpdatesPerSecond: 0,
+        binsPerSecond: 0,
+        totalUpdates: 0,
+        timeElapsed: 0
     });
 
     // Add refs for tracking event count and bin count
@@ -180,10 +183,14 @@ const MainWaterfallDisplay = React.memo(() => {
     const sampleRateRef = useRef(sampleRate);
 
     // Handle the last rotator events, using a hook to prevent unnecessary re-renders
-    const getLastRotatorEvent = useStoreSelector(state => state.targetSatTrack.lastRotatorEvent);
+    //const getLastRotatorEvent = useStoreSelector(state => state.targetSatTrack.lastRotatorEvent);
+
+    const {
+        lastRotatorEvent
+    } = useSelector((state) => state.targetSatTrack);
 
     const targetFPSRef = useRef(targetFPS);
-    const lastRotatorEventRef = useRef(getLastRotatorEvent());
+    const lastRotatorEventRef = useRef("");
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
@@ -217,6 +224,97 @@ const MainWaterfallDisplay = React.memo(() => {
             setIsFullscreen(false);
         }
     };
+
+    useEffect(() => {
+        if (workerRef.current) {
+            workerRef.current.postMessage({
+                cmd: 'rotatorEvent',
+                event: lastRotatorEvent,
+            });
+        }
+    }, [lastRotatorEvent]);
+
+    useEffect(() => {
+        if (waterFallCanvasRef.current && !canvasTransferredRef.current) {
+            try {
+                // Create the offscreen canvas, if it gets called twice it won't work
+                const waterfallOffscreenCanvas = waterFallCanvasRef.current.transferControlToOffscreen();
+                const bandscopeOffscreenCanvas = bandscopeCanvasRef.current.transferControlToOffscreen();
+                const dBAxisOffScreenCanvas = dBAxisScopeCanvasRef.current.transferControlToOffscreen();
+                const waterfallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current.transferControlToOffscreen();
+                canvasTransferredRef.current = true;
+
+                // Initialize the worker if it doesn't exist
+                if (!workerRef.current) {
+                    workerRef.current = createExternalWorker();
+
+                    // Set up message handling from the worker
+                    workerRef.current.onmessage = (event) => {
+                        const { type, data } = event.data;
+
+                        if (type === 'metrics') {
+                            setEventMetrics(data);
+                        } else if (type === 'status') {
+                            // Optional: handle status updates from the worker
+                            //console.log('Worker status:', status);
+                        }
+                    };
+                }
+
+                // Transfer the canvases to the worker
+                workerRef.current.postMessage({
+                    cmd: 'initCanvas',
+                    waterfallCanvas: waterfallOffscreenCanvas,
+                    bandscopeCanvas: bandscopeOffscreenCanvas,
+                    dBAxisCanvas: dBAxisOffScreenCanvas,
+                    waterfallLeftMarginCanvas: waterfallLeftMarginCanvas,
+                    config: {
+                        width: waterFallCanvasWidth,
+                        height: waterFallCanvasHeight,
+                        colorMap,
+                        dbRange,
+                        fftSize
+                    }
+                }, [waterfallOffscreenCanvas, bandscopeOffscreenCanvas, dBAxisOffScreenCanvas, waterfallLeftMarginCanvas]);
+
+                console.log('Canvas successfully transferred');
+
+            } catch (error) {
+                console.error('Canvas transfer failed:', error);
+                // Reset the flag if transfer failed
+                canvasTransferredRef.current = false;
+            }
+        }
+
+        return () => {
+            // // Clean up
+            // if (workerRef.current) {
+            //     workerRef.current.postMessage({ cmd: 'releaseCanvas' });
+            // }
+
+            // We don't want to clean up the worker or reset the transfer flag
+            // in the cleanup function since StrictMode will call this
+            // and then immediately call the effect again
+
+            // Only clean up when component is actually unmounting
+            // We can't easily detect this in the cleanup function,
+            // so we'll handle it elsewhere
+        };
+    }, []);
+
+    // // Separate effect for actual cleanup when component unmounts
+    // useEffect(() => {
+    //     return () => {
+    //         // This cleanup will still run twice in StrictMode,
+    //         // but that's ok for terminating the worker
+    //         if (workerRef.current) {
+    //             workerRef.current.terminate();
+    //             workerRef.current = null;
+    //         }
+    //         // Reset for next mount
+    //         canvasTransferredRef.current = false;
+    //     };
+    // }, []);
 
     // Add event listener for fullscreen change
     useEffect(() => {
@@ -296,65 +394,65 @@ const MainWaterfallDisplay = React.memo(() => {
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
     // Initialize the worker when the component mounts
-    useEffect(() => {
-        // Create the worker
-        const worker = createExternalWorker();
-
-        // Set up a message handler
-        worker.onmessage = (e) => {
-            const {type, immediate, status} = e.data;
-
-            if (type === 'render') {
-                // Draw waterfall and bandscope
-                if (waterFallCanvasRef.current) {
-                    drawWaterfall();
-                }
-
-                if (bandscopeCanvasRef.current) {
-                    drawBandscope();
-                }
-            } else if (type === 'status') {
-                // Optional: handle status updates from the worker
-                console.log('Worker status:', status);
-            }
-        };
-
-        // Store the worker reference
-        workerRef.current = worker;
-
-        // If we're already streaming, start the worker
-        if (isStreaming) {
-            worker.postMessage({
-                cmd: 'start',
-                data: {fps: targetFPSRef.current}
-            });
-        }
-
-        // Clean up when component unmounts
-        return () => {
-            if (workerRef.current) {
-                workerRef.current.postMessage({cmd: 'stop'});
-                workerRef.current.terminate();
-                workerRef.current = null;
-            }
-        };
-    }, []);
+    // useEffect(() => {
+    //     // Create the worker
+    //     const worker = createExternalWorker();
+    //
+    //     // Set up a message handler
+    //     worker.onmessage = (e) => {
+    //         const {type, immediate, status} = e.data;
+    //
+    //         if (type === 'render') {
+    //             // Draw waterfall and bandscope
+    //             if (waterFallCanvasRef.current) {
+    //                 drawWaterfall();
+    //             }
+    //
+    //             if (bandscopeCanvasRef.current) {
+    //                 drawBandscope();
+    //             }
+    //         } else if (type === 'status') {
+    //             // Optional: handle status updates from the worker
+    //             console.log('Worker status:', status);
+    //         }
+    //     };
+    //
+    //     // Store the worker reference
+    //     workerRef.current = worker;
+    //
+    //     // If we're already streaming, start the worker
+    //     if (isStreaming) {
+    //         worker.postMessage({
+    //             cmd: 'start',
+    //             data: {fps: targetFPSRef.current}
+    //         });
+    //     }
+    //
+    //     // Clean up when component unmounts
+    //     return () => {
+    //         if (workerRef.current) {
+    //             workerRef.current.postMessage({cmd: 'stop'});
+    //             workerRef.current.terminate();
+    //             workerRef.current = null;
+    //         }
+    //     };
+    // }, []);
 
     useEffect(() => {
         // Initialize canvases
-        if (waterFallCanvasRef.current) {
-            const canvas = waterFallCanvasRef.current;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+        // if (waterFallCanvasRef.current) {
+        //     const canvas = waterFallCanvasRef.current;
+        //     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        //     ctx.fillStyle = 'black';
+        //     ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // }
 
-        if (bandscopeCanvasRef.current) {
-            const canvas = bandscopeCanvasRef.current;
-            const ctx = canvas.getContext('2d', { willReadFrequently: true });
-            ctx.fillStyle = 'black';
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+        // if (bandscopeCanvasRef.current) {
+        //     const canvas = bandscopeCanvasRef.current;
+        //     const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        //     ctx.fillStyle = 'black';
+        //     ctx.fillRect(0, 0, canvas.width, canvas.height);
+        // }
 
         socket.on('disconnect', () => {
             cancelAnimations();
@@ -425,18 +523,22 @@ const MainWaterfallDisplay = React.memo(() => {
             // Add new FFT data to the waterfall buffer
             waterfallDataRef.current.unshift(floatArray);
 
-                // Keep only the most recent rows based on canvas height
+            // Keep only the most recent rows based on canvas height
             if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
                 waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
             }
 
             // Notify the worker that new data is available
             if (workerRef.current) {
-                workerRef.current.postMessage({cmd: 'updateFFTData'});
+                workerRef.current.postMessage({
+                    cmd: 'updateFFTData',
+                    fft: floatArray,
+                    immediate: true
+                });
             }
         });
 
-        drawBandscope();
+        //drawBandscope();
 
         return () => {
             // Cleanup animations
@@ -450,6 +552,17 @@ const MainWaterfallDisplay = React.memo(() => {
             socket.off('sdr-config');
         };
     }, []);
+
+    useEffect(() => {
+        if (!workerRef.current) return;
+
+        workerRef.current.postMessage({
+            cmd: 'updateConfig',
+            colorMap,
+            dbRange,
+            fftSize
+        });
+    }, [colorMap, dbRange, fftSize]);
 
     // Update the worker when FPS changes
     useEffect(() => {
@@ -481,28 +594,28 @@ const MainWaterfallDisplay = React.memo(() => {
     }, [isStreaming, autoDBRange]);
 
     // Effect to update the metrics every second
-    useEffect(() => {
-        const metricsInterval = setInterval(() => {
-            const now = Date.now();
-            const elapsedSeconds = (now - lastMetricUpdateRef.current) / 1000;
-
-            if (elapsedSeconds > 0) {
-                setEventMetrics({
-                    eventsPerSecond: Math.round(eventCountRef.current / elapsedSeconds),
-                    binsPerSecond: Math.round(binCountRef.current / elapsedSeconds)
-                });
-
-                // Reset counters
-                eventCountRef.current = 0;
-                binCountRef.current = 0;
-                lastMetricUpdateRef.current = now;
-            }
-        }, 1000); // Update metrics every second
-
-        return () => {
-            clearInterval(metricsInterval);
-        };
-    }, []);
+    // useEffect(() => {
+    //     const metricsInterval = setInterval(() => {
+    //         const now = Date.now();
+    //         const elapsedSeconds = (now - lastMetricUpdateRef.current) / 1000;
+    //
+    //         if (elapsedSeconds > 0) {
+    //             setEventMetrics({
+    //                 eventsPerSecond: Math.round(eventCountRef.current / elapsedSeconds),
+    //                 binsPerSecond: Math.round(binCountRef.current / elapsedSeconds)
+    //             });
+    //
+    //             // Reset counters
+    //             eventCountRef.current = 0;
+    //             binCountRef.current = 0;
+    //             lastMetricUpdateRef.current = now;
+    //         }
+    //     }, 1000); // Update metrics every second
+    //
+    //     return () => {
+    //         clearInterval(metricsInterval);
+    //     };
+    // }, []);
 
     // Configure SDR and start streaming
     const startStreaming = () => {
@@ -543,7 +656,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         });
                     }
                     // auto range the dB scale
-                    setTimeout(() => autoScaleDbRange(), 1500);
+                    //setTimeout(() => autoScaleDbRange(), 1500);
                 }
             });
         }
@@ -694,7 +807,8 @@ const MainWaterfallDisplay = React.memo(() => {
         waterFallLeftMarginCtx.fillRect(0, 0, waterFallLeftMarginCanvas.width, 1);
 
         // Process last rotator events, if there are any print a line
-        const newRotatorEvent = getLastRotatorEvent();
+        //const newRotatorEvent = getLastRotatorEvent();
+        const newRotatorEvent = "";
         if (newRotatorEvent !== lastRotatorEventRef.current) {
             // Draw a more visible background for the timestamp
             waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
@@ -1124,7 +1238,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             height={waterFallCanvasHeight}
                             style={{
                                 width: '100%',
-                                height: `${waterFallCanvasHeight}px`,
+                                height: `${dimensions['height']-230}px`,
                                 display: 'block',
                                 backgroundColor: 'rgba(28, 28, 28, 1)',
                                 borderRight: '1px solid #535353',
@@ -1295,7 +1409,7 @@ const MainWaterfallDisplay = React.memo(() => {
             </Dialog>
             <WaterfallStatusBar>
                 {isStreaming ?
-                    `FFTs/s: ${humanizeNumber(eventMetrics.eventsPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
+                    `FFTs/s: ${humanizeNumber(eventMetrics.fftUpdatesPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
                     : `stopped`
                 }
             </WaterfallStatusBar>
