@@ -226,7 +226,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                 width: '100%',
                 height: `${canvasHeight}px`,
                 position: 'relative',
-                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.6)',
+                boxShadow: '0 4px 8px rgba(0, 0, 0, 0.5)',
             }}
         >
             <canvas
