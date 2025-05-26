@@ -472,7 +472,7 @@ def calculate_samples_per_scan(sample_rate):
         int: Number of samples to collect (rounded to power of 2)
     """
     # Define your target FFT production rate (FFTs per second)
-    target_fft_rate = 10  # Adjust this value as needed
+    target_fft_rate = 15  # Adjust this value as needed
 
     # Calculate time needed per FFT in seconds
     time_per_fft = 1.0 / target_fft_rate
@@ -480,8 +480,9 @@ def calculate_samples_per_scan(sample_rate):
     # Calculate samples needed at this sample rate
     samples_needed = int(sample_rate * time_per_fft)
 
-    # Round to the nearest power of 2 for efficient FFT processing
-    power_of_2 = 2 ** math.floor(math.log2(samples_needed))
+    # Alternative rounding approach (to the closest power of 2)
+    power_exp = math.log2(samples_needed)
+    power_of_2 = 2 ** round(power_exp)
 
     # Handle edge cases - set minimum and maximum sample counts
     min_samples = 1024  # Minimum reasonable FFT size
