@@ -768,9 +768,9 @@ const MainWaterfallDisplay = React.memo(() => {
                                 height: `${bandScopeHeight}px`,
                                 backgroundColor: 'rgba(40, 40, 40, 0.7)',
                                 display: 'block',
-                                //transform: 'translateZ(0)',
-                                //backfaceVisibility: 'hidden',
-                                //perspective: '1000px',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
                             }}
                         />
                         <canvas
@@ -783,9 +783,9 @@ const MainWaterfallDisplay = React.memo(() => {
                                 borderTop: '1px solid rgba(255, 255, 255, 0.2)',
                                 borderRight: '1px solid #535353',
                                 display: 'block',
-                                //transform: 'translateZ(0)',
-                                //backfaceVisibility: 'hidden',
-                                //perspective: '1000px',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
                             }}
                         />
                         <canvas
@@ -798,9 +798,9 @@ const MainWaterfallDisplay = React.memo(() => {
                                 display: 'block',
                                 backgroundColor: 'rgba(28, 28, 28, 1)',
                                 borderRight: '1px solid #535353',
-                                //transform: 'translateZ(0)',
-                                //backfaceVisibility: 'hidden',
-                                //perspective: '1000px',
+                                transform: 'translateZ(0)',
+                                backfaceVisibility: 'hidden',
+                                perspective: '1000px',
                             }}
 
                         />
