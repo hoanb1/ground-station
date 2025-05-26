@@ -36,10 +36,26 @@ self.onmessage = function(eventMessage) {
             bandscopeCanvas = eventMessage.data.bandscopeCanvas;
             dBAxisCanvas = eventMessage.data.dBAxisCanvas;
             waterfallLeftMarginCanvas = eventMessage.data.waterfallLeftMarginCanvas;
-            waterfallCtx = waterfallCanvas.getContext('2d', { alpha: true, desynchronized: true, willReadFrequently: true });
-            bandscopeCtx = bandscopeCanvas.getContext('2d', { alpha: true, desynchronized: true, willReadFrequently: true });
-            dBAxisCtx = dBAxisCanvas.getContext('2d', { alpha: true, desynchronized: false, willReadFrequently: true });
-            waterFallLeftMarginCtx = waterfallLeftMarginCanvas.getContext('2d', { alpha: true, desynchronized: true, willReadFrequently: true });
+            waterfallCtx = waterfallCanvas.getContext('2d', {
+                alpha: true,
+                desynchronized: true,
+                willReadFrequently: true
+            });
+            bandscopeCtx = bandscopeCanvas.getContext('2d', {
+                alpha: true,
+                desynchronized: true,
+                willReadFrequently: true
+            });
+            dBAxisCtx = dBAxisCanvas.getContext('2d', {
+                alpha: true,
+                desynchronized: false,
+                willReadFrequently: true
+            });
+            waterFallLeftMarginCtx = waterfallLeftMarginCanvas.getContext('2d', {
+                alpha: true,
+                desynchronized: true,
+                willReadFrequently: true
+            });
             setupCanvas(eventMessage.data.config);
 
             // Start monitoring when canvas is initialized
@@ -216,11 +232,10 @@ function renderWaterfall() {
     updateWaterfallLeftMargin();
 
     // Draw bandscope
-    //drawBandscope();
+    drawBandscope();
 
     // Draw bandscope with throttling
-    throttledDrawBandscope();
-
+    //throttledDrawBandscope();
 }
 
 function renderFFTRow(fftData) {
@@ -261,7 +276,6 @@ function renderFFTRow(fftData) {
     // Put the image data on the TOP row of the canvas instead of bottom
     waterfallCtx.putImageData(imageData, 0, 0);
 }
-
 
 function drawBandscope() {
 
