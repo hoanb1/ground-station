@@ -334,7 +334,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         new_tracking_state = await crud.set_tracking_state(dbsession, {
             'name': 'satellite-tracking',
             'value': {
-                'rig_state': 'connected',
+                'rig_state': current_rig_state,
                 'transmitter_id': "none"
             }
         })

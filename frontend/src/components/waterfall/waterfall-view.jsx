@@ -525,7 +525,6 @@ const MainWaterfallDisplay = React.memo(() => {
     const startStreaming = () => {
 
         if (!isStreaming) {
-
             // Clean up last rotator event
             lastRotatorEventRef.current = "";
 
