@@ -99,6 +99,7 @@ import {getColorForPower} from "./waterfall-colors.jsx";
 export const createExternalWorker = () => {
 
     try {
+        console.info("Creating external worker for waterfall")
         return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
     }
     catch (error) {
@@ -258,6 +259,8 @@ const MainWaterfallDisplay = React.memo(() => {
                             //console.log('Worker status:', status);
                         }
                     };
+                } else {
+                    console.info('Waterfall worker already exists');
                 }
 
                 // Transfer the canvases to the worker
@@ -460,12 +463,10 @@ const MainWaterfallDisplay = React.memo(() => {
                 workerRef.current.postMessage({
                     cmd: 'updateFFTData',
                     fft: floatArray,
-                    immediate: false
+                    immediate: true,
                 });
             }
         });
-
-        //drawBandscope();
 
         return () => {
             // Cleanup animations

@@ -410,7 +410,6 @@ const targetSatTrackSlice = createSlice({
             }
         },
         setUITrackerValues(state, action) {
-            console.info("redux setUITrackerValues", action.payload);
             state.satGroups = action.payload['groups'];
             state.groupOfSats = action.payload['satellites'];
             state.availableTransmitters = action.payload['transmitters'];
@@ -613,8 +612,6 @@ const targetSatTrackSlice = createSlice({
                     const endTime = new Date(pass['event_end']).getTime();
                     return now >= startTime && now <= endTime;
                 });
-
-                //console.info("activePass", activePass);
 
                 state.activePass = activePass;
                 state.passesError = null;

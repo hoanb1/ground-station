@@ -280,7 +280,6 @@ export default function App(props) {
             });
 
             socket.on("ui-tracker-state", (data) => {
-                console.info("Received UI tracker state", data);
                 store.dispatch(setUITrackerValues(data))
             });
 

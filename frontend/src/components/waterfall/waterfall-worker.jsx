@@ -7,7 +7,7 @@ let bandscopeCtx = null;
 let dBAxisCtx = null;
 let waterFallLeftMarginCtx = null;
 let renderIntervalId = null;
-let targetFPS = 10;
+let targetFPS = 15;
 let fftData = new Array(1024).fill(-120);
 let colorMap = 'cosmic';
 let dbRange = [-120, 30];
@@ -210,7 +210,9 @@ function startRendering(fps) {
     rotatorEventQueue = [];
 
     targetFPS = fps;
-    renderIntervalId = setInterval(() => renderWaterfall(), 1000 / targetFPS);
+    renderIntervalId = setInterval(() => {
+        //renderWaterfall();
+    }, 1000 / targetFPS);
 
     // Confirm start
     self.postMessage({ type: 'status', status: 'started', fps: targetFPS });
@@ -241,10 +243,10 @@ function renderWaterfall() {
     updateWaterfallLeftMargin();
 
     // Draw bandscope
-    //drawBandscope();
+    drawBandscope();
 
     // Draw bandscope with throttling
-    throttledDrawBandscope();
+    //throttledDrawBandscope();
 }
 
 function renderFFTRow(fftData) {
