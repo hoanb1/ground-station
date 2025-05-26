@@ -97,9 +97,16 @@ import {getColorForPower} from "./waterfall-colors.jsx";
 
 // Make a new worker
 export const createExternalWorker = () => {
-    return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
-};
 
+    try {
+        return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
+    }
+    catch (error) {
+        enqueueSnackbar(`Failed to create waterfall worker: ${error.message}`, {
+            variant: 'error'
+        });
+    }
+};
 
 const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
@@ -128,7 +135,8 @@ const MainWaterfallDisplay = React.memo(() => {
         fftUpdatesPerSecond: 0,
         binsPerSecond: 0,
         totalUpdates: 0,
-        timeElapsed: 0
+        timeElapsed: 0,
+        renderWaterfallPerSecond: 0,
     });
 
     // Add refs for tracking event count and bin count
@@ -268,10 +276,10 @@ const MainWaterfallDisplay = React.memo(() => {
                     }
                 }, [waterfallOffscreenCanvas, bandscopeOffscreenCanvas, dBAxisOffScreenCanvas, waterfallLeftMarginCanvas]);
 
-                console.log('Canvas successfully transferred');
+                console.log('Canvases successfully transferred');
 
             } catch (error) {
-                console.error('Canvas transfer failed:', error);
+                console.error('Canvases transfer failed:', error);
                 // Reset the flag if transfer failed
                 canvasTransferredRef.current = false;
             }
@@ -452,7 +460,7 @@ const MainWaterfallDisplay = React.memo(() => {
                 workerRef.current.postMessage({
                     cmd: 'updateFFTData',
                     fft: floatArray,
-                    immediate: true
+                    immediate: false
                 });
             }
         });
@@ -602,16 +610,6 @@ const MainWaterfallDisplay = React.memo(() => {
 
         dispatch(setDbRange([min, max]));
     };
-
-
-
-
-
-
-
-
-
-
 
     return (
         <div ref={mainWaterFallContainer}>
@@ -967,7 +965,7 @@ const MainWaterfallDisplay = React.memo(() => {
             </Dialog>
             <WaterfallStatusBar>
                 {isStreaming ?
-                    `FFTs/s: ${humanizeNumber(eventMetrics.fftUpdatesPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
+                    `FPS: ${eventMetrics.renderWaterfallPerSecond}, FFTs/s: ${humanizeNumber(eventMetrics.fftUpdatesPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
                     : `stopped`
                 }
             </WaterfallStatusBar>

@@ -25,6 +25,8 @@ let bandscopeDrawInterval = 100;
 let dottedLineImageData = null;
 let rotatorEventQueue = [];
 let lastTimestamp = new Date();
+let renderWaterfallCount = 0;
+
 
 // Main message handler
 self.onmessage = function(eventMessage) {
@@ -139,6 +141,7 @@ function throttledDrawBandscope() {
 function startFftRateMonitoring() {
     // Reset counters
     fftUpdateCount = 0;
+    renderWaterfallCount = 0; // Reset renderWaterfall counter
     fftRateStartTime = Date.now();
 
     // Calculate and report rate every second
@@ -146,18 +149,20 @@ function startFftRateMonitoring() {
         const now = Date.now();
         const elapsedSeconds = (now - fftRateStartTime) / 1000;
 
-        // Calculate rate (updates per second)
+        // Calculate rates
         fftUpdatesPerSecond = fftUpdateCount / elapsedSeconds;
+        const renderWaterfallPerSecond = renderWaterfallCount / elapsedSeconds;
 
         // Calculate bins per second
         binsPerSecond = binsUpdateCount / elapsedSeconds;
 
-        // Report the rate to the main thread
+        // Report the rates to the main thread
         self.postMessage({
             type: 'metrics',
             data: {
                 fftUpdatesPerSecond: parseFloat(fftUpdatesPerSecond.toFixed(1)),
                 binsPerSecond: binsPerSecond,
+                renderWaterfallPerSecond: parseFloat(renderWaterfallPerSecond.toFixed(1)),
                 totalUpdates: fftUpdateCount,
                 timeElapsed: elapsedSeconds,
             }
@@ -165,10 +170,12 @@ function startFftRateMonitoring() {
 
         // Reset for next interval
         fftUpdateCount = 0;
+        renderWaterfallCount = 0;
         binsUpdateCount = 0;
         fftRateStartTime = now;
     }, 1000);
 }
+
 
 function stopFftRateMonitoring() {
     if (fftRateIntervalId) {
@@ -221,7 +228,9 @@ function stopRendering() {
 function renderWaterfall() {
     if (!waterfallCanvas || !waterfallCtx) return;
 
-    // Scroll the existing content DOWN instead of UP
+    // Increment the counter for rate calculation
+    renderWaterfallCount++;
+
     // Move the current content down by 1 pixel
     waterfallCtx.drawImage(waterfallCanvas, 0, 0, waterfallCanvas.width, waterfallCanvas.height - 1, 0, 1, waterfallCanvas.width, waterfallCanvas.height - 1);
 
@@ -232,10 +241,10 @@ function renderWaterfall() {
     updateWaterfallLeftMargin();
 
     // Draw bandscope
-    drawBandscope();
+    //drawBandscope();
 
     // Draw bandscope with throttling
-    //throttledDrawBandscope();
+    throttledDrawBandscope();
 }
 
 function renderFFTRow(fftData) {

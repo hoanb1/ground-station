@@ -371,7 +371,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
 
         if (offsetValue === "none") {
             dispatch(setSelectedOffsetMode(offsetValue));
-            dispatch(setSelectedOffsetMode(0));
+            dispatch(setSelectedOffsetValue(0));
             return sendSDRConfigToBackend({offsetFrequency: 0});
         } else if (offsetValue === "manual") {
             dispatch(setSelectedOffsetMode(offsetValue));
