@@ -24,6 +24,8 @@ import {createAsyncThunk} from '@reduxjs/toolkit';
 import {useRef, useState} from "react";
 import {setSelectedTransmitter} from "../target/target-sat-slice.jsx";
 
+// Mobile detection
+const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
 
 export const getSDRConfigParameters = createAsyncThunk(
     'waterfall/getSDRConfigParameters',
@@ -78,9 +80,9 @@ const waterfallSlice = createSlice({
         settingsDialogOpen: false,
         autoDBRange: false,
         gridEditable: false,
-        waterFallCanvasWidth: 8191,
+        waterFallCanvasWidth: isMobile? 4096: 8191,
         waterFallCanvasHeight: 800,
-        waterFallVisualWidth: 8191,
+        waterFallVisualWidth: isMobile? 4096: 8191,
         bandScopeHeight: 110,
         frequencyScaleHeight: 20,
         waterFallScaleX: 1,

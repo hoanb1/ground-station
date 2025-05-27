@@ -41,22 +41,22 @@ self.onmessage = function(eventMessage) {
             waterfallCtx = waterfallCanvas.getContext('2d', {
                 alpha: true,
                 desynchronized: true,
-                willReadFrequently: true
+                willReadFrequently: false, // true breaks Webview on android and Hermit browser
             });
             bandscopeCtx = bandscopeCanvas.getContext('2d', {
                 alpha: true,
                 desynchronized: true,
-                willReadFrequently: true
+                willReadFrequently: false, // true breaks Webview on android and Hermit browser
             });
             dBAxisCtx = dBAxisCanvas.getContext('2d', {
                 alpha: true,
-                desynchronized: false,
-                willReadFrequently: true
+                desynchronized: true,
+                willReadFrequently: false, // true breaks Webview on android and Hermit browser
             });
             waterFallLeftMarginCtx = waterfallLeftMarginCanvas.getContext('2d', {
                 alpha: true,
                 desynchronized: true,
-                willReadFrequently: true
+                willReadFrequently: false, // true breaks Webview on android and Hermit browser
             });
             setupCanvas(eventMessage.data.config);
 

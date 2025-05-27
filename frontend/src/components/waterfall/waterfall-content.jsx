@@ -501,9 +501,9 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
                         height: `${waterFallWindowHeight-230}px`,
                         display: 'block',
                         touchAction: 'pan-y',
-                        transform: 'translateZ(0)',
-                        backfaceVisibility: 'hidden',
-                        perspective: '1000px',
+                        //transform: 'translateZ(0)', // commented out because it breaks box-shadow CSS
+                        //backfaceVisibility: 'hidden',
+                        //perspective: '1000px',
                     }}
                 />
             </Box>
