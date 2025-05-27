@@ -144,16 +144,16 @@ def start_tracker_process():
             loop.close()
 
     # Create and start the process
-    tracker_process = multiprocessing.Process(
+    tracker_proc = multiprocessing.Process(
         target=run_tracking_task,
         name="SatelliteTracker"
     )
-    tracker_process.daemon = True  # Process will terminate when main process exits
-    tracker_process.start()
+    tracker_proc.daemon = True  # Process will terminate when main process exits
+    tracker_proc.start()
 
-    logger.info(f"Started satellite tracker process with PID {tracker_process.pid}")
+    logger.info(f"Started satellite tracker process with PID {tracker_proc.pid}")
 
-    return tracker_process, queue_to_tracker, queue_from_tracker, stop_event
+    return tracker_proc, queue_to_tracker, queue_from_tracker, stop_event
 
 
 async def compiled_satellite_data(dbsession, norad_id) -> dict:
@@ -488,6 +488,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
 
         # check what hardware was chosen and set it up
         if current_rig_id is not None and rig_controller is None:
+
             # rig_controller was selected, and a rig_controller is not setup, set it up now
             try:
                 # Try fetching hardware rig details first
@@ -630,9 +631,6 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     # check if the rig id changed, do stuff if it has
     rig_id_state_tracker = StateTracker(initial_state="")
     rig_id_state_tracker.register_async_callback(handle_rig_id_change)
-
-    # nudge command queue
-    nudge_commands = []
 
     # nudge command offset values
     nudge_offset = {'az': 0, 'el': 0}

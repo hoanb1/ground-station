@@ -119,7 +119,6 @@ const WaterfallLayout = React.memo(function () {
 
     // globalize the callback
     handleSetGridEditableWaterfall = useCallback((value) => {
-        console.log("set grid editable to " + value);
         dispatch(setGridEditable(value));
     }, [gridEditable]);
 
@@ -144,7 +143,6 @@ const WaterfallLayout = React.memo(function () {
             <WaterfallSettings ref={waterfallComponentSettingsRef}/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rig-control">
-            {/*<RigControl waterfallSettingsComponentRef={waterfallComponentSettingsRef}/>*/}
             <ControllerTabs waterfallSettingsComponentRef={waterfallComponentSettingsRef}/>
         </StyledIslandParentScrollbar>,
     ];

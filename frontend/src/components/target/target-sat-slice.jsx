@@ -337,6 +337,9 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
+            //const start = performance.now();
+            //console.log('Payload size:', JSON.stringify(action.payload).length);
+
             // // If we are either connecting of disconnecting, ignore any satellite, rotator or rig data updates
             // if (state.rotatorConnecting || state.rotatorDisconnecting) {
             //     state.rotatorConnecting = false;
@@ -348,17 +351,6 @@ const targetSatTrackSlice = createSlice({
             if (action.payload['tracking_state']) {
                 state.trackingState = action.payload['tracking_state'];
             }
-
-            // if (action.payload['ui_tracker_state']) {
-            //     state.satGroups = action.payload['ui_tracker_state']['groups'];
-            //     state.groupOfSats = action.payload['ui_tracker_state']['satellites'];
-            //     state.availableTransmitters = action.payload['ui_tracker_state']['transmitters'];
-            //     state.satelliteId = action.payload['ui_tracker_state']['norad_id'];
-            //     state.groupId = action.payload['ui_tracker_state']['group_id'];
-            //     state.selectedRadioRig = action.payload['ui_tracker_state']['rig_id'];
-            //     state.selectedRotator = action.payload['ui_tracker_state']['rotator_id'];
-            //     state.selectedTransmitter = action.payload['ui_tracker_state']['transmitter_id'];
-            // }
 
             if (action.payload['satellite_data']) {
                 state.satelliteData.details = action.payload['satellite_data']['details'];
@@ -408,6 +400,9 @@ const targetSatTrackSlice = createSlice({
             if (action.payload['rig_data']) {
                 state.rigData = action.payload['rig_data'];
             }
+
+            //const end = performance.now();
+            //console.log(`setSatelliteData took ${end - start}ms`);
         },
         setUITrackerValues(state, action) {
             state.satGroups = action.payload['groups'];

@@ -32,13 +32,14 @@ import {
     setBookMarks
 } from "./waterfall-slice.jsx";
 
-const WaterfallWithStrictXAxisZoom = ({
+const WaterfallWithStrictXAxisZoom = React.memo(({
                                           bandscopeCanvasRef,
                                           waterFallCanvasRef,
                                           centerFrequency,
                                           sampleRate,
                                           waterFallWindowHeight,
                                       }) => {
+    console.info('Rendering WaterfallWithStrictXAxisZoom');
     const containerRef = useRef(null);
     const containerWidthRef = useRef(0);
     const [isMobile, setIsMobile] = useState(false);
@@ -223,15 +224,8 @@ const WaterfallWithStrictXAxisZoom = ({
         scaleRef.current = newScale;
         positionXRef.current = newPositionX;
 
-        // Set the values on Redux
-        //dispatch(setWaterFallScaleX(newScale));
-        //dispatch(setWaterFallPositionX(newPositionX));
-
         // Apply the transform immediately
         applyTransform();
-
-        // Updating state on mouse wheel is not a good idea
-        //updateReactState();
 
     }, [applyTransform, updateReactState]);
 
@@ -483,8 +477,6 @@ const WaterfallWithStrictXAxisZoom = ({
                             perspective: '1000px',
                         }}
                     />
-                    
-                    {/* Add BookmarkCanvas on top of the bandscope */}
                     <BookmarkCanvas
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
@@ -517,6 +509,6 @@ const WaterfallWithStrictXAxisZoom = ({
             </Box>
         </Box>
     );
-};
+});
 
 export default WaterfallWithStrictXAxisZoom;
