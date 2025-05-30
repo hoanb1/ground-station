@@ -117,16 +117,16 @@ const VFOMarkersContainer = ({
 
             // Draw frequency label background
             const labelText = `${vfoMarkers[markerIdx].name}: ${formatFrequency(vfoMarkers[markerIdx].frequency)} MHz`;
-            ctx.font = '11px Arial';
+            ctx.font = '12px Monospace';
             const textMetrics = ctx.measureText(labelText);
             const labelWidth = textMetrics.width + 20; // Add padding
-            const labelHeight = 20;
+            const labelHeight = 14;
 
             ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
             ctx.beginPath();
             ctx.roundRect(
                 x - labelWidth / 2,
-                10,
+                5,
                 labelWidth,
                 labelHeight,
                 4 // rounded corner radius
@@ -136,7 +136,7 @@ const VFOMarkersContainer = ({
             // Draw frequency label text
             ctx.fillStyle = vfoMarkers[markerIdx].color;
             ctx.textAlign = 'center';
-            ctx.fillText(labelText, x, 24);
+            ctx.fillText(labelText, x, 16);
 
             // Draw handle
             ctx.fillStyle = vfoMarkers[markerIdx].color;
