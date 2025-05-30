@@ -745,7 +745,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#FF0000'
+                                color: '#FF0000',
+                                backgroundColor: vfoMarkers[1]['active'] ? 'rgba(255,0,0,0.1)' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: vfoMarkers[1]['active'] ? 'rgba(255,0,0,0.2)' : 'rgba(0,0,0,0.1)'
+                                }
                             }}
                             onClick={() => {
                                 const vfoColor = '#FF0000';
@@ -769,7 +773,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     }));
                                 }
                             }}
-                            color="primary"
+                            color={vfoMarkers[1]['active'] ? "warning" : "primary"}
                             title="Add VFO marker"
                         >
                             1
@@ -781,7 +785,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#00FF00'
+                                color: '#00FF00',
+                                backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.1)' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
+                                }
                             }}
                             onClick={() => {
                                 const vfoColor = '#00FF00';
@@ -805,7 +813,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     }));
                                 }
                             }}
-                            color="primary"
+                            color={vfoMarkers[2]['active'] ? "warning" : "primary"}
                             title="Add VFO marker"
                         >
                             2
@@ -817,7 +825,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#0000FF'
+                                color: '#0000FF',
+                                backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.2)' : 'rgba(0,0,0,0.1)'
+                                }
                             }}
                             onClick={() => {
                                 const vfoColor = '#0000FF';
@@ -841,7 +853,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     }));
                                 }
                             }}
-                            color="primary"
+                            color={vfoMarkers[3]['active'] ? "warning" : "primary"}
                             title="Add VFO marker"
                         >
                             3
@@ -853,7 +865,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#FF00FF'
+                                color: '#FF00FF',
+                                backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.1)' : 'transparent',
+                                '&:hover': {
+                                    backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
+                                }
                             }}
                             onClick={() => {
                                 const vfoColor = '#FF00FF';
@@ -877,7 +893,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     }));
                                 }
                             }}
-                            color="primary"
+                            color={vfoMarkers[4]['active'] ? "warning" : "primary"}
                             title="Add VFO marker"
                         >
                             4

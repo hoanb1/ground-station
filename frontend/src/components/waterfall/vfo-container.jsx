@@ -37,6 +37,7 @@ const VFOMarkersContainer = ({
     const [isDragging, setIsDragging] = useState(false);
     const lastClientXRef = useRef(0);
     const height = bandscopeHeight + waterfallHeight;
+    const [cursor, setCursor] = useState('default');
 
     // Calculate frequency range
     const startFreq = centerFrequency - sampleRate / 2;
@@ -160,19 +161,51 @@ const VFOMarkersContainer = ({
         return startFreq + (freqRatio * freqRange);
     }, [startFreq, freqRange, actualWidth]);
 
-    const handleAddVFO = () => {
-        if (vfoMarkers.length < maxVFOMarkers) {
-            // Create a new VFO marker at the center frequency
-            const newVFO = {
-                id: uuidv4(),
-                color: vfoColors[vfoMarkers.length % vfoColors.length],
-                frequency: centerFrequency,
-                bandwidth: 3000 // Default bandwidth (3 kHz)
-            };
+    // Check if mouse is over a handle
+    const isOverHandle = useCallback((x, y) => {
+        // Check if y-coordinate is in handle area
+        if (y < 40 || y > 60) return false;
 
-            dispatch(addVFOMarker(newVFO));
+        // Calculate scaling factor between canvas coordinate space and DOM space
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleX = actualWidth / rect.width;
+        const canvasX = x * scaleX;
+
+        // Check all markers
+        for (const key of Object.keys(vfoMarkers)) {
+            if (!vfoMarkers[key].active) continue;
+            if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) continue;
+
+            const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
+            if (Math.abs(canvasX - markerX) <= 10) { // 10px hitbox
+                return true;
+            }
         }
-    };
+
+        return false;
+    }, [vfoMarkers, actualWidth, startFreq, endFreq, freqRange]);
+
+    // Handle mouse move to update cursor
+    const handleMouseMove = useCallback((e) => {
+        if (isDragging) return; // Don't change cursor during drag
+
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        if (isOverHandle(x, y)) {
+            setCursor('ew-resize');
+        } else {
+            setCursor('default');
+        }
+    }, [isOverHandle, isDragging]);
+
+    // Handle mouse leave
+    const handleMouseLeave = useCallback(() => {
+        if (!isDragging) {
+            setCursor('default');
+        }
+    }, [isDragging]);
 
     // Handle mouse events for marker interaction
     const handleMouseDown = (e) => {
@@ -190,6 +223,7 @@ const VFOMarkersContainer = ({
         if (y >= 40 && y <= 60) {
             // Convert each marker's frequency to a position
             Object.keys(vfoMarkers).forEach(key => {
+                if (!vfoMarkers[key].active) return;
                 if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return;
 
                 const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
@@ -197,6 +231,7 @@ const VFOMarkersContainer = ({
                 if (Math.abs(canvasX - markerX) <= 10) { // 10px hitbox for handle
                     setActiveMarker(key);
                     setIsDragging(true);
+                    setCursor('ew-resize');
                     lastClientXRef.current = e.clientX;
 
                     // Prevent default to avoid text selection while dragging
@@ -248,6 +283,22 @@ const VFOMarkersContainer = ({
             const handleMouseUpEvent = () => {
                 setIsDragging(false);
                 setActiveMarker(null);
+                // Reset cursor based on mouse position
+                if (canvasRef.current) {
+                    const rect = canvasRef.current.getBoundingClientRect();
+                    const mouseX = event.clientX - rect.left;
+                    const mouseY = event.clientY - rect.top;
+
+                    if (mouseX >= 0 && mouseX <= rect.width && mouseY >= 0 && mouseY <= rect.height) {
+                        if (isOverHandle(mouseX, mouseY)) {
+                            setCursor('ew-resize');
+                        } else {
+                            setCursor('default');
+                        }
+                    } else {
+                        setCursor('default');
+                    }
+                }
             };
 
             // Add the event listeners
@@ -260,7 +311,7 @@ const VFOMarkersContainer = ({
                 document.removeEventListener('mouseup', handleMouseUpEvent);
             };
         }
-    }, [isDragging, activeMarker, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, calculateFrequency]);
+    }, [isDragging, activeMarker, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, calculateFrequency, isOverHandle]);
 
     // Double click to remove a marker
     const handleDoubleClick = (e) => {
@@ -271,6 +322,7 @@ const VFOMarkersContainer = ({
 
         // Find which marker was double-clicked
         Object.keys(vfoMarkers).forEach(key => {
+            if (!vfoMarkers[key].active) return;
             if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return;
 
             const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
@@ -303,34 +355,17 @@ const VFOMarkersContainer = ({
             <canvas
                 ref={canvasRef}
                 onMouseDown={handleMouseDown}
+                onMouseMove={handleMouseMove}
+                onMouseLeave={handleMouseLeave}
                 onDoubleClick={handleDoubleClick}
                 style={{
                     display: 'block',
                     width: '100%',
                     height: '100%',
-                    cursor: isDragging ? 'ew-resize' : 'default',
+                    cursor: cursor,
                     touchAction: 'pan-y',
                 }}
             />
-
-            {/* Add VFO Button */}
-            <IconButton
-                sx={{
-                    position: 'absolute',
-                    bottom: 10,
-                    right: 10,
-                    backgroundColor: 'rgba(0,0,0,0.7)',
-                    color: '#fff',
-                    '&:hover': {
-                        backgroundColor: 'rgba(0,0,0,0.9)',
-                    },
-                    zIndex: 700,
-                }}
-                onClick={handleAddVFO}
-                disabled={vfoMarkers.length >= maxVFOMarkers}
-            >
-                <TuneIcon />
-            </IconButton>
         </Box>
     );
 };
