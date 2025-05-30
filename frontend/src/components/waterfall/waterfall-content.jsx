@@ -31,7 +31,18 @@ import {
     setBookMarks
 } from "./waterfall-slice.jsx";
 import VFOMarkersContainer from './vfo-container.jsx';
-import {addVFOMarker, updateVFOMarker, removeVFOMarker} from './waterfall-slice.jsx';
+import {
+    enableVFO1,
+    enableVFO2,
+    enableVFO3,
+    enableVFO4,
+    disableVFO1,
+    disableVFO2,
+    disableVFO3,
+    disableVFO4,
+    setVFOProperty,
+} from './waterfall-slice.jsx';
+
 import {v4 as uuidv4} from 'uuid';
 import TuneIcon from '@mui/icons-material/Tune';
 

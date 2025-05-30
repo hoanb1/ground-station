@@ -1,13 +1,19 @@
-/**
- * Canvas-based VFO Markers container component
- */
-
 import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from 'uuid';
 import { Box, IconButton } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
-import { addVFOMarker, updateVFOMarker, removeVFOMarker } from './waterfall-slice.jsx';
+import {
+    enableVFO1,
+    enableVFO2,
+    enableVFO3,
+    enableVFO4,
+    disableVFO1,
+    disableVFO2,
+    disableVFO3,
+    disableVFO4,
+    setVFOProperty,
+} from './waterfall-slice.jsx';
 
 const VFOMarkersContainer = ({
                                  centerFrequency,
@@ -87,25 +93,30 @@ const VFOMarkersContainer = ({
         ctx.clearRect(0, 0, canvas.width, height);
 
         // Draw each marker
-        vfoMarkers.forEach(marker => {
-            // Skip if the marker is outside the visible range
-            if (marker.frequency < startFreq || marker.frequency > endFreq) {
+        Object.keys(vfoMarkers).forEach(markerIdx => {
+            // Skip inactive VFOs
+            if (!vfoMarkers[markerIdx].active) {
+                return;
+            }
+
+            // Skip if the markerIdx is outside the visible range
+            if (vfoMarkers[markerIdx].frequency < startFreq || vfoMarkers[markerIdx].frequency > endFreq) {
                 return;
             }
 
             // Calculate x position based on frequency
-            const x = ((marker.frequency - startFreq) / freqRange) * canvas.width;
+            const x = ((vfoMarkers[markerIdx].frequency - startFreq) / freqRange) * canvas.width;
 
-            // Draw marker line
+            // Draw markerIdx line
             ctx.beginPath();
-            ctx.strokeStyle = marker.color;
+            ctx.strokeStyle = vfoMarkers[markerIdx].color;
             ctx.lineWidth = 1;
             ctx.moveTo(x, 0);
             ctx.lineTo(x, height);
             ctx.stroke();
 
             // Draw frequency label background
-            const labelText = `${formatFrequency(marker.frequency)} MHz`;
+            const labelText = `${vfoMarkers[markerIdx].name}: ${formatFrequency(vfoMarkers[markerIdx].frequency)} MHz`;
             ctx.font = '11px Arial';
             const textMetrics = ctx.measureText(labelText);
             const labelWidth = textMetrics.width + 20; // Add padding
@@ -123,12 +134,12 @@ const VFOMarkersContainer = ({
             ctx.fill();
 
             // Draw frequency label text
-            ctx.fillStyle = marker.color;
+            ctx.fillStyle = vfoMarkers[markerIdx].color;
             ctx.textAlign = 'center';
             ctx.fillText(labelText, x, 24);
 
             // Draw handle
-            ctx.fillStyle = marker.color;
+            ctx.fillStyle = vfoMarkers[markerIdx].color;
             const handleWidth = 12;
             const handleHeight = 20;
             ctx.beginPath();
@@ -178,22 +189,22 @@ const VFOMarkersContainer = ({
         // Check if we clicked on a marker handle (around y=40-60px)
         if (y >= 40 && y <= 60) {
             // Convert each marker's frequency to a position
-            for (const marker of vfoMarkers) {
-                if (marker.frequency < startFreq || marker.frequency > endFreq) continue;
+            Object.keys(vfoMarkers).forEach(key => {
+                if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return;
 
-                const markerX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
+                const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
 
                 if (Math.abs(canvasX - markerX) <= 10) { // 10px hitbox for handle
-                    setActiveMarker(marker.id);
+                    setActiveMarker(key);
                     setIsDragging(true);
                     lastClientXRef.current = e.clientX;
 
                     // Prevent default to avoid text selection while dragging
                     e.preventDefault();
                     e.stopPropagation();
-                    break;
+                    return;
                 }
-            }
+            });
         }
     };
 
@@ -208,7 +219,7 @@ const VFOMarkersContainer = ({
                 lastClientXRef.current = e.clientX;
 
                 // Get the active marker
-                const marker = vfoMarkers.find(m => m.id === activeMarker);
+                const marker = vfoMarkers[activeMarker];
                 if (!marker) return;
 
                 // Calculate the current marker position in canvas coordinates
@@ -227,11 +238,10 @@ const VFOMarkersContainer = ({
                 // Ensure the frequency stays within the visible range
                 const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
 
-                // Update the marker in Redux
-                dispatch(updateVFOMarker({
-                    id: marker.id,
-                    frequency: limitedFreq,
-                    bandwidth: marker.bandwidth
+                dispatch(setVFOProperty({vfoNumber: parseInt(activeMarker), updates: {
+                        frequency: limitedFreq,
+                        bandwidth: marker.bandwidth,
+                    }
                 }));
             };
 
@@ -250,7 +260,7 @@ const VFOMarkersContainer = ({
                 document.removeEventListener('mouseup', handleMouseUpEvent);
             };
         }
-    }, [isDragging, activeMarker, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, calculateFrequency, dispatch]);
+    }, [isDragging, activeMarker, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, calculateFrequency]);
 
     // Double click to remove a marker
     const handleDoubleClick = (e) => {
@@ -260,16 +270,20 @@ const VFOMarkersContainer = ({
         const canvasX = x * scaleX;
 
         // Find which marker was double-clicked
-        for (const marker of vfoMarkers) {
-            if (marker.frequency < startFreq || marker.frequency > endFreq) continue;
+        Object.keys(vfoMarkers).forEach(key => {
+            if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return;
 
-            const markerX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
+            const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
 
-            if (Math.abs(canvasX - markerX) <= 10) { // 10px hitbox
-                dispatch(removeVFOMarker(marker.id));
-                break;
+            // Check the 10px hitbox
+            if (Math.abs(canvasX - markerX) <= 10) {
+                console.info("to delete: ", key);
+                dispatch(setVFOProperty({vfoNumber: parseInt(key), updates: {
+                        active: false,
+                    }
+                }));
             }
-        }
+        });
     };
 
     return (

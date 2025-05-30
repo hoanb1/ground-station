@@ -107,8 +107,13 @@ const initialState = {
     soapyAgc: false,
     selectedAntenna: 'none',
     bookmarks: [],
-    vfoMarkers: [], // Array to store VFO markers
-    maxVFOMarkers: 4, // Maximum number of VFO markers allowed
+    vfoMarkers: {
+        1: {active: false, name: "VFO1", bandwidth: 40, frequency: null, color: null},
+        2: {active: false, name: "VFO2", bandwidth: 40, frequency: null, color: null},
+        3: {active: false, name: "VFO3", bandwidth: 40, frequency: null, color: null},
+        4: {active: false, name: "VFO4", bandwidth: 40, frequency: null, color: null},
+    },
+    maxVFOMarkers: 4,
 };
 
 // Add these new reducers to your createSlice
@@ -233,35 +238,46 @@ export const waterfallSlice = createSlice({
         setSelectedTransmitterId(state, action) {
             state.selectedTransmitterId = action.payload;
         },
-        // Add a new VFO marker
-        addVFOMarker: (state, action) => {
-            if (state.vfoMarkers.length < state.maxVFOMarkers) {
-                state.vfoMarkers.push(action.payload);
+        // Enable VFO1
+        enableVFO1: (state, action) => {
+            state.vfoMarkers[0].active = true;
+        },
+        // Enable VFO2
+        enableVFO2: (state, action) => {
+            state.vfoMarkers[1].active = true;
+        },
+        // Enable VFO3
+        enableVFO3: (state, action) => {
+            state.vfoMarkers[2].active = true;
+        },
+        // Enable VFO4
+        enableVFO4: (state, action) => {
+            state.vfoMarkers[3].active = true;
+        },
+        // Disable VFO1
+        disableVFO1: (state, action) => {
+            state.vfoMarkers[0].active = false;
+        },
+        // Disable VFO2
+        disableVFO2: (state, action) => {
+            state.vfoMarkers[1].active = false;
+        },
+        // Disable VFO3
+        disableVFO3: (state, action) => {
+            state.vfoMarkers[2].active = false;
+        },
+        // Disable VFO4
+        disableVFO4: (state, action) => {
+            state.vfoMarkers[3].active = false;
+        },
+        // Set VFO property
+        setVFOProperty: (state, action) => {
+            const {vfoNumber, updates} = action.payload;
+            if (state.vfoMarkers[vfoNumber]) {
+                Object.entries(updates).forEach(([property, value]) => {
+                    state.vfoMarkers[vfoNumber][property] = value;
+                });
             }
-        },
-
-        // Update an existing VFO marker
-        updateVFOMarker: (state, action) => {
-            const { id, position, width, frequency } = action.payload;
-            const index = state.vfoMarkers.findIndex(marker => marker.id === id);
-            if (index !== -1) {
-                state.vfoMarkers[index] = {
-                    ...state.vfoMarkers[index],
-                    position,
-                    width,
-                    frequency
-                };
-            }
-        },
-
-        // Remove a VFO marker
-        removeVFOMarker: (state, action) => {
-            state.vfoMarkers = state.vfoMarkers.filter(marker => marker.id !== action.payload);
-        },
-
-        // Clear all VFO markers
-        clearVFOMarkers: (state) => {
-            state.vfoMarkers = [];
         },
     },
     extraReducers: (builder) => {
@@ -329,10 +345,15 @@ export const {
     setSelectedTransmitterId,
     setSelectedOffsetMode,
     setSelectedOffsetValue,
-    addVFOMarker,
-    updateVFOMarker,
-    removeVFOMarker,
-    clearVFOMarkers
+    setVFOProperty,
+    enableVFO1,
+    enableVFO2,
+    enableVFO3,
+    enableVFO4,
+    disableVFO1,
+    disableVFO2,
+    disableVFO3,
+    disableVFO4,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

@@ -89,13 +89,23 @@ import {
     setBandScopeHeight,
     setAutoDBRange,
     setShowRightSideWaterFallAccessories,
-    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue, addVFOMarker,
+    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue,
 } from './waterfall-slice.jsx'
+import {
+    enableVFO1,
+    enableVFO2,
+    enableVFO3,
+    enableVFO4,
+    disableVFO1,
+    disableVFO2,
+    disableVFO3,
+    disableVFO4,
+    setVFOProperty,
+} from './waterfall-slice.jsx';
 
 import {enqueueSnackbar} from "notistack";
 import { useStore } from 'react-redux';
 import {v4 as uuidv4} from 'uuid';
-import {getColorForPower} from "./waterfall-colors.jsx";
 import TuneIcon from "@mui/icons-material/Tune";
 
 // Make a new worker
@@ -730,21 +740,147 @@ const MainWaterfallDisplay = React.memo(() => {
                         </IconButton>
 
                         <IconButton
+                            sx={{
+                                width: 40,
+                                fontSize: '1rem',
+                                fontFamily: "Monospace",
+                                fontWeight: "bold",
+                                color: '#FF0000'
+                            }}
                             onClick={() => {
-                                const vfoColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
-                                const newVFO = {
-                                    id: uuidv4(),
-                                    width: 30,
-                                    color: vfoColors[vfoMarkers.length % vfoColors.length],
-                                    frequency: centerFrequency
-                                };
-                                dispatch(addVFOMarker(newVFO));
+                                const vfoColor = '#FF0000';
+                                if (vfoMarkers[1]['active']) {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 1, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: false,
+                                        }
+                                    }));
+                                } else {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 1, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: true,
+                                        }
+                                    }));
+                                }
                             }}
                             color="primary"
                             title="Add VFO marker"
-                            disabled={vfoMarkers.length >= maxVFOMarkers}
                         >
-                            <TuneIcon/>
+                            1
+                        </IconButton>
+
+                        <IconButton
+                            sx={{
+                                width: 40,
+                                fontSize: '1rem',
+                                fontFamily: "Monospace",
+                                fontWeight: "bold",
+                                color: '#00FF00'
+                            }}
+                            onClick={() => {
+                                const vfoColor = '#00FF00';
+                                if (vfoMarkers[2]['active']) {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 2, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: false,
+                                        }
+                                    }));
+                                } else {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 2, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: true,
+                                        }
+                                    }));
+                                }
+                            }}
+                            color="primary"
+                            title="Add VFO marker"
+                        >
+                            2
+                        </IconButton>
+
+                        <IconButton
+                            sx={{
+                                width: 40,
+                                fontSize: '1rem',
+                                fontFamily: "Monospace",
+                                fontWeight: "bold",
+                                color: '#0000FF'
+                            }}
+                            onClick={() => {
+                                const vfoColor = '#0000FF';
+                                if (vfoMarkers[3]['active']) {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 3, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: false,
+                                        }
+                                    }));
+                                } else {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 3, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: true,
+                                        }
+                                    }));
+                                }
+                            }}
+                            color="primary"
+                            title="Add VFO marker"
+                        >
+                            3
+                        </IconButton>
+
+                        <IconButton
+                            sx={{
+                                width: 40,
+                                fontSize: '1rem',
+                                fontFamily: "Monospace",
+                                fontWeight: "bold",
+                                color: '#FF00FF'
+                            }}
+                            onClick={() => {
+                                const vfoColor = '#FF00FF';
+                                if (vfoMarkers[4]['active']) {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 4, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: false,
+                                        }
+                                    }));
+                                } else {
+                                    dispatch(setVFOProperty({
+                                        vfoNumber: 4, updates: {
+                                            frequency: centerFrequency,
+                                            bandwidth: 400,
+                                            color: vfoColor,
+                                            active: true,
+                                        }
+                                    }));
+                                }
+                            }}
+                            color="primary"
+                            title="Add VFO marker"
+                        >
+                            4
                         </IconButton>
 
                     </ButtonGroup>
