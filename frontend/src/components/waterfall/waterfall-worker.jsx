@@ -26,6 +26,7 @@ let dottedLineImageData = null;
 let rotatorEventQueue = [];
 let lastTimestamp = new Date();
 let renderWaterfallCount = 0;
+let vfoMarkers = [];
 
 
 // Main message handler
@@ -120,6 +121,10 @@ self.onmessage = function(eventMessage) {
 
         case 'stopMonitoring':
             stopFftRateMonitoring();
+            break;
+
+        case 'updateVFOMarkers':
+            vfoMarkers = eventMessage.data.markers;
             break;
 
         default:
@@ -247,6 +252,9 @@ function renderWaterfall() {
 
     // Draw bandscope with throttling
     //throttledDrawBandscope();
+    
+    // After drawing the waterfall, draw VFO markers
+    //drawVFOMarkers();
 }
 
 function renderFFTRow(fftData) {
@@ -728,6 +736,5 @@ const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
             const greyRGB = {r: intensity, g: intensity, b: intensity};
             colorCache.set(cacheKey, greyRGB);
             return greyRGB;
-
     }
 }

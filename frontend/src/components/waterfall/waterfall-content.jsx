@@ -18,7 +18,6 @@
  */
 
 
-
 import React, {useCallback, useEffect, useRef, useState} from "react";
 import {useDispatch, useSelector} from "react-redux";
 import {Box, IconButton} from "@mui/material";
@@ -31,14 +30,19 @@ import BookmarkCanvas from "./waterfall-bookmarks.jsx";
 import {
     setBookMarks
 } from "./waterfall-slice.jsx";
+import VFOMarkersContainer from './vfo-container.jsx';
+import {addVFOMarker, updateVFOMarker, removeVFOMarker} from './waterfall-slice.jsx';
+import {v4 as uuidv4} from 'uuid';
+import TuneIcon from '@mui/icons-material/Tune';
 
+// Inside your WaterfallWithStrictXAxisZoom component, add:
 const WaterfallWithStrictXAxisZoom = React.memo(({
-                                          bandscopeCanvasRef,
-                                          waterFallCanvasRef,
-                                          centerFrequency,
-                                          sampleRate,
-                                          waterFallWindowHeight,
-                                      }) => {
+                                                     bandscopeCanvasRef,
+                                                     waterFallCanvasRef,
+                                                     centerFrequency,
+                                                     sampleRate,
+                                                     waterFallWindowHeight,
+                                                 }) => {
     console.info('Rendering WaterfallWithStrictXAxisZoom');
     const containerRef = useRef(null);
     const containerWidthRef = useRef(0);
@@ -108,7 +112,7 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
             label: label || `${(frequency / 1e6).toFixed(3)} MHz`,
             color
         };
-        
+
         dispatch(setBookMarks([...bookmarks, newBookmark]));
 
     }, []);
@@ -117,7 +121,7 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
     const addCenterFrequencyBookmark = useCallback(() => {
         addBookmark(
             centerFrequency,
-            `Center ${(centerFrequency / 1e6).toFixed(3)} MHz`, 
+            `Center ${(centerFrequency / 1e6).toFixed(3)} MHz`,
             '#00ffff'
         );
     }, [addBookmark, centerFrequency]);
@@ -126,7 +130,7 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
     const handleBookmarkClick = useCallback((bookmark) => {
         // Example: You could show a dialog to edit or delete the bookmark
         console.log('Clicked on bookmark:', bookmark);
-        
+
         // For now, just log it, but you could add more advanced features here
     }, []);
 
@@ -348,7 +352,7 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
                 const deltaScale = (currentDistance - lastPinchDistanceRef.current) * 0.01;
                 lastPinchDistanceRef.current = currentDistance;
 
-                pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2;;
+                pinchCenterXRef.current = (touch1.clientX + touch2.clientX) / 2;
 
                 zoomOnXAxisOnly(deltaScale, pinchCenterXRef.current);
                 e.preventDefault();
@@ -461,7 +465,7 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
                 }}
             >
                 {/* Bandscope container with relative positioning */}
-                <Box sx={{ position: 'relative' }}>
+                <Box sx={{position: 'relative'}}>
                     <canvas
                         ref={bandscopeCanvasRef}
                         width={waterFallCanvasWidth}
@@ -485,20 +489,20 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
                         onBookmarkClick={handleBookmarkClick}
                     />
                 </Box>
-                
+
                 <FrequencyScale
                     centerFrequency={centerFrequency}
                     containerWidth={visualContainerWidth}
                     sampleRate={sampleRate}
                 />
-                
+
                 <canvas
                     ref={waterFallCanvasRef}
                     width={waterFallCanvasWidth}
-                    height={waterFallWindowHeight-230}
+                    height={waterFallWindowHeight - 230}
                     style={{
                         width: '100%',
-                        height: `${waterFallWindowHeight-230}px`,
+                        height: `${waterFallWindowHeight - 230}px`,
                         display: 'block',
                         touchAction: 'pan-y',
                         //transform: 'translateZ(0)', // commented out because it breaks box-shadow CSS
@@ -506,7 +510,15 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
                         //perspective: '1000px',
                     }}
                 />
+                <VFOMarkersContainer
+                    centerFrequency={centerFrequency}
+                    sampleRate={sampleRate}
+                    waterfallHeight={waterFallCanvasHeight}
+                    bandscopeHeight={bandScopeHeight}
+                    containerWidth={containerWidthRef.current}
+                />
             </Box>
+
         </Box>
     );
 });

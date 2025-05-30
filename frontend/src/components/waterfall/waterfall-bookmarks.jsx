@@ -26,10 +26,6 @@ import {
 } from "./waterfall-slice.jsx";
 
 
-const getBookmarkCanvasWidth = (element) => {
-    return element.current?.getBoundingClientRect();
-}
-
 const BookmarkCanvas = ({
                             centerFrequency,
                             sampleRate,
@@ -62,7 +58,7 @@ const BookmarkCanvas = ({
 
     const updateActualWidth = useCallback(() => {
         // Get the actual client dimensions of the element
-        const rect = getBookmarkCanvasWidth(bookmarkContainerRef);
+        const rect = bookmarkContainerRef.current?.getBoundingClientRect();
 
         // Only update if the width has changed significantly (avoid unnecessary redraws)
         if (rect && Math.abs(rect.width - lastMeasuredWidthRef.current) > 1) {
@@ -137,7 +133,6 @@ const BookmarkCanvas = ({
         return true;
     }
 
-    // Update width when the container width changes
     useEffect(() => {
         // First, check if we need to update based on rigData conditions
         if (rigData['observed_freq'] > 0 && rigData['transmitter_id'] !== "none") {

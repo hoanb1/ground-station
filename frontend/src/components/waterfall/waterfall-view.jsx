@@ -89,11 +89,14 @@ import {
     setBandScopeHeight,
     setAutoDBRange,
     setShowRightSideWaterFallAccessories,
-    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue,
+    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue, addVFOMarker,
 } from './waterfall-slice.jsx'
+
 import {enqueueSnackbar} from "notistack";
 import { useStore } from 'react-redux';
+import {v4 as uuidv4} from 'uuid';
 import {getColorForPower} from "./waterfall-colors.jsx";
+import TuneIcon from "@mui/icons-material/Tune";
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -181,6 +184,8 @@ const MainWaterfallDisplay = React.memo(() => {
         showLeftSideWaterFallAccessories,
         selectedAntenna,
         selectedOffsetValue,
+        vfoMarkers,
+        maxVFOMarkers,
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
@@ -722,6 +727,24 @@ const MainWaterfallDisplay = React.memo(() => {
                             title="Toggle fullscreen"
                         >
                             {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
+                        </IconButton>
+
+                        <IconButton
+                            onClick={() => {
+                                const vfoColors = ['#FF0000', '#00FF00', '#0000FF', '#FFFF00', '#FF00FF', '#00FFFF'];
+                                const newVFO = {
+                                    id: uuidv4(),
+                                    width: 30,
+                                    color: vfoColors[vfoMarkers.length % vfoColors.length],
+                                    frequency: centerFrequency
+                                };
+                                dispatch(addVFOMarker(newVFO));
+                            }}
+                            color="primary"
+                            title="Add VFO marker"
+                            disabled={vfoMarkers.length >= maxVFOMarkers}
+                        >
+                            <TuneIcon/>
                         </IconButton>
 
                     </ButtonGroup>

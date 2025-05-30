@@ -43,73 +43,78 @@ export const getSDRConfigParameters = createAsyncThunk(
 );
 
 
-const waterfallSlice = createSlice({
-    name: 'waterfallState',
-    initialState: {
-        colorMaps: [
-            'viridis',
-            'plasma',
-            'inferno',
-            'magma',
-            'jet',
-            'websdr',
-            'cosmic',
-            'greyscale',
-        ],
-        colorMap: 'cosmic',
-        dbRange: [-80, -20],
-        fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
-        fftSize: 8192,
-        fftWindow: 'hanning',
-        fftWindows: ['hanning', 'hamming', 'blackman', 'kaiser', 'bartlett'],
-        gain: "none",
-        rtlGains: [0, 0.9, 1.4, 2.7, 3.7, 7.7, 8.7, 12.5, 14.4, 15.7, 16.6, 19.7, 20.7, 22.9, 25.4,
-            28.0, 29.7, 32.8, 33.8, 36.4, 37.2, 38.6, 40.2, 42.1, 43.4, 43.9, 44.5, 48.0, 49.6],
-        biasT: false,
-        tunerAgc: false,
-        rtlAgc: false,
-        sampleRate: "none",
-        centerFrequency: 100000000,
-        selectedOffsetMode: "",
-        selectedOffsetValue: 0,
-        errorMessage: null,
-        errorDialogOpen: false,
-        isStreaming: false,
-        isPlaying: false,
-        targetFPS: 10,
-        settingsDialogOpen: false,
-        autoDBRange: false,
-        gridEditable: false,
-        waterFallCanvasWidth: isMobile? 4096: 8191,
-        waterFallCanvasHeight: 800,
-        waterFallVisualWidth: isMobile? 4096: 8191,
-        bandScopeHeight: 110,
-        frequencyScaleHeight: 20,
-        waterFallScaleX: 1,
-        waterFallPositionX: 0,
-        showRightSideWaterFallAccessories: true,
-        showLeftSideWaterFallAccessories: true,
-        expandedPanels: ['sdr', 'freqControl', 'fft'],
-        selectedSDRId: "none",
-        selectedTransmitterId: "none",
-        startStreamingLoading: false,
-        gettingSDRParameters: false,
-        gainValues: [],
-        sampleRateValues: [],
-        hasBiasT: false,
-        hasTunerAgc: false,
-        hasRtlAgc: false,
-        fftSizeValues: [],
-        fftWindowValues: [],
-        antennasList: {
-            'tx': [],
-            'rx': [],
-        },
-        hasSoapyAgc: false,
-        soapyAgc: false,
-        selectedAntenna: 'none',
-        bookmarks: [],
+const initialState = {
+    colorMaps: [
+        'viridis',
+        'plasma',
+        'inferno',
+        'magma',
+        'jet',
+        'websdr',
+        'cosmic',
+        'greyscale',
+    ],
+    colorMap: 'cosmic',
+    dbRange: [-80, -20],
+    fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
+    fftSize: 8192,
+    fftWindow: 'hanning',
+    fftWindows: ['hanning', 'hamming', 'blackman', 'kaiser', 'bartlett'],
+    gain: "none",
+    rtlGains: [0, 0.9, 1.4, 2.7, 3.7, 7.7, 8.7, 12.5, 14.4, 15.7, 16.6, 19.7, 20.7, 22.9, 25.4,
+        28.0, 29.7, 32.8, 33.8, 36.4, 37.2, 38.6, 40.2, 42.1, 43.4, 43.9, 44.5, 48.0, 49.6],
+    biasT: false,
+    tunerAgc: false,
+    rtlAgc: false,
+    sampleRate: "none",
+    centerFrequency: 100000000,
+    selectedOffsetMode: "",
+    selectedOffsetValue: 0,
+    errorMessage: null,
+    errorDialogOpen: false,
+    isStreaming: false,
+    isPlaying: false,
+    targetFPS: 10,
+    settingsDialogOpen: false,
+    autoDBRange: false,
+    gridEditable: false,
+    waterFallCanvasWidth: isMobile? 4096: 8191,
+    waterFallCanvasHeight: 800,
+    waterFallVisualWidth: isMobile? 4096: 8191,
+    bandScopeHeight: 110,
+    frequencyScaleHeight: 20,
+    waterFallScaleX: 1,
+    waterFallPositionX: 0,
+    showRightSideWaterFallAccessories: true,
+    showLeftSideWaterFallAccessories: true,
+    expandedPanels: ['sdr', 'freqControl', 'fft'],
+    selectedSDRId: "none",
+    selectedTransmitterId: "none",
+    startStreamingLoading: false,
+    gettingSDRParameters: false,
+    gainValues: [],
+    sampleRateValues: [],
+    hasBiasT: false,
+    hasTunerAgc: false,
+    hasRtlAgc: false,
+    fftSizeValues: [],
+    fftWindowValues: [],
+    antennasList: {
+        'tx': [],
+        'rx': [],
     },
+    hasSoapyAgc: false,
+    soapyAgc: false,
+    selectedAntenna: 'none',
+    bookmarks: [],
+    vfoMarkers: [], // Array to store VFO markers
+    maxVFOMarkers: 4, // Maximum number of VFO markers allowed
+};
+
+// Add these new reducers to your createSlice
+export const waterfallSlice = createSlice({
+    name: 'waterfallState',
+    initialState: initialState,
     reducers: {
         setColorMap: (state, action) => {
             state.colorMap = action.payload;
@@ -228,6 +233,36 @@ const waterfallSlice = createSlice({
         setSelectedTransmitterId(state, action) {
             state.selectedTransmitterId = action.payload;
         },
+        // Add a new VFO marker
+        addVFOMarker: (state, action) => {
+            if (state.vfoMarkers.length < state.maxVFOMarkers) {
+                state.vfoMarkers.push(action.payload);
+            }
+        },
+
+        // Update an existing VFO marker
+        updateVFOMarker: (state, action) => {
+            const { id, position, width, frequency } = action.payload;
+            const index = state.vfoMarkers.findIndex(marker => marker.id === id);
+            if (index !== -1) {
+                state.vfoMarkers[index] = {
+                    ...state.vfoMarkers[index],
+                    position,
+                    width,
+                    frequency
+                };
+            }
+        },
+
+        // Remove a VFO marker
+        removeVFOMarker: (state, action) => {
+            state.vfoMarkers = state.vfoMarkers.filter(marker => marker.id !== action.payload);
+        },
+
+        // Clear all VFO markers
+        clearVFOMarkers: (state) => {
+            state.vfoMarkers = [];
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -294,6 +329,10 @@ export const {
     setSelectedTransmitterId,
     setSelectedOffsetMode,
     setSelectedOffsetValue,
+    addVFOMarker,
+    updateVFOMarker,
+    removeVFOMarker,
+    clearVFOMarkers
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;
