@@ -112,6 +112,7 @@ const VFOMarkersContainer = ({
             const marker = vfoMarkers[markerIdx];
             const bandwidth = marker.bandwidth || 3000;
             const mode = (marker.mode || 'USB').toUpperCase();
+            const isSelected = marker.selected === true;
 
             // Skip if the marker is outside the visible range
             // Calculate the frequency range based on mode
@@ -153,22 +154,26 @@ const VFOMarkersContainer = ({
             leftEdgeX = Math.max(0, leftEdgeX);
             rightEdgeX = Math.min(canvas.width, rightEdgeX);
 
-            // Draw shaded bandwidth area
-            ctx.fillStyle = `${marker.color}22`; // Add transparency to color
+            // Adjust opacity based on selected state
+            const areaOpacity = isSelected ? '33' : '15'; // Brighter/dimmer for selected/unselected
+            const lineOpacity = isSelected ? 'FF' : '99'; // Full/dimmed for selected/unselected
+
+            // Draw shaded bandwidth area with adjusted opacity
+            ctx.fillStyle = `${marker.color}${areaOpacity}`;
             ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
 
-            // Draw center marker line
+            // Draw center marker line with adjusted opacity
             ctx.beginPath();
-            ctx.strokeStyle = marker.color;
-            ctx.lineWidth = 1.5;
+            ctx.strokeStyle = `${marker.color}${lineOpacity}`;
+            ctx.lineWidth = isSelected ? 2 : 1.5; // Make line thicker when selected
             ctx.moveTo(centerX, 0);
             ctx.lineTo(centerX, height);
             ctx.stroke();
 
-            // Draw bandwidth edge lines based on mode
+            // Draw bandwidth edge lines based on mode with adjusted opacity
             ctx.beginPath();
-            ctx.strokeStyle = marker.color;
-            ctx.lineWidth = 1;
+            ctx.strokeStyle = `${marker.color}${lineOpacity}`;
+            ctx.lineWidth = isSelected ? 1.5 : 1; // Make line thicker when selected
             ctx.setLineDash([4, 4]); // Create dashed lines for the edges
 
             if (mode === 'USB') {
@@ -192,19 +197,19 @@ const VFOMarkersContainer = ({
             ctx.setLineDash([]); // Reset to solid line
 
             // Draw edge handles based on mode
-            ctx.fillStyle = marker.color;
+            ctx.fillStyle = `${marker.color}${lineOpacity}`;
 
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
                 // Right edge handle
                 ctx.beginPath();
-                ctx.arc(rightEdgeX, 20, 4, 0, 2 * Math.PI);
+                ctx.arc(rightEdgeX, 20, isSelected ? 5 : 4, 0, 2 * Math.PI);
                 ctx.fill();
             }
 
             if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
                 // Left edge handle
                 ctx.beginPath();
-                ctx.arc(leftEdgeX, 20, 4, 0, 2 * Math.PI);
+                ctx.arc(leftEdgeX, 20, isSelected ? 5 : 4, 0, 2 * Math.PI);
                 ctx.fill();
             }
 
@@ -217,7 +222,7 @@ const VFOMarkersContainer = ({
             const labelWidth = textMetrics.width + 10; // Add padding
             const labelHeight = 14;
 
-            ctx.fillStyle = marker.color;
+            ctx.fillStyle = `${marker.color}${lineOpacity}`;
             ctx.beginPath();
             ctx.roundRect(
                 centerX - labelWidth / 2,
@@ -234,9 +239,9 @@ const VFOMarkersContainer = ({
             ctx.fillText(labelText, centerX, 16);
 
             // Draw center handle
-            ctx.fillStyle = marker.color;
-            const handleWidth = 12;
-            const handleHeight = 20;
+            ctx.fillStyle = `${marker.color}${lineOpacity}`;
+            const handleWidth = isSelected ? 14 : 12;
+            const handleHeight = isSelected ? 22 : 20;
             ctx.beginPath();
             ctx.roundRect(
                 centerX - handleWidth / 2,
@@ -362,7 +367,7 @@ const VFOMarkersContainer = ({
 
         const { key, element } = getHoverElement(x, y);
 
-        if (key && element) {
+        if (key && (element === 'center' || element === 'leftEdge' || element === 'rightEdge')) {
             setActiveMarker(key);
             setDragMode(element);
             setIsDragging(true);
@@ -373,6 +378,7 @@ const VFOMarkersContainer = ({
             e.preventDefault();
             e.stopPropagation();
         }
+        // If not dragging a handle, the click event will fire to handle selection
     };
 
     // Handle touch start for mobile devices
@@ -806,6 +812,66 @@ const VFOMarkersContainer = ({
         };
     }, [isDragging, activeMarker, dragMode, vfoMarkers, lastTouchXRef, actualWidth, freqRange, startFreq, endFreq, dispatch]);
 
+    // First, let's add a click handler to handle selection
+    const handleClick = (e) => {
+        // Skip if we're dragging
+        if (isDragging) return;
+
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = e.clientX - rect.left;
+        const y = e.clientY - rect.top;
+
+        const { key } = getHoverElement(x, y);
+
+        if (key) {
+            // Update all VFOs, setting selected to false for all except the clicked one
+            Object.keys(vfoMarkers).forEach(markerIdx => {
+                if (vfoMarkers[markerIdx].active) {
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(markerIdx),
+                        updates: {
+                            selected: markerIdx === key
+                        }
+                    }));
+                }
+            });
+        }
+    };
+
+// Handle tap/click on mobile devices
+    const handleTap = (e) => {
+        // Skip if we're dragging
+        if (isDragging) return;
+
+        if (!e.touches || e.touches.length !== 1) return;
+
+        const touch = e.touches[0];
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        const { key } = getHoverElement(x, y);
+
+        if (key) {
+            // Update all VFOs, setting selected to false for all except the tapped one
+            Object.keys(vfoMarkers).forEach(markerIdx => {
+                if (vfoMarkers[markerIdx].active) {
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(markerIdx),
+                        updates: {
+                            selected: markerIdx === key
+                        }
+                    }));
+                }
+            });
+
+            // Prevent default to stop other handlers
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    };
+
+
     // Double click to remove a marker
     const handleDoubleClick = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
@@ -883,11 +949,35 @@ const VFOMarkersContainer = ({
             {/* Canvas for VFO markers */}
             <canvas
                 ref={canvasRef}
+                onClick={handleClick}
                 onMouseDown={handleMouseDown}
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onDoubleClick={handleDoubleClick}
-                onTouchStart={handleTouchStart}
+                onTouchStart={(e) => {
+                    // Store the timestamp for distinguishing between tap and double-tap
+                    const currentTime = new Date().getTime();
+                    const tapLength = currentTime - lastTapRef.current;
+
+                    // Handle potential double-tap
+                    if (tapLength < 500 && tapLength > 0) {
+                        handleDoubleTap(e);
+                    } else {
+                        // First check if this is a drag operation
+                        handleTouchStart(e);
+
+                        // If not a drag, then it might be a tap for selection
+                        // Use a small timeout to ensure we don't interfere with drag operations
+                        if (!isDragging) {
+                            setTimeout(() => {
+                                if (!isDragging) {
+                                    handleTap(e);
+                                }
+                            }, 50);
+                        }
+                    }
+                    lastTapRef.current = currentTime;
+                }}
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchCancel}
@@ -903,6 +993,7 @@ const VFOMarkersContainer = ({
                     userSelect: 'none',
                 }}
             />
+
         </Box>
     );
 };
