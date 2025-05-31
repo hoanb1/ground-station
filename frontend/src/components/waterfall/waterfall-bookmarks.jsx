@@ -301,7 +301,7 @@ const BookmarkCanvas = ({
                     const labelOffset = (visibleBookmarkIndex % 2) * verticalSpacing;
                     const labelY = baseY + labelOffset + 10;
 
-                    ctx.font = '11px Arial';
+                    ctx.font = '12px Arial';
                     ctx.fillStyle = bookmark.color || '#ffff00';
                     ctx.textAlign = 'center';
 
@@ -318,7 +318,7 @@ const BookmarkCanvas = ({
                         textHeight + padding * 2,
                         radius
                     );
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+                    ctx.fillStyle = 'rgba(51,51,51,0.7)';
                     ctx.fill();
 
                     // Draw the text
@@ -334,7 +334,7 @@ const BookmarkCanvas = ({
 
                 // For doppler_shift bookmarks
                 if (bookmark.label && isDopplerShift) {
-                    ctx.font = 'bold 11px Arial';
+                    ctx.font = 'bold 12px Arial';
                     ctx.fillStyle = bookmark.color || '#00ffff';
                     ctx.textAlign = 'center';
 
