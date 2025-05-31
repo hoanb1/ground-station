@@ -37,6 +37,7 @@ const VFOMarkersContainer = ({
     const [isDragging, setIsDragging] = useState(false);
     const [dragMode, setDragMode] = useState(null); // 'center', 'leftEdge', or 'rightEdge'
     const lastClientXRef = useRef(0);
+    const lastTouchXRef = useRef(0); // Track touch position
     const height = bandscopeHeight + waterfallHeight;
     const [cursor, setCursor] = useState('default');
 
@@ -110,7 +111,7 @@ const VFOMarkersContainer = ({
             // Skip if the marker is outside the visible range
             // Calculate the frequency range based on mode
             let markerLowFreq, markerHighFreq;
-        
+
             if (mode === 'USB') {
                 markerLowFreq = marker.frequency;
                 markerHighFreq = marker.frequency + bandwidth;
@@ -131,7 +132,7 @@ const VFOMarkersContainer = ({
 
             // Calculate bandwidth edges positions based on mode
             let leftEdgeX, rightEdgeX;
-        
+
             if (mode === 'USB') {
                 leftEdgeX = centerX;
                 rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * canvas.width;
@@ -177,7 +178,7 @@ const VFOMarkersContainer = ({
                 // Draw both edges for other modes
                 ctx.moveTo(leftEdgeX, 0);
                 ctx.lineTo(leftEdgeX, height);
-            
+
                 ctx.moveTo(rightEdgeX, 0);
                 ctx.lineTo(rightEdgeX, height);
             }
@@ -187,14 +188,14 @@ const VFOMarkersContainer = ({
 
             // Draw edge handles based on mode
             ctx.fillStyle = marker.color;
-        
+
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
                 // Right edge handle
                 ctx.beginPath();
                 ctx.arc(rightEdgeX, 20, 4, 0, 2 * Math.PI);
                 ctx.fill();
             }
-        
+
             if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
                 // Left edge handle
                 ctx.beginPath();
@@ -218,7 +219,7 @@ const VFOMarkersContainer = ({
                 5,
                 labelWidth,
                 labelHeight,
-                4 // rounded corner radius
+                2 // rounded corner radius
             );
             ctx.fill();
 
@@ -237,7 +238,7 @@ const VFOMarkersContainer = ({
                 40,
                 handleWidth,
                 handleHeight,
-                3 // rounded corner radius
+                2 // rounded corner radius
             );
             ctx.fill();
         });
@@ -249,7 +250,7 @@ const VFOMarkersContainer = ({
         return startFreq + (freqRatio * freqRange);
     }, [startFreq, freqRange, actualWidth]);
 
-    // Check if mouse is over a handle or edge
+    // Check if mouse/touch is over a handle or edge
     const getHoverElement = useCallback((x, y) => {
         // Calculate scaling factor between canvas coordinate space and DOM space
         const rect = canvasRef.current.getBoundingClientRect();
@@ -358,6 +359,122 @@ const VFOMarkersContainer = ({
             // Prevent default to avoid text selection while dragging
             e.preventDefault();
             e.stopPropagation();
+        }
+    };
+
+    // Handle touch start for mobile devices
+    const handleTouchStart = (e) => {
+        if (e.touches.length !== 1) return; // Only handle single touches
+
+        const touch = e.touches[0];
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
+
+        const { key, element } = getHoverElement(x, y);
+
+        if (key && element) {
+            setActiveMarker(key);
+            setDragMode(element);
+            setIsDragging(true);
+            lastTouchXRef.current = touch.clientX;
+
+            // Prevent default to avoid scrolling while dragging
+            e.preventDefault();
+            e.stopPropagation();
+        }
+    };
+
+    // Handle touch move for mobile devices
+    const handleTouchMove = (e) => {
+        if (!isDragging || !activeMarker || e.touches.length !== 1) return;
+
+        e.preventDefault();
+        e.stopPropagation();
+
+        const touch = e.touches[0];
+        const deltaX = touch.clientX - lastTouchXRef.current;
+        lastTouchXRef.current = touch.clientX;
+
+        // Get the active marker
+        const marker = vfoMarkers[activeMarker];
+        if (!marker) return;
+
+        // Calculate the scaling factor between screen pixels and canvas pixels
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleFactor = actualWidth / rect.width;
+        const scaledDelta = deltaX * scaleFactor;
+
+        // Calculate pixels to frequency change
+        const freqDelta = (scaledDelta / actualWidth) * freqRange;
+
+        if (dragMode === 'center') {
+            // Moving the entire VFO (center + bandwidth)
+            const newFrequency = marker.frequency + freqDelta;
+
+            // Ensure the frequency stays within the visible range
+            const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+
+            dispatch(setVFOProperty({
+                vfoNumber: parseInt(activeMarker),
+                updates: {
+                    frequency: limitedFreq,
+                }
+            }));
+        }
+        else if (dragMode === 'leftEdge') {
+            // Moving the left edge (adjust bandwidth)
+            const currentBandwidth = marker.bandwidth || 3000;
+            // When dragging left edge right (positive delta), bandwidth decreases
+            const newBandwidth = currentBandwidth - (2 * freqDelta);
+
+            // Enforce minimum bandwidth (e.g., 500 Hz) and maximum (e.g., 30kHz)
+            const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+
+            // Keep the center frequency constant
+            dispatch(setVFOProperty({
+                vfoNumber: parseInt(activeMarker),
+                updates: {
+                    bandwidth: limitedBandwidth,
+                    // No frequency update
+                }
+            }));
+        }
+        else if (dragMode === 'rightEdge') {
+            // Moving the right edge (adjust bandwidth)
+            const currentBandwidth = marker.bandwidth || 3000;
+            // When dragging right edge right (positive delta), bandwidth increases
+            const newBandwidth = currentBandwidth + (2 * freqDelta);
+
+            // Enforce minimum bandwidth and maximum
+            const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+
+            // Keep the center frequency constant
+            dispatch(setVFOProperty({
+                vfoNumber: parseInt(activeMarker),
+                updates: {
+                    bandwidth: limitedBandwidth,
+                    // No frequency update
+                }
+            }));
+        }
+    };
+
+    // Handle touch end for mobile devices
+    const handleTouchEnd = (e) => {
+        if (isDragging) {
+            setIsDragging(false);
+            setActiveMarker(null);
+            setDragMode(null);
+        }
+    };
+
+    // Handle touch cancel for mobile devices
+    const handleTouchCancel = (e) => {
+        if (isDragging) {
+            setIsDragging(false);
+            setActiveMarker(null);
+            setDragMode(null);
         }
     };
 
@@ -492,6 +609,50 @@ const VFOMarkersContainer = ({
         }
     };
 
+    // Double tap to remove a marker on mobile devices
+    const handleDoubleTap = (() => {
+        let lastTap = 0;
+        let tapTimeout;
+
+        return (e) => {
+            if (e.touches.length !== 1) return;
+
+            clearTimeout(tapTimeout);
+
+            const touch = e.touches[0];
+            const rect = canvasRef.current.getBoundingClientRect();
+            const x = touch.clientX - rect.left;
+            const y = touch.clientY - rect.top;
+
+            const currentTime = new Date().getTime();
+            const tapLength = currentTime - lastTap;
+
+            if (tapLength < 500 && tapLength > 0) {
+                // Double tap detected
+                const { key } = getHoverElement(x, y);
+
+                if (key) {
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(key),
+                        updates: {
+                            active: false,
+                        }
+                    }));
+                }
+
+                e.preventDefault();
+                e.stopPropagation();
+            } else {
+                // Single tap
+                tapTimeout = setTimeout(() => {
+                    // Single tap logic if needed
+                }, 500);
+            }
+
+            lastTap = currentTime;
+        };
+    })();
+
     return (
         <Box
             ref={containerRef}
@@ -512,12 +673,16 @@ const VFOMarkersContainer = ({
                 onMouseMove={handleMouseMove}
                 onMouseLeave={handleMouseLeave}
                 onDoubleClick={handleDoubleClick}
+                onTouchStart={handleTouchStart}
+                onTouchMove={handleTouchMove}
+                onTouchEnd={handleTouchEnd}
+                onTouchCancel={handleTouchCancel}
                 style={{
                     display: 'block',
                     width: '100%',
                     height: '100%',
                     cursor: cursor,
-                    touchAction: 'pan-y',
+                    touchAction: 'none', // Prevent browser handling of all touch actions
                 }}
             />
         </Box>
