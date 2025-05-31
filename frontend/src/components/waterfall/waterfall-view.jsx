@@ -779,7 +779,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 }
                             }}
                             color={vfoMarkers[1]['active'] ? "warning" : "primary"}
-                            title="Add VFO marker"
+                            title="Toggle VFO 1"
                         >
                             1
                         </IconButton>
@@ -818,7 +818,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 }
                             }}
                             color={vfoMarkers[2]['active'] ? "warning" : "primary"}
-                            title="Add VFO marker"
+                            title="Toggle VFO 2"
                         >
                             2
                         </IconButton>
@@ -857,7 +857,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 }
                             }}
                             color={vfoMarkers[3]['active'] ? "warning" : "primary"}
-                            title="Add VFO marker"
+                            title="Toggle VFO 3"
                         >
                             3
                         </IconButton>
@@ -896,7 +896,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 }
                             }}
                             color={vfoMarkers[4]['active'] ? "warning" : "primary"}
-                            title="Add VFO marker"
+                            title="Toggle VFO 4"
                         >
                             4
                         </IconButton>
