@@ -295,20 +295,31 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
 
                         # Short sleep to allow the internal buffers to clear
                         time.sleep(0.01)
+
+                    elif sr.ret == -1:  # SOAPY_SDR_TIMEOUT
+                        logger.warning("Stream timeout detected (SOAPY_SDR_TIMEOUT)")
+
+                    elif sr.ret == -2:  # SOAPY_SDR_STREAM_ERROR
+                        logger.warning("Stream error detected (SOAPY_SDR_STREAM_ERROR)")
+
+                    elif sr.ret == -3:  # SOAPY_SDR_CORRUPTION
+                        logger.warning("Data corruption detected (SOAPY_SDR_CORRUPTION)")
+
+                    elif sr.ret == -5:  # SOAPY_SDR_NOT_SUPPORTED
+                        logger.warning("Operation not supported (SOAPY_SDR_NOT_SUPPORTED)")
+
+                    elif sr.ret == -6:  # SOAPY_SDR_TIME_ERROR
+                        logger.warning("Timestamp error detected (SOAPY_SDR_TIME_ERROR)")
+
+                    elif sr.ret == -7:  # SOAPY_SDR_UNDERFLOW
+                        logger.warning("Buffer underflow detected (SOAPY_SDR_UNDERFLOW)")
+
                     else:
-                        # Other error codes:
-                        # SOAPY_SDR_TIMEOUT = -1
-                        # SOAPY_SDR_STREAM_ERROR = -2
-                        # SOAPY_SDR_CORRUPTION = -3
-                        # SOAPY_SDR_NOT_SUPPORTED = -5
-                        # SOAPY_SDR_TIME_ERROR = -6
-                        # SOAPY_SDR_UNDERFLOW = -7
-                        logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
+                        logger.warning(f"readStream returned unknown error code {sr.ret}")
                         time.sleep(0.1)
+                        attempts += 1
 
-                    attempts += 1
-
-                # Check if we have enough samples for processing
+                    # Check if we have enough samples for processing
                 if buffer_position < num_samples:
                     logger.warning(f"Could not get enough samples after {attempts} attempts: {buffer_position}/{num_samples}")
                     time.sleep(0.1)
