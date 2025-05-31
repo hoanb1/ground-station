@@ -27,14 +27,14 @@ const VFOMarkersContainer = ({
     const {
         vfoMarkers,
         maxVFOMarkers,
-        selectedVFO
+        selectedVFO,
+        vfoColors,
     } = useSelector(state => state.waterfall);
 
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
     const [actualWidth, setActualWidth] = useState(containerWidth);
     const lastMeasuredWidthRef = useRef(0);
-    const [vfoColors] = useState(['#ffff00', '#00ffff', '#ff00ff', '#00ff00']);
     const [activeMarker, setActiveMarker] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const [dragMode, setDragMode] = useState(null); // 'center', 'leftEdge', or 'rightEdge'

@@ -108,9 +108,6 @@ import { useStore } from 'react-redux';
 import {v4 as uuidv4} from 'uuid';
 import TuneIcon from "@mui/icons-material/Tune";
 
-const vfoColors = ['#FF0000', '#00FF00', '#0000FF', '#FF00FF'];
-
-
 // Make a new worker
 export const createExternalWorker = () => {
 
@@ -199,6 +196,7 @@ const MainWaterfallDisplay = React.memo(() => {
         selectedOffsetValue,
         vfoMarkers,
         maxVFOMarkers,
+        vfoColors,
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
