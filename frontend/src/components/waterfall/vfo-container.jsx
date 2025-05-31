@@ -105,12 +105,22 @@ const VFOMarkersContainer = ({
 
             const marker = vfoMarkers[markerIdx];
             const bandwidth = marker.bandwidth || 3000;
-            const mode = marker.mode || 'USB';
+            const mode = (marker.mode || 'USB').toUpperCase();
 
             // Skip if the marker is outside the visible range
-            // Add bandwidth to check to ensure we still render if the bandwidth edges are visible
-            const markerLowFreq = marker.frequency - bandwidth/2;
-            const markerHighFreq = marker.frequency + bandwidth/2;
+            // Calculate the frequency range based on mode
+            let markerLowFreq, markerHighFreq;
+        
+            if (mode === 'USB') {
+                markerLowFreq = marker.frequency;
+                markerHighFreq = marker.frequency + bandwidth;
+            } else if (mode === 'LSB') {
+                markerLowFreq = marker.frequency - bandwidth;
+                markerHighFreq = marker.frequency;
+            } else { // For AM, FM, and other modes that use both sidebands
+                markerLowFreq = marker.frequency - bandwidth/2;
+                markerHighFreq = marker.frequency + bandwidth/2;
+            }
 
             if (markerHighFreq < startFreq || markerLowFreq > endFreq) {
                 return;
@@ -119,12 +129,19 @@ const VFOMarkersContainer = ({
             // Calculate x position based on frequency
             const centerX = ((marker.frequency - startFreq) / freqRange) * canvas.width;
 
-            // Calculate bandwidth edges positions
-            const bandwidthPixels = (bandwidth / freqRange) * canvas.width;
-            const halfBandwidth = bandwidthPixels / 2;
-
-            let leftEdgeX = centerX - halfBandwidth;
-            let rightEdgeX = centerX + halfBandwidth;
+            // Calculate bandwidth edges positions based on mode
+            let leftEdgeX, rightEdgeX;
+        
+            if (mode === 'USB') {
+                leftEdgeX = centerX;
+                rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * canvas.width;
+            } else if (mode === 'LSB') {
+                leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * canvas.width;
+                rightEdgeX = centerX;
+            } else { // AM, FM, etc.
+                leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * canvas.width;
+                rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * canvas.width;
+            }
 
             // Ensure edges are within canvas
             leftEdgeX = Math.max(0, leftEdgeX);
@@ -142,39 +159,53 @@ const VFOMarkersContainer = ({
             ctx.lineTo(centerX, height);
             ctx.stroke();
 
-            // Draw bandwidth edge lines
+            // Draw bandwidth edge lines based on mode
             ctx.beginPath();
             ctx.strokeStyle = marker.color;
             ctx.lineWidth = 1;
             ctx.setLineDash([4, 4]); // Create dashed lines for the edges
 
-            // Left edge
-            ctx.moveTo(leftEdgeX, 0);
-            ctx.lineTo(leftEdgeX, height);
-
-            // Right edge
-            ctx.moveTo(rightEdgeX, 0);
-            ctx.lineTo(rightEdgeX, height);
+            if (mode === 'USB') {
+                // Only draw right edge for USB
+                ctx.moveTo(rightEdgeX, 0);
+                ctx.lineTo(rightEdgeX, height);
+            } else if (mode === 'LSB') {
+                // Only draw left edge for LSB
+                ctx.moveTo(leftEdgeX, 0);
+                ctx.lineTo(leftEdgeX, height);
+            } else {
+                // Draw both edges for other modes
+                ctx.moveTo(leftEdgeX, 0);
+                ctx.lineTo(leftEdgeX, height);
+            
+                ctx.moveTo(rightEdgeX, 0);
+                ctx.lineTo(rightEdgeX, height);
+            }
 
             ctx.stroke();
             ctx.setLineDash([]); // Reset to solid line
 
-            // Draw edge handles (small dots at top of edge lines)
+            // Draw edge handles based on mode
             ctx.fillStyle = marker.color;
-
-            // Left edge handle
-            ctx.beginPath();
-            ctx.arc(leftEdgeX, 20, 4, 0, 2 * Math.PI);
-            ctx.fill();
-
-            // Right edge handle
-            ctx.beginPath();
-            ctx.arc(rightEdgeX, 20, 4, 0, 2 * Math.PI);
-            ctx.fill();
+        
+            if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
+                // Right edge handle
+                ctx.beginPath();
+                ctx.arc(rightEdgeX, 20, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
+        
+            if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
+                // Left edge handle
+                ctx.beginPath();
+                ctx.arc(leftEdgeX, 20, 4, 0, 2 * Math.PI);
+                ctx.fill();
+            }
 
             // Draw frequency label background
-            const modeText = mode ? ` [${mode.toUpperCase()}]` : '';
-            const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${(bandwidth/1000).toFixed(1)}kHz`;
+            const modeText = ` [${mode}]`;
+            const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
+            const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
             ctx.font = '12px Monospace';
             const textMetrics = ctx.measureText(labelText);
             const labelWidth = textMetrics.width + 10; // Add padding
@@ -232,27 +263,46 @@ const VFOMarkersContainer = ({
 
             const marker = vfoMarkers[key];
             const bandwidth = marker.bandwidth || 3000;
+            const mode = (marker.mode || 'USB').toUpperCase();
 
-            // Calculate center and edges positions
+            // Calculate center and edges positions based on mode
             const centerX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
-            const bandwidthPixels = (bandwidth / freqRange) * actualWidth;
-            const halfBandwidth = bandwidthPixels / 2;
-            const leftEdgeX = Math.max(0, centerX - halfBandwidth);
-            const rightEdgeX = Math.min(actualWidth, centerX + halfBandwidth);
+
+            let leftEdgeX, rightEdgeX;
+
+            if (mode === 'USB') {
+                leftEdgeX = centerX;
+                rightEdgeX = ((marker.frequency + bandwidth - startFreq) / freqRange) * actualWidth;
+            } else if (mode === 'LSB') {
+                leftEdgeX = ((marker.frequency - bandwidth - startFreq) / freqRange) * actualWidth;
+                rightEdgeX = centerX;
+            } else { // AM, FM, etc.
+                leftEdgeX = ((marker.frequency - bandwidth/2 - startFreq) / freqRange) * actualWidth;
+                rightEdgeX = ((marker.frequency + bandwidth/2 - startFreq) / freqRange) * actualWidth;
+            }
+
+            // Ensure edges are within bounds
+            leftEdgeX = Math.max(0, leftEdgeX);
+            rightEdgeX = Math.min(actualWidth, rightEdgeX);
 
             // Check center handle (y between 40-60px)
             if (y >= 40 && y <= 60 && Math.abs(canvasX - centerX) <= 10) {
                 return { key, element: 'center' };
             }
 
-            // Check left edge (y between 0-40px, specifically around the handle)
-            if (y >= 15 && y <= 25 && Math.abs(canvasX - leftEdgeX) <= 6) {
-                return { key, element: 'leftEdge' };
+            // Check edge handles based on mode
+            if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
+                // Check right edge (y between 15-25px, specifically around the handle)
+                if (y >= 15 && y <= 25 && Math.abs(canvasX - rightEdgeX) <= 6) {
+                    return { key, element: 'rightEdge' };
+                }
             }
 
-            // Check right edge (y between 0-40px, specifically around the handle)
-            if (y >= 15 && y <= 25 && Math.abs(canvasX - rightEdgeX) <= 6) {
-                return { key, element: 'rightEdge' };
+            if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
+                // Check left edge (y between 15-25px, specifically around the handle)
+                if (y >= 15 && y <= 25 && Math.abs(canvasX - leftEdgeX) <= 6) {
+                    return { key, element: 'leftEdge' };
+                }
             }
         }
 

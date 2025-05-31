@@ -108,9 +108,9 @@ const initialState = {
     selectedAntenna: 'none',
     bookmarks: [],
     vfoMarkers: {
-        1: {active: false, name: "VFO1", bandwidth: 4300, frequency: null, color: null, mode: 'fm'},
+        1: {active: false, name: "VFO1", bandwidth: 4300, frequency: null, color: null, mode: 'usb'},
         2: {active: false, name: "VFO2", bandwidth: 100000, frequency: null, color: null, mode: 'fm'},
-        3: {active: false, name: "VFO3", bandwidth: 5000, frequency: null, color: null, mode: 'fm'},
+        3: {active: false, name: "VFO3", bandwidth: 5000, frequency: null, color: null, mode: 'lsb'},
         4: {active: false, name: "VFO4", bandwidth: 20000, frequency: null, color: null, mode: 'fm'},
     },
     maxVFOMarkers: 4,
