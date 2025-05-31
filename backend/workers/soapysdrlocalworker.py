@@ -280,7 +280,9 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                     samples_remaining = num_samples - buffer_position
 
                     # Read samples into the appropriate part of our buffer
-                    sr = sdr.readStream(rx_stream, [samples_buffer[buffer_position:]], samples_remaining, timeoutUs=1000000)
+                    # Pass the appropriate view of the buffer starting at current position
+                    buffer_view = samples_buffer[buffer_position:]
+                    sr = sdr.readStream(rx_stream, [buffer_view], samples_remaining, timeoutUs=1000000)
 
                     if sr.ret > 0:
                         # We got samples - add to our position
@@ -288,10 +290,11 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                         buffer_position += samples_read
                         logger.debug(f"Read {samples_read} samples, accumulated {buffer_position}/{num_samples}")
                     elif sr.ret == -4:  # SOAPY_SDR_OVERFLOW
-                        # Overflow error - internal buffers have filled
-                        logger.warning("Buffer overflow detected, some samples may have been lost")
-                        # Short sleep to allow buffers to clear
-                        time.sleep(0.1)
+                        # Overflow error - the internal ring buffer filled up because we didn't read fast enough
+                        logger.warning("Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost")
+
+                        # Short sleep to allow the internal buffers to clear
+                        time.sleep(0.01)
                     else:
                         # Other error codes:
                         # SOAPY_SDR_TIMEOUT = -1
@@ -311,8 +314,8 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                     time.sleep(0.1)
                     continue
 
-                # We have enough samples to process
-                samples = samples_buffer[:buffer_position]
+                # We have enough samples to process - no need to slice since we filled the buffer exactly
+                samples = samples_buffer
 
                 # Remove DC offset spike
                 samples = remove_dc_offset(samples)
