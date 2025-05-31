@@ -41,6 +41,11 @@ const VFOMarkersContainer = ({
     const height = bandscopeHeight + waterfallHeight;
     const [cursor, setCursor] = useState('default');
 
+    // Configurable bandwidth limits
+    const [minBandwidth] = useState(500); // 500 Hz minimum
+    const [maxBandwidth] = useState(100000); // 100 kHz maximum
+
+
     // Calculate frequency range
     const startFreq = centerFrequency - sampleRate / 2;
     const endFreq = centerFrequency + sampleRate / 2;
@@ -438,8 +443,8 @@ const VFOMarkersContainer = ({
             // When dragging left edge right (positive delta), bandwidth decreases
             const newBandwidth = currentBandwidth - (2 * freqDelta);
 
-            // Enforce minimum bandwidth (e.g., 500 Hz) and maximum (e.g., 30kHz)
-            const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+            // Enforce minimum bandwidth and maximum using the state values
+            const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
             // Keep the center frequency constant
             dispatch(setVFOProperty({
@@ -456,8 +461,8 @@ const VFOMarkersContainer = ({
             // When dragging right edge right (positive delta), bandwidth increases
             const newBandwidth = currentBandwidth + (2 * freqDelta);
 
-            // Enforce minimum bandwidth and maximum
-            const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+            // Enforce minimum bandwidth and maximum using the state values
+            const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
             // Keep the center frequency constant
             dispatch(setVFOProperty({
@@ -538,8 +543,8 @@ const VFOMarkersContainer = ({
                     // When dragging left edge right (positive delta), bandwidth decreases
                     const newBandwidth = currentBandwidth - (2 * freqDelta);
 
-                    // Enforce minimum bandwidth (e.g., 500 Hz) and maximum (e.g., 30kHz)
-                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+                    // Enforce minimum bandwidth and maximum using the state values
+                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
                     // Keep the center frequency constant
                     dispatch(setVFOProperty({
@@ -556,8 +561,8 @@ const VFOMarkersContainer = ({
                     // When dragging right edge right (positive delta), bandwidth increases
                     const newBandwidth = currentBandwidth + (2 * freqDelta);
 
-                    // Enforce minimum bandwidth and maximum
-                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+                    // Enforce minimum bandwidth and maximum using the state values
+                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
                     // Keep the center frequency constant
                     dispatch(setVFOProperty({
@@ -651,15 +656,10 @@ const VFOMarkersContainer = ({
                     }));
                 }
                 else if (dragMode === 'leftEdge') {
-                    // Moving the left edge (adjust bandwidth)
                     const currentBandwidth = marker.bandwidth || 3000;
-                    // When dragging left edge right (positive delta), bandwidth decreases
                     const newBandwidth = currentBandwidth - (2 * freqDelta);
+                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                    // Enforce minimum bandwidth (e.g., 500 Hz) and maximum (e.g., 30kHz)
-                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
-
-                    // Keep the center frequency constant
                     dispatch(setVFOProperty({
                         vfoNumber: parseInt(activeMarker),
                         updates: {
@@ -668,15 +668,10 @@ const VFOMarkersContainer = ({
                     }));
                 }
                 else if (dragMode === 'rightEdge') {
-                    // Moving the right edge (adjust bandwidth)
                     const currentBandwidth = marker.bandwidth || 3000;
-                    // When dragging right edge right (positive delta), bandwidth increases
                     const newBandwidth = currentBandwidth + (2 * freqDelta);
+                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                    // Enforce minimum bandwidth and maximum
-                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
-
-                    // Keep the center frequency constant
                     dispatch(setVFOProperty({
                         vfoNumber: parseInt(activeMarker),
                         updates: {
@@ -760,12 +755,12 @@ const VFOMarkersContainer = ({
                         frequency: limitedFreq,
                     }
                 }));
-            } 
+            }
             else if (dragMode === 'leftEdge') {
                 const currentBandwidth = marker.bandwidth || 3000;
                 const newBandwidth = currentBandwidth - (2 * freqDelta);
-                const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
-                
+                const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+
                 dispatch(setVFOProperty({
                     vfoNumber: parseInt(activeMarker),
                     updates: {
@@ -776,8 +771,8 @@ const VFOMarkersContainer = ({
             else if (dragMode === 'rightEdge') {
                 const currentBandwidth = marker.bandwidth || 3000;
                 const newBandwidth = currentBandwidth + (2 * freqDelta);
-                const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
-                
+                const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+
                 dispatch(setVFOProperty({
                     vfoNumber: parseInt(activeMarker),
                     updates: {
