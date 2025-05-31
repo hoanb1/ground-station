@@ -725,7 +725,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         <IconButton
                             onClick={() => autoScaleDbRange()}
                             size="small"
-                            color={"primary"}
+                            color="primary"
                             title="Auto scale dB range once"
                         >
                             <HeightIcon/>
@@ -785,14 +785,14 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#00FF00',
+                                color: '#1d6a1d',
                                 backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
                                 }
                             }}
                             onClick={() => {
-                                const vfoColor = '#00FF00';
+                                const vfoColor = '#1d6a1d';
                                 if (vfoMarkers[2]['active']) {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 2, updates: {
@@ -865,14 +865,14 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#FF00FF',
+                                color: '#a500a5',
                                 backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
                                 }
                             }}
                             onClick={() => {
-                                const vfoColor = '#FF00FF';
+                                const vfoColor = '#a500a5';
                                 if (vfoMarkers[4]['active']) {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 4, updates: {

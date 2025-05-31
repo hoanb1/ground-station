@@ -82,7 +82,9 @@ const VFOMarkersContainer = ({
     // Draw all VFO markers on the canvas
     useEffect(() => {
         const canvas = canvasRef.current;
-        if (!canvas) return;
+        if (!canvas) {
+            return;
+        };
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
@@ -120,10 +122,12 @@ const VFOMarkersContainer = ({
             const labelText = `${vfoMarkers[markerIdx].name}: ${formatFrequency(vfoMarkers[markerIdx].frequency)} MHz`;
             ctx.font = '12px Monospace';
             const textMetrics = ctx.measureText(labelText);
-            const labelWidth = textMetrics.width + 20; // Add padding
+            const labelWidth = textMetrics.width + 10; // Add padding
             const labelHeight = 14;
+            
 
-            ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            //ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
+            ctx.fillStyle = vfoMarkers[markerIdx].color;
             ctx.beginPath();
             ctx.roundRect(
                 x - labelWidth / 2,
@@ -135,7 +139,7 @@ const VFOMarkersContainer = ({
             ctx.fill();
 
             // Draw frequency label text
-            ctx.fillStyle = vfoMarkers[markerIdx].color;
+            ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.fillText(labelText, x, 16);
 
@@ -209,7 +213,10 @@ const VFOMarkersContainer = ({
 
     // Handle mouse events for marker interaction
     const handleMouseDown = (e) => {
-        if (e.button !== 0) return; // Only respond to left mouse button
+        // Only respond to left mouse button
+        if (e.button !== 0) {
+            return;
+        }
 
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -329,7 +336,6 @@ const VFOMarkersContainer = ({
 
             // Check the 10px hitbox
             if (Math.abs(canvasX - markerX) <= 10) {
-                console.info("to delete: ", key);
                 dispatch(setVFOProperty({vfoNumber: parseInt(key), updates: {
                         active: false,
                     }
