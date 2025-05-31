@@ -749,7 +749,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             sx={{
                                 borderRadius: 0,
                                 width: 40,
-                                fontSize: '1rem',
+                                fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
                                 color: '#FF0000',
@@ -788,7 +788,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             sx={{
                                 borderRadius: 0,
                                 width: 40,
-                                fontSize: '1rem',
+                                fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
                                 color: '#1d6a1d',
@@ -827,7 +827,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             sx={{
                                 borderRadius: 0,
                                 width: 40,
-                                fontSize: '1rem',
+                                fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
                                 color: '#4d4df6',
@@ -866,7 +866,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             sx={{
                                 borderRadius: 0,
                                 width: 40,
-                                fontSize: '1rem',
+                                fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
                                 color: '#a500a5',
