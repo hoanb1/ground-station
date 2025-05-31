@@ -192,7 +192,7 @@ def simple_parse_3le(file_contents: str) -> list:
 async def synchronize_satellite_data(dbsession, logger, sio):
     """
     Fetches all TLE sources from the database and logs the result.
-    Updates the global sync_state to track progress.
+    Uses a structured progress tracking system to accurately report progress.
     """
     global sync_state
 
@@ -218,6 +218,59 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
     # Update the sync state in the manager
     sync_state_manager.set_state(sync_state)
+    await sio.emit('sat-sync-events', sync_state)
+
+    # Define progress weights for each phase
+    progress_phases = {
+        "fetch_tle_sources": 15,     # Fetching TLE data from sources
+        "fetch_satnogs_satellites": 10,  # Fetching satellite data from SATNOGS
+        "fetch_satnogs_transmitters": 10,  # Fetching transmitter data from SATNOGS
+        "process_satellites": 40,    # Processing satellite data
+        "process_transmitters": 25   # Processing transmitter data
+    }
+
+    # Keep track of the highest progress value we've seen
+    highest_progress = 0
+
+    # Progress tracking helper function with monotonic guarantees
+    def update_progress(phase, completed, total=1, message=None):
+        """Update progress for a specific phase based on completion percentage with monotonic guarantee"""
+        nonlocal highest_progress
+
+        if total <= 0:
+            phase_percentage = 0
+        else:
+            phase_percentage = min(1.0, completed / total)
+
+        # Calculate overall progress
+        overall_progress = 0
+        for p, weight in progress_phases.items():
+            if p == phase:
+                # For current phase, use the calculated percentage
+                overall_progress += weight * phase_percentage
+            elif p in completed_phases:
+                # For completed phases, add full weight
+                overall_progress += weight
+            # For future phases, add 0
+
+        # Round the calculated progress
+        calculated_progress = round(overall_progress)
+
+        # Ensure progress never decreases
+        if calculated_progress < highest_progress:
+            sync_state["progress"] = highest_progress
+        else:
+            sync_state["progress"] = calculated_progress
+            highest_progress = calculated_progress
+
+        if message:
+            sync_state["message"] = message
+        sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
+        sync_state_manager.set_state(sync_state)
+        return sync_state
+
+    # Track completed phases
+    completed_phases = set()
 
     def sync_fetch(url: str) -> requests.Response | None:
         reply = requests.get(url, timeout=5)
@@ -233,39 +286,30 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     satnogs_satellite_data = []
     satnogs_transmitter_data = []
     celestrak_list = []
-    group_assignments =  {}
+    group_assignments = {}
 
     tle_sources_reply = await crud.fetch_satellite_tle_source(dbsession)
     tle_sources = tle_sources_reply.get('data', [])
-    progress = 0
-
-    try:
-        increment = 10 / len(tle_sources)
-    except ZeroDivisionError:
-        increment = 1
-
-    # Update state and emit an event
-    sync_state["progress"] = progress
-    sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-    sync_state_manager.set_state(sync_state)
-
-    await sio.emit('sat-sync-events', sync_state)
 
     # Use a single ThreadPoolExecutor for all async_fetch calls
     with ThreadPoolExecutor(max_workers=1) as pool:
         # get TLEs from our user-defined TLE sources (probably from celestrak.org)
-        for tle_source in tle_sources:
+        for i, tle_source in enumerate(tle_sources):
             tle_source_name = tle_source['name']
             tle_source_identifier = tle_source['identifier']
             tle_source_url = tle_source['url']
             tle_source_format = tle_source['format']
             group_assignments[tle_source_identifier] = []
 
-            # Update active sources in state
+            # Update active sources in state and progress
+            progress_state = update_progress(
+                "fetch_tle_sources",
+                i,
+                len(tle_sources),
+                f"Fetching {tle_source_url}"
+            )
             sync_state["active_sources"] = [tle_source_name]
-            sync_state["message"] = f"Fetching {tle_source_url}"
-            sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-            sync_state_manager.set_state(sync_state)
+            await sio.emit('sat-sync-events', progress_state)
 
             try:
                 logger.info(f"Fetching {tle_source_url}")
@@ -288,7 +332,6 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 sync_state["error"] = error_msg
                 sync_state["success"] = False
                 sync_state["message"] = e.message
-                sync_state["progress"] = 0
                 sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
                 sync_state_manager.set_state(sync_state)
 
@@ -302,21 +345,19 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 sync_state["error"] = error_msg
                 sync_state["success"] = False
                 sync_state["message"] = str(e)
-                sync_state["progress"] = 0
                 sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
                 sync_state_manager.set_state(sync_state)
 
                 await sio.emit('sat-sync-events', sync_state)
 
-            progress += increment
-
-            # Update progress in state
-            sync_state["progress"] = progress
-            sync_state["message"] = f'Fetched {tle_source_url}'
-            sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-            sync_state_manager.set_state(sync_state)
-
-            await sio.emit('sat-sync-events', sync_state)
+            # Update progress, completed sources, and emit event
+            progress_state = update_progress(
+                "fetch_tle_sources",
+                i + 1,
+                len(tle_sources),
+                f'Fetched {tle_source_url}'
+            )
+            await sio.emit('sat-sync-events', progress_state)
 
             logger.info(f"Group {tle_source_identifier} has {len(group_assignments[tle_source_identifier])} members")
 
@@ -349,128 +390,148 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
-            progress += 5
-            sync_state["progress"] = progress
-            sync_state["message"] = f'Group {tle_source.get("name", None)} created/updated'
+            # Update message for group creation/update
+            progress_state = update_progress(
+                "fetch_tle_sources",
+                i + 1,
+                len(tle_sources),
+                f'Group {tle_source.get("name", None)} created/updated'
+            )
+            await sio.emit('sat-sync-events', progress_state)
+
+        # Mark TLE sources phase as complete
+        completed_phases.add("fetch_tle_sources")
+
+        if not celestrak_list:
+            logger.error("No TLEs were fetched from any TLE source, aborting!")
+
+            # Update state for error
+            sync_state["status"] = "complete"
+            sync_state["progress"] = 100
+            sync_state["success"] = False
+            sync_state["message"] = 'No TLEs were fetched from any TLE source'
+            sync_state["error"] = 'No TLEs were fetched from any TLE source'
+            sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
             await sio.emit('sat-sync-events', sync_state)
+            return
 
-        # for complete
-        progress += 5
-        sync_state["progress"] = progress
-        sync_state["message"] = 'Finished fetching TLE sources, fetching data from SATNOGS...'
-        sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
+        # Start fetching satellite data from SATNOGS
+        progress_state = update_progress(
+            "fetch_satnogs_satellites",
+            0,
+            1,
+            'Fetching satellite data from SATNOGS'
+        )
+        sync_state["active_sources"] = ["SATNOGS Satellites"]
         sync_state_manager.set_state(sync_state)
+        await sio.emit('sat-sync-events', progress_state)
 
-        await sio.emit('sat-sync-events', sync_state)
-
-    if not celestrak_list:
-        logger.error("No TLEs were fetched from any TLE source, aborting!")
-
-        # Update state for error
-        sync_state["status"] = "complete"
-        sync_state["progress"] = 100
-        sync_state["success"] = False
-        sync_state["message"] = 'No TLEs were fetched from any TLE source'
-        sync_state["error"] = 'No TLEs were fetched from any TLE source'
-        sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-        sync_state_manager.set_state(sync_state)
-
-        await sio.emit('sat-sync-events', sync_state)
-        return
-
-    # emit an event
-    progress += 5
-    sync_state["progress"] = progress
-    sync_state["message"] = 'Fetching satellite data from SATNOGS'
-    sync_state["active_sources"] = ["SATNOGS Satellites"]
-    sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-    sync_state_manager.set_state(sync_state)
-
-    await sio.emit('sat-sync-events', sync_state)
-
-    # get a complete list of satellite data (no TLEs) from Satnogs
-    logger.info(f'Fetching satellite data from SATNOGS ({satnogs_satellites_url})')
-    try:
-        with ThreadPoolExecutor(max_workers=1) as pool:
+        # get a complete list of satellite data (no TLEs) from Satnogs
+        logger.info(f'Fetching satellite data from SATNOGS ({satnogs_satellites_url})')
+        try:
             response = await async_fetch(satnogs_satellites_url, pool)
             if response.status_code != 200:
                 logger.error(f"HTTP Error: Received status code {response.status_code} from {satnogs_satellites_url}")
-
             else:
                 satnogs_satellite_data = json.loads(response.text)
 
             logger.info(f"Fetched {len(satnogs_satellite_data)} satellites from SATNOGS")
 
-            # Update state
+            # Update state and mark phase as complete
             sync_state["completed_sources"].append("SATNOGS Satellites")
             sync_state["active_sources"] = []
+            completed_phases.add("fetch_satnogs_satellites")
+            progress_state = update_progress(
+                "fetch_satnogs_satellites",
+                1,
+                1,
+                'Satellite data fetched from SATNOGS'
+            )
+            await sio.emit('sat-sync-events', progress_state)
+
+        except requests.exceptions.RequestException as e:
+            error_msg = f'Failed to fetch data from {satnogs_satellites_url} ({e})'
+            logger.error(error_msg)
+
+            # Update error in state
+            sync_state["error"] = error_msg
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
-    except requests.exceptions.RequestException as e:
-        error_msg = f'Failed to fetch data from {satnogs_satellites_url} ({e})'
-        logger.error(error_msg)
-
-        # Update error in state
-        sync_state["error"] = error_msg
-        sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
+        # Start fetching transmitter data from SATNOGS
+        progress_state = update_progress(
+            "fetch_satnogs_transmitters",
+            0,
+            1,
+            'Fetching transmitter data from SATNOGS'
+        )
+        sync_state["active_sources"] = ["SATNOGS Transmitters"]
         sync_state_manager.set_state(sync_state)
+        await sio.emit('sat-sync-events', progress_state)
 
-    # emit an event
-    progress += 5
-    sync_state["progress"] = progress
-    sync_state["message"] = 'Fetching transmitter data from SATNOGS'
-    sync_state["active_sources"] = ["SATNOGS Transmitters"]
-    sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-    sync_state_manager.set_state(sync_state)
-
-    await sio.emit('sat-sync-events', sync_state)
-
-    # get transmitters from satnogs
-    logger.info(f'Fetching transmitter data from SATNOGS ({satnogs_transmitters_url})')
-    try:
-        with ThreadPoolExecutor(max_workers=1) as pool:
+        # get transmitters from satnogs
+        logger.info(f'Fetching transmitter data from SATNOGS ({satnogs_transmitters_url})')
+        try:
             response = await async_fetch(satnogs_transmitters_url, pool)
             if response.status_code != 200:
                 logger.error(f"HTTP Error: Received status code {response.status_code} from {satnogs_transmitters_url}")
             else:
                 satnogs_transmitter_data = json.loads(response.text)
 
-            satnogs_transmitter_data = json.loads(response.text)
             logger.info(f"Fetched {len(satnogs_transmitter_data)} transmitters from SATNOGS")
 
-            # Update state
+            # Update state and mark phase as complete
             sync_state["completed_sources"].append("SATNOGS Transmitters")
             sync_state["active_sources"] = []
+            completed_phases.add("fetch_satnogs_transmitters")
+            progress_state = update_progress(
+                "fetch_satnogs_transmitters",
+                1,
+                1,
+                'Transmitter data fetched from SATNOGS'
+            )
+            await sio.emit('sat-sync-events', progress_state)
+
+        except requests.exceptions.RequestException as e:
+            error_msg = f'Failed to fetch data from {satnogs_transmitters_url}: {e}'
+            logger.error(error_msg)
+
+            # Update error in state
+            sync_state["error"] = error_msg
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
-    except requests.exceptions.RequestException as e:
-        error_msg = f'Failed to fetch data from {satnogs_transmitters_url}: {e}'
-        logger.error(error_msg)
-
-        # Update error in state
-        sync_state["error"] = error_msg
-        sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-        sync_state_manager.set_state(sync_state)
-
-    # emit an event
-    progress += 5
-    sync_state["progress"] = progress
-    sync_state["message"] = 'Updating satellite data in the database...'
+    # Begin processing satellites and transmitters
+    progress_state = update_progress(
+        "process_satellites",
+        0,
+        len(celestrak_list),
+        'Updating satellite data in the database...'
+    )
     sync_state["active_sources"] = ["Database Update"]
-    sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
     sync_state_manager.set_state(sync_state)
-
-    await sio.emit('sat-sync-events', sync_state)
+    await sio.emit('sat-sync-events', progress_state)
 
     #  we now have everything, TLE from celestrak sat info and transmitter info from satnogs, lets put them in the db
     count_sats = 0
     count_transmitters = 0
     try:
+        total_satellites = len(celestrak_list)
+
+        # Pre-calculate total transmitters to ensure progress is accurate
+        logger.info("Calculating expected transmitter count for progress tracking...")
+        total_transmitters_to_process = 0
         for sat in celestrak_list:
+            norad_id = get_norad_id_from_tle(sat['line1'])
+            transmitters = get_transmitter_info_by_norad_id(norad_id, satnogs_transmitter_data)
+            total_transmitters_to_process += len(transmitters)
+
+        logger.info(f"Expected to process {total_transmitters_to_process} transmitters in total")
+
+        # Now process satellites
+        for i, sat in enumerate(celestrak_list):
             norad_id = get_norad_id_from_tle(sat['line1'])
             satellite = Satellites(
                 norad_id=norad_id,
@@ -492,12 +553,21 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 is_frequency_violator=None,
                 associated_satellites=None,
             )
-            count_sats+=1
+            count_sats += 1
 
-            # Update satellites count in state
+            # Update progress based on satellites processed
+            progress_state = update_progress(
+                "process_satellites",
+                i + 1,
+                total_satellites,
+                f'Processing satellite {count_sats}/{total_satellites}: {sat["name"]}'
+            )
             sync_state["stats"]["satellites_processed"] = count_sats
-            sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
+
+            # Every 100 satellites, emit an update to avoid flooding
+            if count_sats % 100 == 0 or count_sats == total_satellites:
+                await sio.emit('sat-sync-events', progress_state)
 
             # let's find the sat info from the satnogs list
             satnogs_sat_info = get_satellite_by_norad_id(norad_id, satnogs_satellite_data)
@@ -528,50 +598,64 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             # let's find transmitter info in the satnogs_transmitter_data list
             satnogs_transmitter_info = get_transmitter_info_by_norad_id(norad_id, satnogs_transmitter_data)
 
-            for transmitter in satnogs_transmitter_info:
+            for j, transmitter_info in enumerate(satnogs_transmitter_info):
                 transmitter = Transmitters(
-                    id=transmitter.get('uuid', None),
-                    description=transmitter.get('description', None),
-                    alive=transmitter.get('alive', None),
-                    type=transmitter.get('type', None),
-                    uplink_low=transmitter.get('uplink_low', None),
-                    uplink_high=transmitter.get('uplink_high', None),
-                    uplink_drift=transmitter.get('uplink_drift', None),
-                    downlink_low=transmitter.get('downlink_low', None),
-                    downlink_high=transmitter.get('downlink_high', None),
-                    downlink_drift=transmitter.get('downlink_drift', None),
-                    mode=transmitter.get('mode', None),
-                    mode_id=transmitter.get('mode_id', None),
-                    uplink_mode=transmitter.get('uplink_mode', None),
-                    invert=transmitter.get('invert', None),
-                    baud=transmitter.get('baud', None),
-                    sat_id=transmitter.get('sat_id', None),
-                    norad_cat_id=transmitter.get('norad_cat_id', None),
-                    norad_follow_id=transmitter.get('norad_follow_id', None),
-                    status=transmitter.get('status', None),
-                    citation=transmitter.get('citation', None),
-                    service=transmitter.get('service', None),
-                    iaru_coordination=transmitter.get('iaru_coordination', None),
-                    iaru_coordination_url=transmitter.get('iaru_coordination_url', None),
-                    itu_notification=transmitter.get('itu_notification', None),
-                    frequency_violation=transmitter.get('frequency_violation', None),
-                    unconfirmed=transmitter.get('unconfirmed', None),
+                    id=transmitter_info.get('uuid', None),
+                    description=transmitter_info.get('description', None),
+                    alive=transmitter_info.get('alive', None),
+                    type=transmitter_info.get('type', None),
+                    uplink_low=transmitter_info.get('uplink_low', None),
+                    uplink_high=transmitter_info.get('uplink_high', None),
+                    uplink_drift=transmitter_info.get('uplink_drift', None),
+                    downlink_low=transmitter_info.get('downlink_low', None),
+                    downlink_high=transmitter_info.get('downlink_high', None),
+                    downlink_drift=transmitter_info.get('downlink_drift', None),
+                    mode=transmitter_info.get('mode', None),
+                    mode_id=transmitter_info.get('mode_id', None),
+                    uplink_mode=transmitter_info.get('uplink_mode', None),
+                    invert=transmitter_info.get('invert', None),
+                    baud=transmitter_info.get('baud', None),
+                    sat_id=transmitter_info.get('sat_id', None),
+                    norad_cat_id=transmitter_info.get('norad_cat_id', None),
+                    norad_follow_id=transmitter_info.get('norad_follow_id', None),
+                    status=transmitter_info.get('status', None),
+                    citation=transmitter_info.get('citation', None),
+                    service=transmitter_info.get('service', None),
+                    iaru_coordination=transmitter_info.get('iaru_coordination', None),
+                    iaru_coordination_url=transmitter_info.get('iaru_coordination_url', None),
+                    itu_notification=transmitter_info.get('itu_notification', None),
+                    frequency_violation=transmitter_info.get('frequency_violation', None),
+                    unconfirmed=transmitter_info.get('unconfirmed', None),
                 )
-                count_transmitters+=1
+                count_transmitters += 1
 
-                # Update transmitters count in state
-                sync_state["stats"]["transmitters_processed"] = count_transmitters
-                sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
-                sync_state_manager.set_state(sync_state)
+                # Update progress for transmitters only if we have some to process
+                if total_transmitters_to_process > 0:
+                    progress_state = update_progress(
+                        "process_transmitters",
+                        count_transmitters,
+                        total_transmitters_to_process,
+                        f'Processing transmitter {count_transmitters}/{total_transmitters_to_process}'
+                    )
+                    sync_state["stats"]["transmitters_processed"] = count_transmitters
+                    sync_state_manager.set_state(sync_state)
+
+                    # Every 20 transmitters, emit an update to avoid flooding
+                    if count_transmitters % 20 == 0 or (i == total_satellites - 1 and j == len(satnogs_transmitter_info) - 1):
+                        await sio.emit('sat-sync-events', progress_state)
 
                 await dbsession.merge(transmitter)
 
                 # commit session
                 await dbsession.commit()
 
+        # Mark processing phases as complete
+        completed_phases.add("process_satellites")
+        completed_phases.add("process_transmitters")
+
         logger.info(f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters")
 
-        # Update final state
+        # Update final state - always set to 100% when complete
         sync_state["status"] = "complete"
         sync_state["progress"] = 100
         sync_state["success"] = True
