@@ -757,7 +757,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.1)` : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.2)` : 'rgba(0,0,0,0.1)'
-                                }
+                                },
+                                '& .MuiTouchRipple-root': {
+                                    border: vfoMarkers[1]['active'] ? '1px solid': 'none',
+                                    bolderColor: '#ff9393',
+                                },
                             }}
                             onClick={() => {
                                 if (vfoMarkers[1]['active']) {
@@ -795,7 +799,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
-                                }
+                                },
+                                '& .MuiTouchRipple-root': {
+                                    border: vfoMarkers[2]['active'] ? '1px solid': 'none',
+                                    bolderColor: '#ff9393',
+                                },
                             }}
                             onClick={() => {
                                 if (vfoMarkers[2]['active']) {
@@ -833,7 +841,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.2)' : 'rgba(0,0,0,0.1)'
-                                }
+                                },
+                                '& .MuiTouchRipple-root': {
+                                    border: vfoMarkers[3]['active'] ? '1px solid': 'none',
+                                    bolderColor: '#ff9393',
+                                },
                             }}
                             onClick={() => {
                                 if (vfoMarkers[3]['active']) {
@@ -871,7 +883,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                 backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
-                                }
+                                },
+                                '& .MuiTouchRipple-root': {
+                                    border: vfoMarkers[4]['active'] ? '1px solid': 'none',
+                                    bolderColor: '#a300da',
+                                },
                             }}
                             onClick={() => {
                                 if (vfoMarkers[4]['active']) {
