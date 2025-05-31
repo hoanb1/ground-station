@@ -35,6 +35,7 @@ const VFOMarkersContainer = ({
     const [vfoColors] = useState(['#ffff00', '#00ffff', '#ff00ff', '#00ff00']);
     const [activeMarker, setActiveMarker] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
+    const [dragMode, setDragMode] = useState(null); // 'center', 'leftEdge', or 'rightEdge'
     const lastClientXRef = useRef(0);
     const height = bandscopeHeight + waterfallHeight;
     const [cursor, setCursor] = useState('default');
@@ -84,7 +85,7 @@ const VFOMarkersContainer = ({
         const canvas = canvasRef.current;
         if (!canvas) {
             return;
-        };
+        }
 
         const ctx = canvas.getContext('2d', { willReadFrequently: true });
 
@@ -102,35 +103,87 @@ const VFOMarkersContainer = ({
                 return;
             }
 
-            // Skip if the markerIdx is outside the visible range
-            if (vfoMarkers[markerIdx].frequency < startFreq || vfoMarkers[markerIdx].frequency > endFreq) {
+            const marker = vfoMarkers[markerIdx];
+            const bandwidth = marker.bandwidth || 3000;
+            const mode = marker.mode || 'USB';
+
+            // Skip if the marker is outside the visible range
+            // Add bandwidth to check to ensure we still render if the bandwidth edges are visible
+            const markerLowFreq = marker.frequency - bandwidth/2;
+            const markerHighFreq = marker.frequency + bandwidth/2;
+
+            if (markerHighFreq < startFreq || markerLowFreq > endFreq) {
                 return;
             }
 
             // Calculate x position based on frequency
-            const x = ((vfoMarkers[markerIdx].frequency - startFreq) / freqRange) * canvas.width;
+            const centerX = ((marker.frequency - startFreq) / freqRange) * canvas.width;
 
-            // Draw markerIdx line
+            // Calculate bandwidth edges positions
+            const bandwidthPixels = (bandwidth / freqRange) * canvas.width;
+            const halfBandwidth = bandwidthPixels / 2;
+
+            let leftEdgeX = centerX - halfBandwidth;
+            let rightEdgeX = centerX + halfBandwidth;
+
+            // Ensure edges are within canvas
+            leftEdgeX = Math.max(0, leftEdgeX);
+            rightEdgeX = Math.min(canvas.width, rightEdgeX);
+
+            // Draw shaded bandwidth area
+            ctx.fillStyle = `${marker.color}22`; // Add transparency to color
+            ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
+
+            // Draw center marker line
             ctx.beginPath();
-            ctx.strokeStyle = vfoMarkers[markerIdx].color;
-            ctx.lineWidth = 1;
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
+            ctx.strokeStyle = marker.color;
+            ctx.lineWidth = 1.5;
+            ctx.moveTo(centerX, 0);
+            ctx.lineTo(centerX, height);
             ctx.stroke();
 
+            // Draw bandwidth edge lines
+            ctx.beginPath();
+            ctx.strokeStyle = marker.color;
+            ctx.lineWidth = 1;
+            ctx.setLineDash([4, 4]); // Create dashed lines for the edges
+
+            // Left edge
+            ctx.moveTo(leftEdgeX, 0);
+            ctx.lineTo(leftEdgeX, height);
+
+            // Right edge
+            ctx.moveTo(rightEdgeX, 0);
+            ctx.lineTo(rightEdgeX, height);
+
+            ctx.stroke();
+            ctx.setLineDash([]); // Reset to solid line
+
+            // Draw edge handles (small dots at top of edge lines)
+            ctx.fillStyle = marker.color;
+
+            // Left edge handle
+            ctx.beginPath();
+            ctx.arc(leftEdgeX, 20, 4, 0, 2 * Math.PI);
+            ctx.fill();
+
+            // Right edge handle
+            ctx.beginPath();
+            ctx.arc(rightEdgeX, 20, 4, 0, 2 * Math.PI);
+            ctx.fill();
+
             // Draw frequency label background
-            const labelText = `${vfoMarkers[markerIdx].name}: ${formatFrequency(vfoMarkers[markerIdx].frequency)} MHz`;
+            const modeText = mode ? ` [${mode.toUpperCase()}]` : '';
+            const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${(bandwidth/1000).toFixed(1)}kHz`;
             ctx.font = '12px Monospace';
             const textMetrics = ctx.measureText(labelText);
             const labelWidth = textMetrics.width + 10; // Add padding
             const labelHeight = 14;
-            
 
-            //ctx.fillStyle = 'rgba(0, 0, 0, 0.7)';
-            ctx.fillStyle = vfoMarkers[markerIdx].color;
+            ctx.fillStyle = marker.color;
             ctx.beginPath();
             ctx.roundRect(
-                x - labelWidth / 2,
+                centerX - labelWidth / 2,
                 5,
                 labelWidth,
                 labelHeight,
@@ -139,17 +192,17 @@ const VFOMarkersContainer = ({
             ctx.fill();
 
             // Draw frequency label text
-            ctx.fillStyle = '#ffffff';
+            ctx.fillStyle = '#000000';
             ctx.textAlign = 'center';
-            ctx.fillText(labelText, x, 16);
+            ctx.fillText(labelText, centerX, 16);
 
-            // Draw handle
-            ctx.fillStyle = vfoMarkers[markerIdx].color;
+            // Draw center handle
+            ctx.fillStyle = marker.color;
             const handleWidth = 12;
             const handleHeight = 20;
             ctx.beginPath();
             ctx.roundRect(
-                x - handleWidth / 2,
+                centerX - handleWidth / 2,
                 40,
                 handleWidth,
                 handleHeight,
@@ -165,11 +218,8 @@ const VFOMarkersContainer = ({
         return startFreq + (freqRatio * freqRange);
     }, [startFreq, freqRange, actualWidth]);
 
-    // Check if mouse is over a handle
-    const isOverHandle = useCallback((x, y) => {
-        // Check if y-coordinate is in handle area
-        if (y < 40 || y > 60) return false;
-
+    // Check if mouse is over a handle or edge
+    const getHoverElement = useCallback((x, y) => {
         // Calculate scaling factor between canvas coordinate space and DOM space
         const rect = canvasRef.current.getBoundingClientRect();
         const scaleX = actualWidth / rect.width;
@@ -180,13 +230,33 @@ const VFOMarkersContainer = ({
             if (!vfoMarkers[key].active) continue;
             if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) continue;
 
-            const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
-            if (Math.abs(canvasX - markerX) <= 10) { // 10px hitbox
-                return true;
+            const marker = vfoMarkers[key];
+            const bandwidth = marker.bandwidth || 3000;
+
+            // Calculate center and edges positions
+            const centerX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
+            const bandwidthPixels = (bandwidth / freqRange) * actualWidth;
+            const halfBandwidth = bandwidthPixels / 2;
+            const leftEdgeX = Math.max(0, centerX - halfBandwidth);
+            const rightEdgeX = Math.min(actualWidth, centerX + halfBandwidth);
+
+            // Check center handle (y between 40-60px)
+            if (y >= 40 && y <= 60 && Math.abs(canvasX - centerX) <= 10) {
+                return { key, element: 'center' };
+            }
+
+            // Check left edge (y between 0-40px, specifically around the handle)
+            if (y >= 15 && y <= 25 && Math.abs(canvasX - leftEdgeX) <= 6) {
+                return { key, element: 'leftEdge' };
+            }
+
+            // Check right edge (y between 0-40px, specifically around the handle)
+            if (y >= 15 && y <= 25 && Math.abs(canvasX - rightEdgeX) <= 6) {
+                return { key, element: 'rightEdge' };
             }
         }
 
-        return false;
+        return { key: null, element: null };
     }, [vfoMarkers, actualWidth, startFreq, endFreq, freqRange]);
 
     // Handle mouse move to update cursor
@@ -197,12 +267,16 @@ const VFOMarkersContainer = ({
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        if (isOverHandle(x, y)) {
+        const { element } = getHoverElement(x, y);
+
+        if (element === 'center') {
             setCursor('ew-resize');
+        } else if (element === 'leftEdge' || element === 'rightEdge') {
+            setCursor('col-resize');
         } else {
             setCursor('default');
         }
-    }, [isOverHandle, isDragging]);
+    }, [getHoverElement, isDragging]);
 
     // Handle mouse leave
     const handleMouseLeave = useCallback(() => {
@@ -222,35 +296,22 @@ const VFOMarkersContainer = ({
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
-        // Calculate scaling factor between canvas coordinate space and DOM space
-        const scaleX = actualWidth / rect.width;
-        const canvasX = x * scaleX;
+        const { key, element } = getHoverElement(x, y);
 
-        // Check if we clicked on a marker handle (around y=40-60px)
-        if (y >= 40 && y <= 60) {
-            // Convert each marker's frequency to a position
-            Object.keys(vfoMarkers).forEach(key => {
-                if (!vfoMarkers[key].active) return;
-                if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return;
+        if (key && element) {
+            setActiveMarker(key);
+            setDragMode(element);
+            setIsDragging(true);
+            setCursor(element === 'center' ? 'ew-resize' : 'col-resize');
+            lastClientXRef.current = e.clientX;
 
-                const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
-
-                if (Math.abs(canvasX - markerX) <= 10) { // 10px hitbox for handle
-                    setActiveMarker(key);
-                    setIsDragging(true);
-                    setCursor('ew-resize');
-                    lastClientXRef.current = e.clientX;
-
-                    // Prevent default to avoid text selection while dragging
-                    e.preventDefault();
-                    e.stopPropagation();
-                    return;
-                }
-            });
+            // Prevent default to avoid text selection while dragging
+            e.preventDefault();
+            e.stopPropagation();
         }
     };
 
-    // Separate handler for adding document event listeners after a marker is selected
+    // Inside the effect where we handle dragging
     useEffect(() => {
         if (isDragging && activeMarker) {
             const handleMouseMoveEvent = (e) => {
@@ -264,32 +325,71 @@ const VFOMarkersContainer = ({
                 const marker = vfoMarkers[activeMarker];
                 if (!marker) return;
 
-                // Calculate the current marker position in canvas coordinates
-                const currentX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
-
                 // Calculate the scaling factor between screen pixels and canvas pixels
                 const rect = canvasRef.current.getBoundingClientRect();
                 const scaleFactor = actualWidth / rect.width;
+                const scaledDelta = deltaX * scaleFactor;
 
-                // Apply the scaled delta to get the new position
-                const newX = currentX + (deltaX * scaleFactor);
+                // Calculate pixels to frequency change
+                const freqDelta = (scaledDelta / actualWidth) * freqRange;
 
-                // Convert the new position to a frequency
-                const newFrequency = calculateFrequency(newX);
+                if (dragMode === 'center') {
+                    // Moving the entire VFO (center + bandwidth)
+                    const newFrequency = marker.frequency + freqDelta;
 
-                // Ensure the frequency stays within the visible range
-                const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+                    // Ensure the frequency stays within the visible range
+                    const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
 
-                dispatch(setVFOProperty({vfoNumber: parseInt(activeMarker), updates: {
-                        frequency: limitedFreq,
-                        bandwidth: marker.bandwidth,
-                    }
-                }));
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(activeMarker),
+                        updates: {
+                            frequency: limitedFreq,
+                        }
+                    }));
+                }
+                else if (dragMode === 'leftEdge') {
+                    // Moving the left edge (adjust bandwidth)
+                    const currentBandwidth = marker.bandwidth || 3000;
+                    // When dragging left edge right (positive delta), bandwidth decreases
+                    const newBandwidth = currentBandwidth - (2 * freqDelta);
+
+                    // Enforce minimum bandwidth (e.g., 500 Hz) and maximum (e.g., 30kHz)
+                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+
+                    // Keep the center frequency constant
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(activeMarker),
+                        updates: {
+                            bandwidth: limitedBandwidth,
+                            // No frequency update
+                        }
+                    }));
+                }
+                else if (dragMode === 'rightEdge') {
+                    // Moving the right edge (adjust bandwidth)
+                    const currentBandwidth = marker.bandwidth || 3000;
+                    // When dragging right edge right (positive delta), bandwidth increases
+                    const newBandwidth = currentBandwidth + (2 * freqDelta);
+
+                    // Enforce minimum bandwidth and maximum
+                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+
+                    // Keep the center frequency constant
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(activeMarker),
+                        updates: {
+                            bandwidth: limitedBandwidth,
+                            // No frequency update
+                        }
+                    }));
+                }
             };
 
-            const handleMouseUpEvent = () => {
+            const handleMouseUpEvent = (event) => {
                 setIsDragging(false);
                 setActiveMarker(null);
+                setDragMode(null);
+
                 // Reset cursor based on mouse position
                 if (canvasRef.current) {
                     const rect = canvasRef.current.getBoundingClientRect();
@@ -297,8 +397,12 @@ const VFOMarkersContainer = ({
                     const mouseY = event.clientY - rect.top;
 
                     if (mouseX >= 0 && mouseX <= rect.width && mouseY >= 0 && mouseY <= rect.height) {
-                        if (isOverHandle(mouseX, mouseY)) {
+                        const { element } = getHoverElement(mouseX, mouseY);
+
+                        if (element === 'center') {
                             setCursor('ew-resize');
+                        } else if (element === 'leftEdge' || element === 'rightEdge') {
+                            setCursor('col-resize');
                         } else {
                             setCursor('default');
                         }
@@ -318,30 +422,24 @@ const VFOMarkersContainer = ({
                 document.removeEventListener('mouseup', handleMouseUpEvent);
             };
         }
-    }, [isDragging, activeMarker, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, calculateFrequency, isOverHandle]);
+    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, getHoverElement, dispatch]);
 
     // Double click to remove a marker
     const handleDoubleClick = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
-        const scaleX = actualWidth / rect.width;
-        const canvasX = x * scaleX;
+        const y = e.clientY - rect.top;
 
-        // Find which marker was double-clicked
-        Object.keys(vfoMarkers).forEach(key => {
-            if (!vfoMarkers[key].active) return;
-            if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return;
+        const { key } = getHoverElement(x, y);
 
-            const markerX = ((vfoMarkers[key].frequency - startFreq) / freqRange) * actualWidth;
-
-            // Check the 10px hitbox
-            if (Math.abs(canvasX - markerX) <= 10) {
-                dispatch(setVFOProperty({vfoNumber: parseInt(key), updates: {
-                        active: false,
-                    }
-                }));
-            }
-        });
+        if (key) {
+            dispatch(setVFOProperty({
+                vfoNumber: parseInt(key),
+                updates: {
+                    active: false,
+                }
+            }));
+        }
     };
 
     return (

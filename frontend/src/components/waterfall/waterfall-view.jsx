@@ -757,7 +757,6 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 1, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: false,
                                         }
@@ -766,7 +765,6 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 1, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: true,
                                         }
@@ -797,7 +795,6 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 2, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: false,
                                         }
@@ -806,7 +803,6 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 2, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: true,
                                         }
@@ -825,19 +821,18 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#0000FF',
+                                color: '#4d4df6',
                                 backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.2)' : 'rgba(0,0,0,0.1)'
                                 }
                             }}
                             onClick={() => {
-                                const vfoColor = '#0000FF';
+                                const vfoColor = '#4d4df6';
                                 if (vfoMarkers[3]['active']) {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 3, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: false,
                                         }
@@ -846,7 +841,6 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 3, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: true,
                                         }
@@ -877,7 +871,6 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 4, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: false,
                                         }
@@ -886,7 +879,6 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 4, updates: {
                                             frequency: centerFrequency,
-                                            bandwidth: 400,
                                             color: vfoColor,
                                             active: true,
                                         }
