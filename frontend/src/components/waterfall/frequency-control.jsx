@@ -283,7 +283,6 @@ const FrequencyDisplay = ({
                 alignItems: 'center',
                 width: '100%',
                 p: 0,
-                bgcolor: 'background.paper'
             }}>
                 {renderDigitControls()}
             </Box>

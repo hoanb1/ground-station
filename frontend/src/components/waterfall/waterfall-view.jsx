@@ -108,6 +108,9 @@ import { useStore } from 'react-redux';
 import {v4 as uuidv4} from 'uuid';
 import TuneIcon from "@mui/icons-material/Tune";
 
+const vfoColors = ['#FF0000', '#00FF00', '#0000FF', '#FF00FF'];
+
+
 // Make a new worker
 export const createExternalWorker = () => {
 
@@ -752,19 +755,18 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#FF0000',
-                                backgroundColor: vfoMarkers[1]['active'] ? 'rgba(255,0,0,0.1)' : 'transparent',
+                                color: vfoColors[0],
+                                backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.1)` : 'transparent',
                                 '&:hover': {
-                                    backgroundColor: vfoMarkers[1]['active'] ? 'rgba(255,0,0,0.2)' : 'rgba(0,0,0,0.1)'
+                                    backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.2)` : 'rgba(0,0,0,0.1)'
                                 }
                             }}
                             onClick={() => {
-                                const vfoColor = '#FF0000';
                                 if (vfoMarkers[1]['active']) {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 1, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[0],
                                             active: false,
                                         }
                                     }));
@@ -772,7 +774,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 1, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[0],
                                             active: true,
                                         }
                                     }));
@@ -791,19 +793,18 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#1d6a1d',
+                                color: vfoColors[1],
                                 backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
                                 }
                             }}
                             onClick={() => {
-                                const vfoColor = '#1d6a1d';
                                 if (vfoMarkers[2]['active']) {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 2, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[1],
                                             active: false,
                                         }
                                     }));
@@ -811,7 +812,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 2, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[1],
                                             active: true,
                                         }
                                     }));
@@ -830,19 +831,18 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#4d4df6',
+                                color: vfoColors[2],
                                 backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.2)' : 'rgba(0,0,0,0.1)'
                                 }
                             }}
                             onClick={() => {
-                                const vfoColor = '#4d4df6';
                                 if (vfoMarkers[3]['active']) {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 3, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[2],
                                             active: false,
                                         }
                                     }));
@@ -850,7 +850,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 3, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[2],
                                             active: true,
                                         }
                                     }));
@@ -869,19 +869,18 @@ const MainWaterfallDisplay = React.memo(() => {
                                 fontSize: '1.25rem',
                                 fontFamily: "Monospace",
                                 fontWeight: "bold",
-                                color: '#a500a5',
+                                color: vfoColors[3],
                                 backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.1)' : 'transparent',
                                 '&:hover': {
                                     backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
                                 }
                             }}
                             onClick={() => {
-                                const vfoColor = '#a500a5';
                                 if (vfoMarkers[4]['active']) {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 4, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[3],
                                             active: false,
                                         }
                                     }));
@@ -889,7 +888,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     dispatch(setVFOProperty({
                                         vfoNumber: 4, updates: {
                                             frequency: centerFrequency,
-                                            color: vfoColor,
+                                            color: vfoColors[3],
                                             active: true,
                                         }
                                     }));
@@ -971,7 +970,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             height={waterFallCanvasHeight}
                             style={{
                                 width: '100%',
-                                height: `${dimensions['height']-230}px`,
+                                height: `${dimensions['height'] - 230}px`,
                                 display: 'block',
                                 backgroundColor: 'rgba(28, 28, 28, 1)',
                                 borderRight: '1px solid #535353',

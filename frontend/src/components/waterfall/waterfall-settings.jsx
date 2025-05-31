@@ -396,10 +396,16 @@ const WaterfallSettings = forwardRef((props, ref) => {
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
                 <Accordion expanded={expandedPanels.includes('freqControl')} onChange={handleAccordionChange('freqControl')}>
-                    <AccordionSummary aria-controls="freq-content" id="freq-header">
+                    <AccordionSummary
+                        sx={{
+                            boxShadow: '-1px 4px 7px #00000059',
+                        }}
+                        aria-controls="freq-content" id="freq-header">
                         <Typography component="span">Frequency control</Typography>
                     </AccordionSummary>
-                    <AccordionDetails>
+                    <AccordionDetails sx={{
+                        backgroundColor: 'rgb(34,34,34)',
+                    }}>
                         <Box sx={{mb: 0, width: '100%'}}>
                             <FrequencyDisplay
                                 initialFrequency={centerFrequency / 1000.0} // Convert Hz to kHz
@@ -411,7 +417,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             />
                         </Box>
                         <FormControl disabled={false}
-                                     sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
+                                     sx={{minWidth: 200, marginTop: 1, marginBottom: 0}} fullWidth variant="filled"
                                      size="small">
                             <InputLabel htmlFor="transmitter-select">Go to transmitter</InputLabel>
                             <Select
@@ -437,7 +443,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
 
                         <FormControl
                             disabled={false}
-                            sx={{minWidth: 200, marginTop: 0, marginBottom: 0}}
+                            sx={{minWidth: 200, marginTop: 1, marginBottom: 0}}
                             fullWidth
                             variant="filled"
                             size="small">
@@ -487,11 +493,16 @@ const WaterfallSettings = forwardRef((props, ref) => {
                 </Accordion>
 
                 <Accordion expanded={expandedPanels.includes('sdr')} onChange={handleAccordionChange('sdr')}>
-                    <AccordionSummary aria-controls="panel3d-content" id="panel3d-header">
+                    <AccordionSummary
+                        sx={{
+                            boxShadow: '-1px 4px 7px #00000059',
+                        }}
+                        aria-controls="panel3d-content" id="panel3d-header">
                         <Typography component="span">SDR</Typography>
                     </AccordionSummary>
-                    <AccordionDetails>
-
+                    <AccordionDetails sx={{
+                        backgroundColor: 'rgb(34,34,34)',
+                    }}>
                         <LoadingOverlay loading={gettingSDRParameters}>
                             <Box sx={{mb: 2}}>
 
@@ -667,10 +678,16 @@ const WaterfallSettings = forwardRef((props, ref) => {
 
                 </Accordion>
                 <Accordion expanded={expandedPanels.includes('fft')} onChange={handleAccordionChange('fft')}>
-                    <AccordionSummary aria-controls="panel2d-content" id="panel2d-header">
+                    <AccordionSummary
+                        sx={{
+                            boxShadow: '-1px 4px 7px #00000059',
+                        }}
+                        aria-controls="panel2d-content" id="panel2d-header">
                         <Typography component="span">FFT</Typography>
                     </AccordionSummary>
-                    <AccordionDetails>
+                    <AccordionDetails sx={{
+                        backgroundColor: 'rgb(34,34,34)',
+                    }}>
                         <LoadingOverlay loading={gettingSDRParameters}>
                             <Box sx={{mb: 2}}>
                                 <FormControl disabled={gettingSDRParameters}
