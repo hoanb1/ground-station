@@ -257,6 +257,14 @@ const VFOMarkersContainer = ({
         const scaleX = actualWidth / rect.width;
         const canvasX = x * scaleX;
 
+        // Determine if this is a touch event (use larger hit areas for touch)
+        const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
+
+        // Use larger hit areas for touch devices
+        const centerHandleWidth = isTouchDevice ? 20 : 10;
+        const edgeHandleWidth = isTouchDevice ? 12 : 6;
+        const edgeYRange = isTouchDevice ? 30 : 10;
+
         // Check all markers
         for (const key of Object.keys(vfoMarkers)) {
             if (!vfoMarkers[key].active) continue;
@@ -286,22 +294,22 @@ const VFOMarkersContainer = ({
             leftEdgeX = Math.max(0, leftEdgeX);
             rightEdgeX = Math.min(actualWidth, rightEdgeX);
 
-            // Check center handle (y between 40-60px)
-            if (y >= 40 && y <= 60 && Math.abs(canvasX - centerX) <= 10) {
+            // Check center handle (y between 40-60px with enlarged touch area)
+            if (y >= 30 && y <= 70 && Math.abs(canvasX - centerX) <= centerHandleWidth) {
                 return { key, element: 'center' };
             }
 
             // Check edge handles based on mode
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
-                // Check right edge (y between 15-25px, specifically around the handle)
-                if (y >= 15 && y <= 25 && Math.abs(canvasX - rightEdgeX) <= 6) {
+                // Check right edge (with enlarged touch area)
+                if (y >= 10 && y <= (10 + edgeYRange) && Math.abs(canvasX - rightEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'rightEdge' };
                 }
             }
 
             if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
-                // Check left edge (y between 15-25px, specifically around the handle)
-                if (y >= 15 && y <= 25 && Math.abs(canvasX - leftEdgeX) <= 6) {
+                // Check left edge (with enlarged touch area)
+                if (y >= 10 && y <= (10 + edgeYRange) && Math.abs(canvasX - leftEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'leftEdge' };
                 }
             }
@@ -381,6 +389,7 @@ const VFOMarkersContainer = ({
 
             // Prevent default to avoid scrolling while dragging
             e.preventDefault();
+            // Stop propagation to prevent background elements from receiving this event
             e.stopPropagation();
         }
     };
@@ -389,6 +398,7 @@ const VFOMarkersContainer = ({
     const handleTouchMove = (e) => {
         if (!isDragging || !activeMarker || e.touches.length !== 1) return;
 
+        // Always prevent default and stop propagation when dragging
         e.preventDefault();
         e.stopPropagation();
 
@@ -463,6 +473,10 @@ const VFOMarkersContainer = ({
     // Handle touch end for mobile devices
     const handleTouchEnd = (e) => {
         if (isDragging) {
+            // Prevent default and stop propagation when ending a drag
+            e.preventDefault();
+            e.stopPropagation();
+        
             setIsDragging(false);
             setActiveMarker(null);
             setDragMode(null);
@@ -472,6 +486,10 @@ const VFOMarkersContainer = ({
     // Handle touch cancel for mobile devices
     const handleTouchCancel = (e) => {
         if (isDragging) {
+            // Prevent default and stop propagation when cancelling a drag
+            e.preventDefault();
+            e.stopPropagation();
+        
             setIsDragging(false);
             setActiveMarker(null);
             setDragMode(null);
@@ -591,6 +609,208 @@ const VFOMarkersContainer = ({
         }
     }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, getHoverElement, dispatch]);
 
+    // For touch event dragging, we need a separate effect
+    useEffect(() => {
+        if (isDragging && activeMarker) {
+            // Function to handle touchmove on document level
+            const handleDocumentTouchMove = (e) => {
+                if (e.touches.length !== 1) return;
+
+                // Always prevent default for document-level touch events during drag
+                e.preventDefault();
+                e.stopPropagation();
+
+                const touch = e.touches[0];
+                const deltaX = touch.clientX - lastTouchXRef.current;
+                lastTouchXRef.current = touch.clientX;
+
+                // Get the active marker
+                const marker = vfoMarkers[activeMarker];
+                if (!marker) return;
+
+                // Calculate the scaling factor between screen pixels and canvas pixels
+                const rect = canvasRef.current.getBoundingClientRect();
+                const scaleFactor = actualWidth / rect.width;
+                const scaledDelta = deltaX * scaleFactor;
+
+                // Calculate pixels to frequency change
+                const freqDelta = (scaledDelta / actualWidth) * freqRange;
+
+                if (dragMode === 'center') {
+                    // Moving the entire VFO (center + bandwidth)
+                    const newFrequency = marker.frequency + freqDelta;
+
+                    // Ensure the frequency stays within the visible range
+                    const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(activeMarker),
+                        updates: {
+                            frequency: limitedFreq,
+                        }
+                    }));
+                }
+                else if (dragMode === 'leftEdge') {
+                    // Moving the left edge (adjust bandwidth)
+                    const currentBandwidth = marker.bandwidth || 3000;
+                    // When dragging left edge right (positive delta), bandwidth decreases
+                    const newBandwidth = currentBandwidth - (2 * freqDelta);
+
+                    // Enforce minimum bandwidth (e.g., 500 Hz) and maximum (e.g., 30kHz)
+                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+
+                    // Keep the center frequency constant
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(activeMarker),
+                        updates: {
+                            bandwidth: limitedBandwidth,
+                        }
+                    }));
+                }
+                else if (dragMode === 'rightEdge') {
+                    // Moving the right edge (adjust bandwidth)
+                    const currentBandwidth = marker.bandwidth || 3000;
+                    // When dragging right edge right (positive delta), bandwidth increases
+                    const newBandwidth = currentBandwidth + (2 * freqDelta);
+
+                    // Enforce minimum bandwidth and maximum
+                    const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+
+                    // Keep the center frequency constant
+                    dispatch(setVFOProperty({
+                        vfoNumber: parseInt(activeMarker),
+                        updates: {
+                            bandwidth: limitedBandwidth,
+                        }
+                    }));
+                }
+            };
+
+            // Function to handle touchend on document level
+            const handleDocumentTouchEnd = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                setIsDragging(false);
+                setActiveMarker(null);
+                setDragMode(null);
+            };
+
+            // Function to handle touchcancel on document level
+            const handleDocumentTouchCancel = (e) => {
+                e.preventDefault();
+                e.stopPropagation();
+
+                setIsDragging(false);
+                setActiveMarker(null);
+                setDragMode(null);
+            };
+
+            // Add document-level event listeners for touch events during drag
+            document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
+            document.addEventListener('touchend', handleDocumentTouchEnd, { passive: false });
+            document.addEventListener('touchcancel', handleDocumentTouchCancel, { passive: false });
+
+            // Clean up
+            return () => {
+                document.removeEventListener('touchmove', handleDocumentTouchMove);
+                document.removeEventListener('touchend', handleDocumentTouchEnd);
+                document.removeEventListener('touchcancel', handleDocumentTouchCancel);
+            };
+        }
+    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, dispatch]);
+
+    // Set up global event handlers to intercept touch events during dragging
+    useEffect(() => {
+        // Only set up if we're actively dragging
+        if (!isDragging) return;
+        
+        // Capture phase handler for document touchmove
+        const handleDocumentTouchMove = (e) => {
+            // During active dragging, always prevent default and stop propagation
+            e.preventDefault();
+            e.stopPropagation();
+            
+            if (e.touches.length !== 1) return;
+            
+            const touch = e.touches[0];
+            const deltaX = touch.clientX - lastTouchXRef.current;
+            lastTouchXRef.current = touch.clientX;
+            
+            // Get the active marker
+            const marker = vfoMarkers[activeMarker];
+            if (!marker) return;
+            
+            // Calculate the scaling factor between screen pixels and canvas pixels
+            const rect = canvasRef.current.getBoundingClientRect();
+            const scaleFactor = actualWidth / rect.width;
+            const scaledDelta = deltaX * scaleFactor;
+            
+            // Calculate pixels to frequency change
+            const freqDelta = (scaledDelta / actualWidth) * freqRange;
+            
+            // Implement dragging logic based on drag mode
+            if (dragMode === 'center') {
+                const newFrequency = marker.frequency + freqDelta;
+                const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+                
+                dispatch(setVFOProperty({
+                    vfoNumber: parseInt(activeMarker),
+                    updates: {
+                        frequency: limitedFreq,
+                    }
+                }));
+            } 
+            else if (dragMode === 'leftEdge') {
+                const currentBandwidth = marker.bandwidth || 3000;
+                const newBandwidth = currentBandwidth - (2 * freqDelta);
+                const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+                
+                dispatch(setVFOProperty({
+                    vfoNumber: parseInt(activeMarker),
+                    updates: {
+                        bandwidth: limitedBandwidth,
+                    }
+                }));
+            }
+            else if (dragMode === 'rightEdge') {
+                const currentBandwidth = marker.bandwidth || 3000;
+                const newBandwidth = currentBandwidth + (2 * freqDelta);
+                const limitedBandwidth = Math.max(500, Math.min(30000, newBandwidth));
+                
+                dispatch(setVFOProperty({
+                    vfoNumber: parseInt(activeMarker),
+                    updates: {
+                        bandwidth: limitedBandwidth,
+                    }
+                }));
+            }
+        };
+        
+        // Capture phase handler for document touchend and touchcancel
+        const handleDocumentTouchEnd = (e) => {
+            // During active dragging, always prevent default and stop propagation
+            e.preventDefault();
+            e.stopPropagation();
+            
+            setIsDragging(false);
+            setActiveMarker(null);
+            setDragMode(null);
+        };
+        
+        // Add event listeners with capture: true to intercept events before they reach other elements
+        document.addEventListener('touchmove', handleDocumentTouchMove, { capture: true, passive: false });
+        document.addEventListener('touchend', handleDocumentTouchEnd, { capture: true, passive: false });
+        document.addEventListener('touchcancel', handleDocumentTouchEnd, { capture: true, passive: false });
+        
+        return () => {
+            // Clean up listeners when effect is cleaned up
+            document.removeEventListener('touchmove', handleDocumentTouchMove, { capture: true, passive: false });
+            document.removeEventListener('touchend', handleDocumentTouchEnd, { capture: true, passive: false });
+            document.removeEventListener('touchcancel', handleDocumentTouchEnd, { capture: true, passive: false });
+        };
+    }, [isDragging, activeMarker, dragMode, vfoMarkers, lastTouchXRef, actualWidth, freqRange, startFreq, endFreq, dispatch]);
+
     // Double click to remove a marker
     const handleDoubleClick = (e) => {
         const rect = canvasRef.current.getBoundingClientRect();
@@ -610,48 +830,47 @@ const VFOMarkersContainer = ({
     };
 
     // Double tap to remove a marker on mobile devices
-    const handleDoubleTap = (() => {
-        let lastTap = 0;
-        let tapTimeout;
+    const lastTapRef = useRef(0);
+    const tapTimeoutRef = useRef(null);
 
-        return (e) => {
-            if (e.touches.length !== 1) return;
+    const handleDoubleTap = (e) => {
+        clearTimeout(tapTimeoutRef.current);
 
-            clearTimeout(tapTimeout);
+        if (!e.touches || e.touches.length !== 1) return;
 
-            const touch = e.touches[0];
-            const rect = canvasRef.current.getBoundingClientRect();
-            const x = touch.clientX - rect.left;
-            const y = touch.clientY - rect.top;
+        const touch = e.touches[0];
+        const rect = canvasRef.current.getBoundingClientRect();
+        const x = touch.clientX - rect.left;
+        const y = touch.clientY - rect.top;
 
-            const currentTime = new Date().getTime();
-            const tapLength = currentTime - lastTap;
+        const currentTime = new Date().getTime();
+        const tapLength = currentTime - lastTapRef.current;
 
-            if (tapLength < 500 && tapLength > 0) {
-                // Double tap detected
-                const { key } = getHoverElement(x, y);
+        if (tapLength < 500 && tapLength > 0) {
+            // Double tap detected
+            const { key } = getHoverElement(x, y);
 
-                if (key) {
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(key),
-                        updates: {
-                            active: false,
-                        }
-                    }));
-                }
-
+            if (key) {
+                // Prevent default only when we're removing a marker
                 e.preventDefault();
                 e.stopPropagation();
-            } else {
-                // Single tap
-                tapTimeout = setTimeout(() => {
-                    // Single tap logic if needed
-                }, 500);
-            }
 
-            lastTap = currentTime;
-        };
-    })();
+                dispatch(setVFOProperty({
+                    vfoNumber: parseInt(key),
+                    updates: {
+                        active: false,
+                    }
+                }));
+            }
+        } else {
+            // Single tap
+            tapTimeoutRef.current = setTimeout(() => {
+                // Single tap logic if needed
+            }, 500);
+        }
+
+        lastTapRef.current = currentTime;
+    };
 
     return (
         <Box
@@ -683,6 +902,10 @@ const VFOMarkersContainer = ({
                     height: '100%',
                     cursor: cursor,
                     touchAction: 'none', // Prevent browser handling of all touch actions
+                    WebkitUserSelect: 'none',
+                    MozUserSelect: 'none',
+                    msUserSelect: 'none',
+                    userSelect: 'none',
                 }}
             />
         </Box>
