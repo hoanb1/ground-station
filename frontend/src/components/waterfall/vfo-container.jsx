@@ -13,6 +13,7 @@ import {
     disableVFO3,
     disableVFO4,
     setVFOProperty,
+    setSelectedVFO,
 } from './waterfall-slice.jsx';
 
 const VFOMarkersContainer = ({
@@ -25,7 +26,8 @@ const VFOMarkersContainer = ({
     const dispatch = useDispatch();
     const {
         vfoMarkers,
-        maxVFOMarkers
+        maxVFOMarkers,
+        selectedVFO
     } = useSelector(state => state.waterfall);
 
     const containerRef = useRef(null);
@@ -112,7 +114,7 @@ const VFOMarkersContainer = ({
             const marker = vfoMarkers[markerIdx];
             const bandwidth = marker.bandwidth || 3000;
             const mode = (marker.mode || 'USB').toUpperCase();
-            const isSelected = marker.selected === true;
+            const isSelected = parseInt(markerIdx) === selectedVFO;
 
             // Skip if the marker is outside the visible range
             // Calculate the frequency range based on mode
@@ -252,7 +254,7 @@ const VFOMarkersContainer = ({
             );
             ctx.fill();
         });
-    }, [vfoMarkers, actualWidth, height, centerFrequency, sampleRate, startFreq, endFreq, freqRange]);
+    }, [vfoMarkers, actualWidth, height, centerFrequency, sampleRate, startFreq, endFreq, freqRange, selectedVFO]);
 
     // Calculate frequency from position
     const calculateFrequency = useCallback((position) => {
@@ -379,6 +381,9 @@ const VFOMarkersContainer = ({
             e.stopPropagation();
         }
         // If not dragging a handle, the click event will fire to handle selection
+
+        // Set the selected VFO
+        dispatch(setSelectedVFO(parseInt(key)));
     };
 
     // Handle touch start for mobile devices
@@ -403,6 +408,9 @@ const VFOMarkersContainer = ({
             // Stop propagation to prevent background elements from receiving this event
             e.stopPropagation();
         }
+
+        // Set the selected VFO
+        dispatch(setSelectedVFO(parseInt(key)));
     };
 
     // Handle touch move for mobile devices
@@ -457,7 +465,6 @@ const VFOMarkersContainer = ({
                 vfoNumber: parseInt(activeMarker),
                 updates: {
                     bandwidth: limitedBandwidth,
-                    // No frequency update
                 }
             }));
         }
@@ -475,7 +482,6 @@ const VFOMarkersContainer = ({
                 vfoNumber: parseInt(activeMarker),
                 updates: {
                     bandwidth: limitedBandwidth,
-                    // No frequency update
                 }
             }));
         }
@@ -487,7 +493,7 @@ const VFOMarkersContainer = ({
             // Prevent default and stop propagation when ending a drag
             e.preventDefault();
             e.stopPropagation();
-        
+
             setIsDragging(false);
             setActiveMarker(null);
             setDragMode(null);
@@ -500,7 +506,7 @@ const VFOMarkersContainer = ({
             // Prevent default and stop propagation when cancelling a drag
             e.preventDefault();
             e.stopPropagation();
-        
+
             setIsDragging(false);
             setActiveMarker(null);
             setDragMode(null);
@@ -725,36 +731,36 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         // Only set up if we're actively dragging
         if (!isDragging) return;
-        
+
         // Capture phase handler for document touchmove
         const handleDocumentTouchMove = (e) => {
             // During active dragging, always prevent default and stop propagation
             e.preventDefault();
             e.stopPropagation();
-            
+
             if (e.touches.length !== 1) return;
-            
+
             const touch = e.touches[0];
             const deltaX = touch.clientX - lastTouchXRef.current;
             lastTouchXRef.current = touch.clientX;
-            
+
             // Get the active marker
             const marker = vfoMarkers[activeMarker];
             if (!marker) return;
-            
+
             // Calculate the scaling factor between screen pixels and canvas pixels
             const rect = canvasRef.current.getBoundingClientRect();
             const scaleFactor = actualWidth / rect.width;
             const scaledDelta = deltaX * scaleFactor;
-            
+
             // Calculate pixels to frequency change
             const freqDelta = (scaledDelta / actualWidth) * freqRange;
-            
+
             // Implement dragging logic based on drag mode
             if (dragMode === 'center') {
                 const newFrequency = marker.frequency + freqDelta;
                 const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
-                
+
                 dispatch(setVFOProperty({
                     vfoNumber: parseInt(activeMarker),
                     updates: {
@@ -787,23 +793,23 @@ const VFOMarkersContainer = ({
                 }));
             }
         };
-        
+
         // Capture phase handler for document touchend and touchcancel
         const handleDocumentTouchEnd = (e) => {
             // During active dragging, always prevent default and stop propagation
             e.preventDefault();
             e.stopPropagation();
-            
+
             setIsDragging(false);
             setActiveMarker(null);
             setDragMode(null);
         };
-        
+
         // Add event listeners with capture: true to intercept events before they reach other elements
         document.addEventListener('touchmove', handleDocumentTouchMove, { capture: true, passive: false });
         document.addEventListener('touchend', handleDocumentTouchEnd, { capture: true, passive: false });
         document.addEventListener('touchcancel', handleDocumentTouchEnd, { capture: true, passive: false });
-        
+
         return () => {
             // Clean up listeners when effect is cleaned up
             document.removeEventListener('touchmove', handleDocumentTouchMove, { capture: true, passive: false });
@@ -812,7 +818,7 @@ const VFOMarkersContainer = ({
         };
     }, [isDragging, activeMarker, dragMode, vfoMarkers, lastTouchXRef, actualWidth, freqRange, startFreq, endFreq, dispatch]);
 
-    // First, let's add a click handler to handle selection
+    // Updated click handler to use setSelectedVFO action
     const handleClick = (e) => {
         // Skip if we're dragging
         if (isDragging) return;
@@ -824,21 +830,12 @@ const VFOMarkersContainer = ({
         const { key } = getHoverElement(x, y);
 
         if (key) {
-            // Update all VFOs, setting selected to false for all except the clicked one
-            Object.keys(vfoMarkers).forEach(markerIdx => {
-                if (vfoMarkers[markerIdx].active) {
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(markerIdx),
-                        updates: {
-                            selected: markerIdx === key
-                        }
-                    }));
-                }
-            });
+            // Dont update, we do that on mousedown
+            //dispatch(setSelectedVFO(parseInt(key)));
         }
     };
 
-// Handle tap/click on mobile devices
+    // Updated tap handler for mobile devices
     const handleTap = (e) => {
         // Skip if we're dragging
         if (isDragging) return;
@@ -853,24 +850,14 @@ const VFOMarkersContainer = ({
         const { key } = getHoverElement(x, y);
 
         if (key) {
-            // Update all VFOs, setting selected to false for all except the tapped one
-            Object.keys(vfoMarkers).forEach(markerIdx => {
-                if (vfoMarkers[markerIdx].active) {
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(markerIdx),
-                        updates: {
-                            selected: markerIdx === key
-                        }
-                    }));
-                }
-            });
+            // Update the selected VFO in Redux store
+            dispatch(setSelectedVFO(parseInt(key)));
 
             // Prevent default to stop other handlers
             e.preventDefault();
             e.stopPropagation();
         }
     };
-
 
     // Double click to remove a marker
     const handleDoubleClick = (e) => {
@@ -887,6 +874,11 @@ const VFOMarkersContainer = ({
                     active: false,
                 }
             }));
+
+            // If we're deactivating the currently selected VFO, clear the selection
+            if (selectedVFO === parseInt(key)) {
+                dispatch(setSelectedVFO(null));
+            }
         }
     };
 
@@ -922,6 +914,11 @@ const VFOMarkersContainer = ({
                         active: false,
                     }
                 }));
+
+                // If we're deactivating the currently selected VFO, clear the selection
+                if (selectedVFO === parseInt(key)) {
+                    dispatch(setSelectedVFO(null));
+                }
             }
         } else {
             // Single tap

@@ -723,6 +723,9 @@ const MainWaterfallDisplay = React.memo(() => {
                         </IconButton>
 
                         <IconButton
+                            sx={{
+                                borderRadius: 0,
+                            }}
                             onClick={() => autoScaleDbRange()}
                             size="small"
                             color="primary"
@@ -732,6 +735,9 @@ const MainWaterfallDisplay = React.memo(() => {
                         </IconButton>
 
                         <IconButton
+                            sx={{
+                                borderRadius: 0,
+                            }}
                             onClick={toggleFullscreen}
                             color="primary"
                             title="Toggle fullscreen"
@@ -741,6 +747,7 @@ const MainWaterfallDisplay = React.memo(() => {
 
                         <IconButton
                             sx={{
+                                borderRadius: 0,
                                 width: 40,
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
@@ -779,6 +786,7 @@ const MainWaterfallDisplay = React.memo(() => {
 
                         <IconButton
                             sx={{
+                                borderRadius: 0,
                                 width: 40,
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
@@ -817,6 +825,7 @@ const MainWaterfallDisplay = React.memo(() => {
 
                         <IconButton
                             sx={{
+                                borderRadius: 0,
                                 width: 40,
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",
@@ -855,6 +864,7 @@ const MainWaterfallDisplay = React.memo(() => {
 
                         <IconButton
                             sx={{
+                                borderRadius: 0,
                                 width: 40,
                                 fontSize: '1rem',
                                 fontFamily: "Monospace",

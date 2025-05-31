@@ -114,6 +114,7 @@ const initialState = {
         4: {active: false, name: "VFO4", bandwidth: 20000, frequency: null, color: null, mode: 'fm', 'selected': false,},
     },
     maxVFOMarkers: 4,
+    selectedVFO: 1,
 };
 
 // Add these new reducers to your createSlice
@@ -279,6 +280,9 @@ export const waterfallSlice = createSlice({
                 });
             }
         },
+        setSelectedVFO(state, action) {
+            state.selectedVFO = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -354,6 +358,7 @@ export const {
     disableVFO2,
     disableVFO3,
     disableVFO4,
+    setSelectedVFO,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;
