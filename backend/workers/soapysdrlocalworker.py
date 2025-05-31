@@ -264,6 +264,7 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                         'timestamp': time.time()
                     })
 
+
             try:
                 # Create a buffer for the samples - read directly the number of samples we need
                 samples_buffer = np.zeros(num_samples, dtype=np.complex64)
@@ -279,16 +280,26 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                     samples_remaining = num_samples - buffer_position
 
                     # Read samples into the appropriate part of our buffer
-                    sr = sdr.readStream(rx_stream, [samples_buffer[buffer_position:]], samples_remaining,
-                                        timeoutUs=1000000)
+                    sr = sdr.readStream(rx_stream, [samples_buffer[buffer_position:]], samples_remaining, timeoutUs=1000000)
 
                     if sr.ret > 0:
                         # We got samples - add to our position
                         samples_read = sr.ret
                         buffer_position += samples_read
                         logger.debug(f"Read {samples_read} samples, accumulated {buffer_position}/{num_samples}")
+                    elif sr.ret == -4:  # SOAPY_SDR_OVERFLOW
+                        # Overflow error - internal buffers have filled
+                        logger.warning("Buffer overflow detected, some samples may have been lost")
+                        # Short sleep to allow buffers to clear
+                        time.sleep(0.1)
                     else:
-                        # Error or timeout
+                        # Other error codes:
+                        # SOAPY_SDR_TIMEOUT = -1
+                        # SOAPY_SDR_STREAM_ERROR = -2
+                        # SOAPY_SDR_CORRUPTION = -3
+                        # SOAPY_SDR_NOT_SUPPORTED = -5
+                        # SOAPY_SDR_TIME_ERROR = -6
+                        # SOAPY_SDR_UNDERFLOW = -7
                         logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
                         time.sleep(0.1)
 
@@ -296,8 +307,7 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
 
                 # Check if we have enough samples for processing
                 if buffer_position < num_samples:
-                    logger.warning(
-                        f"Could not get enough samples after {attempts} attempts: {buffer_position}/{num_samples}")
+                    logger.warning(f"Could not get enough samples after {attempts} attempts: {buffer_position}/{num_samples}")
                     time.sleep(0.1)
                     continue
 
