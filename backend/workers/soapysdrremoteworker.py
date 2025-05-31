@@ -27,10 +27,10 @@ from .common import window_functions
 
 
 # Configure logging for the worker process
-logger = logging.getLogger('soapysdr-worker')
+logger = logging.getLogger('soapysdr-remote')
 
 
-def soapysdr_worker_process(config_queue, data_queue, stop_event):
+def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
     """
     Worker process for SoapySDR operations.
 
@@ -52,7 +52,7 @@ def soapysdr_worker_process(config_queue, data_queue, stop_event):
     mtu = 0
     config = {}
 
-    logger.info(f"SoapySDR worker process started for SDR {sdr_id} for client {client_id}")
+    logger.info(f"Remote SoapySDR worker process started for SDR {sdr_id} for client {client_id}")
 
     try:
         # Wait for initial configuration

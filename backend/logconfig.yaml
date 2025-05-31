@@ -119,7 +119,13 @@ loggers:
       - default
     propagate: no
 
-  soapysdr-worker:
+  soapysdr-remote:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  soapysdr-local:
     level: INFO
     handlers:
       - default

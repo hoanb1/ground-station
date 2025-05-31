@@ -19,7 +19,8 @@ import asyncio
 import logging
 import signal
 from workers.rtlsdrworker import rtlsdr_worker_process
-from workers.soapysdrworker import soapysdr_worker_process
+from workers.soapysdrremoteworker import soapysdr_remote_worker_process
+from workers.soapysdrlocalworker import soapysdr_local_worker_process
 
 
 def generate_room_name(client_id1, client_id2):
@@ -168,13 +169,13 @@ class SDRProcessManager:
             connection_type = "soapysdrremote"
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
-            worker_process = soapysdr_worker_process
+            worker_process = soapysdr_remote_worker_process
 
         elif sdr_device['type'] == 'soapysdrlocal':
             connection_type = "soapysdrlocal"
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
-            worker_process = soapysdr_worker_process
+            worker_process = soapysdr_local_worker_process
 
         # Check if a process for this device already exists
         if sdr_id in self.processes and self.processes[sdr_id]['process'].is_alive():
