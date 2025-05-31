@@ -25,7 +25,6 @@ import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
 from .common import window_functions
 
-
 # Configure logging for the worker process
 logger = logging.getLogger('soapysdr-local')
 
@@ -103,20 +102,21 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                             usable_rates.append(rate)
                             break
 
-            logger.debug(f"Usable sample rates: {[rate/1e6 for rate in usable_rates]} MHz")
+            logger.debug(f"Usable sample rates: {[rate / 1e6 for rate in usable_rates]} MHz")
 
             # Now choose a sample rate that is supported
             sample_rate = config.get('sample_rate', 2.048e6)
             if usable_rates and sample_rate not in usable_rates:
                 # Find the closest supported rate
                 closest_rate = min(usable_rates, key=lambda x: abs(x - sample_rate))
-                logger.info(f"Requested sample rate {sample_rate/1e6} MHz is not supported. Using closest rate: {closest_rate/1e6} MHz")
+                logger.info(
+                    f"Requested sample rate {sample_rate / 1e6} MHz is not supported. Using closest rate: {closest_rate / 1e6} MHz")
                 sample_rate = closest_rate
 
             # Set sample rate
             sdr.setSampleRate(SOAPY_SDR_RX, channel, sample_rate)
             actual_sample_rate = sdr.getSampleRate(SOAPY_SDR_RX, channel)
-            logger.debug(f"Sample rate set to {actual_sample_rate/1e6} MHz")
+            logger.debug(f"Sample rate set to {actual_sample_rate / 1e6} MHz")
 
             # Number of samples required for each iteration
             num_samples = calculate_samples_per_scan(actual_sample_rate)
@@ -138,12 +138,12 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
         # Set sample rate
         sdr.setSampleRate(SOAPY_SDR_RX, channel, sample_rate)
         actual_sample_rate = sdr.getSampleRate(SOAPY_SDR_RX, channel)
-        logger.info(f"Sample rate set to {actual_sample_rate/1e6} MHz")
+        logger.info(f"Sample rate set to {actual_sample_rate / 1e6} MHz")
 
         # Set center frequency
         sdr.setFrequency(SOAPY_SDR_RX, channel, center_freq + offset_freq)
         actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
-        logger.info(f"Center frequency set to {actual_freq/1e6} MHz")
+        logger.info(f"Center frequency set to {actual_freq / 1e6} MHz")
 
         # Set gain
         if config.get('soapy_agc', False):
@@ -268,78 +268,92 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                 # Create a buffer for the samples - read directly the number of samples we need
                 samples_buffer = np.zeros(num_samples, dtype=np.complex64)
 
-                # Read samples directly into our buffer in a single call
-                sr = sdr.readStream(rx_stream, [samples_buffer], len(samples_buffer), timeoutUs=1000000)
+                # Track how many samples we've accumulated so far
+                buffer_position = 0
+                max_attempts = 10  # Limit the number of attempts to prevent infinite loops
+                attempts = 0
 
-                if sr.ret > 0:
-                    # We got samples - check how many we actually received
-                    samples_read = sr.ret
-                    logger.debug(f"Read {samples_read}/{num_samples} samples")
+                # Continue reading until we have enough samples or exceed max attempts
+                while buffer_position < num_samples and attempts < max_attempts and not stop_event.is_set():
+                    # Calculate how many more samples we need
+                    samples_remaining = num_samples - buffer_position
 
-                    # Check if we have enough samples for processing
-                    if samples_read < num_samples:
-                        logger.warning(f"Not enough samples received: {samples_read}/{num_samples}")
+                    # Read samples into the appropriate part of our buffer
+                    sr = sdr.readStream(rx_stream, [samples_buffer[buffer_position:]], samples_remaining,
+                                        timeoutUs=1000000)
+
+                    if sr.ret > 0:
+                        # We got samples - add to our position
+                        samples_read = sr.ret
+                        buffer_position += samples_read
+                        logger.debug(f"Read {samples_read} samples, accumulated {buffer_position}/{num_samples}")
+                    else:
+                        # Error or timeout
+                        logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
                         time.sleep(0.1)
-                        continue
 
-                    # Use the samples we've read
-                    samples = samples_buffer[:samples_read]
+                    attempts += 1
 
-                    # Remove DC offset spike
-                    samples = remove_dc_offset(samples)
-
-                    # Calculate the number of samples needed for the FFT
-                    actual_fft_size = fft_size * 1
-
-                    # Apply window function
-                    window_func = window_functions.get(fft_window.lower(), np.hanning)
-                    window = window_func(actual_fft_size)
-
-                    # Calculate FFT with 50% overlap
-                    num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
-                    if num_segments <= 0:
-                        logger.warning(f"Not enough samples for FFT with overlap: {len(samples)} < {actual_fft_size}")
-                        continue
-
-                    fft_result = np.zeros(actual_fft_size)
-
-                    for i in range(num_segments):
-                        start_idx = i * (actual_fft_size // 2)
-                        segment = samples[start_idx:start_idx + actual_fft_size]
-
-                        windowed_segment = segment * window
-
-                        # Perform FFT
-                        fft_segment = np.fft.fft(windowed_segment)
-
-                        # Shift DC to center
-                        fft_segment = np.fft.fftshift(fft_segment)
-
-                        # Proper power normalization
-                        N = len(fft_segment)
-                        window_correction = 1.0
-                        power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
-                        fft_result += power
-
-                    # Average the segments
-                    if num_segments > 0:
-                        fft_result /= num_segments
-
-                    # Convert to Float32 for efficiency in transmission
-                    fft_result = fft_result.astype(np.float32)
-
-                    # Send the result back to the main process
-                    data_queue.put({
-                        'type': 'fft_data',
-                        'client_id': client_id,
-                        'data': fft_result.tobytes(),
-                        'timestamp': time.time()
-                    })
-
-                else:
-                    # Error or timeout
-                    logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
+                # Check if we have enough samples for processing
+                if buffer_position < num_samples:
+                    logger.warning(
+                        f"Could not get enough samples after {attempts} attempts: {buffer_position}/{num_samples}")
                     time.sleep(0.1)
+                    continue
+
+                # We have enough samples to process
+                samples = samples_buffer[:buffer_position]
+
+                # Remove DC offset spike
+                samples = remove_dc_offset(samples)
+
+                # Calculate the number of samples needed for the FFT
+                actual_fft_size = fft_size * 1
+
+                # Apply window function
+                window_func = window_functions.get(fft_window.lower(), np.hanning)
+                window = window_func(actual_fft_size)
+
+                # Calculate FFT with 50% overlap
+                num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
+                if num_segments <= 0:
+                    logger.warning(f"Not enough samples for FFT with overlap: {len(samples)} < {actual_fft_size}")
+                    continue
+
+                fft_result = np.zeros(actual_fft_size)
+
+                for i in range(num_segments):
+                    start_idx = i * (actual_fft_size // 2)
+                    segment = samples[start_idx:start_idx + actual_fft_size]
+
+                    windowed_segment = segment * window
+
+                    # Perform FFT
+                    fft_segment = np.fft.fft(windowed_segment)
+
+                    # Shift DC to center
+                    fft_segment = np.fft.fftshift(fft_segment)
+
+                    # Proper power normalization
+                    N = len(fft_segment)
+                    window_correction = 1.0
+                    power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
+                    fft_result += power
+
+                # Average the segments
+                if num_segments > 0:
+                    fft_result /= num_segments
+
+                # Convert to Float32 for efficiency in transmission
+                fft_result = fft_result.astype(np.float32)
+
+                # Send the result back to the main process
+                data_queue.put({
+                    'type': 'fft_data',
+                    'client_id': client_id,
+                    'data': fft_result.tobytes(),
+                    'timestamp': time.time()
+                })
 
                 # Short sleep to prevent CPU hogging
                 time.sleep(0.01)
@@ -427,8 +441,8 @@ def calculate_samples_per_scan(sample_rate):
 
     samples = max(min(power_of_2, max_samples), min_samples)
 
-    logger.info(f"Sample rate: {sample_rate/1e6:.3f} MHz, samples: {samples}, "
-                f"expected FFT duration: {samples/sample_rate:.3f} sec")
+    logger.info(f"Sample rate: {sample_rate / 1e6:.3f} MHz, samples: {samples}, "
+                f"expected FFT duration: {samples / sample_rate:.3f} sec")
 
     return samples
 
@@ -442,7 +456,7 @@ def remove_dc_offset(samples):
     mean_q = np.mean(np.imag(samples))
 
     # Subtract the mean
-    samples_no_dc = samples - (mean_i + 1j*mean_q)
+    samples_no_dc = samples - (mean_i + 1j * mean_q)
 
     return samples_no_dc
 
