@@ -209,17 +209,20 @@ const VFOMarkersContainer = ({
             // Draw edge handles based on mode
             ctx.fillStyle = `${marker.color}${lineOpacity}`;
 
+            // Change the Y position (currently at 20) to a lower value
+            const edgeHandleYPosition = 30; // Changed from 20 to 30
+
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
-                // Right edge handle
+                // Right edge handle - moved lower
                 ctx.beginPath();
-                ctx.arc(rightEdgeX, 20, isSelected ? 5 : 4, 0, 2 * Math.PI);
+                ctx.arc(rightEdgeX, edgeHandleYPosition, isSelected ? 5 : 4, 0, 2 * Math.PI);
                 ctx.fill();
             }
 
             if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
-                // Left edge handle
+                // Left edge handle - moved lower
                 ctx.beginPath();
-                ctx.arc(leftEdgeX, 20, isSelected ? 5 : 4, 0, 2 * Math.PI);
+                ctx.arc(leftEdgeX, edgeHandleYPosition, isSelected ? 5 : 4, 0, 2 * Math.PI);
                 ctx.fill();
             }
 
@@ -286,6 +289,9 @@ const VFOMarkersContainer = ({
         const edgeYRange = isTouchDevice ? 30 : 10;
         const labelYRange = isTouchDevice ? 25 : 20; // Height range for label detection
 
+        // Update edge handle Y position to match the drawing position
+        const edgeHandleYPosition = 30; // Changed from 20 to 30
+
         // Function to check if a single VFO has a hit
         const checkVFOHit = (key) => {
             if (!vfoMarkers[key].active) return null;
@@ -339,20 +345,25 @@ const VFOMarkersContainer = ({
                 return { key, element: 'center' };
             }
 
-            // Check edge handles based on mode
+            // Check edge handles based on mode - update Y range for edge handles
+            // Use the new position (edgeHandleYPosition) with an appropriate range
+            const edgeYMin = edgeHandleYPosition - 10;
+            const edgeYMax = edgeHandleYPosition + 10;
+
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
-                // Check right edge (with enlarged touch area)
-                if (y >= 10 && y <= (10 + edgeYRange) && Math.abs(canvasX - rightEdgeX) <= edgeHandleWidth) {
+                // Check right edge with updated Y position
+                if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - rightEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'rightEdge' };
                 }
             }
 
             if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
-                // Check left edge (with enlarged touch area)
-                if (y >= 10 && y <= (10 + edgeYRange) && Math.abs(canvasX - leftEdgeX) <= edgeHandleWidth) {
+                // Check left edge with updated Y position
+                if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - leftEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'leftEdge' };
                 }
             }
+
             return null;
         };
 
