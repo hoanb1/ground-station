@@ -26,7 +26,7 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
 from .common import window_functions
 
 # Configure logging for the worker process
-logger = logging.getLogger('soapysdr-local')
+logger = logging.getLogger('soapysdr-local-worker')
 
 
 def soapysdr_local_worker_process(config_queue, data_queue, stop_event):

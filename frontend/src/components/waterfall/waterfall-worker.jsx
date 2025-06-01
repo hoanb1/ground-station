@@ -252,9 +252,7 @@ function renderWaterfall() {
 
     // Draw bandscope with throttling
     //throttledDrawBandscope();
-    
-    // After drawing the waterfall, draw VFO markers
-    //drawVFOMarkers();
+
 }
 
 function renderFFTRow(fftData) {
@@ -301,10 +299,6 @@ function drawBandscope() {
     if (!bandscopeCanvas || fftData.length === 0) {
         return;
     }
-
-    // Enable image smoothing (anti-aliasing)
-    bandscopeCtx.imageSmoothingEnabled = true;
-    bandscopeCtx.imageSmoothingQuality = 'high'; // Options: 'low', 'medium', 'high'
 
     // Enable image smoothing (anti-aliasing)
     dBAxisCtx.imageSmoothingEnabled = true;

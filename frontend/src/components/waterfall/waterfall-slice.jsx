@@ -81,7 +81,7 @@ const initialState = {
     waterFallCanvasWidth: isMobile? 4096: 8191,
     waterFallCanvasHeight: 800,
     waterFallVisualWidth: isMobile? 4096: 8191,
-    bandScopeHeight: 110,
+    bandScopeHeight: 125,
     frequencyScaleHeight: 20,
     waterFallScaleX: 1,
     waterFallPositionX: 0,

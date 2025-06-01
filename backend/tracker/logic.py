@@ -278,7 +278,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     previous_rotator_state = None
     rotator_controller = None
     rig_controller = None
-    current_rotator_id = None
+    current_rotator_id = "none"
     current_transmitter_id = "none"
     rotator_data = {
         'az': 0,
@@ -682,11 +682,11 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 tracker = tracking_state_reply['data']['value']
                 current_norad_id = tracker.get('norad_id', None)
                 current_group_id = tracker.get('group_id', None)
-                current_rotator_id = tracker.get('rotator_id', None)
-                current_rig_id = tracker.get('rig_id', None)
-                current_rotator_state = tracker.get('rotator_state')
-                current_rig_state = tracker.get('rig_state')
+                current_rotator_id = tracker.get('rotator_id', "none")
+                current_rig_id = tracker.get('rig_id', "none")
                 current_transmitter_id = tracker.get('transmitter_id', "none")
+                current_rotator_state = tracker.get('rotator_state', "disconnected")
+                current_rig_state = tracker.get('rig_state', "disconnected")
 
                 # check norad_id and detect change
                 await norad_id_change_tracker.update_state(current_norad_id)

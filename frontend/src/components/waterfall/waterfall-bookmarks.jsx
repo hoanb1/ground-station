@@ -299,7 +299,7 @@ const BookmarkCanvas = ({
                     // Calculate label vertical position based on index
                     // Use visibleBookmarkIndex to ensure proper alternating heights
                     const labelOffset = (visibleBookmarkIndex % 2) * verticalSpacing;
-                    const labelY = baseY + labelOffset + 10;
+                    const labelY = baseY + labelOffset + 30;
 
                     ctx.font = '12px Arial';
                     ctx.fillStyle = bookmark.color || '#ffff00';
@@ -339,10 +339,10 @@ const BookmarkCanvas = ({
                     ctx.textAlign = 'center';
 
                     // Position the label just above the arrow
-                    const dopplerLabelY = 25 - padding - textHeight;
+                    const dopplerLabelY = 45 - padding - textHeight;
 
                     // Add semi-transparent background
-                    const textMetrics = `${ctx.measureText(bookmark.label)}`;
+                    const textMetrics = ctx.measureText(bookmark.label);
                     const textWidth = textMetrics.width;
                     const radius = 3;
 
@@ -354,7 +354,7 @@ const BookmarkCanvas = ({
                         textHeight + padding * 2,
                         radius
                     );
-                    ctx.fillStyle = 'rgba(0, 0, 0, 0.65)';
+                    ctx.fillStyle = 'rgba(51,51,51,0.7)';
                     ctx.fill();
 
                     // Draw the text
