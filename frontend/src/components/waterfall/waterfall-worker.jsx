@@ -571,108 +571,6 @@ const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
 
     // Apply the selected color map
     switch (mapName) {
-        case 'viridis':
-            const viridisRGB = {
-                r: Math.floor(0 + 230 * Math.pow(normalizedValue, 2.0)),
-                g: Math.floor(normalizedValue < 0.5 ? 5 + 215 * Math.pow(normalizedValue * 2, 1.4) : 220 - 160 * Math.pow((normalizedValue - 0.5) * 2, 0.8)),
-                b: Math.floor(normalizedValue < 0.5 ? 20 + 210 * Math.pow(normalizedValue * 2, 1.2) : 230 - 230 * Math.pow((normalizedValue - 0.5) * 2, 0.7))
-            };
-            colorCache.set(cacheKey, viridisRGB);
-            return viridisRGB;
-        case 'plasma':
-            const plasmaRGB = {
-                r: Math.floor(20 + 230 * normalizedValue),
-                g: Math.floor(normalizedValue < 0.7 ? 20 + 180 * normalizedValue / 0.7 : 200 - 150 * (normalizedValue - 0.7) / 0.3),
-                b: Math.floor(normalizedValue < 0.5 ? 120 + 80 * normalizedValue / 0.5 : 200 - 200 * (normalizedValue - 0.5) / 0.5)
-            };
-            colorCache.set(cacheKey, plasmaRGB);
-            return plasmaRGB;
-        case 'inferno':
-            const infernoRGB = {
-                r: Math.floor(normalizedValue < 0.5 ? 20 + 200 * normalizedValue / 0.5 : 220 + 35 * (normalizedValue - 0.5) / 0.5),
-                g: Math.floor(normalizedValue < 0.7 ? 10 + 120 * normalizedValue / 0.7 : 130 - 30 * (normalizedValue - 0.7) / 0.3),
-                b: Math.floor(normalizedValue < 0.3 ? 40 + 80 * normalizedValue / 0.3 : 120 - 120 * (normalizedValue - 0.3) / 0.7)
-            };
-            colorCache.set(cacheKey, infernoRGB);
-            return infernoRGB;
-        case 'magma':
-            const magmaRGB = {
-                r: Math.floor(normalizedValue < 0.6 ? 30 + 170 * normalizedValue / 0.6 : 200 + 55 * (normalizedValue - 0.6) / 0.4),
-                g: Math.floor(normalizedValue < 0.7 ? 10 + 140 * normalizedValue / 0.7 : 150 + 50 * (normalizedValue - 0.7) / 0.3),
-                b: Math.floor(normalizedValue < 0.4 ? 100 + 70 * normalizedValue / 0.4 : 170 - 70 * (normalizedValue - 0.4) / 0.6)
-            };
-            colorCache.set(cacheKey, magmaRGB);
-            return magmaRGB;
-
-        case 'websdr':
-            // Custom WebSDR colormap with blue -> purple -> magenta -> yellow
-            let websdrRGB;
-            if (normalizedValue < 0.25) {
-                // Dark blue to medium blue for very weak signals
-                const factor = normalizedValue / 0.25;
-                websdrRGB = {
-                    r: 20 + Math.floor(factor * 40),
-                    g: 20 + Math.floor(factor * 50),
-                    b: 80 + Math.floor(factor * 100)
-                };
-            } else if (normalizedValue < 0.5) {
-                // Medium blue to purple transition
-                const factor = (normalizedValue - 0.25) / 0.25;
-                websdrRGB = {
-                    r: 60 + Math.floor(factor * 80),
-                    g: 70 - Math.floor(factor * 20),
-                    b: 180 + Math.floor(factor * 75)
-                };
-            } else if (normalizedValue < 0.7) {
-                // Purple to bright magenta
-                const factor = (normalizedValue - 0.5) / 0.2;
-                websdrRGB = {
-                    r: 140 + Math.floor(factor * 115),
-                    g: 50 + Math.floor(factor * 40),
-                    b: 255 - Math.floor(factor * 50)
-                };
-            } else if (normalizedValue < 0.85) {
-                // Magenta to gold transition
-                const factor = (normalizedValue - 0.7) / 0.15;
-                websdrRGB = {
-                    r: 255,
-                    g: 90 + Math.floor(factor * 165),
-                    b: 205 - Math.floor(factor * 205)
-                };
-            } else {
-                // Gold to bright yellow for strongest signals
-                const factor = (normalizedValue - 0.85) / 0.15;
-                websdrRGB = {
-                    r: 255,
-                    g: 255,
-                    b: Math.floor(factor * 130)
-                };
-            }
-            colorCache.set(cacheKey, websdrRGB);
-            return websdrRGB;
-
-        case 'jet':
-            // Classic jet colormap (blue -> cyan -> green -> yellow -> red)
-            let jetRGB;
-            if (normalizedValue < 0.125) {
-                jetRGB = {r: 0, g: 0, b: Math.floor(normalizedValue * 8 * 255)};
-            } else if (normalizedValue < 0.375) {
-                jetRGB = {r: 0, g: Math.floor((normalizedValue - 0.125) * 4 * 255), b: 255};
-            } else if (normalizedValue < 0.625) {
-                jetRGB = {
-                    r: Math.floor((normalizedValue - 0.375) * 4 * 255),
-                    g: 255,
-                    b: Math.floor(255 - (normalizedValue - 0.375) * 4 * 255)
-                };
-            } else if (normalizedValue < 0.875) {
-                jetRGB = {r: 255, g: Math.floor(255 - (normalizedValue - 0.625) * 4 * 255), b: 0};
-            } else {
-                jetRGB = {r: Math.floor(255 - (normalizedValue - 0.875) * 8 * 255), g: 0, b: 0};
-            }
-
-            colorCache.set(cacheKey, jetRGB);
-            return jetRGB;
-
         case 'cosmic':
             // Custom cosmic colormap with dark purple to yellow gradient based on provided colors
             // #070208 -> #100b56 -> #170d87 -> #7400cd -> #cb5cff -> #f9f9ae
@@ -730,5 +628,110 @@ const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
             const greyRGB = {r: intensity, g: intensity, b: intensity};
             colorCache.set(cacheKey, greyRGB);
             return greyRGB;
+
+        case 'iceberg':
+            // Iceberg palette - Optimized for high contrast with darker low values
+            // Very dark blue -> dark blue -> blue -> cyan -> white
+            let icebergRGB;
+
+            // Apply a curve to make lower values darker
+            // This pushes the very low values closer to black
+            const iceCurvedValue = Math.pow(normalizedValue, 1.5);
+
+            if (iceCurvedValue < 0.25) {
+                // Very dark blue to dark blue
+                const factor = iceCurvedValue / 0.25;
+                icebergRGB = {
+                    r: Math.floor(0 + factor * 20),
+                    g: Math.floor(0 + factor * 30),
+                    b: Math.floor(10 + factor * 70)
+                };
+            } else if (iceCurvedValue < 0.5) {
+                // Dark blue to medium blue
+                const factor = (iceCurvedValue - 0.25) / 0.25;
+                icebergRGB = {
+                    r: Math.floor(20 + factor * 30),
+                    g: Math.floor(30 + factor * 70),
+                    b: Math.floor(80 + factor * 100)
+                };
+            } else if (iceCurvedValue < 0.75) {
+                // Medium blue to cyan
+                const factor = (iceCurvedValue - 0.5) / 0.25;
+                icebergRGB = {
+                    r: Math.floor(50 + factor * 100),
+                    g: Math.floor(100 + factor * 155),
+                    b: Math.floor(180 + factor * 75)
+                };
+            } else {
+                // Cyan to white
+                const factor = (iceCurvedValue - 0.75) / 0.25;
+                icebergRGB = {
+                    r: Math.floor(150 + factor * 105),
+                    g: Math.floor(255),
+                    b: Math.floor(255)
+                };
+            }
+            colorCache.set(cacheKey, icebergRGB);
+            return icebergRGB;
+
+        case 'heat':
+            // Heat palette - Optimized for distinguishing signal levels with darker low end
+            // Black -> deep red -> bright red -> orange -> yellow -> white
+            let heatRGB;
+
+            // Apply a curve to make lower values darker
+            const heatCurvedValue = Math.pow(normalizedValue, 1.5);
+
+            if (heatCurvedValue < 0.15) {
+                // True black to very deep red
+                const factor = heatCurvedValue / 0.15;
+                heatRGB = {
+                    r: Math.floor(0 + factor * 60),
+                    g: Math.floor(0),
+                    b: Math.floor(0)
+                };
+            } else if (heatCurvedValue < 0.35) {
+                // Very deep red to deep red
+                const factor = (heatCurvedValue - 0.15) / 0.2;
+                heatRGB = {
+                    r: Math.floor(60 + factor * 100),
+                    g: Math.floor(0 + factor * 20),
+                    b: Math.floor(0)
+                };
+            } else if (heatCurvedValue < 0.55) {
+                // Deep red to bright red
+                const factor = (heatCurvedValue - 0.35) / 0.2;
+                heatRGB = {
+                    r: Math.floor(160 + factor * 95),
+                    g: Math.floor(20 + factor * 70),
+                    b: Math.floor(0)
+                };
+            } else if (heatCurvedValue < 0.75) {
+                // Bright red to orange
+                const factor = (heatCurvedValue - 0.55) / 0.2;
+                heatRGB = {
+                    r: Math.floor(255),
+                    g: Math.floor(90 + factor * 120),
+                    b: Math.floor(0 + factor * 50)
+                };
+            } else if (heatCurvedValue < 0.9) {
+                // Orange to yellow
+                const factor = (heatCurvedValue - 0.75) / 0.15;
+                heatRGB = {
+                    r: Math.floor(255),
+                    g: Math.floor(210 + factor * 45),
+                    b: Math.floor(50 + factor * 100)
+                };
+            } else {
+                // Yellow to white
+                const factor = (heatCurvedValue - 0.9) / 0.1;
+                heatRGB = {
+                    r: Math.floor(255),
+                    g: Math.floor(255),
+                    b: Math.floor(150 + factor * 105)
+                };
+            }
+            colorCache.set(cacheKey, heatRGB);
+            return heatRGB;
     }
 }

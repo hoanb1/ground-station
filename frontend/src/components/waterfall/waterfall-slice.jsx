@@ -45,12 +45,8 @@ export const getSDRConfigParameters = createAsyncThunk(
 
 const initialState = {
     colorMaps: [
-        'viridis',
-        'plasma',
-        'inferno',
-        'magma',
-        'jet',
-        'websdr',
+        'iceberg',
+        'heat',
         'cosmic',
         'greyscale',
     ],
