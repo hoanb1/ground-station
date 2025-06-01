@@ -104,13 +104,21 @@ const VFOMarkersContainer = ({
         // Clear the canvas
         ctx.clearRect(0, 0, canvas.width, height);
 
-        // Draw each marker
-        Object.keys(vfoMarkers).forEach(markerIdx => {
-            // Skip inactive VFOs
-            if (!vfoMarkers[markerIdx].active) {
-                return;
-            }
+        // Get active VFO keys and sort them so selected VFO is last (drawn on top)
+        const vfoKeys = Object.keys(vfoMarkers).filter(key => vfoMarkers[key].active);
 
+        // Sort keys to put selected VFO at the end (drawn last)
+        const sortedVfoKeys = vfoKeys.sort((a, b) => {
+            // If a is selected, it should come after b (drawn on top)
+            if (parseInt(a) === selectedVFO) return 1;
+            // If b is selected, it should come after a
+            if (parseInt(b) === selectedVFO) return -1;
+            // Otherwise maintain original order
+            return parseInt(a) - parseInt(b);
+        });
+
+        // Draw each marker in sorted order (selected one drawn last)
+        sortedVfoKeys.forEach(markerIdx => {
             const marker = vfoMarkers[markerIdx];
             const bandwidth = marker.bandwidth || 3000;
             const mode = (marker.mode || 'USB').toUpperCase();
@@ -276,11 +284,12 @@ const VFOMarkersContainer = ({
         const centerHandleWidth = isTouchDevice ? 20 : 10;
         const edgeHandleWidth = isTouchDevice ? 12 : 6;
         const edgeYRange = isTouchDevice ? 30 : 10;
+        const labelYRange = isTouchDevice ? 25 : 20; // Height range for label detection
 
-        // Check all markers
-        for (const key of Object.keys(vfoMarkers)) {
-            if (!vfoMarkers[key].active) continue;
-            if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) continue;
+        // Function to check if a single VFO has a hit
+        const checkVFOHit = (key) => {
+            if (!vfoMarkers[key].active) return null;
+            if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return null;
 
             const marker = vfoMarkers[key];
             const bandwidth = marker.bandwidth || 3000;
@@ -306,6 +315,25 @@ const VFOMarkersContainer = ({
             leftEdgeX = Math.max(0, leftEdgeX);
             rightEdgeX = Math.min(actualWidth, rightEdgeX);
 
+            // Check label (y between 0-20px with enlarged touch area)
+            if (y >= 0 && y <= labelYRange) {
+                // Calculate label width (approximated based on drawing code)
+                const modeText = ` [${mode}]`;
+                const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
+                const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
+
+                // Approximate the label width calculation similar to what's done in the render
+                const ctx = canvasRef.current.getContext('2d');
+                ctx.font = '12px Monospace';
+                const textMetrics = ctx.measureText(labelText);
+                const labelWidth = textMetrics.width + 10; // Add padding
+
+                // Check if mouse is over label area
+                if (Math.abs(canvasX - centerX) <= labelWidth / 2) {
+                    return { key, element: 'center' }; // Treat label drag the same as center handle
+                }
+            }
+
             // Check center handle (y between 40-60px with enlarged touch area)
             if (y >= 30 && y <= 70 && Math.abs(canvasX - centerX) <= centerHandleWidth) {
                 return { key, element: 'center' };
@@ -325,10 +353,33 @@ const VFOMarkersContainer = ({
                     return { key, element: 'leftEdge' };
                 }
             }
+            return null;
+        };
+
+        // First check if the selected VFO has a hit
+        if (selectedVFO !== null) {
+            const selectedKey = selectedVFO.toString();
+            const hitResult = checkVFOHit(selectedKey);
+            if (hitResult) {
+                return { key: selectedKey, element: hitResult.element };
+            }
+        }
+
+        // Get all active VFO keys and sort them (non-selected VFOs)
+        const vfoKeys = Object.keys(vfoMarkers).filter(key =>
+            vfoMarkers[key].active && parseInt(key) !== selectedVFO
+        );
+
+        // Check each VFO in order
+        for (const key of vfoKeys) {
+            const hitResult = checkVFOHit(key);
+            if (hitResult) {
+                return { key, element: hitResult.element };
+            }
         }
 
         return { key: null, element: null };
-    }, [vfoMarkers, actualWidth, startFreq, endFreq, freqRange]);
+    }, [vfoMarkers, actualWidth, startFreq, endFreq, freqRange, selectedVFO, formatFrequency]);
 
     // Handle mouse move to update cursor
     const handleMouseMove = useCallback((e) => {
