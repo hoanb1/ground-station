@@ -648,273 +648,285 @@ const MainWaterfallDisplay = React.memo(() => {
                     paddingBottom: '0px',
                     borderRadius: 0,
                 }}>
-                    <ButtonGroup variant="contained" size="small" sx={{
-                        boxShadow: 'none',
+                    <Box sx={{
+                        width: '100%',
+                        overflowX: 'auto',
+                        msOverflowStyle: 'none',
+                        scrollbarWidth: 'none',
+                        '&::-webkit-scrollbar': { display: 'none' }
                     }}>
-                        <IconButton
-                            loading={startStreamingLoading}
-                            disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}
-                            color="primary"
-                            onClick={startStreaming}
-                            title="Start streaming"
+                        <Stack
+                            direction="row"
+                            spacing={0}
                             sx={{
-                                borderRadius: 0,
+                                minWidth: 'min-content',
+                                flexWrap: 'nowrap'
                             }}
                         >
-                            <PlayArrowIcon/>
-                        </IconButton>
+                            <IconButton
+                                loading={startStreamingLoading}
+                                disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}
+                                color="primary"
+                                onClick={startStreaming}
+                                title="Start streaming"
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                            >
+                                <PlayArrowIcon/>
+                            </IconButton>
 
-                        <IconButton
-                            disabled={!isStreaming}
-                            color="error"
-                            onClick={stopStreaming}
-                            title="Stop streaming"
-                            sx={{
-                                borderRadius: 0,
-                            }}
-                        >
-                            <StopIcon/>
-                        </IconButton>
+                            <IconButton
+                                disabled={!isStreaming}
+                                color="error"
+                                onClick={stopStreaming}
+                                title="Stop streaming"
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                            >
+                                <StopIcon/>
+                            </IconButton>
 
-                        <IconButton
-                            color={showLeftSideWaterFallAccessories ? "warning" : "default"}
-                            onClick={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
-                            size="small"
-                            title="Toggle left side panel"
-                            sx={{
-                                borderRadius: 0,
-                                backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
-                                }
-                            }}
-                        >
-                            <AlignHorizontalLeftIcon/>
-                        </IconButton>
+                            <IconButton
+                                color={showLeftSideWaterFallAccessories ? "warning" : "default"}
+                                onClick={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
+                                size="small"
+                                title="Toggle left side panel"
+                                sx={{
+                                    borderRadius: 0,
+                                    backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                                    }
+                                }}
+                            >
+                                <AlignHorizontalLeftIcon/>
+                            </IconButton>
 
-                        <IconButton
-                            color={showRightSideWaterFallAccessories ? "warning" : "default"}
-                            onClick={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
-                            size="small"
-                            title="Toggle right side panel"
-                            sx={{
-                                borderRadius: 0,
-                                backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
-                                }
-                            }}
-                        >
-                            <AlignHorizontalRightIcon/>
-                        </IconButton>
-                        <IconButton
-                            onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
-                            size="small"
-                            color={autoDBRange ? "warning" : "primary"}
-                            title="Toggle automatic dB range"
-                            sx={{
-                                borderRadius: 0,
-                                backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.2)' : 'rgba(25, 118, 210, 0.1)'
-                                }
-                            }}
-                        >
-                            <AutoGraphIcon/>
-                        </IconButton>
+                            <IconButton
+                                color={showRightSideWaterFallAccessories ? "warning" : "default"}
+                                onClick={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
+                                size="small"
+                                title="Toggle right side panel"
+                                sx={{
+                                    borderRadius: 0,
+                                    backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                                    }
+                                }}
+                            >
+                                <AlignHorizontalRightIcon/>
+                            </IconButton>
+                            <IconButton
+                                onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
+                                size="small"
+                                color={autoDBRange ? "warning" : "primary"}
+                                title="Toggle automatic dB range"
+                                sx={{
+                                    borderRadius: 0,
+                                    backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.2)' : 'rgba(25, 118, 210, 0.1)'
+                                    }
+                                }}
+                            >
+                                <AutoGraphIcon/>
+                            </IconButton>
 
-                        <IconButton
-                            sx={{
-                                borderRadius: 0,
-                            }}
-                            onClick={() => autoScaleDbRange()}
-                            size="small"
-                            color="primary"
-                            title="Auto scale dB range once"
-                        >
-                            <HeightIcon/>
-                        </IconButton>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={() => autoScaleDbRange()}
+                                size="small"
+                                color="primary"
+                                title="Auto scale dB range once"
+                            >
+                                <HeightIcon/>
+                            </IconButton>
 
-                        <IconButton
-                            sx={{
-                                borderRadius: 0,
-                            }}
-                            onClick={toggleFullscreen}
-                            color="primary"
-                            title="Toggle fullscreen"
-                        >
-                            {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
-                        </IconButton>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={toggleFullscreen}
+                                color="primary"
+                                title="Toggle fullscreen"
+                            >
+                                {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
+                            </IconButton>
 
-                        <IconButton
-                            sx={{
-                                borderRadius: 0,
-                                width: 40,
-                                fontSize: '1.25rem',
-                                fontFamily: "Monospace",
-                                fontWeight: "bold",
-                                color: vfoColors[0],
-                                backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.1)` : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.2)` : 'rgba(0,0,0,0.1)'
-                                },
-                                '& .MuiTouchRipple-root': {
-                                    border: vfoMarkers[1]['active'] ? '1px solid': 'none',
-                                    bolderColor: '#ff9393',
-                                },
-                            }}
-                            onClick={() => {
-                                if (vfoMarkers[1]['active']) {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 1, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[0],
-                                            active: false,
-                                        }
-                                    }));
-                                } else {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 1, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[0],
-                                            active: true,
-                                        }
-                                    }));
-                                }
-                            }}
-                            color={vfoMarkers[1]['active'] ? "warning" : "primary"}
-                            title="Toggle VFO 1"
-                        >
-                            1
-                        </IconButton>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                    width: 40,
+                                    fontSize: '1.25rem',
+                                    fontFamily: "Monospace",
+                                    fontWeight: "bold",
+                                    color: vfoColors[0],
+                                    backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.1)` : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.2)` : 'rgba(0,0,0,0.1)'
+                                    },
+                                    '& .MuiTouchRipple-root': {
+                                        border: vfoMarkers[1]['active'] ? '1px solid': 'none',
+                                        bolderColor: '#ff9393',
+                                    },
+                                }}
+                                onClick={() => {
+                                    if (vfoMarkers[1]['active']) {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 1, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[0],
+                                                active: false,
+                                            }
+                                        }));
+                                    } else {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 1, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[0],
+                                                active: true,
+                                            }
+                                        }));
+                                    }
+                                }}
+                                color={vfoMarkers[1]['active'] ? "warning" : "primary"}
+                                title="Toggle VFO 1"
+                            >
+                                1
+                            </IconButton>
 
-                        <IconButton
-                            sx={{
-                                borderRadius: 0,
-                                width: 40,
-                                fontSize: '1.25rem',
-                                fontFamily: "Monospace",
-                                fontWeight: "bold",
-                                color: vfoColors[1],
-                                backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.1)' : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
-                                },
-                                '& .MuiTouchRipple-root': {
-                                    border: vfoMarkers[2]['active'] ? '1px solid': 'none',
-                                    bolderColor: '#ff9393',
-                                },
-                            }}
-                            onClick={() => {
-                                if (vfoMarkers[2]['active']) {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 2, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[1],
-                                            active: false,
-                                        }
-                                    }));
-                                } else {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 2, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[1],
-                                            active: true,
-                                        }
-                                    }));
-                                }
-                            }}
-                            color={vfoMarkers[2]['active'] ? "warning" : "primary"}
-                            title="Toggle VFO 2"
-                        >
-                            2
-                        </IconButton>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                    width: 40,
+                                    fontSize: '1.25rem',
+                                    fontFamily: "Monospace",
+                                    fontWeight: "bold",
+                                    color: vfoColors[1],
+                                    backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
+                                    },
+                                    '& .MuiTouchRipple-root': {
+                                        border: vfoMarkers[2]['active'] ? '1px solid': 'none',
+                                        bolderColor: '#ff9393',
+                                    },
+                                }}
+                                onClick={() => {
+                                    if (vfoMarkers[2]['active']) {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 2, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[1],
+                                                active: false,
+                                            }
+                                        }));
+                                    } else {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 2, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[1],
+                                                active: true,
+                                            }
+                                        }));
+                                    }
+                                }}
+                                color={vfoMarkers[2]['active'] ? "warning" : "primary"}
+                                title="Toggle VFO 2"
+                            >
+                                2
+                            </IconButton>
 
-                        <IconButton
-                            sx={{
-                                borderRadius: 0,
-                                width: 40,
-                                fontSize: '1.25rem',
-                                fontFamily: "Monospace",
-                                fontWeight: "bold",
-                                color: vfoColors[2],
-                                backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.2)' : 'rgba(0,0,0,0.1)'
-                                },
-                                '& .MuiTouchRipple-root': {
-                                    border: vfoMarkers[3]['active'] ? '1px solid': 'none',
-                                    bolderColor: '#ff9393',
-                                },
-                            }}
-                            onClick={() => {
-                                if (vfoMarkers[3]['active']) {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 3, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[2],
-                                            active: false,
-                                        }
-                                    }));
-                                } else {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 3, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[2],
-                                            active: true,
-                                        }
-                                    }));
-                                }
-                            }}
-                            color={vfoMarkers[3]['active'] ? "warning" : "primary"}
-                            title="Toggle VFO 3"
-                        >
-                            3
-                        </IconButton>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                    width: 40,
+                                    fontSize: '1.25rem',
+                                    fontFamily: "Monospace",
+                                    fontWeight: "bold",
+                                    color: vfoColors[2],
+                                    backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.2)' : 'rgba(0,0,0,0.1)'
+                                    },
+                                    '& .MuiTouchRipple-root': {
+                                        border: vfoMarkers[3]['active'] ? '1px solid': 'none',
+                                        bolderColor: '#ff9393',
+                                    },
+                                }}
+                                onClick={() => {
+                                    if (vfoMarkers[3]['active']) {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 3, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[2],
+                                                active: false,
+                                            }
+                                        }));
+                                    } else {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 3, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[2],
+                                                active: true,
+                                            }
+                                        }));
+                                    }
+                                }}
+                                color={vfoMarkers[3]['active'] ? "warning" : "primary"}
+                                title="Toggle VFO 3"
+                            >
+                                3
+                            </IconButton>
 
-                        <IconButton
-                            sx={{
-                                borderRadius: 0,
-                                width: 40,
-                                fontSize: '1.25rem',
-                                fontFamily: "Monospace",
-                                fontWeight: "bold",
-                                color: vfoColors[3],
-                                backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.1)' : 'transparent',
-                                '&:hover': {
-                                    backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
-                                },
-                                '& .MuiTouchRipple-root': {
-                                    border: vfoMarkers[4]['active'] ? '1px solid': 'none',
-                                    bolderColor: '#a300da',
-                                },
-                            }}
-                            onClick={() => {
-                                if (vfoMarkers[4]['active']) {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 4, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[3],
-                                            active: false,
-                                        }
-                                    }));
-                                } else {
-                                    dispatch(setVFOProperty({
-                                        vfoNumber: 4, updates: {
-                                            frequency: centerFrequency,
-                                            color: vfoColors[3],
-                                            active: true,
-                                        }
-                                    }));
-                                }
-                            }}
-                            color={vfoMarkers[4]['active'] ? "warning" : "primary"}
-                            title="Toggle VFO 4"
-                        >
-                            4
-                        </IconButton>
-
-                    </ButtonGroup>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                    width: 40,
+                                    fontSize: '1.25rem',
+                                    fontFamily: "Monospace",
+                                    fontWeight: "bold",
+                                    color: vfoColors[3],
+                                    backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.1)' : 'transparent',
+                                    '&:hover': {
+                                        backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
+                                    },
+                                    '& .MuiTouchRipple-root': {
+                                        border: vfoMarkers[4]['active'] ? '1px solid': 'none',
+                                        bolderColor: '#a300da',
+                                    },
+                                }}
+                                onClick={() => {
+                                    if (vfoMarkers[4]['active']) {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 4, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[3],
+                                                active: false,
+                                            }
+                                        }));
+                                    } else {
+                                        dispatch(setVFOProperty({
+                                            vfoNumber: 4, updates: {
+                                                frequency: centerFrequency,
+                                                color: vfoColors[3],
+                                                active: true,
+                                            }
+                                        }));
+                                    }
+                                }}
+                                color={vfoMarkers[4]['active'] ? "warning" : "primary"}
+                                title="Toggle VFO 4"
+                            >
+                                4
+                            </IconButton>
+                        </Stack>
+                    </Box>
                 </Paper>
             </Box>
 
