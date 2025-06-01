@@ -983,11 +983,11 @@ const VFOMarkersContainer = ({
                     width: '100%',
                     height: '100%',
                     cursor: cursor,
-                    touchAction: 'none', // Prevent browser handling of all touch actions
-                    WebkitUserSelect: 'none',
-                    MozUserSelect: 'none',
-                    msUserSelect: 'none',
-                    userSelect: 'none',
+                    // touchAction: 'none', // Prevent browser handling of all touch actions
+                    // WebkitUserSelect: 'none',
+                    // MozUserSelect: 'none',
+                    // msUserSelect: 'none',
+                    // userSelect: 'none',
                 }}
             />
 
