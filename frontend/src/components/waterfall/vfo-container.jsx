@@ -294,8 +294,7 @@ const VFOMarkersContainer = ({
 
         // Function to check if a single VFO has a hit
         const checkVFOHit = (key) => {
-            if (!vfoMarkers[key].active) return null;
-            if (vfoMarkers[key].frequency < startFreq || vfoMarkers[key].frequency > endFreq) return null;
+            if (!vfoMarkers[key] || !vfoMarkers[key].active) return null;
 
             const marker = vfoMarkers[key];
             const bandwidth = marker.bandwidth || 3000;
@@ -383,6 +382,7 @@ const VFOMarkersContainer = ({
 
         // Check each VFO in order
         for (const key of vfoKeys) {
+            console.info("key", key, typeof key,);
             const hitResult = checkVFOHit(key);
             if (hitResult) {
                 return { key, element: hitResult.element };
