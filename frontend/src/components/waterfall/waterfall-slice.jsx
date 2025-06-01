@@ -115,7 +115,7 @@ const initialState = {
     },
     maxVFOMarkers: 4,
     selectedVFO: 1,
-    vfoColors: ['#FF0000', '#00FF00', '#144bff', '#FF00FF'],
+    vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
 };
 
 // Add these new reducers to your createSlice

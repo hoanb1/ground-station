@@ -236,7 +236,7 @@ const VFOMarkersContainer = ({
             ctx.fill();
 
             // Draw frequency label text
-            ctx.fillStyle = '#000000';
+            ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.fillText(labelText, centerX, 16);
 
@@ -938,7 +938,8 @@ const VFOMarkersContainer = ({
                 position: 'absolute',
                 top: 0,
                 left: 0,
-                width: `${containerWidth}px`,
+                //width: `${containerWidth}px`,
+                width: '100%',
                 height: height,
                 zIndex: 600
             }}
