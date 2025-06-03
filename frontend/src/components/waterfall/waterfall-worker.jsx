@@ -21,7 +21,7 @@ let fftRateIntervalId = null;
 let binsUpdateCount = 0;
 let binsPerSecond = 0;
 let lastBandscopeDrawTime = 0;
-let bandscopeDrawInterval = 100;
+let bandscopeDrawInterval = 150;
 let dottedLineImageData = null;
 let rotatorEventQueue = [];
 let lastTimestamp = new Date();
@@ -248,10 +248,10 @@ function renderWaterfall() {
     updateWaterfallLeftMargin();
 
     // Draw bandscope
-    drawBandscope();
+    //drawBandscope();
 
     // Draw bandscope with throttling
-    //throttledDrawBandscope();
+    throttledDrawBandscope();
 
 }
 
