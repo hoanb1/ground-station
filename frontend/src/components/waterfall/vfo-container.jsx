@@ -363,6 +363,11 @@ const VFOMarkersContainer = ({
                 }
             }
 
+            // Check if click is within the VFO body area
+            if (canvasX >= leftEdgeX && canvasX <= rightEdgeX) {
+                return { key, element: 'center' }; // Treat clicks within VFO body as center handle
+            }
+
             return null;
         };
 
@@ -382,7 +387,6 @@ const VFOMarkersContainer = ({
 
         // Check each VFO in order
         for (const key of vfoKeys) {
-            console.info("key", key, typeof key,);
             const hitResult = checkVFOHit(key);
             if (hitResult) {
                 return { key, element: hitResult.element };
@@ -1003,7 +1007,7 @@ const VFOMarkersContainer = ({
                 //width: `${containerWidth}px`,
                 width: '100%',
                 height: height,
-                zIndex: 600
+                zIndex: 400,
             }}
         >
             {/* Canvas for VFO markers */}
