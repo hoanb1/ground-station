@@ -90,21 +90,21 @@ const DurationFormatter = React.memo(({params, value, event_start, event_end}) =
         const diffInSeconds = Math.floor((endDate - startDate) / 1000);
         const minutes = Math.floor(diffInSeconds / 60);
         const seconds = diffInSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 
     } else if (endDate < now) {
         // Pass ended
         const diffInSeconds = Math.floor((endDate - startDate) / 1000);
         const minutes = Math.floor(diffInSeconds / 60);
         const seconds = diffInSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 
     } else if (startDate < now < endDate) {
         // Passing now
         const diffInSeconds = Math.floor((endDate - now) / 1000);
         const minutes = Math.floor(diffInSeconds / 60);
         const seconds = diffInSeconds % 60;
-        return `${minutes}:${seconds.toString().padStart(2, '0')}`;
+        return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 
     } else {
         return `no value`;

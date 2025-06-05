@@ -286,7 +286,7 @@ export const humanizeFutureDateInMinutes = (isoString, zeroPadding=2) => {
     const diffInMinutes = Math.floor(diffInSeconds / 60);
     const remainingSeconds = diffInSeconds % 60;
 
-    return `in ${formatWithZeros(diffInMinutes, zeroPadding)}:${formatWithZeros(remainingSeconds, zeroPadding)}`;
+    return `in ${formatWithZeros(diffInMinutes, zeroPadding)}m ${formatWithZeros(remainingSeconds, zeroPadding)}s`;
 };
 
 export const betterDateTimes = (date) => {
