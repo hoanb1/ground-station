@@ -12,7 +12,7 @@
 }
 
 .leaflet-tooltip {
-    opacity: 0.8 !important;
+    opacity: 0.9 !important;
 }
 
 .leaflet-control-attribution {
@@ -29,6 +29,7 @@
 .leaflet-left{
     top: 32px !important;
 }
+
 .leaflet-control-fullscreen {
     display: none;
 }
@@ -63,4 +64,17 @@
 
 .pointer-cursor {
     cursor: pointer;
+}
+
+/* Enable events so that the button in the tooltip works*/
+.tooltip-satellite {
+    pointer-events: auto !important;
+}
+
+.tooltip-satellite button {
+    pointer-events: auto !important;
+}
+
+.tooltip-satellite button.Mui-disabled {
+    pointer-events: none !important;
 }

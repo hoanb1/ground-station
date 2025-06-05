@@ -83,6 +83,9 @@ import Typography from "@mui/material/Typography";
 import CoordinateGrid from "../common/mercator-grid.jsx";
 import WeatherDisplay from "./weather-card.jsx";
 import SatelliteInfoCard from "./overview-sat-info.jsx";
+import {setTrackingStateInBackend} from "../target/target-sat-slice.jsx";
+import SatelliteMarker from "./overview-map-tooltip.jsx";
+import SatelliteTrackSuggestion from "./overview-map-trackbutton.jsx";
 
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
@@ -132,7 +135,6 @@ function getMapZoomFromStorage() {
 }
 
 const GlobalSatelliteTrackLayout = React.memo(function () {
-
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const {
@@ -156,7 +158,15 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         nextPassesHours,
         showGrid,
         selectedSatelliteId,
+        selectedSatGroupId,
     } = useSelector(state => state.overviewSatTrack);
+    const {
+        trackingState,
+        satelliteId: trackingSatelliteId,
+        selectedRadioRig,
+        selectedRotator,
+        selectedTransmitter
+    } = useSelector(state => state.targetSatTrack);
     const {location,} = useSelector((state) => state.location);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
@@ -335,6 +345,29 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         </Fab>;
     }
 
+    const handleSetTrackingOnBackend = (noradId) => {
+        const newTrackingState = {
+            'norad_id': noradId,
+            'group_id': selectedSatGroupId,
+            'rotator_state': trackingState['rotator_state'],
+            'rig_state': trackingState['rig_state'],
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+        };
+
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
+            .unwrap()
+            .then((response) => {
+                // Success handling
+            })
+            .catch((error) => {
+                enqueueSnackbar(`Failed to start tracking with the rotator: ${error.message}`, {
+                    variant: "error"
+                });
+            });
+    };
+
     function satelliteUpdate(now) {
         let currentPos = [];
         let currentCoverage = [];
@@ -436,13 +469,19 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 }
 
                 if (showTooltip || selectedSatelliteId === noradid) {
-                    currentPos.push(<Marker key={"marker-" + satellite['norad_id']} position={[lat, lon]}
-                                            icon={satelliteIcon2}
-                                            eventHandlers={markerEventHandlers}>
-                        <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} permanent={true}>
-                            {satellite['name']} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                        </ThemedLeafletTooltip>
-                    </Marker>);
+                    currentPos.push(
+                        <SatelliteMarker
+                            key={`satellite-marker-${satellite.norad_id}`}
+                            satellite={satellite}
+                            position={[lat, lon]}
+                            altitude={altitude}
+                            velocity={velocity}
+                            trackingSatelliteId={trackingSatelliteId}
+                            selectedSatelliteId={selectedSatelliteId}
+                            markerEventHandlers={markerEventHandlers}
+                            satelliteIcon={satelliteIcon2}
+                        />
+                    );
                 } else {
                     currentPos.push(<Marker key={"marker-" + satellite['norad_id']} position={[lat, lon]}
                                             icon={satelliteIcon2}
@@ -569,7 +608,6 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
                 <TileLayer
                     url={getTileLayerById(tileLayerID)['url']}
-                    attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                 />
                 <Box sx={{'& > :not(style)': {m: 1}}} style={{right: 5, top: 30, position: 'absolute'}}>
                     <MapSettingsButton/>
@@ -630,6 +668,12 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                         showLabels={false}
                     />
                 )}
+                <SatelliteTrackSuggestion
+                    selectedSatelliteId={selectedSatelliteId}
+                    trackingSatelliteId={trackingSatelliteId}
+                    selectedSatelliteName={selectedSatellites.find(sat => sat.norad_id === selectedSatelliteId)?.name}
+                    handleSetTrackingOnBackend={handleSetTrackingOnBackend}
+                />
             </MapContainer>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key={"satselector"}>

@@ -166,6 +166,7 @@ export const ThemedLeafletTooltip = styled(LeafletTooltip)(({ theme }) => ({
     backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
     borderColor: theme.palette.background.paper,
+    zIndex: 300,
 }));
 
 export const ThemedStackIsland = styled(Stack)(({theme}) => ({
