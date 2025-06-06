@@ -428,7 +428,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 }}
                                 variant={'filled'}>
                                 <MenuItem value="none">
-                                    [no frequency control]
+                                    [no frequency selected]
                                 </MenuItem>
                                 <MenuItem value="" disabled>
                                     <em>select a transmitter</em>
