@@ -600,6 +600,9 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
                 whenReady={handleWhenReady}
                 zoomSnap={0.25}
                 zoomDelta={0.25}
+                keyboard={false}
+                bounceAtZoomLimits={false}
+                closePopupOnClick={false}
             >
                 <MapTitleBar
                     className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
