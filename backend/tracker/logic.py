@@ -902,7 +902,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                             'events': events.copy(),              # copy(), because it will be modified later
                             'rotator_data': rotator_data.copy(),  # copy(), because it will be modified later
                             'rig_data': rig_data.copy(),          # copy(), because it will be modified later
-                            'tracking_state': tracker.copy(),
+                            'tracking_state': tracker.copy(),     # copy(), because it will be modified later
                         }
                     }
                     logger.debug(f"Sending satellite tracking data: \n%s", pretty_dict(full_msg))
