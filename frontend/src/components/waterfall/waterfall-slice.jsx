@@ -236,39 +236,30 @@ export const waterfallSlice = createSlice({
         setSelectedTransmitterId(state, action) {
             state.selectedTransmitterId = action.payload;
         },
-        // Enable VFO1
         enableVFO1: (state, action) => {
             state.vfoMarkers[0].active = true;
         },
-        // Enable VFO2
         enableVFO2: (state, action) => {
             state.vfoMarkers[1].active = true;
         },
-        // Enable VFO3
         enableVFO3: (state, action) => {
             state.vfoMarkers[2].active = true;
         },
-        // Enable VFO4
         enableVFO4: (state, action) => {
             state.vfoMarkers[3].active = true;
         },
-        // Disable VFO1
         disableVFO1: (state, action) => {
             state.vfoMarkers[0].active = false;
         },
-        // Disable VFO2
         disableVFO2: (state, action) => {
             state.vfoMarkers[1].active = false;
         },
-        // Disable VFO3
         disableVFO3: (state, action) => {
             state.vfoMarkers[2].active = false;
         },
-        // Disable VFO4
         disableVFO4: (state, action) => {
             state.vfoMarkers[3].active = false;
         },
-        // Set VFO property
         setVFOProperty: (state, action) => {
             const {vfoNumber, updates} = action.payload;
             if (state.vfoMarkers[vfoNumber]) {

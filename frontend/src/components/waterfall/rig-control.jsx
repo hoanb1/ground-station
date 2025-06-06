@@ -50,6 +50,7 @@ import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import {setCenterFrequency} from "./waterfall-slice.jsx";
 
+
 const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
@@ -183,14 +184,6 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
             .catch((error) => {
 
             });
-
-        // // If a transmitter was selected, then set the SDR center frequency
-        // if (transmitterId !== "none") {
-        //     const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
-        //     const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
-        //     dispatch(setCenterFrequency(newFrequency));
-        //     waterfallSettingsComponentRef.current.sendSDRConfigToBackend({centerFrequency: newFrequency});
-        // }
     }
 
     function connectRig() {
@@ -210,6 +203,11 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
+
+    console.info(
+        ["stopped", "disconnected", "connected"].includes(trackingState['rig_state']),
+        satelliteId === "", ["none", ""].includes(selectedRadioRig),
+        ["none", ""].includes(selectedTransmitter));
 
     return (
         <>
@@ -429,12 +427,11 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                             </Button>
                         </Grid>
                         <Grid size="grow">
-                            <Button fullWidth={true} disabled={
+                            <Button fullWidth={true}
+                                    disabled={
                                 ["stopped", "disconnected", "connected"].includes(trackingState['rig_state']) ||
-                                satelliteId === "" ||
-                                ["none", ""].includes(selectedRadioRig)
-                                || ["none", ""].includes(selectedTransmitter)
-                            } variant="contained" color="error" style={{height: '60px'}}
+                                        satelliteId === "" || ["none", ""].includes(selectedRadioRig)}
+                                    variant="contained" color="error" style={{height: '60px'}}
                                     onClick={() => {handleTrackingStop()}}>
                                 STOP
                             </Button>

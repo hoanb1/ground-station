@@ -265,8 +265,6 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     :return: None
     """
 
-    logger.info(f"Starting satellite tracker-worker...")
-
     # check interval value, should be between 2 and 5 (including)
     assert 1 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
 
@@ -334,7 +332,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
         new_tracking_state = await crud.set_tracking_state(dbsession, {
             'name': 'satellite-tracking',
             'value': {
-                'rig_state': current_rig_state,
+                'rig_state': "connected",
                 'transmitter_id': "none"
             }
         })
@@ -904,6 +902,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                             'events': events.copy(),              # copy(), because it will be modified later
                             'rotator_data': rotator_data.copy(),  # copy(), because it will be modified later
                             'rig_data': rig_data.copy(),          # copy(), because it will be modified later
+                            'tracking_state': tracker.copy(),
                         }
                     }
                     logger.debug(f"Sending satellite tracking data: \n%s", pretty_dict(full_msg))
