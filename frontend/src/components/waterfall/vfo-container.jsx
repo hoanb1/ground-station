@@ -927,25 +927,29 @@ const VFOMarkersContainer = ({
 
     // Double click to remove a marker
     const handleDoubleClick = (e) => {
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
 
-        const { key } = getHoverElement(x, y);
+        // Disable this for now
+        return false;
 
-        if (key) {
-            dispatch(setVFOProperty({
-                vfoNumber: parseInt(key),
-                updates: {
-                    active: false,
-                }
-            }));
-
-            // If we're deactivating the currently selected VFO, clear the selection
-            if (selectedVFO === parseInt(key)) {
-                dispatch(setSelectedVFO(null));
-            }
-        }
+        // const rect = canvasRef.current.getBoundingClientRect();
+        // const x = e.clientX - rect.left;
+        // const y = e.clientY - rect.top;
+        //
+        // const { key } = getHoverElement(x, y);
+        //
+        // if (key) {
+        //     dispatch(setVFOProperty({
+        //         vfoNumber: parseInt(key),
+        //         updates: {
+        //             active: false,
+        //         }
+        //     }));
+        //
+        //     // If we're deactivating the currently selected VFO, clear the selection
+        //     if (selectedVFO === parseInt(key)) {
+        //         dispatch(setSelectedVFO(null));
+        //     }
+        // }
     };
 
     // Double tap to remove a marker on mobile devices

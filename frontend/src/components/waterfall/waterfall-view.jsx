@@ -772,7 +772,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     },
                                     '& .MuiTouchRipple-root': {
                                         border: vfoMarkers[1]['active'] ? '1px solid': 'none',
-                                        bolderColor: '#ff9393',
+                                        borderColor: '#ff0000',
                                     },
                                 }}
                                 onClick={() => {
@@ -814,7 +814,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     },
                                     '& .MuiTouchRipple-root': {
                                         border: vfoMarkers[2]['active'] ? '1px solid': 'none',
-                                        bolderColor: '#ff9393',
+                                        borderColor: 'rgba(0,255,0,0.7)',
                                     },
                                 }}
                                 onClick={() => {
@@ -852,11 +852,11 @@ const MainWaterfallDisplay = React.memo(() => {
                                     color: vfoColors[2],
                                     backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.2)' : 'rgba(0,0,0,0.1)'
+                                        backgroundColor: vfoMarkers[3]['active'] ? 'rgba(18,49,255,0.78)' : 'rgba(0,0,0,0.1)'
                                     },
                                     '& .MuiTouchRipple-root': {
                                         border: vfoMarkers[3]['active'] ? '1px solid': 'none',
-                                        bolderColor: '#ff9393',
+                                        borderColor: 'rgba(18,49,255,0.8)',
                                     },
                                 }}
                                 onClick={() => {
@@ -898,7 +898,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                     },
                                     '& .MuiTouchRipple-root': {
                                         border: vfoMarkers[4]['active'] ? '1px solid': 'none',
-                                        bolderColor: '#a300da',
+                                        borderColor: 'rgba(163,0,218,0.77)',
                                     },
                                 }}
                                 onClick={() => {
