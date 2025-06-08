@@ -14,31 +14,24 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import json
 import multiprocessing
 import pprint
 import crud
 import asyncio
-import socketio
 from io import StringIO
 from datetime import UTC
-import math
 import logging
 from common import is_geostationary, serialize_object
-from db import AsyncSessionLocal
-from models import ModelEncoder
-from exceptions import AzimuthOutOfBounds, ElevationOutOfBounds, MinimumElevationError
+from db.__init__ import AsyncSessionLocal
 from controllers.rotator import RotatorController
 from controllers.rig import RigController
 from controllers.sdr import SDRController
 from arguments import arguments as args
 from .state import StateTracker
-from skyfield.api import load, wgs84, EarthSatellite
-from datetime import datetime, timedelta
-from typing import List, Dict, Union, Tuple
+from datetime import datetime
+from typing import Union
 from tracking.footprint import get_satellite_coverage_circle
 from tracking.doppler import calculate_doppler_shift
-from tracking.passes import calculate_next_events
 from tracking.satellite import get_satellite_position_from_tle, get_satellite_az_el, get_satellite_path
 
 

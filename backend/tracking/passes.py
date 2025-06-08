@@ -19,12 +19,10 @@
 import json
 import logging
 import numpy as np
-from common import async_timeit
-from skyfield.api import Loader, Topos, EarthSatellite
-from models import ModelEncoder
-from skyfield.api import load, wgs84, EarthSatellite
-from typing import List, Dict, Union, Tuple, Optional
-
+from skyfield.api import Loader, Topos
+from db.models import ModelEncoder
+from skyfield.api import EarthSatellite
+from typing import Union
 
 logger = logging.getLogger('passes-worker')
 

@@ -20,25 +20,23 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import uvicorn
 import socketio
 import httpx
-import numpy as np
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, Request, HTTPException
-from models import Base
-from logger import get_logger, get_logger_config
+from db.models import Base
+from logger import get_logger_config
 from handlers import *
 from db import *
-from sqlalchemy.ext.asyncio import (create_async_engine, AsyncSession)
+from sqlalchemy.ext.asyncio import (AsyncSession)
 from fastapi.staticfiles import StaticFiles
 from logger import logger
 from engineio.payload import Payload
-from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
-from typing import Optional, Dict, Any, Union
+from typing import Optional, Dict
 from waterfall import waterfall_socket_app, cleanup_sdr_session
-from sdrprocessmanager import sdr_process_manager
-from soapysdrbrowser import discover_soapy_servers
+from sdr.sdrprocessmanager import sdr_process_manager
+from sdr.soapysdrbrowser import discover_soapy_servers
 from tracker.logic import tracker_process, queue_to_tracker, queue_from_tracker, stop_event
 
 

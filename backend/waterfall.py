@@ -20,10 +20,9 @@ import rtlsdr
 import crud
 import asyncio
 import json
-from typing import Dict, List, Optional, Any, Union
-from sdrprocessmanager import sdr_process_manager
+from typing import Dict, Optional, Any, Union
+from sdr.sdrprocessmanager import sdr_process_manager
 from workers.common import window_functions
-from functools import lru_cache
 
 logger = logging.getLogger('waterfall-process')
 

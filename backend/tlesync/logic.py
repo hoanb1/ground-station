@@ -21,8 +21,8 @@ import asyncio
 from .state import SatelliteSyncState
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
-from models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
-from typing import List, Optional
+from db.models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
+from typing import List
 from exceptions import *
 
 

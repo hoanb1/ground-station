@@ -23,15 +23,15 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete, String
 from utils import *
 from datetime import datetime, UTC
-from models import Users
-from models import Locations, SatelliteTrackingState, Cameras, SDRs
-from models import Preferences
-from models import Rotators
-from models import Rigs
-from models import Satellites
-from models import Transmitters
-from models import SatelliteTLESources
-from models import SatelliteGroups
+from db.models import Users
+from db.models import Locations, SatelliteTrackingState, Cameras, SDRs
+from db.models import Preferences
+from db.models import Rotators
+from db.models import Rigs
+from db.models import Satellites
+from db.models import Transmitters
+from db.models import SatelliteTLESources
+from db.models import SatelliteGroups
 from logger import logger
 from common import serialize_object
 from typing import Optional

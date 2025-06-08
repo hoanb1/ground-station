@@ -21,10 +21,9 @@ import multiprocessing
 import crud
 import asyncio
 import logging
-from functools import lru_cache
 from db import AsyncSessionLocal
-from models import ModelEncoder
-from typing import List, Dict, Union, Tuple
+from db.models import ModelEncoder
+from typing import Union
 from .passes import calculate_next_events
 from multiprocessing import Manager
 

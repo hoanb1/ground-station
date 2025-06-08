@@ -21,9 +21,9 @@ import datetime
 from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
-from models import Users
+from db.models import Users
 from arguments import arguments
-from models import ModelEncoder
+from db.models import ModelEncoder
 
 # Replace these placeholders with your actual secret key and algorithm
 JWT_ALGORITHM = "HS256"
