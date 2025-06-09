@@ -42,6 +42,25 @@ export const getSDRConfigParameters = createAsyncThunk(
     }
 );
 
+export const updateVFOParameters = createAsyncThunk(
+    'waterfall/updateVFOParameters',
+    async ({socket, vfoNumber, frequency, mode, bandwidth}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('data_submission', 'update-vfo-parameters', {
+                vfoNumber,
+                frequency,
+                mode,
+                bandwidth
+            }, (response) => {
+                if (response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue(response.error));
+                }
+            });
+        });
+    }
+);
 
 const initialState = {
     colorMaps: [
@@ -292,6 +311,15 @@ export const waterfallSlice = createSlice({
             })
             .addCase(getSDRConfigParameters.rejected, (state, action) => {
                 state.gettingSDRParameters = false;
+                state.errorMessage = action.payload;
+            })
+            .addCase(updateVFOParameters.pending, (state) => {
+                state.errorMessage = null;
+            })
+            .addCase(updateVFOParameters.fulfilled, (state, action) => {
+                // Successfully updated VFO parameters
+            })
+            .addCase(updateVFOParameters.rejected, (state, action) => {
                 state.errorMessage = action.payload;
             });
     }

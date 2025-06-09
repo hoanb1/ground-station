@@ -37,7 +37,7 @@ const VFOMarkersContainer = ({
     const lastMeasuredWidthRef = useRef(0);
     const [activeMarker, setActiveMarker] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
-    const [dragMode, setDragMode] = useState(null); // 'center', 'leftEdge', or 'rightEdge'
+    const [dragMode, setDragMode] = useState(null); // 'body', 'leftEdge', or 'rightEdge'
     const lastClientXRef = useRef(0);
     const lastTouchXRef = useRef(0); // Track touch position
     const height = bandscopeHeight + waterfallHeight;
@@ -47,6 +47,8 @@ const VFOMarkersContainer = ({
     const [minBandwidth] = useState(500); // 500 Hz minimum
     const [maxBandwidth] = useState(100000); // 100 kHz maximum
 
+    // Configurable vertical length of resize handles
+    const [edgeHandleHeight] = useState(20);
 
     // Calculate frequency range
     const startFreq = centerFrequency - sampleRate / 2;
@@ -209,20 +211,33 @@ const VFOMarkersContainer = ({
             // Draw edge handles based on mode
             ctx.fillStyle = `${marker.color}${lineOpacity}`;
 
-            // Change the Y position (currently at 20) to a lower value
-            const edgeHandleYPosition = 30; // Changed from 20 to 30
+            // Configurable handle dimensions
+            const edgeHandleYPosition = 30;
+            const edgeHandleWidth = isSelected ? 6 : 4;
 
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
-                // Right edge handle - moved lower
+                // Right edge handle - vertical rectangle
                 ctx.beginPath();
-                ctx.arc(rightEdgeX, edgeHandleYPosition, isSelected ? 5 : 4, 0, 2 * Math.PI);
+                ctx.roundRect(
+                    rightEdgeX - edgeHandleWidth / 2,
+                    edgeHandleYPosition - edgeHandleHeight / 2,
+                    edgeHandleWidth,
+                    edgeHandleHeight,
+                    2 // rounded corner radius
+                );
                 ctx.fill();
             }
 
             if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
-                // Left edge handle - moved lower
+                // Left edge handle - vertical rectangle
                 ctx.beginPath();
-                ctx.arc(leftEdgeX, edgeHandleYPosition, isSelected ? 5 : 4, 0, 2 * Math.PI);
+                ctx.roundRect(
+                    leftEdgeX - edgeHandleWidth / 2,
+                    edgeHandleYPosition - edgeHandleHeight / 2,
+                    edgeHandleWidth,
+                    edgeHandleHeight,
+                    2 // rounded corner radius
+                );
                 ctx.fill();
             }
 
@@ -251,19 +266,7 @@ const VFOMarkersContainer = ({
             ctx.textAlign = 'center';
             ctx.fillText(labelText, centerX, 16);
 
-            // Draw center handle
-            ctx.fillStyle = `${marker.color}${lineOpacity}`;
-            const handleWidth = isSelected ? 14 : 12;
-            const handleHeight = isSelected ? 22 : 20;
-            ctx.beginPath();
-            ctx.roundRect(
-                centerX - handleWidth / 2,
-                40,
-                handleWidth,
-                handleHeight,
-                2 // rounded corner radius
-            );
-            ctx.fill();
+            // Center handle drawing code removed
         });
     }, [vfoMarkers, actualWidth, height, centerFrequency, sampleRate, startFreq, endFreq, freqRange, selectedVFO]);
 
@@ -284,7 +287,6 @@ const VFOMarkersContainer = ({
         const isTouchDevice = 'ontouchstart' in window || navigator.maxTouchPoints > 0;
 
         // Use larger hit areas for touch devices
-        const centerHandleWidth = isTouchDevice ? 20 : 10;
         const edgeHandleWidth = isTouchDevice ? 12 : 6;
         const edgeYRange = isTouchDevice ? 30 : 10;
         const labelYRange = isTouchDevice ? 25 : 20; // Height range for label detection
@@ -320,7 +322,7 @@ const VFOMarkersContainer = ({
             leftEdgeX = Math.max(0, leftEdgeX);
             rightEdgeX = Math.min(actualWidth, rightEdgeX);
 
-            // Check label (y between 0-20px with enlarged touch area)
+            // Check label (y between 0-20px with enlarged touch area) - treat as body drag
             if (y >= 0 && y <= labelYRange) {
                 // Calculate label width (approximated based on drawing code)
                 const modeText = ` [${mode}]`;
@@ -335,19 +337,14 @@ const VFOMarkersContainer = ({
 
                 // Check if mouse is over label area
                 if (Math.abs(canvasX - centerX) <= labelWidth / 2) {
-                    return { key, element: 'center' }; // Treat label drag the same as center handle
+                    return { key, element: 'body' }; // Treat label drag as body drag
                 }
-            }
-
-            // Check center handle (y between 40-60px with enlarged touch area)
-            if (y >= 30 && y <= 70 && Math.abs(canvasX - centerX) <= centerHandleWidth) {
-                return { key, element: 'center' };
             }
 
             // Check edge handles based on mode - update Y range for edge handles
             // Use the new position (edgeHandleYPosition) with an appropriate range
-            const edgeYMin = edgeHandleYPosition - 10;
-            const edgeYMax = edgeHandleYPosition + 10;
+            const edgeYMin = edgeHandleYPosition - edgeHandleHeight / 2;
+            const edgeYMax = edgeHandleYPosition + edgeHandleHeight / 2;
 
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
                 // Check right edge with updated Y position
@@ -363,9 +360,10 @@ const VFOMarkersContainer = ({
                 }
             }
 
-            // Check if click is within the VFO body area
-            if (canvasX >= leftEdgeX && canvasX <= rightEdgeX) {
-                return { key, element: 'center' }; // Treat clicks within VFO body as center handle
+            // Check if click is within the VFO body area (but not on edge handles)
+            if (canvasX >= leftEdgeX && canvasX <= rightEdgeX &&
+                !(y >= edgeYMin && y <= edgeYMax)) {
+                return { key, element: 'body' }; // Treat clicks within VFO body as body drag
             }
 
             return null;
@@ -406,7 +404,7 @@ const VFOMarkersContainer = ({
 
         const { element } = getHoverElement(x, y);
 
-        if (element === 'center') {
+        if (element === 'body') {
             setCursor('ew-resize');
         } else if (element === 'leftEdge' || element === 'rightEdge') {
             setCursor('col-resize');
@@ -435,11 +433,11 @@ const VFOMarkersContainer = ({
 
         const { key, element } = getHoverElement(x, y);
 
-        if (key && (element === 'center' || element === 'leftEdge' || element === 'rightEdge')) {
+        if (key && (element === 'body' || element === 'leftEdge' || element === 'rightEdge')) {
             setActiveMarker(key);
             setDragMode(element);
             setIsDragging(true);
-            setCursor(element === 'center' ? 'ew-resize' : 'col-resize');
+            setCursor(element === 'body' ? 'ew-resize' : 'col-resize');
             lastClientXRef.current = e.clientX;
 
             // Prevent default to avoid text selection while dragging
@@ -503,7 +501,7 @@ const VFOMarkersContainer = ({
         // Calculate pixels to frequency change
         const freqDelta = (scaledDelta / actualWidth) * freqRange;
 
-        if (dragMode === 'center') {
+        if (dragMode === 'body') {
             // Moving the entire VFO (center + bandwidth)
             const newFrequency = marker.frequency + freqDelta;
 
@@ -601,7 +599,7 @@ const VFOMarkersContainer = ({
                 // Calculate pixels to frequency change
                 const freqDelta = (scaledDelta / actualWidth) * freqRange;
 
-                if (dragMode === 'center') {
+                if (dragMode === 'body') {
                     // Moving the entire VFO (center + bandwidth)
                     const newFrequency = marker.frequency + freqDelta;
 
@@ -667,7 +665,7 @@ const VFOMarkersContainer = ({
                     if (mouseX >= 0 && mouseX <= rect.width && mouseY >= 0 && mouseY <= rect.height) {
                         const { element } = getHoverElement(mouseX, mouseY);
 
-                        if (element === 'center') {
+                        if (element === 'body') {
                             setCursor('ew-resize');
                         } else if (element === 'leftEdge' || element === 'rightEdge') {
                             setCursor('col-resize');
@@ -719,7 +717,7 @@ const VFOMarkersContainer = ({
                 // Calculate pixels to frequency change
                 const freqDelta = (scaledDelta / actualWidth) * freqRange;
 
-                if (dragMode === 'center') {
+                if (dragMode === 'body') {
                     // Moving the entire VFO (center + bandwidth)
                     const newFrequency = marker.frequency + freqDelta;
 
@@ -823,7 +821,7 @@ const VFOMarkersContainer = ({
             const freqDelta = (scaledDelta / actualWidth) * freqRange;
 
             // Implement dragging logic based on drag mode
-            if (dragMode === 'center') {
+            if (dragMode === 'body') {
                 const newFrequency = marker.frequency + freqDelta;
                 const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
 
@@ -876,6 +874,7 @@ const VFOMarkersContainer = ({
         document.addEventListener('touchend', handleDocumentTouchEnd, { capture: true, passive: false });
         document.addEventListener('touchcancel', handleDocumentTouchEnd, { capture: true, passive: false });
 
+        // Clean up
         return () => {
             // Clean up listeners when effect is cleaned up
             document.removeEventListener('touchmove', handleDocumentTouchMove, { capture: true, passive: false });
@@ -1029,7 +1028,7 @@ const VFOMarkersContainer = ({
 
                     // Handle potential double-tap
                     if (tapLength < 500 && tapLength > 0) {
-                        handleDoubleTap(e);
+                        //handleDoubleTap(e);
                     } else {
                         // First check if this is a drag operation
                         handleTouchStart(e);

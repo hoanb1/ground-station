@@ -28,6 +28,7 @@ from waterfall import cleanup_sdr_session, add_sdr_session, get_sdr_session, act
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discovered_servers
 from waterfall import get_sdr_parameters, get_local_soapy_sdr_devices
+from vfos.state import VFOManager
 
 
 # Function to run async code in a thread
@@ -515,6 +516,18 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             transmitters = await crud.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
             reply = {'success': (transmitters['success'] & delete_reply['success']),
                      'data': transmitters.get('data', [])}
+
+        elif cmd == "update-vfos-parameters":
+            logger.debug(f'Updating VFO parameters, data: {data}')
+            vfomanager = VFOManager()
+            vfomanager.update_vfo_state(
+                vfo_id=data.get('vfoNumber', 0),
+                center_freq=data.get('frequency', None),
+                bandwidth=data.get('bandwidth', None),
+                modulation=data.get('modulation', None)
+            )
+
+            reply = {'success': True, 'data': {}}
 
         else:
             logger.error(f'Unknown command: {cmd}')
