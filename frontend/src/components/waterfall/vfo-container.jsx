@@ -50,6 +50,9 @@ const VFOMarkersContainer = ({
     // Configurable vertical length of resize handles
     const [edgeHandleHeight] = useState(20);
 
+    // Configurable Y position offset for resize handles
+    const [edgeHandleYOffset] = useState(50);
+
     // Calculate frequency range
     const startFreq = centerFrequency - sampleRate / 2;
     const endFreq = centerFrequency + sampleRate / 2;
@@ -208,11 +211,11 @@ const VFOMarkersContainer = ({
             ctx.stroke();
             ctx.setLineDash([]); // Reset to solid line
 
-            // Draw edge handles based on mode
+// Draw edge handles based on mode
             ctx.fillStyle = `${marker.color}${lineOpacity}`;
 
             // Configurable handle dimensions
-            const edgeHandleYPosition = 30;
+            const edgeHandleYPosition = edgeHandleYOffset; // Use configurable offset instead of hardcoded 30
             const edgeHandleWidth = isSelected ? 6 : 4;
 
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
@@ -292,7 +295,7 @@ const VFOMarkersContainer = ({
         const labelYRange = isTouchDevice ? 25 : 20; // Height range for label detection
 
         // Update edge handle Y position to match the drawing position
-        const edgeHandleYPosition = 30; // Changed from 20 to 30
+        const edgeHandleYPosition = edgeHandleYOffset;
 
         // Function to check if a single VFO has a hit
         const checkVFOHit = (key) => {
