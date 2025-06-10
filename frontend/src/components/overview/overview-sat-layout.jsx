@@ -699,7 +699,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
     if (gridEditable === true) {
         ResponsiveGridLayoutParent =
             <ResponsiveReactGridLayout
-                useCSSTransforms={false}
+                useCSSTransforms={true}
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}
@@ -715,7 +715,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
     } else {
         ResponsiveGridLayoutParent =
             <ResponsiveReactGridLayout
-                useCSSTransforms={false}
+                useCSSTransforms={true}
                 className="layout"
                 layouts={layouts}
                 onLayoutChange={handleLayoutsChange}

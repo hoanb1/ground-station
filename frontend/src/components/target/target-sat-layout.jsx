@@ -1121,7 +1121,7 @@ const TargetSatelliteLayout = React.memo(function () {
 
     if (gridEditable === true) {
         ResponsiveGridLayoutParent = <ResponsiveReactGridLayout
-            useCSSTransforms={false}
+            useCSSTransforms={true}
             className="layout"
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
@@ -1136,7 +1136,7 @@ const TargetSatelliteLayout = React.memo(function () {
         </ResponsiveReactGridLayout>;
     } else {
         ResponsiveGridLayoutParent = <ResponsiveReactGridLayout
-            useCSSTransforms={false}
+            useCSSTransforms={true}
             className="layout"
             layouts={layouts}
             onLayoutChange={handleLayoutsChange}
