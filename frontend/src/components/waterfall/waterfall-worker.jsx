@@ -37,6 +37,21 @@ const maxHistoryLength = 5;
 // Add a flag to track if initial auto-scaling has been performed
 let hasPerformedInitialAutoScale = false;
 
+// Store recent FFT data for averaging
+let fftHistory = [];
+
+// Number of frames to average (adjust as needed)
+let maxFftHistoryLength = 5;
+
+// Smoothing type: 'simple', 'weighted', 'exponential'
+let smoothingType = 'exponential';
+
+// For exponential smoothing (0-1, higher = more smoothing)
+let smoothingStrength = 0.9;
+
+// Cached smoothed data
+let smoothedFftData = new Array(1024).fill(-120);
+
 
 // Main message handler
 self.onmessage = function(eventMessage) {
@@ -100,6 +115,9 @@ self.onmessage = function(eventMessage) {
             // Store the new FFT data
             fftData = eventMessage.data.fft;
 
+            // Update smoothed data with every new FFT frame
+            updateSmoothedFftData(eventMessage.data.fft);
+
             // Store FFT data in history for auto-scaling
             storeFFTDataInHistory(eventMessage.data.fft);
 
@@ -107,6 +125,31 @@ self.onmessage = function(eventMessage) {
             if (eventMessage.data.immediate) {
                 renderWaterfall();
             }
+            break;
+
+        case 'updateSmoothingConfig':
+            if (eventMessage.data.historyLength !== undefined) {
+                maxFftHistoryLength = Math.max(1, Math.min(20, eventMessage.data.historyLength));
+            }
+            if (eventMessage.data.smoothingType !== undefined) {
+                smoothingType = eventMessage.data.smoothingType;
+            }
+            if (eventMessage.data.smoothingStrength !== undefined) {
+                smoothingStrength = Math.max(0, Math.min(1, eventMessage.data.smoothingStrength));
+            }
+
+            // Reset history when changing settings
+            fftHistory = [];
+            smoothedFftData = new Array(fftData.length).fill(-120);
+
+            self.postMessage({
+                type: 'smoothingConfigUpdated',
+                data: {
+                    historyLength: maxFftHistoryLength,
+                    smoothingType: smoothingType,
+                    smoothingStrength: smoothingStrength
+                }
+            });
             break;
 
         case 'updateConfig':
@@ -150,6 +193,62 @@ self.onmessage = function(eventMessage) {
             console.error('Unknown command:', cmd);
     }
 };
+
+//Function that produces a smoother line out of the FFT data
+function updateSmoothedFftData(newFftData) {
+    // Add new FFT data to history
+    fftHistory.push([...newFftData]);
+
+    // Keep only the last N frames
+    if (fftHistory.length > maxFftHistoryLength) {
+        fftHistory.shift();
+    }
+
+    // Apply different smoothing algorithms
+    switch (smoothingType) {
+        case 'simple':
+            // Simple moving average
+            for (let i = 0; i < newFftData.length; i++) {
+                let sum = 0;
+                for (let j = 0; j < fftHistory.length; j++) {
+                    sum += fftHistory[j][i];
+                }
+                smoothedFftData[i] = sum / fftHistory.length;
+            }
+            break;
+
+        case 'weighted':
+            // Weighted average - recent frames have more influence
+            for (let i = 0; i < newFftData.length; i++) {
+                let weightedSum = 0;
+                let totalWeight = 0;
+
+                for (let j = 0; j < fftHistory.length; j++) {
+                    // More recent frames get higher weight
+                    const weight = j + 1; // weights: 1, 2, 3, 4, 5...
+                    weightedSum += fftHistory[j][i] * weight;
+                    totalWeight += weight;
+                }
+                smoothedFftData[i] = weightedSum / totalWeight;
+            }
+            break;
+
+        case 'exponential':
+            // Exponential moving average - only needs current and previous
+            if (fftHistory.length === 1) {
+                // First frame, just copy
+                smoothedFftData = [...newFftData];
+            } else {
+                for (let i = 0; i < newFftData.length; i++) {
+                    // EMA formula: new_value = alpha * current + (1 - alpha) * previous
+                    const alpha = 1 - smoothingStrength; // Convert to alpha (lower strength = higher alpha = less smoothing)
+                    smoothedFftData[i] = alpha * newFftData[i] + smoothingStrength * smoothedFftData[i];
+                }
+            }
+            break;
+    }
+}
+
 
 // Store FFT data in history for auto-scaling analysis
 function storeFFTDataInHistory(fftDataArray) {
@@ -402,7 +501,6 @@ function renderFFTRow(fftData) {
 }
 
 function drawBandscope() {
-
     if (!bandscopeCanvas || fftData.length === 0) {
         return;
     }
@@ -443,14 +541,11 @@ function drawBandscope() {
         bandscopeCtx.setLineDash([]);
     }
 
-    // Get the most recent FFT data
-    const lastFFTData = fftData;
-
     // Draw the dB axis (y-axis)
     drawDbAxis(dBAxisCtx, width, height, dbRange);
 
-    // Draw the FFT data as a line graph
-    drawFftLine(bandscopeCtx, lastFFTData, width, height, dbRange);
+    // Draw the FFT data as a line graph using smoothed data
+    drawFftLine(bandscopeCtx, smoothedFftData, width, height, dbRange);
 }
 
 function drawDbAxis(ctx, width, height, [minDb, maxDb]) {

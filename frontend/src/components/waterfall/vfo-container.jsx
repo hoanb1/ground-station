@@ -63,6 +63,14 @@ const VFOMarkersContainer = ({
         return (freq / 1e6).toFixed(3);
     };
 
+    // Consolidated function to set state
+    const updateVFOProperty = useCallback((vfoNumber, updates) => {
+        dispatch(setVFOProperty({
+            vfoNumber,
+            updates
+        }));
+    }, [dispatch]);
+
     // Update actual width measurement
     const updateActualWidth = useCallback(() => {
         // Get the actual client dimensions of the element
@@ -270,7 +278,6 @@ const VFOMarkersContainer = ({
             ctx.textAlign = 'center';
             ctx.fillText(labelText, centerX, 16);
 
-            // Center handle drawing code removed
         });
     }, [vfoMarkers, actualWidth, height, centerFrequency, sampleRate, startFreq, endFreq, freqRange, selectedVFO]);
 
@@ -295,7 +302,7 @@ const VFOMarkersContainer = ({
         const edgeYRange = isTouchDevice ? 30 : 10;
         const labelYRange = isTouchDevice ? 25 : 20; // Height range for label detection
 
-        // Update edge handle Y position to match the drawing position
+        // Update the edge handle Y position to match the drawing position
         const edgeHandleYPosition = edgeHandleYOffset;
 
         // Function to check if a single VFO has a hit
@@ -512,14 +519,11 @@ const VFOMarkersContainer = ({
             // Ensure the frequency stays within the visible range
             const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
 
-            dispatch(setVFOProperty({
-                vfoNumber: parseInt(activeMarker),
-                updates: {
-                    frequency: limitedFreq,
-                }
-            }));
-        }
-        else if (dragMode === 'leftEdge') {
+            updateVFOProperty(parseInt(activeMarker), {
+                frequency: limitedFreq,
+            });
+
+        } else if (dragMode === 'leftEdge') {
             // Moving the left edge (adjust bandwidth)
             const currentBandwidth = marker.bandwidth || 3000;
             // When dragging left edge right (positive delta), bandwidth decreases
@@ -528,15 +532,11 @@ const VFOMarkersContainer = ({
             // Enforce minimum bandwidth and maximum using the state values
             const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-            // Keep the center frequency constant
-            dispatch(setVFOProperty({
-                vfoNumber: parseInt(activeMarker),
-                updates: {
-                    bandwidth: limitedBandwidth,
-                }
-            }));
-        }
-        else if (dragMode === 'rightEdge') {
+            updateVFOProperty(parseInt(activeMarker), {
+                bandwidth: limitedBandwidth,
+            });
+
+        } else if (dragMode === 'rightEdge') {
             // Moving the right edge (adjust bandwidth)
             const currentBandwidth = marker.bandwidth || 3000;
             // When dragging right edge right (positive delta), bandwidth increases
@@ -545,13 +545,9 @@ const VFOMarkersContainer = ({
             // Enforce minimum bandwidth and maximum using the state values
             const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-            // Keep the center frequency constant
-            dispatch(setVFOProperty({
-                vfoNumber: parseInt(activeMarker),
-                updates: {
-                    bandwidth: limitedBandwidth,
-                }
-            }));
+            updateVFOProperty(parseInt(activeMarker), {
+                bandwidth: limitedBandwidth,
+            });
         }
     };
 
@@ -610,14 +606,11 @@ const VFOMarkersContainer = ({
                     // Ensure the frequency stays within the visible range
                     const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
 
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(activeMarker),
-                        updates: {
-                            frequency: limitedFreq,
-                        }
-                    }));
-                }
-                else if (dragMode === 'leftEdge') {
+                    updateVFOProperty(parseInt(activeMarker), {
+                        frequency: limitedFreq,
+                    });
+
+                } else if (dragMode === 'leftEdge') {
                     // Moving the left edge (adjust bandwidth)
                     const currentBandwidth = marker.bandwidth || 3000;
                     // When dragging left edge right (positive delta), bandwidth decreases
@@ -626,16 +619,11 @@ const VFOMarkersContainer = ({
                     // Enforce minimum bandwidth and maximum using the state values
                     const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                    // Keep the center frequency constant
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(activeMarker),
-                        updates: {
-                            bandwidth: limitedBandwidth,
-                            // No frequency update
-                        }
-                    }));
-                }
-                else if (dragMode === 'rightEdge') {
+                    updateVFOProperty(parseInt(activeMarker), {
+                        bandwidth: limitedBandwidth,
+                    });
+
+                } else if (dragMode === 'rightEdge') {
                     // Moving the right edge (adjust bandwidth)
                     const currentBandwidth = marker.bandwidth || 3000;
                     // When dragging right edge right (positive delta), bandwidth increases
@@ -644,14 +632,9 @@ const VFOMarkersContainer = ({
                     // Enforce minimum bandwidth and maximum using the state values
                     const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                    // Keep the center frequency constant
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(activeMarker),
-                        updates: {
-                            bandwidth: limitedBandwidth,
-                            // No frequency update
-                        }
-                    }));
+                    updateVFOProperty(parseInt(activeMarker), {
+                        bandwidth: limitedBandwidth,
+                    });
                 }
             };
 
@@ -728,36 +711,27 @@ const VFOMarkersContainer = ({
                     // Ensure the frequency stays within the visible range
                     const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
 
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(activeMarker),
-                        updates: {
-                            frequency: limitedFreq,
-                        }
-                    }));
-                }
-                else if (dragMode === 'leftEdge') {
+                    updateVFOProperty(parseInt(activeMarker), {
+                        frequency: limitedFreq,
+                    });
+
+                } else if (dragMode === 'leftEdge') {
                     const currentBandwidth = marker.bandwidth || 3000;
                     const newBandwidth = currentBandwidth - (2 * freqDelta);
                     const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(activeMarker),
-                        updates: {
-                            bandwidth: limitedBandwidth,
-                        }
-                    }));
-                }
-                else if (dragMode === 'rightEdge') {
+                    updateVFOProperty(parseInt(activeMarker), {
+                        bandwidth: limitedBandwidth,
+                    });
+
+                } else if (dragMode === 'rightEdge') {
                     const currentBandwidth = marker.bandwidth || 3000;
                     const newBandwidth = currentBandwidth + (2 * freqDelta);
                     const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                    dispatch(setVFOProperty({
-                        vfoNumber: parseInt(activeMarker),
-                        updates: {
-                            bandwidth: limitedBandwidth,
-                        }
-                    }));
+                    updateVFOProperty(parseInt(activeMarker), {
+                        bandwidth: limitedBandwidth,
+                    });
                 }
             };
 
@@ -829,36 +803,27 @@ const VFOMarkersContainer = ({
                 const newFrequency = marker.frequency + freqDelta;
                 const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
 
-                dispatch(setVFOProperty({
-                    vfoNumber: parseInt(activeMarker),
-                    updates: {
-                        frequency: limitedFreq,
-                    }
-                }));
-            }
-            else if (dragMode === 'leftEdge') {
+                updateVFOProperty(parseInt(activeMarker), {
+                    frequency: limitedFreq,
+                });
+
+            } else if (dragMode === 'leftEdge') {
                 const currentBandwidth = marker.bandwidth || 3000;
                 const newBandwidth = currentBandwidth - (2 * freqDelta);
                 const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                dispatch(setVFOProperty({
-                    vfoNumber: parseInt(activeMarker),
-                    updates: {
-                        bandwidth: limitedBandwidth,
-                    }
-                }));
-            }
-            else if (dragMode === 'rightEdge') {
+                updateVFOProperty(parseInt(activeMarker), {
+                    bandwidth: limitedBandwidth,
+                });
+
+            } else if (dragMode === 'rightEdge') {
                 const currentBandwidth = marker.bandwidth || 3000;
                 const newBandwidth = currentBandwidth + (2 * freqDelta);
                 const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
 
-                dispatch(setVFOProperty({
-                    vfoNumber: parseInt(activeMarker),
-                    updates: {
-                        bandwidth: limitedBandwidth,
-                    }
-                }));
+                updateVFOProperty(parseInt(activeMarker), {
+                    bandwidth: limitedBandwidth,
+                });
             }
         };
 
