@@ -209,14 +209,15 @@ const VFOMarkersContainer = ({
             }
 
             ctx.stroke();
-            ctx.setLineDash([]); // Reset to solid line
+            // Reset to solid line
+            ctx.setLineDash([]);
 
-// Draw edge handles based on mode
+            // Draw edge handles based on mode
             ctx.fillStyle = `${marker.color}${lineOpacity}`;
 
             // Configurable handle dimensions
-            const edgeHandleYPosition = edgeHandleYOffset; // Use configurable offset instead of hardcoded 30
-            const edgeHandleWidth = isSelected ? 6 : 4;
+            const edgeHandleYPosition = edgeHandleYOffset;
+            const edgeHandleWidth = isSelected ? 14 : 6;
 
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
                 // Right edge handle - vertical rectangle

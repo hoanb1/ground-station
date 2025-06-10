@@ -53,7 +53,8 @@ const OverviewSatelliteGroupSelector = React.memo(function () {
         satGroups,
         formGroupSelectError,
         selectedSatGroupId,
-        gridEditable
+        gridEditable,
+        passesLoading,
     } = useSelector(state => state.overviewSatTrack);
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
@@ -92,10 +93,11 @@ const OverviewSatelliteGroupSelector = React.memo(function () {
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Select group of satellites</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }}
+                    <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} disabled={passesLoading}
                                  fullWidth variant={"filled"} size={"small"}>
                         <InputLabel htmlFor="grouped-select">Group</InputLabel>
                         <Select
+                            disabled={passesLoading}
                             error={formGroupSelectError}
                             value={satGroups.length ? selectedSatGroupId: ""}
                             id="grouped-select"
