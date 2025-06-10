@@ -28,6 +28,15 @@ let lastTimestamp = new Date();
 let renderWaterfallCount = 0;
 let vfoMarkers = [];
 
+// Store waterfall history for auto-scaling
+let waterfallHistory = [];
+
+// Keep the last 10 frames for analysis
+const maxHistoryLength = 5;
+
+// Add a flag to track if initial auto-scaling has been performed
+let hasPerformedInitialAutoScale = false;
+
 
 // Main message handler
 self.onmessage = function(eventMessage) {
@@ -66,6 +75,10 @@ self.onmessage = function(eventMessage) {
             break;
 
         case 'start':
+            // Reset auto-scale flag for new sessions
+            hasPerformedInitialAutoScale = false;
+            waterfallHistory = []; // Clear any existing history
+
             startRendering(eventMessage.data.fps || targetFPS);
             break;
 
@@ -87,6 +100,9 @@ self.onmessage = function(eventMessage) {
             // Store the new FFT data
             fftData = eventMessage.data.fft;
 
+            // Store FFT data in history for auto-scaling
+            storeFFTDataInHistory(eventMessage.data.fft);
+
             // If we're set to immediate rendering, trigger a render now
             if (eventMessage.data.immediate) {
                 renderWaterfall();
@@ -101,8 +117,11 @@ self.onmessage = function(eventMessage) {
             if (eventMessage.data.dbRange) {
                 dbRange = eventMessage.data.dbRange;
             }
+            break;
 
-            //console.info("worker config update", eventMessage.data.colorMap, eventMessage.data.dbRange);
+        case 'autoScaleDbRange':
+            // Trigger auto-scaling of dB range
+            autoScaleDbRange();
             break;
 
         case 'rotatorEvent':
@@ -131,6 +150,92 @@ self.onmessage = function(eventMessage) {
             console.error('Unknown command:', cmd);
     }
 };
+
+// Store FFT data in history for auto-scaling analysis
+function storeFFTDataInHistory(fftDataArray) {
+    // Add new data to the history
+    waterfallHistory.push([...fftDataArray]);
+
+    // Keep only the last N frames
+    if (waterfallHistory.length > maxHistoryLength) {
+        waterfallHistory.shift();
+    }
+
+    // Perform initial auto-scaling once we have enough data (3-5 frames)
+    if (!hasPerformedInitialAutoScale && waterfallHistory.length >= 3) {
+        console.log('Performing initial auto-scale with', waterfallHistory.length, 'frames of data');
+        autoScaleDbRange();
+        hasPerformedInitialAutoScale = true;
+    }
+}
+
+// Auto-scale dB range based on recent waterfall data
+function autoScaleDbRange() {
+    if (waterfallHistory.length === 0) {
+        console.warn('No waterfall history available for auto-scaling');
+        return;
+    }
+
+    // Collect all values from recent frames
+    const allValues = [];
+    const samplesToCheck = Math.min(10, waterfallHistory.length);
+
+    for (let i = 0; i < samplesToCheck; i++) {
+        const row = waterfallHistory[i];
+        allValues.push(...row);
+    }
+
+    if (allValues.length === 0) {
+        console.warn('No data available for auto-scaling');
+        return;
+    }
+
+    // Calculate mean and standard deviation
+    const sum = allValues.reduce((acc, val) => acc + val, 0);
+    const mean = sum / allValues.length;
+
+    const squaredDiffs = allValues.map(val => (val - mean) ** 2);
+    const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / allValues.length;
+    const stdDev = Math.sqrt(variance);
+
+    // Filter out values more than X standard deviations from the mean
+    const stdDevMultiplier = 4.5;
+    const filteredValues = allValues.filter(val =>
+        Math.abs(val - mean) <= stdDevMultiplier * stdDev
+    );
+
+    if (filteredValues.length === 0) {
+        console.warn('No valid values after filtering for auto-scaling');
+        return;
+    }
+
+    let min = Math.min(...filteredValues);
+    let max = Math.max(...filteredValues);
+
+    // Add some padding to the range
+    min = Math.floor(min);
+    max = Math.ceil(max);
+
+    // Update the local dbRange
+    dbRange = [min, max];
+
+    // Send the new range back to the main thread
+    self.postMessage({
+        type: 'autoScaleResult',
+        data: {
+            dbRange: [min, max],
+            stats: {
+                mean: mean.toFixed(2),
+                stdDev: stdDev.toFixed(2),
+                samplesAnalyzed: allValues.length,
+                framesAnalyzed: samplesToCheck,
+                filteredSamples: filteredValues.length
+            }
+        }
+    });
+
+    console.log(`Auto-scaled dB range: [${min}, ${max}] (analyzed ${allValues.length} samples from ${samplesToCheck} frames)`);
+}
 
 // Function to throttle bandscope drawing
 function throttledDrawBandscope() {
@@ -215,9 +320,11 @@ function startRendering(fps) {
     rotatorEventQueue = [];
 
     targetFPS = fps;
-    renderIntervalId = setInterval(() => {
-        //renderWaterfall();
-    }, 1000 / targetFPS);
+
+    // Disabling this method for now
+    // renderIntervalId = setInterval(() => {
+    //     //renderWaterfall();
+    // }, 1000 / targetFPS);
 
     // Confirm start
     self.postMessage({ type: 'status', status: 'started', fps: targetFPS });

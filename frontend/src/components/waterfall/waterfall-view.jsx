@@ -273,6 +273,13 @@ const MainWaterfallDisplay = React.memo(() => {
                         } else if (type === 'status') {
                             // Optional: handle status updates from the worker
                             //console.log('Worker status:', status);
+                        } else if (type === 'autoScaleResult') {
+                            const { dbRange, stats } = data;
+                            console.log('New dB range:', dbRange);
+                            console.log('Analysis stats:', stats);
+
+                            // Update your Redux store
+                            dispatch(setDbRange(dbRange));
                         }
                     };
                 } else {
@@ -526,8 +533,8 @@ const MainWaterfallDisplay = React.memo(() => {
 
         if (isStreaming && autoDBRange) {
             interval = setInterval(() => {
-                autoScaleDbRange();
-            }, 1000); // Update every second
+                workerRef.current.postMessage({ cmd: 'autoScaleDbRange' });
+            }, 2000); // Update 2 seconds
         }
 
         return () => {
@@ -541,7 +548,7 @@ const MainWaterfallDisplay = React.memo(() => {
     const startStreaming = () => {
 
         if (!isStreaming) {
-            // Clean up last rotator event
+            // Clean up the last rotator event
             lastRotatorEventRef.current = "";
 
             // Set the loading flags and clear errors
@@ -574,8 +581,6 @@ const MainWaterfallDisplay = React.memo(() => {
                             data: {fps: targetFPSRef.current}
                         });
                     }
-                    // auto range the dB scale
-                    //setTimeout(() => autoScaleDbRange(), 1500);
                 }
             });
         }
@@ -587,44 +592,6 @@ const MainWaterfallDisplay = React.memo(() => {
             dispatch(setIsStreaming(false));
             cancelAnimations();
         }
-    };
-
-    const autoScaleDbRange = () => {
-        if (waterfallDataRef.current.length === 0) {
-            return;
-        }
-
-        // Collect all values from recent frames
-        const allValues = [];
-        const samplesToCheck = Math.min(10, waterfallDataRef.current.length);
-
-        for (let i = 0; i < samplesToCheck; i++) {
-            const row = waterfallDataRef.current[i];
-            allValues.push(...row);
-        }
-
-        // Calculate mean and standard deviation
-        const sum = allValues.reduce((acc, val) => acc + val, 0);
-        const mean = sum / allValues.length;
-
-        const squaredDiffs = allValues.map(val => (val - mean) ** 2);
-        const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / allValues.length;
-        const stdDev = Math.sqrt(variance);
-
-        // Filter out values more than X standard deviations from the mean
-        const stdDevMultiplier = 4.5; // Adjust this value as needed
-        const filteredValues = allValues.filter(val =>
-            Math.abs(val - mean) <= stdDevMultiplier * stdDev
-        );
-
-        let min = Math.min(...filteredValues);
-        let max = Math.max(...filteredValues);
-
-        // Add some padding to the range
-        min = Math.floor(min);
-        max = Math.ceil(max);
-
-        dispatch(setDbRange([min, max]));
     };
 
     return (
@@ -739,7 +706,10 @@ const MainWaterfallDisplay = React.memo(() => {
                                 sx={{
                                     borderRadius: 0,
                                 }}
-                                onClick={() => autoScaleDbRange()}
+                                onClick={() => {
+                                    // Trigger auto-scaling
+                                    workerRef.current.postMessage({ cmd: 'autoScaleDbRange' });
+                                }}
                                 size="small"
                                 color="primary"
                                 title="Auto scale dB range once"
@@ -1037,7 +1007,9 @@ const MainWaterfallDisplay = React.memo(() => {
                                 variant="filled"
                                 disabled={!isStreaming}
                                 color={autoDBRange? "success": "info"}
-                                onClick={autoScaleDbRange}
+                                onClick={() => {
+                                    workerRef.current.postMessage({ cmd: 'autoScaleDbRange' });
+                                }}
                                 title="Auto range dB scale once"
                                 sx={{
                                     borderRadius: 0,
