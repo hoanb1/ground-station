@@ -39,6 +39,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {setIsEditing} from "./dashboard-slice.jsx";
+import WakeLockStatus from "./dashboard-wake-lock-status.jsx";
 
 
 function DashboardEditor() {
@@ -108,6 +109,7 @@ function ConnectionStatus() {
                             : '#f44336', // Red for "disconnected"
                     marginRight: '8px',
                 }}
+                title={`Connection Status: ${transportType}`}
             />
         </>
     );
@@ -117,6 +119,7 @@ function ConnectionStatus() {
 function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
+            <WakeLockStatus/>
             <ConnectionStatus/>
             <DashboardEditor/>
             <TimeDisplay/>

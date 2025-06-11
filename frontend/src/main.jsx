@@ -48,6 +48,7 @@ import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './components/common/store.jsx';
 import ErrorPage from './components/common/error-page.jsx';
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
+import {WakeLockProvider} from "./components/dashboard/dashboard-wake-lock-provider.jsx";
 
 const router = createBrowserRouter([
     {
@@ -145,7 +146,9 @@ createRoot(document.getElementById('root')).render(
             <PersistGate loading={null} persistor={persistor}>
                 <SocketProvider>
                     <AuthProvider>
-                        <RouterProvider router={router} />
+                        <WakeLockProvider>
+                            <RouterProvider router={router} />
+                        </WakeLockProvider>
                     </AuthProvider>
                 </SocketProvider>
             </PersistGate>
