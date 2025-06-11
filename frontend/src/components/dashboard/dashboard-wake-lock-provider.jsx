@@ -25,6 +25,7 @@ const defaultWakeLockContext = {
     isSupported: false,
     isActive: false,
     activeRequests: 0,
+    hasManualRequest: false,
     requestWakeLock: () => {
         console.warn('WakeLockProvider not found. Make sure to wrap your component with WakeLockProvider.');
     },
@@ -34,11 +35,11 @@ const defaultWakeLockContext = {
     forceRelease: () => {
         console.warn('WakeLockProvider not found. Make sure to wrap your component with WakeLockProvider.');
     },
-    acquire: async () => {
+    requestManualWakeLock: async () => {
         console.warn('WakeLockProvider not found. Make sure to wrap your component with WakeLockProvider.');
         return false;
     },
-    release: () => {
+    releaseManualWakeLock: () => {
         console.warn('WakeLockProvider not found. Make sure to wrap your component with WakeLockProvider.');
     },
 };
@@ -47,7 +48,9 @@ const WakeLockContext = createContext(defaultWakeLockContext);
 
 export const WakeLockProvider = ({ children }) => {
     const [wakeLockRequests, setWakeLockRequests] = useState(new Set());
-    const shouldBeActive = wakeLockRequests.size > 0;
+    const [hasManualRequest, setHasManualRequest] = useState(false);
+
+    const shouldBeActive = wakeLockRequests.size > 0 || hasManualRequest;
     const wakeLock = useWakeLock(shouldBeActive);
 
     const requestWakeLock = useCallback((componentId, componentName = 'Unknown') => {
@@ -55,7 +58,7 @@ export const WakeLockProvider = ({ children }) => {
             const newSet = new Set([...prev, componentId]);
 
             // Show notification when first wake lock is requested
-            if (prev.size === 0 && newSet.size === 1) {
+            if (prev.size === 0 && newSet.size === 1 && !hasManualRequest) {
                 if (wakeLock.isSupported) {
                     enqueueSnackbar(`Screen wake lock activated by ${componentName}`, {
                         variant: 'info',
@@ -71,7 +74,7 @@ export const WakeLockProvider = ({ children }) => {
 
             return newSet;
         });
-    }, [wakeLock.isSupported]);
+    }, [wakeLock.isSupported, hasManualRequest]);
 
     const releaseWakeLock = useCallback((componentId, componentName = 'Unknown') => {
         setWakeLockRequests(prev => {
@@ -79,7 +82,7 @@ export const WakeLockProvider = ({ children }) => {
             newSet.delete(componentId);
 
             // Show notification when last wake lock is released
-            if (prev.size > 0 && newSet.size === 0) {
+            if (prev.size > 0 && newSet.size === 0 && !hasManualRequest) {
                 enqueueSnackbar(`Screen wake lock released by ${componentName}`, {
                     variant: 'info',
                     autoHideDuration: 2000,
@@ -88,10 +91,36 @@ export const WakeLockProvider = ({ children }) => {
 
             return newSet;
         });
+    }, [hasManualRequest]);
+
+    const requestManualWakeLock = useCallback(async () => {
+        if (!wakeLock.isSupported) {
+            enqueueSnackbar('Wake lock not supported on this device', {
+                variant: 'warning',
+                autoHideDuration: 5000,
+            });
+            return false;
+        }
+
+        setHasManualRequest(true);
+        enqueueSnackbar('Manual wake lock activated', {
+            variant: 'info',
+            autoHideDuration: 2000,
+        });
+        return true;
+    }, [wakeLock.isSupported]);
+
+    const releaseManualWakeLock = useCallback(() => {
+        setHasManualRequest(false);
+        enqueueSnackbar('Manual wake lock released', {
+            variant: 'info',
+            autoHideDuration: 2000,
+        });
     }, []);
 
     const forceRelease = useCallback(() => {
         setWakeLockRequests(new Set());
+        setHasManualRequest(false);
         enqueueSnackbar('All wake locks forcefully released', {
             variant: 'info',
             autoHideDuration: 2000,
@@ -102,11 +131,12 @@ export const WakeLockProvider = ({ children }) => {
         isSupported: wakeLock.isSupported,
         isActive: wakeLock.isActive,
         activeRequests: wakeLockRequests.size,
+        hasManualRequest,
         requestWakeLock,
         releaseWakeLock,
         forceRelease,
-        acquire: wakeLock.acquire,
-        release: wakeLock.release,
+        requestManualWakeLock,
+        releaseManualWakeLock,
     };
 
     return (
