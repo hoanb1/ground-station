@@ -1,8 +1,9 @@
-import { useEffect, useRef, useCallback } from 'react';
+import { useEffect, useRef, useCallback, useState } from 'react';
 
 const useWakeLock = (isActive = false) => {
     const wakeLockRef = useRef(null);
     const isSupported = useRef('wakeLock' in navigator);
+    const [wakeLockActive, setWakeLockActive] = useState(false);
 
     const acquire = useCallback(async () => {
         if (!isSupported.current) {
@@ -16,10 +17,12 @@ const useWakeLock = (isActive = false) => {
             }
 
             wakeLockRef.current = await navigator.wakeLock.request('screen');
+            setWakeLockActive(true);
 
             wakeLockRef.current.addEventListener('release', () => {
                 console.log('Wake lock released');
                 wakeLockRef.current = null;
+                setWakeLockActive(false);
             });
 
             console.log('Wake lock acquired');
@@ -34,6 +37,7 @@ const useWakeLock = (isActive = false) => {
         if (wakeLockRef.current) {
             wakeLockRef.current.release();
             wakeLockRef.current = null;
+            setWakeLockActive(false);
         }
     }, []);
 
@@ -62,7 +66,7 @@ const useWakeLock = (isActive = false) => {
 
     return {
         isSupported: isSupported.current,
-        isActive: !!wakeLockRef.current,
+        isActive: wakeLockActive,
         acquire,
         release
     };
