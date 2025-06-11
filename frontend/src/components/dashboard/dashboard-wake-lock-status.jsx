@@ -1,11 +1,11 @@
 import React from 'react';
-import { Chip, Tooltip } from '@mui/material';
+import { Tooltip, IconButton } from '@mui/material';
 import { useWakeLockContext } from './dashboard-wake-lock-provider.jsx';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import WarningIcon from '@mui/icons-material/Warning';
 
-const WakeLockStatus = ({ variant = 'outlined', size = 'small' }) => {
+const WakeLockStatus = ({ size = 'medium' }) => {
     const {
         isSupported,
         isActive,
@@ -13,22 +13,7 @@ const WakeLockStatus = ({ variant = 'outlined', size = 'small' }) => {
         hasManualRequest,
         forceRelease,
         requestManualWakeLock,
-        releaseManualWakeLock
     } = useWakeLockContext();
-
-    if (!isSupported) {
-        return (
-            <Tooltip title="Wake lock not supported on this device">
-                <Chip
-                    icon={<WarningIcon />}
-                    label="Wake lock unsupported"
-                    color="warning"
-                    variant={variant}
-                    size={size}
-                />
-            </Tooltip>
-        );
-    }
 
     const handleClick = async () => {
         if (isActive) {
@@ -41,6 +26,10 @@ const WakeLockStatus = ({ variant = 'outlined', size = 'small' }) => {
     };
 
     const getTooltipText = () => {
+        if (!isSupported) {
+            return 'Wake lock not supported on this device';
+        }
+
         if (hasManualRequest && activeRequests > 0) {
             return `Manual + ${activeRequests} component wake lock${activeRequests !== 1 ? 's' : ''} active. Click to release all.`;
         } else if (hasManualRequest) {
@@ -52,39 +41,22 @@ const WakeLockStatus = ({ variant = 'outlined', size = 'small' }) => {
         }
     };
 
-    const getLabel = () => {
-        if (hasManualRequest && activeRequests > 0) {
-            return `Manual + ${activeRequests} requests`;
-        } else if (hasManualRequest) {
-            return 'Manual wake lock';
-        } else if (activeRequests > 0) {
-            return `Wake lock (${activeRequests})`;
-        } else {
-            return 'Screen can sleep';
+    const getIcon = () => {
+        if (!isSupported) {
+            return <WarningIcon color="warning" />;
         }
-    };
-
-    const getColor = () => {
-        if (hasManualRequest) {
-            return 'primary';
-        } else if (activeRequests > 0) {
-            return 'success';
-        } else {
-            return 'default';
-        }
+        return isActive ? <LockIcon color="primary" /> : <LockOpenIcon color="action" />;
     };
 
     return (
         <Tooltip title={getTooltipText()}>
-            <Chip
-                icon={isActive ? <LockIcon /> : <LockOpenIcon />}
-                label={getLabel()}
-                color={getColor()}
-                variant={variant}
+            <IconButton
+                onClick={isSupported ? handleClick : undefined}
                 size={size}
-                onClick={handleClick}
-                clickable={true}
-            />
+                disabled={!isSupported}
+            >
+                {getIcon()}
+            </IconButton>
         </Tooltip>
     );
 };

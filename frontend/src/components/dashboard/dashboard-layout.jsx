@@ -24,7 +24,18 @@ import Typography from "@mui/material/Typography";
 import PropTypes from "prop-types";
 import * as React from "react";
 import {Outlet} from "react-router";
-import {Avatar, Backdrop, Box, Button, Divider, ListItemIcon, ListItemText, MenuItem, MenuList} from "@mui/material";
+import {
+    Avatar,
+    Backdrop,
+    Box,
+    Button,
+    Divider,
+    IconButton,
+    ListItemIcon,
+    ListItemText,
+    MenuItem,
+    MenuList
+} from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import {GroundStationLogoGreenBlue, GSRetroLogo} from "../common/icons.jsx";
 import {stringAvatar} from "../common/common.jsx";
@@ -40,6 +51,7 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {setIsEditing} from "./dashboard-slice.jsx";
 import WakeLockStatus from "./dashboard-wake-lock-status.jsx";
+import Tooltip from "@mui/material/Tooltip";
 
 
 function DashboardEditor() {
@@ -66,15 +78,23 @@ function DashboardEditor() {
     };
 
     return (
-        <Box>
+        <>
             {isEditing ? (
                 <Stack direction="row" spacing={2}>
-                    <Button size={"small"} variant={"outlined"} onClick={handleSaveClick} startIcon={<CheckIcon/>}>Done editing</Button>
+                    <Tooltip title="Done editing">
+                        <IconButton size="small" onClick={handleSaveClick}>
+                            <CheckIcon color="success"/>
+                        </IconButton>
+                    </Tooltip>
                 </Stack>
             ) : (
-                <Button size={"small"} variant={"text"} onClick={handleEditClick} startIcon={<BorderColorIcon/>}>Edit layout</Button>
+                <Tooltip title="Edit layout">
+                    <IconButton size="small" onClick={handleEditClick}>
+                        <BorderColorIcon color="primary"/>
+                    </IconButton>
+                </Tooltip>
             )}
-        </Box>
+        </>
     );
 }
 
@@ -93,24 +113,25 @@ function ConnectionStatus() {
 
         return () => clearInterval(interval);
     }, [socket]);
-    
+
     return (
         <>
-            <Box
-                sx={{
-                    mt: '10px',
-                    width: '12px',
-                    height: '12px',
-                    borderRadius: '50%',
-                    backgroundColor: transportType === "websocket"
-                        ? '#4caf50'
-                        : transportType === "polling"
-                            ? '#f57c00'
-                            : '#f44336', // Red for "disconnected"
-                    marginRight: '8px',
-                }}
-                title={`Connection Status: ${transportType}`}
-            />
+            <Tooltip title={`Connection Status: ${transportType}`}>
+                <Box
+                    sx={{
+                        mt: '10px',
+                        width: '12px',
+                        height: '12px',
+                        borderRadius: '50%',
+                        backgroundColor: transportType === "websocket"
+                            ? '#4caf50'
+                            : transportType === "polling"
+                                ? '#f57c00'
+                                : '#f44336', // Red for "disconnected"
+                        marginRight: '8px',
+                    }}
+                />
+            </Tooltip>
         </>
     );
 }
@@ -119,8 +140,8 @@ function ConnectionStatus() {
 function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
-            <WakeLockStatus/>
             <ConnectionStatus/>
+            <WakeLockStatus/>
             <DashboardEditor/>
             <TimeDisplay/>
             <ThemeSwitcher />
