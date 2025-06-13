@@ -1,5 +1,9 @@
+import logging
 from dataclasses import dataclass
 from typing import Dict, Optional
+
+# Configure logging for the worker process
+logger = logging.getLogger('vfo-state')
 
 
 @dataclass
@@ -37,7 +41,7 @@ class VFOManager:
         if modulation is not None:
             vfo_state.modulation = modulation
 
-        print(self._vfo_states)
+        #logger.info(f"vfo states: {self._vfo_states}")
 
     def get_all_vfo_states(self) -> Dict[int, VFOState]:
         return self._vfo_states.copy()

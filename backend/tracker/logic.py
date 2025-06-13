@@ -259,7 +259,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     """
 
     # check interval value, should be between 2 and 5 (including)
-    assert 1 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
+    assert 0 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
 
     azimuthlimits = (0, 360)
     eleveationlimits = (0, 90)
