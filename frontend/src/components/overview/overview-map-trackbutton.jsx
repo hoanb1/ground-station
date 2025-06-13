@@ -5,9 +5,13 @@ import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 const SatelliteTrackSuggestion = ({
                                       selectedSatelliteId,
                                       trackingSatelliteId,
-                                      selectedSatelliteName,
+                                      selectedSatellite,
                                       handleSetTrackingOnBackend
                                   }) => {
+
+    if (!selectedSatellite) {
+        return null;
+    }
 
     return (
         <Paper
@@ -28,7 +32,7 @@ const SatelliteTrackSuggestion = ({
         >
             <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
                 <Typography variant="subtitle2" component="div" sx={{color: '#fff', mb: 1}}>
-                    {trackingSatelliteId === selectedSatelliteId ? 'Already tracking this satellite' : `Start tracking ${selectedSatelliteName || 'this satellite'}?`}
+                    {trackingSatelliteId === selectedSatelliteId ? 'Already tracking this satellite' : `Start tracking ${selectedSatellite['name'] || 'this satellite'}?`}
                 </Typography>
 
                 <Button

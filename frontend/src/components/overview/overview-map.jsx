@@ -486,7 +486,7 @@ const SatelliteMapContainer = ({
             <SatelliteTrackSuggestion
                 selectedSatelliteId={selectedSatelliteId}
                 trackingSatelliteId={trackingSatelliteId}
-                selectedSatelliteName={selectedSatellites.find(sat => sat.norad_id === selectedSatelliteId)?.name}
+                selectedSatellite={selectedSatellites.find(sat => sat.norad_id === selectedSatelliteId)}
                 handleSetTrackingOnBackend={handleSetTrackingOnBackend}
             />
         </MapContainer>
