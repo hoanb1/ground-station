@@ -37,5 +37,7 @@ class VFOManager:
         if modulation is not None:
             vfo_state.modulation = modulation
 
+        print(self._vfo_states)
+
     def get_all_vfo_states(self) -> Dict[int, VFOState]:
         return self._vfo_states.copy()

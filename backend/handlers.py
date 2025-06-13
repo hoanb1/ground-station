@@ -517,14 +517,14 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             reply = {'success': (transmitters['success'] & delete_reply['success']),
                      'data': transmitters.get('data', [])}
 
-        elif cmd == "update-vfos-parameters":
+        elif cmd == "update-vfo-parameters":
             logger.debug(f'Updating VFO parameters, data: {data}')
             vfomanager = VFOManager()
             vfomanager.update_vfo_state(
                 vfo_id=data.get('vfoNumber', 0),
-                center_freq=data.get('frequency', None),
-                bandwidth=data.get('bandwidth', None),
-                modulation=data.get('modulation', None)
+                center_freq=int(data.get('frequency', 0)),
+                bandwidth=int(data.get('bandwidth', 0)),
+                modulation=data.get('mode', "fm")
             )
 
             reply = {'success': True, 'data': {}}

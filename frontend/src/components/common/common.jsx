@@ -275,13 +275,15 @@ export const humanizeDate = (isoString) => {
 };
 
 
-export const humanizeFutureDateInMinutes = (isoString, zeroPadding=2) => {
+export const humanizeFutureDateInMinutes = (isoString, zeroPadding = 2) => {
     const now = new Date();
     const futureDate = new Date(isoString);
     const diffInSeconds = Math.floor((futureDate - now) / 1000);
 
     if (diffInSeconds < 0) {
-        return "In the past"; // Handle cases where the date is not in the future
+        const diffInMinutes = Math.floor(Math.abs(diffInSeconds) / 60);
+        const remainingSeconds = Math.abs(diffInSeconds) % 60;
+        return `${formatWithZeros(diffInMinutes, zeroPadding)}m ${formatWithZeros(remainingSeconds, zeroPadding)}s ago`;
     }
 
     const diffInMinutes = Math.floor(diffInSeconds / 60);

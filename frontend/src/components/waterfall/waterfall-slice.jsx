@@ -44,13 +44,11 @@ export const getSDRConfigParameters = createAsyncThunk(
 
 export const updateVFOParameters = createAsyncThunk(
     'waterfall/updateVFOParameters',
-    async ({socket, vfoNumber, frequency, mode, bandwidth}, {rejectWithValue}) => {
+    async ({socket, vfoNumber, updates}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
             socket.emit('data_submission', 'update-vfo-parameters', {
                 vfoNumber,
-                frequency,
-                mode,
-                bandwidth
+                ...updates
             }, (response) => {
                 if (response.success) {
                     resolve(response.data);

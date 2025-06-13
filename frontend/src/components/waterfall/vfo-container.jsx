@@ -13,8 +13,9 @@ import {
     disableVFO3,
     disableVFO4,
     setVFOProperty,
-    setSelectedVFO,
+    setSelectedVFO, updateVFOParameters,
 } from './waterfall-slice.jsx';
+import {useSocket} from "../common/socket.jsx";
 
 const VFOMarkersContainer = ({
                                  centerFrequency,
@@ -24,6 +25,7 @@ const VFOMarkersContainer = ({
                                  containerWidth,
                              }) => {
     const dispatch = useDispatch();
+    const {socket} = useSocket();
     const {
         vfoMarkers,
         maxVFOMarkers,
@@ -67,8 +69,15 @@ const VFOMarkersContainer = ({
     const updateVFOProperty = useCallback((vfoNumber, updates) => {
         dispatch(setVFOProperty({
             vfoNumber,
-            updates
+            updates,
         }));
+
+        dispatch(updateVFOParameters({
+            socket,
+            vfoNumber,
+            updates,
+        }));
+
     }, [dispatch]);
 
     // Update actual width measurement
