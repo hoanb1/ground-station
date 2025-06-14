@@ -19,74 +19,31 @@
 
 
 import React, {useState, useEffect, useCallback, useMemo, memo, useRef} from 'react';
-import {SatelliteAlt} from '@mui/icons-material';
 import {Responsive, WidthProvider} from 'react-grid-layout';
-import {
-    MapContainer,
-    TileLayer,
-    Marker,
-    Polyline,
-    Polygon,
-    useMapEvents,
-} from 'react-leaflet';
 import L from 'leaflet';
 import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
-import createTerminatorLine from '../common/terminator-line.jsx';
-import {getSunMoonCoords} from "../common/sunmoon.jsx";
-import {moonIcon, sunIcon, homeIcon, satelliteIcon, satelliteIcon2} from '../common/icons.jsx';
-import MapSettingsIsland from "../common/map-settings.jsx";
 import {Box, Fab, Slider} from "@mui/material";
-import HomeIcon from '@mui/icons-material/Home';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
-import SettingsIcon from '@mui/icons-material/Settings';
-import {getTileLayerById} from "../common/tile-layers.jsx";
 import SatSelectorIsland from "./target-sat-selector.jsx";
 import {
-    getClassNamesBasedOnGridEditing, humanizeAltitude, humanizeVelocity,
-    InternationalDateLinePolyline, MapArrowControls,
-    MapStatusBar,
-    MapTitleBar, renderCountryFlagsCSV,
-    StyledIslandParent, StyledIslandParentNoScrollbar,
-    StyledIslandParentScrollbar, ThemedLeafletTooltip,
-    ThemedStackIsland,
+    StyledIslandParent,
+    StyledIslandParentNoScrollbar,
+    StyledIslandParentScrollbar,
 } from "../common/common.jsx";
 import {enqueueSnackbar} from "notistack";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {
     setSatGroupId,
-    setTerminatorLine,
-    setDaySidePolygon,
-    setPastOrbitLineColor,
-    setFutureOrbitLineColor,
-    setSatelliteCoverageColor,
-    setOrbitProjectionDuration,
-    setTileLayerID,
     setMapZoomLevel,
-    setSunPos,
-    setMoonPos,
     setGridEditable,
-    setSliderTimeOffset,
-    setLoading,
-    fetchSatellite,
     getTrackingStateFromBackend,
     setSatelliteId,
-    setTargetMapSetting,
 } from './target-sat-slice.jsx'
 import SatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
-import VideoWebRTCPlayer from "../common/video-webrtc.jsx";
-import {setOpenMapSettingsDialog} from "./target-sat-slice.jsx";
-import MapSettingsIslandDialog from './map-settings-dialog.jsx';
-import {SimpleTruncatedHtml} from '../common/common.jsx';
-import CoordinateGrid from "../common/mercator-grid.jsx";
-import RotatorControl from "./rotator-control.jsx";
-import RigControl from "../waterfall/rig-control.jsx";
 import CameraView from "../common/camera-view.jsx";
-import MiniWaterfallDisplay from "./waterfall-view.jsx";
 import {
     satellitePositionSelector,
     satelliteCoverageSelector,
@@ -502,225 +459,10 @@ const TargetSatelliteLayout = React.memo(function () {
         return loaded ?? defaultLayouts;
     });
 
-    // const handleWhenReady = (map) => {
-    //     // map is ready
-    //     MapObject = map.target;
-    // };
-
-    // useEffect(() => {
-    //     const intervalId = setInterval(() => {
-    //         if (MapObject) {
-    //             MapObject.invalidateSize();
-    //         }
-    //     }, 1000);
-    //
-    //     return () => {
-    //         clearInterval(intervalId);
-    //     };
-    // }, []);
-
-    // function MapSettingsButton() {
-    //     const dispatch = useDispatch();
-    //     const handleClick = () => {
-    //         dispatch(setOpenMapSettingsDialog(true));
-    //     };
-    //
-    //     return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
-    //         handleClick()
-    //     }}>
-    //         <SettingsIcon/>
-    //     </Fab>;
-    // }
-    //
-    // function CenterHomeButton() {
-    //     const targetCoordinates = [location.lat, location.lon];
-    //     const handleClick = () => {
-    //         MapObject.setView(targetCoordinates, MapObject.getZoom());
-    //     };
-    //
-    //     return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
-    //         handleClick()
-    //     }}>
-    //         <HomeIcon/>
-    //     </Fab>;
-    // }
-    //
-    // function CenterMapButton() {
-    //     const targetCoordinates = [0, 0];
-    //     const handleClick = () => {
-    //         MapObject.setView(targetCoordinates, MapObject.getZoom());
-    //     };
-    //
-    //     return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={() => {
-    //         handleClick()
-    //     }}>
-    //         <FilterCenterFocusIcon/>
-    //     </Fab>;
-    // }
-    //
-    // function FullscreenMapButton() {
-    //     const handleMapFullscreen = () => {
-    //         const mapContainer = MapObject.getContainer();
-    //         if (!document.fullscreenElement) {
-    //             if (mapContainer.requestFullscreen) {
-    //                 mapContainer.requestFullscreen();
-    //             } else if (mapContainer.mozRequestFullScreen) {
-    //                 mapContainer.mozRequestFullScreen();
-    //             } else if (mapContainer.webkitRequestFullscreen) {
-    //                 mapContainer.webkitRequestFullscreen();
-    //             } else if (mapContainer.msRequestFullscreen) {
-    //                 mapContainer.msRequestFullscreen();
-    //             }
-    //         } else {
-    //             // Exit fullscreen if we're already in it
-    //             if (document.exitFullscreen) {
-    //                 document.exitFullscreen();
-    //             } else if (document.mozCancelFullScreen) {
-    //                 document.mozCancelFullScreen();
-    //             } else if (document.webkitExitFullscreen) {
-    //                 document.webkitExitFullscreen();
-    //             } else if (document.msExitFullscreen) {
-    //                 document.msExitFullscreen();
-    //             }
-    //         }
-    //     };
-    //
-    //     return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={() => {
-    //         handleMapFullscreen()
-    //     }}>
-    //         <FullscreenIcon/>
-    //     </Fab>;
-    // }
-
-    // const satelliteUpdate = function (now) {
-    //     if (Object.keys(satelliteDetails['name']).length !== 0) {
-    //
-    //         const satelliteName = satelliteDetails['name'];
-    //         const satelliteId = satelliteDetails['norad_id'];
-    //         const latitude = satellitePosition['lat'];
-    //         const longitude = satellitePosition['lon'];
-    //         const altitude = satellitePosition['alt'];
-    //         const velocity = satellitePosition['vel'];
-    //         const paths = satellitePaths;
-    //         const coverage = satelliteCoverage;
-    //
-    //         // generate current positions for the group of satellites
-    //         let currentPos = [];
-    //         let currentCoverage = [];
-    //         let currentFuturePaths = [];
-    //         let currentPastPaths = [];
-    //
-    //         // focus map on satellite, center on latitude only
-    //         //let mapCoords = MapObject.getCenter();
-    //         //MapObject.setView([latitude, longitude], MapObject.getZoom());
-    //
-    //         if (paths) {
-    //             // past path
-    //             currentPastPaths.push(<Polyline
-    //                 key={`past-path-${noradId}`}
-    //                 positions={paths['past']}
-    //                 pathOptions={{
-    //                     color: pastOrbitLineColor,
-    //                     weight: 2,
-    //                     opacity: 1,
-    //                     smoothFactor: 1,
-    //                 }}
-    //             />)
-    //
-    //             // future path
-    //             currentFuturePaths.push(<Polyline
-    //                 key={`future-path-${noradId}`}
-    //                 positions={paths['future']}
-    //                 pathOptions={{
-    //                     color: futureOrbitLineColor,
-    //                     weight: 2,
-    //                     opacity: 0.8,
-    //                     dashArray: "3 3",
-    //                     smoothFactor: 1,
-    //                 }}
-    //             />)
-    //         }
-    //
-    //         if (showTooltip) {
-    //             currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
-    //                                     icon={satelliteIcon2}>
-    //                 <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={1} permanent>
-    //                     {satelliteName} - {humanizeAltitude(altitude) + " km, " + humanizeVelocity(velocity) + " km/s"}
-    //                 </ThemedLeafletTooltip>
-    //             </Marker>);
-    //         } else {
-    //             currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
-    //                                     icon={satelliteIcon2}>
-    //             </Marker>);
-    //         }
-    //
-    //         if (coverage) {
-    //             //let coverage = [];
-    //             //coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
-    //             currentCoverage.push(<Polyline
-    //                 ref={coverageRef}
-    //                 noClip={true}
-    //                 key={"coverage-" + satelliteDetails['name']}
-    //                 pathOptions={{
-    //                     color: satelliteCoverageColor,
-    //                     weight: 1,
-    //                     fill: true,
-    //                     fillOpacity: 0.2,
-    //                 }}
-    //                 positions={coverage}
-    //             />);
-    //         }
-    //
-    //         setCurrentPastSatellitesPaths(currentPastPaths);
-    //         setCurrentFutureSatellitesPaths(currentFuturePaths);
-    //         setCurrentSatellitesPosition(currentPos);
-    //         setCurrentSatellitesCoverage(currentCoverage);
-    //
-    //     } else {
-    //         //console.warn("No satellite data found for norad id: ", noradId, satelliteDetails);
-    //     }
-    //
-    //     // Day/night boundary
-    //     const terminatorLine = createTerminatorLine().reverse();
-    //     dispatch(setTerminatorLine(terminatorLine));
-    //
-    //     // Day side polygon
-    //     const dayPoly = [...terminatorLine];
-    //     dayPoly.push(dayPoly[dayPoly.length - 1]);
-    //     dispatch(setDaySidePolygon(dayPoly));
-    //
-    //     // sun and moon position
-    //     const [sunPos, moonPos] = getSunMoonCoords();
-    //     dispatch(setSunPos(sunPos));
-    //     dispatch(setMoonPos(moonPos));
-    // }
-
     function handleLayoutsChange(currentLayout, allLayouts) {
         setLayouts(allLayouts);
         saveLayoutsToLocalStorage(allLayouts);
     }
-
-    // // subscribe to map events
-    // function MapEventComponent({handleSetMapZoomLevel}) {
-    //     const mapEvents = useMapEvents({
-    //         zoomend: () => {
-    //             const mapZoom = mapEvents.getZoom()
-    //             handleSetMapZoomLevel(mapZoom);
-    //             localStorage.setItem(storageMapZoomValueKey, mapZoom);
-    //         },
-    //     });
-    //     return null;
-    // }
-
-    // useEffect(() => {
-    //     if (coverageRef.current) {
-    //         // Fit the map to the polygon's bounds
-    //         MapObject.fitBounds(coverageRef.current.getBounds(), {
-    //                 padding: [15, 15],
-    //             }
-    //         );
-    //     }
-    // }, [MapObject, satellitePosition, sliderTimeOffset, noradId]);
 
     useEffect(() => {
         // we do this here once onmount,
@@ -743,44 +485,6 @@ const TargetSatelliteLayout = React.memo(function () {
         };
     }, []);
 
-    // useEffect(() => {
-    //     if (noradId) {
-    //         dispatch(fetchSatellite({socket, noradId: noradId}));
-    //     }
-    //
-    //     return () => {
-    //
-    //     };
-    // }, [noradId]);
-
-    // useEffect(() => {
-    //     satelliteUpdate(new Date());
-    //
-    //     return () => {
-    //     };
-    //
-    // }, [satelliteDetails, satellitePosition, satellitePaths, satelliteCoverage, sliderTimeOffset, showTooltip,
-    //     orbitProjectionDuration, tileLayerID, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage,
-    //     showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor,
-    //     satelliteCoverageColor]);
-    //
-    // useEffect(() => {
-    //     // zoom in and out a bit to fix the zoom factor issue
-    //     if (MapObject) {
-    //         const zoomLevel = MapObject.getZoom();
-    //         const loc = MapObject.getCenter();
-    //         setTimeout(() => {
-    //             MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
-    //             setTimeout(() => {
-    //                 MapObject.setView([loc.lat, loc.lng], zoomLevel);
-    //             }, 500);
-    //         }, 0);
-    //     }
-    //     return () => {
-    //
-    //     };
-    // }, [tileLayerID]);
-
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
@@ -799,7 +503,6 @@ const TargetSatelliteLayout = React.memo(function () {
             <CameraView/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentScrollbar key="rotator-control">
-            {/*<RotatorControl/>*/}
             <ControllerTabs waterfallSettingsComponentRef={null}/>
         </StyledIslandParentScrollbar>,
     ];
