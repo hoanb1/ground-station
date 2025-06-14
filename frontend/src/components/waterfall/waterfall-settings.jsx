@@ -249,9 +249,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                 soapyAgc: soapyAgc,
                 offsetFrequency: selectedOffsetValue,
             }
-
             SDRSettings = {...SDRSettings, ...updates};
-            console.info(`Sending SDR freq to backend: `, SDRSettings);
             socket.emit('sdr_data', 'configure-sdr', SDRSettings);
 
         } else {
@@ -269,6 +267,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
             fftWindow,
             socket,
             selectedOffsetValue,
+            selectedAntenna,
+            soapyAgc,
         ]
     );
 
@@ -348,6 +348,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
     };
 
     const updateSelectedAntenna = (antenna) => (dispatch) => {
+        console.info("updateSelectedAntenna", antenna);
         dispatch(setSelectedAntenna(antenna));
         return sendSDRConfigToBackend({antenna: antenna});
     };
@@ -408,9 +409,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
                     }}>
                         <Box sx={{mb: 0, width: '100%'}}>
                             <FrequencyDisplay
-                                initialFrequency={centerFrequency / 1000.0} // Convert Hz to kHz
+                                initialFrequency={centerFrequency / 1000.0}
                                 onChange={(newFrequency) => {
-                                    // Using custom thunk instead of direct dispatch
                                     dispatch(updateCenterFrequency(newFrequency));
                                 }}
                                 size={"small"}
@@ -561,7 +561,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={sampleRateValues.length? localSampleRate: "none"}
+                                        value={sampleRateValues.includes(localSampleRate) ? localSampleRate : "none"}
                                         onChange={(e) => {
                                             setLocalSampleRate(e.target.value);
                                             dispatch(updateSampleRate(e.target.value));
@@ -594,7 +594,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={antennasList.rx.length? selectedAntenna: "none"}
+                                        value={antennasList.rx.includes(selectedAntenna) ? selectedAntenna : "none"}
                                         onChange={(e) => {
                                             dispatch(updateSelectedAntenna(e.target.value));
                                         }}
