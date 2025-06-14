@@ -96,6 +96,7 @@ import {
     satelliteTransmittersSelector
 } from './state-selectors.jsx';
 import ControllerTabs from "../common/controller.jsx";
+import TargetSatelliteMapContainer from './target-sat-map.jsx';
 
 
 // global leaflet map object
@@ -130,232 +131,6 @@ function loadLayoutsFromLocalStorage() {
 
 function saveLayoutsToLocalStorage(layouts) {
     localStorage.setItem(gridLayoutStoreName, JSON.stringify(layouts));
-}
-
-
-const l = {
-    "lg": [{
-        "w": 6,
-        "h": 17,
-        "x": 0,
-        "y": 0,
-        "i": "map",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 12,
-        "x": 6,
-        "y": 0,
-        "i": "info",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 6,
-        "h": 9,
-        "x": 0,
-        "y": 17,
-        "i": "passes",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 4,
-        "x": 8,
-        "y": 0,
-        "i": "satselector",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 8,
-        "x": 8,
-        "y": 4,
-        "i": "video",
-        "minH": 4,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 11,
-        "x": 10,
-        "y": 0,
-        "i": "rotator-control",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 9,
-        "x": 10,
-        "y": 11,
-        "i": "rig-control",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }],
-    "md": [{
-        "w": 6,
-        "h": 15,
-        "x": 0,
-        "y": 0,
-        "i": "map",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 11,
-        "x": 8,
-        "y": 0,
-        "i": "info",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 6,
-        "h": 9,
-        "x": 0,
-        "y": 15,
-        "i": "passes",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 4,
-        "x": 6,
-        "y": 0,
-        "i": "satselector",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 7,
-        "x": 6,
-        "y": 4,
-        "i": "video",
-        "minH": 4,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 11,
-        "x": 8,
-        "y": 11,
-        "i": "rotator-control",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 9,
-        "x": 8,
-        "y": 22,
-        "i": "rig-control",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }],
-    "sm": [{
-        "w": 6,
-        "h": 15,
-        "x": 0,
-        "y": 4,
-        "i": "map",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 11,
-        "x": 4,
-        "y": 28,
-        "i": "info",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 6,
-        "h": 9,
-        "x": 0,
-        "y": 19,
-        "i": "passes",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 6,
-        "h": 4,
-        "x": 0,
-        "y": 0,
-        "i": "satselector",
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 7,
-        "x": 0,
-        "y": 39,
-        "i": "video",
-        "minH": 4,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 11,
-        "x": 0,
-        "y": 28,
-        "i": "rotator-control",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }, {
-        "w": 2,
-        "h": 9,
-        "x": 2,
-        "y": 28,
-        "i": "rig-control",
-        "minH": 6,
-        "moved": false,
-        "static": false,
-        "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-    }]
-};
-
-function CenterSatelliteButton() {
-    const targetCoordinates = [0, 0];
-    const handleClick = () => {
-        MapObject.setView(targetCoordinates, MapObject.getZoom());
-    };
-
-    return <Fab size="small" color="primary" aria-label="Follow satellite" onClick={() => {
-        handleClick()
-    }}>
-        <SatelliteAlt/>
-    </Fab>;
-}
-
-function getMapZoomFromStorage() {
-    const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
-    return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
 
 const MapSlider = function ({handleSliderChange}) {
@@ -721,235 +496,231 @@ const TargetSatelliteLayout = React.memo(function () {
         dispatch(setMapZoomLevel(zoomLevel));
     }, [mapZoomLevel]);
 
-    const handleSliderChange = useCallback((value) => {
-        dispatch(setSliderTimeOffset(value));
-    }, []);
-
     // we load any stored layouts from localStorage or fallback to default
     const [layouts, setLayouts] = useState(() => {
         const loaded = loadLayoutsFromLocalStorage();
         return loaded ?? defaultLayouts;
     });
 
-    const handleWhenReady = (map) => {
-        // map is ready
-        MapObject = map.target;
-    };
+    // const handleWhenReady = (map) => {
+    //     // map is ready
+    //     MapObject = map.target;
+    // };
 
-    useEffect(() => {
-        const intervalId = setInterval(() => {
-            if (MapObject) {
-                MapObject.invalidateSize();
-            }
-        }, 1000);
+    // useEffect(() => {
+    //     const intervalId = setInterval(() => {
+    //         if (MapObject) {
+    //             MapObject.invalidateSize();
+    //         }
+    //     }, 1000);
+    //
+    //     return () => {
+    //         clearInterval(intervalId);
+    //     };
+    // }, []);
 
-        return () => {
-            clearInterval(intervalId);
-        };
-    }, []);
+    // function MapSettingsButton() {
+    //     const dispatch = useDispatch();
+    //     const handleClick = () => {
+    //         dispatch(setOpenMapSettingsDialog(true));
+    //     };
+    //
+    //     return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
+    //         handleClick()
+    //     }}>
+    //         <SettingsIcon/>
+    //     </Fab>;
+    // }
+    //
+    // function CenterHomeButton() {
+    //     const targetCoordinates = [location.lat, location.lon];
+    //     const handleClick = () => {
+    //         MapObject.setView(targetCoordinates, MapObject.getZoom());
+    //     };
+    //
+    //     return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
+    //         handleClick()
+    //     }}>
+    //         <HomeIcon/>
+    //     </Fab>;
+    // }
+    //
+    // function CenterMapButton() {
+    //     const targetCoordinates = [0, 0];
+    //     const handleClick = () => {
+    //         MapObject.setView(targetCoordinates, MapObject.getZoom());
+    //     };
+    //
+    //     return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={() => {
+    //         handleClick()
+    //     }}>
+    //         <FilterCenterFocusIcon/>
+    //     </Fab>;
+    // }
+    //
+    // function FullscreenMapButton() {
+    //     const handleMapFullscreen = () => {
+    //         const mapContainer = MapObject.getContainer();
+    //         if (!document.fullscreenElement) {
+    //             if (mapContainer.requestFullscreen) {
+    //                 mapContainer.requestFullscreen();
+    //             } else if (mapContainer.mozRequestFullScreen) {
+    //                 mapContainer.mozRequestFullScreen();
+    //             } else if (mapContainer.webkitRequestFullscreen) {
+    //                 mapContainer.webkitRequestFullscreen();
+    //             } else if (mapContainer.msRequestFullscreen) {
+    //                 mapContainer.msRequestFullscreen();
+    //             }
+    //         } else {
+    //             // Exit fullscreen if we're already in it
+    //             if (document.exitFullscreen) {
+    //                 document.exitFullscreen();
+    //             } else if (document.mozCancelFullScreen) {
+    //                 document.mozCancelFullScreen();
+    //             } else if (document.webkitExitFullscreen) {
+    //                 document.webkitExitFullscreen();
+    //             } else if (document.msExitFullscreen) {
+    //                 document.msExitFullscreen();
+    //             }
+    //         }
+    //     };
+    //
+    //     return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={() => {
+    //         handleMapFullscreen()
+    //     }}>
+    //         <FullscreenIcon/>
+    //     </Fab>;
+    // }
 
-    function MapSettingsButton() {
-        const dispatch = useDispatch();
-        const handleClick = () => {
-            dispatch(setOpenMapSettingsDialog(true));
-        };
-
-        return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
-            handleClick()
-        }}>
-            <SettingsIcon/>
-        </Fab>;
-    }
-
-    function CenterHomeButton() {
-        const targetCoordinates = [location.lat, location.lon];
-        const handleClick = () => {
-            MapObject.setView(targetCoordinates, MapObject.getZoom());
-        };
-
-        return <Fab size="small" color="primary" aria-label="Go home" onClick={() => {
-            handleClick()
-        }}>
-            <HomeIcon/>
-        </Fab>;
-    }
-
-    function CenterMapButton() {
-        const targetCoordinates = [0, 0];
-        const handleClick = () => {
-            MapObject.setView(targetCoordinates, MapObject.getZoom());
-        };
-
-        return <Fab size="small" color="primary" aria-label="Go to center of map" onClick={() => {
-            handleClick()
-        }}>
-            <FilterCenterFocusIcon/>
-        </Fab>;
-    }
-
-    function FullscreenMapButton() {
-        const handleMapFullscreen = () => {
-            const mapContainer = MapObject.getContainer();
-            if (!document.fullscreenElement) {
-                if (mapContainer.requestFullscreen) {
-                    mapContainer.requestFullscreen();
-                } else if (mapContainer.mozRequestFullScreen) {
-                    mapContainer.mozRequestFullScreen();
-                } else if (mapContainer.webkitRequestFullscreen) {
-                    mapContainer.webkitRequestFullscreen();
-                } else if (mapContainer.msRequestFullscreen) {
-                    mapContainer.msRequestFullscreen();
-                }
-            } else {
-                // Exit fullscreen if we're already in it
-                if (document.exitFullscreen) {
-                    document.exitFullscreen();
-                } else if (document.mozCancelFullScreen) {
-                    document.mozCancelFullScreen();
-                } else if (document.webkitExitFullscreen) {
-                    document.webkitExitFullscreen();
-                } else if (document.msExitFullscreen) {
-                    document.msExitFullscreen();
-                }
-            }
-        };
-
-        return <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={() => {
-            handleMapFullscreen()
-        }}>
-            <FullscreenIcon/>
-        </Fab>;
-    }
-
-    const satelliteUpdate = function (now) {
-        if (Object.keys(satelliteDetails['name']).length !== 0) {
-
-            const satelliteName = satelliteDetails['name'];
-            const satelliteId = satelliteDetails['norad_id'];
-            const latitude = satellitePosition['lat'];
-            const longitude = satellitePosition['lon'];
-            const altitude = satellitePosition['alt'];
-            const velocity = satellitePosition['vel'];
-            const paths = satellitePaths;
-            const coverage = satelliteCoverage;
-
-            // generate current positions for the group of satellites
-            let currentPos = [];
-            let currentCoverage = [];
-            let currentFuturePaths = [];
-            let currentPastPaths = [];
-
-            // focus map on satellite, center on latitude only
-            //let mapCoords = MapObject.getCenter();
-            //MapObject.setView([latitude, longitude], MapObject.getZoom());
-
-            if (paths) {
-                // past path
-                currentPastPaths.push(<Polyline
-                    key={`past-path-${noradId}`}
-                    positions={paths['past']}
-                    pathOptions={{
-                        color: pastOrbitLineColor,
-                        weight: 2,
-                        opacity: 1,
-                        smoothFactor: 1,
-                    }}
-                />)
-
-                // future path
-                currentFuturePaths.push(<Polyline
-                    key={`future-path-${noradId}`}
-                    positions={paths['future']}
-                    pathOptions={{
-                        color: futureOrbitLineColor,
-                        weight: 2,
-                        opacity: 0.8,
-                        dashArray: "3 3",
-                        smoothFactor: 1,
-                    }}
-                />)
-            }
-
-            if (showTooltip) {
-                currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
-                                        icon={satelliteIcon2}>
-                    <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={1} permanent>
-                        {satelliteName} - {humanizeAltitude(altitude) + " km, " + humanizeVelocity(velocity) + " km/s"}
-                    </ThemedLeafletTooltip>
-                </Marker>);
-            } else {
-                currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
-                                        icon={satelliteIcon2}>
-                </Marker>);
-            }
-
-            if (coverage) {
-                //let coverage = [];
-                //coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
-                currentCoverage.push(<Polyline
-                    ref={coverageRef}
-                    noClip={true}
-                    key={"coverage-" + satelliteDetails['name']}
-                    pathOptions={{
-                        color: satelliteCoverageColor,
-                        weight: 1,
-                        fill: true,
-                        fillOpacity: 0.2,
-                    }}
-                    positions={coverage}
-                />);
-            }
-
-            setCurrentPastSatellitesPaths(currentPastPaths);
-            setCurrentFutureSatellitesPaths(currentFuturePaths);
-            setCurrentSatellitesPosition(currentPos);
-            setCurrentSatellitesCoverage(currentCoverage);
-
-        } else {
-            //console.warn("No satellite data found for norad id: ", noradId, satelliteDetails);
-        }
-
-        // Day/night boundary
-        const terminatorLine = createTerminatorLine().reverse();
-        dispatch(setTerminatorLine(terminatorLine));
-
-        // Day side polygon
-        const dayPoly = [...terminatorLine];
-        dayPoly.push(dayPoly[dayPoly.length - 1]);
-        dispatch(setDaySidePolygon(dayPoly));
-
-        // sun and moon position
-        const [sunPos, moonPos] = getSunMoonCoords();
-        dispatch(setSunPos(sunPos));
-        dispatch(setMoonPos(moonPos));
-    }
+    // const satelliteUpdate = function (now) {
+    //     if (Object.keys(satelliteDetails['name']).length !== 0) {
+    //
+    //         const satelliteName = satelliteDetails['name'];
+    //         const satelliteId = satelliteDetails['norad_id'];
+    //         const latitude = satellitePosition['lat'];
+    //         const longitude = satellitePosition['lon'];
+    //         const altitude = satellitePosition['alt'];
+    //         const velocity = satellitePosition['vel'];
+    //         const paths = satellitePaths;
+    //         const coverage = satelliteCoverage;
+    //
+    //         // generate current positions for the group of satellites
+    //         let currentPos = [];
+    //         let currentCoverage = [];
+    //         let currentFuturePaths = [];
+    //         let currentPastPaths = [];
+    //
+    //         // focus map on satellite, center on latitude only
+    //         //let mapCoords = MapObject.getCenter();
+    //         //MapObject.setView([latitude, longitude], MapObject.getZoom());
+    //
+    //         if (paths) {
+    //             // past path
+    //             currentPastPaths.push(<Polyline
+    //                 key={`past-path-${noradId}`}
+    //                 positions={paths['past']}
+    //                 pathOptions={{
+    //                     color: pastOrbitLineColor,
+    //                     weight: 2,
+    //                     opacity: 1,
+    //                     smoothFactor: 1,
+    //                 }}
+    //             />)
+    //
+    //             // future path
+    //             currentFuturePaths.push(<Polyline
+    //                 key={`future-path-${noradId}`}
+    //                 positions={paths['future']}
+    //                 pathOptions={{
+    //                     color: futureOrbitLineColor,
+    //                     weight: 2,
+    //                     opacity: 0.8,
+    //                     dashArray: "3 3",
+    //                     smoothFactor: 1,
+    //                 }}
+    //             />)
+    //         }
+    //
+    //         if (showTooltip) {
+    //             currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
+    //                                     icon={satelliteIcon2}>
+    //                 <ThemedLeafletTooltip direction="bottom" offset={[0, 10]} opacity={1} permanent>
+    //                     {satelliteName} - {humanizeAltitude(altitude) + " km, " + humanizeVelocity(velocity) + " km/s"}
+    //                 </ThemedLeafletTooltip>
+    //             </Marker>);
+    //         } else {
+    //             currentPos.push(<Marker key={"marker-" + satelliteId} position={[latitude, longitude]}
+    //                                     icon={satelliteIcon2}>
+    //             </Marker>);
+    //         }
+    //
+    //         if (coverage) {
+    //             //let coverage = [];
+    //             //coverage = getSatelliteCoverageCircle(latitude, longitude, altitude, 360);
+    //             currentCoverage.push(<Polyline
+    //                 ref={coverageRef}
+    //                 noClip={true}
+    //                 key={"coverage-" + satelliteDetails['name']}
+    //                 pathOptions={{
+    //                     color: satelliteCoverageColor,
+    //                     weight: 1,
+    //                     fill: true,
+    //                     fillOpacity: 0.2,
+    //                 }}
+    //                 positions={coverage}
+    //             />);
+    //         }
+    //
+    //         setCurrentPastSatellitesPaths(currentPastPaths);
+    //         setCurrentFutureSatellitesPaths(currentFuturePaths);
+    //         setCurrentSatellitesPosition(currentPos);
+    //         setCurrentSatellitesCoverage(currentCoverage);
+    //
+    //     } else {
+    //         //console.warn("No satellite data found for norad id: ", noradId, satelliteDetails);
+    //     }
+    //
+    //     // Day/night boundary
+    //     const terminatorLine = createTerminatorLine().reverse();
+    //     dispatch(setTerminatorLine(terminatorLine));
+    //
+    //     // Day side polygon
+    //     const dayPoly = [...terminatorLine];
+    //     dayPoly.push(dayPoly[dayPoly.length - 1]);
+    //     dispatch(setDaySidePolygon(dayPoly));
+    //
+    //     // sun and moon position
+    //     const [sunPos, moonPos] = getSunMoonCoords();
+    //     dispatch(setSunPos(sunPos));
+    //     dispatch(setMoonPos(moonPos));
+    // }
 
     function handleLayoutsChange(currentLayout, allLayouts) {
         setLayouts(allLayouts);
         saveLayoutsToLocalStorage(allLayouts);
     }
 
-    // subscribe to map events
-    function MapEventComponent({handleSetMapZoomLevel}) {
-        const mapEvents = useMapEvents({
-            zoomend: () => {
-                const mapZoom = mapEvents.getZoom()
-                handleSetMapZoomLevel(mapZoom);
-                localStorage.setItem(storageMapZoomValueKey, mapZoom);
-            },
-        });
-        return null;
-    }
+    // // subscribe to map events
+    // function MapEventComponent({handleSetMapZoomLevel}) {
+    //     const mapEvents = useMapEvents({
+    //         zoomend: () => {
+    //             const mapZoom = mapEvents.getZoom()
+    //             handleSetMapZoomLevel(mapZoom);
+    //             localStorage.setItem(storageMapZoomValueKey, mapZoom);
+    //         },
+    //     });
+    //     return null;
+    // }
 
-    useEffect(() => {
-        if (coverageRef.current) {
-            // Fit the map to the polygon's bounds
-            MapObject.fitBounds(coverageRef.current.getBounds(), {
-                    padding: [15, 15],
-                }
-            );
-        }
-    }, [MapObject, satellitePosition, sliderTimeOffset, noradId]);
+    // useEffect(() => {
+    //     if (coverageRef.current) {
+    //         // Fit the map to the polygon's bounds
+    //         MapObject.fitBounds(coverageRef.current.getBounds(), {
+    //                 padding: [15, 15],
+    //             }
+    //         );
+    //     }
+    // }, [MapObject, satellitePosition, sliderTimeOffset, noradId]);
 
     useEffect(() => {
         // we do this here once onmount,
@@ -972,131 +743,48 @@ const TargetSatelliteLayout = React.memo(function () {
         };
     }, []);
 
-    useEffect(() => {
-        if (noradId) {
-            dispatch(fetchSatellite({socket, noradId: noradId}));
-        }
+    // useEffect(() => {
+    //     if (noradId) {
+    //         dispatch(fetchSatellite({socket, noradId: noradId}));
+    //     }
+    //
+    //     return () => {
+    //
+    //     };
+    // }, [noradId]);
 
-        return () => {
-
-        };
-    }, [noradId]);
-
-    useEffect(() => {
-        satelliteUpdate(new Date());
-
-        return () => {
-        };
-
-    }, [satelliteDetails, satellitePosition, satellitePaths, satelliteCoverage, sliderTimeOffset, showTooltip,
-        orbitProjectionDuration, tileLayerID, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage,
-        showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor,
-        satelliteCoverageColor]);
-
-    useEffect(() => {
-        // zoom in and out a bit to fix the zoom factor issue
-        if (MapObject) {
-            const zoomLevel = MapObject.getZoom();
-            const loc = MapObject.getCenter();
-            setTimeout(() => {
-                MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
-                setTimeout(() => {
-                    MapObject.setView([loc.lat, loc.lng], zoomLevel);
-                }, 500);
-            }, 0);
-        }
-        return () => {
-
-        };
-    }, [tileLayerID]);
+    // useEffect(() => {
+    //     satelliteUpdate(new Date());
+    //
+    //     return () => {
+    //     };
+    //
+    // }, [satelliteDetails, satellitePosition, satellitePaths, satelliteCoverage, sliderTimeOffset, showTooltip,
+    //     orbitProjectionDuration, tileLayerID, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage,
+    //     showSunIcon, showMoonIcon, showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor,
+    //     satelliteCoverageColor]);
+    //
+    // useEffect(() => {
+    //     // zoom in and out a bit to fix the zoom factor issue
+    //     if (MapObject) {
+    //         const zoomLevel = MapObject.getZoom();
+    //         const loc = MapObject.getCenter();
+    //         setTimeout(() => {
+    //             MapObject.setView([loc.lat, loc.lng], zoomLevel - 0.25);
+    //             setTimeout(() => {
+    //                 MapObject.setView([loc.lat, loc.lng], zoomLevel);
+    //             }, 500);
+    //         }, 0);
+    //     }
+    //     return () => {
+    //
+    //     };
+    // }, [tileLayerID]);
 
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
-            <MapContainer
-                center={[satellitePosition['lat'] || 0, satellitePosition['lon'] || 0]}
-                zoom={mapZoomLevel}
-                style={{width: '100%', height: '100%', minHeight: '400px', minWidth: '400px'}}
-                dragging={false}
-                scrollWheelZoom={false}
-                maxZoom={7}
-                minZoom={0}
-                whenReady={handleWhenReady}
-                zoomSnap={0.25}
-                zoomDelta={0.25}
-                boundsOptions={{padding: [300, 300]}}
-            >
-                <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                    Tracking {satelliteDetails['name'] || "-"} {(satellitePosition['alt'] / 1000).toFixed(2)} km, {satellitePosition['vel'].toFixed(2)} km/s
-                </MapTitleBar>
-                <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
-                <TileLayer
-                    url={getTileLayerById(tileLayerID)['url']}
-                    attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
-                />
-                <Box sx={{'& > :not(style)': {m: 1}}} style={{right: 0, top: 30, position: 'absolute'}}>
-                    <MapSettingsButton/>
-                    <CenterHomeButton/>
-                    <CenterMapButton/>
-                    <FullscreenMapButton/>
-                </Box>
-
-                {sunPos && showSunIcon ? <Marker position={sunPos} icon={sunIcon} opacity={0.5}></Marker> : null}
-                {moonPos && showMoonIcon ? <Marker position={moonPos} icon={moonIcon} opacity={0.5}></Marker> : null}
-
-                {daySidePolygon.length > 1 && showTerminatorLine && (
-                    <Polygon
-                        positions={daySidePolygon}
-                        pathOptions={{
-                            fillColor: 'black',
-                            fillOpacity: 0.4,
-                            color: 'white',
-                            weight: 0,
-                            smoothed: true,
-                        }}
-                    />
-                )}
-
-                {terminatorLine.length > 1 && showTerminatorLine && (
-                    <Polyline
-                        positions={terminatorLine}
-                        pathOptions={{
-                            color: 'white',
-                            weight: 1,
-                            opacity: 0.2,
-                            smoothFactor: 1,
-                        }}
-                    />
-                )}
-
-                {InternationalDateLinePolyline()}
-                {location.lat && location.lon ?
-                    <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/> : null}
-                {showPastOrbitPath ? currentPastSatellitesPaths : null}
-                {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
-                {currentSatellitesPosition}
-                {showSatelliteCoverage ? currentSatellitesCoverage : null}
-                <MapSettingsIslandDialog updateBackend={() => {
-                    const key = 'target-map-settings';
-                    dispatch(setTargetMapSetting({socket, key: key}));
-                }}/>
-                <MapStatusBar>
-                    <SimpleTruncatedHtml className={"attribution"} htmlString={`<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank"
-                       rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}/>
-                </MapStatusBar>
-                <MapArrowControls mapObject={MapObject}/>
-                {showGrid && (
-                    <CoordinateGrid
-                        latInterval={15}
-                        lngInterval={15}
-                        latColor="#FFFFFF"
-                        lngColor="#FFFFFF"
-                        weight={1}
-                        opacity={0.5}
-                        showLabels={false}
-                    />
-                )}
-            </MapContainer>
+            <TargetSatelliteMapContainer />
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="info">
             <SatelliteInfoIsland/>
@@ -1114,7 +802,6 @@ const TargetSatelliteLayout = React.memo(function () {
             {/*<RotatorControl/>*/}
             <ControllerTabs waterfallSettingsComponentRef={null}/>
         </StyledIslandParentScrollbar>,
-
     ];
 
     let ResponsiveGridLayoutParent = null;
