@@ -524,7 +524,9 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
                 vfo_id=data.get('vfoNumber', 0),
                 center_freq=int(data.get('frequency', 0)),
                 bandwidth=int(data.get('bandwidth', 0)),
-                modulation=data.get('mode', "fm")
+                modulation=data.get('mode', "fm"),
+                active=data.get('active', None),
+                selected=data.get('selected', None),
             )
 
             reply = {'success': True, 'data': {}}

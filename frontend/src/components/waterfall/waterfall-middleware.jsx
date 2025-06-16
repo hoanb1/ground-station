@@ -50,6 +50,28 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         }));
     }
 
+    // Handle VFO activation
+    if (action.type === 'waterfallState/setVfoActive') {
+        const vfoNumber = action.payload;
+
+        store.dispatch(updateVFOParameters({
+            socket,
+            vfoNumber,
+            updates: { active: true }
+        }));
+    }
+
+    // Handle VFO deactivation
+    if (action.type === 'waterfallState/setVfoInactive') {
+        const vfoNumber = action.payload;
+
+        store.dispatch(updateVFOParameters({
+            socket,
+            vfoNumber,
+            updates: { active: false }
+        }));
+    }
+
     // I can add more actions here based on type
 
     return result;
