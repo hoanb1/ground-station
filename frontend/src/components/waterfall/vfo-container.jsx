@@ -72,11 +72,11 @@ const VFOMarkersContainer = ({
             updates,
         }));
 
-        dispatch(updateVFOParameters({
-            socket,
-            vfoNumber,
-            updates,
-        }));
+        // dispatch(updateVFOParameters({
+        //     socket,
+        //     vfoNumber,
+        //     updates,
+        // }));
 
     }, [dispatch]);
 

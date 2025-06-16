@@ -21,6 +21,7 @@
 import React, {createContext, useCallback, useContext, useEffect, useState} from 'react';
 import { useSnackbar } from 'notistack';
 import { Manager } from "socket.io-client";
+import {setSocketForMiddleware} from '../waterfall/waterfall-middleware.jsx';
 
 // Create the context
 const SocketContext = createContext();
@@ -37,7 +38,7 @@ export const SocketProvider = ({ children }) => {
     
     useEffect(() => {
         // Initialize socket connection (replace URL with your server's URL)
-        console.info(import.meta.env.VITE_GS_BACKEND_PORT);
+        //console.info(import.meta.env.VITE_GS_BACKEND_PORT);
         //const port = import.meta.env.VITE_GS_BACKEND_PORT || 5000;
         const host = window.location.hostname;
         const port = window.location.port;
@@ -48,6 +49,7 @@ export const SocketProvider = ({ children }) => {
         const manager = new Manager(backendURL);
         const newSocket = manager.socket("/");
         setSocket(newSocket);
+        setSocketForMiddleware(newSocket);
 
         // Cleanup on unmount
         return () => {

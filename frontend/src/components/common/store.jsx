@@ -37,6 +37,7 @@ import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
+import backendSyncMiddleware from '../waterfall/waterfall-middleware.jsx';
 
 
 // Persist configuration for waterfall slice
@@ -198,7 +199,7 @@ export const store = configureStore({
                 warnAfter: 256,
                 ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
             },
-        }),
+        }).concat(backendSyncMiddleware),
 });
 
 //export default store;
