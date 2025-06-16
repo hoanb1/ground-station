@@ -54,7 +54,7 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
                                                      sampleRate,
                                                      waterFallWindowHeight,
                                                  }) => {
-    console.info('Rendering WaterfallWithStrictXAxisZoom');
+
     const containerRef = useRef(null);
     const containerWidthRef = useRef(0);
     const [isMobile, setIsMobile] = useState(false);
@@ -527,6 +527,8 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
                     waterfallHeight={waterFallCanvasHeight}
                     bandscopeHeight={bandScopeHeight}
                     containerWidth={containerWidthRef.current}
+                    zoomScale={scaleRef.current}
+                    currentPositionX={positionXRef.current}
                 />
             </Box>
 

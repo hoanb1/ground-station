@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useCallback, useRef } from "react";
+import React, {useState, useEffect, useCallback, useRef, useMemo} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from 'uuid';
 import { Box, IconButton } from '@mui/material';
@@ -13,7 +13,10 @@ import {
     disableVFO3,
     disableVFO4,
     setVFOProperty,
-    setSelectedVFO, updateVFOParameters,
+    setSelectedVFO,
+    updateVFOParameters,
+    setVfoActive,
+    setVfoInactive,
 } from './waterfall-slice.jsx';
 import {useSocket} from "../common/socket.jsx";
 
@@ -23,6 +26,8 @@ const VFOMarkersContainer = ({
                                  waterfallHeight,
                                  bandscopeHeight,
                                  containerWidth,
+                                 zoomScale,
+                                 currentPositionX,
                              }) => {
     const dispatch = useDispatch();
     const {socket} = useSocket();
@@ -31,6 +36,7 @@ const VFOMarkersContainer = ({
         maxVFOMarkers,
         selectedVFO,
         vfoColors,
+        vfoActive,
     } = useSelector(state => state.waterfall);
 
     const containerRef = useRef(null);
@@ -44,6 +50,9 @@ const VFOMarkersContainer = ({
     const lastTouchXRef = useRef(0); // Track touch position
     const height = bandscopeHeight + waterfallHeight;
     const [cursor, setCursor] = useState('default');
+
+    // Track previous VFO active state to detect changes
+    const prevVfoActiveRef = useRef({});
 
     // Configurable bandwidth limits
     const [minBandwidth] = useState(500); // 500 Hz minimum
@@ -68,20 +77,107 @@ const VFOMarkersContainer = ({
         return (freq / 1e6).toFixed(3);
     };
 
-    // Consolidated function to set state
+    // Consolidated function to set redux state
     const updateVFOProperty = useCallback((vfoNumber, updates) => {
         dispatch(setVFOProperty({
             vfoNumber,
             updates,
         }));
-
-        // dispatch(updateVFOParameters({
-        //     socket,
-        //     vfoNumber,
-        //     updates,
-        // }));
-
     }, [dispatch]);
+
+    // When the VFO status changes, detect which VFO was just made active
+    useEffect(() => {
+        // Compare current vfoActive with previous state
+        Object.keys(vfoActive).forEach(vfoNumber => {
+            const isCurrentlyActive = vfoActive[vfoNumber];
+            const wasPreviouslyActive = prevVfoActiveRef.current[vfoNumber] || false;
+
+            // Only process VFOs that just became active (transition from false/undefined to true)
+            if (isCurrentlyActive && !wasPreviouslyActive) {
+                const marker = vfoMarkers[vfoNumber];
+
+                if (marker) {
+                    const visibleRange = getVisibleFrequencyRange();
+                    console.info(visibleRange);
+                    const needsFrequencyUpdate =
+                        marker.frequency === null ||
+                        marker.frequency < visibleRange.startFrequency ||
+                        marker.frequency > visibleRange.endFrequency;
+
+                    if (needsFrequencyUpdate) {
+                        // Set frequency to center of visible range
+                        const newFrequency = visibleRange.centerFrequency;
+
+                        // Also ensure color is set if null
+                        const updates = {
+                            frequency: newFrequency
+                        };
+
+                        if (marker.color === null) {
+                            // Use the color from vfoColors array based on VFO number
+                            const colorIndex = parseInt(vfoNumber) - 1;
+                            updates.color = vfoColors[colorIndex] || '#FF0000';
+                        }
+
+                        dispatch(setVFOProperty({
+                            vfoNumber: parseInt(vfoNumber),
+                            updates,
+                        }));
+                    }
+                }
+            }
+        });
+
+        // Update the previous state reference for next comparison
+        prevVfoActiveRef.current = { ...vfoActive };
+
+        return () => {
+            // Cleanup if needed
+        };
+    }, [vfoActive, vfoMarkers, vfoColors, dispatch]);
+
+    // Function to calculate visible frequency range considering zoom and pan
+    const getVisibleFrequencyRange = () => {
+        // When zoomed out (actualWidth < containerWidth), we see the full spectrum
+        if (actualWidth <= containerWidth) {
+            return {
+                startFrequency: centerFrequency - sampleRate / 2,
+                endFrequency: centerFrequency + sampleRate / 2,
+                centerFrequency: centerFrequency,
+                bandwidth: sampleRate
+            };
+        }
+
+        // When zoomed in (actualWidth > containerWidth), calculate visible portion
+        const zoomFactor = actualWidth / containerWidth;
+
+        // Calculate the visible width as a fraction of the total zoomed width
+        const visibleWidthRatio = containerWidth / actualWidth;
+
+        // Calculate the pan offset as a fraction of the total zoomed width
+        // currentPositionX is negative when panned right
+        const panOffsetRatio = -currentPositionX / actualWidth;
+
+        // Calculate start and end ratios, ensuring they stay within bounds
+        const startRatio = Math.max(0, Math.min(1 - visibleWidthRatio, panOffsetRatio));
+        const endRatio = Math.min(1, startRatio + visibleWidthRatio);
+
+        // Calculate the full frequency range
+        const fullStartFreq = centerFrequency - sampleRate / 2;
+        const fullEndFreq = centerFrequency + sampleRate / 2;
+        const fullFreqRange = fullEndFreq - fullStartFreq;
+
+        // Calculate visible frequency range
+        const visibleStartFreq = fullStartFreq + (startRatio * fullFreqRange);
+        const visibleEndFreq = fullStartFreq + (endRatio * fullFreqRange);
+
+        return {
+            startFrequency: visibleStartFreq,
+            endFrequency: visibleEndFreq,
+            centerFrequency: (visibleStartFreq + visibleEndFreq) / 2,
+            bandwidth: visibleEndFreq - visibleStartFreq
+        };
+    };
 
     // Handle mousewheel events for frequency adjustment
     const handleWheel = useCallback((e) => {
@@ -91,7 +187,7 @@ const VFOMarkersContainer = ({
         }
 
         // Check if we have a selected VFO
-        if (selectedVFO === null || !vfoMarkers[selectedVFO] || !vfoMarkers[selectedVFO].active) {
+        if (selectedVFO === null || !vfoMarkers[selectedVFO] || !vfoActive[selectedVFO]) {
             return;
         }
 
@@ -177,7 +273,7 @@ const VFOMarkersContainer = ({
         ctx.clearRect(0, 0, canvas.width, height);
 
         // Get active VFO keys and sort them so selected VFO is last (drawn on top)
-        const vfoKeys = Object.keys(vfoMarkers).filter(key => vfoMarkers[key].active);
+        const vfoKeys = Object.keys(vfoActive).filter(key => vfoActive[key]);
 
         // Sort keys to put selected VFO at the end (drawn last)
         const sortedVfoKeys = vfoKeys.sort((a, b) => {
@@ -338,7 +434,8 @@ const VFOMarkersContainer = ({
             ctx.fillText(labelText, centerX, 16);
 
         });
-    }, [vfoMarkers, actualWidth, height, centerFrequency, sampleRate, startFreq, endFreq, freqRange, selectedVFO]);
+    }, [vfoActive, vfoMarkers, actualWidth, height, centerFrequency, sampleRate,
+        startFreq, endFreq, freqRange, selectedVFO]);
 
     // Calculate frequency from position
     const calculateFrequency = useCallback((position) => {
@@ -366,7 +463,7 @@ const VFOMarkersContainer = ({
 
         // Function to check if a single VFO has a hit
         const checkVFOHit = (key) => {
-            if (!vfoMarkers[key] || !vfoMarkers[key].active) return null;
+            if (!vfoMarkers[key] || !vfoActive[key]) return null;
 
             const marker = vfoMarkers[key];
             const bandwidth = marker.bandwidth || 3000;
@@ -449,8 +546,8 @@ const VFOMarkersContainer = ({
         }
 
         // Get all active VFO keys and sort them (non-selected VFOs)
-        const vfoKeys = Object.keys(vfoMarkers).filter(key =>
-            vfoMarkers[key].active && parseInt(key) !== selectedVFO
+        const vfoKeys = Object.keys(vfoActive).filter(key =>
+            vfoActive[key] && parseInt(key) !== selectedVFO
         );
 
         // Check each VFO in order
@@ -462,7 +559,7 @@ const VFOMarkersContainer = ({
         }
 
         return { key: null, element: null };
-    }, [vfoMarkers, actualWidth, startFreq, endFreq, freqRange, selectedVFO, formatFrequency]);
+    }, [vfoActive, actualWidth, startFreq, endFreq, freqRange, selectedVFO, formatFrequency]);
 
     // Handle mouse move to update cursor
     const handleMouseMove = useCallback((e) => {
@@ -958,75 +1055,11 @@ const VFOMarkersContainer = ({
 
         // Disable this for now
         return false;
-
-        // const rect = canvasRef.current.getBoundingClientRect();
-        // const x = e.clientX - rect.left;
-        // const y = e.clientY - rect.top;
-        //
-        // const { key } = getHoverElement(x, y);
-        //
-        // if (key) {
-        //     dispatch(setVFOProperty({
-        //         vfoNumber: parseInt(key),
-        //         updates: {
-        //             active: false,
-        //         }
-        //     }));
-        //
-        //     // If we're deactivating the currently selected VFO, clear the selection
-        //     if (selectedVFO === parseInt(key)) {
-        //         dispatch(setSelectedVFO(null));
-        //     }
-        // }
     };
 
     // Double tap to remove a marker on mobile devices
     const lastTapRef = useRef(0);
     const tapTimeoutRef = useRef(null);
-
-    const handleDoubleTap = (e) => {
-        clearTimeout(tapTimeoutRef.current);
-
-        if (!e.touches || e.touches.length !== 1) return;
-
-        const touch = e.touches[0];
-        const rect = canvasRef.current.getBoundingClientRect();
-        const x = touch.clientX - rect.left;
-        const y = touch.clientY - rect.top;
-
-        const currentTime = new Date().getTime();
-        const tapLength = currentTime - lastTapRef.current;
-
-        if (tapLength < 500 && tapLength > 0) {
-            // Double tap detected
-            const { key } = getHoverElement(x, y);
-
-            if (key) {
-                // Prevent default only when we're removing a marker
-                e.preventDefault();
-                e.stopPropagation();
-
-                dispatch(setVFOProperty({
-                    vfoNumber: parseInt(key),
-                    updates: {
-                        active: false,
-                    }
-                }));
-
-                // If we're deactivating the currently selected VFO, clear the selection
-                if (selectedVFO === parseInt(key)) {
-                    dispatch(setSelectedVFO(null));
-                }
-            }
-        } else {
-            // Single tap
-            tapTimeoutRef.current = setTimeout(() => {
-                // Single tap logic if needed
-            }, 500);
-        }
-
-        lastTapRef.current = currentTime;
-    };
 
     return (
         <Box

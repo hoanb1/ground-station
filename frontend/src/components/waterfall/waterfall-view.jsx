@@ -101,6 +101,8 @@ import {
     disableVFO3,
     disableVFO4,
     setVFOProperty,
+    setVfoInactive,
+    setVfoActive,
 } from './waterfall-slice.jsx';
 
 import {enqueueSnackbar} from "notistack";
@@ -197,6 +199,7 @@ const MainWaterfallDisplay = React.memo(() => {
         vfoMarkers,
         maxVFOMarkers,
         vfoColors,
+        vfoActive,
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
@@ -736,35 +739,23 @@ const MainWaterfallDisplay = React.memo(() => {
                                     fontFamily: "Monospace",
                                     fontWeight: "bold",
                                     color: vfoColors[0],
-                                    backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.1)` : 'transparent',
+                                    backgroundColor: vfoActive[1] ? `rgba(255,0,0,0.1)` : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: vfoMarkers[1]['active'] ? `rgba(255,0,0,0.2)` : 'rgba(0,0,0,0.1)'
+                                        backgroundColor: vfoActive[1] ? `rgba(255,0,0,0.2)` : 'rgba(0,0,0,0.1)'
                                     },
                                     '& .MuiTouchRipple-root': {
-                                        border: vfoMarkers[1]['active'] ? '1px solid': 'none',
+                                        border: vfoActive[1] ? '1px solid': 'none',
                                         borderColor: '#ff0000',
                                     },
                                 }}
                                 onClick={() => {
-                                    if (vfoMarkers[1]['active']) {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 1, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[0],
-                                                active: false,
-                                            }
-                                        }));
+                                    if (vfoActive[1]) {
+                                        dispatch(setVfoInactive(1));
                                     } else {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 1, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[0],
-                                                active: true,
-                                            }
-                                        }));
+                                        dispatch(setVfoActive(1));
                                     }
                                 }}
-                                color={vfoMarkers[1]['active'] ? "warning" : "primary"}
+                                color={vfoActive[1] ? "warning" : "primary"}
                                 title="Toggle VFO 1"
                             >
                                 1
@@ -778,35 +769,23 @@ const MainWaterfallDisplay = React.memo(() => {
                                     fontFamily: "Monospace",
                                     fontWeight: "bold",
                                     color: vfoColors[1],
-                                    backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.1)' : 'transparent',
+                                    backgroundColor: vfoActive[2] ? 'rgba(0,255,0,0.1)' : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: vfoMarkers[2]['active'] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
+                                        backgroundColor: vfoActive[2] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
                                     },
                                     '& .MuiTouchRipple-root': {
-                                        border: vfoMarkers[2]['active'] ? '1px solid': 'none',
+                                        border: vfoActive[2] ? '1px solid': 'none',
                                         borderColor: 'rgba(0,255,0,0.7)',
                                     },
                                 }}
                                 onClick={() => {
-                                    if (vfoMarkers[2]['active']) {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 2, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[1],
-                                                active: false,
-                                            }
-                                        }));
+                                    if (vfoActive[2]) {
+                                        dispatch(setVfoInactive(2));
                                     } else {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 2, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[1],
-                                                active: true,
-                                            }
-                                        }));
+                                        dispatch(setVfoActive(2));
                                     }
                                 }}
-                                color={vfoMarkers[2]['active'] ? "warning" : "primary"}
+                                color={vfoActive[2] ? "warning" : "primary"}
                                 title="Toggle VFO 2"
                             >
                                 2
@@ -820,35 +799,23 @@ const MainWaterfallDisplay = React.memo(() => {
                                     fontFamily: "Monospace",
                                     fontWeight: "bold",
                                     color: vfoColors[2],
-                                    backgroundColor: vfoMarkers[3]['active'] ? 'rgba(0,0,255,0.1)' : 'transparent',
+                                    backgroundColor: vfoActive[3] ? 'rgba(0,0,255,0.1)' : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: vfoMarkers[3]['active'] ? 'rgba(18,49,255,0.78)' : 'rgba(0,0,0,0.1)'
+                                        backgroundColor: vfoActive[3] ? 'rgba(18,49,255,0.78)' : 'rgba(0,0,0,0.1)'
                                     },
                                     '& .MuiTouchRipple-root': {
-                                        border: vfoMarkers[3]['active'] ? '1px solid': 'none',
+                                        border: vfoActive[3] ? '1px solid': 'none',
                                         borderColor: 'rgba(18,49,255,0.8)',
                                     },
                                 }}
                                 onClick={() => {
-                                    if (vfoMarkers[3]['active']) {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 3, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[2],
-                                                active: false,
-                                            }
-                                        }));
+                                    if (vfoActive[3]) {
+                                        dispatch(setVfoInactive(3));
                                     } else {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 3, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[2],
-                                                active: true,
-                                            }
-                                        }));
+                                        dispatch(setVfoActive(3));
                                     }
                                 }}
-                                color={vfoMarkers[3]['active'] ? "warning" : "primary"}
+                                color={vfoActive[3] ? "warning" : "primary"}
                                 title="Toggle VFO 3"
                             >
                                 3
@@ -862,35 +829,23 @@ const MainWaterfallDisplay = React.memo(() => {
                                     fontFamily: "Monospace",
                                     fontWeight: "bold",
                                     color: vfoColors[3],
-                                    backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.1)' : 'transparent',
+                                    backgroundColor: vfoActive[4] ? 'rgba(255,0,255,0.1)' : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: vfoMarkers[4]['active'] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
+                                        backgroundColor: vfoActive[4] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
                                     },
                                     '& .MuiTouchRipple-root': {
-                                        border: vfoMarkers[4]['active'] ? '1px solid': 'none',
+                                        border: vfoActive[4] ? '1px solid': 'none',
                                         borderColor: 'rgba(163,0,218,0.77)',
                                     },
                                 }}
                                 onClick={() => {
-                                    if (vfoMarkers[4]['active']) {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 4, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[3],
-                                                active: false,
-                                            }
-                                        }));
+                                    if (vfoActive[4]) {
+                                        dispatch(setVfoInactive(4));
                                     } else {
-                                        dispatch(setVFOProperty({
-                                            vfoNumber: 4, updates: {
-                                                frequency: centerFrequency,
-                                                color: vfoColors[3],
-                                                active: true,
-                                            }
-                                        }));
+                                        dispatch(setVfoActive(4));
                                     }
                                 }}
-                                color={vfoMarkers[4]['active'] ? "warning" : "primary"}
+                                color={vfoActive[4] ? "warning" : "primary"}
                                 title="Toggle VFO 4"
                             >
                                 4
@@ -899,9 +854,7 @@ const MainWaterfallDisplay = React.memo(() => {
                     </Box>
                 </Paper>
             </Box>
-
             {/* Container for both bandscope and waterfall */}
-
             <Box
                 sx={{
                     width: '100%',

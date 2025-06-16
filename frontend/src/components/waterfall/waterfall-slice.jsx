@@ -120,11 +120,17 @@ const initialState = {
     soapyAgc: false,
     selectedAntenna: 'none',
     bookmarks: [],
+    vfoActive: {
+        1: false,
+        2: false,
+        3: false,
+        4: false,
+    },
     vfoMarkers: {
-        1: {active: false, name: "VFO1", bandwidth: 4300, frequency: null, color: null, mode: 'fm'},
-        2: {active: false, name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
-        3: {active: false, name: "VFO3", bandwidth: 5000, frequency: null, color: null, mode: 'fm'},
-        4: {active: false, name: "VFO4", bandwidth: 20000, frequency: null, color: null, mode: 'fm'},
+        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
+        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
+        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
+        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
     },
     maxVFOMarkers: 4,
     selectedVFO: 1,
@@ -288,6 +294,12 @@ export const waterfallSlice = createSlice({
         setSelectedVFO(state, action) {
             state.selectedVFO = action.payload;
         },
+        setVfoActive: (state, action) => {
+            state.vfoActive[action.payload] = true;
+        },
+        setVfoInactive: (state, action) => {
+            state.vfoActive[action.payload] = false;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -373,6 +385,8 @@ export const {
     disableVFO3,
     disableVFO4,
     setSelectedVFO,
+    setVfoActive,
+    setVfoInactive,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;
