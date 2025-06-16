@@ -60,7 +60,8 @@ import {
     setSelectedTransmitterId,
     setSelectedOffsetMode,
     setSelectedOffsetValue,
-} from './waterfall-slice.jsx'
+} from './waterfall-slice.jsx';
+
 import {
     Box,
     CircularProgress,
