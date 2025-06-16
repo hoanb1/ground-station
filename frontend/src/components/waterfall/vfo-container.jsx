@@ -55,6 +55,9 @@ const VFOMarkersContainer = ({
     // Configurable Y position offset for resize handles
     const [edgeHandleYOffset] = useState(50);
 
+    // Configurable mousewheel frequency step (in Hz)
+    const [mousewheelFreqStep] = useState(1000); // 100 Hz step
+
     // Calculate frequency range
     const startFreq = centerFrequency - sampleRate / 2;
     const endFreq = centerFrequency + sampleRate / 2;
@@ -79,6 +82,53 @@ const VFOMarkersContainer = ({
         // }));
 
     }, [dispatch]);
+
+    // Handle mousewheel events for frequency adjustment
+    const handleWheel = useCallback((e) => {
+        // Only handle plain mousewheel events (not with shift key)
+        if (e.shiftKey) {
+            return; // Let the underlying canvas handle shift+wheel events
+        }
+
+        // Check if we have a selected VFO
+        if (selectedVFO === null || !vfoMarkers[selectedVFO] || !vfoMarkers[selectedVFO].active) {
+            return;
+        }
+
+        // Prevent default scrolling behavior
+        e.preventDefault();
+        e.stopPropagation();
+
+        const marker = vfoMarkers[selectedVFO];
+
+        // Calculate frequency change based on wheel direction
+        // Positive deltaY = wheel down = decrease frequency
+        // Negative deltaY = wheel up = increase frequency
+        const freqChange = -Math.sign(e.deltaY) * mousewheelFreqStep;
+        const newFrequency = marker.frequency + freqChange;
+
+        // Ensure the frequency stays within the visible range
+        const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+
+        // Update the VFO frequency
+        updateVFOProperty(selectedVFO, {
+            frequency: limitedFreq,
+        });
+
+    }, [selectedVFO, vfoMarkers, mousewheelFreqStep, startFreq, endFreq, updateVFOProperty]);
+
+    // Set up a wheel event listener with passive: false to allow preventDefault
+    useEffect(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return;
+
+        // Add wheel event listener with passive: false to ensure preventDefault works
+        canvas.addEventListener('wheel', handleWheel, { passive: false });
+
+        return () => {
+            canvas.removeEventListener('wheel', handleWheel);
+        };
+    }, [handleWheel]);
 
     // Update actual width measurement
     const updateActualWidth = useCallback(() => {
@@ -859,7 +909,8 @@ const VFOMarkersContainer = ({
             document.removeEventListener('touchend', handleDocumentTouchEnd, { capture: true, passive: false });
             document.removeEventListener('touchcancel', handleDocumentTouchEnd, { capture: true, passive: false });
         };
-    }, [isDragging, activeMarker, dragMode, vfoMarkers, lastTouchXRef, actualWidth, freqRange, startFreq, endFreq, dispatch]);
+
+    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, dispatch, minBandwidth, maxBandwidth, updateVFOProperty]);
 
     // Updated click handler to use setSelectedVFO action
     const handleClick = (e) => {
@@ -1038,7 +1089,6 @@ const VFOMarkersContainer = ({
                     // userSelect: 'none',
                 }}
             />
-
         </Box>
     );
 };
