@@ -205,7 +205,6 @@ RUN cat /etc/os-release
 
 RUN cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12/site-packages/Hamlib
 RUN cp /usr/local/lib/python3.12/site-packages/*SoapySDR* /app/venv/lib/python3.12/site-packages/
-RUN cp /usr/local/lib/python3.12/site-packages/*csdr* /app/venv/lib/python3.12/site-packages/
 
 RUN ls -la /app/venv/lib/python3.12/site-packages/Hamlib
 
