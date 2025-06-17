@@ -93,6 +93,13 @@ const BookmarkCanvas = ({
                 }
             ));
         })
+
+        // Clear any existing doppler shift bookmarks when switching satellites
+        // This ensures transmitter bookmarks are visible immediately
+        const filteredBookmarks = bookmarks.filter(bookmark =>
+            bookmark.metadata?.type !== 'doppler_shift'
+        );
+
         dispatch(setBookMarks([...bookMarks]));
     }, [availableTransmitters]);
 
