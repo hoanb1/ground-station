@@ -52,6 +52,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libnss-mdns \
     dbus \
     gpg-agent \
+    libsamplerate0-dev \
     && rm -rf /var/lib/apt/lists/*
 
 # Add Ettus Research UHD Repository
