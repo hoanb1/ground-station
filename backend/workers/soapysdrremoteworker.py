@@ -27,7 +27,7 @@ from .common import window_functions
 
 
 # Configure logging for the worker process
-logger = logging.getLogger('soapysdr-remote-worker')
+logger = logging.getLogger('soapysdr-remote')
 
 
 def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
