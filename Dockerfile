@@ -168,6 +168,23 @@ RUN ./configure --with-python-binding
 RUN make
 RUN sudo make install
 
+# compile csdr
+WORKDIR /src
+RUN git clone https://github.com/jketterl/csdr.git
+WORKDIR csdr/
+RUN mkdir build
+WORKDIR build/
+RUN cmake ..
+RUN make
+RUN make install
+RUN ldconfig
+
+# compile pycsdr
+WORKDIR /src
+RUN git clone https://github.com/jketterl/pycsdr.git
+WORKDIR pycsdr/
+RUN ./setup.py install install_headers
+
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
     ldconfig
 
@@ -187,6 +204,7 @@ RUN cat /etc/os-release
 
 RUN cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12/site-packages/Hamlib
 RUN cp /usr/local/lib/python3.12/site-packages/*SoapySDR* /app/venv/lib/python3.12/site-packages/
+RUN cp /usr/local/lib/python3.12/site-packages/*csdr* /app/venv/lib/python3.12/site-packages/
 
 RUN ls -la /app/venv/lib/python3.12/site-packages/Hamlib
 
