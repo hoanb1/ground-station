@@ -6,7 +6,7 @@ import logging
 from typing import Optional, Dict, Any, Callable
 from dataclasses import dataclass
 from fmdemodulator import FMDemodulator, DemodulatorConfig, ModulationMode, AudioChunk
-from controller import StreamingDemodulatorManager
+from manager import StreamingDemodulatorManager
 
 
 # Configure logging

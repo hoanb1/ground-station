@@ -287,18 +287,18 @@ class StreamingDemodulatorManager:
     def _update_vfo_demodulator(self, vfo_id: int, current_state: VFOState, last_state: Optional[VFOState]):
         """Update or create demodulator for VFO"""
 
-        # If VFO is now inactive, remove demodulator
+        # If VFO is now inactive, remove the demodulator
         if not current_state.active:
             if vfo_id in self.demodulators:
                 logger.info(f"Deactivating VFO {vfo_id}")
                 del self.demodulators[vfo_id]
             return
 
-        # If VFO is active but has invalid frequency, skip
+        # If VFO is active but has an invalid frequency, skip
         if current_state.center_freq == 0:
             return
 
-        # Check if we need to change demodulator type
+        # Check if we need to change the demodulator type
         current_demod_type = self._determine_demodulator_type(current_state.modulation)
         existing_demod = self.demodulators.get(vfo_id)
 
@@ -313,7 +313,7 @@ class StreamingDemodulatorManager:
         else:
             existing_demod_type = None
 
-        # If modulation family changed, we need to recreate the demodulator
+        # If the modulation family changed, we need to recreate the demodulator
         if existing_demod_type != current_demod_type:
             logger.info(f"VFO {vfo_id} changing demodulator type: {existing_demod_type} → {current_demod_type}")
 
@@ -436,93 +436,3 @@ class StreamingDemodulatorManager:
                 time.sleep(0.01)  # Brief pause before retry
 
         logger.info("Demodulator worker stopped")
-
-
-# Example usage
-def main():
-    """Demo of VFO-aware streaming system with FM and AM support"""
-    logger.info("Multi-Mode VFO-Aware Streaming Demodulator Demo")
-
-    # Import here to avoid circular imports in main usage
-    from bridge import SDRVFODemodulatorBridge
-
-    # Create bridge
-    bridge = SDRVFODemodulatorBridge(
-        sdr_center_freq=14.0e6,   # 14 MHz (good for AM/SSB)
-        sdr_sample_rate=2048000   # 2.048 MSPS
-    )
-
-    # Get the VFO manager and configure different modulation modes
-    vfo_manager = VFOManager()
-
-    # Configure VFO 1 for AM broadcast
-    vfo_manager.update_vfo_state(
-        vfo_id=1,
-        center_freq=int(14.205e6),  # 14.205 MHz
-        bandwidth=10000,            # 10 kHz
-        modulation="AM",
-        active=True,
-        selected=True
-    )
-
-    # Configure VFO 2 for USB
-    vfo_manager.update_vfo_state(
-        vfo_id=2,
-        center_freq=int(14.230e6),  # 14.230 MHz
-        bandwidth=3000,             # 3 kHz
-        modulation="USB",
-        active=True
-    )
-
-    # Configure VFO 3 for NFM
-    vfo_manager.update_vfo_state(
-        vfo_id=3,
-        center_freq=int(14.100e6),  # 14.100 MHz
-        bandwidth=25000,            # 25 kHz
-        modulation="NFM",
-        active=True
-    )
-
-    bridge.start()
-
-    # Simulate SDR samples
-    logger.info("\n Simulating SDR sample stream...")
-    for i in range(30):
-        # Generate test samples
-        samples = np.random.randn(8192) + 1j * np.random.randn(8192)
-        samples = samples.astype(np.complex64)
-
-        # Feed to demodulator
-        bridge.on_sdr_samples(samples)
-
-        # Test VFO changes
-        if i == 10:
-            logger.info("Changing VFO 1 to LSB...")
-            vfo_manager.update_vfo_state(1, modulation="LSB", bandwidth=3000)
-
-        elif i == 20:
-            logger.info("Changing VFO 3 to WFM...")
-            vfo_manager.update_vfo_state(3, modulation="WFM", bandwidth=200000)
-
-        # Get web audio for active VFOs
-        all_audio = bridge.get_all_web_audio()
-        for vfo_id, audio in all_audio.items():
-            if audio:
-                logger.info(f"VFO {vfo_id} audio: {len(audio['samples'])} samples")
-
-        time.sleep(0.05)  # 50ms chunks
-
-    # Final status
-    status = bridge.get_status()
-    logger.info(f"Final status:")
-    logger.info(f"Active VFOs: {status['active_demodulators']}")
-    logger.info(f"Demodulator types: {status['demodulator_types']}")
-    logger.info(f"Samples processed: {status['statistics']['samples_processed']}")
-    logger.info(f"VFO updates: {status['statistics']['vfo_updates']}")
-
-    bridge.stop()
-    logger.info("Demo complete!")
-
-
-if __name__ == "__main__":
-    main()
