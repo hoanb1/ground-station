@@ -489,8 +489,7 @@ const TargetSatelliteMapContainer = ({}) => {
 
             <MapSettingsIslandDialog updateBackend={() => {
                 const key = 'target-map-settings';
-                // Note: This will need to be passed as a prop or handled differently
-                // dispatch(setTargetMapSetting({socket, key: key}));
+                dispatch(setTargetMapSetting({socket, key: key}));
             }} />
 
             {sunPos && showSunIcon ? (

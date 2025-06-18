@@ -5,6 +5,8 @@ from typing import Dict, Optional
 # Configure logging for the worker process
 logger = logging.getLogger('vfo-state')
 
+# How many VFOs
+VFO_NUMBER = 4
 
 @dataclass
 class VFOState:
@@ -22,8 +24,8 @@ class VFOManager:
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(VFOManager, cls).__new__(cls)
-            # Initialize 4 VFOs with default values
-            for i in range(4):
+            # Initialize VFO_NUMBER VFOs with default values
+            for i in range(VFO_NUMBER):
                 cls._instance._vfo_states[i + 1] = VFOState()
         return cls._instance
 
