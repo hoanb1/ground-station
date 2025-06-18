@@ -364,7 +364,7 @@ class StreamingDemodulatorManager:
                 am_mode = modulation_map.get(current_state.modulation.upper(), AMMode.AM)
                 demod.set_modulation_mode(am_mode)
 
-            logger.info(f"🔧 VFO {vfo_id} mode set to {current_state.modulation.upper()}")
+            logger.info(f"VFO {vfo_id} mode set to {current_state.modulation.upper()}")
 
     def _get_default_bandwidth(self, modulation: str) -> int:
         """Get default bandwidth for modulation mode"""
