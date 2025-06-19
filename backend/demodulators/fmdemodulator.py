@@ -1,3 +1,4 @@
+
 import pycsdr.modules as modules
 import pycsdr.types as types
 import numpy as np
@@ -41,8 +42,8 @@ class AudioChunk:
 
 class FMDemodulator:
     """
-    Flexible streaming demodulator supporting WFM and NFM
-    Handles wide IQ streams (2-10 MHz) and extracts specific frequencies
+    Fixed streaming FM demodulator supporting WFM and NFM
+    Handles wide IQ streams with proper phase continuity
     """
 
     def __init__(self, config: DemodulatorConfig):
@@ -56,7 +57,12 @@ class FMDemodulator:
         # Calculate decimation stages
         self._calculate_processing_rates()
 
-        # Processing state
+        # **FIXED: Continuous phase tracking**
+        self.phase_accumulator = 0.0
+        self.phase_increment = -2 * np.pi * self.freq_offset / self.input_rate
+        self.last_sample = 0.0 + 0.0j
+
+        # Processing state - **FIXED: Reset-able state**
         self.dc_accumulator = 0.0
         self.dc_alpha = 0.001
 
@@ -67,7 +73,7 @@ class FMDemodulator:
         # Initialize PyCSdr modules
         self._init_pycsdr_modules()
 
-        logger.info(f"Flexible Demodulator initialized:")
+        logger.info(f"Fixed FM Demodulator initialized:")
         logger.info(f"  Mode: {config.modulation.value.upper()}")
         logger.info(f"  Target: {config.target_frequency / 1e6:.3f} MHz")
         logger.info(f"  Bandwidth: {config.bandwidth / 1e3:.1f} kHz")
@@ -79,23 +85,15 @@ class FMDemodulator:
     def _calculate_processing_rates(self):
         """Calculate intermediate processing rates based on bandwidth and mode"""
         if self.config.modulation == ModulationMode.WFM:
-            # WFM needs wider bandwidth, typically 200kHz
-            self.target_bandwidth = max(self.config.bandwidth, 200000)
-            # Intermediate rate should be at least 2x bandwidth
-            self.intermediate_rate = max(self.target_bandwidth * 2.5, 480000)
+            # WFM needs higher intermediate rate
+            self.intermediate_rate = 240000
         else:  # NFM
-            # NFM uses narrower bandwidth, typically 12.5-25kHz
-            self.target_bandwidth = max(self.config.bandwidth, 25000)
-            # Lower intermediate rate for NFM
-            self.intermediate_rate = max(self.target_bandwidth * 4, 200000)
+            # NFM can use lower intermediate rate
+            self.intermediate_rate = 96000
 
         # Calculate decimation factors
-        self.first_decimation = self.input_rate // self.intermediate_rate
-        self.second_decimation = self.intermediate_rate // self.audio_rate
-
-        # Ensure minimum decimation of 1
-        self.first_decimation = max(1, self.first_decimation)
-        self.second_decimation = max(1, self.second_decimation)
+        self.first_decimation = max(1, self.input_rate // self.intermediate_rate)
+        self.second_decimation = max(1, self.intermediate_rate // self.audio_rate)
 
         # Recalculate actual rates
         self.intermediate_rate = self.input_rate // self.first_decimation
@@ -106,25 +104,28 @@ class FMDemodulator:
         try:
             # Test module chain
             self.shift_module = modules.Shift(0.0)
-
-            if self.config.modulation == ModulationMode.WFM:
-                self.demod_module = modules.FmDemod()
-            else:  # NFM
-                self.demod_module = modules.FmDemod()
-
+            self.demod_module = modules.FmDemod()
             self.dc_block_module = modules.DcBlock()
             self.agc_module = modules.Agc(types.Format.FLOAT)
-
             logger.info("✓ PyCSdr modules initialized successfully")
-
         except Exception as e:
             logger.info(f"PyCSdr module initialization warning: {e}")
+
+    def reset_state(self):
+        """Reset internal state to prevent drift - called by bridge"""
+        self.dc_accumulator = 0.0
+        self.phase_accumulator = 0.0
+        self.last_sample = 0.0 + 0.0j
+        logger.debug("FM demodulator state reset")
 
     def tune_to_frequency(self, new_target_freq: float):
         """Retune to a new frequency within the IQ stream"""
         old_freq = self.config.target_frequency
         self.config.target_frequency = new_target_freq
         self.freq_offset = new_target_freq - self.config.center_frequency
+
+        # Update phase increment
+        self.phase_increment = -2 * np.pi * self.freq_offset / self.input_rate
 
         logger.info(f"Retuned: {old_freq/1e6:.3f} MHz → {new_target_freq/1e6:.3f} MHz")
         logger.info(f"New offset: {self.freq_offset/1e3:.1f} kHz")
@@ -133,10 +134,7 @@ class FMDemodulator:
         """Change demodulation bandwidth"""
         old_bw = self.config.bandwidth
         self.config.bandwidth = new_bandwidth
-
-        # Recalculate processing rates
         self._calculate_processing_rates()
-
         logger.info(f"Bandwidth changed: {old_bw/1e3:.1f} kHz → {new_bandwidth/1e3:.1f} kHz")
 
     def set_modulation_mode(self, new_mode: ModulationMode):
@@ -144,22 +142,12 @@ class FMDemodulator:
         if new_mode != self.config.modulation:
             old_mode = self.config.modulation
             self.config.modulation = new_mode
-
-            # Recalculate rates for new mode
             self._calculate_processing_rates()
-
             logger.info(f"Mode changed: {old_mode.value.upper()} → {new_mode.value.upper()}")
 
     def process_chunk(self, iq_samples: np.ndarray, chunk_id: Optional[int] = None) -> AudioChunk:
         """
-        Process a chunk of wide IQ samples to extract audio at target frequency
-
-        Args:
-            iq_samples: Complex IQ samples from SDR (full bandwidth)
-            chunk_id: Optional chunk identifier
-
-        Returns:
-            AudioChunk with demodulated audio
+        **FIXED** Process a chunk with proper phase continuity
         """
         start_time = time.time()
 
@@ -171,29 +159,28 @@ class FMDemodulator:
             if iq_samples.dtype != np.complex64:
                 iq_samples = iq_samples.astype(np.complex64)
 
-            # Processing pipeline
-            # 1. Shift to target frequency
-            shifted = self._frequency_shift(iq_samples)
+            # **FIXED** Processing pipeline with continuity
+            # 1. Continuous frequency shift
+            shifted = self._frequency_shift_continuous(iq_samples)
 
-            # 2. First decimation + filtering
-            filtered = self._bandpass_filter(shifted)
-            decimated1 = self._first_decimation(filtered)
+            # 2. Simple decimation with basic filtering
+            decimated1 = self._decimate_with_filter(shifted, self.first_decimation)
 
-            # 3. Demodulation (WFM or NFM)
-            audio = self._demodulate(decimated1)
+            # 3. **FIXED** Phase-based FM demodulation
+            audio = self._fm_demodulate_phase(decimated1)
 
-            # 4. Second decimation to audio rate
-            decimated2 = self._second_decimation(audio)
+            # 4. Second decimation
+            decimated2 = self._decimate_with_filter(audio, self.second_decimation)
 
             # 5. Audio processing
-            audio_clean = self._dc_block(decimated2)
-            audio_final = self._agc(audio_clean)
+            audio_clean = self._dc_block_simple(decimated2)
+            audio_final = self._agc_simple(audio_clean)
 
-            # 6. Apply mode-specific processing
+            # 6. Mode-specific processing
             if self.config.modulation == ModulationMode.WFM:
-                audio_final = self._wfm_deemphasis(audio_final)
+                audio_final = self._wfm_deemphasis_simple(audio_final)
             else:  # NFM
-                audio_final = self._nfm_processing(audio_final)
+                audio_final = self._nfm_processing_simple(audio_final)
 
             # Performance tracking
             processing_time = time.time() - start_time
@@ -216,128 +203,159 @@ class FMDemodulator:
             )
 
         except Exception as e:
-            logger.info(f"Chunk processing error: {e}")
+            logger.error(f"Chunk processing error: {e}")
             return self._empty_audio_chunk(chunk_id)
 
-    def _frequency_shift(self, iq_samples: np.ndarray) -> np.ndarray:
-        """Shift frequency to baseband"""
+    def _frequency_shift_continuous(self, iq_samples: np.ndarray) -> np.ndarray:
+        """**FIXED** Frequency shift with continuous phase"""
         if abs(self.freq_offset) < 1.0:
             return iq_samples
 
-        t = np.arange(len(iq_samples), dtype=np.float32) / self.input_rate
-        shift = np.exp(-2j * np.pi * self.freq_offset * t)
-        return iq_samples * shift
+        n_samples = len(iq_samples)
 
-    def _bandpass_filter(self, iq_samples: np.ndarray) -> np.ndarray:
-        """Apply bandpass filter to isolate desired signal"""
-        # Simple brick-wall filter in frequency domain
-        if len(iq_samples) < 64:  # Too short for FFT filtering
-            return iq_samples
+        # Generate continuous phase
+        phases = np.arange(n_samples) * self.phase_increment + self.phase_accumulator
 
-        # FFT-based filtering
-        fft_data = np.fft.fft(iq_samples)
-        freqs = np.fft.fftfreq(len(iq_samples), 1.0 / self.input_rate)
+        # Update accumulator for next chunk
+        self.phase_accumulator = (self.phase_accumulator + n_samples * self.phase_increment) % (2 * np.pi)
 
-        # Create filter mask
-        filter_mask = np.abs(freqs) <= (self.target_bandwidth / 2)
+        # Apply shift
+        shift_signal = np.exp(1j * phases)
+        return iq_samples * shift_signal
 
-        # Apply filter
-        fft_filtered = fft_data * filter_mask
+    def _decimate_with_filter(self, signal, decimation):
+        """**FIXED** Simple decimation with basic anti-aliasing"""
+        if decimation <= 1:
+            return signal
 
-        return np.fft.ifft(fft_filtered)
+        # Simple moving average filter
+        kernel_size = min(3, decimation)
+        if kernel_size > 1 and len(signal) >= kernel_size:
+            if np.iscomplexobj(signal):
+                kernel = np.ones(kernel_size, dtype=np.complex64) / kernel_size
+            else:
+                kernel = np.ones(kernel_size, dtype=np.float32) / kernel_size
 
-    def _first_decimation(self, iq_samples: np.ndarray) -> np.ndarray:
-        """First decimation stage"""
-        if self.first_decimation <= 1:
-            return iq_samples
-        return iq_samples[::self.first_decimation]
+            filtered = np.convolve(signal, kernel, mode='same')
+        else:
+            filtered = signal
 
-    def _demodulate(self, iq_samples: np.ndarray) -> np.ndarray:
-        """FM demodulation (same for WFM and NFM)"""
+        return filtered[::decimation]
+
+    def _fm_demodulate_phase(self, iq_samples: np.ndarray) -> np.ndarray:
+        """**FIXED** FM demodulation using phase differences"""
         if len(iq_samples) < 2:
             return np.array([0.0], dtype=np.float32)
 
-        # Cross-product FM demodulation
-        real = iq_samples.real
-        imag = iq_samples.imag
+        # Add last sample for continuity
+        extended_samples = np.concatenate([[self.last_sample], iq_samples])
 
-        cross = real[:-1] * imag[1:] - imag[:-1] * real[1:]
-        power = real[:-1] ** 2 + imag[:-1] ** 2
-        power = np.where(power < 1e-12, 1e-12, power)
+        # Calculate instantaneous phase
+        phases = np.angle(extended_samples)
 
-        fm_out = cross / power
+        # Calculate phase differences (unwrapped)
+        phase_diffs = np.diff(np.unwrap(phases))
 
-        # Scale based on sample rate and modulation
+        # Convert to audio
         if self.config.modulation == ModulationMode.WFM:
-            # WFM has wider deviation, scale accordingly
-            audio = fm_out * self.intermediate_rate / (2 * np.pi)
+            # WFM scaling
+            audio = phase_diffs * self.intermediate_rate / (2 * np.pi * 75000)
         else:  # NFM
-            # NFM has narrower deviation
-            audio = fm_out * self.intermediate_rate / (2 * np.pi) * 0.5
+            # NFM scaling
+            audio = phase_diffs * self.intermediate_rate / (2 * np.pi * 5000)
 
-        return np.concatenate([[0.0], audio])
+        # Save last sample
+        self.last_sample = iq_samples[-1]
 
-    def _second_decimation(self, audio: np.ndarray) -> np.ndarray:
-        """Second decimation to audio rate"""
-        if self.second_decimation <= 1:
-            return audio
-        return audio[::self.second_decimation]
+        return audio.astype(np.float32)
 
-    def _dc_block(self, audio: np.ndarray) -> np.ndarray:
-        """DC blocking filter"""
+    def _dc_block_simple(self, audio: np.ndarray) -> np.ndarray:
+        """**FIXED** Simple DC blocking without drift"""
         if len(audio) == 0:
             return audio
 
-        mean_val = np.mean(audio)
-        self.dc_accumulator = (1 - self.dc_alpha) * self.dc_accumulator + self.dc_alpha * mean_val
-        return audio - self.dc_accumulator
+        # Simple high-pass filter instead of accumulating DC
+        if len(audio) > 1:
+            # Simple difference filter: y[n] = x[n] - 0.95 * x[n-1]
+            filtered = np.zeros_like(audio)
+            filtered[0] = audio[0]
+            for i in range(1, len(audio)):
+                filtered[i] = audio[i] - 0.95 * audio[i-1]
+            return filtered
+        return audio
 
-    def _agc(self, audio: np.ndarray) -> np.ndarray:
-        """Automatic Gain Control"""
+    def _agc_simple(self, audio: np.ndarray) -> np.ndarray:
+        """**FIXED** Simple AGC without state accumulation"""
         if len(audio) == 0:
             return audio
 
         max_amp = np.max(np.abs(audio))
         if max_amp > 1e-6:
             if self.config.modulation == ModulationMode.WFM:
-                target_level = 0.2  # Lower level for WFM
-                max_gain = 5.0
+                target = 0.3
+                max_gain = 8.0
             else:  # NFM
-                target_level = 0.3  # Higher level for NFM
-                max_gain = 10.0
+                target = 0.4
+                max_gain = 12.0
 
-            gain = min(target_level / max_amp, max_gain)
+            gain = min(target / max_amp, max_gain)
             return audio * gain
         return audio
 
-    def _wfm_deemphasis(self, audio: np.ndarray) -> np.ndarray:
-        """Apply de-emphasis filter for WFM (75μs time constant)"""
+    def _wfm_deemphasis_simple(self, audio: np.ndarray) -> np.ndarray:
+        """**FIXED** Simple de-emphasis without state accumulation"""
         if len(audio) <= 1:
             return audio
 
-        # Simple 1-pole de-emphasis filter
-        tau = 75e-6  # 75 microseconds
-        alpha = 1.0 / (1.0 + self.audio_rate * tau)
-
-        # Apply filter
-        filtered = np.zeros_like(audio)
-        filtered[0] = audio[0]
+        # Simple approximation of de-emphasis
+        alpha = 0.95
         for i in range(1, len(audio)):
-            filtered[i] = alpha * audio[i] + (1 - alpha) * filtered[i-1]
+            audio[i] = audio[i] + alpha * (audio[i-1] - audio[i])
 
-        return filtered
+        return audio
 
-    def _nfm_processing(self, audio: np.ndarray) -> np.ndarray:
-        """Additional processing for NFM"""
-        # NFM typically doesn't need de-emphasis, but may need noise reduction
-        # Simple noise gate
+    def _nfm_processing_simple(self, audio: np.ndarray) -> np.ndarray:
+        """**FIXED** Simple NFM processing"""
         if len(audio) == 0:
             return audio
 
-        # Simple noise gate - silence very quiet parts
-        noise_threshold = 0.01
+        # Simple noise gate
+        noise_threshold = 0.005
         mask = np.abs(audio) > noise_threshold
         return audio * mask
+
+    # Keep all the original methods for compatibility
+    def _bandpass_filter(self, iq_samples: np.ndarray) -> np.ndarray:
+        """Legacy method - now just returns input"""
+        return iq_samples
+
+    def _first_decimation(self, iq_samples: np.ndarray) -> np.ndarray:
+        """Legacy method"""
+        return self._decimate_with_filter(iq_samples, self.first_decimation)
+
+    def _demodulate(self, iq_samples: np.ndarray) -> np.ndarray:
+        """Legacy method"""
+        return self._fm_demodulate_phase(iq_samples)
+
+    def _second_decimation(self, audio: np.ndarray) -> np.ndarray:
+        """Legacy method"""
+        return self._decimate_with_filter(audio, self.second_decimation)
+
+    def _dc_block(self, audio: np.ndarray) -> np.ndarray:
+        """Legacy method"""
+        return self._dc_block_simple(audio)
+
+    def _agc(self, audio: np.ndarray) -> np.ndarray:
+        """Legacy method"""
+        return self._agc_simple(audio)
+
+    def _wfm_deemphasis(self, audio: np.ndarray) -> np.ndarray:
+        """Legacy method"""
+        return self._wfm_deemphasis_simple(audio)
+
+    def _nfm_processing(self, audio: np.ndarray) -> np.ndarray:
+        """Legacy method"""
+        return self._nfm_processing_simple(audio)
 
     def _empty_audio_chunk(self, chunk_id: Optional[int]) -> AudioChunk:
         """Create an empty audio chunk for error cases"""
@@ -413,42 +431,35 @@ class FMDemodulator:
 
 # Example usage and testing
 def main():
-    """Demo of flexible demodulator"""
-    logger.info("Flexible Demodulator Demo")
+    """Demo of fixed FM demodulator"""
+    logger.info("Fixed FM Demodulator Demo")
     logger.info("=" * 50)
 
-    # Test WFM (broadcast radio)
-    logger.info("Testing WFM (Broadcast Radio)")
+    # Test WFM
     wfm_config = DemodulatorConfig(
-        center_frequency=100.0e6,      # 100 MHz center
-        target_frequency=100.1e6,      # 100.1 MHz station
-        bandwidth=200e3,               # 200 kHz bandwidth
+        center_frequency=100.0e6,
+        target_frequency=100.1e6,
+        bandwidth=200e3,
         modulation=ModulationMode.WFM,
-        input_rate=2048000             # 2.048 MSPS from SDR
+        input_rate=2048000
     )
 
     wfm_demod = FMDemodulator(wfm_config)
-    logger.info(f"Status: {wfm_demod.get_status()}")
+    logger.info(f"WFM Status: {wfm_demod.get_status()}")
 
-    # Test NFM (two-way radio)
-    logger.info("Testing NFM (Two-way Radio)")
+    # Test NFM
     nfm_config = DemodulatorConfig(
-        center_frequency=460.0e6,      # 460 MHz center
-        target_frequency=460.125e6,    # 460.125 MHz channel
-        bandwidth=12.5e3,              # 12.5 kHz bandwidth
+        center_frequency=460.0e6,
+        target_frequency=460.125e6,
+        bandwidth=12.5e3,
         modulation=ModulationMode.NFM,
-        input_rate=2048000             # 2.048 MSPS from SDR
+        input_rate=2048000
     )
 
     nfm_demod = FMDemodulator(nfm_config)
-    logger.info(f"Status: {nfm_demod.get_status()}")
+    logger.info(f"NFM Status: {nfm_demod.get_status()}")
 
-    # Test frequency changes
-    logger.info("Testing Dynamic Frequency Changes")
-    wfm_demod.tune_to_frequency(100.3e6)  # Change to 100.3 MHz
-    nfm_demod.tune_to_frequency(460.175e6)  # Change to 460.175 MHz
-
-    logger.info("Demo complete! Demodulator ready for use.")
+    logger.info("Fixed FM Demodulator ready!")
 
 
 if __name__ == "__main__":

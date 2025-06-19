@@ -68,7 +68,7 @@ class VFOManager:
 
             vfo_state.selected = selected
 
-        logger.info(f"vfo states: {self._vfo_states}")
+        #logger.info(f"vfo states: {self._vfo_states}")
 
     def get_all_vfo_states(self) -> Dict[int, VFOState]:
         return self._vfo_states.copy()
