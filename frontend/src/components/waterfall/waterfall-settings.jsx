@@ -27,7 +27,12 @@ import MuiAccordionSummary, {
 } from '@mui/material/AccordionSummary';
 import MuiAccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
-import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
+import {
+    getClassNamesBasedOnGridEditing,
+    humanizeFrequency,
+    preciseHumanizeFrequency,
+    TitleBar
+} from "../common/common.jsx";
 import {useSelector, useDispatch} from 'react-redux';
 
 import {
@@ -739,8 +744,36 @@ const WaterfallSettings = forwardRef((props, ref) => {
                         </Tabs>
                         {[1, 2, 3, 4].map((vfoIndex) => (
                             <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
+                                <Box sx={{
+                                    mt: 2,
+                                    mb: 1,
+                                    typography: 'body1',
+                                    fontWeight: 'medium',
+                                    display: 'flex',
+                                    alignItems: 'center'
+                                }}>
+                                    <Box sx={{flex: 1}}>Frequency:</Box>
+                                    <Box
+                                        sx={{fontFamily: "Monospace", color: '#2196f3'}}>{preciseHumanizeFrequency(vfoMarkers[vfoIndex]?.frequency || 0)}</Box>
+                                </Box>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={vfoActive[vfoIndex] || false}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    dispatch(setVfoActive(vfoIndex));
+                                                } else {
+                                                    dispatch(setVfoInactive(vfoIndex));
+                                                }
+                                            }}
+                                        />
+                                    }
+                                    label="Active"
+                                    sx={{mt: 2}}
+                                />
                                 <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
-                                    <InputLabel>Modulation</InputLabel>
+                                <InputLabel>Modulation</InputLabel>
                                     <Select
                                         value={vfoMarkers[vfoIndex]?.mode || 'none'}
                                         variant={'filled'}
@@ -776,25 +809,22 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     </Select>
                                 </FormControl>
 
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={vfoActive[vfoIndex] || false}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    dispatch(setVfoActive(vfoIndex));
-                                                } else {
-                                                    dispatch(setVfoInactive(vfoIndex));
-                                                }
-                                            }}
-                                        />
-                                    }
-                                    label="Active"
-                                    sx={{mt: 2}}
-                                />
-
                                 <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
-                                    <VolumeDown/>
+                                    <Box sx={{textAlign: 'left'}}><VolumeDown/></Box>
+                                    <Slider
+                                        value={vfoMarkers[vfoIndex]?.squelch || -150}
+                                        min={-150}
+                                        max={0}
+                                        onChange={(e, val) => dispatch(setVFOProperty({
+                                            vfoNumber: vfoIndex,
+                                            updates: {squelch: val}
+                                        }))}
+                                    />
+                                    <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
+                                </Stack>
+                                
+                                <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
+                                <VolumeDown/>
                                     <Slider
                                         value={vfoMarkers[vfoIndex]?.volume || 50}
                                         onChange={(e, val) => dispatch(setVFOProperty({

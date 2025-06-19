@@ -36,6 +36,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     color: updates.color,
                     active: updates.active,
                     volume: updates.volume,
+                    squelch: updates.squelch,
                 },
         }));
     }

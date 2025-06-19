@@ -527,6 +527,8 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
                 modulation=data.get('mode', "fm"),
                 active=data.get('active', None),
                 selected=data.get('selected', None),
+                volume=data.get('volume', None),
+                squelch=data.get('squelch', None),
             )
 
             reply = {'success': True, 'data': {}}

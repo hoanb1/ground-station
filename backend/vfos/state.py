@@ -15,6 +15,8 @@ class VFOState:
     modulation: str = "AM"
     active: bool = False
     selected: bool = False
+    volume: int = 50
+    squelch: int = -150
 
 
 class VFOManager:
@@ -34,7 +36,7 @@ class VFOManager:
 
     def update_vfo_state(self, vfo_id: int, center_freq: int = None,
                          bandwidth: int = None, modulation: str = None,
-                         active: bool = False, selected: bool = False) -> None:
+                         active: bool = None, selected: bool = None, volume = None, squelch = None) -> None:
         if vfo_id not in self._vfo_states:
             return
 
@@ -55,6 +57,14 @@ class VFOManager:
         # check if active
         if active is not None:
             vfo_state.active = active
+
+        # check volume
+        if volume is not None:
+            vfo_state.volume = volume
+
+        # check squelch
+        if squelch is not None:
+            vfo_state.squelch = squelch
 
         # check if selected
         if selected is not None:

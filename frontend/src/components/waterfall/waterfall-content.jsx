@@ -426,7 +426,7 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
             {/* Zoom controls */}
             <Box sx={{
                 position: 'absolute',
-                bottom: isMobile ? 20 : 10,
+                bottom: isMobile ? 20 : 20,
                 right: isMobile ? 20 : 10,
                 zIndex: 10,
                 display: 'flex',
