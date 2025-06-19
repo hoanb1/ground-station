@@ -100,7 +100,7 @@ const initialState = {
     waterFallPositionX: 0,
     showRightSideWaterFallAccessories: true,
     showLeftSideWaterFallAccessories: true,
-    expandedPanels: ['sdr', 'freqControl', 'fft'],
+    expandedPanels: ['sdr', 'freqControl', 'fft', 'vfo'],
     selectedSDRId: "none",
     selectedTransmitterId: "none",
     startStreamingLoading: false,
@@ -127,14 +127,15 @@ const initialState = {
         4: false,
     },
     vfoMarkers: {
-        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
-        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
-        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
-        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'fm'},
+        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'fm', volume: 50},
+        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'fm', volume: 50},
+        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'fm', volume: 50},
+        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'fm', volume: 50},
     },
     maxVFOMarkers: 4,
     selectedVFO: 1,
     vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
+    selectedVFOTab: 0,
 };
 
 // Add these new reducers to your createSlice
@@ -300,6 +301,9 @@ export const waterfallSlice = createSlice({
         setVfoInactive: (state, action) => {
             state.vfoActive[action.payload] = false;
         },
+        setSelectedVFOTab: (state, action) => {
+            state.selectedVFOTab = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -387,6 +391,7 @@ export const {
     setSelectedVFO,
     setVfoActive,
     setVfoInactive,
+    setSelectedVFOTab,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

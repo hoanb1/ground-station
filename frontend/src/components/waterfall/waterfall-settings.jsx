@@ -29,15 +29,14 @@ import MuiAccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
 import {useSelector, useDispatch} from 'react-redux';
+
 import {
     getSDRConfigParameters,
     setErrorDialogOpen,
     setGridEditable,
     setRtlAgc,
-    setTunerAgc
-} from './waterfall-slice.jsx';
-
-import {
+    setTunerAgc,
+    setVFOProperty,
     setColorMap,
     setColorMaps,
     setDbRange,
@@ -60,6 +59,10 @@ import {
     setSelectedTransmitterId,
     setSelectedOffsetMode,
     setSelectedOffsetValue,
+    setSelectedVFO,
+    setSelectedVFOTab,
+    setVfoInactive,
+    setVfoActive,
 } from './waterfall-slice.jsx';
 
 import {
@@ -72,15 +75,29 @@ import {
     Select,
     Slider,
     Switch,
-    TextField
+    TextField,
+    Tab,
+    Tabs,
+    Stack
 } from "@mui/material";
+import VolumeDown from '@mui/icons-material/VolumeDown';
+import VolumeUp from '@mui/icons-material/VolumeUp';
 import FrequencyDisplay from "./frequency-control.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 
-const LoadingOverlay = ({ loading, children }) => {
+const BANDWIDTHS = {
+    "3300": "3.3 kHz",
+    "5000": "5 kHz",
+    "10000": "10 kHz",
+    "12500": "12.5 kHz",
+    "15000": "15 kHz",
+    "20000": "20 kHz"
+}
+
+const LoadingOverlay = ({loading, children}) => {
     return (
-        <Box sx={{ position: 'relative' }}>
+        <Box sx={{position: 'relative'}}>
             {children}
 
             {loading && (
@@ -97,7 +114,7 @@ const LoadingOverlay = ({ loading, children }) => {
                         zIndex: 1000,
                     }}
                 >
-                    <CircularProgress />
+                    <CircularProgress/>
                 </Box>
             )}
         </Box>
@@ -187,6 +204,11 @@ const WaterfallSettings = forwardRef((props, ref) => {
         hasSoapyAgc,
         soapyAgc,
         selectedTransmitterId,
+        selectedVFO,
+        vfoMarkers,
+        maxVFOMarkers,
+        selectedVFOTab,
+        vfoActive,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -235,28 +257,28 @@ const WaterfallSettings = forwardRef((props, ref) => {
 
     // Convert to useCallback to ensure stability of the function reference
     const sendSDRConfigToBackend = useCallback((updates = {}) => {
-        if (selectedSDRId !== "none" && selectedSDRId !== "") {
-            let SDRSettings = {
-                selectedSDRId: selectedSDRId,
-                centerFrequency: centerFrequency,
-                sampleRate: sampleRate,
-                gain: gain,
-                fftSize: fftSize,
-                biasT: biasT,
-                tunerAgc: tunerAgc,
-                rtlAgc: rtlAgc,
-                fftWindow: fftWindow,
-                antenna: selectedAntenna,
-                soapyAgc: soapyAgc,
-                offsetFrequency: selectedOffsetValue,
-            }
-            SDRSettings = {...SDRSettings, ...updates};
-            socket.emit('sdr_data', 'configure-sdr', SDRSettings);
+            if (selectedSDRId !== "none" && selectedSDRId !== "") {
+                let SDRSettings = {
+                    selectedSDRId: selectedSDRId,
+                    centerFrequency: centerFrequency,
+                    sampleRate: sampleRate,
+                    gain: gain,
+                    fftSize: fftSize,
+                    biasT: biasT,
+                    tunerAgc: tunerAgc,
+                    rtlAgc: rtlAgc,
+                    fftWindow: fftWindow,
+                    antenna: selectedAntenna,
+                    soapyAgc: soapyAgc,
+                    offsetFrequency: selectedOffsetValue,
+                }
+                SDRSettings = {...SDRSettings, ...updates};
+                socket.emit('sdr_data', 'configure-sdr', SDRSettings);
 
-        } else {
-            console.warn("No SDR selected, not sending SDR settings to backend");
-        }
-    }, [
+            } else {
+                console.warn("No SDR selected, not sending SDR settings to backend");
+            }
+        }, [
             selectedSDRId,
             centerFrequency,
             sampleRate,
@@ -397,7 +419,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
                 settings</TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
-                <Accordion expanded={expandedPanels.includes('freqControl')} onChange={handleAccordionChange('freqControl')}>
+                <Accordion expanded={expandedPanels.includes('freqControl')}
+                           onChange={handleAccordionChange('freqControl')}>
                     <AccordionSummary
                         sx={{
                             boxShadow: '-1px 4px 7px #00000059',
@@ -472,7 +495,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             </Select>
                         </FormControl>
 
-                        <FormControl disabled={selectedOffsetMode !== "manual"} sx={{minWidth: 200, marginTop: 1}} fullWidth variant="filled"
+                        <FormControl disabled={selectedOffsetMode !== "manual"} sx={{minWidth: 200, marginTop: 1}}
+                                     fullWidth variant="filled"
                                      size="small">
                             <TextField
                                 disabled={selectedOffsetMode !== "manual"}
@@ -508,12 +532,13 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             <Box sx={{mb: 2}}>
 
                                 <FormControl disabled={isStreaming} margin="normal"
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth
+                                             variant="filled"
                                              size="small">
                                     <InputLabel htmlFor="sdr-select">SDR</InputLabel>
                                     <Select
                                         id="sdr-select"
-                                        value={sdrs.length > 0? selectedSDRId: "none"}
+                                        value={sdrs.length > 0 ? selectedSDRId : "none"}
                                         onChange={(event) => {
                                             handleSDRChange(event);
                                         }}
@@ -525,7 +550,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                             <em>select a SDR</em>
                                         </MenuItem>
                                         {sdrs.map((sdr, index) => {
-                                            return <MenuItem value={sdr.id} key={index}>{sdr.name} ({sdr.type})</MenuItem>;
+                                            return <MenuItem value={sdr.id}
+                                                             key={index}>{sdr.name} ({sdr.type})</MenuItem>;
                                         })}
                                     </Select>
                                 </FormControl>
@@ -538,7 +564,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={gainValues.length? localGain: "none"}
+                                        value={gainValues.length ? localGain : "none"}
                                         onChange={(e) => {
                                             setLocalGain(e.target.value);
                                             dispatch(updateSDRGain(e.target.value));
@@ -676,8 +702,109 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             </Box>
                         </LoadingOverlay>
                     </AccordionDetails>
-
                 </Accordion>
+
+                <Accordion expanded={expandedPanels.includes('vfo')} onChange={handleAccordionChange('vfo')}>
+                    <AccordionSummary
+                        sx={{
+                            boxShadow: '-1px 4px 7px #00000059',
+                        }}
+                        aria-controls="vfo-content" id="vfo-header">
+                        <Typography component="span">VFO Controls</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{
+                        backgroundColor: 'rgb(34,34,34)',
+                    }}>
+                        <Tabs
+                            value={selectedVFOTab}
+                            onChange={(event, newValue) => {
+                                dispatch(setSelectedVFOTab(newValue));
+                            }}
+                            sx={{
+                                minHeight: '32px',
+                                '& .MuiTab-root': {
+                                    minHeight: '32px',
+                                    padding: '6px 12px'
+                                }
+                            }}
+                        >
+                            {[0, 1, 2, 3].map((index) => (
+                                <Tab key={index} label={`${index + 1}`} sx={{minWidth: '25%'}}/>
+                            ))}
+
+                        </Tabs>
+                        {[1, 2, 3, 4].map((vfoIndex) => (
+                            <Box key={vfoIndex} hidden={selectedVFO !== vfoIndex}>
+                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
+                                    <InputLabel>Modulation</InputLabel>
+                                    <Select
+                                        value={vfoMarkers[vfoIndex]?.mode || 'none'}
+                                        variant={'filled'}
+                                        onChange={(e) => {
+                                            dispatch(setVFOProperty({
+                                                vfoNumber: vfoIndex,
+                                                updates: {mode: e.target.value}
+                                            }));
+                                        }}>
+                                        <MenuItem value="none">[no modulation]</MenuItem>
+                                        <MenuItem value="am">AM</MenuItem>
+                                        <MenuItem value="fm">FM</MenuItem>
+                                        <MenuItem value="lsb">LSB</MenuItem>
+                                        <MenuItem value="usb">USB</MenuItem>
+                                    </Select>
+                                </FormControl>
+
+                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
+                                    <InputLabel>Bandwidth</InputLabel>
+                                    <Select
+                                        value={BANDWIDTHS.hasOwnProperty(vfoMarkers[vfoIndex]?.bandwidth) ? vfoMarkers[vfoIndex]?.bandwidth : 'custom'}
+                                        variant={'filled'}
+                                        onChange={(e) => {
+                                            dispatch(setVFOProperty({
+                                                vfoNumber: vfoIndex,
+                                                updates: {bandwidth: parseInt(e.target.value)}
+                                            }));
+                                        }}>
+                                        <MenuItem value="custom">[custom value]</MenuItem>
+                                        {Object.entries(BANDWIDTHS).map(([value, label]) => (
+                                            <MenuItem key={value} value={value}>{label}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={vfoActive[vfoIndex] || false}
+                                            onChange={(e) => {
+                                                if (e.target.checked) {
+                                                    dispatch(setVfoActive(vfoIndex));
+                                                } else {
+                                                    dispatch(setVfoInactive(vfoIndex));
+                                                }
+                                            }}
+                                        />
+                                    }
+                                    label="Active"
+                                    sx={{mt: 2}}
+                                />
+
+                                <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
+                                    <VolumeDown/>
+                                    <Slider
+                                        value={vfoMarkers[vfoIndex]?.volume || 50}
+                                        onChange={(e, val) => dispatch(setVFOProperty({
+                                            vfoNumber: vfoIndex,
+                                            updates: {volume: val}
+                                        }))}
+                                    />
+                                    <VolumeUp/>
+                                </Stack>
+                            </Box>
+                        ))}
+                    </AccordionDetails>
+                </Accordion>
+
                 <Accordion expanded={expandedPanels.includes('fft')} onChange={handleAccordionChange('fft')}>
                     <AccordionSummary
                         sx={{
@@ -699,7 +826,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={fftSizeValues.length? localFFTSize: ""}
+                                        value={fftSizeValues.length ? localFFTSize : ""}
                                         onChange={(e) => {
                                             setLocalFFTSize(e.target.value);
                                             dispatch(updateFFTSize(e.target.value));
@@ -718,7 +845,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     <Select
                                         disabled={gettingSDRParameters}
                                         size={'small'}
-                                        value={fftWindowValues.length? fftWindow: ""}
+                                        value={fftWindowValues.length ? fftWindow : ""}
                                         onChange={(e) => {
                                             dispatch(updateFFTWindow(e.target.value));
                                         }}
