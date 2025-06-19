@@ -35,6 +35,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     bandwidth: state.waterfall.vfoMarkers[vfoNumber].bandwidth,
                     color: updates.color,
                     active: updates.active,
+                    volume: updates.volume,
                 },
         }));
     }

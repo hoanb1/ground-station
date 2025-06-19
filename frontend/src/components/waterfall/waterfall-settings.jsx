@@ -209,6 +209,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
         maxVFOMarkers,
         selectedVFOTab,
         vfoActive,
+        vfoColors,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -729,12 +730,15 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             }}
                         >
                             {[0, 1, 2, 3].map((index) => (
-                                <Tab key={index} label={`${index + 1}`} sx={{minWidth: '25%'}}/>
+                                <Tab key={index} label={`${index + 1}`} sx={{
+                                    minWidth: '25%',
+                                    backgroundColor: `${vfoColors[index]}40`, // CC = 80% opacity (204/255)
+                                }}/>
                             ))}
 
                         </Tabs>
                         {[1, 2, 3, 4].map((vfoIndex) => (
-                            <Box key={vfoIndex} hidden={selectedVFO !== vfoIndex}>
+                            <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
                                 <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
                                     <InputLabel>Modulation</InputLabel>
                                     <Select
