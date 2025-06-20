@@ -45,11 +45,19 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     if (action.type === 'waterfallState/setSelectedVFO') {
         const selectedVFO = action.payload;
 
-        store.dispatch(updateVFOParameters({
-            socket,
-            vfoNumber: selectedVFO,
-            updates: { selected: true }
-        }));
+        if (selectedVFO === null) {
+            store.dispatch(updateVFOParameters({
+                socket,
+                vfoNumber: 0,
+                updates: { selected: false }
+            }));
+        } else {
+            store.dispatch(updateVFOParameters({
+                socket,
+                vfoNumber: selectedVFO,
+                updates: { selected: true }
+            }));
+        }
     }
 
     // Handle VFO activation

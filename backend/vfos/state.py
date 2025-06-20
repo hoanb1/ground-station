@@ -10,6 +10,7 @@ VFO_NUMBER = 4
 
 @dataclass
 class VFOState:
+    vfo_number: int = 0
     center_freq: int = 0
     bandwidth: int = 0
     modulation: str = "AM"
@@ -28,7 +29,7 @@ class VFOManager:
             cls._instance = super(VFOManager, cls).__new__(cls)
             # Initialize VFO_NUMBER VFOs with default values
             for i in range(VFO_NUMBER):
-                cls._instance._vfo_states[i + 1] = VFOState()
+                cls._instance._vfo_states[i + 1] = VFOState(vfo_number=i + 1)
         return cls._instance
 
     def get_vfo_state(self, vfo_id: int) -> Optional[VFOState]:
@@ -37,6 +38,14 @@ class VFOManager:
     def update_vfo_state(self, vfo_id: int, center_freq: int = None,
                          bandwidth: int = None, modulation: str = None,
                          active: bool = None, selected: bool = None, volume = None, squelch = None) -> None:
+
+        # Check if the user deselected all VFOs
+        if vfo_id == 0 and selected is not None:
+            # deselect all VFOs
+            for _vfo_id in self._vfo_states:
+                self._vfo_states[_vfo_id].selected = False
+            return
+
         if vfo_id not in self._vfo_states:
             return
 
@@ -82,3 +91,11 @@ class VFOManager:
 
     def get_all_vfo_states(self) -> Dict[int, VFOState]:
         return self._vfo_states.copy()
+
+    def get_selected_vfo(self) -> Optional[VFOState]:
+        """Returns the currently selected VFO state or None if no VFO is selected."""
+        for vfo_state in self._vfo_states.values():
+            if vfo_state.selected:
+                return vfo_state
+
+        return None

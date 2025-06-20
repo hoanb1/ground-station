@@ -614,7 +614,7 @@ const VFOMarkersContainer = ({
         // If not dragging a handle, the click event will fire to handle selection
 
         // Set the selected VFO
-        dispatch(setSelectedVFO(parseInt(key)));
+        dispatch(setSelectedVFO(parseInt(key) || null));
     };
 
     // Handle touch start for mobile devices
@@ -641,7 +641,7 @@ const VFOMarkersContainer = ({
         }
 
         // Set the selected VFO
-        dispatch(setSelectedVFO(parseInt(key)));
+        dispatch(setSelectedVFO(parseInt(key) || null));
     };
 
     // Handle touch move for mobile devices
@@ -1022,7 +1022,7 @@ const VFOMarkersContainer = ({
 
         if (key) {
             // Dont update, we do that on mousedown
-            //dispatch(setSelectedVFO(parseInt(key)));
+            //dispatch(setSelectedVFO(parseInt(key) || null));
         }
     };
 
@@ -1042,7 +1042,7 @@ const VFOMarkersContainer = ({
 
         if (key) {
             // Update the selected VFO in Redux store
-            dispatch(setSelectedVFO(parseInt(key)));
+            dispatch(setSelectedVFO(parseInt(key) || null));
 
             // Prevent default to stop other handlers
             e.preventDefault();

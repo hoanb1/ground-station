@@ -133,7 +133,7 @@ const initialState = {
         4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'fm', volume: 50, squelch: -150},
     },
     maxVFOMarkers: 4,
-    selectedVFO: 1,
+    selectedVFO: null,
     vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
     selectedVFOTab: 0,
 };
@@ -293,7 +293,7 @@ export const waterfallSlice = createSlice({
             }
         },
         setSelectedVFO(state, action) {
-            state.selectedVFO = action.payload;
+            state.selectedVFO = Number.isInteger(action.payload) ? parseInt(action.payload) : null;
         },
         setVfoActive: (state, action) => {
             state.vfoActive[action.payload] = true;

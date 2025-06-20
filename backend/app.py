@@ -20,6 +20,9 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import uvicorn
 import socketio
 import httpx
+import queue
+from demodulators.webaudioproducer import WebAudioProducer
+from demodulators.webaudioconsumer import WebAudioConsumer
 from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, Request, HTTPException
@@ -92,6 +95,17 @@ async def lifespan(fastapiapp: FastAPI):
     Create and cleanup background tasks or other
     resources in this context manager.
     """
+    global audio_producer, audio_consumer
+
+    # Get the current event loop
+    loop = asyncio.get_event_loop()
+
+    # Start audio producer/consumer threads
+    audio_producer = WebAudioProducer(audio_queue)
+    audio_consumer = WebAudioConsumer(audio_queue, sio, loop)
+
+    audio_producer.start()
+    audio_consumer.start()
 
     if arguments.runonce_soapy_discovery:
         # Run SoapyDR discovery task on startup
@@ -108,6 +122,12 @@ async def lifespan(fastapiapp: FastAPI):
     try:
         yield
     finally:
+        # Stop audio threads
+        if audio_producer:
+            audio_producer.stop()
+        if audio_consumer:
+            audio_consumer.stop()
+
         # Cancel the Soapy server discovery task if it was started
         if discover_task:
             discover_task.cancel()
@@ -127,6 +147,11 @@ async def lifespan(fastapiapp: FastAPI):
 # Create an asynchronous Socket.IO server using ASGI mode.
 sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True)
 app = FastAPI(lifespan=lifespan)
+
+# Queues for the sound streams
+audio_queue = queue.Queue(maxsize=20)
+audio_producer = None
+audio_consumer = None
 
 # Wrap the Socket.IO server with an ASGI application.
 # This allows non-Socket.IO routes (like the FastAPI endpoints) to be served as well.
