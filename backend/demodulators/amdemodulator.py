@@ -133,7 +133,7 @@ class AMDemodulator:
             self.dc_block_module = modules.DcBlock()
             self.agc_module = modules.Agc(types.Format.FLOAT)
 
-            logger.info("✓ PyCSdr modules initialized successfully")
+            logger.info("PyCSdr modules initialized successfully")
 
         except Exception as e:
             logger.warning(f"PyCSdr module initialization warning: {e}")
