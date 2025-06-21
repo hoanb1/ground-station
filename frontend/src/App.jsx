@@ -102,7 +102,7 @@ export default function App(props) {
     const dispatch = useDispatch();
 
     // Use the audio context
-    const { initializeAudio, playAudioSamples } = useAudio();
+    const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
 
     const authentication = useMemo(() => {
         return {
@@ -241,20 +241,6 @@ export default function App(props) {
         },
     ];
 
-    useEffect(() => {
-        initializeAudio()
-            .then(() => {
-                console.log('Audio initialized successfully');
-            })
-            .catch(error => {
-                console.error('Failed to initialize audio:', error);
-            });
-
-        return () => {
-
-        };
-    }, []);
-
     // Socket event listeners
     useEffect(() => {
         if (socket) {
@@ -294,7 +280,17 @@ export default function App(props) {
                 }
             });
 
-            socket.on("audio-data", (data) => {
+            socket.on("audio-data", async (data) => {
+                // Check if audio is enabled before trying to play
+                const audioState = getAudioState();
+                if (!audioState.enabled) {
+                    try {
+                        await initializeAudio();
+                    } catch (error) {
+                        console.error('Failed to initialize audio:', error);
+                        return;
+                    }
+                }
                 playAudioSamples(data);
             });
 

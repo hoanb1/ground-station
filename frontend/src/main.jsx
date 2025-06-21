@@ -148,11 +148,11 @@ createRoot(document.getElementById('root')).render(
             <PersistGate loading={null} persistor={persistor}>
                 <SocketProvider>
                     <AuthProvider>
-                        <WakeLockProvider>
-                            <AudioProvider>
+                        <AudioProvider>
+                            <WakeLockProvider>
                                 <RouterProvider router={router} />
-                            </AudioProvider>
-                        </WakeLockProvider>
+                            </WakeLockProvider>
+                        </AudioProvider>
                     </AuthProvider>
                 </SocketProvider>
             </PersistGate>

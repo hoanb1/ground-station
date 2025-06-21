@@ -379,6 +379,7 @@ export default function Layout() {
 
         return () => {
             if (socket) {
+                console.warn("Disconnecting from socket");
                 socket.off("connect");
                 socket.off("disconnect");
                 socket.off("error");
@@ -390,7 +391,6 @@ export default function Layout() {
     return (
         <DashboardLayout
             sx={{
-                //minHeight: '1000px',
                 '& .MuiToolbar-root': {
                     boxShadow: '4px 8px 8px rgba(0, 0, 0, 0.35)',
                 },

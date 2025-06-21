@@ -1,7 +1,16 @@
-import React, { createContext, useContext, useRef, useState, useEffect, useCallback } from 'react';
+import React, { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { enqueueSnackbar } from 'notistack';
 
-const AudioContext = createContext();
+const AudioContext = createContext({
+        audioEnabled: false,
+        volume: 0.5,
+        initializeAudio: () => {},
+        playAudioSamples: () => {},
+        setAudioVolume: () => {},
+        stopAudio: () => {},
+        getAudioState: () => ({})
+    }
+);
 
 export const useAudio = () => {
     const context = useContext(AudioContext);
@@ -26,6 +35,15 @@ export const AudioProvider = ({ children }) => {
     // Initialize audio context
     const initializeAudio = useCallback(async () => {
         try {
+            // Use requestIdleCallback to create AudioContext when browser is idle
+            await new Promise(resolve => {
+                if (window.requestIdleCallback) {
+                    window.requestIdleCallback(resolve);
+                } else {
+                    setTimeout(resolve, 0);
+                }
+            });
+
             audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
             gainNodeRef.current = audioContextRef.current.createGain();
             gainNodeRef.current.connect(audioContextRef.current.destination);
@@ -48,6 +66,7 @@ export const AudioProvider = ({ children }) => {
             }
         }
     }, [volume]);
+
 
     // Process audio buffer queue
     const processAudioQueue = useCallback(() => {
@@ -178,7 +197,8 @@ export const AudioProvider = ({ children }) => {
         };
     }, []);
 
-    const value = {
+    // Memoize the context value to prevent unnecessary re-renders
+    const value = useMemo(() => ({
         // State
         audioEnabled,
         volume,
@@ -189,7 +209,7 @@ export const AudioProvider = ({ children }) => {
         setAudioVolume,
         stopAudio,
         getAudioState
-    };
+    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, stopAudio, getAudioState]);
 
     return (
         <AudioContext.Provider value={value}>
