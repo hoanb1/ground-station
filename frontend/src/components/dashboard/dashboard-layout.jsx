@@ -52,6 +52,7 @@ import {useDispatch, useSelector} from "react-redux";
 import {setIsEditing} from "./dashboard-slice.jsx";
 import WakeLockStatus from "./dashboard-wake-lock-status.jsx";
 import Tooltip from "@mui/material/Tooltip";
+import { AudioProvider, useAudio } from "./dashboard-audio.jsx";
 
 
 function DashboardEditor() {
@@ -282,7 +283,7 @@ function SidebarFooterAccountPopover() {
                         }}
                     >
                         <ListItemIcon>
-                            <Avatar {...stringAvatar('Efstratios Goudelis')} />
+                            <Avatar {...stringAvatar('My Name')} />
                         </ListItemIcon>
                         <ListItemText
                             sx={{
@@ -362,6 +363,25 @@ export default function Layout() {
     const [ loading, setLoading ] = useState(true);
     const { socket } = useSocket();
 
+    // Use the audio context
+    const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
+
+    useEffect(() => {
+        console.info('Initializing audio...');
+
+        // Check if audio is enabled before trying to play
+        const audioState = getAudioState();
+        if (!audioState.enabled) {
+            initializeAudio()
+                .then(() => {
+                    console.info('Audio initialized successfully');
+                })
+                .catch((error) => {
+                    console.error('Error initializing audio', error);
+                });
+        }
+    }, []);
+
     useEffect(() => {
         if (socket) {
             socket.on("connect", () => {
@@ -375,16 +395,19 @@ export default function Layout() {
             socket.on("disconnect", () => {
                 setLoading(true);
             });
+
+            socket.on("audio-data", (data) => {
+                playAudioSamples(data);
+            });
         }
 
         return () => {
             if (socket) {
-                console.warn("Disconnecting from socket");
                 socket.off("connect");
                 socket.off("disconnect");
                 socket.off("error");
+                socket.off("audio-data");
             }
-
         };
     }, [socket]);
     

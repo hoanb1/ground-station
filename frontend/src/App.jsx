@@ -58,7 +58,8 @@ import { getOverviewMapSettings } from './components/overview/overview-sat-slice
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 import LoginForm from './components/common/login.jsx';
 import {useDispatch, useSelector} from "react-redux";
-import { useAudio } from "./components/dashboard/dashboard-audio.jsx";
+import { AudioProvider, useAudio } from "./components/dashboard/dashboard-audio.jsx";
+
 import {
     setUITrackerValues
 } from "./components/target/target-sat-slice.jsx";
@@ -101,8 +102,8 @@ export default function App(props) {
     } = useSelector((state) => state.targetSatTrack);
     const dispatch = useDispatch();
 
-    // Use the audio context
-    const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
+    // // Use the audio context
+    // const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
 
     const authentication = useMemo(() => {
         return {
@@ -280,20 +281,6 @@ export default function App(props) {
                 }
             });
 
-            socket.on("audio-data", async (data) => {
-                // Check if audio is enabled before trying to play
-                const audioState = getAudioState();
-                if (!audioState.enabled) {
-                    try {
-                        await initializeAudio();
-                    } catch (error) {
-                        console.error('Failed to initialize audio:', error);
-                        return;
-                    }
-                }
-                playAudioSamples(data);
-            });
-
             socket.on("ui-tracker-state", (data) => {
                 store.dispatch(setUITrackerValues(data))
             });
@@ -335,10 +322,9 @@ export default function App(props) {
                 socket.off("sat-sync-events");
                 socket.off("satellite-tracking");
                 socket.off("ui-tracker-state");
-                socket.off("audio-data");
             };
         }
-    }, [socket, initializeAudio, playAudioSamples]);
+    }, [socket]);
 
     const action = snackbarId => (
         <>
@@ -349,16 +335,18 @@ export default function App(props) {
     );
 
     return (
-        <SnackbarProvider maxSnack={5} autoHideDuration={4000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}} action={action}>
-            <ReactRouterAppProvider
-                navigation={NAVIGATION}
-                theme={dashboardTheme}
-                authentication={authentication}
-                session={session}
-                branding={BRANDING}
-            >
-                {loggedIn ? <Outlet/> : <LoginForm/>}
-            </ReactRouterAppProvider>
-        </SnackbarProvider>
+        <AudioProvider>
+            <SnackbarProvider maxSnack={5} autoHideDuration={4000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}} action={action}>
+                <ReactRouterAppProvider
+                    navigation={NAVIGATION}
+                    theme={dashboardTheme}
+                    authentication={authentication}
+                    session={session}
+                    branding={BRANDING}
+                >
+                    {loggedIn ? <Outlet/> : <LoginForm/>}
+                </ReactRouterAppProvider>
+            </SnackbarProvider>
+        </AudioProvider>
     );
 }
