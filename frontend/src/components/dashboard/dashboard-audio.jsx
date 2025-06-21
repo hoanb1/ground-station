@@ -55,7 +55,7 @@ export const AudioProvider = ({ children }) => {
 
             nextPlayTimeRef.current = audioContextRef.current.currentTime;
             setAudioEnabled(true);
-            //enqueueSnackbar('Audio initialized successfully', { variant: 'success' });
+            enqueueSnackbar('Audio initialized successfully', { variant: 'success' });
 
         } catch (error) {
             console.error('Failed to initialize audio:', error);
