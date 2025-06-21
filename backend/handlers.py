@@ -521,6 +521,7 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             logger.debug(f'Updating VFO parameters, data: {data}')
             vfomanager = VFOManager()
             vfomanager.update_vfo_state(
+                session_id=sid,
                 vfo_id=data.get('vfoNumber', 0),
                 center_freq=int(data.get('frequency', 0)),
                 bandwidth=int(data.get('bandwidth', 0)),

@@ -1,6 +1,7 @@
+
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional
+from typing import Dict, Optional, List
 
 # Configure logging for the worker process
 logger = logging.getLogger('vfo-state')
@@ -13,7 +14,7 @@ class VFOState:
     vfo_number: int = 0
     center_freq: int = 0
     bandwidth: int = 0
-    modulation: str = "AM"
+    modulation: str = "fm"
     active: bool = False
     selected: bool = False
     volume: int = 50
@@ -22,34 +23,51 @@ class VFOState:
 
 class VFOManager:
     _instance = None
-    _vfo_states: Dict[int, VFOState] = {}
+    _session_vfo_states: Dict[str, Dict[int, VFOState]] = {}
 
     def __new__(cls):
         if cls._instance is None:
             cls._instance = super(VFOManager, cls).__new__(cls)
-            # Initialize VFO_NUMBER VFOs with default values
-            for i in range(VFO_NUMBER):
-                cls._instance._vfo_states[i + 1] = VFOState(vfo_number=i + 1)
+            cls._instance._session_vfo_states = {}
         return cls._instance
 
-    def get_vfo_state(self, vfo_id: int) -> Optional[VFOState]:
-        return self._vfo_states.get(vfo_id)
+    def _ensure_session_vfos(self, session_id: str) -> None:
+        """Ensure VFOs exist for the given session_id."""
+        if session_id not in self._session_vfo_states:
+            self._session_vfo_states[session_id] = {}
+            # Initialize VFO_NUMBER VFOs with default values for this session
+            for i in range(VFO_NUMBER):
+                self._session_vfo_states[session_id][i + 1] = VFOState(vfo_number=i + 1)
 
-    def update_vfo_state(self, vfo_id: int, center_freq: int = None,
+    def get_all_session_ids(self) -> List[str]:
+        """Returns a list of all session IDs currently in the VFOManager."""
+        return list(self._session_vfo_states.keys())
+
+    def get_vfo_state(self, session_id: str, vfo_id: int) -> Optional[VFOState]:
+        self._ensure_session_vfos(session_id)
+        return self._session_vfo_states[session_id].get(vfo_id)
+
+    def update_vfo_state(self, session_id: str, vfo_id: int, center_freq: int = None,
                          bandwidth: int = None, modulation: str = None,
-                         active: bool = None, selected: bool = None, volume = None, squelch = None) -> None:
+                         active: bool = None, selected: bool = None, volume = None,
+                         squelch = None) -> None:
+
+        assert session_id is not None, "session_id is required"
+
+        self._ensure_session_vfos(session_id)
+        session_vfos = self._session_vfo_states[session_id]
 
         # Check if the user deselected all VFOs
         if vfo_id == 0 and selected is not None:
-            # deselect all VFOs
-            for _vfo_id in self._vfo_states:
-                self._vfo_states[_vfo_id].selected = False
+            # deselect all VFOs for this session
+            for _vfo_id in session_vfos:
+                session_vfos[_vfo_id].selected = False
             return
 
-        if vfo_id not in self._vfo_states:
+        if vfo_id not in session_vfos:
             return
 
-        vfo_state = self._vfo_states[vfo_id]
+        vfo_state = session_vfos[vfo_id]
 
         # update center frequency
         if center_freq is not None:
@@ -81,20 +99,24 @@ class VFOManager:
             if selected:
                 vfo_state.active = True
 
-            # since a VFO is now selected set the other VFOs to not selected
-            for _vfo_id in self._vfo_states:
-                self._vfo_states[_vfo_id].selected = False
+            # since a VFO is now selected set the other VFOs to not selected for this session
+            for _vfo_id in session_vfos:
+                session_vfos[_vfo_id].selected = False
 
             vfo_state.selected = selected
 
-        #logger.info(f"vfo states: {self._vfo_states}")
+        #logger.info(f"vfo states for session {session_id}: {session_vfos}")
 
-    def get_all_vfo_states(self) -> Dict[int, VFOState]:
-        return self._vfo_states.copy()
+    def get_all_vfo_states(self, session_id: str) -> Dict[int, VFOState]:
+        self._ensure_session_vfos(session_id)
+        return self._session_vfo_states[session_id].copy()
 
-    def get_selected_vfo(self) -> Optional[VFOState]:
+    def get_selected_vfo(self, session_id: str) -> Optional[VFOState]:
         """Returns the currently selected VFO state or None if no VFO is selected."""
-        for vfo_state in self._vfo_states.values():
+        self._ensure_session_vfos(session_id)
+        session_vfos = self._session_vfo_states[session_id]
+
+        for vfo_state in session_vfos.values():
             if vfo_state.selected:
                 return vfo_state
 
