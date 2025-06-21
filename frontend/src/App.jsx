@@ -17,7 +17,6 @@
  *
  */
 
-
 import * as React from 'react';
 import {Outlet} from "react-router";
 import PublicIcon from '@mui/icons-material/Public';
@@ -28,7 +27,7 @@ import {setupTheme} from './theme.js';
 import AddHomeIcon from '@mui/icons-material/AddHome';
 import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-react";
 import {Alert, Avatar, Button, Checkbox} from "@mui/material";
-import {useEffect, useMemo, useState, useRef} from "react";
+import {useEffect, useMemo, useState} from "react";
 import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/common/icons.jsx";
 import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
@@ -59,10 +58,10 @@ import { getOverviewMapSettings } from './components/overview/overview-sat-slice
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 import LoginForm from './components/common/login.jsx';
 import {useDispatch, useSelector} from "react-redux";
+import { useAudio } from "./components/dashboard/dashboard-audio.jsx";
 import {
     setUITrackerValues
 } from "./components/target/target-sat-slice.jsx";
-
 
 const BRANDING = {
     logo: (
@@ -102,96 +101,14 @@ export default function App(props) {
     } = useSelector((state) => state.targetSatTrack);
     const dispatch = useDispatch();
 
-    // Audio context for Web Audio API
-    const audioContextRef = useRef(null);
-    const gainNodeRef = useRef(null);
-    const [audioEnabled, setAudioEnabled] = useState(false);
-
-    // Initialize audio context
-    const initializeAudio = async () => {
-        try {
-            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
-            gainNodeRef.current = audioContextRef.current.createGain();
-            gainNodeRef.current.connect(audioContextRef.current.destination);
-            gainNodeRef.current.gain.value = 0.5; // 50% volume
-
-            // Resume audio context if suspended (required by browsers)
-            if (audioContextRef.current.state === 'suspended') {
-                await audioContextRef.current.resume();
-            }
-
-            setAudioEnabled(true);
-            enqueueSnackbar('Audio initialized successfully', { variant: 'success' });
-
-        } catch (error) {
-            console.error('Failed to initialize audio:', error);
-            enqueueSnackbar(`Failed to initialize audio: ${error.message}`, { variant: 'error' });
-
-            // Enable audio even if there's an error, as long as we have the context and gain node
-            if (audioContextRef.current && gainNodeRef.current) {
-                setAudioEnabled(true);
-            }
-        }
-    };
-
-    // Play audio samples - Cleaned up production version
-    const playAudioSamples = (audioData) => {
-        // Check if audio is ready
-        if (!audioContextRef.current || !gainNodeRef.current) {
-            return;
-        }
-
-        // Resume context if suspended
-        if (audioContextRef.current.state === 'suspended') {
-            audioContextRef.current.resume().then(() => {
-                playAudioSamples(audioData);
-            }).catch(err => {
-                console.error('Failed to resume AudioContext:', err);
-            });
-            return;
-        }
-
-        // Update state if needed
-        if (!audioEnabled) {
-            setAudioEnabled(true);
-        }
-
-        try {
-            const { samples, sample_rate, channels = 1 } = audioData;
-
-            if (!samples || samples.length === 0) {
-                return;
-            }
-
-            // Create and fill audio buffer
-            const audioBuffer = audioContextRef.current.createBuffer(
-                channels,
-                samples.length,
-                sample_rate
-            );
-
-            const channelData = audioBuffer.getChannelData(0);
-            for (let i = 0; i < samples.length; i++) {
-                channelData[i] = samples[i];
-            }
-
-            // Create and play audio source
-            const source = audioContextRef.current.createBufferSource();
-            source.buffer = audioBuffer;
-            source.connect(gainNodeRef.current);
-            source.start();
-
-        } catch (error) {
-            console.error('Error playing audio:', error);
-        }
-    };
+    // Use the audio context
+    const { initializeAudio, playAudioSamples } = useAudio();
 
     const authentication = useMemo(() => {
         return {
             signIn: () => {
                 enqueueSnackbar('user clicked on the sign in button', {
                     variant: 'info',
-
                 });
             },
             signOut: () => {
@@ -199,7 +116,7 @@ export default function App(props) {
                 enqueueSnackbar('You have been logged out', {variant: 'success'});
             },
         };
-    }, []);
+    }, [logOut]);
 
     useEffect(() => {
         const fetchPasses = () => {
@@ -207,7 +124,7 @@ export default function App(props) {
                 dispatch(fetchNextPasses({socket, noradId: satelliteId, hours: nextPassesHours}))
                     .unwrap()
                     .then(data => {
-
+                        // Handle success if needed
                     })
                     .catch(error => {
                         enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
@@ -225,7 +142,7 @@ export default function App(props) {
         return () => {
             clearInterval(interval);
         };
-    }, [satelliteId]);
+    }, [satelliteId, socket, dispatch, nextPassesHours]);
 
     const NAVIGATION = [
         {
@@ -324,16 +241,27 @@ export default function App(props) {
         },
     ];
 
-    // To listen to the connection event
+    useEffect(() => {
+        initializeAudio()
+            .then(() => {
+                console.log('Audio initialized successfully');
+            })
+            .catch(error => {
+                console.error('Failed to initialize audio:', error);
+            });
+
+        return () => {
+
+        };
+    }, []);
+
+    // Socket event listeners
     useEffect(() => {
         if (socket) {
             socket.on('connect', async () => {
                 console.log('Socket connected with ID:', socket.id);
                 enqueueSnackbar("Connected to backend!", {variant: 'success'});
                 uponConnectionToBackEnd(socket);
-
-                // Initialize audio when connected
-                await initializeAudio();
             });
 
             socket.on("reconnect_attempt", (attempt) => {
@@ -377,31 +305,29 @@ export default function App(props) {
             socket.on("satellite-tracking", (data) => {
                 store.dispatch(setSatelliteData(data));
                 if (data['events']) {
-                    if (data['events']) {
-                        data['events'].forEach(event => {
-                            if (event.name === 'rotator_connected') {
-                                enqueueSnackbar("Rotator connected!", {variant: 'success'});
-                            } else if (event.name === 'rotator_disconnected') {
-                                enqueueSnackbar("Rotator disconnected!", {variant: 'info'});
-                            } else if (event.name === 'rig_connected') {
-                                enqueueSnackbar("Rig connected!", {variant: 'success'});
-                            } else if (event.name === 'rig_disconnected') {
-                                enqueueSnackbar("Rig disconnected!", {variant: 'info'});
-                            } else if (event.name === 'elevation_out_of_bounds') {
-                                enqueueSnackbar("Elevation of target is not reachable!", {variant: 'warning'});
-                            } else if (event.name === 'azimuth_out_of_bounds') {
-                                enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
-                            } else if (event.name === 'minelevation_error') {
-                                enqueueSnackbar("Target is beyond the minimum elevation limit", {variant: 'warning'});
-                            } else if (event.name === 'norad_id_change') {
-                                enqueueSnackbar("Target satellite changed!", {variant: 'info'});
-                            } else if (event.name === 'rotator_error') {
-                                enqueueSnackbar(event.error, {variant: 'error'});
-                            } else if (event.name === 'rig_error') {
-                                enqueueSnackbar(event.error, {variant: 'error'});
-                            }
-                        });
-                    }
+                    data['events'].forEach(event => {
+                        if (event.name === 'rotator_connected') {
+                            enqueueSnackbar("Rotator connected!", {variant: 'success'});
+                        } else if (event.name === 'rotator_disconnected') {
+                            enqueueSnackbar("Rotator disconnected!", {variant: 'info'});
+                        } else if (event.name === 'rig_connected') {
+                            enqueueSnackbar("Rig connected!", {variant: 'success'});
+                        } else if (event.name === 'rig_disconnected') {
+                            enqueueSnackbar("Rig disconnected!", {variant: 'info'});
+                        } else if (event.name === 'elevation_out_of_bounds') {
+                            enqueueSnackbar("Elevation of target is not reachable!", {variant: 'warning'});
+                        } else if (event.name === 'azimuth_out_of_bounds') {
+                            enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
+                        } else if (event.name === 'minelevation_error') {
+                            enqueueSnackbar("Target is beyond the minimum elevation limit", {variant: 'warning'});
+                        } else if (event.name === 'norad_id_change') {
+                            enqueueSnackbar("Target satellite changed!", {variant: 'info'});
+                        } else if (event.name === 'rotator_error') {
+                            enqueueSnackbar(event.error, {variant: 'error'});
+                        } else if (event.name === 'rig_error') {
+                            enqueueSnackbar(event.error, {variant: 'error'});
+                        }
+                    });
                 }
             });
 
@@ -416,16 +342,7 @@ export default function App(props) {
                 socket.off("audio-data");
             };
         }
-    }, [socket]);
-
-    // Cleanup audio context on unmount
-    useEffect(() => {
-        return () => {
-            if (audioContextRef.current) {
-                audioContextRef.current.close();
-            }
-        };
-    }, []);
+    }, [socket, initializeAudio, playAudioSamples]);
 
     const action = snackbarId => (
         <>

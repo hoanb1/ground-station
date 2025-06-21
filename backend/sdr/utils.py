@@ -29,17 +29,8 @@ logger = logging.getLogger('waterfall-process')
 # Store active SDR clients and client sessions, keyed by client ID and session ID, respectively.
 active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 
-# Store active RTLSDR devices and client connections
-rtlsdr_devices: Dict[str, rtlsdr.RtlSdr] = {}
-
 # Create a cache dictionary to store SDR parameters by SDR ID
 sdr_parameters_cache: Dict[str, Dict] = {}
-
-# Create a second Socket.IO server instance specifically for waterfall data
-waterfall_sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*')
-
-# Create a separate ASGI app for this Socket.IO server
-waterfall_socket_app = socketio.ASGIApp(waterfall_sio)
 
 
 def add_sdr_session(sid: str, sdr_config: Dict):
@@ -96,41 +87,6 @@ async def cleanup_sdr_session(sid):
         logger.warning(f"Client {sid} not found in active clients while cleaning up")
 
 
-# Set up event handlers for the waterfall Socket.IO server
-@waterfall_sio.event
-async def connect(sid, environ):
-    """Connect to waterfall the client"""
-    client_ip = environ.get("REMOTE_ADDR")
-    logger.info(f'Waterfall client {sid} from {client_ip} connected')
-
-@waterfall_sio.event
-async def disconnect(sid):
-    """Disconnect from the waterfall client"""
-
-    # clean up any SDR sessions
-    await cleanup_sdr_session(sid)
-
-
-@waterfall_sio.event
-async def configure(sid, config):
-    """Handle waterfall configuration from the client"""
-
-@waterfall_sio.event
-async def start_streaming(sid):
-    """Start streaming waterfall data to the client"""
-
-@waterfall_sio.event
-async def stop_streaming(sid):
-    """Stop streaming waterfall data to the client"""
-
-# Helper functions for waterfall streaming
-async def stop_waterfall_streaming(sid):
-    """Stop waterfall streaming for a client"""
-
-async def stream_waterfall_data_task(sid, device_index, config):
-    """Background task to stream waterfall data to a client"""
-
-
 async def get_local_soapy_sdr_devices():
     """Retrieve a list of local SoapySDR devices with frequency range information"""
 
@@ -171,7 +127,6 @@ async def get_local_soapy_sdr_devices():
         reply['error'] = str(e)
 
     return reply
-
 
 
 async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):

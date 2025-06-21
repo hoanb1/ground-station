@@ -37,7 +37,7 @@ from engineio.payload import Payload
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import Optional, Dict
-from waterfall import waterfall_socket_app, cleanup_sdr_session
+from sdr.utils import cleanup_sdr_session
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
 from tracker.logic import tracker_process, queue_to_tracker, queue_from_tracker, stop_event
@@ -329,9 +329,6 @@ async def serve_spa(request: Request, full_path: str):
 
     # For all other routes, serve the index.html file
     return FileResponse(os.path.join(static_files_dir, "index.html"))
-
-# Mount the waterfall Socket.IO app at the /waterfall path
-app.mount("/ws/waterfall", waterfall_socket_app)
 
 # root path
 app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")

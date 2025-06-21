@@ -49,6 +49,8 @@ import { store, persistor } from './components/common/store.jsx';
 import ErrorPage from './components/common/error-page.jsx';
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 import {WakeLockProvider} from "./components/dashboard/dashboard-wake-lock-provider.jsx";
+import { AudioProvider, useAudio } from "./components/dashboard/dashboard-audio.jsx";
+
 
 const router = createBrowserRouter([
     {
@@ -147,7 +149,9 @@ createRoot(document.getElementById('root')).render(
                 <SocketProvider>
                     <AuthProvider>
                         <WakeLockProvider>
-                            <RouterProvider router={router} />
+                            <AudioProvider>
+                                <RouterProvider router={router} />
+                            </AudioProvider>
                         </WakeLockProvider>
                     </AuthProvider>
                 </SocketProvider>

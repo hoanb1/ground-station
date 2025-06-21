@@ -25,6 +25,7 @@ import MuiAccordion from '@mui/material/Accordion';
 import MuiAccordionSummary, {
     accordionSummaryClasses,
 } from '@mui/material/AccordionSummary';
+import {SquelchIcon} from '../common/icons.jsx';
 import MuiAccordionDetails from '@mui/material/AccordionDetails';
 import Typography from '@mui/material/Typography';
 import {
@@ -810,7 +811,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 </FormControl>
 
                                 <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
-                                    <Box sx={{textAlign: 'left'}}><VolumeDown/></Box>
+                                    <Box sx={{textAlign: 'left'}}></Box>
                                     <Slider
                                         value={vfoMarkers[vfoIndex]?.squelch || -150}
                                         min={-150}
