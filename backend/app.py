@@ -98,11 +98,11 @@ async def lifespan(fastapiapp: FastAPI):
     global audio_producer, audio_consumer
 
     # Get the current event loop
-    loop = asyncio.get_event_loop()
+    event_loop = asyncio.get_event_loop()
 
     # Start audio producer/consumer threads
     audio_producer = WebAudioProducer(audio_queue)
-    audio_consumer = WebAudioConsumer(audio_queue, sio, loop)
+    audio_consumer = WebAudioConsumer(audio_queue, sio, event_loop)
 
     audio_producer.start()
     audio_consumer.start()
