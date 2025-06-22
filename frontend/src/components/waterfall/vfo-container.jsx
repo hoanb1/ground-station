@@ -41,15 +41,18 @@ const VFOMarkersContainer = ({
 
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
+    const workerRef = useRef(null);
     const [actualWidth, setActualWidth] = useState(containerWidth);
     const lastMeasuredWidthRef = useRef(0);
     const [activeMarker, setActiveMarker] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
     const [dragMode, setDragMode] = useState(null); // 'body', 'leftEdge', or 'rightEdge'
     const lastClientXRef = useRef(0);
-    const lastTouchXRef = useRef(0); // Track touch position
+    const lastTouchXRef = useRef(0);
     const height = bandscopeHeight + waterfallHeight;
     const [cursor, setCursor] = useState('default');
+    const [workerInitialized, setWorkerInitialized] = useState(false);
+    const [useWorker, setUseWorker] = useState(false);
 
     // Track previous VFO active state to detect changes
     const prevVfoActiveRef = useRef({});
@@ -84,6 +87,87 @@ const VFOMarkersContainer = ({
             updates,
         }));
     }, [dispatch]);
+
+    // Initialize Web Worker
+    useEffect(() => {
+        // Check if OffscreenCanvas is supported
+        if (typeof OffscreenCanvas === 'undefined') {
+            console.warn('OffscreenCanvas not supported, falling back to main thread rendering');
+            setUseWorker(false);
+            return;
+        }
+
+        try {
+            // Create worker
+            const worker = new Worker(new URL('./vfo-marker-worker.js', import.meta.url));
+            workerRef.current = worker;
+
+            // Handle worker messages
+            worker.onmessage = (e) => {
+                const { type, success, error } = e.data;
+
+                switch (type) {
+                    case 'CANVAS_INITIALIZED':
+                        if (success) {
+                            setWorkerInitialized(true);
+                            setUseWorker(true);
+                            console.log('VFO renderer worker initialized successfully');
+                        } else {
+                            console.error('Failed to initialize worker canvas:', error);
+                            setUseWorker(false);
+                        }
+                        break;
+                    case 'RENDER_COMPLETE':
+                        // Optional: Handle render completion if needed
+                        break;
+                    case 'ERROR':
+                        console.error('Worker error:', error);
+                        break;
+                    default:
+                        break;
+                }
+            };
+
+            worker.onerror = (error) => {
+                console.error('Worker error:', error);
+                setUseWorker(false);
+            };
+
+            return () => {
+                if (workerRef.current) {
+                    workerRef.current.terminate();
+                    workerRef.current = null;
+                }
+            };
+        } catch (error) {
+            console.error('Failed to create worker:', error);
+            setUseWorker(false);
+        }
+    }, []);
+
+    // Initialize OffscreenCanvas when canvas is ready
+    useEffect(() => {
+        if (!workerRef.current || !canvasRef.current || !useWorker) return;
+
+        const canvas = canvasRef.current;
+
+        try {
+            // Transfer canvas to worker
+            const offscreenCanvas = canvas.transferControlToOffscreen();
+
+            workerRef.current.postMessage({
+                type: 'INIT_CANVAS',
+                data: {
+                    canvas: offscreenCanvas,
+                    width: actualWidth,
+                    height: height
+                }
+            }, [offscreenCanvas]);
+        } catch (error) {
+            console.error('Failed to transfer canvas to worker:', error);
+            setUseWorker(false);
+        }
+    }, [useWorker, actualWidth, height]);
 
     // When the VFO status changes, detect which VFO was just made active
     useEffect(() => {
@@ -256,8 +340,34 @@ const VFOMarkersContainer = ({
         updateActualWidth();
     }, [containerWidth, updateActualWidth]);
 
-    // Draw all VFO markers on the canvas
+    // Send render commands to worker or fallback to direct rendering
     useEffect(() => {
+        if (useWorker && workerInitialized && workerRef.current) {
+            // Send rendering data to worker
+            workerRef.current.postMessage({
+                type: 'RENDER_VFO_MARKERS',
+                data: {
+                    vfoMarkers,
+                    vfoActive,
+                    selectedVFO,
+                    canvasWidth: actualWidth,
+                    canvasHeight: height,
+                    centerFrequency,
+                    sampleRate,
+                    actualWidth,
+                    containerWidth,
+                    currentPositionX
+                }
+            });
+        } else if (!useWorker) {
+            // Fallback to direct canvas rendering
+            renderVFOMarkersDirect();
+        }
+    }, [useWorker, workerInitialized, vfoActive, vfoMarkers, actualWidth, height,
+        centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX]);
+
+    // Fallback rendering function for browsers without OffscreenCanvas support
+    const renderVFOMarkersDirect = () => {
         const canvas = canvasRef.current;
         if (!canvas) {
             return;
@@ -332,9 +442,8 @@ const VFOMarkersContainer = ({
             leftEdgeX = Math.max(0, leftEdgeX);
             rightEdgeX = Math.min(canvas.width, rightEdgeX);
 
-            // Adjust opacity based on selected state
-            const areaOpacity = isSelected ? '33' : '15'; // Brighter/dimmer for selected/unselected
-            const lineOpacity = isSelected ? 'FF' : '99'; // Full/dimmed for selected/unselected
+            const areaOpacity = isSelected ? '33' : '15';
+            const lineOpacity = isSelected ? 'FF' : '99';
 
             // Draw shaded bandwidth area with adjusted opacity
             ctx.fillStyle = `${marker.color}${areaOpacity}`;
@@ -428,20 +537,12 @@ const VFOMarkersContainer = ({
             );
             ctx.fill();
 
-            // Draw frequency label text
             ctx.fillStyle = '#ffffff';
             ctx.textAlign = 'center';
             ctx.fillText(labelText, centerX, 16);
 
         });
-    }, [vfoActive, vfoMarkers, actualWidth, height, centerFrequency, sampleRate,
-        startFreq, endFreq, freqRange, selectedVFO]);
-
-    // Calculate frequency from position
-    const calculateFrequency = useCallback((position) => {
-        const freqRatio = position / actualWidth;
-        return startFreq + (freqRatio * freqRange);
-    }, [startFreq, freqRange, actualWidth]);
+    };
 
     // Check if mouse/touch is over a handle or edge
     const getHoverElement = useCallback((x, y) => {
@@ -455,10 +556,7 @@ const VFOMarkersContainer = ({
 
         // Use larger hit areas for touch devices
         const edgeHandleWidth = isTouchDevice ? 12 : 6;
-        const edgeYRange = isTouchDevice ? 30 : 10;
-        const labelYRange = isTouchDevice ? 25 : 20; // Height range for label detection
-
-        // Update the edge handle Y position to match the drawing position
+        const labelYRange = isTouchDevice ? 25 : 20;
         const edgeHandleYPosition = edgeHandleYOffset;
 
         // Function to check if a single VFO has a hit
@@ -496,11 +594,12 @@ const VFOMarkersContainer = ({
                 const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
                 const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
 
-                // Approximate the label width calculation similar to what's done in the render
-                const ctx = canvasRef.current.getContext('2d');
-                ctx.font = '12px Monospace';
-                const textMetrics = ctx.measureText(labelText);
-                const labelWidth = textMetrics.width + 10; // Add padding
+                // Create temporary canvas for text measurement
+                const tempCanvas = document.createElement('canvas');
+                const tempCtx = tempCanvas.getContext('2d');
+                tempCtx.font = '12px Monospace';
+                const textMetrics = tempCtx.measureText(labelText);
+                const labelWidth = textMetrics.width + 10;
 
                 // Check if mouse is over label area
                 if (Math.abs(canvasX - centerX) <= labelWidth / 2) {
@@ -559,11 +658,13 @@ const VFOMarkersContainer = ({
         }
 
         return { key: null, element: null };
-    }, [vfoActive, actualWidth, startFreq, endFreq, freqRange, selectedVFO, formatFrequency]);
+    }, [vfoActive, actualWidth, startFreq, freqRange, selectedVFO, formatFrequency,
+        edgeHandleHeight, edgeHandleYOffset, vfoMarkers]);
 
     // Handle mouse move to update cursor
     const handleMouseMove = useCallback((e) => {
-        if (isDragging) return; // Don't change cursor during drag
+        // Don't change cursor during drag
+        if (isDragging) return;
 
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -589,10 +690,7 @@ const VFOMarkersContainer = ({
 
     // Handle mouse events for marker interaction
     const handleMouseDown = (e) => {
-        // Only respond to left mouse button
-        if (e.button !== 0) {
-            return;
-        }
+        if (e.button !== 0) return;
 
         const rect = canvasRef.current.getBoundingClientRect();
         const x = e.clientX - rect.left;
@@ -831,7 +929,8 @@ const VFOMarkersContainer = ({
                 document.removeEventListener('mouseup', handleMouseUpEvent);
             };
         }
-    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, getHoverElement, dispatch]);
+    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq,
+        freqRange, actualWidth, getHoverElement, dispatch]);
 
     // For touch event dragging, we need a separate effect
     useEffect(() => {

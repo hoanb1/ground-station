@@ -115,7 +115,7 @@ export const createExternalWorker = () => {
 
     try {
         console.info("Creating external worker for waterfall")
-        return new Worker(new URL('./waterfall-worker.jsx', import.meta.url));
+        return new Worker(new URL('./waterfall-worker.js', import.meta.url));
     }
     catch (error) {
         enqueueSnackbar(`Failed to create waterfall worker: ${error.message}`, {

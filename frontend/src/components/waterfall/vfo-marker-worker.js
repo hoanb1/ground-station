@@ -1,0 +1,380 @@
+let offscreenCanvas = null;
+let ctx = null;
+
+// Configuration constants (matches main thread)
+const EDGE_HANDLE_HEIGHT = 20;
+const EDGE_HANDLE_Y_OFFSET = 50;
+
+// Message handler
+self.onmessage = function(e) {
+    const { type, data } = e.data;
+
+    switch (type) {
+        case 'INIT_CANVAS':
+            initializeCanvas(data);
+            break;
+        case 'RENDER_VFO_MARKERS':
+            renderVFOMarkers(data);
+            break;
+        case 'RESIZE_CANVAS':
+            resizeCanvas(data);
+            break;
+        default:
+            console.warn('Unknown message type:', type);
+    }
+};
+
+/**
+ * Initialize the OffscreenCanvas
+ */
+function initializeCanvas({ canvas, width, height }) {
+    try {
+        offscreenCanvas = canvas;
+        ctx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+
+        if (!ctx) {
+            throw new Error('Failed to get 2D context from OffscreenCanvas');
+        }
+
+        // Set initial canvas dimensions
+        offscreenCanvas.width = width;
+        offscreenCanvas.height = height;
+
+        self.postMessage({
+            type: 'CANVAS_INITIALIZED',
+            success: true
+        });
+    } catch (error) {
+        self.postMessage({
+            type: 'CANVAS_INITIALIZED',
+            success: false,
+            error: error.message
+        });
+    }
+}
+
+/**
+ * Resize the canvas
+ */
+function resizeCanvas({ width, height }) {
+    if (!offscreenCanvas || !ctx) {
+        return;
+    }
+
+    offscreenCanvas.width = width;
+    offscreenCanvas.height = height;
+
+    self.postMessage({
+        type: 'CANVAS_RESIZED',
+        width,
+        height
+    });
+}
+
+/**
+ * Format frequency to display in MHz
+ */
+function formatFrequency(freq) {
+    return (freq / 1e6).toFixed(3);
+}
+
+/**
+ * Calculate VFO marker positions and dimensions
+ */
+function calculateVFOPositions(marker, startFreq, freqRange, canvasWidth) {
+    const bandwidth = marker.bandwidth || 3000;
+    const mode = (marker.mode || 'USB').toUpperCase();
+
+    // Calculate frequency range based on mode
+    let markerLowFreq, markerHighFreq;
+
+    if (mode === 'USB') {
+        markerLowFreq = marker.frequency;
+        markerHighFreq = marker.frequency + bandwidth;
+    } else if (mode === 'LSB') {
+        markerLowFreq = marker.frequency - bandwidth;
+        markerHighFreq = marker.frequency;
+    } else { // AM, FM, etc.
+        markerLowFreq = marker.frequency - bandwidth / 2;
+        markerHighFreq = marker.frequency + bandwidth / 2;
+    }
+
+    // Calculate x positions
+    const centerX = ((marker.frequency - startFreq) / freqRange) * canvasWidth;
+
+    let leftEdgeX, rightEdgeX;
+
+    if (mode === 'USB') {
+        leftEdgeX = centerX;
+        rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * canvasWidth;
+    } else if (mode === 'LSB') {
+        leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * canvasWidth;
+        rightEdgeX = centerX;
+    } else { // AM, FM, etc.
+        leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * canvasWidth;
+        rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * canvasWidth;
+    }
+
+    // Ensure edges are within canvas bounds
+    leftEdgeX = Math.max(0, leftEdgeX);
+    rightEdgeX = Math.min(canvasWidth, rightEdgeX);
+
+    return {
+        centerX,
+        leftEdgeX,
+        rightEdgeX,
+        markerLowFreq,
+        markerHighFreq,
+        bandwidth,
+        mode
+    };
+}
+
+/**
+ * Draw a single VFO marker
+ */
+function drawVFOMarker(marker, markerIdx, isSelected, startFreq, endFreq, freqRange, canvasWidth, canvasHeight) {
+    const positions = calculateVFOPositions(marker, startFreq, freqRange, canvasWidth);
+    const { centerX, leftEdgeX, rightEdgeX, markerLowFreq, markerHighFreq, bandwidth, mode } = positions;
+
+    // Skip if marker is outside visible range
+    if (markerHighFreq < startFreq || markerLowFreq > endFreq) {
+        return;
+    }
+
+    // Adjust opacity based on selected state
+    const areaOpacity = isSelected ? '33' : '15';
+    const lineOpacity = isSelected ? 'FF' : '99';
+
+    // Draw shaded bandwidth area
+    ctx.fillStyle = `${marker.color}${areaOpacity}`;
+    ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, canvasHeight);
+
+    // Draw center marker line
+    ctx.beginPath();
+    ctx.strokeStyle = `${marker.color}${lineOpacity}`;
+    ctx.lineWidth = isSelected ? 2 : 1.5;
+    ctx.moveTo(centerX, 0);
+    ctx.lineTo(centerX, canvasHeight);
+    ctx.stroke();
+
+    // Draw bandwidth edge lines based on mode
+    ctx.beginPath();
+    ctx.strokeStyle = `${marker.color}${lineOpacity}`;
+    ctx.lineWidth = isSelected ? 1.5 : 1;
+    ctx.setLineDash([4, 4]); // Create dashed lines
+
+    if (mode === 'USB') {
+        // Only draw right edge for USB
+        ctx.moveTo(rightEdgeX, 0);
+        ctx.lineTo(rightEdgeX, canvasHeight);
+    } else if (mode === 'LSB') {
+        // Only draw left edge for LSB
+        ctx.moveTo(leftEdgeX, 0);
+        ctx.lineTo(leftEdgeX, canvasHeight);
+    } else {
+        // Draw both edges for other modes
+        ctx.moveTo(leftEdgeX, 0);
+        ctx.lineTo(leftEdgeX, canvasHeight);
+        ctx.moveTo(rightEdgeX, 0);
+        ctx.lineTo(rightEdgeX, canvasHeight);
+    }
+
+    ctx.stroke();
+    ctx.setLineDash([]); // Reset to solid line
+
+    // Draw edge handles
+    drawEdgeHandles(mode, leftEdgeX, rightEdgeX, marker.color, lineOpacity, isSelected);
+
+    // Draw frequency label
+    drawFrequencyLabel(marker, centerX, bandwidth, mode, lineOpacity);
+}
+
+/**
+ * Draw edge handles for VFO marker
+ */
+function drawEdgeHandles(mode, leftEdgeX, rightEdgeX, color, opacity, isSelected) {
+    ctx.fillStyle = `${color}${opacity}`;
+
+    const edgeHandleYPosition = EDGE_HANDLE_Y_OFFSET;
+    const edgeHandleWidth = isSelected ? 14 : 6;
+
+    if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
+        // Right edge handle
+        ctx.beginPath();
+        ctx.roundRect(
+            rightEdgeX - edgeHandleWidth / 2,
+            edgeHandleYPosition - EDGE_HANDLE_HEIGHT / 2,
+            edgeHandleWidth,
+            EDGE_HANDLE_HEIGHT,
+            2
+        );
+        ctx.fill();
+    }
+
+    if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
+        // Left edge handle
+        ctx.beginPath();
+        ctx.roundRect(
+            leftEdgeX - edgeHandleWidth / 2,
+            edgeHandleYPosition - EDGE_HANDLE_HEIGHT / 2,
+            edgeHandleWidth,
+            EDGE_HANDLE_HEIGHT,
+            2
+        );
+        ctx.fill();
+    }
+}
+
+/**
+ * Draw frequency label for VFO marker
+ */
+function drawFrequencyLabel(marker, centerX, bandwidth, mode, opacity) {
+    // Create label text
+    const modeText = ` [${mode}]`;
+    const bwText = mode === 'USB' || mode === 'LSB'
+        ? `${(bandwidth / 1000).toFixed(1)}kHz`
+        : `±${(bandwidth / 2000).toFixed(1)}kHz`;
+    const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
+
+    // Set font and measure text
+    ctx.font = '12px Monospace';
+    const textMetrics = ctx.measureText(labelText);
+    const labelWidth = textMetrics.width + 10; // Add padding
+    const labelHeight = 14;
+
+    // Draw label background
+    ctx.fillStyle = `${marker.color}${opacity}`;
+    ctx.beginPath();
+    ctx.roundRect(
+        centerX - labelWidth / 2,
+        5,
+        labelWidth,
+        labelHeight,
+        2
+    );
+    ctx.fill();
+
+    // Draw label text
+    ctx.fillStyle = '#ffffff';
+    ctx.textAlign = 'center';
+    ctx.fillText(labelText, centerX, 16);
+}
+
+/**
+ * Main rendering function
+ */
+function renderVFOMarkers(data) {
+    const {
+        vfoMarkers,
+        vfoActive,
+        selectedVFO,
+        canvasWidth,
+        canvasHeight,
+        centerFrequency,
+        sampleRate,
+        actualWidth,
+        containerWidth,
+        currentPositionX
+    } = data;
+
+    if (!offscreenCanvas || !ctx) {
+        console.error('Canvas not initialized');
+        return;
+    }
+
+    // Update canvas dimensions if needed
+    if (offscreenCanvas.width !== canvasWidth || offscreenCanvas.height !== canvasHeight) {
+        offscreenCanvas.width = canvasWidth;
+        offscreenCanvas.height = canvasHeight;
+    }
+
+    // Clear the canvas
+    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+
+    // Calculate frequency range
+    const startFreq = centerFrequency - sampleRate / 2;
+    const endFreq = centerFrequency + sampleRate / 2;
+    const freqRange = endFreq - startFreq;
+
+    // Get active VFO keys and sort them so selected VFO is drawn last (on top)
+    const vfoKeys = Object.keys(vfoActive).filter(key => vfoActive[key]);
+
+    // Sort keys to put selected VFO at the end
+    const sortedVfoKeys = vfoKeys.sort((a, b) => {
+        if (parseInt(a) === selectedVFO) return 1;
+        if (parseInt(b) === selectedVFO) return -1;
+        return parseInt(a) - parseInt(b);
+    });
+
+    // Draw each marker in sorted order
+    sortedVfoKeys.forEach(markerIdx => {
+        const marker = vfoMarkers[markerIdx];
+        if (!marker) return;
+
+        const isSelected = parseInt(markerIdx) === selectedVFO;
+        drawVFOMarker(marker, markerIdx, isSelected, startFreq, endFreq, freqRange, canvasWidth, canvasHeight);
+    });
+
+    // Notify main thread that rendering is complete
+    self.postMessage({
+        type: 'RENDER_COMPLETE',
+        timestamp: performance.now()
+    });
+}
+
+/**
+ * Calculate visible frequency range (utility function for potential future use)
+ */
+function calculateVisibleFrequencyRange(centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX) {
+    // When zoomed out, we see the full spectrum
+    if (actualWidth <= containerWidth) {
+        return {
+            startFrequency: centerFrequency - sampleRate / 2,
+            endFrequency: centerFrequency + sampleRate / 2,
+            centerFrequency: centerFrequency,
+            bandwidth: sampleRate
+        };
+    }
+
+    // When zoomed in, calculate visible portion
+    const visibleWidthRatio = containerWidth / actualWidth;
+    const panOffsetRatio = -currentPositionX / actualWidth;
+
+    const startRatio = Math.max(0, Math.min(1 - visibleWidthRatio, panOffsetRatio));
+    const endRatio = Math.min(1, startRatio + visibleWidthRatio);
+
+    const fullStartFreq = centerFrequency - sampleRate / 2;
+    const fullEndFreq = centerFrequency + sampleRate / 2;
+    const fullFreqRange = fullEndFreq - fullStartFreq;
+
+    const visibleStartFreq = fullStartFreq + (startRatio * fullFreqRange);
+    const visibleEndFreq = fullStartFreq + (endRatio * fullFreqRange);
+
+    return {
+        startFrequency: visibleStartFreq,
+        endFrequency: visibleEndFreq,
+        centerFrequency: (visibleStartFreq + visibleEndFreq) / 2,
+        bandwidth: visibleEndFreq - visibleStartFreq
+    };
+}
+
+// Error handling
+self.onerror = function(error) {
+    self.postMessage({
+        type: 'ERROR',
+        error: error.message,
+        filename: error.filename,
+        lineno: error.lineno
+    });
+};
+
+// Handle unhandled promise rejections
+self.onunhandledrejection = function(event) {
+    self.postMessage({
+        type: 'ERROR',
+        error: 'Unhandled promise rejection: ' + event.reason
+    });
+};
+
+console.log('VFO Renderer Worker initialized');
