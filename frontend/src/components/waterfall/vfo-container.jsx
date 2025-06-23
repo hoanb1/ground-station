@@ -284,7 +284,7 @@ const VFOMarkersContainer = ({
         // Calculate frequency change based on wheel direction
         // Positive deltaY = wheel down = increase frequency (inverted)
         // Negative deltaY = wheel up = decrease frequency (inverted)
-        const freqChange = Math.sign(e.deltaY) * mousewheelFreqStep;
+        const freqChange = Math.sign(e.deltaY) * marker.stepSize;
         const newFrequency = marker.frequency + freqChange;
 
         // Ensure the frequency stays within the visible range

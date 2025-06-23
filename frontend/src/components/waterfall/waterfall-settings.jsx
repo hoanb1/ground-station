@@ -773,6 +773,30 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     label="Active"
                                     sx={{mt: 2}}
                                 />
+
+                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
+                                    <InputLabel>Step Size</InputLabel>
+                                    <Select
+                                        value={vfoMarkers[vfoIndex]?.stepSize || 1000}
+                                        variant={'filled'}
+                                        onChange={(e) => {
+                                            dispatch(setVFOProperty({
+                                                vfoNumber: vfoIndex,
+                                                updates: {stepSize: e.target.value}
+                                            }));
+                                        }}>
+                                        <MenuItem value={100}>100 Hz</MenuItem>
+                                        <MenuItem value={500}>500 Hz</MenuItem>
+                                        <MenuItem value={1000}>1 kHz</MenuItem>
+                                        <MenuItem value={2500}>2.5 kHz</MenuItem>
+                                        <MenuItem value={5000}>5 kHz</MenuItem>
+                                        <MenuItem value={10000}>10 kHz</MenuItem>
+                                        <MenuItem value={12500}>12.5 kHz</MenuItem>
+                                        <MenuItem value={20000}>20 kHz</MenuItem>
+                                        <MenuItem value={25000}>25 kHz</MenuItem>
+                                    </Select>
+                                </FormControl>
+
                                 <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
                                 <InputLabel>Modulation</InputLabel>
                                     <Select
