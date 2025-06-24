@@ -491,36 +491,56 @@ function renderFFTRow(fftData) {
     const data = imageData.data;
     const [min, max] = dbRange;
     const range = max - min;
+    const canvasWidth = waterfallCanvas.width;
 
-    for (let i = 0; i < fftData.length; i++) {
-        // Map the FFT bin to a pixel position
-        const x = Math.floor(i * waterfallCanvas.width / fftData.length);
-
-        // Get the power level and normalize it to 0-1
-        const power = Math.max(min, Math.min(max, fftData[i]));
-        const normalized = (power - min) / range;
-
-        // Calculate a scaling factor to fit all frequency bins to the available width
-        const skipFactor = fftData.length / (waterfallCanvas.width);
-
-        const fftIndex = Math.min(Math.floor(x * skipFactor), fftData.length - 1);
-        const amplitude = fftData[fftIndex];
-
-        let color = getColorForPower(
-            amplitude,
-            colorMap,
-            dbRange,
-        );
-
-        // Set the pixel color
-        const pixelIndex = x * 4;
-        data[pixelIndex] = color.r;
-        data[pixelIndex + 1] = color.g;
-        data[pixelIndex + 2] = color.b;
-        data[pixelIndex + 3] = 255; // Alpha
+    // Clear the image data first
+    for (let i = 0; i < data.length; i += 4) {
+        data[i] = 0;     // R
+        data[i + 1] = 0; // G
+        data[i + 2] = 0; // B
+        data[i + 3] = 255; // A
     }
 
-    // Put the image data on the TOP row of the canvas instead of bottom
+    if (fftData.length >= canvasWidth) {
+        // More FFT bins than pixels - downsample
+        const skipFactor = fftData.length / canvasWidth;
+
+        for (let x = 0; x < canvasWidth; x++) {
+            const fftIndex = Math.min(Math.floor(x * skipFactor), fftData.length - 1);
+            const amplitude = fftData[fftIndex];
+
+            let color = getColorForPower(amplitude, colorMap, dbRange);
+
+            const pixelIndex = x * 4;
+            data[pixelIndex] = color.r;
+            data[pixelIndex + 1] = color.g;
+            data[pixelIndex + 2] = color.b;
+            data[pixelIndex + 3] = 255;
+        }
+    } else {
+        // Fewer FFT bins than pixels - interpolate/stretch
+        const stretchFactor = canvasWidth / fftData.length;
+
+        for (let i = 0; i < fftData.length; i++) {
+            const amplitude = fftData[i];
+            let color = getColorForPower(amplitude, colorMap, dbRange);
+
+            // Calculate the pixel range for this FFT bin
+            const startX = Math.floor(i * stretchFactor);
+            const endX = Math.floor((i + 1) * stretchFactor);
+
+            // Fill all pixels in this range with the same color
+            for (let x = startX; x < endX && x < canvasWidth; x++) {
+                const pixelIndex = x * 4;
+                data[pixelIndex] = color.r;
+                data[pixelIndex + 1] = color.g;
+                data[pixelIndex + 2] = color.b;
+                data[pixelIndex + 3] = 255;
+            }
+        }
+    }
+
+    // Put the image data on the TOP row of the canvas
     waterfallCtx.putImageData(imageData, 0, 0);
 }
 
