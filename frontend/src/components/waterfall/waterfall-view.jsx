@@ -299,9 +299,9 @@ const MainWaterfallDisplay = React.memo(() => {
                     config: {
                         width: waterFallCanvasWidth,
                         height: waterFallCanvasHeight,
-                        colorMap,
-                        dbRange,
-                        fftSize
+                        colorMap: colorMap,
+                        dbRange: dbRange,
+                        fftSize: fftSize,
                     }
                 }, [waterfallOffscreenCanvas, bandscopeOffscreenCanvas, dBAxisOffScreenCanvas, waterfallLeftMarginCanvas]);
 

@@ -9,6 +9,7 @@ let waterFallLeftMarginCtx = null;
 let renderIntervalId = null;
 let targetFPS = 15;
 let fftData = new Array(1024).fill(-120);
+let fftSize = 8192;
 let colorMap = 'cosmic';
 let dbRange = [-120, 30];
 let scrollOffset = 0;
@@ -127,6 +128,23 @@ self.onmessage = function(eventMessage) {
             }
             break;
 
+        case 'updateFFTSize':
+            fftSize = eventMessage.data.fftSize;
+
+            // Reset smoothing arrays when FFT size changes
+            fftHistory = [];
+            smoothedFftData = new Array(fftSize).fill(-120);
+
+            // Also reset waterfall history for auto-scaling
+            waterfallHistory = [];
+            hasPerformedInitialAutoScale = false;
+
+            self.postMessage({
+                type: 'fftSizeUpdated',
+                data: { fftSize: fftSize }
+            });
+            break;
+
         case 'updateSmoothingConfig':
             if (eventMessage.data.historyLength !== undefined) {
                 maxFftHistoryLength = Math.max(1, Math.min(20, eventMessage.data.historyLength));
@@ -196,6 +214,13 @@ self.onmessage = function(eventMessage) {
 
 //Function that produces a smoother line out of the FFT data
 function updateSmoothedFftData(newFftData) {
+    // Check if smoothedFftData needs to be resized
+    if (smoothedFftData.length !== newFftData.length) {
+        console.log(`Resizing smoothed FFT data from ${smoothedFftData.length} to ${newFftData.length}`);
+        smoothedFftData = new Array(newFftData.length).fill(-120);
+        fftHistory = []; // Clear history when size changes
+    }
+
     // Add new FFT data to history
     fftHistory.push([...newFftData]);
 
@@ -248,7 +273,6 @@ function updateSmoothedFftData(newFftData) {
             break;
     }
 }
-
 
 // Store FFT data in history for auto-scaling analysis
 function storeFFTDataInHistory(fftDataArray) {
@@ -405,6 +429,11 @@ function setupCanvas(config) {
     // Other setup
     colorMap = config.colorMap;
     dbRange = config.dbRange;
+    fftSize = config.fftSize;
+
+    // IMPORTANT: Reset smoothing arrays when FFT size changes
+    fftHistory = [];
+    smoothedFftData = new Array(fftSize).fill(-120);
 
     // Clear the canvas
     waterfallCtx.fillStyle = 'black';
@@ -419,11 +448,6 @@ function startRendering(fps) {
     rotatorEventQueue = [];
 
     targetFPS = fps;
-
-    // Disabling this method for now
-    // renderIntervalId = setInterval(() => {
-    //     //renderWaterfall();
-    // }, 1000 / targetFPS);
 
     // Confirm start
     self.postMessage({ type: 'status', status: 'started', fps: targetFPS });
