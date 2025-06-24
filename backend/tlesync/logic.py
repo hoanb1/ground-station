@@ -1,3 +1,4 @@
+
 # Copyright (c) 2024 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -24,6 +25,7 @@ from concurrent.futures import ThreadPoolExecutor
 from db.models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
 from typing import List
 from exceptions import *
+from sqlalchemy import select
 
 
 # Global state to track satellite synchronization progress
@@ -213,6 +215,11 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             "satellites_processed": 0,
             "transmitters_processed": 0,
             "groups_processed": 0
+        },
+        # Add new tracking lists for newly added items
+        "newly_added": {
+            "satellites": [],
+            "transmitters": []
         }
     }
 
@@ -514,6 +521,27 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     sync_state_manager.set_state(sync_state)
     await sio.emit('sat-sync-events', progress_state)
 
+    # Get existing satellite and transmitter IDs from database
+    existing_satellite_norad_ids = set()
+    existing_transmitter_uuids = set()
+
+    try:
+        # Query existing satellites
+        satellite_result = await dbsession.execute(select(Satellites.norad_id))
+        existing_satellite_norad_ids = {row[0] for row in satellite_result.fetchall()}
+
+        # Query existing transmitters
+        transmitter_result = await dbsession.execute(select(Transmitters.id))
+        existing_transmitter_uuids = {row[0] for row in transmitter_result.fetchall()}
+
+        logger.info(f"Found {len(existing_satellite_norad_ids)} existing satellites and {len(existing_transmitter_uuids)} existing transmitters in database")
+
+    except Exception as e:
+        logger.error(f"Error querying existing data: {e}")
+        # Continue with empty sets if query fails
+        existing_satellite_norad_ids = set()
+        existing_transmitter_uuids = set()
+
     #  we now have everything, TLE from celestrak sat info and transmitter info from satnogs, lets put them in the db
     count_sats = 0
     count_transmitters = 0
@@ -533,6 +561,10 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         # Now process satellites
         for i, sat in enumerate(celestrak_list):
             norad_id = get_norad_id_from_tle(sat['line1'])
+
+            # Check if this is a new satellite
+            is_new_satellite = norad_id not in existing_satellite_norad_ids
+
             satellite = Satellites(
                 norad_id=norad_id,
                 name=sat['name'],
@@ -595,12 +627,26 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             # commit session
             await dbsession.commit()
 
+            # If this is a new satellite, add it to the newly added list
+            if is_new_satellite:
+                sync_state["newly_added"]["satellites"].append({
+                    "norad_id": norad_id,
+                    "name": satellite.name,
+                    "sat_id": satellite.sat_id
+                })
+                logger.info(f"New satellite added: {satellite.name} (NORAD ID: {norad_id})")
+
             # let's find transmitter info in the satnogs_transmitter_data list
             satnogs_transmitter_info = get_transmitter_info_by_norad_id(norad_id, satnogs_transmitter_data)
 
             for j, transmitter_info in enumerate(satnogs_transmitter_info):
+                transmitter_uuid = transmitter_info.get('uuid', None)
+
+                # Check if this is a new transmitter
+                is_new_transmitter = transmitter_uuid not in existing_transmitter_uuids
+
                 transmitter = Transmitters(
-                    id=transmitter_info.get('uuid', None),
+                    id=transmitter_uuid,
                     description=transmitter_info.get('description', None),
                     alive=transmitter_info.get('alive', None),
                     type=transmitter_info.get('type', None),
@@ -649,17 +695,41 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 # commit session
                 await dbsession.commit()
 
+                # If this is a new transmitter, add it to the newly added list
+                if is_new_transmitter:
+                    sync_state["newly_added"]["transmitters"].append({
+                        "uuid": transmitter_uuid,
+                        "description": transmitter.description,
+                        "satellite_name": satellite.name,
+                        "norad_id": norad_id,
+                        "downlink_low": transmitter.downlink_low,
+                        "downlink_high": transmitter.downlink_high,
+                        "mode": transmitter.mode
+                    })
+                    logger.info(f"New transmitter added: {transmitter.description} for satellite {satellite.name} (UUID: {transmitter_uuid})")
+
         # Mark processing phases as complete
         completed_phases.add("process_satellites")
         completed_phases.add("process_transmitters")
 
+        # Log summary of newly added items
+        new_satellites_count = len(sync_state["newly_added"]["satellites"])
+        new_transmitters_count = len(sync_state["newly_added"]["transmitters"])
+
         logger.info(f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters")
+        logger.info(f"New items added: {new_satellites_count} satellites, {new_transmitters_count} transmitters")
 
         # Update final state - always set to 100% when complete
         sync_state["status"] = "complete"
         sync_state["progress"] = 100
         sync_state["success"] = True
-        sync_state["message"] = f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'
+
+        # Create a detailed success message including newly added items
+        success_message = f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'
+        if new_satellites_count > 0 or new_transmitters_count > 0:
+            success_message += f' (New: {new_satellites_count} satellites, {new_transmitters_count} transmitters)'
+
+        sync_state["message"] = success_message
         sync_state["active_sources"] = []
         sync_state["completed_sources"].append("Database Update")
         sync_state["last_update"] = datetime.now(timezone.utc).isoformat()

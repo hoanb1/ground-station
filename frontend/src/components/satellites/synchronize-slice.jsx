@@ -18,7 +18,6 @@
  */
 
 
-
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 export const startSatelliteSync = createAsyncThunk(
@@ -65,6 +64,7 @@ const syncSatelliteSlice = createSlice({
     name: 'syncSatellite',
     initialState: {
         syncState: {
+            progress: 0,
 
         }
     },

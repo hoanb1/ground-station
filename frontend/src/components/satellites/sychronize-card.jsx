@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -18,9 +19,9 @@
  */
 
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Card, Box, CardContent, Typography, Button } from '@mui/material';
+import { Card, Box, CardContent, Typography, Button, Collapse, Chip, IconButton } from '@mui/material';
 import { enqueueSnackbar } from 'notistack';
 import { useSocket } from '../common/socket.jsx';
 import {
@@ -35,65 +36,17 @@ import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import {humanizeDate} from '../common/common.jsx';
 import SyncIcon from '@mui/icons-material/Sync';
 import AccessTimeIcon from '@mui/icons-material/AccessTime';
-
-
-function LinearProgressWithLabel(props) {
-    return (
-        <Box sx={{display: 'flex', alignItems: 'center'}}>
-            <Box sx={{width: '100%', mr: 1}}>
-                <LinearProgress variant="determinate" {...props} />
-            </Box>
-            <Box sx={{minWidth: 35}}>
-                <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                    {`${Math.round(props.value)}%`}
-                </Typography>
-            </Box>
-        </Box>
-    );
-}
-
-function LinearWithValueLabel({progress}) {
-
-    const BorderLinearProgress = styled(LinearProgress)(({theme}) => ({
-        height: 20,
-        borderRadius: 5,
-        [`&.${linearProgressClasses.colorPrimary}`]: {
-            backgroundColor: theme.palette.grey[200],
-            ...theme.applyStyles('dark', {
-                backgroundColor: theme.palette.grey[800],
-            }),
-        },
-        [`& .${linearProgressClasses.bar}`]: {
-            borderRadius: 5,
-            backgroundColor: '#1a90ff',
-            ...theme.applyStyles('dark', {
-                backgroundColor: '#308fe8',
-            }),
-        },
-    }));
-
-    return (
-        <Box sx={{display: 'flex', alignItems: 'left', width: '100%'}}>
-            <Box sx={{width: '100%', mr: 1}}>
-                <BorderLinearProgress
-                    value={progress}
-                    variant="determinate"
-                />
-            </Box>
-            <Box sx={{minWidth: 35}}>
-                <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                    {`${Math.round(progress)}%`}
-                </Typography>
-            </Box>
-        </Box>
-    );
-}
+import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
+import ExpandLessIcon from '@mui/icons-material/ExpandLess';
+import FiberNewIcon from '@mui/icons-material/FiberNew';
+import RadioIcon from '@mui/icons-material/Radio';
 
 
 const SynchronizeTLEsCard = function () {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { syncState } = useSelector((state) => state.syncSatellite);
+    const [showNewItems, setShowNewItems] = useState(false);
 
     const handleSynchronizeSatellites = async () => {
         dispatch(startSatelliteSync({ socket }));
@@ -102,6 +55,13 @@ const SynchronizeTLEsCard = function () {
     useEffect(() => {
         dispatch(fetchSyncState({socket: socket}));
     }, []);
+
+    // Check if there are newly added items
+    const hasNewItems = syncState?.newly_added &&
+        (syncState.newly_added.satellites?.length > 0 || syncState.newly_added.transmitters?.length > 0);
+
+    const newSatellitesCount = syncState?.newly_added?.satellites?.length || 0;
+    const newTransmittersCount = syncState?.newly_added?.transmitters?.length || 0;
 
     return (
         <Card sx={{
@@ -362,6 +322,172 @@ const SynchronizeTLEsCard = function () {
                             >
                                 Last update: {humanizeDate(syncState.last_update)}
                             </Typography>
+                        </Box>
+                    )}
+
+                    {/* New items notification */}
+                    {hasNewItems && (
+                        <Box sx={{
+                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                            border: '1px solid rgba(76, 175, 80, 0.3)',
+                            borderRadius: 1,
+                            p: 1,
+                            mb: 1,
+                        }}>
+                            <Box sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'space-between',
+                                cursor: 'pointer',
+                            }}
+                                 onClick={() => setShowNewItems(!showNewItems)}
+                            >
+                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <FiberNewIcon
+                                        sx={{
+                                            color: '#4caf50',
+                                            mr: 1,
+                                            fontSize: '1.2rem',
+                                            animation: 'glow 2s infinite ease-in-out',
+                                            '@keyframes glow': {
+                                                '0%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' },
+                                                '50%': { filter: 'drop-shadow(0 0 8px rgba(76,175,80,0.9))' },
+                                                '100%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' }
+                                            }
+                                        }}
+                                    />
+                                    <Typography
+                                        variant="caption"
+                                        sx={{
+                                            color: '#4caf50',
+                                            fontWeight: 600,
+                                            textTransform: 'uppercase',
+                                            letterSpacing: '0.5px',
+                                            fontSize: '0.75rem',
+                                        }}
+                                    >
+                                        New Items Added
+                                    </Typography>
+                                    <Box sx={{ ml: 1, display: 'flex', gap: 0.5 }}>
+                                        <Chip
+                                            label={`${newSatellitesCount} SAT`}
+                                            size="small"
+                                            sx={{
+                                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                                color: '#4caf50',
+                                                fontSize: '0.6rem',
+                                                height: '18px',
+                                                fontWeight: 600,
+                                            }}
+                                        />
+                                        <Chip
+                                            label={`${newTransmittersCount} TRX`}
+                                            size="small"
+                                            sx={{
+                                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+                                                color: '#4caf50',
+                                                fontSize: '0.6rem',
+                                                height: '18px',
+                                                fontWeight: 600,
+                                            }}
+                                        />
+                                    </Box>
+                                </Box>
+                                <IconButton
+                                    size="small"
+                                    sx={{ color: '#4caf50', p: 0.5 }}
+                                >
+                                    {showNewItems ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                                </IconButton>
+                            </Box>
+
+                            <Collapse in={showNewItems}>
+                                <Box sx={{ mt: 1, maxHeight: '200px', overflowY: 'auto' }}>
+                                    {newSatellitesCount > 0 && (
+                                        <Box sx={{ mb: 1 }}>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: '#40c0ff',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.7rem',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.5px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    mb: 0.5,
+                                                }}
+                                            >
+                                                <SatelliteAltIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+                                                Satellites ({newSatellitesCount})
+                                            </Typography>
+                                            <Box sx={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                gap: 0.5,
+                                                maxHeight: '60px',
+                                                overflowY: 'auto',
+                                            }}>
+                                                {syncState.newly_added.satellites.map((sat, index) => (
+                                                    <Chip
+                                                        key={index}
+                                                        label={`${sat.name} (${sat.norad_id})`}
+                                                        size="small"
+                                                        sx={{
+                                                            backgroundColor: 'rgba(64, 192, 255, 0.1)',
+                                                            color: '#40c0ff',
+                                                            fontSize: '0.65rem',
+                                                            fontFamily: 'monospace',
+                                                        }}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        </Box>
+                                    )}
+
+                                    {newTransmittersCount > 0 && (
+                                        <Box>
+                                            <Typography
+                                                variant="caption"
+                                                sx={{
+                                                    color: '#ff9800',
+                                                    fontWeight: 600,
+                                                    fontSize: '0.7rem',
+                                                    textTransform: 'uppercase',
+                                                    letterSpacing: '0.5px',
+                                                    display: 'flex',
+                                                    alignItems: 'center',
+                                                    mb: 0.5,
+                                                }}
+                                            >
+                                                <RadioIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+                                                Transmitters ({newTransmittersCount})
+                                            </Typography>
+                                            <Box sx={{
+                                                display: 'flex',
+                                                flexWrap: 'wrap',
+                                                gap: 0.5,
+                                                maxHeight: '60px',
+                                                overflowY: 'auto',
+                                            }}>
+                                                {syncState.newly_added.transmitters.map((trx, index) => (
+                                                    <Chip
+                                                        key={index}
+                                                        label={`${trx.description || 'Unknown'} (${trx.satellite_name})`}
+                                                        size="small"
+                                                        sx={{
+                                                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                                                            color: '#ff9800',
+                                                            fontSize: '0.65rem',
+                                                            fontFamily: 'monospace',
+                                                        }}
+                                                    />
+                                                ))}
+                                            </Box>
+                                        </Box>
+                                    )}
+                                </Box>
+                            </Collapse>
                         </Box>
                     )}
 
