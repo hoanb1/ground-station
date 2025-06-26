@@ -45,7 +45,7 @@ import RadioIcon from '@mui/icons-material/Radio';
 const SynchronizeTLEsCard = function () {
     const dispatch = useDispatch();
     const { socket } = useSocket();
-    const { syncState } = useSelector((state) => state.syncSatellite);
+    const { syncState, synchronizing } = useSelector((state) => state.syncSatellite);
     const [showNewItems, setShowNewItems] = useState(false);
 
     const handleSynchronizeSatellites = async () => {
@@ -168,6 +168,7 @@ const SynchronizeTLEsCard = function () {
                     </Box>
 
                     <Button
+                        disabled={synchronizing}
                         variant="contained"
                         color="primary"
                         onClick={handleSynchronizeSatellites}
@@ -219,13 +220,6 @@ const SynchronizeTLEsCard = function () {
                 </Box>
 
                 {/* Progress section */}
-                <Box sx={{
-                    mt: 1,
-                    border: '1px solid rgba(45,72,86,0.7)',
-                    borderRadius: 2,
-                    backgroundColor: 'rgba(7,19,24,0.5)',
-                    p: { xs: 1.5, sm: 2 },
-                }}>
                     <Box sx={{
                         display: 'flex',
                         justifyContent: 'space-between',
@@ -293,6 +287,49 @@ const SynchronizeTLEsCard = function () {
                             }}/>
                         )}
                     </Box>
+
+                {/* Terminal effect for the status message */}
+                <Box sx={{
+                    position: 'absolute',
+                    top: 0,
+                    left: 0,
+                    width: '100%',
+                    height: '100%',
+                    backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,30,60,0.15), rgba(0,30,60,0.15) 1px, transparent 1px, transparent 2px)',
+                    opacity: 0.5,
+                    pointerEvents: 'none',
+                }}/>
+                <Box sx={{
+                    height: '40px',
+                }}>
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            fontFamily: 'monospace',
+                            color: '#bbbbbb',
+                            position: 'relative',
+                            zIndex: 1,
+                            fontSize: { xs: '0.8rem', sm: '0.875rem' },
+                            '&::after': syncState['progress'] > 0 && syncState['progress'] < 100 ? {
+                                content: '"█"',
+                                animation: 'blink 1s infinite',
+                                '@keyframes blink': {
+                                    '0%': { opacity: 0 },
+                                    '50%': { opacity: 1 },
+                                    '100%': { opacity: 0 }
+                                }
+                            } : {},
+                        }}
+                    >
+                        {syncState['message'] || (
+                            syncState['progress'] === 0
+                                ? 'Ready to synchronize. Click the button to start.'
+                                : syncState['progress'] === 100
+                                    ? 'Synchronization complete!'
+                                    : 'Synchronizing satellite data...'
+                        )}
+                    </Typography>
+                </Box>
 
                     {/* Last update timestamp indicator using humanizeDate */}
                     {syncState?.last_update && (
@@ -491,49 +528,7 @@ const SynchronizeTLEsCard = function () {
                         </Box>
                     )}
 
-                    {/* Terminal effect for the status message */}
-                    <Box sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        width: '100%',
-                        height: '100%',
-                        backgroundImage: 'repeating-linear-gradient(0deg, rgba(0,30,60,0.15), rgba(0,30,60,0.15) 1px, transparent 1px, transparent 2px)',
-                        opacity: 0.5,
-                        pointerEvents: 'none',
-                    }}/>
-                    <Box sx={{
-                        height: '40px',
-                    }}>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                fontFamily: 'monospace',
-                                color: '#bbbbbb',
-                                position: 'relative',
-                                zIndex: 1,
-                                fontSize: { xs: '0.8rem', sm: '0.875rem' },
-                                '&::after': syncState['progress'] > 0 && syncState['progress'] < 100 ? {
-                                    content: '"█"',
-                                    animation: 'blink 1s infinite',
-                                    '@keyframes blink': {
-                                        '0%': { opacity: 0 },
-                                        '50%': { opacity: 1 },
-                                        '100%': { opacity: 0 }
-                                    }
-                                } : {},
-                            }}
-                        >
-                            {syncState['message'] || (
-                                syncState['progress'] === 0
-                                    ? 'Ready to synchronize. Click the button to start.'
-                                    : syncState['progress'] === 100
-                                        ? 'Synchronization complete!'
-                                        : 'Synchronizing satellite data...'
-                            )}
-                        </Typography>
-                    </Box>
-                </Box>
+
             </Box>
         </Card>
     );

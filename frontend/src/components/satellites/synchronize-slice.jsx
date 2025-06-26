@@ -63,6 +63,10 @@ export const fetchSyncState = createAsyncThunk(
 const syncSatelliteSlice = createSlice({
     name: 'syncSatellite',
     initialState: {
+        status: 'idle',
+        error: null,
+        loading: false,
+        synchronizing: false,
         syncState: {
             progress: 0,
 
@@ -72,11 +76,21 @@ const syncSatelliteSlice = createSlice({
         setSyncState: (state, action) => {
             state.syncState = action.payload;
         },
+        setLoading: (state, action) => {
+            state.loading = action.payload;
+        },
+        setSynchronizing: (state, action) => {
+            state.synchronizing = action.payload;
+        },
+        setError: (state, action) => {
+            state.error = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
             .addCase(startSatelliteSync.pending, (state) => {
                 state.status = 'loading';
+                state.synchronizing = true;
                 state.error = null;
             })
             .addCase(startSatelliteSync.fulfilled, (state, action) => {
@@ -84,6 +98,7 @@ const syncSatelliteSlice = createSlice({
             })
             .addCase(startSatelliteSync.rejected, (state, action) => {
                 state.status = 'failed';
+                state.synchronizing = false;
                 state.error = action.payload || 'Failed to synchronize satellites';
             })
             .addCase(fetchSyncState.pending, (state) => {
@@ -103,6 +118,7 @@ const syncSatelliteSlice = createSlice({
 
 export const {
     setSyncState,
+    setSynchronizing,
 } = syncSatelliteSlice.actions;
 
 export default syncSatelliteSlice.reducer;

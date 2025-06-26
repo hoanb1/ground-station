@@ -59,10 +59,8 @@ import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 import LoginForm from './components/common/login.jsx';
 import {useDispatch, useSelector} from "react-redux";
 import { AudioProvider, useAudio } from "./components/dashboard/dashboard-audio.jsx";
-
-import {
-    setUITrackerValues
-} from "./components/target/target-sat-slice.jsx";
+import { setUITrackerValues } from "./components/target/target-sat-slice.jsx";
+import { setSynchronizing } from "./components/satellites/synchronize-slice.jsx";
 
 const BRANDING = {
     logo: (
@@ -271,6 +269,7 @@ export default function App(props) {
                         variant: 'error',
                         autoHideDuration: 4000,
                     });
+                    dispatch(setSynchronizing(false));
                 }
 
                 if (data.status === 'complete') {
@@ -278,6 +277,7 @@ export default function App(props) {
                         variant: 'success',
                         autoHideDuration: 4000,
                     });
+                    dispatch(setSynchronizing(false));
                 }
             });
 
