@@ -17,29 +17,17 @@
  *
  */
 
-
-
-import Dialog from "@mui/material/Dialog";
-import DialogTitle from "@mui/material/DialogTitle";
-import DialogContent from "@mui/material/DialogContent";
-import {Box} from "@mui/material";
-import TableContainer from "@mui/material/TableContainer";
-import Table from "@mui/material/Table";
-import TableBody from "@mui/material/TableBody";
-import TableRow from "@mui/material/TableRow";
-import TableCell from "@mui/material/TableCell";
-import {betterDateTimes, betterStatusValue, humanizeFrequency, renderCountryFlagsCSV} from "../common/common.jsx";
-import TableHead from "@mui/material/TableHead";
-import DialogActions from "@mui/material/DialogActions";
+import {Box, Typography} from "@mui/material";
+import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
 import {useEffect, useState, useCallback} from "react";
 import Grid from "@mui/material/Grid2";
-import { 
-    DataGrid, 
-    GridActionsCellItem, 
-    GridRowModes, 
-    GridToolbarContainer, 
+import {
+    DataGrid,
+    GridActionsCellItem,
+    GridRowModes,
+    GridToolbarContainer,
     useGridApiContext
 } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
@@ -48,7 +36,6 @@ import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import SaveIcon from "@mui/icons-material/Save";
 import CancelIcon from "@mui/icons-material/Close";
 import {useDispatch} from "react-redux";
-import {v4 as uuidv4} from "uuid";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
@@ -100,7 +87,6 @@ const MODE_OPTIONS = [
     {name: "FSK", value: "FSK"},
     {name: "GMSK", value: "GMSK"}
 ];
-
 
 // Custom editor for dropdown selects
 function SelectEditInputCell(props) {
@@ -163,7 +149,7 @@ function renderModeEditCell(params) {
     return <SelectEditInputCell {...params} options={MODE_OPTIONS}/>;
 }
 
-const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
+const SatelliteInfo = ({selectedSatellite}) => {
     const [rows, setRows] = useState([]);
     const [rowModesModel, setRowModesModel] = useState({});
     const dispatch = useDispatch();
@@ -243,7 +229,6 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
     };
 
     const handleAddClick = () => {
-        //const id = `new-${uuidv4()}`;
         const id = `new`;
         setRows((oldRows) => [
             ...oldRows,
@@ -322,13 +307,11 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
             baud: row.baud !== "-" ? row.baud : null,
         }));
 
-        if (newTransmitterData) {
+        if (newTransmitterData.length > 0) {
             // Update backend here
             dispatch(submitTransmitter({socket: socket, transmitterData: newTransmitterData[0]}));
         }
-
-        
-    }, [selectedSatellite, dispatch]);
+    }, [selectedSatellite, dispatch, socket]);
 
     function onProcessRowUpdateError (error) {
         console.error("Error updating row", error);
@@ -337,23 +320,23 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
     const columns = [
         {field: "description", headerName: "Description", flex: 1, editable: true},
         {
-            field: "type", 
-            headerName: "Type", 
-            flex: 1, 
+            field: "type",
+            headerName: "Type",
+            flex: 1,
             editable: true,
             renderEditCell: renderTypeEditCell
         },
         {
-            field: "status", 
-            headerName: "Status", 
-            flex: 1, 
+            field: "status",
+            headerName: "Status",
+            flex: 1,
             editable: true,
             renderEditCell: renderStatusEditCell
         },
         {
-            field: "alive", 
-            headerName: "Alive", 
-            flex: 1, 
+            field: "alive",
+            headerName: "Alive",
+            flex: 1,
             editable: true,
             renderEditCell: renderAliveEditCell
         },
@@ -366,14 +349,13 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
         {field: "mode", headerName: "Mode", flex: 1, editable: true, renderEditCell: renderModeEditCell},
         {field: "uplinkMode", headerName: "Uplink mode", flex: 1, editable: true, renderEditCell: renderModeEditCell},
         {
-            field: "invert", 
-            headerName: "Invert", 
-            flex: 1, 
+            field: "invert",
+            headerName: "Invert",
+            flex: 1,
             editable: true,
             renderEditCell: renderInvertEditCell
         },
         {field: "baud", headerName: "Baud", flex: 1, editable: true},
-        // Actions column remains the same
         {
             field: "actions",
             type: "actions",
@@ -386,11 +368,13 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                 if (isInEditMode) {
                     return [
                         <GridActionsCellItem
+                            key="save"
                             icon={<SaveIcon />}
                             label="Save"
                             onClick={handleSaveClick(id)}
                         />,
                         <GridActionsCellItem
+                            key="cancel"
                             icon={<CancelIcon />}
                             label="Cancel"
                             onClick={handleCancelClick(id)}
@@ -400,11 +384,13 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
 
                 return [
                     <GridActionsCellItem
+                        key="edit"
                         icon={<EditIcon />}
                         label="Edit"
                         onClick={handleEditClick(id)}
                     />,
                     <GridActionsCellItem
+                        key="delete"
                         icon={<DeleteIcon />}
                         label="Delete"
                         onClick={handleDeleteClick(id)}
@@ -415,168 +401,171 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
     ];
 
     return (
-        <Dialog open={open} onClose={handleClose} maxWidth={"xl"} fullWidth={true}>
-            <DialogTitle>Satellite Information</DialogTitle>
-            <DialogContent>
-                {selectedSatellite ? (
-                    <Box>
+        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            {selectedSatellite ? (
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                    <Grid
+                        container
+                        spacing={3}
+                        sx={{
+                            width: '100%',
+                            flexDirection: {xs: 'column', md: 'row'},
+                            flexShrink: 0,
+                            mb: 2
+                        }}
+                    >
                         <Grid
-                            container
-                            spacing={3}
                             sx={{
-                                width: '100%',
-                                flexDirection: {xs: 'column', md: 'row'}
+                                backgroundColor: '#1e1e1e',
+                                borderRadius: '8px',
+                                padding: 3,
+                                minHeight: '300px',
+                                color: '#ffffff',
+                                width: {xs: '100%', md: '60%'},
+                                mb: {xs: 3, md: 0},
+                                boxSizing: 'border-box'
                             }}
                         >
-                            <Grid
-                                sx={{
-                                    backgroundColor: '#1e1e1e',
-                                    borderRadius: '8px',
-                                    padding: 3,
-                                    minHeight: '300px',
-                                    color: '#ffffff',
-                                    width: {xs: '100%', md: '60%'},
-                                    mb: {xs: 3, md: 0},
-                                    boxSizing: 'border-box'
-                                }}
-                            >
-                                <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>Name:</strong> <span>{selectedSatellite['name']}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>NORAD ID:</strong> <span>{selectedSatellite['norad_id']}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>Status:</strong>
-                                        <span>{betterStatusValue(selectedSatellite['status'])}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>Countries:</strong>
-                                        <span>{renderCountryFlagsCSV(selectedSatellite['countries'])}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>Operator:</strong> <span>{selectedSatellite['operator'] || '-'}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>Launched:</strong>
-                                        <span>{betterDateTimes(selectedSatellite['launched'])}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>Deployed:</strong>
-                                        <span>{betterDateTimes(selectedSatellite['deployed'])}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                            borderBottom: '1px solid #444444',
-                                        }}
-                                    >
-                                        <strong>Decayed:</strong>
-                                        <span>{betterDateTimes(selectedSatellite['decayed'])}</span>
-                                    </Box>
-                                    <Box
-                                        sx={{
-                                            display: 'flex',
-                                            justifyContent: 'space-between',
-                                            width: '100%',
-                                            padding: '8px 0',
-                                        }}
-                                    >
-                                        <strong>Updated:</strong>
-                                        <span>{betterDateTimes(selectedSatellite['updated'])}</span>
-                                    </Box>
+                            <Box sx={{display: 'flex', flexDirection: 'column', gap: 2}}>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Name:</strong> <span>{selectedSatellite['name']}</span>
                                 </Box>
-                            </Grid>
-                            <Grid
-                                sx={{
-                                    textAlign: 'center',
-                                    minHeight: '300px',
-                                    display: 'flex',
-                                    justifyContent: 'center',
-                                    alignItems: 'center',
-                                    backgroundColor: '#1e1e1e',
-                                    borderRadius: '8px',
-                                    width: {xs: '100%', md: '36%'},
-                                    boxSizing: 'border-box'
-                                }}
-                            >
-                                <Box sx={{textAlign: 'right'}}>
-                                    <img
-                                        src={`/satimages/${selectedSatellite['norad_id']}.png`}
-                                        alt={`Satellite ${selectedSatellite['norad_id']}`}
-                                        style={{
-                                            maxWidth: '100%',
-                                            height: 'auto',
-                                            border: '1px solid #444444',
-                                            borderRadius: '4px',
-                                        }}
-                                    />
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>NORAD ID:</strong> <span>{selectedSatellite['norad_id']}</span>
                                 </Box>
-                            </Grid>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Status:</strong>
+                                    <span>{betterStatusValue(selectedSatellite['status'])}</span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Countries:</strong>
+                                    <span>{renderCountryFlagsCSV(selectedSatellite['countries'])}</span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Operator:</strong> <span>{selectedSatellite['operator'] || '-'}</span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Launched:</strong>
+                                    <span>{betterDateTimes(selectedSatellite['launched'])}</span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Deployed:</strong>
+                                    <span>{betterDateTimes(selectedSatellite['deployed'])}</span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Decayed:</strong>
+                                    <span>{betterDateTimes(selectedSatellite['decayed'])}</span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                    }}
+                                >
+                                    <strong>Updated:</strong>
+                                    <span>{betterDateTimes(selectedSatellite['updated'])}</span>
+                                </Box>
+                            </Box>
                         </Grid>
-                        <Box mt={2}>
-                            <h3>Transmitters</h3>
-                            {selectedSatellite['transmitters'] ? (
+                        <Grid
+                            sx={{
+                                textAlign: 'center',
+                                minHeight: '300px',
+                                display: 'flex',
+                                justifyContent: 'center',
+                                alignItems: 'center',
+                                backgroundColor: '#1e1e1e',
+                                borderRadius: '8px',
+                                width: {xs: '100%', md: '36%'},
+                                boxSizing: 'border-box'
+                            }}
+                        >
+                            <Box sx={{textAlign: 'right'}}>
+                                <img
+                                    src={`/satimages/${selectedSatellite['norad_id']}.png`}
+                                    alt={`Satellite ${selectedSatellite['norad_id']}`}
+                                    style={{
+                                        maxWidth: '100%',
+                                        height: 'auto',
+                                        border: '1px solid #444444',
+                                        borderRadius: '4px',
+                                    }}
+                                />
+                            </Box>
+                        </Grid>
+                    </Grid>
+                    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="h6" component="h3" sx={{ mb: 2, flexShrink: 0 }}>
+                            Transmitters
+                        </Typography>
+                        {selectedSatellite['transmitters'] ? (
+                            <Box sx={{ flex: 1, minHeight: 0 }}>
                                 <DataGrid
                                     rows={rows}
                                     columns={columns}
@@ -597,6 +586,7 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                                         border: 'none',
                                         backgroundColor: '#1e1e1e',
                                         color: '#ffffff',
+                                        height: '100%',
                                         '& .MuiDataGrid-columnHeaders': {
                                             backgroundColor: '#333333',
                                             color: '#ffffff',
@@ -670,25 +660,21 @@ const SatelliteInfoModal = ({open, handleClose, selectedSatellite}) => {
                                                 backgroundColor: '#3c3c3c',
                                             },
                                         },
-
                                     }}
                                 />
-                            ) : (
-                                <div style={{textAlign: 'center'}}>
-                                    <span>No Transmitters Available</span>
-                                </div>
-                            )}
-                        </Box>
+                            </Box>
+                        ) : (
+                            <div style={{textAlign: 'center'}}>
+                                <span>No Transmitters Available</span>
+                            </div>
+                        )}
                     </Box>
-                ) : (
-                    <span>No Satellite Data Available</span>
-                )}
-            </DialogContent>
-            <DialogActions>
-                <Button onClick={handleClose} color="primary">Close</Button>
-            </DialogActions>
-        </Dialog>
+                </Box>
+            ) : (
+                <span>No Satellite Data Available</span>
+            )}
+        </Box>
     );
 };
 
-export default SatelliteInfoModal;
+export default SatelliteInfo;
