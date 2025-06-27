@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -17,7 +18,7 @@
  *
  */
 
-import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel} from "@mui/material";
+import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip} from "@mui/material";
 import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
@@ -83,6 +84,48 @@ const MODE_OPTIONS = [
     {name: "FSK", value: "FSK"},
     {name: "GMSK", value: "GMSK"}
 ];
+
+// Frequency formatting function
+const formatFrequency = (frequency) => {
+    if (!frequency || frequency === "-" || isNaN(parseFloat(frequency))) {
+        return "-";
+    }
+
+    const freq = parseFloat(frequency);
+
+    if (freq >= 1000000000) {
+        // GHz range
+        const ghz = (freq / 1000000000).toFixed(3);
+        return (
+            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
+                <span>{ghz} GHz</span>
+            </Tooltip>
+        );
+    } else if (freq >= 1000000) {
+        // MHz range
+        const mhz = (freq / 1000000).toFixed(3);
+        return (
+            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
+                <span>{mhz} MHz</span>
+            </Tooltip>
+        );
+    } else if (freq >= 1000) {
+        // kHz range
+        const khz = (freq / 1000).toFixed(3);
+        return (
+            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
+                <span>{khz} kHz</span>
+            </Tooltip>
+        );
+    } else {
+        // Hz range
+        return (
+            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
+                <span>{freq} Hz</span>
+            </Tooltip>
+        );
+    }
+};
 
 // Transmitter Edit/Add Modal Component
 const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false }) => {
@@ -277,10 +320,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         <Grid xs={12} md={6}>
                             <TextField
                                 fullWidth
-                                label="Uplink Low"
+                                label="Uplink Low (Hz)"
                                 value={formData.uplinkLow}
                                 onChange={handleChange('uplinkLow')}
                                 variant="outlined"
+                                type="number"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         color: '#ffffff',
@@ -295,10 +339,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         <Grid xs={12} md={6}>
                             <TextField
                                 fullWidth
-                                label="Uplink High"
+                                label="Uplink High (Hz)"
                                 value={formData.uplinkHigh}
                                 onChange={handleChange('uplinkHigh')}
                                 variant="outlined"
+                                type="number"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         color: '#ffffff',
@@ -313,10 +358,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         <Grid xs={12} md={6}>
                             <TextField
                                 fullWidth
-                                label="Uplink Drift"
+                                label="Uplink Drift (Hz)"
                                 value={formData.uplinkDrift}
                                 onChange={handleChange('uplinkDrift')}
                                 variant="outlined"
+                                type="number"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         color: '#ffffff',
@@ -331,10 +377,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         <Grid xs={12} md={6}>
                             <TextField
                                 fullWidth
-                                label="Downlink Low"
+                                label="Downlink Low (Hz)"
                                 value={formData.downlinkLow}
                                 onChange={handleChange('downlinkLow')}
                                 variant="outlined"
+                                type="number"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         color: '#ffffff',
@@ -349,10 +396,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         <Grid xs={12} md={6}>
                             <TextField
                                 fullWidth
-                                label="Downlink High"
+                                label="Downlink High (Hz)"
                                 value={formData.downlinkHigh}
                                 onChange={handleChange('downlinkHigh')}
                                 variant="outlined"
+                                type="number"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         color: '#ffffff',
@@ -367,10 +415,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         <Grid xs={12} md={6}>
                             <TextField
                                 fullWidth
-                                label="Downlink Drift"
+                                label="Downlink Drift (Hz)"
                                 value={formData.downlinkDrift}
                                 onChange={handleChange('downlinkDrift')}
                                 variant="outlined"
+                                type="number"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         color: '#ffffff',
@@ -395,7 +444,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
                                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
                                     }}
-                                >
+                                 variant={'filled'}>
                                     {MODE_OPTIONS.map((option) => (
                                         <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                     ))}
@@ -415,7 +464,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
                                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
                                     }}
-                                >
+                                 variant={'filled'}>
                                     {MODE_OPTIONS.map((option) => (
                                         <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                     ))}
@@ -435,7 +484,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
                                         '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
                                     }}
-                                >
+                                 variant={'filled'}>
                                     {INVERT_OPTIONS.map((option) => (
                                         <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                     ))}
@@ -449,6 +498,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                 value={formData.baud}
                                 onChange={handleChange('baud')}
                                 variant="outlined"
+                                type="number"
                                 sx={{
                                     '& .MuiOutlinedInput-root': {
                                         color: '#ffffff',
@@ -648,12 +698,42 @@ const SatelliteInfo = ({selectedSatellite}) => {
         {field: "type", headerName: "Type", flex: 1},
         {field: "status", headerName: "Status", flex: 1},
         {field: "alive", headerName: "Alive", flex: 1},
-        {field: "uplinkLow", headerName: "Uplink low", flex: 1},
-        {field: "uplinkHigh", headerName: "Uplink high", flex: 1},
-        {field: "uplinkDrift", headerName: "Uplink drift", flex: 1},
-        {field: "downlinkLow", headerName: "Downlink low", flex: 1},
-        {field: "downlinkHigh", headerName: "Downlink high", flex: 1},
-        {field: "downlinkDrift", headerName: "Downlink drift", flex: 1},
+        {
+            field: "uplinkLow",
+            headerName: "Uplink low",
+            flex: 1,
+            renderCell: (params) => formatFrequency(params.value)
+        },
+        {
+            field: "uplinkHigh",
+            headerName: "Uplink high",
+            flex: 1,
+            renderCell: (params) => formatFrequency(params.value)
+        },
+        {
+            field: "uplinkDrift",
+            headerName: "Uplink drift",
+            flex: 1,
+            renderCell: (params) => formatFrequency(params.value)
+        },
+        {
+            field: "downlinkLow",
+            headerName: "Downlink low",
+            flex: 1,
+            renderCell: (params) => formatFrequency(params.value)
+        },
+        {
+            field: "downlinkHigh",
+            headerName: "Downlink high",
+            flex: 1,
+            renderCell: (params) => formatFrequency(params.value)
+        },
+        {
+            field: "downlinkDrift",
+            headerName: "Downlink drift",
+            flex: 1,
+            renderCell: (params) => formatFrequency(params.value)
+        },
         {field: "mode", headerName: "Mode", flex: 1},
         {field: "uplinkMode", headerName: "Uplink mode", flex: 1},
         {field: "invert", headerName: "Invert", flex: 1},
@@ -685,6 +765,9 @@ const SatelliteInfo = ({selectedSatellite}) => {
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+            <Typography variant="h4" component="h1" sx={{ mb: 3, fontWeight: 'bold', flexShrink: 0 }}>
+                Satellite Information
+            </Typography>
             {selectedSatellite ? (
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
                     <Grid
