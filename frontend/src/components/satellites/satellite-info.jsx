@@ -17,7 +17,7 @@
  *
  */
 
-import {Box, Typography} from "@mui/material";
+import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel} from "@mui/material";
 import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
@@ -26,15 +26,11 @@ import Grid from "@mui/material/Grid2";
 import {
     DataGrid,
     GridActionsCellItem,
-    GridRowModes,
     GridToolbarContainer,
-    useGridApiContext
 } from "@mui/x-data-grid";
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
-import SaveIcon from "@mui/icons-material/Save";
-import CancelIcon from "@mui/icons-material/Close";
 import {useDispatch} from "react-redux";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
@@ -88,70 +84,437 @@ const MODE_OPTIONS = [
     {name: "GMSK", value: "GMSK"}
 ];
 
-// Custom editor for dropdown selects
-function SelectEditInputCell(props) {
-    const { id, value, field, options } = props;
-    const apiRef = useGridApiContext();
+// Transmitter Edit/Add Modal Component
+const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false }) => {
+    const [formData, setFormData] = useState({
+        description: "",
+        type: "",
+        status: "",
+        alive: "",
+        uplinkLow: "",
+        uplinkHigh: "",
+        uplinkDrift: "",
+        downlinkLow: "",
+        downlinkHigh: "",
+        downlinkDrift: "",
+        mode: "",
+        uplinkMode: "",
+        invert: "",
+        baud: "",
+    });
 
-    const handleChange = (event) => {
-        apiRef.current.setEditCellValue({ id, field, value: event.target.value });
+    useEffect(() => {
+        if (transmitter) {
+            setFormData({
+                description: transmitter.description === "-" ? "" : transmitter.description || "",
+                type: transmitter.type === "-" ? "" : transmitter.type || "",
+                status: transmitter.status === "-" ? "" : transmitter.status || "",
+                alive: transmitter.alive === "-" ? "" : transmitter.alive || "",
+                uplinkLow: transmitter.uplinkLow === "-" ? "" : transmitter.uplinkLow || "",
+                uplinkHigh: transmitter.uplinkHigh === "-" ? "" : transmitter.uplinkHigh || "",
+                uplinkDrift: transmitter.uplinkDrift === "-" ? "" : transmitter.uplinkDrift || "",
+                downlinkLow: transmitter.downlinkLow === "-" ? "" : transmitter.downlinkLow || "",
+                downlinkHigh: transmitter.downlinkHigh === "-" ? "" : transmitter.downlinkHigh || "",
+                downlinkDrift: transmitter.downlinkDrift === "-" ? "" : transmitter.downlinkDrift || "",
+                mode: transmitter.mode === "-" ? "" : transmitter.mode || "",
+                uplinkMode: transmitter.uplinkMode === "-" ? "" : transmitter.uplinkMode || "",
+                invert: transmitter.invert === "-" ? "" : transmitter.invert || "",
+                baud: transmitter.baud === "-" ? "" : transmitter.baud || "",
+            });
+        } else {
+            // Reset form for new transmitter
+            setFormData({
+                description: "",
+                type: "",
+                status: "",
+                alive: "",
+                uplinkLow: "",
+                uplinkHigh: "",
+                uplinkDrift: "",
+                downlinkLow: "",
+                downlinkHigh: "",
+                downlinkDrift: "",
+                mode: "",
+                uplinkMode: "",
+                invert: "",
+                baud: "",
+            });
+        }
+    }, [transmitter, open]);
+
+    const handleChange = (field) => (event) => {
+        setFormData(prev => ({
+            ...prev,
+            [field]: event.target.value
+        }));
+    };
+
+    const handleSave = () => {
+        const updatedData = {
+            ...formData,
+            // Convert empty strings back to "-" for display
+            description: formData.description || "-",
+            type: formData.type || "-",
+            status: formData.status || "-",
+            alive: formData.alive || "-",
+            uplinkLow: formData.uplinkLow || "-",
+            uplinkHigh: formData.uplinkHigh || "-",
+            uplinkDrift: formData.uplinkDrift || "-",
+            downlinkLow: formData.downlinkLow || "-",
+            downlinkHigh: formData.downlinkHigh || "-",
+            downlinkDrift: formData.downlinkDrift || "-",
+            mode: formData.mode || "-",
+            uplinkMode: formData.uplinkMode || "-",
+            invert: formData.invert || "-",
+            baud: formData.baud || "-",
+        };
+
+        if (isNew) {
+            onSave({ ...updatedData, id: `new-${Date.now()}`, isNew: true });
+        } else {
+            onSave({ ...transmitter, ...updatedData });
+        }
+        onClose();
     };
 
     return (
-        <FormControl fullWidth variant="standard" size="small">
-            <Select
-                value={value}
-                onChange={handleChange}
-                autoFocus
-                sx={{
-                    height: '70px',
-                    backgroundColor: "transparent",
-                    color: "#FFFFFF",
-                    fontSize: "0.875rem",
-                    '& .MuiSelect-select': {
-                        paddingY: '4px',
-                        paddingX: '8px'
-                    },
-                    '&:before': {
-                        borderColor: 'rgba(255, 255, 255, 0.2)'
-                    },
-                    '&:hover:not(.Mui-disabled):before': {
-                        borderColor: 'rgba(255, 255, 255, 0.4)'
-                    }
-                }}
-                variant={'standard'}>
-                {options.map((option) => (
-                    <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
-                ))}
-            </Select>
-        </FormControl>
+        <Dialog
+            open={open}
+            onClose={onClose}
+            maxWidth="md"
+            fullWidth
+            PaperProps={{
+                sx: {
+                    backgroundColor: '#1e1e1e',
+                    color: '#ffffff'
+                }
+            }}
+        >
+            <DialogTitle sx={{ color: '#ffffff' }}>
+                {isNew ? 'Add New Transmitter' : 'Edit Transmitter'}
+            </DialogTitle>
+            <DialogContent>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 3, pt: 2 }}>
+                    <Grid container spacing={3}>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Description"
+                                value={formData.description}
+                                onChange={handleChange('description')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined">
+                                <InputLabel sx={{ color: '#ffffff' }}>Type</InputLabel>
+                                <Select
+                                    value={formData.type}
+                                    onChange={handleChange('type')}
+                                    label="Type"
+                                    sx={{
+                                        color: '#ffffff',
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444444' },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
+                                    }}
+                                >
+                                    {TYPE_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined">
+                                <InputLabel sx={{ color: '#ffffff' }}>Status</InputLabel>
+                                <Select
+                                    value={formData.status}
+                                    onChange={handleChange('status')}
+                                    label="Status"
+                                    sx={{
+                                        color: '#ffffff',
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444444' },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
+                                    }}
+                                >
+                                    {STATUS_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined">
+                                <InputLabel sx={{ color: '#ffffff' }}>Alive</InputLabel>
+                                <Select
+                                    value={formData.alive}
+                                    onChange={handleChange('alive')}
+                                    label="Alive"
+                                    sx={{
+                                        color: '#ffffff',
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444444' },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
+                                    }}
+                                >
+                                    {ALIVE_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Uplink Low"
+                                value={formData.uplinkLow}
+                                onChange={handleChange('uplinkLow')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Uplink High"
+                                value={formData.uplinkHigh}
+                                onChange={handleChange('uplinkHigh')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Uplink Drift"
+                                value={formData.uplinkDrift}
+                                onChange={handleChange('uplinkDrift')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Downlink Low"
+                                value={formData.downlinkLow}
+                                onChange={handleChange('downlinkLow')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Downlink High"
+                                value={formData.downlinkHigh}
+                                onChange={handleChange('downlinkHigh')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Downlink Drift"
+                                value={formData.downlinkDrift}
+                                onChange={handleChange('downlinkDrift')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined">
+                                <InputLabel sx={{ color: '#ffffff' }}>Mode</InputLabel>
+                                <Select
+                                    value={formData.mode}
+                                    onChange={handleChange('mode')}
+                                    label="Mode"
+                                    sx={{
+                                        color: '#ffffff',
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444444' },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
+                                    }}
+                                >
+                                    {MODE_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined">
+                                <InputLabel sx={{ color: '#ffffff' }}>Uplink Mode</InputLabel>
+                                <Select
+                                    value={formData.uplinkMode}
+                                    onChange={handleChange('uplinkMode')}
+                                    label="Uplink Mode"
+                                    sx={{
+                                        color: '#ffffff',
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444444' },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
+                                    }}
+                                >
+                                    {MODE_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <FormControl fullWidth variant="outlined">
+                                <InputLabel sx={{ color: '#ffffff' }}>Invert</InputLabel>
+                                <Select
+                                    value={formData.invert}
+                                    onChange={handleChange('invert')}
+                                    label="Invert"
+                                    sx={{
+                                        color: '#ffffff',
+                                        '& .MuiOutlinedInput-notchedOutline': { borderColor: '#444444' },
+                                        '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#666666' },
+                                        '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
+                                    }}
+                                >
+                                    {INVERT_OPTIONS.map((option) => (
+                                        <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
+                                    ))}
+                                </Select>
+                            </FormControl>
+                        </Grid>
+                        <Grid xs={12} md={6}>
+                            <TextField
+                                fullWidth
+                                label="Baud"
+                                value={formData.baud}
+                                onChange={handleChange('baud')}
+                                variant="outlined"
+                                sx={{
+                                    '& .MuiOutlinedInput-root': {
+                                        color: '#ffffff',
+                                        '& fieldset': { borderColor: '#444444' },
+                                        '&:hover fieldset': { borderColor: '#666666' },
+                                        '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+                                    },
+                                    '& .MuiInputLabel-root': { color: '#ffffff' },
+                                }}
+                            />
+                        </Grid>
+                    </Grid>
+                </Box>
+            </DialogContent>
+            <DialogActions sx={{ p: 3 }}>
+                <Button onClick={onClose} sx={{ color: '#ffffff' }}>
+                    Cancel
+                </Button>
+                <Button onClick={handleSave} variant="contained" sx={{ ml: 2 }}>
+                    {isNew ? 'Add' : 'Save'}
+                </Button>
+            </DialogActions>
+        </Dialog>
     );
-}
+};
 
-// Create render components for each dropdown type
-function renderStatusEditCell(params) {
-    return <SelectEditInputCell {...params} options={STATUS_OPTIONS}/>;
-}
-
-function renderTypeEditCell(params) {
-    return <SelectEditInputCell {...params} options={TYPE_OPTIONS} />;
-}
-
-function renderAliveEditCell(params) {
-    return <SelectEditInputCell {...params} options={ALIVE_OPTIONS} />;
-}
-
-function renderInvertEditCell(params) {
-    return <SelectEditInputCell {...params} options={INVERT_OPTIONS} />;
-}
-
-function renderModeEditCell(params) {
-    return <SelectEditInputCell {...params} options={MODE_OPTIONS}/>;
-}
+// Delete Confirmation Dialog Component
+const DeleteConfirmDialog = ({ open, onClose, onConfirm, transmitterName }) => {
+    return (
+        <Dialog
+            open={open}
+            onClose={onClose}
+            PaperProps={{
+                sx: {
+                    backgroundColor: '#1e1e1e',
+                    color: '#ffffff'
+                }
+            }}
+        >
+            <DialogTitle sx={{ color: '#ffffff' }}>
+                Confirm Delete
+            </DialogTitle>
+            <DialogContent>
+                <Typography sx={{ color: '#ffffff' }}>
+                    Are you sure you want to delete the transmitter "{transmitterName}"?
+                </Typography>
+            </DialogContent>
+            <DialogActions sx={{ p: 3 }}>
+                <Button onClick={onClose} sx={{ color: '#ffffff' }}>
+                    Cancel
+                </Button>
+                <Button onClick={onConfirm} variant="contained" color="error" sx={{ ml: 2 }}>
+                    Delete
+                </Button>
+            </DialogActions>
+        </Dialog>
+    );
+};
 
 const SatelliteInfo = ({selectedSatellite}) => {
     const [rows, setRows] = useState([]);
-    const [rowModesModel, setRowModesModel] = useState({});
+    const [editModalOpen, setEditModalOpen] = useState(false);
+    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
+    const [editingTransmitter, setEditingTransmitter] = useState(null);
+    const [deletingTransmitter, setDeletingTransmitter] = useState(null);
+    const [isNewTransmitter, setIsNewTransmitter] = useState(false);
     const dispatch = useDispatch();
     const {socket} = useSocket();
 
@@ -181,88 +544,55 @@ const SatelliteInfo = ({selectedSatellite}) => {
         }
     }, [selectedSatellite]);
 
-    const handleRowEditStart = (params, event) => {
-        event.defaultMuiPrevented = true;
-    };
-
-    const handleRowEditStop = (params, event) => {
-        event.defaultMuiPrevented = true;
-        console.info("params", params);
-    };
-
     const handleEditClick = (id) => () => {
-        setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.Edit } });
-    };
-
-    const handleSaveClick = (id) => () => {
-        setRowModesModel({ ...rowModesModel, [id]: { mode: GridRowModes.View } });
+        const transmitter = rows.find(row => row.id === id);
+        setEditingTransmitter(transmitter);
+        setIsNewTransmitter(false);
+        setEditModalOpen(true);
     };
 
     const handleDeleteClick = (id) => () => {
-        const updatedRows = rows.filter((row) => row.id !== id);
-        setRows(updatedRows);
-        saveTransmittersToBackend(updatedRows);
+        const transmitter = rows.find(row => row.id === id);
+        setDeletingTransmitter(transmitter);
+        setDeleteConfirmOpen(true);
     };
 
-    const handleCancelClick = (id) => () => {
-        setRowModesModel({
-            ...rowModesModel,
-            [id]: { mode: GridRowModes.View, ignoreModifications: true },
-        });
-
-        const editedRow = rows.find((row) => row.id === id);
-        if (editedRow.isNew) {
-            setRows(rows.filter((row) => row.id !== id));
+    const handleDeleteConfirm = () => {
+        if (deletingTransmitter) {
+            const updatedRows = rows.filter((row) => row.id !== deletingTransmitter.id);
+            setRows(updatedRows);
+            saveTransmittersToBackend(updatedRows);
+            setDeleteConfirmOpen(false);
+            setDeletingTransmitter(null);
         }
     };
 
-    const processRowUpdate = (newRow) => {
-        const updatedRow = { ...newRow, isNew: false };
-        const updatedRows = rows.map((row) => (row.id === newRow.id ? updatedRow : row));
-        setRows(updatedRows);
-        saveTransmittersToBackend(updatedRows);
-        return updatedRow;
-    };
-
-    const handleRowModesModelChange = (newRowModesModel) => {
-        setRowModesModel(newRowModesModel);
-    };
-
     const handleAddClick = () => {
-        const id = `new`;
-        setRows((oldRows) => [
-            ...oldRows,
-            {
-                id,
-                description: "",
-                type: "",
-                status: "",
-                alive: "",
-                uplinkLow: "",
-                uplinkHigh: "",
-                uplinkDrift: "",
-                downlinkLow: "",
-                downlinkHigh: "",
-                downlinkDrift: "",
-                mode: "",
-                uplinkMode: "",
-                invert: "",
-                baud: "",
-                isNew: true,
-            },
-        ]);
-        setRowModesModel((oldModel) => ({
-            ...oldModel,
-            [id]: { mode: GridRowModes.Edit, fieldToFocus: "description" },
-        }));
+        setEditingTransmitter(null);
+        setIsNewTransmitter(true);
+        setEditModalOpen(true);
+    };
+
+    const handleModalSave = (transmitterData) => {
+        if (isNewTransmitter) {
+            const newRows = [...rows, transmitterData];
+            setRows(newRows);
+            saveTransmittersToBackend(newRows);
+        } else {
+            const updatedRows = rows.map((row) =>
+                row.id === transmitterData.id ? transmitterData : row
+            );
+            setRows(updatedRows);
+            saveTransmittersToBackend(updatedRows);
+        }
     };
 
     const saveTransmittersToBackend = useCallback((currentRows) => {
         if (!selectedSatellite || !selectedSatellite.norad_id) return;
 
         // Separate new and existing transmitters
-        const newTransmitters = currentRows.filter(row => row.id === 'new');
-        const existingTransmitters = currentRows.filter(row => row.id !== 'new');
+        const newTransmitters = currentRows.filter(row => row.isNew);
+        const existingTransmitters = currentRows.filter(row => !row.isNew);
 
         // Map rows back to transmitter format
         const transmitters = existingTransmitters.map(row => {
@@ -313,49 +643,21 @@ const SatelliteInfo = ({selectedSatellite}) => {
         }
     }, [selectedSatellite, dispatch, socket]);
 
-    function onProcessRowUpdateError (error) {
-        console.error("Error updating row", error);
-    }
-
     const columns = [
-        {field: "description", headerName: "Description", flex: 1, editable: true},
-        {
-            field: "type",
-            headerName: "Type",
-            flex: 1,
-            editable: true,
-            renderEditCell: renderTypeEditCell
-        },
-        {
-            field: "status",
-            headerName: "Status",
-            flex: 1,
-            editable: true,
-            renderEditCell: renderStatusEditCell
-        },
-        {
-            field: "alive",
-            headerName: "Alive",
-            flex: 1,
-            editable: true,
-            renderEditCell: renderAliveEditCell
-        },
-        {field: "uplinkLow", headerName: "Uplink low", flex: 1, editable: true},
-        {field: "uplinkHigh", headerName: "Uplink high", flex: 1, editable: true},
-        {field: "uplinkDrift", headerName: "Uplink drift", flex: 1, editable: true},
-        {field: "downlinkLow", headerName: "Downlink low", flex: 1, editable: true},
-        {field: "downlinkHigh", headerName: "Downlink high", flex: 1, editable: true},
-        {field: "downlinkDrift", headerName: "Downlink drift", flex: 1, editable: true},
-        {field: "mode", headerName: "Mode", flex: 1, editable: true, renderEditCell: renderModeEditCell},
-        {field: "uplinkMode", headerName: "Uplink mode", flex: 1, editable: true, renderEditCell: renderModeEditCell},
-        {
-            field: "invert",
-            headerName: "Invert",
-            flex: 1,
-            editable: true,
-            renderEditCell: renderInvertEditCell
-        },
-        {field: "baud", headerName: "Baud", flex: 1, editable: true},
+        {field: "description", headerName: "Description", flex: 1},
+        {field: "type", headerName: "Type", flex: 1},
+        {field: "status", headerName: "Status", flex: 1},
+        {field: "alive", headerName: "Alive", flex: 1},
+        {field: "uplinkLow", headerName: "Uplink low", flex: 1},
+        {field: "uplinkHigh", headerName: "Uplink high", flex: 1},
+        {field: "uplinkDrift", headerName: "Uplink drift", flex: 1},
+        {field: "downlinkLow", headerName: "Downlink low", flex: 1},
+        {field: "downlinkHigh", headerName: "Downlink high", flex: 1},
+        {field: "downlinkDrift", headerName: "Downlink drift", flex: 1},
+        {field: "mode", headerName: "Mode", flex: 1},
+        {field: "uplinkMode", headerName: "Uplink mode", flex: 1},
+        {field: "invert", headerName: "Invert", flex: 1},
+        {field: "baud", headerName: "Baud", flex: 1},
         {
             field: "actions",
             type: "actions",
@@ -363,25 +665,6 @@ const SatelliteInfo = ({selectedSatellite}) => {
             width: 100,
             cellClassName: "actions",
             getActions: ({ id }) => {
-                const isInEditMode = rowModesModel[id]?.mode === GridRowModes.Edit;
-
-                if (isInEditMode) {
-                    return [
-                        <GridActionsCellItem
-                            key="save"
-                            icon={<SaveIcon />}
-                            label="Save"
-                            onClick={handleSaveClick(id)}
-                        />,
-                        <GridActionsCellItem
-                            key="cancel"
-                            icon={<CancelIcon />}
-                            label="Cancel"
-                            onClick={handleCancelClick(id)}
-                        />,
-                    ];
-                }
-
                 return [
                     <GridActionsCellItem
                         key="edit"
@@ -403,7 +686,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {selectedSatellite ? (
-                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
                     <Grid
                         container
                         spacing={3}
@@ -560,22 +843,17 @@ const SatelliteInfo = ({selectedSatellite}) => {
                             </Box>
                         </Grid>
                     </Grid>
-                    <Box sx={{ flex: 1, minHeight: 0, display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" component="h3" sx={{ mb: 2, flexShrink: 0 }}>
+
+                    {/* Transmitters section with fixed height */}
+                    <Box sx={{ flexShrink: 0 }}>
+                        <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
                             Transmitters
                         </Typography>
                         {selectedSatellite['transmitters'] ? (
-                            <Box sx={{ flex: 1, minHeight: 0 }}>
+                            <Box sx={{ height: '400px', width: '100%' }}>
                                 <DataGrid
                                     rows={rows}
                                     columns={columns}
-                                    editMode="row"
-                                    rowModesModel={rowModesModel}
-                                    onRowModesModelChange={handleRowModesModelChange}
-                                    onRowEditStart={handleRowEditStart}
-                                    onRowEditStop={handleRowEditStop}
-                                    processRowUpdate={processRowUpdate}
-                                    onProcessRowUpdateError={onProcessRowUpdateError}
                                     slots={{
                                         toolbar: EditToolbar,
                                     }}
@@ -608,10 +886,6 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                                 backgroundColor: '#3a3a3a',
                                             },
                                         },
-                                        '& .MuiFormControl-fullWidth': {
-                                            borderBottom: '1px solid #414141',
-                                            borderRight: '1px solid #414141',
-                                        },
                                         '& .MuiDataGrid-footerContainer': {
                                             backgroundColor: '#121212',
                                             color: '#ffffff',
@@ -625,41 +899,6 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                         '& .MuiDataGrid-cellContent': {
                                             color: '#ffffff',
                                         },
-                                        '& .MuiDataGrid-editInputCell': {
-                                            color: '#FFFFFF',
-                                            backgroundColor: '#121212',
-                                            borderBottom: '1px solid #414141',
-                                            borderRight: '1px solid #414141',
-                                        },
-                                        '& .MuiInputBase-input': {
-                                            backgroundColor: '#121212',
-                                            color: '#ffffff',
-                                        },
-                                        '& .MuiInput-root': {
-                                            backgroundColor: '#121212',
-                                            borderColor: '#414141',
-                                        },
-                                        '& .MuiOutlinedInput-root': {
-                                            backgroundColor: '#121212',
-                                            '& fieldset': {
-                                                borderColor: '#444444',
-                                            },
-                                            '&:hover fieldset': {
-                                                borderColor: '#666666',
-                                            },
-                                            '&.Mui-focused fieldset': {
-                                                borderColor: '#90caf9',
-                                            },
-                                        },
-                                        '& .MuiFilledInput-root': {
-                                            backgroundColor: '#2c2c2c',
-                                            '&:hover': {
-                                                backgroundColor: '#3c3c3c',
-                                            },
-                                            '&.Mui-focused': {
-                                                backgroundColor: '#3c3c3c',
-                                            },
-                                        },
                                     }}
                                 />
                             </Box>
@@ -669,6 +908,26 @@ const SatelliteInfo = ({selectedSatellite}) => {
                             </div>
                         )}
                     </Box>
+
+                    {/* Edit/Add Transmitter Modal */}
+                    <TransmitterModal
+                        open={editModalOpen}
+                        onClose={() => setEditModalOpen(false)}
+                        transmitter={editingTransmitter}
+                        onSave={handleModalSave}
+                        isNew={isNewTransmitter}
+                    />
+
+                    {/* Delete Confirmation Dialog */}
+                    <DeleteConfirmDialog
+                        open={deleteConfirmOpen}
+                        onClose={() => {
+                            setDeleteConfirmOpen(false);
+                            setDeletingTransmitter(null);
+                        }}
+                        onConfirm={handleDeleteConfirm}
+                        transmitterName={deletingTransmitter?.description || 'Unknown'}
+                    />
                 </Box>
             ) : (
                 <span>No Satellite Data Available</span>
