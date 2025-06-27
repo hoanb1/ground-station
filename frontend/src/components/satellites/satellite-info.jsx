@@ -382,10 +382,47 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
                                     }}
                                 >
                                     <strong>Updated:</strong>
                                     <span>{betterDateTimes(clickedSatellite['updated'])}</span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Website:</strong>
+                                    <span>
+                                        {clickedSatellite['website'] ? (
+                                            <a href={clickedSatellite['website']} target="_blank" rel="noopener noreferrer" style={{color: '#fff'}}>
+                                                {clickedSatellite['website']}
+                                            </a>
+                                        ) : '-'}
+                                    </span>
+                                </Box>
+                                <Box
+                                    sx={{
+                                        display: 'flex',
+                                        justifyContent: 'space-between',
+                                        width: '100%',
+                                        padding: '8px 0',
+                                        borderBottom: '1px solid #444444',
+                                    }}
+                                >
+                                    <strong>Citation:</strong>
+                                    <span>
+                                        {clickedSatellite['citation'] ? (
+                                            <a href={clickedSatellite['citation']} target="_blank" rel="noopener noreferrer" style={{color: '#fff'}}>
+                                                {clickedSatellite['citation']}
+                                            </a>
+                                        ) : '-'}
+                                    </span>
                                 </Box>
                             </Box>
                         </Grid>
