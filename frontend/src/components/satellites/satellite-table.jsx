@@ -270,7 +270,7 @@ const SatelliteTable = React.memo(function () {
     // If showing satellite info, render full-page satellite info
     if (showSatelliteInfo && clickedSatellite) {
         return (
-            <Box sx={{ width: '100%', height: '100vh', display: 'flex', flexDirection: 'column' }}>
+            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
                 {/* Back arrow header */}
                 <Box sx={{
                     display: 'flex',

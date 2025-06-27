@@ -257,7 +257,7 @@ const SatelliteInfo = () => {
     ];
 
     return (
-        <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box className={"top-level-box"} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
             {clickedSatellite && clickedSatellite.name ? (
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
                     <Grid
@@ -265,20 +265,18 @@ const SatelliteInfo = () => {
                         spacing={3}
                         sx={{
                             width: '100%',
-                            flexDirection: {xs: 'column', md: 'row'},
                             flexShrink: 0,
                             mb: 2
                         }}
                     >
                         <Grid
+                            size={{ xs: 12, md: 8 }}
                             sx={{
                                 backgroundColor: '#1e1e1e',
                                 borderRadius: '8px',
                                 padding: 3,
                                 minHeight: '300px',
                                 color: '#ffffff',
-                                width: {xs: '100%', md: '60%'},
-                                mb: {xs: 3, md: 0},
                                 boxSizing: 'border-box'
                             }}
                         >
@@ -400,7 +398,8 @@ const SatelliteInfo = () => {
                                     <strong>Website:</strong>
                                     <span>
                                         {clickedSatellite['website'] ? (
-                                            <a href={clickedSatellite['website']} target="_blank" rel="noopener noreferrer" style={{color: '#fff'}}>
+                                            <a href={clickedSatellite['website']} target="_blank" rel="noopener noreferrer"
+                                               style={{color: '#fff'}}>
                                                 {clickedSatellite['website']}
                                             </a>
                                         ) : '-'}
@@ -418,7 +417,8 @@ const SatelliteInfo = () => {
                                     <strong>Citation:</strong>
                                     <span>
                                         {clickedSatellite['citation'] ? (
-                                            <a href={clickedSatellite['citation']} target="_blank" rel="noopener noreferrer" style={{color: '#fff'}}>
+                                            <a href={clickedSatellite['citation']} target="_blank" rel="noopener noreferrer"
+                                               style={{color: '#fff'}}>
                                                 {clickedSatellite['citation']}
                                             </a>
                                         ) : '-'}
@@ -427,15 +427,15 @@ const SatelliteInfo = () => {
                             </Box>
                         </Grid>
                         <Grid
+                            size={{ xs: 12, md: 4 }}
                             sx={{
                                 textAlign: 'center',
-                                minHeight: '300px',
+                                minHeight: '200px',
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center',
                                 backgroundColor: '#1e1e1e',
                                 borderRadius: '8px',
-                                width: {xs: '100%', md: '36%'},
                                 boxSizing: 'border-box'
                             }}
                         >
@@ -455,12 +455,12 @@ const SatelliteInfo = () => {
                     </Grid>
 
                     {/* Transmitters section with fixed height */}
-                    <Box sx={{ flexShrink: 0 }}>
-                        <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
+                    <Box sx={{flexShrink: 0}}>
+                        <Typography variant="h6" component="h3" sx={{mb: 2}}>
                             Transmitters
                         </Typography>
                         {clickedSatellite['transmitters'] ? (
-                            <Box sx={{ height: '400px', width: '100%' }}>
+                            <Box sx={{height: '400px', width: '100%'}}>
                                 <DataGrid
                                     rows={rows}
                                     columns={columns}
@@ -468,7 +468,7 @@ const SatelliteInfo = () => {
                                         toolbar: EditToolbar,
                                     }}
                                     slotProps={{
-                                        toolbar: { onAddClick: handleAddClick },
+                                        toolbar: {onAddClick: handleAddClick},
                                     }}
                                     sx={{
                                         border: 'none',
