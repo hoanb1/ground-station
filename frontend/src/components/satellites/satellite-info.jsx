@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -534,6 +533,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                         onClose={() => setEditModalOpen(false)}
                         transmitter={editingTransmitter}
                         onSave={handleModalSave}
+                        satelliteId={selectedSatellite.norad_id}
                         isNew={isNewTransmitter}
                     />
 

@@ -30,8 +30,6 @@ import {
     setSelectedCameraId
 } from "../hardware/camera-slice.jsx";
 import VideoWebRTCPlayer from './video-webrtc.jsx';
-import VideoHLS from './video-hls.jsx';
-import VideoMJPEG from './video-mjpeg.jsx';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 
 const CameraView = () => {

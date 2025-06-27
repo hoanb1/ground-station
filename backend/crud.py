@@ -1107,6 +1107,16 @@ async def add_transmitter(session: AsyncSession, data: dict) -> dict:
         data["added"] = now
         data["updated"] = now
 
+        # rename some fields
+        data["norad_cat_id"] = data.pop("satelliteId")
+        data["uplink_low"] = data.pop("uplinkLow")
+        data["uplink_high"] = data.pop("uplinkHigh")
+        data["downlink_low"] = data.pop("downlinkLow")
+        data["downlink_high"] = data.pop("downlinkHigh")
+        data["uplink_drift"] = data.pop("uplinkDrift")
+        data["downlink_drift"] = data.pop("downlinkDrift")
+        data["uplink_mode"] = data.pop("uplinkMode")
+
         stmt = (
             insert(Transmitters)
             .values(**data)
@@ -1137,6 +1147,16 @@ async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
 
         data.pop('added', None)
         data.pop('updated', None)
+
+        # rename some fields
+        data["norad_cat_id"] = data.pop("satelliteId")
+        data["uplink_low"] = data.pop("uplinkLow")
+        data["uplink_high"] = data.pop("uplinkHigh")
+        data["downlink_low"] = data.pop("downlinkLow")
+        data["downlink_high"] = data.pop("downlinkHigh")
+        data["uplink_drift"] = data.pop("uplinkDrift")
+        data["downlink_drift"] = data.pop("downlinkDrift")
+        data["uplink_mode"] = data.pop("uplinkMode")
 
         # Ensure the record exists first
         stmt = select(Transmitters).filter(Transmitters.id == transmitter_id)

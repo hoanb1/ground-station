@@ -1,5 +1,4 @@
 import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip} from "@mui/material";
-import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
 import {useEffect, useState, useCallback} from "react";
@@ -12,7 +11,7 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
-import {useDispatch} from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
@@ -54,7 +53,11 @@ const MODE_OPTIONS = [
 
 
 // Transmitter Edit/Add Modal Component
-const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false }) => {
+const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = false }) => {
+    const dispatch = useDispatch();
+    const {socket} = useSocket();
+    const { loading, error } = useSelector(state => state.satellites);
+
     const [formData, setFormData] = useState({
         description: "",
         type: "",
@@ -118,8 +121,8 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
         }));
     };
 
-    const handleSave = () => {
-        const updatedData = {
+    const handleSave = async () => {
+        const processedData = {
             ...formData,
             // Convert empty strings back to "-" for display
             description: formData.description || "-",
@@ -134,16 +137,31 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
             downlinkDrift: formData.downlinkDrift || "-",
             mode: formData.mode || "-",
             uplinkMode: formData.uplinkMode || "-",
-            invert: formData.invert || "-",
+            invert: formData.invert || false,
             baud: formData.baud || "-",
         };
 
-        if (isNew) {
-            onSave({ ...updatedData, id: `new-${Date.now()}`, isNew: true });
-        } else {
-            onSave({ ...transmitter, ...updatedData });
+        const transmitterData = {
+            ...processedData,
+            satelliteId: satelliteId,
+            ...(isNew ? {} : { id: transmitter.id })
+        };
+
+        try {
+            const result = await dispatch(submitTransmitter({
+                socket,
+                transmitterData
+            })).unwrap();
+
+            // Update the transmitters with the response
+            dispatch(setTransmitters(result));
+
+            // Close modal on successful submission
+            onClose();
+        } catch (error) {
+            // Error is handled by Redux state, modal stays open for user to retry
+            console.error('Failed to submit transmitter:', error);
         }
-        onClose();
     };
 
     const fieldSx = {
@@ -196,6 +214,20 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                 {isNew ? '📡 Add New Transmitter' : '✏️ Edit Transmitter'}
             </DialogTitle>
             <DialogContent sx={{ backgroundColor: '#1a1a1a', px: 3, py: 3 }}>
+                {error && (
+                    <Box sx={{
+                        mb: 2,
+                        p: 2,
+                        backgroundColor: '#d32f2f',
+                        borderRadius: 1,
+                        color: '#ffffff'
+                    }}>
+                        <Typography variant="body2">
+                            Error: {error}
+                        </Typography>
+                    </Box>
+                )}
+
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
                     {/* Basic Information Section */}
@@ -208,9 +240,10 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         label="Description"
                         value={formData.description}
                         onChange={handleChange('description')}
-                        variant="outlined"
+                        variant="filled"
                         placeholder="Enter transmitter description"
                         sx={fieldSx}
+                        disabled={loading}
                     />
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
@@ -220,9 +253,9 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                 value={formData.type}
                                 onChange={handleChange('type')}
                                 label="Type"
+                                disabled={loading}
                                 sx={{
                                     color: '#ffffff',
-                                    backgroundColor: '#2a2a2a',
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
                                     '& .MuiSelect-icon': { color: '#cccccc' },
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
@@ -239,7 +272,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         }
                                     }
                                 }}
-                            >
+                             variant={'filled'}>
                                 {TYPE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -252,9 +285,9 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                 value={formData.status}
                                 onChange={handleChange('status')}
                                 label="Status"
+                                disabled={loading}
                                 sx={{
                                     color: '#ffffff',
-                                    backgroundColor: '#2a2a2a',
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
                                     '& .MuiSelect-icon': { color: '#cccccc' },
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
@@ -271,7 +304,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         }
                                     }
                                 }}
-                            >
+                             variant={'filled'}>
                                 {STATUS_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -285,9 +318,9 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                             value={formData.alive}
                             onChange={handleChange('alive')}
                             label="Alive"
+                            disabled={loading}
                             sx={{
                                 color: '#ffffff',
-                                backgroundColor: '#2a2a2a',
                                 '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
                                 '& .MuiSelect-icon': { color: '#cccccc' },
                                 '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
@@ -302,9 +335,9 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                             '&:hover': { backgroundColor: '#3a3a3a' }
                                         }
                                     }
-                                }
-                            }}
-                        >
+                                }}
+                            }
+                         variant={'filled'}>
                             {ALIVE_OPTIONS.map((option) => (
                                 <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                             ))}
@@ -321,10 +354,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         label="Uplink Low (Hz)"
                         value={formData.uplinkLow}
                         onChange={handleChange('uplinkLow')}
-                        variant="outlined"
+                        variant="filled"
                         type="number"
                         placeholder="e.g., 435000000"
                         sx={fieldSx}
+                        disabled={loading}
                     />
 
                     <TextField
@@ -332,10 +366,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         label="Uplink High (Hz)"
                         value={formData.uplinkHigh}
                         onChange={handleChange('uplinkHigh')}
-                        variant="outlined"
+                        variant="filled"
                         type="number"
                         placeholder="e.g., 438000000"
                         sx={fieldSx}
+                        disabled={loading}
                     />
 
                     <TextField
@@ -343,10 +378,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         label="Uplink Drift (Hz)"
                         value={formData.uplinkDrift}
                         onChange={handleChange('uplinkDrift')}
-                        variant="outlined"
+                        variant="filled"
                         type="number"
                         placeholder="e.g., 1000"
                         sx={{ ...fieldSx, mb: 3 }}
+                        disabled={loading}
                     />
 
                     {/* Downlink Frequencies Section */}
@@ -359,10 +395,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         label="Downlink Low (Hz)"
                         value={formData.downlinkLow}
                         onChange={handleChange('downlinkLow')}
-                        variant="outlined"
+                        variant="filled"
                         type="number"
                         placeholder="e.g., 145800000"
                         sx={fieldSx}
+                        disabled={loading}
                     />
 
                     <TextField
@@ -370,10 +407,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         label="Downlink High (Hz)"
                         value={formData.downlinkHigh}
                         onChange={handleChange('downlinkHigh')}
-                        variant="outlined"
+                        variant="filled"
                         type="number"
                         placeholder="e.g., 145900000"
                         sx={fieldSx}
+                        disabled={loading}
                     />
 
                     <TextField
@@ -381,10 +419,11 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                         label="Downlink Drift (Hz)"
                         value={formData.downlinkDrift}
                         onChange={handleChange('downlinkDrift')}
-                        variant="outlined"
+                        variant="filled"
                         type="number"
                         placeholder="e.g., 500"
                         sx={{ ...fieldSx, mb: 3 }}
+                        disabled={loading}
                     />
 
                     {/* Transmission Settings Section */}
@@ -399,9 +438,9 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                 value={formData.mode}
                                 onChange={handleChange('mode')}
                                 label="Mode"
+                                disabled={loading}
                                 sx={{
                                     color: '#ffffff',
-                                    backgroundColor: '#2a2a2a',
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
                                     '& .MuiSelect-icon': { color: '#cccccc' },
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
@@ -418,7 +457,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         }
                                     }
                                 }}
-                            >
+                             variant={'filled'}>
                                 {MODE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -431,9 +470,9 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                 value={formData.uplinkMode}
                                 onChange={handleChange('uplinkMode')}
                                 label="Uplink Mode"
+                                disabled={loading}
                                 sx={{
                                     color: '#ffffff',
-                                    backgroundColor: '#2a2a2a',
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
                                     '& .MuiSelect-icon': { color: '#cccccc' },
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
@@ -450,7 +489,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         }
                                     }
                                 }}
-                            >
+                             variant={'filled'}>
                                 {MODE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -465,9 +504,9 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                 value={formData.invert}
                                 onChange={handleChange('invert')}
                                 label="Invert"
+                                disabled={loading}
                                 sx={{
                                     color: '#ffffff',
-                                    backgroundColor: '#2a2a2a',
                                     '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
                                     '& .MuiSelect-icon': { color: '#cccccc' },
                                     '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
@@ -484,7 +523,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                                         }
                                     }
                                 }}
-                            >
+                             variant={'filled'}>
                                 {INVERT_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -496,9 +535,10 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                             label="Baud Rate"
                             value={formData.baud}
                             onChange={handleChange('baud')}
-                            variant="outlined"
+                            variant="filled"
                             type="number"
                             placeholder="e.g., 9600"
+                            disabled={loading}
                             sx={{
                                 '& .MuiOutlinedInput-root': {
                                     color: '#ffffff',
@@ -526,6 +566,7 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                 <Button
                     onClick={onClose}
                     variant="outlined"
+                    disabled={loading}
                     sx={{
                         color: '#ffffff',
                         borderColor: '#666666',
@@ -540,12 +581,20 @@ const TransmitterModal = ({ open, onClose, transmitter, onSave, isNew = false })
                 <Button
                     onClick={handleSave}
                     variant="contained"
+                    disabled={loading}
                     sx={{
                         backgroundColor: '#1976d2',
-                        '&:hover': { backgroundColor: '#1565c0' }
+                        '&:hover': { backgroundColor: '#1565c0' },
+                        '&.Mui-disabled': {
+                            backgroundColor: '#555555',
+                            color: '#aaaaaa'
+                        }
                     }}
                 >
-                    {isNew ? '✅ Add Transmitter' : '💾 Save Changes'}
+                    {loading ?
+                        (isNew ? '⏳ Adding...' : '⏳ Saving...') :
+                        (isNew ? '✅ Add Transmitter' : '💾 Save Changes')
+                    }
                 </Button>
             </DialogActions>
         </Dialog>
