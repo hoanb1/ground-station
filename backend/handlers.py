@@ -510,9 +510,17 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             reply = {'success': (transmitters['success'] & add_reply['success']),
                      'data': transmitters.get('data', [])}
 
+        elif cmd == "edit-transmitter":
+            logger.debug(f'Editing transmitter, data: {data}')
+            edit_reply = await crud.edit_transmitter(dbsession, data)
+            logger.info(edit_reply)
+            transmitters = await crud.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
+            reply = {'success': (transmitters['success'] & edit_reply['success']),
+                     'data': transmitters.get('data', [])}
+
         elif cmd == "delete-transmitter":
             logger.debug(f'Deleting transmitter, data: {data}')
-            delete_reply = await crud.delete_transmitter(dbsession, data.get('id'))
+            delete_reply = await crud.delete_transmitter(dbsession, data.get('transmitter_id'))
             transmitters = await crud.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
             reply = {'success': (transmitters['success'] & delete_reply['success']),
                      'data': transmitters.get('data', [])}

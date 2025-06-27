@@ -54,12 +54,32 @@ export const submitTransmitter = createAsyncThunk(
     }
 );
 
-export const deleteTransmitter = createAsyncThunk(
-    'satellites/deleteTransmitter',
-    async ({socket, transmitterId}, {rejectWithValue}) => {
+export const editTransmitter = createAsyncThunk(
+    'satellites/submitTransmitter',
+    async ({socket, transmitterData}, {rejectWithValue}) => {
         try {
             return await new Promise((resolve, reject) => {
-                socket.emit('data_submission', 'delete-transmitter', transmitterId, (res) => {
+                socket.emit('data_submission', 'edit-transmitter', transmitterData, (res) => {
+                    if (res.success) {
+                        resolve(res.data);
+                    } else {
+                        reject(new Error('Failed to submit transmitter'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
+export const deleteTransmitter = createAsyncThunk(
+    'satellites/deleteTransmitter',
+    async ({socket, satelliteId, transmitterId}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                const data = {'transmitter_id': transmitterId, 'norad_cat_id': satelliteId};
+                socket.emit('data_submission', 'delete-transmitter', data, (res) => {
                     if (res.success) {
                         resolve(res.data);
                     } else {
@@ -166,6 +186,9 @@ const satellitesSlice = createSlice({
         setClickedSatellite: (state, action) => {
             state.clickedSatellite = action.payload;
         },
+        setClickedSatelliteTransmitters: (state, action) => {
+            state.clickedSatellite.transmitters = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -243,6 +266,7 @@ export const {
     resetFormValues,
     setError,
     setStatus,
+    setClickedSatelliteTransmitters,
 } = satellitesSlice.actions;
 
 export default satellitesSlice.reducer;

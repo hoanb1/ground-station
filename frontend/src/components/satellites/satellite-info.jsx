@@ -21,7 +21,7 @@ import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, Text
 import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
-import {useEffect, useState, useCallback} from "react";
+import {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
 import {
     DataGrid,
@@ -31,11 +31,12 @@ import {
 import AddIcon from "@mui/icons-material/Add";
 import EditIcon from "@mui/icons-material/Edit";
 import DeleteIcon from "@mui/icons-material/DeleteOutlined";
-import {useDispatch} from "react-redux";
-import Select from "@mui/material/Select";
-import MenuItem from "@mui/material/MenuItem";
-import FormControl from "@mui/material/FormControl";
-import {submitTransmitter} from "./satellite-slice.jsx";
+import {useDispatch, useSelector} from "react-redux";
+import {
+    deleteTransmitter,
+    setClickedSatellite,
+    setClickedSatelliteTransmitters
+} from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal, {DeleteConfirmDialog} from "./transmitter-modal.jsx";
 
@@ -96,7 +97,7 @@ const formatFrequency = (frequency) => {
 };
 
 
-const SatelliteInfo = ({selectedSatellite}) => {
+const SatelliteInfo = () => {
     const [rows, setRows] = useState([]);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -106,10 +107,13 @@ const SatelliteInfo = ({selectedSatellite}) => {
     const dispatch = useDispatch();
     const {socket} = useSocket();
 
+    // Get clickedSatellite from Redux store
+    const clickedSatellite = useSelector(state => state.satellites.clickedSatellite);
+
     useEffect(() => {
-        if (selectedSatellite && selectedSatellite.transmitters) {
+        if (clickedSatellite && clickedSatellite.transmitters) {
             // Map the transmitters data to rows with unique IDs
-            const mappedRows = selectedSatellite.transmitters.map((transmitter, index) => ({
+            const mappedRows = clickedSatellite.transmitters.map((transmitter, index) => ({
                 id: transmitter.id || `existing-${index}`,
                 description: transmitter.description || "-",
                 type: transmitter.type || "-",
@@ -129,8 +133,10 @@ const SatelliteInfo = ({selectedSatellite}) => {
                 _original: transmitter,
             }));
             setRows(mappedRows);
+        } else {
+            setRows([]);
         }
-    }, [selectedSatellite]);
+    }, [clickedSatellite]);
 
     const handleEditClick = (id) => () => {
         const transmitter = rows.find(row => row.id === id);
@@ -145,14 +151,27 @@ const SatelliteInfo = ({selectedSatellite}) => {
         setDeleteConfirmOpen(true);
     };
 
-    const handleDeleteConfirm = () => {
-        if (deletingTransmitter) {
-            const updatedRows = rows.filter((row) => row.id !== deletingTransmitter.id);
-            setRows(updatedRows);
-            saveTransmittersToBackend(updatedRows);
-            setDeleteConfirmOpen(false);
-            setDeletingTransmitter(null);
+    const handleDeleteConfirm = async () => {
+        if (deletingTransmitter && deletingTransmitter._original?.id) {
+            try {
+                // Dispatch delete action to backend
+                const result = await dispatch(deleteTransmitter({
+                    socket,
+                    transmitterId: deletingTransmitter._original.id,
+                    satelliteId: clickedSatellite.norad_id,
+                })).unwrap();
+
+                dispatch(setClickedSatelliteTransmitters(result));
+
+                console.log('Transmitter deleted successfully');
+            } catch (error) {
+                console.error('Failed to delete transmitter:', error);
+            }
         }
+
+        // Close the dialog regardless of success/failure
+        setDeleteConfirmOpen(false);
+        setDeletingTransmitter(null);
     };
 
     const handleAddClick = () => {
@@ -161,75 +180,11 @@ const SatelliteInfo = ({selectedSatellite}) => {
         setEditModalOpen(true);
     };
 
-    const handleModalSave = (transmitterData) => {
-        if (isNewTransmitter) {
-            const newRows = [...rows, transmitterData];
-            setRows(newRows);
-            saveTransmittersToBackend(newRows);
-        } else {
-            const updatedRows = rows.map((row) =>
-                row.id === transmitterData.id ? transmitterData : row
-            );
-            setRows(updatedRows);
-            saveTransmittersToBackend(updatedRows);
-        }
+    const handleModalClose = () => {
+        setEditModalOpen(false);
+        setEditingTransmitter(null);
+        setIsNewTransmitter(false);
     };
-
-    const saveTransmittersToBackend = useCallback((currentRows) => {
-        if (!selectedSatellite || !selectedSatellite.norad_id) return;
-
-        // Separate new and existing transmitters
-        const newTransmitters = currentRows.filter(row => row.isNew);
-        const existingTransmitters = currentRows.filter(row => !row.isNew);
-
-        // Map rows back to transmitter format
-        const transmitters = existingTransmitters.map(row => {
-            // If we have the original data, use it as a base
-            const base = row._original || {};
-
-            return {
-                ...base,
-                description: row.description !== "-" ? row.description : null,
-                type: row.type !== "-" ? row.type : null,
-                status: row.status !== "-" ? row.status : null,
-                alive: row.alive !== "-" ? row.alive : null,
-                uplink_low: row.uplinkLow !== "-" ? row.uplinkLow : null,
-                uplink_high: row.uplinkHigh !== "-" ? row.uplinkHigh : null,
-                uplink_drift: row.uplinkDrift !== "-" ? row.uplinkDrift : null,
-                downlink_low: row.downlinkLow !== "-" ? row.downlinkLow : null,
-                downlink_high: row.downlinkHigh !== "-" ? row.downlinkHigh : null,
-                downlink_drift: row.downlinkDrift !== "-" ? row.downlinkDrift : null,
-                mode: row.mode !== "-" ? row.mode : null,
-                uplink_mode: row.uplinkMode !== "-" ? row.uplinkMode : null,
-                invert: row.invert !== "-" ? row.invert : null,
-                baud: row.baud !== "-" ? row.baud : null,
-            };
-        });
-
-        // Create new transmitter data
-        const newTransmitterData = newTransmitters.map(row => ({
-            norad_cat_id: selectedSatellite.norad_id,
-            description: row.description !== "-" ? row.description : null,
-            type: row.type !== "-" ? row.type : null,
-            status: row.status !== "-" ? row.status : null,
-            alive: row.alive !== "-" ? row.alive : null,
-            uplink_low: row.uplinkLow !== "-" ? row.uplinkLow : null,
-            uplink_high: row.uplinkHigh !== "-" ? row.uplinkHigh : null,
-            uplink_drift: row.uplinkDrift !== "-" ? row.uplinkDrift : null,
-            downlink_low: row.downlinkLow !== "-" ? row.downlinkLow : null,
-            downlink_high: row.downlinkHigh !== "-" ? row.downlinkHigh : null,
-            downlink_drift: row.downlinkDrift !== "-" ? row.downlinkDrift : null,
-            mode: row.mode !== "-" ? row.mode : null,
-            uplink_mode: row.uplinkMode !== "-" ? row.uplinkMode : null,
-            invert: row.invert !== "-" ? row.invert : null,
-            baud: row.baud !== "-" ? row.baud : null,
-        }));
-
-        if (newTransmitterData.length > 0) {
-            // Update backend here
-            dispatch(submitTransmitter({socket: socket, transmitterData: newTransmitterData[0]}));
-        }
-    }, [selectedSatellite, dispatch, socket]);
 
     const columns = [
         {field: "description", headerName: "Description", flex: 1},
@@ -303,7 +258,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
 
     return (
         <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
-            {selectedSatellite ? (
+            {clickedSatellite && clickedSatellite.name ? (
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
                     <Grid
                         container
@@ -337,7 +292,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Name:</strong> <span>{selectedSatellite['name']}</span>
+                                    <strong>Name:</strong> <span>{clickedSatellite['name']}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -348,7 +303,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>NORAD ID:</strong> <span>{selectedSatellite['norad_id']}</span>
+                                    <strong>NORAD ID:</strong> <span>{clickedSatellite['norad_id']}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -360,7 +315,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                     }}
                                 >
                                     <strong>Status:</strong>
-                                    <span>{betterStatusValue(selectedSatellite['status'])}</span>
+                                    <span>{betterStatusValue(clickedSatellite['status'])}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -372,7 +327,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                     }}
                                 >
                                     <strong>Countries:</strong>
-                                    <span>{renderCountryFlagsCSV(selectedSatellite['countries'])}</span>
+                                    <span>{renderCountryFlagsCSV(clickedSatellite['countries'])}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -383,7 +338,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Operator:</strong> <span>{selectedSatellite['operator'] || '-'}</span>
+                                    <strong>Operator:</strong> <span>{clickedSatellite['operator'] || '-'}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -395,7 +350,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                     }}
                                 >
                                     <strong>Launched:</strong>
-                                    <span>{betterDateTimes(selectedSatellite['launched'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['launched'])}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -407,7 +362,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                     }}
                                 >
                                     <strong>Deployed:</strong>
-                                    <span>{betterDateTimes(selectedSatellite['deployed'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['deployed'])}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -419,7 +374,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                     }}
                                 >
                                     <strong>Decayed:</strong>
-                                    <span>{betterDateTimes(selectedSatellite['decayed'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['decayed'])}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -430,7 +385,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                                     }}
                                 >
                                     <strong>Updated:</strong>
-                                    <span>{betterDateTimes(selectedSatellite['updated'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['updated'])}</span>
                                 </Box>
                             </Box>
                         </Grid>
@@ -449,8 +404,8 @@ const SatelliteInfo = ({selectedSatellite}) => {
                         >
                             <Box sx={{textAlign: 'right'}}>
                                 <img
-                                    src={`/satimages/${selectedSatellite['norad_id']}.png`}
-                                    alt={`Satellite ${selectedSatellite['norad_id']}`}
+                                    src={`/satimages/${clickedSatellite['norad_id']}.png`}
+                                    alt={`Satellite ${clickedSatellite['norad_id']}`}
                                     style={{
                                         maxWidth: '100%',
                                         height: 'auto',
@@ -467,7 +422,7 @@ const SatelliteInfo = ({selectedSatellite}) => {
                         <Typography variant="h6" component="h3" sx={{ mb: 2 }}>
                             Transmitters
                         </Typography>
-                        {selectedSatellite['transmitters'] ? (
+                        {clickedSatellite['transmitters'] ? (
                             <Box sx={{ height: '400px', width: '100%' }}>
                                 <DataGrid
                                     rows={rows}
@@ -530,10 +485,9 @@ const SatelliteInfo = ({selectedSatellite}) => {
                     {/* Edit/Add Transmitter Modal */}
                     <TransmitterModal
                         open={editModalOpen}
-                        onClose={() => setEditModalOpen(false)}
+                        onClose={handleModalClose}
                         transmitter={editingTransmitter}
-                        onSave={handleModalSave}
-                        satelliteId={selectedSatellite.norad_id}
+                        satelliteId={clickedSatellite.norad_id}
                         isNew={isNewTransmitter}
                     />
 

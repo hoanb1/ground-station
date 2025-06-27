@@ -1142,8 +1142,6 @@ async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
     """
     try:
         transmitter_id = data.pop('id')
-        if isinstance(transmitter_id, str):
-            transmitter_id = uuid.UUID(transmitter_id)
 
         data.pop('added', None)
         data.pop('updated', None)
@@ -1192,8 +1190,7 @@ async def delete_transmitter(session: AsyncSession, transmitter_id: Union[uuid.U
     Delete a transmitter record by its UUID or string representation of UUID.
     """
     try:
-        if isinstance(transmitter_id, str):
-            transmitter_id = uuid.UUID(transmitter_id)
+        logger.info(transmitter_id)
 
         del_stmt = (
             delete(Transmitters)

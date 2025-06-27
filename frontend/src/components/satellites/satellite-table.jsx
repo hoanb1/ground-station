@@ -293,7 +293,7 @@ const SatelliteTable = React.memo(function () {
 
                 {/* Satellite info content */}
                 <Box sx={{ flex: 1, minHeight: 0, padding: 0 }}>
-                    <SatelliteInfo selectedSatellite={clickedSatellite} />
+                    <SatelliteInfo />
                 </Box>
             </Box>
         );

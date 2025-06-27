@@ -15,7 +15,11 @@ import {useDispatch, useSelector} from "react-redux";
 import Select from "@mui/material/Select";
 import MenuItem from "@mui/material/MenuItem";
 import FormControl from "@mui/material/FormControl";
-import {submitTransmitter} from "./satellite-slice.jsx";
+import {
+    submitTransmitter,
+    editTransmitter,
+    setClickedSatelliteTransmitters,
+} from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 
 
@@ -148,16 +152,27 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
         };
 
         try {
-            const result = await dispatch(submitTransmitter({
-                socket,
-                transmitterData
-            })).unwrap();
+            if (isNew) {
+                const result = await dispatch(submitTransmitter({
+                    socket,
+                    transmitterData
+                })).unwrap();
 
-            // Update the transmitters with the response
-            dispatch(setTransmitters(result));
+                // Update the transmitters with the response
+                dispatch(setClickedSatelliteTransmitters(result));
+            } else {
+                const result = await dispatch(editTransmitter({
+                    socket,
+                    transmitterData
+                })).unwrap();
+
+                // Update the transmitters with the response
+                dispatch(setClickedSatelliteTransmitters(result));
+            }
 
             // Close modal on successful submission
             onClose();
+
         } catch (error) {
             // Error is handled by Redux state, modal stays open for user to retry
             console.error('Failed to submit transmitter:', error);
