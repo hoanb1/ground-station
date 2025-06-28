@@ -36,6 +36,19 @@ import {
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal, {DeleteConfirmDialog} from "./transmitter-modal.jsx";
+import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+import SatelliteMapContainer from "./satellite-map.jsx";
+
+
+// Fix for default markers in react-leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 // Frequency formatting function
 const formatFrequency = (frequency) => {
@@ -92,10 +105,12 @@ const SatelliteInfo = () => {
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const [imageError, setImageError] = useState(false);
-
+    const [satellitePosition, setSatellitePosition] = useState([0, 0]); // Default position
 
     // Get clickedSatellite from Redux store
     const clickedSatellite = useSelector(state => state.satellites.clickedSatellite);
+
+    console.info('SatelliteInfo: clickedSatellite', clickedSatellite);
 
     useEffect(() => {
         if (clickedSatellite && clickedSatellite.transmitters) {
@@ -120,6 +135,15 @@ const SatelliteInfo = () => {
                 _original: transmitter,
             }));
             setRows(mappedRows);
+
+            // Set satellite position if available (you might need to get this from satellite tracking data)
+            // For now, using a default position - you can replace this with actual satellite coordinates
+            if (clickedSatellite.latitude && clickedSatellite.longitude) {
+                setSatellitePosition([clickedSatellite.latitude, clickedSatellite.longitude]);
+            } else {
+                // Default to showing a world view
+                setSatellitePosition([0, 0]);
+            }
         } else {
             setRows([]);
         }
@@ -178,50 +202,56 @@ const SatelliteInfo = () => {
     };
 
     const columns = [
-        {field: "description", headerName: "Description", flex: 1},
-        {field: "type", headerName: "Type", flex: 1},
-        {field: "status", headerName: "Status", flex: 1},
-        {field: "alive", headerName: "Alive", flex: 1},
+        {field: "description", headerName: "Description", flex: 1.5, minWidth: 200},
+        {field: "type", headerName: "Type", flex: 1, minWidth: 100},
+        {field: "status", headerName: "Status", flex: 1, minWidth: 100},
+        {field: "alive", headerName: "Alive", flex: 1, minWidth: 100},
         {
             field: "uplinkLow",
             headerName: "Uplink low",
-            flex: 1,
+            flex: 1.2,
+            minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "uplinkHigh",
             headerName: "Uplink high",
-            flex: 1,
+            flex: 1.2,
+            minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "uplinkDrift",
             headerName: "Uplink drift",
-            flex: 1,
+            flex: 1.2,
+            minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "downlinkLow",
             headerName: "Downlink low",
-            flex: 1,
+            flex: 1.2,
+            minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "downlinkHigh",
             headerName: "Downlink high",
-            flex: 1,
+            flex: 1.2,
+            minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "downlinkDrift",
             headerName: "Downlink drift",
-            flex: 1,
+            flex: 1.2,
+            minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
-        {field: "mode", headerName: "Mode", flex: 1},
-        {field: "uplinkMode", headerName: "Uplink mode", flex: 1},
-        {field: "invert", headerName: "Invert", flex: 1},
-        {field: "baud", headerName: "Baud", flex: 1},
+        {field: "mode", headerName: "Mode", flex: 1, minWidth: 120},
+        {field: "uplinkMode", headerName: "Uplink mode", flex: 1, minWidth: 130},
+        {field: "invert", headerName: "Invert", flex: 0.8, minWidth: 80},
+        {field: "baud", headerName: "Baud", flex: 1, minWidth: 100},
     ];
 
     function handleImageError() {
@@ -242,7 +272,7 @@ const SatelliteInfo = () => {
                         }}
                     >
                         <Grid
-                            size={{ xs: 12, md: 8 }}
+                            size={{ xs: 12, lg: 4 }}
                             sx={{
                                 backgroundColor: '#1e1e1e',
                                 borderRadius: '8px',
@@ -399,10 +429,10 @@ const SatelliteInfo = () => {
                             </Box>
                         </Grid>
                         <Grid
-                            size={{ xs: 12, md: 4 }}
+                            size={{ xs: 12, lg: 4 }}
                             sx={{
                                 textAlign: 'center',
-                                minHeight: '200px',
+                                minHeight: '300px',
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center',
@@ -445,6 +475,22 @@ const SatelliteInfo = () => {
                                         </Typography>
                                     </Box>
                                 )}
+                            </Box>
+                        </Grid>
+                        <Grid
+                            size={{ xs: 12, lg: 4 }}
+                            sx={{
+                                backgroundColor: '#1e1e1e',
+                                borderRadius: '8px',
+                                minHeight: '300px',
+                                boxSizing: 'border-box',
+                                overflow: 'hidden'
+                            }}
+                        >
+                            <Box sx={{ height: '100%', position: 'relative' }}>
+                                <Box sx={{ height: 'calc(100%)', minHeight: '240px' }}>
+                                    <SatelliteMapContainer satelliteData={clickedSatellite}/>
+                                </Box>
                             </Box>
                         </Grid>
                     </Grid>
