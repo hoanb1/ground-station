@@ -875,7 +875,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 </FormControl>
 
                                 <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
-                                    <Box sx={{textAlign: 'left'}}></Box>
+                                    <Box sx={{textAlign: 'left'}}><SquelchIcon size={24}/></Box>
                                     <Slider
                                         value={vfoMarkers[vfoIndex]?.squelch || -150}
                                         min={-150}
