@@ -550,16 +550,56 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                             handleSDRChange(event);
                                         }}
                                         variant={'filled'}>
-                                        <MenuItem value="none">
-                                            [no SDR selected]
-                                        </MenuItem>
                                         <MenuItem value="" disabled>
                                             <em>select a SDR</em>
                                         </MenuItem>
-                                        {sdrs.map((sdr, index) => {
-                                            return <MenuItem value={sdr.id}
-                                                             key={index}>{sdr.name} ({sdr.type})</MenuItem>;
-                                        })}
+                                        <MenuItem value="none">
+                                            [no SDR selected]
+                                        </MenuItem>
+                                        {/* Local SDRs */}
+                                        {sdrs.filter(sdr => sdr.type.toLowerCase().includes('local')).length > 0 && (
+                                            <MenuItem value="" disabled>
+                                                <em>Local SDRs</em>
+                                            </MenuItem>
+                                        )}
+                                        {sdrs
+                                            .filter(sdr => sdr.type.toLowerCase().includes('local'))
+                                            .map((sdr, index) => {
+                                                return <MenuItem value={sdr.id} key={`local-${index}`}>
+                                                    {sdr.name} ({sdr.type})
+                                                </MenuItem>;
+                                            })
+                                        }
+
+                                        {/* Remote SDRs */}
+                                        {sdrs.filter(sdr => sdr.type.toLowerCase().includes('remote')).length > 0 && (
+                                            <MenuItem value="" disabled>
+                                                <em>Remote SDRs</em>
+                                            </MenuItem>
+                                        )}
+                                        {sdrs
+                                            .filter(sdr => sdr.type.toLowerCase().includes('remote'))
+                                            .map((sdr, index) => {
+                                                return <MenuItem value={sdr.id} key={`remote-${index}`}>
+                                                    {sdr.name} ({sdr.type})
+                                                </MenuItem>;
+                                            })
+                                        }
+
+                                        {/* Other SDRs (neither local nor remote) */}
+                                        {sdrs.filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote')).length > 0 && (
+                                            <MenuItem value="" disabled>
+                                                <em>Other SDRs</em>
+                                            </MenuItem>
+                                        )}
+                                        {sdrs
+                                            .filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote'))
+                                            .map((sdr, index) => {
+                                                return <MenuItem value={sdr.id} key={`other-${index}`}>
+                                                    {sdr.name} ({sdr.type})
+                                                </MenuItem>;
+                                            })
+                                        }
                                     </Select>
                                 </FormControl>
 
