@@ -59,7 +59,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import HeightIcon from '@mui/icons-material/Height';
 import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
 import AlignHorizontalRightIcon from '@mui/icons-material/AlignHorizontalRight';
-import WaterfallWithStrictXAxisZoom from './waterfall-content.jsx'
+import WaterfallAndBandscope from './waterfall-content.jsx'
 import {useSocket} from "../common/socket.jsx";
 import {
     setColorMap,
@@ -209,12 +209,31 @@ const MainWaterfallDisplay = React.memo(() => {
     } = useSelector((state) => state.targetSatTrack);
 
     const targetFPSRef = useRef(targetFPS);
+    const waterfallControlRef = useRef(null);
     const lastRotatorEventRef = useRef("");
     const [scrollFactor, setScrollFactor] = useState(1);
     const accumulatedRowsRef = useRef(0);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [isFullscreen, setIsFullscreen] = useState(false);
+
+    const handleZoomIn = useCallback(() => {
+        if (waterfallControlRef.current) {
+            waterfallControlRef.current.zoomOnXAxisOnly(0.5, window.innerWidth / 2);
+        }
+    }, []);
+
+    const handleZoomOut = useCallback(() => {
+        if (waterfallControlRef.current) {
+            waterfallControlRef.current.zoomOnXAxisOnly(-0.5, window.innerWidth / 2);
+        }
+    }, []);
+
+    const handleZoomReset = useCallback(() => {
+        if (waterfallControlRef.current) {
+            waterfallControlRef.current.resetCustomTransform();
+        }
+    }, []);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -454,8 +473,6 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-status', (data) => {
-            //console.info(`sdr-status`, data);
-
             if (data['streaming'] === true) {
                 dispatch(setIsStreaming(true));
                 dispatch(setStartStreamingLoading(false));
@@ -466,7 +483,6 @@ const MainWaterfallDisplay = React.memo(() => {
             }
         });
 
-        // Modify the socket event handler for FFT data
         socket.on('sdr-fft-data', (binaryData) => {
             const floatArray = new Float32Array(binaryData);
 
@@ -850,6 +866,38 @@ const MainWaterfallDisplay = React.memo(() => {
                             >
                                 4
                             </IconButton>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={handleZoomIn}
+                                color="primary"
+                                title="Zoom in"
+                            >
+                                <ZoomInIcon/>
+                            </IconButton>
+
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={handleZoomOut}
+                                color="primary"
+                                title="Zoom out"
+                            >
+                                <ZoomOutIcon/>
+                            </IconButton>
+
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={handleZoomReset}
+                                color="primary"
+                                title="Reset zoom"
+                            >
+                                <RestartAltIcon/>
+                            </IconButton>
                         </Stack>
                     </Box>
                 </Paper>
@@ -932,7 +980,8 @@ const MainWaterfallDisplay = React.memo(() => {
                     </Box>
 
                     {/* Right column - Main visualization canvases */}
-                    <WaterfallWithStrictXAxisZoom
+                    <WaterfallAndBandscope
+                        ref={waterfallControlRef}
                         bandscopeCanvasRef={bandscopeCanvasRef}
                         waterFallCanvasRef={waterFallCanvasRef}
                         centerFrequency={centerFrequency}

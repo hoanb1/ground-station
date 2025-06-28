@@ -18,7 +18,7 @@
  */
 
 
-import React, {useCallback, useEffect, useRef, useState} from "react";
+import React, {useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef} from "react";
 import {useDispatch, useSelector} from "react-redux";
 import {Box, IconButton} from "@mui/material";
 import AddIcon from "@mui/icons-material/Add";
@@ -31,29 +31,18 @@ import {
     setBookMarks
 } from "./waterfall-slice.jsx";
 import VFOMarkersContainer from './vfo-container.jsx';
-import {
-    enableVFO1,
-    enableVFO2,
-    enableVFO3,
-    enableVFO4,
-    disableVFO1,
-    disableVFO2,
-    disableVFO3,
-    disableVFO4,
-    setVFOProperty,
-} from './waterfall-slice.jsx';
-
 import {v4 as uuidv4} from 'uuid';
 import TuneIcon from '@mui/icons-material/Tune';
 
-// Inside your WaterfallWithStrictXAxisZoom component, add:
-const WaterfallWithStrictXAxisZoom = React.memo(({
-                                                     bandscopeCanvasRef,
-                                                     waterFallCanvasRef,
-                                                     centerFrequency,
-                                                     sampleRate,
-                                                     waterFallWindowHeight,
-                                                 }) => {
+// Inside your WaterfallAndBandscope component, add:
+const WaterfallAndBandscope = forwardRef(({
+                                              bandscopeCanvasRef,
+                                              waterFallCanvasRef,
+                                              centerFrequency,
+                                              sampleRate,
+                                              waterFallWindowHeight,
+                                          }, ref) => {
+
 
     const containerRef = useRef(null);
     const containerWidthRef = useRef(0);
@@ -175,11 +164,6 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
     const applyTransform = useCallback(() => {
         if (containerRef.current) {
             containerRef.current.style.transform = `translateX(${positionXRef.current}px) scaleX(${scaleRef.current})`;
-
-            // Updating state on a mouse wheel event is not a good idea
-            //const newVisualWidth = getScaledWidth(containerRef.current, scaleRef.current);
-            //setVisualContainerWidth(newVisualWidth);
-            //dispatch(setWaterFallVisualWidth(newVisualWidth));
         }
     }, []);
 
@@ -401,6 +385,15 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
         };
     }, []);
 
+    // Expose functions to parent component
+    useImperativeHandle(ref, () => ({
+        zoomOnXAxisOnly,
+        panOnXAxisOnly,
+        resetCustomTransform,
+        getCurrentScale: () => scaleRef.current,
+        getCurrentPosition: () => positionXRef.current,
+    }), [zoomOnXAxisOnly, panOnXAxisOnly, resetCustomTransform]);
+
     // Set touch actions for mobile scrolling
     useEffect(() => {
         const canvases = [
@@ -423,45 +416,6 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
             touchAction: 'pan-y',
             position: 'relative',
         }}>
-            {/* Zoom controls */}
-            <Box sx={{
-                position: 'absolute',
-                bottom: isMobile ? 20 : 30,
-                right: isMobile ? 20 : 10,
-                zIndex: 1000,
-                display: 'flex',
-                gap: '5px',
-                backgroundColor: 'rgba(0, 0, 0, 0.5)',
-                borderRadius: '20px',
-                padding: '5px',
-            }}>
-                <IconButton
-                    size={isMobile ? "medium" : "small"}
-                    onClick={() => {
-                        zoomOnXAxisOnly(0.3, window.innerWidth / 2);
-                    }}
-                    sx={{color: 'white'}}
-                >
-                    <AddIcon/>
-                </IconButton>
-                <IconButton
-                    size={isMobile ? "medium" : "small"}
-                    onClick={() => {
-                        zoomOnXAxisOnly(-0.3, window.innerWidth / 2);
-                    }}
-                    sx={{color: 'white'}}
-                >
-                    <RemoveIcon/>
-                </IconButton>
-                <IconButton
-                    size={isMobile ? "medium" : "small"}
-                    onClick={resetCustomTransform}
-                    sx={{color: 'white'}}
-                >
-                    <RestartAltIcon/>
-                </IconButton>
-            </Box>
-
             {/* Canvases */}
             <Box
                 ref={containerRef}
@@ -536,4 +490,4 @@ const WaterfallWithStrictXAxisZoom = React.memo(({
     );
 });
 
-export default WaterfallWithStrictXAxisZoom;
+export default WaterfallAndBandscope;
