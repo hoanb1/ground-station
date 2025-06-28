@@ -91,6 +91,8 @@ const SatelliteInfo = () => {
     const [selected, setSelected] = useState([]);
     const dispatch = useDispatch();
     const {socket} = useSocket();
+    const [imageError, setImageError] = useState(false);
+
 
     // Get clickedSatellite from Redux store
     const clickedSatellite = useSelector(state => state.satellites.clickedSatellite);
@@ -221,6 +223,10 @@ const SatelliteInfo = () => {
         {field: "invert", headerName: "Invert", flex: 1},
         {field: "baud", headerName: "Baud", flex: 1},
     ];
+
+    function handleImageError() {
+        setImageError(true);
+    }
 
     return (
         <Box className={"top-level-box"} sx={{ height: '1200px', display: 'flex', flexDirection: 'column' }}>
@@ -405,17 +411,40 @@ const SatelliteInfo = () => {
                                 boxSizing: 'border-box'
                             }}
                         >
-                            <Box sx={{textAlign: 'right'}}>
-                                <img
-                                    src={`/satimages/${clickedSatellite['norad_id']}.png`}
-                                    alt={`Satellite ${clickedSatellite['norad_id']}`}
-                                    style={{
-                                        maxWidth: '100%',
-                                        height: 'auto',
-                                        border: '1px solid #444444',
-                                        borderRadius: '4px',
-                                    }}
-                                />
+                            <Box sx={{textAlign: 'center', display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1}}>
+                                {!imageError ? (
+                                    <img
+                                        src={`/satimages/${clickedSatellite['norad_id']}.png`}
+                                        alt={`Satellite ${clickedSatellite['norad_id']}`}
+                                        onError={handleImageError}
+                                        style={{
+                                            maxWidth: '100%',
+                                            height: 'auto',
+                                            border: '1px solid #444444',
+                                            borderRadius: '4px',
+                                        }}
+                                    />
+                                ) : (
+                                    <Box
+                                        sx={{
+                                            width: '200px',
+                                            height: '150px',
+                                            border: '1px solid #444444',
+                                            borderRadius: '4px',
+                                            display: 'flex',
+                                            flexDirection: 'column',
+                                            justifyContent: 'center',
+                                            alignItems: 'center',
+                                            backgroundColor: '#2a2a2a',
+                                            color: '#888888',
+                                            gap: 1
+                                        }}
+                                    >
+                                        <Typography variant="caption" sx={{ color: '#888888', textAlign: 'center' }}>
+                                            No image available
+                                        </Typography>
+                                    </Box>
+                                )}
                             </Box>
                         </Grid>
                     </Grid>
