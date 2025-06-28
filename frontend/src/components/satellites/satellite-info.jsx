@@ -306,7 +306,7 @@ const SatelliteInfo = () => {
                     <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
                         <ArrowBackIcon />
                     </IconButton>
-                    <Typography variant="h5" display="inline">
+                    <Typography variant="h6" display="inline">
                         Loading satellite information...
                     </Typography>
                 </Box>
@@ -322,7 +322,7 @@ const SatelliteInfo = () => {
                     <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
                         <ArrowBackIcon />
                     </IconButton>
-                    <Typography variant="h4" component="h1" display="inline">
+                    <Typography variant="h6" display="inline">
                         Satellite not found
                     </Typography>
                 </Box>
@@ -348,7 +348,7 @@ const SatelliteInfo = () => {
                     <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
                         <ArrowBackIcon />
                     </IconButton>
-                    <Typography variant="h4" component="h1" display="inline">
+                    <Typography variant="h6" display="inline">
                         Loading satellite information...
                     </Typography>
                 </Box>
@@ -369,7 +369,7 @@ const SatelliteInfo = () => {
                 <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
                     <ArrowBackIcon />
                 </IconButton>
-                <Typography variant="h5" display="inline">
+                <Typography variant="h6" display="inline">
                     {clickedSatellite.name} - Satellite Information
                 </Typography>
             </Box>
