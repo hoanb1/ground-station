@@ -83,25 +83,15 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "get-satellite":
             logger.debug(f'Getting satellite data for norad id, data: {data}')
-            satellite = await crud.fetch_satellites(dbsession, data)
 
-            # get transmitters
-            satellite_data = satellite.get('data', [])[0]
-            transmitters = await crud.fetch_transmitters_for_satellite(dbsession, satellite_data['norad_id'])
-
-            # add in the result if the satellite is geostationary
-            satellite_data['is_geostationary'] = is_geostationary([satellite_data['tle1'], satellite_data['tle2']])
-
-            # get position
-            position = get_satellite_position_from_tle([
-                satellite_data['name'],
-                satellite_data['tle1'],
-                satellite_data['tle2']
-            ])
-
-            satellite_data = await compiled_satellite_data(dbsession, satellite_data['norad_id'])
-
-            reply = {'success': (satellite['success'] & transmitters['success']), 'data': satellite_data}
+            try:
+                # compile a complete satellite data set with details position coverage etc.
+                satellite_data = await compiled_satellite_data(dbsession, data)
+            except Exception as e:
+                logger.error(f'Error: {e}')
+                reply = {'success': False, 'data': {}}
+            else:
+                reply = {'success': True, 'data': satellite_data}
 
         elif cmd == "get-satellites-for-group-id":
             logger.debug(f'Getting satellites for group id, data: {data}')

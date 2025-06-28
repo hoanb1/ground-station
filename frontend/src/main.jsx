@@ -50,6 +50,7 @@ import ErrorPage from './components/common/error-page.jsx';
 import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
 import {WakeLockProvider} from "./components/dashboard/dashboard-wake-lock-provider.jsx";
 import { AudioProvider, useAudio } from "./components/dashboard/dashboard-audio.jsx";
+import SatelliteInfo from "./components/satellites/satellite-info.jsx";
 
 
 const router = createBrowserRouter([
@@ -72,6 +73,10 @@ const router = createBrowserRouter([
                     {
                         path: "waterfall",
                         Component: WaterfallLayout,
+                    },
+                    {
+                        path: "satellite/:noradId",
+                        Component: SatelliteInfo,
                     },
                     {
                         path: "satellites",
@@ -148,11 +153,9 @@ createRoot(document.getElementById('root')).render(
             <PersistGate loading={null} persistor={persistor}>
                 <SocketProvider>
                     <AuthProvider>
-                        {/*<AudioProvider>*/}
-                            <WakeLockProvider>
-                                <RouterProvider router={router} />
-                            </WakeLockProvider>
-                        {/*</AudioProvider>*/}
+                        <WakeLockProvider>
+                            <RouterProvider router={router} />
+                        </WakeLockProvider>
                     </AuthProvider>
                 </SocketProvider>
             </PersistGate>

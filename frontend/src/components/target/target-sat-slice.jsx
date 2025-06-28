@@ -337,17 +337,6 @@ const targetSatTrackSlice = createSlice({
             state.loading = action.payload;
         },
         setSatelliteData(state, action) {
-            //const start = performance.now();
-            //console.log('Payload size:', JSON.stringify(action.payload).length);
-
-            // // If we are either connecting of disconnecting, ignore any satellite, rotator or rig data updates
-            // if (state.rotatorConnecting || state.rotatorDisconnecting) {
-            //     state.rotatorConnecting = false;
-            //     state.rotatorDisconnecting = false;
-            //     console.info(`returning....`)
-            //     return;
-            // }
-
             if (action.payload['tracking_state']) {
                 state.trackingState = action.payload['tracking_state'];
             }
@@ -400,9 +389,6 @@ const targetSatTrackSlice = createSlice({
             if (action.payload['rig_data']) {
                 state.rigData = action.payload['rig_data'];
             }
-
-            //const end = performance.now();
-            //console.log(`setSatelliteData took ${end - start}ms`);
         },
         setUITrackerValues(state, action) {
             state.satGroups = action.payload['groups'];

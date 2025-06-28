@@ -18,7 +18,7 @@
  *
  */
 
-import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip, Stack} from "@mui/material";
+import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip, Stack, IconButton} from "@mui/material";
 import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
@@ -32,7 +32,9 @@ import {useDispatch, useSelector} from "react-redux";
 import {
     deleteTransmitter,
     setClickedSatellite,
-    setClickedSatelliteTransmitters
+    setClickedSatelliteTransmitters,
+    fetchSatellites,
+    fetchSatellite
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal, {DeleteConfirmDialog} from "./transmitter-modal.jsx";
@@ -40,6 +42,9 @@ import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import SatelliteMapContainer from "./satellite-map.jsx";
+import { useParams, useNavigate } from 'react-router';
+import ArrowBackIcon from '@mui/icons-material/ArrowBack';
+import { enqueueSnackbar } from 'notistack';
 
 
 // Fix for default markers in react-leaflet
@@ -95,6 +100,8 @@ const formatFrequency = (frequency) => {
 const paginationModel = {page: 0, pageSize: 10};
 
 const SatelliteInfo = () => {
+    const { noradId } = useParams();
+    const navigate = useNavigate();
     const [rows, setRows] = useState([]);
     const [editModalOpen, setEditModalOpen] = useState(false);
     const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
@@ -107,10 +114,39 @@ const SatelliteInfo = () => {
     const [imageError, setImageError] = useState(false);
     const [satellitePosition, setSatellitePosition] = useState([0, 0]); // Default position
 
-    // Get clickedSatellite from Redux store
-    const clickedSatellite = useSelector(state => state.satellites.clickedSatellite);
+    // Get satellite list, clickedSatellite and loading state from Redux store
+    const { satellites, clickedSatellite, loading, error } = useSelector(state => state.satellites);
 
-    console.info('SatelliteInfo: clickedSatellite', clickedSatellite);
+    useEffect(() => {
+        const noradIdInt = parseInt(noradId);
+
+        // If we don't have the satellite data in Redux or it doesn't match the URL parameter
+        if (!clickedSatellite || clickedSatellite.norad_id !== noradIdInt) {
+            // First check if the satellite exists in the satellites list
+            const satellite = satellites.find(sat => sat.norad_id === noradIdInt);
+            if (satellite) {
+                dispatch(setClickedSatellite(satellite));
+            } else {
+                // Try to fetch the specific satellite by NORAD ID
+                dispatch(fetchSatellite({socket, noradId: noradIdInt}))
+                    .unwrap()
+                    .then((satelliteData) => {
+                        // Successfully fetched the satellite
+                        //console.info('Successfully fetched satellite:', satelliteData);
+                    })
+                    .catch((error) => {
+                        console.error(`Failed to fetch satellite with NORAD ID ${noradId}:`, error);
+                        enqueueSnackbar(`Failed to load satellite data: ${error}`, {
+                            variant: 'error',
+                            autoHideDuration: 5000,
+                        });
+
+                        // Optionally redirect back to satellites list or show error page
+                        // navigate('/satellites/satellites');
+                    });
+            }
+        }
+    }, [noradId, satellites, dispatch, socket, navigate]);
 
     useEffect(() => {
         if (clickedSatellite && clickedSatellite.transmitters) {
@@ -148,6 +184,10 @@ const SatelliteInfo = () => {
             setRows([]);
         }
     }, [clickedSatellite]);
+
+    const handleBackClick = () => {
+        navigate(-1); // Go back to previous page
+    };
 
     const handleAddClick = () => {
         setEditingTransmitter(null);
@@ -258,10 +298,84 @@ const SatelliteInfo = () => {
         setImageError(true);
     }
 
+    // Show loading state while fetching satellite data
+    if (loading && clickedSatellite.id === null) {
+        return (
+            <Box sx={{ p: 3 }}>
+                <Box sx={{ mb: 2 }}>
+                    <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="h5" display="inline">
+                        Loading satellite information...
+                    </Typography>
+                </Box>
+            </Box>
+        );
+    }
+
+    // Show error state if the satellite couldn't be found
+    if (error && clickedSatellite.id === null) {
+        return (
+            <Box sx={{ p: 3 }}>
+                <Box sx={{ mb: 2 }}>
+                    <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="h4" component="h1" display="inline">
+                        Satellite not found
+                    </Typography>
+                </Box>
+                <Typography variant="body1" sx={{ mt: 2 }}>
+                    Could not find satellite with NORAD ID: {noradId}
+                </Typography>
+                <Button
+                    variant="contained"
+                    onClick={() => navigate('/satellites/satellites')}
+                    sx={{ mt: 2 }}
+                >
+                    Go to Satellites List
+                </Button>
+            </Box>
+        );
+    }
+
+    // Don't render anything if we don't have satellite data yet
+    if (clickedSatellite.id === null) {
+        return (
+            <Box sx={{ p: 3 }}>
+                <Box sx={{ mb: 2 }}>
+                    <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
+                        <ArrowBackIcon />
+                    </IconButton>
+                    <Typography variant="h4" component="h1" display="inline">
+                        Loading satellite information...
+                    </Typography>
+                </Box>
+            </Box>
+        );
+    }
+
     return (
-        <Box className={"top-level-box"} sx={{ height: '1200px', display: 'flex', flexDirection: 'column' }}>
-            {clickedSatellite && clickedSatellite.name ? (
-                <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
+        <Box
+            className={"top-level-box"}
+            sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                p: 3,
+                backgroundColor: '#262626',
+            }}>
+            <Box sx={{ mb: 2 }}>
+                <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
+                    <ArrowBackIcon />
+                </IconButton>
+                <Typography variant="h5" display="inline">
+                    {clickedSatellite.name} - Satellite Information
+                </Typography>
+            </Box>
+
+            {clickedSatellite.id !== null ? (
+                <Box sx={{}}>
                     <Grid
                         container
                         spacing={3}
@@ -501,7 +615,7 @@ const SatelliteInfo = () => {
                             Transmitters
                         </Typography>
                         {clickedSatellite['transmitters'] ? (
-                            <Box sx={{height: '400px', width: '100%'}}>
+                            <Box sx={{width: '100%'}}>
                                 <DataGrid
                                     rows={rows}
                                     columns={columns}

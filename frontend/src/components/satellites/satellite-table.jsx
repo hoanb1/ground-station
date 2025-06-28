@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -20,11 +19,10 @@
 
 
 import * as React from 'react';
-import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select, IconButton} from "@mui/material";
-import {useEffect, useState} from "react";
+import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
+import {useEffect} from "react";
 import {useDispatch, useSelector} from "react-redux";
 import {enqueueSnackbar} from "notistack";
-import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import {
     DataGrid,
     gridPageCountSelector,
@@ -36,20 +34,18 @@ import {
 import MuiPagination from '@mui/material/Pagination';
 import {
     betterDateTimes,
-    humanizeDate,
     betterStatusValue,
     renderCountryFlagsCSV,
-    humanizeFrequency, getFrequencyBand, getBandColor
+    getFrequencyBand, getBandColor
 } from '../common/common.jsx';
-import SatelliteInfo from "./satellite-info.jsx";
 import {
     fetchSatelliteGroups,
     fetchSatellites,
     setSatGroupId,
-    setOpenSatelliteInfoDialog,
     setClickedSatellite,
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
+import { useNavigate } from 'react-router';
 
 function Pagination({page, onPageChange, className}) {
     const apiRef = useGridApiContext();
@@ -74,17 +70,14 @@ function CustomPagination(props) {
 
 const SatelliteTable = React.memo(function () {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const {socket} = useSocket();
     const {
         satellites,
         satellitesGroups,
         satGroupId,
         loading,
-        clickedSatellite,
-        openSatelliteInfoDialog
     } = useSelector((state) => state.satellites);
-
-    const [showSatelliteInfo, setShowSatelliteInfo] = useState(false);
 
     const columns = [
         {
@@ -131,15 +124,6 @@ const SatelliteTable = React.memo(function () {
                 }
             },
         },
-
-        // {
-        //     field: 'transmitters',
-        //     headerName: 'Transmitters',
-        //     width: 150,
-        //     headerAlign: 'center',
-        //     align: 'center',
-        //     valueGetter: (value, row) => row['transmitters'].length
-        // },
 
         {
             field: 'transmitters',
@@ -258,48 +242,12 @@ const SatelliteTable = React.memo(function () {
     };
 
     const handleRowClick = (params) => {
+        // Set the clicked satellite in Redux store
         dispatch(setClickedSatellite(params.row));
-        setShowSatelliteInfo(true);
+        // Navigate to the satellite detail page
+        navigate(`/satellite/${params.row.norad_id}`);
     };
 
-    const handleBackToTable = () => {
-        setShowSatelliteInfo(false);
-        dispatch(setClickedSatellite(null));
-    };
-
-    // If showing satellite info, render full-page satellite info
-    if (showSatelliteInfo && clickedSatellite) {
-        return (
-            <Box sx={{ width: '100%', display: 'flex', flexDirection: 'column' }}>
-                {/* Back arrow header */}
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    padding: 0,
-                    flexShrink: 0,
-                    marginBottom: 2,
-                }}>
-                    <IconButton
-                        onClick={handleBackToTable}
-                        sx={{ marginRight: 2 }}
-                        size="large"
-                    >
-                        <ArrowBackIcon />
-                    </IconButton>
-                    <Box sx={{ fontSize: '1.2rem', fontWeight: 'bold' }}>
-                        Back to Satellite Table
-                    </Box>
-                </Box>
-
-                {/* Satellite info content */}
-                <Box sx={{ flex: 1, minHeight: 0, padding: 0 }}>
-                    <SatelliteInfo />
-                </Box>
-            </Box>
-        );
-    }
-
-    // Regular satellite table view
     return (
         <Box elevation={3} sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">

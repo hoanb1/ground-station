@@ -35,6 +35,25 @@ const defaultSatellite = {
     updated: null,
 };
 
+export const fetchSatellite = createAsyncThunk(
+    'satellites/fetchSatellite',
+    async ({ socket, noradId }, { rejectWithValue }) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_request', 'get-satellite', noradId, (response) => {
+                    if (response.success) {
+                        resolve(response.data);
+                    } else {
+                        reject(new Error('Failed to fetch satellites'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 export const submitTransmitter = createAsyncThunk(
     'satellites/submitTransmitter',
     async ({socket, transmitterData}, {rejectWithValue}) => {
@@ -246,6 +265,21 @@ const satellitesSlice = createSlice({
                 state.loading = false;
             })
             .addCase(deleteTransmitter.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.error?.message;
+            })
+            .addCase(fetchSatellite.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(fetchSatellite.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+                state.clickedSatellite = {...action.payload['details'], transmitters: action.payload['transmitters']};
+            })
+            .addCase(fetchSatellite.rejected, (state, action) => {
                 state.status = 'failed';
                 state.loading = false;
                 state.error = action.error?.message;
