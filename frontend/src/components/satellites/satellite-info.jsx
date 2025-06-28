@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -17,7 +18,7 @@
  *
  */
 
-import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip} from "@mui/material";
+import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip, Stack} from "@mui/material";
 import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
@@ -25,12 +26,8 @@ import {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
 import {
     DataGrid,
-    GridActionsCellItem,
-    GridToolbarContainer,
+    gridClasses,
 } from "@mui/x-data-grid";
-import AddIcon from "@mui/icons-material/Add";
-import EditIcon from "@mui/icons-material/Edit";
-import DeleteIcon from "@mui/icons-material/DeleteOutlined";
 import {useDispatch, useSelector} from "react-redux";
 import {
     deleteTransmitter,
@@ -39,20 +36,6 @@ import {
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal, {DeleteConfirmDialog} from "./transmitter-modal.jsx";
-
-function EditToolbar({onAddClick}) {
-    return (
-        <GridToolbarContainer>
-            <Button
-                color="primary"
-                startIcon={<AddIcon />}
-                onClick={onAddClick}
-            >
-                Add Transmitter
-            </Button>
-        </GridToolbarContainer>
-    );
-}
 
 // Frequency formatting function
 const formatFrequency = (frequency) => {
@@ -96,6 +79,7 @@ const formatFrequency = (frequency) => {
     }
 };
 
+const paginationModel = {page: 0, pageSize: 10};
 
 const SatelliteInfo = () => {
     const [rows, setRows] = useState([]);
@@ -104,6 +88,7 @@ const SatelliteInfo = () => {
     const [editingTransmitter, setEditingTransmitter] = useState(null);
     const [deletingTransmitter, setDeletingTransmitter] = useState(null);
     const [isNewTransmitter, setIsNewTransmitter] = useState(false);
+    const [selected, setSelected] = useState([]);
     const dispatch = useDispatch();
     const {socket} = useSocket();
 
@@ -138,46 +123,50 @@ const SatelliteInfo = () => {
         }
     }, [clickedSatellite]);
 
-    const handleEditClick = (id) => () => {
-        const transmitter = rows.find(row => row.id === id);
+    const handleAddClick = () => {
+        setEditingTransmitter(null);
+        setIsNewTransmitter(true);
+        setEditModalOpen(true);
+    };
+
+    const handleEditClick = () => {
+        const singleRowId = selected[0];
+        const transmitter = rows.find(row => row.id === singleRowId);
         setEditingTransmitter(transmitter);
         setIsNewTransmitter(false);
         setEditModalOpen(true);
     };
 
-    const handleDeleteClick = (id) => () => {
-        const transmitter = rows.find(row => row.id === id);
-        setDeletingTransmitter(transmitter);
+    const handleDeleteClick = () => {
         setDeleteConfirmOpen(true);
     };
 
     const handleDeleteConfirm = async () => {
-        if (deletingTransmitter && deletingTransmitter._original?.id) {
-            try {
-                // Dispatch delete action to backend
-                const result = await dispatch(deleteTransmitter({
-                    socket,
-                    transmitterId: deletingTransmitter._original.id,
-                    satelliteId: clickedSatellite.norad_id,
-                })).unwrap();
-
-                dispatch(setClickedSatelliteTransmitters(result));
-
-                console.log('Transmitter deleted successfully');
-            } catch (error) {
-                console.error('Failed to delete transmitter:', error);
+        try {
+            // Delete all selected transmitters
+            for (const selectedId of selected) {
+                const transmitter = rows.find(row => row.id === selectedId);
+                if (transmitter && transmitter._original?.id) {
+                    await dispatch(deleteTransmitter({
+                        socket,
+                        transmitterId: transmitter._original.id,
+                        satelliteId: clickedSatellite.norad_id,
+                    })).unwrap();
+                }
             }
+
+            // Refresh the transmitters list
+            const updatedTransmitters = rows.filter(row => !selected.includes(row.id));
+            setRows(updatedTransmitters);
+            setSelected([]);
+
+            console.log('Transmitters deleted successfully');
+        } catch (error) {
+            console.error('Failed to delete transmitters:', error);
         }
 
         // Close the dialog regardless of success/failure
         setDeleteConfirmOpen(false);
-        setDeletingTransmitter(null);
-    };
-
-    const handleAddClick = () => {
-        setEditingTransmitter(null);
-        setIsNewTransmitter(true);
-        setEditModalOpen(true);
     };
 
     const handleModalClose = () => {
@@ -231,33 +220,10 @@ const SatelliteInfo = () => {
         {field: "uplinkMode", headerName: "Uplink mode", flex: 1},
         {field: "invert", headerName: "Invert", flex: 1},
         {field: "baud", headerName: "Baud", flex: 1},
-        {
-            field: "actions",
-            type: "actions",
-            headerName: "Actions",
-            width: 100,
-            cellClassName: "actions",
-            getActions: ({ id }) => {
-                return [
-                    <GridActionsCellItem
-                        key="edit"
-                        icon={<EditIcon />}
-                        label="Edit"
-                        onClick={handleEditClick(id)}
-                    />,
-                    <GridActionsCellItem
-                        key="delete"
-                        icon={<DeleteIcon />}
-                        label="Delete"
-                        onClick={handleDeleteClick(id)}
-                    />,
-                ];
-            },
-        },
     ];
 
     return (
-        <Box className={"top-level-box"} sx={{ height: '100%', display: 'flex', flexDirection: 'column' }}>
+        <Box className={"top-level-box"} sx={{ height: '1200px', display: 'flex', flexDirection: 'column' }}>
             {clickedSatellite && clickedSatellite.name ? (
                 <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', overflow: 'auto' }}>
                     <Grid
@@ -464,17 +430,24 @@ const SatelliteInfo = () => {
                                 <DataGrid
                                     rows={rows}
                                     columns={columns}
-                                    slots={{
-                                        toolbar: EditToolbar,
-                                    }}
-                                    slotProps={{
-                                        toolbar: {onAddClick: handleAddClick},
+                                    initialState={{pagination: {paginationModel}}}
+                                    pageSizeOptions={[5, 10]}
+                                    checkboxSelection={true}
+                                    onRowSelectionModelChange={(newSelected) => {
+                                        setSelected(newSelected);
                                     }}
                                     sx={{
                                         border: 'none',
                                         backgroundColor: '#1e1e1e',
                                         color: '#ffffff',
                                         height: '100%',
+                                        [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
+                                            outline: 'none',
+                                        },
+                                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
+                                            {
+                                                outline: 'none',
+                                            },
                                         '& .MuiDataGrid-columnHeaders': {
                                             backgroundColor: '#333333',
                                             color: '#ffffff',
@@ -500,9 +473,6 @@ const SatelliteInfo = () => {
                                             backgroundColor: '#121212',
                                             color: '#ffffff',
                                         },
-                                        '& .MuiDataGrid-cell:focus': {
-                                            outline: 'none',
-                                        },
                                         '& .MuiDataGrid-selectedRowCount': {
                                             color: '#ffffff',
                                         },
@@ -511,6 +481,32 @@ const SatelliteInfo = () => {
                                         },
                                     }}
                                 />
+                                <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
+                                    <Button variant="contained" onClick={handleAddClick}>
+                                        Add
+                                    </Button>
+                                    <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
+                                        Edit
+                                    </Button>
+                                    <Button variant="contained" color="error" disabled={selected.length < 1}
+                                            onClick={handleDeleteClick}>
+                                        Delete
+                                    </Button>
+                                    <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
+                                        <DialogTitle>Confirm Deletion</DialogTitle>
+                                        <DialogContent>Are you sure you want to delete the selected transmitter(s)?</DialogContent>
+                                        <DialogActions>
+                                            <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+                                            <Button
+                                                variant="contained"
+                                                color="error"
+                                                onClick={handleDeleteConfirm}
+                                            >
+                                                Delete
+                                            </Button>
+                                        </DialogActions>
+                                    </Dialog>
+                                </Stack>
                             </Box>
                         ) : (
                             <div style={{textAlign: 'center'}}>
@@ -526,17 +522,6 @@ const SatelliteInfo = () => {
                         transmitter={editingTransmitter}
                         satelliteId={clickedSatellite.norad_id}
                         isNew={isNewTransmitter}
-                    />
-
-                    {/* Delete Confirmation Dialog */}
-                    <DeleteConfirmDialog
-                        open={deleteConfirmOpen}
-                        onClose={() => {
-                            setDeleteConfirmOpen(false);
-                            setDeletingTransmitter(null);
-                        }}
-                        onConfirm={handleDeleteConfirm}
-                        transmitterName={deletingTransmitter?.description || 'Unknown'}
                     />
                 </Box>
             ) : (
