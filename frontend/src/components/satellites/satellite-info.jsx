@@ -356,6 +356,31 @@ const SatelliteInfo = () => {
         );
     }
 
+    const renderTextWithClickableLinks = (text) => {
+        if (!text || text === '-') return '-';
+
+        // Regular expression to match URLs
+        const urlRegex = /(https?:\/\/[^\s]+)/g;
+        const parts = text.split(urlRegex);
+
+        return parts.map((part, index) => {
+            if (urlRegex.test(part)) {
+                return (
+                    <a
+                        key={index}
+                        href={part}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        style={{color: '#fff', textDecoration: 'underline'}}
+                    >
+                        {part}
+                    </a>
+                );
+            }
+            return part;
+        });
+    };
+
     return (
         <Box
             className={"top-level-box"}
@@ -513,12 +538,7 @@ const SatelliteInfo = () => {
                                 >
                                     <strong>Website:</strong>
                                     <span>
-                                        {clickedSatellite['website'] ? (
-                                            <a href={clickedSatellite['website']} target="_blank" rel="noopener noreferrer"
-                                               style={{color: '#fff'}}>
-                                                {clickedSatellite['website']}
-                                            </a>
-                                        ) : '-'}
+                                        {renderTextWithClickableLinks(clickedSatellite['website'])}
                                     </span>
                                 </Box>
                                 <Box
@@ -532,12 +552,7 @@ const SatelliteInfo = () => {
                                 >
                                     <strong>Citation:</strong>
                                     <span>
-                                        {clickedSatellite['citation'] ? (
-                                            <a href={clickedSatellite['citation']} target="_blank" rel="noopener noreferrer"
-                                               style={{color: '#fff'}}>
-                                                {clickedSatellite['citation']}
-                                            </a>
-                                        ) : '-'}
+                                        {renderTextWithClickableLinks(clickedSatellite['citation'])}
                                     </span>
                                 </Box>
                             </Box>
