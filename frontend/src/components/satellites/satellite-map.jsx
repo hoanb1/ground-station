@@ -51,6 +51,7 @@ import CoordinateGrid from "../common/mercator-grid.jsx";
 import createTerminatorLine from "../common/terminator-line.jsx";
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import {getSatelliteCoverageCircle} from "../common/tracking-logic.jsx";
+import {useSelector} from "react-redux";
 
 // global leaflet map object
 let MapObject = null;
@@ -83,8 +84,7 @@ const SatelliteMapContainer = ({ satelliteData }) => {
         orbitProjectionDuration: 90, // minutes
     };
 
-    // Default location (you can make this a prop)
-    const location = { lat: 37.7749, lon: -122.4194 }; // San Francisco
+    const {location} = useSelector(state => state.location);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
         setMapZoomLevel(zoomLevel);

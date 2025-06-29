@@ -29,7 +29,6 @@ import {
 } from '@mui/material';
 import {MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMapEvents} from 'react-leaflet';
 import Grid from '@mui/material/Grid2';
-import {SimpleVectorCircle, SimpleVectorCircleWhite} from '../common/icons.jsx';
 import { enqueueSnackbar } from 'notistack';
 import { useSocket } from '../common/socket.jsx';
 import { getMaidenhead } from '../common/common.jsx';
@@ -43,6 +42,16 @@ import {
     storeLocation
 } from './location-slice.jsx';
 import {getTileLayerById} from "../common/tile-layers.jsx";
+import 'leaflet/dist/leaflet.css';
+import L from 'leaflet';
+
+// Fix for default markers in react-leaflet
+delete L.Icon.Default.prototype._getIconUrl;
+L.Icon.Default.mergeOptions({
+    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
+    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
+    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
+});
 
 let MapObject = null;
 
@@ -103,7 +112,7 @@ const LocationPage = () => {
             clearInterval(intervalUpdate);
         };
     }, [location]);
-    
+
     const handleWhenReady = (map) => {
         // set global variable
         MapObject = map.target;
@@ -225,7 +234,7 @@ const LocationPage = () => {
                                 attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                             />
                             <MapClickHandler onClick={handleMapClick} />
-                            <Marker position={[location.lat, location.lon]}>
+                            <Marker position={location}>
                                 <Popup>Your Selected Location</Popup>
                             </Marker>
                             {polylines.map((polyline, index) => (
@@ -246,16 +255,16 @@ const LocationPage = () => {
                                 />
                             ))}
                             <Marker position={location}>
-                            <Circle
-                                center={location}
-                                radius={400000}
-                                pathOptions={{
-                                    color: 'white',
-                                    fillOpacity: 0,
-                                    weight: 1,
-                                    opacity: 0.8,
-                                }}
-                            />
+                                <Circle
+                                    center={location}
+                                    radius={400000}
+                                    pathOptions={{
+                                        color: 'white',
+                                        fillOpacity: 0,
+                                        weight: 1,
+                                        opacity: 0.8,
+                                    }}
+                                />
                             </Marker>
                         </MapContainer>
                     </Box>

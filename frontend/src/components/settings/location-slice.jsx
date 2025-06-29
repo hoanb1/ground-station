@@ -21,7 +21,7 @@
 
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
 import {enqueueSnackbar} from 'notistack';
-import {getMaidenhead} from '../common/common.jsx'; // or wherever it's defined
+import {getMaidenhead} from '../common/common.jsx';
 
 
 export const fetchLocationForUserId = createAsyncThunk(
