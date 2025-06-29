@@ -28,7 +28,7 @@ import AddHomeIcon from '@mui/icons-material/AddHome';
 import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-react";
 import {Alert, Avatar, Button, Checkbox} from "@mui/material";
 import {useEffect, useMemo, useState} from "react";
-import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo} from "./components/common/icons.jsx";
+import {GroundStationLogoGreenBlue, GroundStationTinyLogo, GSRetroLogo, TLEIcon} from "./components/common/icons.jsx";
 import RadioIcon from '@mui/icons-material/Radio';
 import SegmentIcon from '@mui/icons-material/Segment';
 import InfoIcon from '@mui/icons-material/Info';
@@ -196,7 +196,7 @@ export default function App(props) {
         {
             segment: 'satellites/tlesources',
             title: 'TLE sources',
-            icon: <SegmentIcon/>,
+            icon: <TLEIcon/>,
         },
         {
             segment: 'satellites/satellites',
