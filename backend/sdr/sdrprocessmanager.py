@@ -21,6 +21,7 @@ import signal
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.soapysdrremoteworker import soapysdr_remote_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
+from workers.uhdworker import uhd_worker_process
 
 
 def generate_room_name(client_id1, client_id2):
@@ -124,7 +125,8 @@ class SDRProcessManager:
         assert sdr_device['type'] in [
             'rtlsdrusbv3', 'rtlsdrtcpv3',
             'rtlsdrusbv4', 'rtlsdrtcpv4',
-            'soapysdrremote', 'soapysdrlocal'
+            'soapysdrremote', 'soapysdrlocal',
+            'uhd'
         ]
         assert sdr_device['id']
 
@@ -176,6 +178,12 @@ class SDRProcessManager:
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
             worker_process = soapysdr_local_worker_process
+
+        elif sdr_device['type'] == 'uhd':
+            connection_type = "uhd"
+            driver = "uhd"
+            serial_number = sdr_device['serial']
+            worker_process = uhd_worker_process
 
         # Check if a process for this device already exists
         if sdr_id in self.processes and self.processes[sdr_id]['process'].is_alive():
