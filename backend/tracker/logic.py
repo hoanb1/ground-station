@@ -144,7 +144,9 @@ def start_tracker_process():
         target=run_tracking_task,
         name="SatelliteTracker"
     )
-    tracker_proc.daemon = True  # Process will terminate when main process exits
+
+    # Process will terminate when main process exits
+    tracker_proc.daemon = True
     tracker_proc.start()
 
     logger.info(f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_proc.pid}")
@@ -180,7 +182,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
 
     satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
 
-    if satellite.get('success', False) is False:
+    if not satellite.get('success', False):
         raise Exception(f"No satellite found in the db for norad id {norad_id}")
 
     if len(satellite.get('data', [])) != 1:
@@ -202,7 +204,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     satellite_data['transmitters'] = transmitters['data']
 
     location = await crud.fetch_location_for_userid(dbsession, user_id=None)
-    if location.get('success', False) is False:
+    if not location.get('success', False):
         raise Exception(f"No location found in the db for user id None, please set one")
 
     # get current position
@@ -758,11 +760,8 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                             }
                         })
                     notified['azimuth_out_of_bounds'] = True
-                    #rotator_data['minelevation'] = False
                     rotator_data['outofbounds'] = True
                     rotator_data['stopped'] = True
-                    #rig_data['tracking'] = False
-                    #rig_data['tuning'] = False
 
                     #raise AzimuthOutOfBounds(f"azimuth {round(skypoint[0], 3)}° is out of range (range: {azimuthlimits})")
 
@@ -777,11 +776,8 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                             }
                         })
                     notified['elevation_out_of_bounds'] = True
-                    #rotator_data['minelevation'] = False
                     rotator_data['outofbounds'] = True
                     rotator_data['stopped'] = True
-                    #rig_data['tracking'] = False
-                    #rig_data['tuning'] = False
 
                     #raise ElevationOutOfBounds(f"elevation {round(skypoint[1], 3)}° is out of range (range: {eleveationlimits})")
 
@@ -797,10 +793,7 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                         })
                     notified['minelevation_error'] = True
                     rotator_data['minelevation'] = True
-                    #rotator_data['outofbounds'] = False
                     rotator_data['stopped'] = True
-                    #rig_data['tracking'] = False
-                    #rig_data['tuning'] = False
 
                     #raise MinimumElevationError(f"target has not reached minimum elevation {minelevation}° degrees")
 
