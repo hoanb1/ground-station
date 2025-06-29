@@ -61,6 +61,8 @@ import {useDispatch, useSelector} from "react-redux";
 import { AudioProvider, useAudio } from "./components/dashboard/dashboard-audio.jsx";
 import { setUITrackerValues } from "./components/target/target-sat-slice.jsx";
 import { setSynchronizing } from "./components/satellites/synchronize-slice.jsx";
+import VideocamIcon from '@mui/icons-material/Videocam';
+
 
 const BRANDING = {
     logo: (
@@ -181,7 +183,7 @@ export default function App(props) {
         {
             segment: 'hardware/cameras',
             title: 'Cameras',
-            icon: <CameraIcon/>,
+            icon: <VideocamIcon/>,
         },
         {
             segment: 'hardware/sdrs',
