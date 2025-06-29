@@ -18,7 +18,6 @@
  */
 
 
-
 import React, { useEffect } from 'react';
 import {
     Box,
@@ -43,7 +42,7 @@ import {
     setLocationLoading,
     storeLocation
 } from './location-slice.jsx';
-import {getTileLayerById} from "../common/tile-layers.jsx"; // or correct path
+import {getTileLayerById} from "../common/tile-layers.jsx";
 
 let MapObject = null;
 
@@ -130,7 +129,6 @@ const LocationPage = () => {
                     variant: 'success',
                 });
                 const { latitude, longitude } = position.coords;
-                console.info("getCurrentLocation", latitude, longitude);
                 dispatch(setLocation({ lat: latitude, lon: longitude }));
                 dispatch(setQth(getMaidenhead(latitude, longitude)));
                 reCenterMap(latitude, longitude);
@@ -191,10 +189,8 @@ const LocationPage = () => {
                                     loading={locationLoading}
                                     onClick={async () => {
                                         try {
-
                                             await getCurrentLocation();
                                         } catch (error) {
-                                            console.error(error.message);
                                             enqueueSnackbar('Failed to get current location', {
                                                 variant: 'error',
                                             });
@@ -252,7 +248,7 @@ const LocationPage = () => {
                             <Marker position={location}>
                             <Circle
                                 center={location}
-                                radius={400000} // Radius in meters (e.g., 100 km in this case)
+                                radius={400000}
                                 pathOptions={{
                                     color: 'white',
                                     fillOpacity: 0,
@@ -260,7 +256,6 @@ const LocationPage = () => {
                                     opacity: 0.8,
                                 }}
                             />
-                                
                             </Marker>
                         </MapContainer>
                     </Box>
