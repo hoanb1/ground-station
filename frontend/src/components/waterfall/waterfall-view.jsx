@@ -104,7 +104,7 @@ import {
     setVfoInactive,
     setVfoActive,
 } from './waterfall-slice.jsx';
-
+import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from "../common/icons.jsx";
 import {enqueueSnackbar} from "notistack";
 import { useStore } from 'react-redux';
 import {v4 as uuidv4} from 'uuid';
@@ -755,12 +755,12 @@ const MainWaterfallDisplay = React.memo(() => {
                                     fontFamily: "Monospace",
                                     fontWeight: "bold",
                                     color: vfoColors[0],
-                                    backgroundColor: vfoActive[1] ? `rgba(255,0,0,0.1)` : 'transparent',
+                                    backgroundColor: vfoActive[1] ? `rgba(255, 0, 0, 0.1)` : 'transparent',
                                     '&:hover': {
-                                        backgroundColor: vfoActive[1] ? `rgba(255,0,0,0.2)` : 'rgba(0,0,0,0.1)'
+                                        backgroundColor: vfoActive[1] ? `rgba(255, 0, 0, 0.2)` : 'rgba(0,0,0,0.1)'
                                     },
                                     '& .MuiTouchRipple-root': {
-                                        border: vfoActive[1] ? '1px solid': 'none',
+                                        border: vfoActive[1] ? '1px solid' : 'none',
                                         borderColor: '#ff0000',
                                     },
                                 }}
@@ -774,7 +774,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 color={vfoActive[1] ? "warning" : "primary"}
                                 title="Toggle VFO 1"
                             >
-                                1
+                                <VFO1Icon/>
                             </IconButton>
 
                             <IconButton
@@ -804,7 +804,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 color={vfoActive[2] ? "warning" : "primary"}
                                 title="Toggle VFO 2"
                             >
-                                2
+                                <VFO2Icon/>
                             </IconButton>
 
                             <IconButton
@@ -834,7 +834,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 color={vfoActive[3] ? "warning" : "primary"}
                                 title="Toggle VFO 3"
                             >
-                                3
+                                <VFO3Icon/>
                             </IconButton>
 
                             <IconButton
@@ -864,7 +864,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 color={vfoActive[4] ? "warning" : "primary"}
                                 title="Toggle VFO 4"
                             >
-                                4
+                                <VFO4Icon/>
                             </IconButton>
                             <IconButton
                                 sx={{

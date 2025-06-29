@@ -1,6 +1,9 @@
+
 import React, { useState, useEffect } from 'react';
-import { Box, Button, Typography, Paper } from '@mui/material';
+import { Box, Button, Typography, Paper, IconButton } from '@mui/material';
+import { useNavigate } from 'react-router-dom';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
+import InfoIcon from '@mui/icons-material/Info';
 
 const SatelliteTrackSuggestion = ({
                                       selectedSatelliteId,
@@ -8,10 +11,15 @@ const SatelliteTrackSuggestion = ({
                                       selectedSatellite,
                                       handleSetTrackingOnBackend
                                   }) => {
+    const navigate = useNavigate();
 
     if (!selectedSatellite) {
         return null;
     }
+
+    const handleNavigateToSatellite = () => {
+        navigate(`/satellite/${selectedSatelliteId}`);
+    };
 
     return (
         <Paper
@@ -22,7 +30,7 @@ const SatelliteTrackSuggestion = ({
                 left: 10,
                 zIndex: 1000,
                 padding: 2,
-                maxWidth: 250,
+                maxWidth: 300,
                 backgroundColor: 'rgba(25, 25, 25, 0.8)',
                 backdropFilter: 'blur(5px)',
                 borderRadius: 2,
@@ -35,23 +43,42 @@ const SatelliteTrackSuggestion = ({
                     {trackingSatelliteId === selectedSatelliteId ? 'Already tracking this satellite' : `Start tracking ${selectedSatellite['name'] || 'this satellite'}?`}
                 </Typography>
 
-                <Button
-                    disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
-                    variant="contained"
-                    color="primary"
-                    startIcon={<TrackChangesIcon />}
-                    onClick={() => {
-                        handleSetTrackingOnBackend(selectedSatelliteId);
-                    }}
-                    sx={{
-                        fontWeight: 'bold',
-                        '&:hover': {
-                            backgroundColor: '#00796b',
-                        }
-                    }}
-                >
-                    Track Satellite
-                </Button>
+                <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                    <Button
+                        disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
+                        variant="contained"
+                        color="primary"
+                        startIcon={<TrackChangesIcon />}
+                        onClick={() => {
+                            handleSetTrackingOnBackend(selectedSatelliteId);
+                        }}
+                        sx={{
+                            fontWeight: 'bold',
+                            flex: 1,
+                            '&:hover': {
+                                backgroundColor: '#00796b',
+                            }
+                        }}
+                        title={"Start tracking " + (selectedSatellite['name'] || "this satellite") + " with the rotator and rig"}
+                    >
+                        Track Satellite
+                    </Button>
+
+                    <IconButton
+                        onClick={handleNavigateToSatellite}
+                        sx={{
+                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                            color: '#fff',
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                            }
+                        }}
+                        size="small"
+                        title="View satellite details"
+                    >
+                        <InfoIcon/>
+                    </IconButton>
+                </Box>
             </Box>
         </Paper>
     );

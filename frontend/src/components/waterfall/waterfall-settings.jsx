@@ -776,7 +776,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             }}
                         >
                             {[0, 1, 2, 3].map((index) => (
-                                <Tab key={index} label={`${index + 1}`} sx={{
+                                <Tab key={index} label={`VFO ${index + 1}`} sx={{
                                     minWidth: '25%',
                                     backgroundColor: `${vfoColors[index]}40`, // CC = 80% opacity (204/255)
                                 }}/>
