@@ -106,6 +106,7 @@ class SDRType(str, PyEnum):
     RTLSDRTCPV4 = "rtlsdrtcpv4"
     SOAPYSDRLOCAL = "soapysdrlocal"
     SOAPYSDRREMOTE = "soapysdrremote"
+    UHD = "uhd"
 
 class Satellites(Base):
     __tablename__ = 'satellites'

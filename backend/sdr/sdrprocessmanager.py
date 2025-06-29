@@ -23,6 +23,13 @@ from workers.soapysdrremoteworker import soapysdr_remote_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
 from workers.uhdworker import uhd_worker_process
 
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
 
 def generate_room_name(client_id1, client_id2):
     """
@@ -37,6 +44,29 @@ def generate_room_name(client_id1, client_id2):
         str: A unique, consistent room name for these two clients
     """
     return "_".join(sorted([client_id1, client_id2]))
+
+
+def create_named_worker_process(worker_func, process_name, *args):
+    """
+    Wrapper function to create a named worker process
+    
+    Args:
+        worker_func: The actual worker function to run
+        process_name: Name to assign to the process  
+        *args: Arguments to pass to the worker function
+    """
+    def named_worker(*args):
+        # Set process title if available
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle(process_name)
+        
+        # Set multiprocessing process name
+        multiprocessing.current_process().name = process_name
+        
+        # Call the actual worker function
+        worker_func(*args)
+    
+    return named_worker
 
 
 class SDRProcessManager:
@@ -115,9 +145,6 @@ class SDRProcessManager:
 
         Returns:
             The device ID for the started process
-            :param client_id:
-            :param sdr_device:
-            :param sdr_config:
         """
 
         assert self.sio is not None, ("Socket.IO server instance not set when setting up SDR process manager."
@@ -136,12 +163,14 @@ class SDRProcessManager:
         port = None
         driver = None
         worker_process = None
+        process_name = None
 
         if sdr_device['type'] == 'rtlsdrusbv3':
             serial_number = sdr_device['serial']
             connection_type = "usb"
             driver = None
             worker_process = rtlsdr_worker_process
+            process_name = f"RTL-SDR-USB-v3-{sdr_id}"
 
         elif sdr_device['type'] == 'rtlsdrtcpv3':
             hostname = sdr_device['host']
@@ -150,12 +179,14 @@ class SDRProcessManager:
             connection_type = "tcp"
             driver = None
             worker_process = rtlsdr_worker_process
+            process_name = f"RTL-SDR-TCP-v3-{sdr_id}"
 
         elif sdr_device['type'] == 'rtlsdrusbv4':
             serial_number = sdr_device['serial']
             connection_type = "usb"
             driver = None
             worker_process = rtlsdr_worker_process
+            process_name = f"RTL-SDR-USB-v4-{sdr_id}"
 
         elif sdr_device['type'] == 'rtlsdrtcpv4':
             hostname = sdr_device['host']
@@ -164,6 +195,7 @@ class SDRProcessManager:
             connection_type = "tcp"
             driver = None
             worker_process = rtlsdr_worker_process
+            process_name = f"RTL-SDR-TCP-v4-{sdr_id}"
 
         elif sdr_device['type'] == 'soapysdrremote':
             hostname = sdr_device['host']
@@ -172,18 +204,21 @@ class SDRProcessManager:
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
             worker_process = soapysdr_remote_worker_process
+            process_name = f"SoapySDR-Remote-{sdr_id}"
 
         elif sdr_device['type'] == 'soapysdrlocal':
             connection_type = "soapysdrlocal"
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
             worker_process = soapysdr_local_worker_process
+            process_name = f"SoapySDR-Local-{sdr_id}"
 
         elif sdr_device['type'] == 'uhd':
             connection_type = "uhd"
             driver = "uhd"
             serial_number = sdr_device['serial']
             worker_process = uhd_worker_process
+            process_name = f"UHD-Worker-{sdr_id}"
 
         # Check if a process for this device already exists
         if sdr_id in self.processes and self.processes[sdr_id]['process'].is_alive():
@@ -248,15 +283,19 @@ class SDRProcessManager:
             if not worker_process:
                 raise Exception(f"Worker process {worker_process} for SDR id: {sdr_id} not found")
 
-            # Create and start the process
+            # Create named worker function
+            named_worker = create_named_worker_process(worker_process, process_name)
+
+            # Create and start the process with a descriptive name
             process = multiprocessing.Process(
-                target=worker_process,
+                target=named_worker,
                 args=(config_queue, data_queue, stop_event),
+                name=process_name,
                 daemon=True
             )
             process.start()
 
-            self.logger.info(f"Started SDR process for device {sdr_id} (PID: {process.pid})")
+            self.logger.info(f"Started SDR process '{process_name}' for device {sdr_id} (PID: {process.pid})")
 
             # Store process information
             self.processes[sdr_id] = {

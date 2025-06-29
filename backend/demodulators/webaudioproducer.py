@@ -7,7 +7,7 @@ from vfos.state import VFOManager
 
 class WebAudioProducer(threading.Thread):
     def __init__(self, audio_queue):
-        super().__init__(daemon=True)
+        super().__init__(daemon=True, name="WebAudioProducer")
         self.audio_queue = audio_queue
         self.sample_rate = 44100
         self.chunk_size = 4096  # Increased from 1024 to 4096 (about 93ms)

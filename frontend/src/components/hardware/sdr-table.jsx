@@ -123,8 +123,19 @@ const sdrTypeFields = {
             driver: '',
             serial: ''
         }
+    },
+    uhd: {
+        excludeFields: ['host', 'port', 'driver'],
+        fields: ['name', 'frequency_min', 'frequency_max', 'serial'],
+        defaults: {
+            name: 'UHD Device',
+            frequency_min: 10,
+            frequency_max: 6000,
+            serial: ''
+        }
     }
 };
+
 
 export default function SDRsPage() {
     const {socket} = useSocket();
@@ -288,6 +299,7 @@ export default function SDRsPage() {
                     <MenuItem value="rtlsdrtcpv4">RTL-SDR TCP v4</MenuItem>
                     <MenuItem value="soapysdrremote">SoapySDR Remote</MenuItem>
                     <MenuItem value="soapysdrlocal">SoapySDR USB</MenuItem>
+                    <MenuItem value="uhd">UHD</MenuItem>
                 </Select>
             </FormControl>
         ];

@@ -22,16 +22,6 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32, SOAPY_SDR_TX
 import yaml
 import os
 
-"""
-Example input:
-
-{'id': 'faf61065-2f90-43e4-a541-e89c28ddb37e', 'name': 'LimeSDR Mini [USB 2.0] 1D393786C41058',
- 'serial': '1D393786C41058', 'host': None, 'port': None, 'type': 'soapysdrlocal', 'driver': 'lime',
- 'frequency_range': {'min': 24, 'max': 1800}, 'added': '2025-05-08T20:04:54.432736+00:00',
- 'updated': '2025-05-08T20:04:54.432761+00:00'}
-
-"""
-
 
 # Load logger configuration
 with open(os.path.join(os.path.dirname(__file__), '../logconfig.yaml'), 'r') as f:

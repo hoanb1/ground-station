@@ -40,7 +40,7 @@ from typing import Optional, Dict
 from sdr.utils import cleanup_sdr_session
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
-from tracker.logic import tracker_process, queue_to_tracker, queue_from_tracker, stop_event
+from tracker.logic import start_tracker_process
 
 
 # Show NumPy configuration
@@ -74,13 +74,11 @@ active_connections: Dict[str, WebSocket] = {}
 # hold a list of sessions
 SESSIONS = {}
 
-# Create a session factory
-AsyncSessionLocal = sessionmaker(
-    bind=engine,
-    expire_on_commit=False,
-    class_=AsyncSession
-)
-
+# Add these global variables
+tracker_process = None
+queue_to_tracker = None
+queue_from_tracker = None
+tracker_stop_event = None
 
 async def run_discover_soapy():
     while True:
@@ -95,7 +93,10 @@ async def lifespan(fastapiapp: FastAPI):
     Create and cleanup background tasks or other
     resources in this context manager.
     """
-    global audio_producer, audio_consumer
+    global audio_producer, audio_consumer, tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event
+
+    # Start the tracker process here
+    tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event = start_tracker_process()
 
     # Get the current event loop
     event_loop = asyncio.get_event_loop()
@@ -136,12 +137,12 @@ async def lifespan(fastapiapp: FastAPI):
             except asyncio.CancelledError:
                 pass
 
-        # Cancel the separate process tracker, used for satellite tracking
-        try:
-            # Stop the tracker process
-            stop_tracker()
-        except asyncio.CancelledError:
-            pass
+        # Stop the tracker process
+        if tracker_process and tracker_process.is_alive():
+            try:
+                stop_tracker()
+            except Exception as e:
+                logger.error(f"Error stopping tracker: {e}")
 
 
 # Create an asynchronous Socket.IO server using ASGI mode.
@@ -169,34 +170,53 @@ app.add_middleware(
 # Feed in the Socket.IO server instance to the SDR process manager
 sdr_process_manager.set_sio(sio)
 
-# Start the tracker process
-#tracker_process, queue_to_tracker, queue_from_tracker, stop_event = start_tracker_process()
-
 def stop_tracker():
     """
     Send a command to the tracker process to stop it.
+
     """
-    stop_event.set()
+    global tracker_stop_event, queue_to_tracker, tracker_process
 
-    # Send a stop command through the queue as well
-    queue_to_tracker.put({'command': 'stop'})
+    if tracker_stop_event is None or queue_to_tracker is None or tracker_process is None:
+        logger.warning("Tracker components not initialized, cannot stop")
+        return
 
-    # Wait for the process to terminate
-    tracker_process.join(timeout=5)
+    logger.info("Stopping tracker process...")
 
-    # Force terminate if it's still running
-    if tracker_process.is_alive():
-        logger.warning("Tracker process didn't terminate gracefully, forcing termination")
-        tracker_process.terminate()
+    try:
+        # Set the stop event
+        tracker_stop_event.set()
+
+        # Send a stop command through the queue as well
+        queue_to_tracker.put({'command': 'stop'})
+
+        # Wait for the process to terminate
+        tracker_process.join(timeout=5)
+
+        # Force terminate if it's still running
+        if tracker_process.is_alive():
+            logger.warning("Tracker process didn't terminate gracefully, forcing termination")
+            tracker_process.terminate()
+            tracker_process.join(timeout=2)  # Give it a bit more time
+
+        logger.info("Tracker process stopped successfully")
+
+    except Exception as e:
+        logger.error(f"Error during tracker shutdown: {e}")
+        # Force terminate as last resort
+        if tracker_process and tracker_process.is_alive():
+            tracker_process.terminate()
 
 
 async def handle_tracker_messages(sockio):
     """
     Continuously checks for messages from the tracker process and forwards them to Socket.IO
     """
+    global queue_from_tracker
+
     while True:
         try:
-            if not queue_from_tracker.empty():
+            if queue_from_tracker is not None and not queue_from_tracker.empty():
                 message = queue_from_tracker.get_nowait()
                 event = message.get('event')
                 data = message.get('data', {})
@@ -222,7 +242,7 @@ async def connect(sid, environ, auth=None):
 
 @sio.on('disconnect')
 async def disconnect(sid, environ):
-    logger.info(f'Client {sid} from {SESSIONS[sid]['REMOTE_ADDR']} disconnected')
+    logger.info(f'Client {sid} from {SESSIONS[sid]["REMOTE_ADDR"]} disconnected')
     del SESSIONS[sid]
 
     # clean up any SDR sessions
@@ -248,10 +268,10 @@ async def handle_frontend_data_submissions(sid, cmd, data=None):
 
 @sio.on('auth_request')
 async def handle_frontend_auth_requests(sid, cmd, data):
-    logger.info(f'Received authentication event from client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}: {data}')
+    logger.info(f'Received authentication event from client {sid} with IP {SESSIONS[sid]["REMOTE_ADDR"]}: {data}')
     reply = await auth_request_routing(sio, cmd, data, logger, sid)
 
-    logger.info(f'Replying to authentication event from client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}: {reply}')
+    logger.info(f'Replying to authentication event from client {sid} with IP {SESSIONS[sid]["REMOTE_ADDR"]}: {reply}')
     return {'success': reply['success'], 'token': reply['token'], 'user': reply['user']}
 
 @app.post("/api/webrtc/offer")
@@ -365,4 +385,3 @@ if __name__ == "__main__":
         logger.error(f"Error starting Ground Station server: {str(e)}")
         logger.exception(e)
         sys.exit(1)
-

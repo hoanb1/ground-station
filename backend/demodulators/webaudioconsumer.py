@@ -14,7 +14,7 @@ logger = logging.getLogger('audio-consumer')
 
 class WebAudioConsumer(threading.Thread):
     def __init__(self, audio_queue, sio, loop):
-        super().__init__(daemon=True)
+        super().__init__(daemon=True, name="WebAudioConsumer")
         self.audio_queue = audio_queue
         self.sio = sio
         self.loop = loop  # Pass the main event loop

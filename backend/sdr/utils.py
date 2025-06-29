@@ -15,8 +15,6 @@
 
 
 import logging
-import socketio
-import rtlsdr
 import crud
 import asyncio
 import json
@@ -129,6 +127,7 @@ async def get_local_soapy_sdr_devices():
     return reply
 
 
+
 async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
     """Retrieve SDR parameters from the SDR process manager with caching"""
 
@@ -239,6 +238,59 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 'fft_window_values': window_function_names,
                 'has_soapy_agc': sdr_params['has_soapy_agc'],
                 'antennas': sdr_params['antennas'],
+            }
+
+            # Cache the parameters
+            sdr_parameters_cache[sdr_id] = params
+            reply = {'success': True, 'data': params}
+
+        elif sdr.get('type') in ['uhd']:
+            logger.info(f'Getting SDR parameters from UHD/USRP for SDR: {sdr}')
+
+            # Get SDR parameters from UHD/USRP in a separate process
+            probe_process = await asyncio.create_subprocess_exec(
+                'python3', '-c',
+                f'from workers.uhdprobe import probe_uhd_usrp; print(probe_uhd_usrp({sdr}))',
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE
+            )
+
+            try:
+                stdout, stderr = await asyncio.wait_for(probe_process.communicate(), timeout=timeout)
+
+                if probe_process.returncode != 0:
+                    error_output = stderr.decode().strip()
+                    raise Exception(f"UHD probe process failed: {error_output}")
+
+            except asyncio.TimeoutError:
+                probe_process.kill()
+                raise TimeoutError('Timed out while getting SDR parameters from UHD/USRP')
+
+            sdr_params_reply = eval(stdout.decode().strip())
+
+            if sdr_params_reply['success'] is False:
+                logger.error(sdr_params_reply)
+                raise Exception(sdr_params_reply['error'])
+
+            sdr_params = sdr_params_reply['data']
+
+            logger.debug(f'Got SDR parameters from UHD/USRP: {sdr_params}')
+
+            # Common window functions
+            window_function_names = list(window_functions.keys())
+
+            # Common FFT sizes
+            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
+
+            params = {
+                'gain_values': sdr_params['gains'],
+                'sample_rate_values': [rate for rate in sdr_params['rates'] if rate >= 100000],
+                'fft_size_values': fft_size_values,
+                'fft_window_values': window_function_names,
+                'has_uhd_agc': sdr_params.get('has_uhd_agc', False),
+                'antennas': sdr_params['antennas'],
+                'frequency_ranges': sdr_params.get('frequency_ranges', {}),
+                'clock_info': sdr_params.get('clock_info', {}),
             }
 
             # Cache the parameters

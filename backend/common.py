@@ -26,7 +26,6 @@ from skyfield.api import EarthSatellite, load, wgs84
 from datetime import datetime, UTC
 
 
-
 class ModelEncoder(json.JSONEncoder):
     def default(self, obj):
 
@@ -39,8 +38,18 @@ class ModelEncoder(json.JSONEncoder):
         if isinstance(obj, uuid.UUID):
             return str(obj)
 
-        if isinstance(obj, numpy.bool):
+        if isinstance(obj, bool):
             return bool(obj)
+
+        # Handle numpy types
+        if isinstance(obj, numpy.bool_):
+            return bool(obj)
+
+        if isinstance(obj, (numpy.integer, numpy.int_)):
+            return int(obj)
+
+        if isinstance(obj, (numpy.floating, numpy.float_)):
+            return float(obj)
 
         # Attempt to convert SQLAlchemy model objects
         # by reading their columns

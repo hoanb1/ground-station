@@ -15,6 +15,7 @@
 
 
 import multiprocessing
+import setproctitle
 import pprint
 import crud
 import asyncio
@@ -37,13 +38,6 @@ from tracking.satellite import get_satellite_position_from_tle, get_satellite_az
 
 logger = logging.getLogger("tracker-worker")
 
-
-# Create queues for bi-directional communication
-queue_to_tracker = multiprocessing.Queue()
-queue_from_tracker = multiprocessing.Queue()
-
-# Create a stop event to signal the process to terminate
-stop_event = multiprocessing.Event()
 
 def pretty_dict(d):
     # Create a string buffer and pretty print the dict to it
@@ -120,7 +114,12 @@ def start_tracker_process():
 
     # Define the process target function that will run the async tracking task
     def run_tracking_task():
-        import asyncio
+        # Set the process title for system monitoring tools
+        setproctitle.setproctitle("SatelliteTracker")
+
+        # Set the multiprocessing process name
+        multiprocessing.current_process().name = "SatelliteTracker"
+
         # Create a new event loop for this process
         loop = asyncio.new_event_loop()
         asyncio.set_event_loop(loop)
@@ -136,6 +135,10 @@ def start_tracker_process():
         finally:
             loop.close()
 
+    queue_to_tracker = multiprocessing.Queue()
+    queue_from_tracker = multiprocessing.Queue()
+    stop_event = multiprocessing.Event()
+
     # Create and start the process
     tracker_proc = multiprocessing.Process(
         target=run_tracking_task,
@@ -144,7 +147,7 @@ def start_tracker_process():
     tracker_proc.daemon = True  # Process will terminate when main process exits
     tracker_proc.start()
 
-    logger.info(f"Started satellite tracker process with PID {tracker_proc.pid}")
+    logger.info(f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_proc.pid}")
 
     return tracker_proc, queue_to_tracker, queue_from_tracker, stop_event
 
@@ -936,7 +939,3 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
                 logger.info(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
                             f"(already spent {round(loop_duration, 2)})...")
                 await asyncio.sleep(remaining_time_to_sleep)
-
-
-# Start the tracker process
-tracker_process, _, _, _ = start_tracker_process()
