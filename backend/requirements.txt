@@ -31,7 +31,6 @@ passlib==1.7.4
 propcache==0.3.1
 PyAudio==0.2.14
 pycparser==2.22
--e git+https://github.com/jketterl/pycsdr.git@041986e51f9b191021325f67b2387a47731a0fc7#egg=pycsdr
 pydantic==2.10.6
 pydantic_core==2.27.2
 PyJWT==2.10.1
