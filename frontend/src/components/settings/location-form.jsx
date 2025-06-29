@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -45,13 +46,60 @@ import {getTileLayerById} from "../common/tile-layers.jsx";
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 
-// Fix for default markers in react-leaflet
-delete L.Icon.Default.prototype._getIconUrl;
-L.Icon.Default.mergeOptions({
-    iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon-2x.png',
-    iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-icon.png',
-    shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
-});
+const createCustomIcon = () => {
+    // SVG marker with enhanced shadow as data URI
+    const svgIcon = `
+        <svg width="25" height="41" viewBox="0 0 25 41" xmlns="http://www.w3.org/2000/svg">
+            <defs>
+                <filter id="dropshadow" x="-50%" y="-50%" width="200%" height="200%">
+                    <feGaussianBlur in="SourceAlpha" stdDeviation="3"/>
+                    <feOffset dx="3" dy="5" result="offset"/>
+                    <feFlood flood-color="#000000" flood-opacity="0.6"/>
+                    <feComposite in2="offset" operator="in"/>
+                    <feMerge> 
+                        <feMergeNode/>
+                        <feMergeNode in="SourceGraphic"/> 
+                    </feMerge>
+                </filter>
+            </defs>
+            <path d="M12.5 0C5.597 0 0 5.597 0 12.5c0 12.5 12.5 28.5 12.5 28.5s12.5-16 12.5-28.5C25 5.597 19.403 0 12.5 0z" 
+                  fill="#3388ff" 
+                  filter="url(#dropshadow)"/>
+            <circle cx="12.5" cy="12.5" r="5" fill="white"/>
+        </svg>
+    `;
+
+    return L.icon({
+        iconUrl: `data:image/svg+xml;base64,${btoa(svgIcon)}`,
+        iconSize: [25, 41],
+        iconAnchor: [12, 41],
+        popupAnchor: [1, -34],
+        shadowUrl: null,
+        shadowSize: null,
+        shadowAnchor: null
+    });
+};
+
+// Try multiple fallback approaches for marker icons
+const setupMarkerIcons = () => {
+    try {
+        // First attempt: Use CDN with fallback
+        delete L.Icon.Default.prototype._getIconUrl;
+        L.Icon.Default.mergeOptions({
+            iconRetinaUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon-2x.png',
+            iconUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-icon.png',
+            shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.9.4/images/marker-shadow.png',
+        });
+    } catch (error) {
+        console.warn('Failed to set up default marker icons:', error);
+    }
+};
+
+// Initialize marker icons
+setupMarkerIcons();
+
+// Custom icon instance with shadow - you can choose between the two approaches
+const customIcon = createCustomIcon(); // Integrated shadow
 
 let MapObject = null;
 
@@ -234,7 +282,7 @@ const LocationPage = () => {
                                 attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
                             />
                             <MapClickHandler onClick={handleMapClick} />
-                            <Marker position={location}>
+                            <Marker position={location} icon={customIcon}>
                                 <Popup>Your Selected Location</Popup>
                             </Marker>
                             {polylines.map((polyline, index) => (
@@ -254,18 +302,17 @@ const LocationPage = () => {
                                     weight={1}
                                 />
                             ))}
-                            <Marker position={location}>
-                                <Circle
-                                    center={location}
-                                    radius={400000}
-                                    pathOptions={{
-                                        color: 'white',
-                                        fillOpacity: 0,
-                                        weight: 1,
-                                        opacity: 0.8,
-                                    }}
-                                />
-                            </Marker>
+                            <Circle
+                                center={location}
+                                radius={400000}
+                                pathOptions={{
+                                    color: 'white',
+                                    fillOpacity: 0,
+                                    weight: 1,
+                                    opacity: 0.8,
+                                    dashArray: "2, 2",
+                                }}
+                            />
                         </MapContainer>
                     </Box>
                 </Grid>
