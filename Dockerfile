@@ -81,9 +81,6 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /src
 
-# instal python UHD
-RUN pip install uhd
-
 # compile SoapySDR
 RUN git clone https://github.com/pothosware/SoapySDR.git
 WORKDIR SoapySDR/
