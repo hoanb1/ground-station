@@ -66,6 +66,28 @@ const MaintenanceForm = () => {
         localStorage.setItem('persist:root', null);
     }
 
+    // Test transfer support once
+    React.useEffect(() => {
+        if (typeof document !== 'undefined') {
+            const testCanvas = document.createElement('canvas');
+            setOffscreenTransferSupported(typeof testCanvas.transferControlToOffscreen === 'function');
+        }
+    }, []);
+
+    // Auto-trigger all tests 1 second after component load
+    React.useEffect(() => {
+        const timer = setTimeout(() => {
+            // Trigger all 4 tests simultaneously
+            testWebWorkers();
+            testOffscreenCanvas();
+            testOffscreenCanvasInWorker();
+            testCanvasTransferToWorker();
+        }, 1000);
+
+        // Cleanup timer on component unmount
+        return () => clearTimeout(timer);
+    }, []);
+
     // Test functions
     const testWebWorkers = () => {
         setIsTestingWorkers(true);
@@ -403,7 +425,7 @@ const MaintenanceForm = () => {
                             disabled={isTestingWorkers}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingWorkers ? <CircularProgress size={24} /> : 'Test Workers'}
+                            {isTestingWorkers ? <CircularProgress size={24} /> : 'Test now'}
                         </Button>
                     </Grid>
 
@@ -441,7 +463,7 @@ const MaintenanceForm = () => {
                             disabled={isTestingOffscreen}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingOffscreen ? <CircularProgress size={24} /> : 'Test OffscreenCanvas'}
+                            {isTestingOffscreen ? <CircularProgress size={24} /> : 'Test now'}
                         </Button>
                     </Grid>
 
@@ -493,7 +515,7 @@ const MaintenanceForm = () => {
                             disabled={isTestingOffscreenInWorker}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingOffscreenInWorker ? <CircularProgress size={24} /> : 'Test in Worker'}
+                            {isTestingOffscreenInWorker ? <CircularProgress size={24} /> : 'Test now'}
                         </Button>
                     </Grid>
 
@@ -531,7 +553,7 @@ const MaintenanceForm = () => {
                             disabled={isTestingCanvasTransfer}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingCanvasTransfer ? <CircularProgress size={24} /> : 'Test Transfer'}
+                            {isTestingCanvasTransfer ? <CircularProgress size={24} /> : 'Test now'}
                         </Button>
                     </Grid>
 

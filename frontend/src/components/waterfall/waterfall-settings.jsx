@@ -447,6 +447,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 size={"small"}
                             />
                         </Box>
+
                         <FormControl disabled={false}
                                      sx={{minWidth: 200, marginTop: 1, marginBottom: 0}} fullWidth variant="filled"
                                      size="small">
@@ -466,7 +467,22 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 </MenuItem>
                                 {availableTransmitters.map((transmitter, index) => {
                                     return <MenuItem value={transmitter.id} key={transmitter.id}>
-                                        {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Box
+                                                sx={{
+                                                    width: 8,
+                                                    height: 8,
+                                                    borderRadius: '50%',
+                                                    backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                    boxShadow: transmitter.alive
+                                                        ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                        : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                                }}
+                                            />
+                                            <span>
+                                                {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
+                                            </span>
+                                        </Box>
                                     </MenuItem>;
                                 })}
                             </Select>
