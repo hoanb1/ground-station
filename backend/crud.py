@@ -1079,11 +1079,14 @@ async def fetch_transmitters_for_satellite(session: AsyncSession, norad_id: int)
         return {"success": False, "error": str(e)}
 
 
-async def fetch_transmitter(session: AsyncSession, transmitter_id: uuid.UUID) -> dict:
+async def fetch_transmitter(session: AsyncSession, transmitter_id: Union[uuid.UUID, str]) -> dict:
     """
-    Fetch a single transmitter record by its UUID.
+    Fetch a single transmitter record by its UUID or string representation.
     """
     try:
+        if isinstance(transmitter_id, str):
+            transmitter_id = uuid.UUID(transmitter_id)
+
         stmt = select(Transmitters).filter(Transmitters.id == transmitter_id)
         result = await session.execute(stmt)
         transmitter = result.scalar_one_or_none()

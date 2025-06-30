@@ -148,6 +148,10 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
         try:
             # Get home location
             home = await crud.fetch_location_for_userid(dbsession, user_id=None)
+
+            if home['data'] is None:
+                raise Exception("No home location found in the database")
+
             homelat = float(home['data']['lat'])
             homelon = float(home['data']['lon'])
 

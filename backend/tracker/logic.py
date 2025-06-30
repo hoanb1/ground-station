@@ -15,26 +15,18 @@
 
 
 import multiprocessing
-import setproctitle
-import queue
-import pprint
 import crud
 import asyncio
 from io import StringIO
 from datetime import UTC
 import logging
-from common import is_geostationary, serialize_object
 from db.__init__ import AsyncSessionLocal
 from controllers.rotator import RotatorController
 from controllers.rig import RigController
 from controllers.sdr import SDRController
 from arguments import arguments as args
-from tracker.state import StateTracker
 from datetime import datetime
-from typing import Union
-from tracking.footprint import get_satellite_coverage_circle
 from tracking.doppler import calculate_doppler_shift
-from tracking.satellite import get_satellite_position_from_tle, get_satellite_az_el, get_satellite_path
 from tracker.utils import pretty_dict
 from tracker.data import compiled_satellite_data
 
@@ -98,6 +90,12 @@ class SatelliteTracker:
         self.prev_rig_state = None
         self.prev_transmitter_id = None
         self.prev_rig_id = None
+
+        # Events to send the UI
+        self.events = []
+
+        # Performance monitoring
+        self.start_loop_date = None
 
     def in_tracking_state(self) -> bool:
         """Check if rotator is currently in tracking state."""
@@ -257,7 +255,7 @@ class SatelliteTracker:
         if self.current_rig_id is not None and self.rig_controller is None:
             try:
                 async with AsyncSessionLocal() as dbsession:
-                    # Try hardware rig first
+                    # Try the hardware rig first
                     rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=self.current_rig_id)
 
                     if rig_details_reply.get('data') is not None:
@@ -419,7 +417,7 @@ class SatelliteTracker:
                 cmd_type = command.get('command')
                 if cmd_type == 'stop':
                     logger.info("Received stop command, exiting tracking task")
-                    return True  # Signal to stop
+                    return True
                 elif cmd_type == 'nudge_clockwise':
                     self.nudge_offset['az'] += 2
                 elif cmd_type == 'nudge_counter_clockwise':
@@ -524,7 +522,8 @@ class SatelliteTracker:
         """Handle transmitter selection and doppler calculation."""
         if self.current_transmitter_id != "none":
             async with AsyncSessionLocal() as dbsession:
-                current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=self.current_transmitter_id)
+                current_transmitter_reply = await crud.fetch_transmitter(dbsession,
+                                                                         transmitter_id=self.current_transmitter_id)
                 current_transmitter = current_transmitter_reply.get('data', {})
 
             if current_transmitter:
@@ -622,19 +621,23 @@ class SatelliteTracker:
                 break
 
             try:
-                start_loop_date = datetime.now(UTC)
-                events = []
+                self.start_loop_date = datetime.now(UTC)
+                self.events = []
 
                 # Get tracking data from database
                 async with AsyncSessionLocal() as dbsession:
+                    # Get tracking state from the db
                     tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
                     assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
 
+                    # Get a data dict that contains all the information for the target satellite
                     satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply['data']['value']['norad_id'])
                     satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
                     satellite_name = satellite_data['details']['name']
+
+                    # Fetch the location of the ground station
                     location_reply = await crud.fetch_location_for_userid(dbsession, user_id=None)
                     location = location_reply['data']
                     tracker = tracking_state_reply['data']['value']
@@ -687,7 +690,7 @@ class SatelliteTracker:
                         'event': 'satellite-tracking',
                         'data': {
                             'satellite_data': satellite_data,
-                            'events': events.copy(),
+                            'events': self.events.copy(),
                             'rotator_data': self.rotator_data.copy(),
                             'rig_data': self.rig_data.copy(),
                             'tracking_state': tracker.copy(),
@@ -701,8 +704,7 @@ class SatelliteTracker:
                     logger.exception(e)
 
                 # Calculate sleep time
-                end_loop_date = datetime.now(UTC)
-                loop_duration = round((end_loop_date - start_loop_date).total_seconds(), 2)
+                loop_duration = round((datetime.now(UTC) - self.start_loop_date).total_seconds(), 2)
 
                 if loop_duration > args.track_interval:
                     logger.warning(f"Single tracking loop iteration took longer ({loop_duration}) than the configured "
