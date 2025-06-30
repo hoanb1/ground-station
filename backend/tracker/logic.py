@@ -669,7 +669,7 @@ class SatelliteTracker:
                 self._check_position_limits(skypoint, satellite_name)
 
                 # Log valid target
-                logger.info(f"We have a valid target (#{self.current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°")
+                logger.debug(f"We have a valid target (#{self.current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°")
 
                 # Handle transmitter tracking
                 await self._handle_transmitter_tracking(satellite_tles, location)
@@ -721,8 +721,8 @@ class SatelliteTracker:
                     logger.info("Stop event detected, exiting tracking task")
                     break
 
-                logger.info(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
-                            f"(already spent {round(loop_duration, 2)})...")
+                logger.debug(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
+                             f"(already spent {round(loop_duration, 2)})...")
                 await asyncio.sleep(remaining_time_to_sleep)
 
 

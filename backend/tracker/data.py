@@ -232,7 +232,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
 
     # Check for cached items
     if cached_paths is not None:
-        logger.info(f"Using cached satellite paths for NORAD ID: {norad_id}")
+        logger.debug(f"Using cached satellite paths for NORAD ID: {norad_id}")
         satellite_data['paths'] = cached_paths
     else:
         logger.info(f"Computing new satellite paths for NORAD ID: {norad_id}")
