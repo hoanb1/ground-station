@@ -87,12 +87,13 @@ RUN make -j`nproc`
 RUN sudo make install
 RUN sudo ldconfig
 
-# Copy UHD Python bindings to virtual environment
-RUN cp -r /usr/local/lib/python3.12/site-packages/uhd* /app/venv/lib/python3.12/site-packages/ || true
-
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
+# Copy UHD Python bindings to virtual environment
+RUN cp -r /usr/local/lib/python3.12/site-packages/uhd* /app/venv/lib/python3.12/site-packages/ || true
+
+WORKDIR /app
 # Now pip will use the virtual environment
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
