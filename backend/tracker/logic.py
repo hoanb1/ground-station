@@ -16,6 +16,7 @@
 
 import multiprocessing
 import setproctitle
+import queue
 import pprint
 import crud
 import asyncio
@@ -28,224 +29,705 @@ from controllers.rotator import RotatorController
 from controllers.rig import RigController
 from controllers.sdr import SDRController
 from arguments import arguments as args
-from .state import StateTracker
+from tracker.state import StateTracker
 from datetime import datetime
 from typing import Union
 from tracking.footprint import get_satellite_coverage_circle
 from tracking.doppler import calculate_doppler_shift
 from tracking.satellite import get_satellite_position_from_tle, get_satellite_az_el, get_satellite_path
+from tracker.utils import pretty_dict
+from tracker.data import compiled_satellite_data
 
 
 logger = logging.getLogger("tracker-worker")
 
 
-def pretty_dict(d):
-    # Create a string buffer and pretty print the dict to it
-    output = StringIO()
-    pprint.pprint(d, stream=output)
-    # Get the string value and return it without the last newline
-    return output.getvalue().rstrip()
-
-
-async def get_ui_tracker_state(group_id: str, norad_id: int):
+class SatelliteTracker:
     """
-    Fetches the current tracker state for a specified group ID and satellite ID. This function
-    interacts with the tracking database using asynchronous functions to retrieve data related
-    to the specified identifiers. The response contains the success status and fetched data,
-    or an error on failure.
-
-    :param group_id: The unique identifier for the group whose satellites are to be fetched.
-    :type group_id: int
-    :param norad_id: The unique identifier for the satellite whose state is to be fetched.
-    :type norad_id: int
-    :return: A dictionary containing the success status and the tracker state data, or None
-        if the operation fails.
-    :rtype: dict
-    """
-    reply: dict[str, Union[bool, None, dict]] = {'success': False, 'data': None}
-
-    data = {
-        'groups': [],
-        'satellites': [],
-        'transmitters': [],
-        'group_id': None,
-        'norad_id': None,
-        'rotator_id': 'none',
-        'rig_id': 'none',
-        'transmitter_id': 'none'
-    }
-
-    try:
-        async with (AsyncSessionLocal() as dbsession):
-            groups = await crud.fetch_satellite_group(dbsession)
-            satellites = await crud.fetch_satellites_for_group_id(dbsession, group_id=group_id)
-            tracking_state = await crud.get_tracking_state(dbsession, name='satellite-tracking')
-            transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
-            data['groups'] = groups['data']
-            data['satellites'] = satellites['data']
-            data['group_id'] = group_id
-            data['norad_id'] = norad_id
-            data['rig_id'] = tracking_state['data']['value'].get('rig_id', "none")
-            data['rotator_id'] = tracking_state['data']['value'].get('rotator_id', "none")
-            data['transmitter_id'] = tracking_state['data']['value'].get('transmitter_id', "none")
-            data['transmitters'] = transmitters['data']
-            reply['success'] = True
-            reply['data'] = data
-
-    except Exception as e:
-        logger.error(f"Failed to get tracker state for group id: {group_id}, satellite id: {norad_id}, error: {e}")
-        logger.exception(e)
-
-    finally:
-        pass
-
-    return reply
-
-
-def start_tracker_process():
-    """
-    Starts the satellite tracking task in a separate process using multiprocessing.
-
-    This function creates the necessary queues for communication between the main process
-    and the tracker process, and handles the lifecycle of the tracker process.
-
-    :return: A tuple containing (process, queue_in, queue_out, stop_event)
+    Satellite tracking class that manages rotator and rig controllers
+    for automated satellite tracking in a multiprocessing environment.
     """
 
-    # Define the process target function that will run the async tracking task
-    def run_tracking_task():
-        # Set the process title for system monitoring tools
-        setproctitle.setproctitle("SatelliteTracker")
+    def __init__(self, queue_out: multiprocessing.Queue, queue_in: multiprocessing.Queue, stop_event=None):
+        """Initialize the satellite tracker with queues and configuration."""
+        # Store queue references
+        self.queue_out = queue_out
+        self.queue_in = queue_in
+        self.stop_event = stop_event
 
-        # Set the multiprocessing process name
-        multiprocessing.current_process().name = "SatelliteTracker"
+        # Configuration constants
+        self.azimuth_limits = (0, 360)
+        self.elevation_limits = (0, 90)
+        self.min_elevation = 10.0
+        self.az_tolerance = 2.0
+        self.el_tolerance = 2.0
 
-        # Create a new event loop for this process
-        loop = asyncio.new_event_loop()
-        asyncio.set_event_loop(loop)
+        # State tracking
+        self.current_rotator_id = "none"
+        self.current_rig_id = "none"
+        self.current_transmitter_id = "none"
+        self.current_rotator_state = "disconnected"
+        self.current_rig_state = "disconnected"
+        self.current_norad_id = None
+        self.current_group_id = None
+
+        # Hardware controllers
+        self.rotator_controller = None
+        self.rig_controller = None
+
+        # Data structures
+        self.rotator_data = {
+            'az': 0, 'el': 0, 'connected': False, 'tracking': False,
+            'slewing': False, 'outofbounds': False, 'minelevation': False,
+            'stopped': False, 'error': False
+        }
+        self.rig_data = {
+            'connected': False, 'tracking': False, 'stopped': False, 'error': False,
+            'frequency': 0, 'observed_freq': 0, 'doppler_shift': 0, 'original_freq': 0,
+            'transmitter_id': 'none', 'device_type': ''
+        }
+
+        # Operational state
+        self.notified = {}
+        self.nudge_offset = {'az': 0, 'el': 0}
+
+        # State change tracking (replacing StateTracker)
+        self.prev_norad_id = None
+        self.prev_rotator_state = None
+        self.prev_rotator_id = None
+        self.prev_rig_state = None
+        self.prev_transmitter_id = None
+        self.prev_rig_id = None
+
+    def in_tracking_state(self) -> bool:
+        """Check if rotator is currently in tracking state."""
+        return self.current_rotator_state == "tracking"
+
+    async def handle_satellite_change(self, old, new):
+        """Handle satellite target change events."""
+        logger.info(f"Target satellite change detected from '{old}' to '{new}'")
+
+        # Reset state
+        self.rotator_data['minelevation'] = False
+        self.notified = {}
+
+        # Notify about change
+        self.queue_out.put({
+            'event': 'satellite-tracking',
+            'data': {
+                'events': [{'name': "norad_id_change", 'old': old, 'new': new}]
+            }
+        })
+
+        # Update rig state in database
+        async with AsyncSessionLocal() as dbsession:
+            new_tracking_state = await crud.set_tracking_state(dbsession, {
+                'name': 'satellite-tracking',
+                'value': {'rig_state': "connected", 'transmitter_id': "none"}
+            })
+
+        # Update local state
+        self.rig_data['tracking'] = False
+        self.rig_data['stopped'] = True
+
+    async def connect_to_rotator(self):
+        """Connect to the rotator hardware."""
+        if self.current_rotator_id is not None and self.rotator_controller is None:
+            try:
+                async with AsyncSessionLocal() as dbsession:
+                    rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=self.current_rotator_id)
+                    rotator_details = rotator_details_reply['data']
+
+                self.rotator_controller = RotatorController(
+                    host=rotator_details['host'],
+                    port=rotator_details['port']
+                )
+                await self.rotator_controller.connect()
+
+                # Update state
+                self.rotator_data.update({
+                    'connected': True, 'tracking': False, 'slewing': False,
+                    'outofbounds': False, 'stopped': True
+                })
+
+                self.queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [{'name': "rotator_connected"}],
+                        'rotator_data': self.rotator_data.copy()
+                    }
+                })
+
+            except Exception as e:
+                logger.error(f"Failed to connect to rotator: {e}")
+                logger.exception(e)
+                await self._handle_rotator_error(e)
+
+    async def _handle_rotator_error(self, error):
+        """Handle rotator connection errors."""
+        self.rotator_data.update({
+            'connected': False, 'tracking': False, 'slewing': False,
+            'stopped': False, 'error': True
+        })
+
+        async with AsyncSessionLocal() as dbsession:
+            new_tracking_state = await crud.set_tracking_state(dbsession, {
+                'name': 'satellite-tracking',
+                'value': {'rotator_state': 'disconnected'}
+            })
+
+        self.queue_out.put({
+            'event': 'satellite-tracking',
+            'data': {
+                'events': [{'name': "rotator_error", "error": str(error)}],
+                'rotator_data': self.rotator_data.copy(),
+                'tracking_state': new_tracking_state['data']['value'],
+            }
+        })
+
+        self.rotator_controller = None
+
+    async def handle_rotator_state_change(self, old, new):
+        """Handle rotator state changes."""
+        logger.info(f"Rotator state change detected from '{old}' to '{new}'")
+
+        self.rotator_data['minelevation'] = False
+
+        if new == "connected":
+            await self.connect_to_rotator()
+        elif new == "tracking":
+            await self.connect_to_rotator()
+            self.rotator_data['tracking'] = True
+        elif new == "stopped":
+            self.rotator_data.update({'tracking': False, 'slewing': False, 'stopped': True})
+        elif new == "disconnected":
+            await self._disconnect_rotator()
+        elif new == "parked":
+            await self._park_rotator()
+        else:
+            logger.error(f"Unknown tracking state: {new}")
+
+    async def _disconnect_rotator(self):
+        """Disconnect from rotator."""
+        if self.rotator_controller is not None:
+            logger.info(f"Disconnecting from rotator at {self.rotator_controller.host}:{self.rotator_controller.port}...")
+            try:
+                await self.rotator_controller.disconnect()
+                self.rotator_data['connected'] = False
+                self.queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [{'name': "rotator_disconnected"}],
+                        'rotator_data': self.rotator_data.copy()
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Error disconnecting from rotator: {e}")
+                logger.exception(e)
+            finally:
+                self.rotator_controller = None
+
+    async def _park_rotator(self):
+        """Park the rotator."""
+        self.rotator_data.update({'tracking': False, 'slewing': False})
 
         try:
-            # Run the tracking task
-            loop.run_until_complete(
-                satellite_tracking_task(queue_from_tracker, queue_to_tracker, stop_event)
-            )
+            park_reply = await self.rotator_controller.park()
+            if park_reply:
+                self.rotator_data['parked'] = True
+                self.queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [{'name': "rotator_parked"}],
+                        'rotator_data': self.rotator_data.copy()
+                    }
+                })
+            else:
+                raise Exception("Failed to park rotator")
         except Exception as e:
-            logger.error(f"Error in tracker process: {e}")
+            logger.error(f"Failed to park rotator: {e}")
             logger.exception(e)
-        finally:
-            loop.close()
 
-    queue_to_tracker = multiprocessing.Queue()
-    queue_from_tracker = multiprocessing.Queue()
-    stop_event = multiprocessing.Event()
+    async def handle_rotator_id_change(self, old, new):
+        """Handle rotator ID changes."""
+        logger.info(f"Rotator ID change detected from '{old}' to '{new}'")
 
-    # Create and start the process
-    tracker_proc = multiprocessing.Process(
-        target=run_tracking_task,
-        name="SatelliteTracker"
-    )
+    async def connect_to_rig(self):
+        """Connect to rig hardware (radio or SDR)."""
+        if self.current_rig_id is not None and self.rig_controller is None:
+            try:
+                async with AsyncSessionLocal() as dbsession:
+                    # Try hardware rig first
+                    rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=self.current_rig_id)
 
-    # Process will terminate when main process exits
-    tracker_proc.daemon = True
-    tracker_proc.start()
+                    if rig_details_reply.get('data') is not None:
+                        rig_type = 'radio'
+                    else:
+                        # Try SDR
+                        rig_details_reply = await crud.fetch_sdr(dbsession, sdr_id=self.current_rig_id)
+                        if not rig_details_reply.get('data', None):
+                            raise Exception(f"No rig or SDR found with ID: {self.current_rig_id}")
+                        rig_type = 'sdr'
 
-    logger.info(f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_proc.pid}")
+                    rig_details = rig_details_reply['data']
 
-    return tracker_proc, queue_to_tracker, queue_from_tracker, stop_event
+                # Create appropriate controller
+                if rig_type == 'sdr':
+                    self.rig_controller = SDRController(sdr_details=rig_details)
+                else:
+                    self.rig_controller = RigController(host=rig_details['host'], port=rig_details['port'])
 
+                await self.rig_controller.connect()
 
-async def compiled_satellite_data(dbsession, norad_id) -> dict:
-    """
-    Compiles detailed information about a satellite, including its orbital details,
-    transmitters, and sky position based on tracking data and user's location.
+                # Update state
+                self.rig_data.update({
+                    'connected': True, 'tracking': False, 'tuning': False,
+                    'device_type': rig_details.get('type', 'hardware')
+                })
 
-    :param dbsession: Database session object used to interact with the database
-    :param norad_id: Tracking state dictionary containing satellite tracking data
-    :return: Dictionary containing satellite details, transmitters, and position
-    :rtype: dict
-    :raises Exception: If satellite tracking data is unavailable or incomplete
-    :raises Exception: If no satellite matches the provided NORAD ID
-    :raises Exception: If more than one satellite is found for the same NORAD ID
-    :raises Exception: If user location is not found in the database
-    """
+                self.queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [{'name': "rig_connected"}],
+                        'rig_data': self.rig_data.copy()
+                    }
+                })
 
-    satellite_data = {
-        'details': {},
-        'position': {},
-        'paths': {
-            'past': [],
-            'future': []
-        },
-        'coverage': [],
-        'transmitters': [],
-    }
+            except Exception as e:
+                logger.error(f"Failed to connect to rig: {e}")
+                logger.exception(e)
+                await self._handle_rig_error(e)
 
-    satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
+    async def _handle_rig_error(self, error):
+        """Handle rig connection errors."""
+        self.rig_data.update({
+            'connected': False, 'tracking': False, 'tuning': False, 'error': True
+        })
 
-    if not satellite.get('success', False):
-        raise Exception(f"No satellite found in the db for norad id {norad_id}")
+        async with AsyncSessionLocal() as dbsession:
+            new_tracking_state = await crud.set_tracking_state(dbsession, {
+                'name': 'satellite-tracking',
+                'value': {'rig_state': 'disconnected'}
+            })
 
-    if len(satellite.get('data', [])) != 1:
-        raise Exception(f"Expected exactly one satellite in the result for norad id {norad_id} got"
-                        f" {len(satellite.get('data', []))}")
+        self.queue_out.put({
+            'event': 'satellite-tracking',
+            'data': {
+                'events': [{'name': "rig_error", "error": str(error)}],
+                'rig_data': self.rig_data.copy(),
+                'tracking_state': new_tracking_state['data']['value'],
+            }
+        })
 
-    satellite_data['details'] = satellite['data'][0]
-    satellite_data['details']['is_geostationary'] = is_geostationary([
-        satellite_data['details']['tle1'],
-        satellite_data['details']['tle2']
-    ])
+        self.rig_controller = None
 
-    # get target map settings
-    target_map_settings_reply = await crud.get_map_settings(dbsession, 'target-map-settings')
-    target_map_settings = target_map_settings_reply['data'].get('value', {})
+    async def handle_rig_state_change(self, old, new):
+        """Handle rig state changes."""
+        logger.info(f"Rig state change detected from '{old}' to '{new}'")
 
-    # fetch transmitters
-    transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
-    satellite_data['transmitters'] = transmitters['data']
+        if new == "connected":
+            await self.connect_to_rig()
+        elif new == "disconnected":
+            await self._disconnect_rig()
+        elif new == "tracking":
+            await self.connect_to_rig()
+            self.rig_data['tracking'] = True
+        elif new == "stopped":
+            self.rig_data.update({'tracking': False, 'tuning': False, 'stopped': True})
 
-    location = await crud.fetch_location_for_userid(dbsession, user_id=None)
-    if not location.get('success', False):
-        raise Exception(f"No location found in the db for user id None, please set one")
+    async def _disconnect_rig(self):
+        """Disconnect from rig."""
+        if self.rig_controller is not None:
+            logger.info("Disconnecting from rig...")
+            try:
+                await self.rig_controller.disconnect()
+                self.rig_data.update({'connected': False, 'tracking': False, 'tuning': False})
+                self.queue_out.put({
+                    'event': 'satellite-tracking',
+                    'data': {
+                        'events': [{'name': "rig_disconnected"}],
+                        'rig_data': self.rig_data.copy()
+                    }
+                })
+            except Exception as e:
+                logger.error(f"Error disconnecting from rig: {e}")
+                logger.exception(e)
+            finally:
+                self.rig_controller = None
 
-    # get current position
-    position = await asyncio.to_thread(get_satellite_position_from_tle, [
-        satellite_data['details']['name'],
-        satellite_data['details']['tle1'],
-        satellite_data['details']['tle2']
-    ])
+    async def handle_transmitter_id_change(self, old, new):
+        """Handle transmitter ID changes."""
+        logger.info(f"Transmitter ID change detected from '{old}' to '{new}'")
 
-    # get position in the sky
-    home_lat = location['data']['lat']
-    home_lon = location['data']['lon']
-    sky_point = await asyncio.to_thread(get_satellite_az_el, home_lat, home_lon, satellite['data'][0]['tle1'],
-                                        satellite['data'][0]['tle2'], datetime.now(UTC))
+    async def handle_rig_id_change(self, old, new):
+        """Handle rig ID changes."""
+        logger.info(f"Rig ID change detected from '{old}' to '{new}'")
 
-    # calculate paths
-    paths = await asyncio.to_thread(get_satellite_path, [
-        satellite_data['details']['tle1'],
-        satellite_data['details']['tle2']
-    ], duration_minutes=int(target_map_settings.get('orbitProjectionDuration', 240)), step_minutes=0.5)
+    def _check_state_changes(self):
+        """Check for state changes and return list of changes."""
+        changes = []
 
-    satellite_data['paths'] = paths
+        if self.current_norad_id != self.prev_norad_id:
+            changes.append(('satellite', self.prev_norad_id, self.current_norad_id))
+            self.prev_norad_id = self.current_norad_id
 
-    satellite_data['coverage'] = await asyncio.to_thread(get_satellite_coverage_circle,
-                                                         position['lat'],
-                                                         position['lon'],
-                                                         position['alt'] / 1000,
-                                                         num_points=300
-                                                         )
+        if self.current_rotator_state != self.prev_rotator_state:
+            changes.append(('rotator_state', self.prev_rotator_state, self.current_rotator_state))
+            self.prev_rotator_state = self.current_rotator_state
 
-    satellite_data['position'] = position
-    position['az'] = sky_point[0]
-    position['el'] = sky_point[1]
+        if self.current_rotator_id != self.prev_rotator_id:
+            changes.append(('rotator_id', self.prev_rotator_id, self.current_rotator_id))
+            self.prev_rotator_id = self.current_rotator_id
 
-    satellite_data = serialize_object(satellite_data)
-    
-    return satellite_data
+        if self.current_rig_state != self.prev_rig_state:
+            changes.append(('rig_state', self.prev_rig_state, self.current_rig_state))
+            self.prev_rig_state = self.current_rig_state
+
+        if self.current_transmitter_id != self.prev_transmitter_id:
+            changes.append(('transmitter_id', self.prev_transmitter_id, self.current_transmitter_id))
+            self.prev_transmitter_id = self.current_transmitter_id
+
+        if self.current_rig_id != self.prev_rig_id:
+            changes.append(('rig_id', self.prev_rig_id, self.current_rig_id))
+            self.prev_rig_id = self.current_rig_id
+
+        return changes
+
+    async def _process_state_changes(self, changes):
+        """Process all detected state changes."""
+        for change_type, old, new in changes:
+            if change_type == 'satellite':
+                await self.handle_satellite_change(old, new)
+            elif change_type == 'rotator_state':
+                await self.handle_rotator_state_change(old, new)
+            elif change_type == 'rotator_id':
+                await self.handle_rotator_id_change(old, new)
+            elif change_type == 'rig_state':
+                await self.handle_rig_state_change(old, new)
+            elif change_type == 'transmitter_id':
+                await self.handle_transmitter_id_change(old, new)
+            elif change_type == 'rig_id':
+                await self.handle_rig_id_change(old, new)
+
+    async def _process_commands(self):
+        """Process incoming commands from the queue."""
+        try:
+            while not self.queue_in.empty():
+                command = self.queue_in.get_nowait()
+                logger.info(f"Received command: {command}")
+
+                cmd_type = command.get('command')
+                if cmd_type == 'stop':
+                    logger.info("Received stop command, exiting tracking task")
+                    return True  # Signal to stop
+                elif cmd_type == 'nudge_clockwise':
+                    self.nudge_offset['az'] += 2
+                elif cmd_type == 'nudge_counter_clockwise':
+                    self.nudge_offset['az'] -= 2
+                elif cmd_type == 'nudge_up':
+                    self.nudge_offset['el'] += 2
+                elif cmd_type == 'nudge_down':
+                    self.nudge_offset['el'] -= 2
+
+        except Exception as e:
+            logger.error(f"Error processing commands: {e}")
+
+        return False  # Continue running
+
+    async def _validate_hardware_states(self):
+        """Validate that hardware states match database expectations."""
+        # Check if rotator should be connected but isn't
+        if self.current_rotator_state == "connected" and self.rotator_controller is None:
+            logger.warning("Tracking state said rotator must be connected but it is not")
+
+            async with AsyncSessionLocal() as dbsession:
+                new_tracking_state = await crud.set_tracking_state(dbsession, {
+                    'name': 'satellite-tracking',
+                    'value': {'rotator_state': 'disconnected'}
+                })
+
+            self.queue_out.put({
+                'event': 'satellite-tracking',
+                'data': {
+                    'rotator_data': self.rotator_data.copy(),
+                    'tracking_state': new_tracking_state['data']['value'],
+                }
+            })
+
+        # Check if rig should be connected but isn't
+        if self.current_rig_state == "connected" and self.rig_controller is None:
+            logger.warning("Tracking state said rig must be connected but it is not")
+
+            async with AsyncSessionLocal() as dbsession:
+                new_tracking_state = await crud.set_tracking_state(dbsession, {
+                    'name': 'satellite-tracking',
+                    'value': {'rig_state': 'disconnected'}
+                })
+
+            self.queue_out.put({
+                'event': 'satellite-tracking',
+                'data': {
+                    'rig_data': self.rig_data.copy(),
+                    'tracking_state': new_tracking_state['data']['value'],
+                }
+            })
+
+    async def _update_hardware_positions(self):
+        """Update current hardware positions."""
+        # Get rotator position
+        if self.rotator_controller:
+            self.rotator_data['az'], self.rotator_data['el'] = await self.rotator_controller.get_position()
+
+        # Get rig frequency
+        if self.rig_controller:
+            self.rig_data['frequency'] = await self.rig_controller.get_frequency()
+
+    def _check_position_limits(self, skypoint, satellite_name):
+        """Check if satellite position is within limits."""
+        events = []
+
+        # Check azimuth limits
+        if skypoint[0] > self.azimuth_limits[1] or skypoint[0] < self.azimuth_limits[0]:
+            logger.warning(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
+            if self.in_tracking_state() and not self.notified.get('azimuth_out_of_bounds', False):
+                events.append({'name': "azimuth_out_of_bounds"})
+            self.notified['azimuth_out_of_bounds'] = True
+            self.rotator_data['outofbounds'] = True
+            self.rotator_data['stopped'] = True
+
+        # Check elevation limits
+        if skypoint[1] < self.elevation_limits[0] or skypoint[1] > self.elevation_limits[1]:
+            logger.warning(f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}")
+            if self.in_tracking_state() and not self.notified.get('elevation_out_of_bounds', False):
+                events.append({'name': "elevation_out_of_bounds"})
+            self.notified['elevation_out_of_bounds'] = True
+            self.rotator_data['outofbounds'] = True
+            self.rotator_data['stopped'] = True
+
+        # Check minimum elevation
+        if skypoint[1] < self.min_elevation:
+            logger.warning(f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}")
+            if self.in_tracking_state() and not self.notified.get('minelevation_error', False):
+                events.append({'name': "minelevation_error"})
+            self.notified['minelevation_error'] = True
+            self.rotator_data['minelevation'] = True
+            self.rotator_data['stopped'] = True
+
+        # Send events if any
+        if events:
+            self.queue_out.put({
+                'event': 'satellite-tracking',
+                'data': {'events': events}
+            })
+
+    async def _handle_transmitter_tracking(self, satellite_tles, location):
+        """Handle transmitter selection and doppler calculation."""
+        if self.current_transmitter_id != "none":
+            async with AsyncSessionLocal() as dbsession:
+                current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=self.current_transmitter_id)
+                current_transmitter = current_transmitter_reply.get('data', {})
+
+            if current_transmitter:
+                if self.current_rig_state == "tracking":
+                    # Calculate doppler shift
+                    self.rig_data['observed_freq'], self.rig_data['doppler_shift'] = calculate_doppler_shift(
+                        satellite_tles[0],
+                        satellite_tles[1],
+                        location['lat'],
+                        location['lon'],
+                        0,
+                        current_transmitter.get('downlink_low', 0)
+                    )
+                    self.rig_data['tracking'] = True
+                else:
+                    self.rig_data['observed_freq'] = 0
+                    self.rig_data['doppler_shift'] = 0
+                    self.rig_data['tracking'] = False
+
+            self.rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
+            self.rig_data['transmitter_id'] = self.current_transmitter_id
+        else:
+            logger.debug("No satellite transmitter selected")
+            self.rig_data['transmitter_id'] = self.current_transmitter_id
+
+    async def _control_rig_frequency(self):
+        """Control rig frequency based on doppler calculations."""
+        if self.rig_controller and self.current_rig_state == "tracking":
+            frequency_gen = self.rig_controller.set_frequency(self.rig_data['observed_freq'])
+
+            try:
+                current_frequency, is_tuning = await anext(frequency_gen)
+                self.rig_data['tuning'] = is_tuning
+                logger.info(f"Current frequency: {current_frequency}, tuning={is_tuning}")
+            except StopAsyncIteration:
+                logger.info(f"Tuning to frequency {self.rig_data['observed_freq']} complete")
+
+    async def _control_rotator_position(self, skypoint):
+        """Control rotator position for tracking or nudging."""
+        if (self.rotator_controller and self.current_rotator_state == "tracking" and
+                not self.rotator_data['outofbounds'] and not self.rotator_data['minelevation']):
+
+            # Check if movement is needed
+            if (abs(skypoint[0] - self.rotator_data['az']) > self.az_tolerance or
+                    abs(skypoint[1] - self.rotator_data['el']) > self.el_tolerance):
+
+                position_gen = self.rotator_controller.set_position(skypoint[0], skypoint[1])
+
+                try:
+                    az, el, is_slewing = await anext(position_gen)
+                    self.rotator_data['slewing'] = is_slewing
+                    logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
+                except StopAsyncIteration:
+                    logger.info(f"Slewing to AZ={skypoint[0]}° EL={skypoint[1]}° complete")
+
+        elif self.rotator_controller and self.current_rotator_state != "tracking":
+            # Handle nudge commands when not tracking
+            if self.nudge_offset['az'] != 0 or self.nudge_offset['el'] != 0:
+                new_az = self.rotator_data['az'] + self.nudge_offset['az']
+                new_el = self.rotator_data['el'] + self.nudge_offset['el']
+
+                position_gen = self.rotator_controller.set_position(new_az, new_el)
+
+                try:
+                    az, el, is_slewing = await anext(position_gen)
+                    self.rotator_data['slewing'] = is_slewing
+                    logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
+                except StopAsyncIteration:
+                    logger.info(f"Slewing to AZ={az}° EL={el}° complete")
+
+    def _cleanup_data_states(self):
+        """Clean up temporary state flags."""
+        # Clean up rotator_data
+        self.rotator_data['slewing'] = False
+        self.rotator_data['outofbounds'] = False
+        self.rotator_data['minelevation'] = False
+        self.rotator_data['error'] = False
+
+        # Clean up rig_data
+        self.rig_data['tuning'] = False
+        self.rig_data['error'] = False
+
+        # Reset nudge offset values
+        self.nudge_offset = {'az': 0, 'el': 0}
+
+    async def run(self):
+        """Main tracking loop - this replaces the original function."""
+        # Validate interval
+        assert 0 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
+
+        while True:
+            # Process commands first
+            should_stop = await self._process_commands()
+            if should_stop:
+                break
+
+            try:
+                start_loop_date = datetime.now(UTC)
+                events = []
+
+                # Get tracking data from database
+                async with AsyncSessionLocal() as dbsession:
+                    tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
+                    assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
+                    assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
+                    assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
+
+                    satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply['data']['value']['norad_id'])
+                    satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
+                    satellite_name = satellite_data['details']['name']
+                    location_reply = await crud.fetch_location_for_userid(dbsession, user_id=None)
+                    location = location_reply['data']
+                    tracker = tracking_state_reply['data']['value']
+
+                # Update current state variables
+                self.current_norad_id = tracker.get('norad_id', None)
+                self.current_group_id = tracker.get('group_id', None)
+                self.current_rotator_id = tracker.get('rotator_id', "none")
+                self.current_rig_id = tracker.get('rig_id', "none")
+                self.current_transmitter_id = tracker.get('transmitter_id', "none")
+                self.current_rotator_state = tracker.get('rotator_state', "disconnected")
+                self.current_rig_state = tracker.get('rig_state', "disconnected")
+
+                # Check for state changes and handle them
+                changes = self._check_state_changes()
+                await self._process_state_changes(changes)
+
+                # Validate hardware states
+                await self._validate_hardware_states()
+
+                # Update hardware positions
+                await self._update_hardware_positions()
+
+                # Work on sky coordinates
+                skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
+
+                # Check position limits
+                self._check_position_limits(skypoint, satellite_name)
+
+                # Log valid target
+                logger.info(f"We have a valid target (#{self.current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°")
+
+                # Handle transmitter tracking
+                await self._handle_transmitter_tracking(satellite_tles, location)
+
+                # Control rig frequency
+                await self._control_rig_frequency()
+
+                # Control rotator position
+                await self._control_rotator_position(skypoint)
+
+            except Exception as e:
+                logger.error(f"Error in satellite tracking task: {e}")
+                logger.exception(e)
+
+            finally:
+                # Send updates via the queue
+                try:
+                    full_msg = {
+                        'event': 'satellite-tracking',
+                        'data': {
+                            'satellite_data': satellite_data,
+                            'events': events.copy(),
+                            'rotator_data': self.rotator_data.copy(),
+                            'rig_data': self.rig_data.copy(),
+                            'tracking_state': tracker.copy(),
+                        }
+                    }
+                    logger.debug(f"Sending satellite tracking data: \n{pretty_dict(full_msg)}")
+                    self.queue_out.put(full_msg)
+
+                except Exception as e:
+                    logger.critical(f"Error sending satellite tracking data: {e}")
+                    logger.exception(e)
+
+                # Calculate sleep time
+                end_loop_date = datetime.now(UTC)
+                loop_duration = round((end_loop_date - start_loop_date).total_seconds(), 2)
+
+                if loop_duration > args.track_interval:
+                    logger.warning(f"Single tracking loop iteration took longer ({loop_duration}) than the configured "
+                                   f"interval ({args.track_interval})")
+
+                remaining_time_to_sleep = max((args.track_interval - loop_duration), 0)
+
+                # Clean up data states
+                self._cleanup_data_states()
+
+                # Check if stop_event is set before sleeping
+                if self.stop_event and self.stop_event.is_set():
+                    logger.info("Stop event detected, exiting tracking task")
+                    break
+
+                logger.info(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
+                            f"(already spent {round(loop_duration, 2)})...")
+                await asyncio.sleep(remaining_time_to_sleep)
 
 
 async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: multiprocessing.Queue, stop_event=None):
     """
+    Wrapper function that creates and runs a SatelliteTracker instance.
+    This maintains compatibility with existing multiprocessing code.
+
     Periodically tracks and transmits satellite position and details along with user location data
     using multiprocessing Queue instead of Socket.IO for inter-process communication.
 
@@ -262,673 +744,5 @@ async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: mu
     :type stop_event: multiprocessing.Event
     :return: None
     """
-
-    # check interval value, should be between 2 and 5 (including)
-    assert 0 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
-
-    azimuthlimits = (0, 360)
-    eleveationlimits = (0, 90)
-    minelevation = 10.0
-    az_tolerance = 2.0
-    el_tolerance = 2.0
-    previous_rotator_state = None
-    rotator_controller = None
-    rig_controller = None
-    current_rotator_id = "none"
-    current_transmitter_id = "none"
-    rotator_data = {
-        'az': 0,
-        'el': 0,
-        'connected': False,
-        'tracking': False,
-        'slewing': False,
-        'outofbounds': False,
-        'minelevation': False,
-        'stopped': False,
-        'error': False
-    }
-    rig_data = {
-        'connected': False,
-        'tracking': False,
-        'stopped': False,
-        'error': False,
-        'frequency': 0,
-        'observed_freq': 0, # hz
-        'doppler_shift': 0, # hz
-        'original_freq': 0, # hz
-        'transmitter_id': 'none',
-        'device_type': '',
-    }
-
-    notified = {}
-
-    def in_tracking_state():
-        if current_rotator_state == "tracking":
-            return True
-        else:
-            return False
-
-    async def handle_satellite_change(old, new):
-        nonlocal notified, rotator_data, rig_data, current_transmitter_id, current_rig_state, new_tracking_state
-
-        logger.info(f"Target satellite change detected from '{old}' to '{new}'")
-
-        # reset the minelevation error
-        rotator_data['minelevation'] = False
-
-        notified = {}
-        queue_out.put({
-            'event': 'satellite-tracking',
-            'data': {
-                'events': [
-                    {'name': "norad_id_change", 'old': old, 'new': new},
-                ]
-            }
-        })
-
-        # change the rig_state in the tracking_state in the db
-        new_tracking_state = await crud.set_tracking_state(dbsession, {
-            'name': 'satellite-tracking',
-            'value': {
-                'rig_state': "connected",
-                'transmitter_id': "none"
-            }
-        })
-
-        # change state values for the loop below
-        rig_data['tracking'] = False
-        rig_data['stopped'] = True
-
-    async def connect_to_rotator():
-        """
-        Check if rotator_controller is set up, if not set it up.
-        :return:
-        """
-        nonlocal rotator_controller, current_rotator_state
-
-        if current_rotator_id is not None and rotator_controller is None:
-            # rotator_controller was selected, and a rotator_controller is not setup, set it up now
-            try:
-                rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=current_rotator_id)
-                rotator_details = rotator_details_reply['data']
-                rotator_controller = RotatorController(host=rotator_details['host'], port=rotator_details['port'])
-                await rotator_controller.connect()
-                rotator_data['connected'] = True
-                rotator_data['tracking'] = False
-                rotator_data['slewing'] = False
-                rotator_data['outofbounds'] = False
-                rotator_data['stopped'] = True
-                queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [{'name': "rotator_connected"}],
-                        'rotator_data': rotator_data.copy()
-                    }
-                })
-
-            except Exception as e:
-                logger.error(f"Failed to connect to rotator_controller: {e}")
-                logger.exception(e)
-                rotator_data['connected'] = False
-                rotator_data['tracking'] = False
-                rotator_data['slewing'] = False
-                rotator_data['stopped'] = False
-                rotator_data['error'] = True
-
-                # change the rotator_state in the tracking_state in the db
-                _new_tracking_state = await crud.set_tracking_state(dbsession, {
-                    'name': 'satellite-tracking',
-                    'value': {'rotator_state': 'disconnected'}
-                })
-
-                # report to the main thread
-                queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [
-                            {'name': "rotator_error", "error": str(e)}
-                        ],
-                        'rotator_data': rotator_data.copy(),
-                        'tracking_state': _new_tracking_state['data']['value'],
-                    }
-                })
-
-                # dereference object
-                rotator_controller = None
-
-
-    async def handle_rotator_state_change(old, new):
-        nonlocal rotator_controller
-
-        logger.info(f"Rotator state change detected from '{old}' to '{new}'")
-
-        # reset the minelevation error
-        rotator_data['minelevation'] = False
-        if new == "connected":
-            # check what hardware was chosen and set it up
-            await connect_to_rotator()
-
-        elif new == "tracking":
-            # check what hardware was chosen and set it up
-            await connect_to_rotator()
-            rotator_data['tracking'] = True
-
-        elif new == "stopped":
-            # check what hardware was chosen and set it up
-            rotator_data['tracking'] = False
-            rotator_data['slewing'] = False
-            rotator_data['stopped'] = True
-
-        elif new == "disconnected":
-            # disconnect from the controller
-            if rotator_controller is not None:
-                logger.info(f"Disconnecting from rotator_controller at {rotator_controller.host}:{rotator_controller.port}...")
-                try:
-                    await rotator_controller.disconnect()
-                    rotator_data['connected'] = False
-                    queue_out.put({
-                        'event': 'satellite-tracking',
-                        'data': {
-                            'events': [{'name': "rotator_disconnected"}],
-                            'rotator_data': rotator_data.copy()
-                        }
-                    })
-
-                except Exception as e:
-                    logger.error(f"Error disconnecting from rotator_controller: {e}")
-                    logger.exception(e)
-
-                finally:
-                    # Set to None regardless of disconnect success
-                    rotator_controller = None
-
-        elif new == "parked":
-            rotator_data['tracking'] = False
-            rotator_data['slewing'] = False
-
-            try:
-                # going to park position
-                park_reply = await rotator_controller.park()
-
-                if park_reply:
-                    rotator_data['parked'] = True
-                    queue_out.put({
-                        'event': 'satellite-tracking',
-                        'data': {
-                            'events': [{'name': "rotator_parked"}],
-                            'rotator_data': rotator_data.copy()
-                        }
-                    })
-                else:
-                    raise Exception("Failed to park rotator")
-
-            except Exception as e:
-                logger.error(f"Failed to park rotator: {e}")
-                logger.exception(e)
-
-        else:
-            logger.error(f"unknown tracking state: {new}")
-
-
-    async def handle_rotator_id_change(old, new):
-        logger.info(f"Rotator ID change detected from '{old}' to '{new}'")
-
-
-    async def connect_to_rig():
-        """
-        If rig_controller is not set up yet, set it up.
-        Handles both hardware rigs and SDR devices.
-        :return:
-        """
-        nonlocal rig_controller
-
-        # check what hardware was chosen and set it up
-        if current_rig_id is not None and rig_controller is None:
-
-            # rig_controller was selected, and a rig_controller is not setup, set it up now
-            try:
-                # Try fetching hardware rig details first
-                rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=current_rig_id)
-
-                if rig_details_reply.get('data') is not None:
-                    rig_type = 'radio'
-
-                else:
-                    # If hardware Rig not found, try fetching SDR details
-                    rig_details_reply = await crud.fetch_sdr(dbsession, sdr_id=current_rig_id)
-                    if not rig_details_reply.get('data', None):
-                        raise Exception(f"No hardware radio rig or SDR device found with ID: {current_rig_id}")
-                    else:
-                        rig_type = 'sdr'
-
-                rig_details = rig_details_reply['data']
-
-                # Handle different device types
-                if rig_type == 'sdr':
-                    rig_controller = SDRController(sdr_details=rig_details)
-                else:
-                    rig_controller = RigController(host=rig_details['host'], port=rig_details['port'])
-
-                await rig_controller.connect()
-                rig_data['connected'] = True
-                rig_data['tracking'] = False
-                rig_data['tuning'] = False
-
-                rig_data['device_type'] = rig_details.get('type', 'hardware')
-                queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [{'name': "rig_connected"}],
-                        'rig_data': rig_data.copy()
-                    }
-                })
-
-            except Exception as e:
-                logger.error(f"Failed to connect to rig_controller: {e}")
-                logger.exception(e)
-                rig_data['connected'] = False
-                rig_data['tracking'] = False
-                rig_data['tuning'] = False
-                rig_data['error'] = True
-
-                # change the rig_state in the tracking_state in the db
-                _new_tracking_state = await crud.set_tracking_state(dbsession, {
-                    'name': 'satellite-tracking',
-                    'value': {'rig_state': 'disconnected'}
-                })
-
-                queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [
-                            {'name': "rig_error", "error": str(e)}
-                        ],
-                        'rig_data': rig_data.copy(),
-                        'tracking_state': _new_tracking_state['data']['value'],
-                    }
-                })
-
-                # dereference object
-                rig_controller = None
-
-
-    async def handle_rig_state_change(old, new):
-        nonlocal rig_controller
-
-        logger.info(f"Rig state change detected from '{old}' to '{new}'")
-
-        if new == "connected":
-            # check what hardware was chosen and set it up
-            await connect_to_rig()
-
-        elif new == "disconnected":
-            # disconnected rig_controller
-            if rig_controller is not None:
-                logger.info(f"Disconnecting from rig...")
-                try:
-                    await rig_controller.disconnect()
-                    rig_data['connected'] = False
-                    rig_data['tracking'] = False
-                    rig_data['tuning'] = False
-                    queue_out.put({
-                        'event': 'satellite-tracking',
-                        'data': {
-                            'events': [{'name': "rig_disconnected"}],
-                            'rig_data': rig_data.copy()
-                        }
-                    })
-
-                except Exception as e:
-                    logger.error(f"Error disconnecting from rig_controller: {e}")
-                    logger.exception(e)
-
-                finally:
-                    # Set to None regardless of disconnect success
-                    rig_controller = None
-
-        elif new == "tracking":
-            # check what hardware was chosen and set it up
-            await connect_to_rig()
-            rig_data['tracking'] = True
-
-        elif new == "stopped":
-            # check what hardware was chosen and set it up
-            rig_data['tracking'] = False
-            rig_data['tuning'] = False
-            rig_data['stopped'] = True
-
-
-    async def handle_transmitter_id_change(old, new):
-        logger.info(f"Transmitter ID change detected from '{old}' to '{new}'")
-
-    async def handle_rig_id_change(old, new):
-        logger.info(f"Rig ID change detected from '{old}' to '{new}'")
-
-    # check if satellite was changed in the UI and send a message/event
-    norad_id_change_tracker = StateTracker(initial_state="")
-    norad_id_change_tracker.register_async_callback(handle_satellite_change)
-
-    # check if the rotator state changed, do stuff if it has
-    rotator_state_tracker = StateTracker(initial_state="")
-    rotator_state_tracker.register_async_callback(handle_rotator_state_change)
-
-    # check if the rotator id changed, do stuff if it has
-    rotator_id_tracker = StateTracker(initial_state="")
-    rotator_id_tracker.register_async_callback(handle_rotator_id_change)
-
-    # check if the rig state changed, do stuff if it has
-    rig_state_tracker = StateTracker(initial_state="")
-    rig_state_tracker.register_async_callback(handle_rig_state_change)
-
-    # check if the transmitter id changed, do stuff if it has
-    transmitter_id_state_tracker = StateTracker(initial_state="")
-    transmitter_id_state_tracker.register_async_callback(handle_transmitter_id_change)
-
-    # check if the rig id changed, do stuff if it has
-    rig_id_state_tracker = StateTracker(initial_state="")
-    rig_id_state_tracker.register_async_callback(handle_rig_id_change)
-
-    # nudge command offset values
-    nudge_offset = {'az': 0, 'el': 0}
-
-    # main loop
-    async with (AsyncSessionLocal() as dbsession):
-        while True:
-
-            # Check for any incoming commands from the main process
-            try:
-                # Process all available commands in the queue
-                while not queue_in.empty():
-                    command = queue_in.get_nowait()
-                    logger.info(f"Received command from main process: {command}")
-
-                    # Process the command based on its type
-                    if command.get('command') == 'stop':
-                        logger.info("Received stop command, exiting tracking task")
-                        return
-
-                    elif command.get('command') == 'nudge_clockwise':
-                        nudge_offset['az']  = nudge_offset['az'] + 2
-
-                    elif command.get('command') == 'nudge_counter_clockwise':
-                        nudge_offset['az']  = nudge_offset['az'] - 2
-
-                    elif command.get('command') == 'nudge_up':
-                        nudge_offset['el']  = nudge_offset['el'] + 2
-
-                    elif command.get('command') == 'nudge_down':
-                        nudge_offset['el']  = nudge_offset['el'] - 2
-
-            # Handle other command types as needed
-            except Exception as e:
-                logger.error(f"Error processing command from queue: {e}")
-
-            try:
-                start_loop_date = datetime.now(UTC)
-                events = []
-                tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
-                assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
-                assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
-                assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
-                satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply['data']['value']['norad_id'])
-                satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
-                satellite_name = satellite_data['details']['name']
-                location_reply = await crud.fetch_location_for_userid(dbsession, user_id=None)
-                location = location_reply['data']
-                tracker = tracking_state_reply['data']['value']
-                current_norad_id = tracker.get('norad_id', None)
-                current_group_id = tracker.get('group_id', None)
-                current_rotator_id = tracker.get('rotator_id', "none")
-                current_rig_id = tracker.get('rig_id', "none")
-                current_transmitter_id = tracker.get('transmitter_id', "none")
-                current_rotator_state = tracker.get('rotator_state', "disconnected")
-                current_rig_state = tracker.get('rig_state', "disconnected")
-
-                # check norad_id and detect change
-                await norad_id_change_tracker.update_state(current_norad_id)
-
-                # check rotator_controller state change
-                await rotator_state_tracker.update_state(current_rotator_state)
-
-                # check rotator_controller ID change
-                await rotator_id_tracker.update_state(current_rotator_id)
-
-                # check rig state change
-                await rig_state_tracker.update_state(current_rig_state)
-
-                # check transmitter id state change
-                await transmitter_id_state_tracker.update_state(current_transmitter_id)
-
-                # check rig id state change
-                await rig_id_state_tracker.update_state(current_rig_id)
-
-                # check if the rotator is actually supposed to be connected
-                if current_rotator_state == "connected" and rotator_controller is None:
-                    logger.warning(f"Tracking state said rotator must be connected but it is not")
-
-                    # change the rig_state in the tracking_state in the db
-                    new_tracking_state = await crud.set_tracking_state(dbsession, {
-                        'name': 'satellite-tracking',
-                        'value': {'rotator_state': 'disconnected'}
-                    })
-
-                    queue_out.put({
-                        'event': 'satellite-tracking',
-                        'data': {
-                            'rotator_data': rotator_data.copy(),
-                            'tracking_state': new_tracking_state['data']['value'],
-                        }
-                    })
-
-                # check if the rig is actually supposed to be connected
-                if current_rig_state == "connected" and rig_controller is None:
-                    logger.warning(f"Tracking state said rig must be connected but it is not")
-
-                    # change the rig_state in the tracking_state in the db
-                    new_tracking_state = await crud.set_tracking_state(dbsession, {
-                        'name': 'satellite-tracking',
-                        'value': {'rig_state': 'disconnected'}
-                    })
-
-                    queue_out.put({
-                        'event': 'satellite-tracking',
-                        'data': {
-                            'rig_data': rig_data.copy(),
-                            'tracking_state': new_tracking_state['data']['value'],
-                        }
-                    })
-
-                # get rotator controller position
-                if rotator_controller:
-                    rotator_data['az'], rotator_data['el'] = await rotator_controller.get_position()
-
-                # get rig controller frequency and set a new one
-                if rig_controller:
-                    rig_data['frequency'] = await rig_controller.get_frequency()
-
-                # work on our sky coordinates
-                skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
-
-                # first we check if the az end el values in the skypoint tuple are reachable
-                if skypoint[0] > azimuthlimits[1] or skypoint[0] < azimuthlimits[0]:
-                    logger.warning(f"Azimuth out of bounds for satellite #{current_norad_id} {satellite_name}")
-                    if in_tracking_state() and notified.get('azimuth_out_of_bounds', False) is not True:
-                        queue_out.put({
-                            'event': 'satellite-tracking',
-                            'data': {
-                                'events': [{'name': "azimuth_out_of_bounds"}]
-                            }
-                        })
-                    notified['azimuth_out_of_bounds'] = True
-                    rotator_data['outofbounds'] = True
-                    rotator_data['stopped'] = True
-
-                    #raise AzimuthOutOfBounds(f"azimuth {round(skypoint[0], 3)}° is out of range (range: {azimuthlimits})")
-
-                # check elevation limits
-                if skypoint[1] < eleveationlimits[0] or skypoint[1] > eleveationlimits[1]:
-                    logger.warning(f"Elevation out of bounds for satellite #{current_norad_id} {satellite_name}")
-                    if in_tracking_state() and notified.get('elevation_out_of_bounds', False) is not True:
-                        queue_out.put({
-                            'event': 'satellite-tracking',
-                            'data': {
-                                'events': [{'name': "elevation_out_of_bounds"}]
-                            }
-                        })
-                    notified['elevation_out_of_bounds'] = True
-                    rotator_data['outofbounds'] = True
-                    rotator_data['stopped'] = True
-
-                    #raise ElevationOutOfBounds(f"elevation {round(skypoint[1], 3)}° is out of range (range: {eleveationlimits})")
-
-                # check if the satellite is over a specific elevation limit
-                if skypoint[1] < minelevation:
-                    logger.warning(f"Elevation below minimum ({minelevation})° for satellite #{current_norad_id} {satellite_name}")
-                    if in_tracking_state() and notified.get('minelevation_error', False) is not True:
-                        queue_out.put({
-                            'event': 'satellite-tracking',
-                            'data': {
-                                'events': [{'name': "minelevation_error"}]
-                            }
-                        })
-                    notified['minelevation_error'] = True
-                    rotator_data['minelevation'] = True
-                    rotator_data['stopped'] = True
-
-                    #raise MinimumElevationError(f"target has not reached minimum elevation {minelevation}° degrees")
-
-                # everything good, move on to actual rotator and rig tracking
-                logger.info(f"We have a valid target (#{current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°")
-
-                # check if we have a transmitter selected
-                if current_transmitter_id != "none":
-                    current_transmitter_reply = await crud.fetch_transmitter(dbsession, transmitter_id=current_transmitter_id)
-                    current_transmitter = current_transmitter_reply.get('data', {})
-
-                    if current_transmitter:
-                        if current_rig_state == "tracking":
-                            # calculate doppler shift
-                            rig_data['observed_freq'], rig_data['doppler_shift'] = calculate_doppler_shift(
-                                satellite_tles[0],
-                                satellite_tles[1],
-                                location['lat'],
-                                location['lon'],
-                                0,
-                                current_transmitter.get('downlink_low', 0)
-                            )
-                            rig_data['tracking'] = True
-
-                        else:
-                            rig_data['observed_freq'] = 0
-                            rig_data['doppler_shift'] = 0
-                            rig_data['tracking'] = False
-
-                    rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
-                    rig_data['transmitter_id'] = current_transmitter_id
-
-                else:
-                    logger.debug(f"No satellite transmitter selected")
-                    rig_data['transmitter_id'] = current_transmitter_id
-
-                # tune freq to observed frequency
-                if rig_controller and current_rig_state == "tracking":
-                    frequency_gen = rig_controller.set_frequency(rig_data['observed_freq'])
-
-                    try:
-                        current_frequency, is_tuning = await anext(frequency_gen)
-                        rig_data['tuning'] = is_tuning
-                        logger.info(f"Current frequency: {current_frequency}, tuning={is_tuning}")
-
-                    except StopAsyncIteration:
-                        # generator is done (tuning complete)
-                        logger.info(f"Tuning to frequency {rig_data['observed_freq']} complete")
-
-                # slew rotator to the new target location in the sky
-                if rotator_controller and current_rotator_state == "tracking" and rotator_data['outofbounds'] is False and rotator_data['minelevation'] is False:
-
-                    # Check if the target position is within tolerance of the current position
-                    if (abs(skypoint[0] - rotator_data['az']) > az_tolerance or
-                            abs(skypoint[1] - rotator_data['el']) > el_tolerance):
-                        position_gen = rotator_controller.set_position(skypoint[0], skypoint[1])
-
-                        # go through the yields while it is slewing
-                        try:
-                            az, el, is_slewing = await anext(position_gen)
-                            rotator_data['slewing'] = is_slewing
-                            logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
-
-                        except StopAsyncIteration:
-                            logger.info(f"Slewing to AZ={az}° EL={el}° complete")
-                            
-                elif rotator_controller and current_rotator_state != "tracking":
-                    # since we are not tracking, process those nudge commands if there are any
-                    if nudge_offset['az'] != 0 or nudge_offset['el'] != 0:
-                        new_az = rotator_data['az'] + nudge_offset['az']
-                        new_el = rotator_data['el'] + nudge_offset['el']
-
-                        position_gen = rotator_controller.set_position(new_az, new_el)
-
-                        # go through the yields while it is slewing
-                        try:
-                            az, el, is_slewing = await anext(position_gen)
-                            rotator_data['slewing'] = is_slewing
-                            logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
-
-                        except StopAsyncIteration:
-                            logger.info(f"Slewing to AZ={az}° EL={el}° complete")
-
-            except Exception as e:
-                logger.error(f"Error in satellite tracking task: {e}")
-                logger.exception(e)
-
-            finally:
-                # Lastly, send updates via the queue
-                try:
-                    full_msg = {
-                        'event': 'satellite-tracking',
-                        'data': {
-                            'satellite_data': satellite_data,
-                            'events': events.copy(),              # copy(), because it will be modified later
-                            'rotator_data': rotator_data.copy(),  # copy(), because it will be modified later
-                            'rig_data': rig_data.copy(),          # copy(), because it will be modified later
-                            'tracking_state': tracker.copy(),     # copy(), because it will be modified later
-                        }
-                    }
-                    logger.debug(f"Sending satellite tracking data: \n%s", pretty_dict(full_msg))
-                    queue_out.put(full_msg)
-
-                except Exception as e:
-                    logger.critical(f"Error sending satellite tracking data: {e}")
-                    logger.exception(e)
-
-                # calculate sleep time
-                end_loop_date = datetime.now(UTC)
-                loop_duration = round((end_loop_date - start_loop_date).total_seconds(), 2)
-
-                if loop_duration > args.track_interval:
-                    logger.warning(f"Single tracking loop iteration took longer ({loop_duration}) than the configured "
-                                   f"interval ({args.track_interval})")
-
-                remaining_time_to_sleep = max((args.track_interval - loop_duration), 0)
-
-                # Clean up rotator_data
-                rotator_data['slewing'] = False
-                rotator_data['outofbounds'] = False
-                rotator_data['minelevation'] = False
-                rotator_data['error'] = False
-
-                # Clean up rig_data
-                rig_data['tuning'] = False
-                rig_data['error'] = False
-
-                # reset those nudge offset values
-                nudge_offset = {'az': 0, 'el': 0}
-
-                # Check if stop_event is set before sleeping
-                if stop_event and stop_event.is_set():
-                    logger.info("Stop event detected, exiting tracking task")
-                    break
-
-                logger.info(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
-                            f"(already spent {round(loop_duration, 2)})...")
-                await asyncio.sleep(remaining_time_to_sleep)
+    tracker = SatelliteTracker(queue_out, queue_in, stop_event)
+    await tracker.run()

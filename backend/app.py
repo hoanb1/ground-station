@@ -40,7 +40,7 @@ from typing import Optional, Dict
 from sdr.utils import cleanup_sdr_session
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
-from tracker.logic import start_tracker_process
+from tracker.runner import start_tracker_process
 
 
 # Show NumPy configuration
@@ -203,7 +203,7 @@ def stop_tracker():
 
     except Exception as e:
         logger.error(f"Error during tracker shutdown: {e}")
-        # Force terminate as last resort
+        # Force terminate as a last resort
         if tracker_process and tracker_process.is_alive():
             tracker_process.terminate()
 

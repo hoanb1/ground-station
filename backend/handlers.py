@@ -22,7 +22,9 @@ from tlesync.logic import synchronize_satellite_data
 from tlesync.state import sync_state_manager
 from auth import *
 from tracking.events import (fetch_next_events_for_satellite, fetch_next_events_for_group)
-from tracker.logic import get_ui_tracker_state, get_satellite_position_from_tle, compiled_satellite_data
+from tracker.logic import compiled_satellite_data
+from tracker.data import get_ui_tracker_state
+from tracking.satellite import get_satellite_position_from_tle
 from app import queue_to_tracker
 from common import is_geostationary
 from sdr.utils import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
