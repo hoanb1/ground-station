@@ -57,8 +57,14 @@ except ImportError:
     HAS_SETPROCTITLE = False
 
 # Global references for cleanup
-audio_producer = None
-audio_consumer = None
+audio_producer: Optional[threading.Thread] = None
+audio_consumer: Optional[threading.Thread] = None
+
+# Some globals for the tracker process
+tracker_process: Optional[multiprocessing.Process] = None
+queue_to_tracker: Optional[multiprocessing.Queue] = None
+queue_from_tracker: Optional[multiprocessing.Queue] = None
+tracker_stop_event: Optional[multiprocessing.Event] = None
 
 def cleanup_everything():
     """Cleanup function to stop all processes and threads"""
@@ -73,6 +79,30 @@ def cleanup_everything():
             logger.info("Tracker killed")
     except Exception as e:
         logger.info(f"Error killing tracker: {e}")
+
+    # Clean up all SDR sessions
+    try:
+        from sdr.utils import active_sdr_clients
+        if active_sdr_clients:
+            logger.info(f"Cleaning up {len(active_sdr_clients)} SDR sessions...")
+            # Create a copy of the keys to avoid dictionary changed size during iteration
+            session_ids = list(active_sdr_clients.keys())
+            for sid in session_ids:
+                try:
+                    # Run cleanup_sdr_session for each session
+                    event_loop = asyncio.get_event_loop()
+                    if event_loop.is_running():
+                        # If we're in an async context, create a task
+                        asyncio.create_task(cleanup_sdr_session(sid))
+                    else:
+                        # If we're not in an async context, run it
+                        event_loop.run_until_complete(cleanup_sdr_session(sid))
+                    logger.info(f"Cleaned up SDR session: {sid}")
+                except Exception as e:
+                    logger.warning(f"Error cleaning up SDR session {sid}: {e}")
+            logger.info("All SDR sessions cleaned up")
+    except Exception as e:
+        logger.warning(f"Error during SDR sessions cleanup: {e}")
 
     # Stop audio
     try:
@@ -109,11 +139,6 @@ threading.current_thread().name = "Ground Station - Main Thread"
 
 Payload.max_decode_packets = 50
 
-# Some globals for the tracker process
-tracker_process = None
-queue_to_tracker = None
-queue_from_tracker = None
-tracker_stop_event = None
 
 # Models for request/response
 class RTCSessionDescription(BaseModel):

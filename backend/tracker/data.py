@@ -230,6 +230,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     # Try to get cached paths first
     cached_paths = get_cached_satellite_paths(tle1, tle2, duration_minutes, step_minutes)
 
+    # Check for cached items
     if cached_paths is not None:
         logger.info(f"Using cached satellite paths for NORAD ID: {norad_id}")
         satellite_data['paths'] = cached_paths
@@ -241,6 +242,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         cache_satellite_paths(tle1, tle2, duration_minutes, step_minutes, paths, ttl_minutes=30)
         satellite_data['paths'] = paths
 
+    # Add the coverage (footprint)
     satellite_data['coverage'] = get_satellite_coverage_circle(
         position['lat'],
         position['lon'],
@@ -248,9 +250,9 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         num_points=300
     )
 
-    satellite_data['position'] = position
     position['az'] = sky_point[0]
     position['el'] = sky_point[1]
+    satellite_data['position'] = position
 
     satellite_data = serialize_object(satellite_data)
 

@@ -56,11 +56,11 @@ def create_named_worker_process(worker_func, process_name, *args):
         *args: Arguments to pass to the worker function
     """
     def named_worker(*args):
-        # Set process title if available
+        # Set the process title if available
         if HAS_SETPROCTITLE:
             setproctitle.setproctitle(process_name)
         
-        # Set multiprocessing process name
+        # Set the multiprocessing process name
         multiprocessing.current_process().name = process_name
         
         # Call the actual worker function
