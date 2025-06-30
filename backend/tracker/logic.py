@@ -121,7 +121,7 @@ class SatelliteTracker:
         async with AsyncSessionLocal() as dbsession:
             new_tracking_state = await crud.set_tracking_state(dbsession, {
                 'name': 'satellite-tracking',
-                'value': {'rig_state': "connected", 'transmitter_id': "none"}
+                'value': {'transmitter_id': "none"}
             })
 
         # Update local state
