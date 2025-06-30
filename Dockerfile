@@ -258,5 +258,5 @@ CMD dbus-daemon --system --nofork --nopidfile & \
     sleep 2 && \
     avahi-daemon --no-chroot -D & \
     sleep 2 && \
-    /usr/bin/uhd_images_downloader && \
+    /usr/local/bin/uhd_images_downloader && \
     python app.py --secret-key=AuZ9theig2geu4wu --log-level=INFO --host=0.0.0.0 --port=7000
