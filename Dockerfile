@@ -92,6 +92,7 @@ ENV PATH="/app/venv/bin:$PATH"
 
 # Copy UHD Python bindings to virtual environment
 RUN cp -r /usr/local/lib/python3.12/site-packages/uhd* /app/venv/lib/python3.12/site-packages/ || true
+RUN cp -r /usr/local/lib/python3.12/site-packages/usrp* /app/venv/lib/python3.12/site-packages/ || true
 
 WORKDIR /app
 # Now pip will use the virtual environment
