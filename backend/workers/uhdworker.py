@@ -21,7 +21,7 @@ import math
 from .common import window_functions
 
 # Configure logging for the worker process
-logger = logging.getLogger('UHD-worker')
+logger = logging.getLogger('uhd-worker')
 
 try:
     import uhd

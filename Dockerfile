@@ -55,14 +55,14 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     libsamplerate0-dev \
     && rm -rf /var/lib/apt/lists/*
 
-# Add Ettus Research UHD Repository
-RUN apt-get update && \
-    apt-get install -y software-properties-common && \
-    add-apt-repository ppa:ettusresearch/uhd && \
-    apt-get update
-
-# Install UHD packages
-RUN apt-get install -y libuhd-dev uhd-host
+## Add Ettus Research UHD Repository
+#RUN apt-get update && \
+#    apt-get install -y software-properties-common && \
+#    add-apt-repository ppa:ettusresearch/uhd && \
+#    apt-get update
+#
+## Install UHD packages
+#RUN apt-get install -y libuhd-dev uhd-host python3-uhd
 
 # Create required directories for Avahi and D-Bus
 RUN mkdir -p /var/run/avahi-daemon /var/run/dbus
@@ -80,6 +80,20 @@ RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
 WORKDIR /src
+
+# Compile UHD from source with Python API
+WORKDIR /src
+RUN git clone https://github.com/EttusResearch/uhd.git
+WORKDIR uhd/host/
+RUN mkdir build
+WORKDIR build/
+RUN cmake -DENABLE_PYTHON_API=ON ..
+RUN make -j`nproc`
+RUN sudo make install
+RUN sudo ldconfig
+
+# Copy UHD Python bindings to virtual environment
+RUN cp -r /usr/local/lib/python3.12/site-packages/uhd* /app/venv/lib/python3.12/site-packages/ || true
 
 # compile SoapySDR
 RUN git clone https://github.com/pothosware/SoapySDR.git
