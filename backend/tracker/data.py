@@ -1,3 +1,4 @@
+
 # Copyright (c) 2024 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -17,10 +18,11 @@
 import crud
 import asyncio
 import logging
+import hashlib
 from common import is_geostationary, serialize_object
-from datetime import datetime
+from datetime import datetime, timedelta
 from datetime import UTC
-from typing import Callable, Any, List, Union, Coroutine, Optional
+from typing import Callable, Any, List, Union, Coroutine, Optional, Dict
 from db import AsyncSessionLocal
 from tracking.footprint import get_satellite_coverage_circle
 from tracking.satellite import get_satellite_position_from_tle, get_satellite_az_el, get_satellite_path
@@ -28,10 +30,135 @@ from tracking.satellite import get_satellite_position_from_tle, get_satellite_az
 logger = logging.getLogger("tracker-worker")
 
 
+class CacheManager:
+    """
+    A generic caching system that stores computed values with expiration times.
+    Designed to be extensible for different types of cached data.
+    """
+
+    def __init__(self):
+        self._cache: Dict[str, Dict[str, Any]] = {}
+
+    def _generate_cache_key(self, prefix: str, **kwargs) -> str:
+        """Generate a unique cache key based on prefix and parameters."""
+        # Sort kwargs to ensure consistent key generation
+        sorted_params = sorted(kwargs.items())
+        param_string = "_".join([f"{k}={v}" for k, v in sorted_params])
+
+        # Create hash of parameters to handle long parameter strings
+        param_hash = hashlib.md5(param_string.encode()).hexdigest()
+        return f"{prefix}_{param_hash}"
+
+    def get(self, cache_key: str) -> Optional[Any]:
+        """Retrieve cached value if it exists and hasn't expired."""
+        if cache_key not in self._cache:
+            return None
+
+        cache_entry = self._cache[cache_key]
+
+        # Check if cache has expired
+        if datetime.now(UTC) > cache_entry['expires_at']:
+            del self._cache[cache_key]
+            return None
+
+        logger.debug(f"Cache hit for key: {cache_key}")
+        return cache_entry['data']
+
+    def set(self, cache_key: str, data: Any, ttl_minutes: int = 30) -> None:
+        """Store data in cache with specified time-to-live."""
+        expires_at = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
+
+        self._cache[cache_key] = {
+            'data': data,
+            'expires_at': expires_at,
+            'created_at': datetime.now(UTC)
+        }
+
+        logger.debug(f"Cached data with key: {cache_key}, expires at: {expires_at}")
+
+    def clear_expired(self) -> int:
+        """Remove all expired cache entries and return count of removed items."""
+        now = datetime.now(UTC)
+        expired_keys = [
+            key for key, entry in self._cache.items()
+            if now > entry['expires_at']
+        ]
+
+        for key in expired_keys:
+            del self._cache[key]
+
+        if expired_keys:
+            logger.debug(f"Cleared {len(expired_keys)} expired cache entries")
+
+        return len(expired_keys)
+
+    def get_cache_stats(self) -> Dict[str, Any]:
+        """Get statistics about the cache."""
+        now = datetime.now(UTC)
+        expired_count = sum(
+            1 for entry in self._cache.values()
+            if now > entry['expires_at']
+        )
+
+        return {
+            'total_entries': len(self._cache),
+            'expired_entries': expired_count,
+            'active_entries': len(self._cache) - expired_count
+        }
+
+
+# Global cache manager instance
+cache_manager = CacheManager()
+
+
+def get_cached_satellite_paths(tle1: str, tle2: str, duration_minutes: int, step_minutes: float) -> Optional[dict]:
+    """
+    Retrieve cached satellite paths if available and not expired.
+    
+    :param tle1: First line of TLE data
+    :param tle2: Second line of TLE data
+    :param duration_minutes: Duration for path calculation
+    :param step_minutes: Step size in minutes
+    :return: Cached paths or None if not available
+    """
+    cache_key = cache_manager._generate_cache_key(
+        "satellite_paths",
+        tle1=tle1,
+        tle2=tle2,
+        duration=duration_minutes,
+        step=step_minutes
+    )
+
+    return cache_manager.get(cache_key)
+
+
+def cache_satellite_paths(tle1: str, tle2: str, duration_minutes: int, step_minutes: float, paths: dict, ttl_minutes: int = 30) -> None:
+    """
+    Cache satellite paths with specified TTL.
+    
+    :param tle1: First line of TLE data
+    :param tle2: Second line of TLE data
+    :param duration_minutes: Duration for path calculation
+    :param step_minutes: Step size in minutes
+    :param paths: Path data to cache
+    :param ttl_minutes: Time to live in minutes (default: 30)
+    """
+    cache_key = cache_manager._generate_cache_key(
+        "satellite_paths",
+        tle1=tle1,
+        tle2=tle2,
+        duration=duration_minutes,
+        step=step_minutes
+    )
+
+    cache_manager.set(cache_key, paths, ttl_minutes)
+
+
 async def compiled_satellite_data(dbsession, norad_id) -> dict:
     """
     Compiles detailed information about a satellite, including its orbital details,
     transmitters, and sky position based on tracking data and user's location.
+    Now uses caching for expensive path calculations.
 
     :param dbsession: Database session object used to interact with the database
     :param norad_id: Tracking state dictionary containing satellite tracking data
@@ -82,7 +209,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         raise Exception(f"No location found in the db for user id None, please set one")
 
     # get current position
-    position = await asyncio.to_thread(get_satellite_position_from_tle, [
+    position = get_satellite_position_from_tle([
         satellite_data['details']['name'],
         satellite_data['details']['tle1'],
         satellite_data['details']['tle2']
@@ -91,23 +218,35 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     # get position in the sky
     home_lat = location['data']['lat']
     home_lon = location['data']['lon']
-    sky_point = await asyncio.to_thread(get_satellite_az_el, home_lat, home_lon, satellite['data'][0]['tle1'],
-                                        satellite['data'][0]['tle2'], datetime.now(UTC))
+    sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
+                                    satellite['data'][0]['tle2'], datetime.now(UTC))
 
-    # calculate paths
-    paths = await asyncio.to_thread(get_satellite_path, [
-        satellite_data['details']['tle1'],
-        satellite_data['details']['tle2']
-    ], duration_minutes=int(target_map_settings.get('orbitProjectionDuration', 240)), step_minutes=0.5)
+    # calculate paths with caching
+    tle1 = satellite_data['details']['tle1']
+    tle2 = satellite_data['details']['tle2']
+    duration_minutes = int(target_map_settings.get('orbitProjectionDuration', 240))
+    step_minutes = 0.5
 
-    satellite_data['paths'] = paths
+    # Try to get cached paths first
+    cached_paths = get_cached_satellite_paths(tle1, tle2, duration_minutes, step_minutes)
 
-    satellite_data['coverage'] = await asyncio.to_thread(get_satellite_coverage_circle,
-                                                         position['lat'],
-                                                         position['lon'],
-                                                         position['alt'] / 1000,
-                                                         num_points=300
-                                                         )
+    if cached_paths is not None:
+        logger.info(f"Using cached satellite paths for NORAD ID: {norad_id}")
+        satellite_data['paths'] = cached_paths
+    else:
+        logger.info(f"Computing new satellite paths for NORAD ID: {norad_id}")
+        paths = get_satellite_path([tle1, tle2], duration_minutes=duration_minutes, step_minutes=step_minutes)
+
+        # Cache the computed paths for 30 minutes
+        cache_satellite_paths(tle1, tle2, duration_minutes, step_minutes, paths, ttl_minutes=30)
+        satellite_data['paths'] = paths
+
+    satellite_data['coverage'] = get_satellite_coverage_circle(
+        position['lat'],
+        position['lon'],
+        position['alt'] / 1000,
+        num_points=300
+    )
 
     satellite_data['position'] = position
     position['az'] = sky_point[0]
@@ -172,3 +311,16 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
 
     return reply
 
+
+# Utility functions for cache management
+async def clear_expired_cache():
+    """Clear expired cache entries. Can be called periodically."""
+    cleared_count = cache_manager.clear_expired()
+    if cleared_count > 0:
+        logger.info(f"Cleared {cleared_count} expired cache entries")
+    return cleared_count
+
+
+async def get_cache_statistics():
+    """Get current cache statistics."""
+    return cache_manager.get_cache_stats()

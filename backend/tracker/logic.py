@@ -626,6 +626,7 @@ class SatelliteTracker:
 
                 # Get tracking data from database
                 async with AsyncSessionLocal() as dbsession:
+
                     # Get tracking state from the db
                     tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
                     assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
