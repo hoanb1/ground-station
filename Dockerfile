@@ -80,6 +80,9 @@ ENV PATH="/app/venv/bin:$PATH"
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
+# Install python3-mako needed by uhd
+RUN pip install mako
+
 WORKDIR /src
 
 # Compile UHD from source with Python API
