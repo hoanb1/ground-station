@@ -107,9 +107,6 @@ def get_satellite_position_from_tle(tle_lines):
     }
 
 
-
-
-
 def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: float = 1.0) -> Dict[
     str, List[List[Dict[str, float]]]]:
     """

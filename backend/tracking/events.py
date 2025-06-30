@@ -1,19 +1,3 @@
-# Copyright (c) 2024 Efstratios Goudelis
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-
 import json
 import time
 import hashlib
@@ -27,6 +11,12 @@ from typing import Union
 from .passes import calculate_next_events
 from multiprocessing import Manager
 
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
 
 # Create logger
 logger = logging.getLogger("passes-worker")
@@ -54,7 +44,24 @@ def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minu
     return hashlib.md5(params_str.encode()).hexdigest()
 
 
+def _named_worker_init():
+    """Initialize worker process with a descriptive name"""
+    # Set process title for system monitoring tools
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle("Ground Station - SatellitePassWorker")
+
+    # Set multiprocessing process name
+    multiprocessing.current_process().name = "Ground Station - SatellitePassWorker"
+
+
 def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_minutes, use_cache=True):
+    # Set process name if not already set by pool initializer
+    current_proc = multiprocessing.current_process()
+    if current_proc.name.startswith('ForkPoolWorker'):
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle("Ground Station - SatellitePassWorker")
+        current_proc.name = "Ground Station - SatellitePassWorker"
+
     cache_key = None
 
     if use_cache:
@@ -168,7 +175,8 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
                     satellite['tle2']
                 ])
 
-            with multiprocessing.Pool(processes=1) as pool:
+            # Create pool with named processes
+            with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
                 # Submit the calculation task to the pool
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
@@ -261,7 +269,9 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
                 satellite['tle1'],
                 satellite['tle2']
             ]]
-            with multiprocessing.Pool(processes=1) as pool:
+
+            # Create pool with named processes
+            with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
                 # Submit the calculation task to the pool
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,

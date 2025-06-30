@@ -170,7 +170,7 @@ class SDRProcessManager:
             connection_type = "usb"
             driver = None
             worker_process = rtlsdr_worker_process
-            process_name = f"RTL-SDR-USB-v3-{sdr_id}"
+            process_name = f"Ground Station - RTL-SDR-USB-v3-{sdr_id}"
 
         elif sdr_device['type'] == 'rtlsdrtcpv3':
             hostname = sdr_device['host']
@@ -179,14 +179,14 @@ class SDRProcessManager:
             connection_type = "tcp"
             driver = None
             worker_process = rtlsdr_worker_process
-            process_name = f"RTL-SDR-TCP-v3-{sdr_id}"
+            process_name = f"Ground Station - RTL-SDR-TCP-v3-{sdr_id}"
 
         elif sdr_device['type'] == 'rtlsdrusbv4':
             serial_number = sdr_device['serial']
             connection_type = "usb"
             driver = None
             worker_process = rtlsdr_worker_process
-            process_name = f"RTL-SDR-USB-v4-{sdr_id}"
+            process_name = f"Ground Station - RTL-SDR-USB-v4-{sdr_id}"
 
         elif sdr_device['type'] == 'rtlsdrtcpv4':
             hostname = sdr_device['host']
@@ -195,7 +195,7 @@ class SDRProcessManager:
             connection_type = "tcp"
             driver = None
             worker_process = rtlsdr_worker_process
-            process_name = f"RTL-SDR-TCP-v4-{sdr_id}"
+            process_name = f"Ground Station - RTL-SDR-TCP-v4-{sdr_id}"
 
         elif sdr_device['type'] == 'soapysdrremote':
             hostname = sdr_device['host']
@@ -204,21 +204,21 @@ class SDRProcessManager:
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
             worker_process = soapysdr_remote_worker_process
-            process_name = f"SoapySDR-Remote-{sdr_id}"
+            process_name = f"Ground Station - SoapySDR-Remote-{sdr_id}"
 
         elif sdr_device['type'] == 'soapysdrlocal':
             connection_type = "soapysdrlocal"
             driver = sdr_device['driver']
             serial_number = sdr_device['serial']
             worker_process = soapysdr_local_worker_process
-            process_name = f"SoapySDR-Local-{sdr_id}"
+            process_name = f"Ground Station - SoapySDR-Local-{sdr_id}"
 
         elif sdr_device['type'] == 'uhd':
             connection_type = "uhd"
             driver = "uhd"
             serial_number = sdr_device['serial']
             worker_process = uhd_worker_process
-            process_name = f"UHD-Worker-{sdr_id}"
+            process_name = f"Ground Station - UHD-Worker-{sdr_id}"
 
         # Check if a process for this device already exists
         if sdr_id in self.processes and self.processes[sdr_id]['process'].is_alive():

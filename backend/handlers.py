@@ -22,10 +22,8 @@ from tlesync.logic import synchronize_satellite_data
 from tlesync.state import sync_state_manager
 from auth import *
 from tracking.events import (fetch_next_events_for_satellite, fetch_next_events_for_group)
-from tracker.logic import compiled_satellite_data
-from tracker.data import get_ui_tracker_state
+from tracker.data import get_ui_tracker_state, compiled_satellite_data
 from tracking.satellite import get_satellite_position_from_tle
-from app import queue_to_tracker
 from common import is_geostationary
 from sdr.utils import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdr.sdrprocessmanager import sdr_process_manager
@@ -475,8 +473,10 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             reply = {'success': update_reply['success'], 'data': update_reply.get('data', [])}
 
         elif cmd == "set-tracking-state":
-            logger.debug(f'Updating satellite tracking state, data: {data}')
+            logger.info(f'Updating satellite tracking state, data: {data}')
+            # store the tracking state in the db
             tracking_state_reply = await crud.set_tracking_state(dbsession, data)
+
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
             await emit_ui_tracker_values(dbsession, sio, logger)
@@ -493,6 +493,7 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
         elif cmd == "nudge-rotator":
             logger.info(f'Nudging rotator, data: {data}')
             # Put command into the tracker queue
+            from tracker.state import queue_to_tracker
             queue_to_tracker.put({'command': data.get('cmd', None), 'data': None})
             reply = {'success': True, 'data': None}
 

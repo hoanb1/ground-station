@@ -1,3 +1,4 @@
+
 # Copyright (c) 2024 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -16,11 +17,16 @@
 
 import sys
 import os
+import signal
+import json
+import asyncio
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import uvicorn
 import socketio
 import httpx
 import queue
+import threading
+import multiprocessing
 from demodulators.webaudioproducer import WebAudioProducer
 from demodulators.webaudioconsumer import WebAudioConsumer
 from fastapi.responses import FileResponse
@@ -43,10 +49,71 @@ from sdr.soapysdrbrowser import discover_soapy_servers
 from tracker.runner import start_tracker_process
 
 
-# Show NumPy configuration
-# np.show_config()
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
+# Global references for cleanup
+audio_producer = None
+audio_consumer = None
+
+def cleanup_everything():
+    """Cleanup function to stop all processes and threads"""
+    logger.info("Cleaning up all processes and threads...")
+
+    # Import here to avoid circular imports
+    try:
+        # Kill tracker process immediately - no graceful shutdown
+        if tracker_process and tracker_process.is_alive():
+            logger.info(f"Killing tracker process PID: {tracker_process.pid}")
+            tracker_process.kill()
+            logger.info("Tracker killed")
+    except Exception as e:
+        logger.info(f"Error killing tracker: {e}")
+
+    # Stop audio
+    try:
+        if audio_producer:
+            audio_producer.stop()
+        if audio_consumer:
+            audio_consumer.stop()
+    except Exception as e:
+        logger.warning(f"Error stopping audio: {e}")
+
+    logger.info("Cleanup complete")
+
+
+def signal_handler(signum, frame):
+    """Handle SIGINT and SIGTERM signals"""
+    logger.info(f"\nReceived signal {signum}, initiating shutdown...")
+    cleanup_everything()
+    logger.info("Forcing exit...")
+    os._exit(0)
+
+# Register signal handlers BEFORE starting anything
+signal.signal(signal.SIGINT, signal_handler)
+signal.signal(signal.SIGTERM, signal_handler)
+
+# Set the main process name early in the application startup
+if HAS_SETPROCTITLE:
+    setproctitle.setproctitle("Ground Station - Main Thread")
+
+# Set the multiprocessing current process name
+multiprocessing.current_process().name = "Ground Station - Main"
+
+# Set the main thread name
+threading.current_thread().name = "Ground Station - Main Thread"
 
 Payload.max_decode_packets = 50
+
+# Some globals for the tracker process
+tracker_process = None
+queue_to_tracker = None
+queue_from_tracker = None
+tracker_stop_event = None
 
 # Models for request/response
 class RTCSessionDescription(BaseModel):
@@ -74,146 +141,15 @@ active_connections: Dict[str, WebSocket] = {}
 # hold a list of sessions
 SESSIONS = {}
 
-# Add these global variables
-tracker_process = None
-queue_to_tracker = None
-queue_from_tracker = None
-tracker_stop_event = None
-
 async def run_discover_soapy():
     while True:
         await discover_soapy_servers()
         await asyncio.sleep(120)
 
-
-@asynccontextmanager
-async def lifespan(fastapiapp: FastAPI):
-    """
-    Custom lifespan for FastAPI.
-    Create and cleanup background tasks or other
-    resources in this context manager.
-    """
-    global audio_producer, audio_consumer, tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event
-
-    # Start the tracker process here
-    tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event = start_tracker_process()
-
-    # Get the current event loop
-    event_loop = asyncio.get_event_loop()
-
-    # Start audio producer/consumer threads
-    audio_producer = WebAudioProducer(audio_queue)
-    audio_consumer = WebAudioConsumer(audio_queue, sio, event_loop)
-
-    audio_producer.start()
-    audio_consumer.start()
-
-    if arguments.runonce_soapy_discovery:
-        # Run SoapyDR discovery task on startup
-        await discover_soapy_servers()
-
-    # Start the Soapy server discovery task only if continuous discovery enabled
-    discover_task = None
-    if arguments.enable_soapy_discovery:
-        discover_task = asyncio.create_task(run_discover_soapy())
-
-    # Start the message handler in your tracker process event loop
-    asyncio.create_task(handle_tracker_messages(sio))
-
-    try:
-        yield
-    finally:
-        # Stop audio threads
-        if audio_producer:
-            audio_producer.stop()
-        if audio_consumer:
-            audio_consumer.stop()
-
-        # Cancel the Soapy server discovery task if it was started
-        if discover_task:
-            discover_task.cancel()
-            try:
-                await discover_task
-            except asyncio.CancelledError:
-                pass
-
-        # Stop the tracker process
-        if tracker_process and tracker_process.is_alive():
-            try:
-                stop_tracker()
-            except Exception as e:
-                logger.error(f"Error stopping tracker: {e}")
-
-
-# Create an asynchronous Socket.IO server using ASGI mode.
-sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True)
-app = FastAPI(lifespan=lifespan)
-
-# Queues for the sound streams
-audio_queue = queue.Queue(maxsize=20)
-audio_producer = None
-audio_consumer = None
-
-# Wrap the Socket.IO server with an ASGI application.
-# This allows non-Socket.IO routes (like the FastAPI endpoints) to be served as well.
-socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
-
-# Middleware setup
-app.add_middleware(
-    CORSMiddleware,
-    allow_origins=["*"],
-    allow_credentials=True,
-    allow_methods=["*"],
-    allow_headers=["*"],
-)
-
-# Feed in the Socket.IO server instance to the SDR process manager
-sdr_process_manager.set_sio(sio)
-
-def stop_tracker():
-    """
-    Send a command to the tracker process to stop it.
-
-    """
-    global tracker_stop_event, queue_to_tracker, tracker_process
-
-    if tracker_stop_event is None or queue_to_tracker is None or tracker_process is None:
-        logger.warning("Tracker components not initialized, cannot stop")
-        return
-
-    logger.info("Stopping tracker process...")
-
-    try:
-        # Set the stop event
-        tracker_stop_event.set()
-
-        # Send a stop command through the queue as well
-        queue_to_tracker.put({'command': 'stop'})
-
-        # Wait for the process to terminate
-        tracker_process.join(timeout=5)
-
-        # Force terminate if it's still running
-        if tracker_process.is_alive():
-            logger.warning("Tracker process didn't terminate gracefully, forcing termination")
-            tracker_process.terminate()
-            tracker_process.join(timeout=2)  # Give it a bit more time
-
-        logger.info("Tracker process stopped successfully")
-
-    except Exception as e:
-        logger.error(f"Error during tracker shutdown: {e}")
-        # Force terminate as a last resort
-        if tracker_process and tracker_process.is_alive():
-            tracker_process.terminate()
-
-
 async def handle_tracker_messages(sockio):
     """
     Continuously checks for messages from the tracker process and forwards them to Socket.IO
     """
-    global queue_from_tracker
-
     while True:
         try:
             if queue_from_tracker is not None and not queue_from_tracker.empty():
@@ -233,6 +169,84 @@ async def handle_tracker_messages(sockio):
             # Wait a bit longer on error
             await asyncio.sleep(1)
 
+@asynccontextmanager
+async def lifespan(fastapiapp: FastAPI):
+    """
+    Custom lifespan for FastAPI.
+    Create and cleanup background tasks or other
+    resources in this context manager.
+    """
+    global audio_producer, audio_consumer, tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event
+
+    logger.info("FastAPI lifespan startup...")
+
+    # Start the tracker process here
+    _tracker_process, _queue_to_tracker, _queue_from_tracker, _tracker_stop_event = start_tracker_process()
+    tracker_process = _tracker_process
+    queue_to_tracker = _queue_to_tracker
+    queue_from_tracker = _queue_from_tracker
+    tracker_stop_event = _tracker_stop_event
+
+    # Get the current event loop
+    event_loop = asyncio.get_event_loop()
+
+    # Start audio producer/consumer threads
+    audio_producer = WebAudioProducer(audio_queue)
+    audio_consumer = WebAudioConsumer(audio_queue, sio, event_loop)
+
+    audio_producer.start()
+    audio_consumer.start()
+
+    # Start the message handler in your tracker process event loop
+    asyncio.create_task(handle_tracker_messages(sio))
+
+    if arguments.runonce_soapy_discovery:
+        # Run SoapyDR discovery task on startup
+        await discover_soapy_servers()
+
+    # Start the Soapy server discovery task only if continuous discovery enabled
+    discover_task = None
+    if arguments.enable_soapy_discovery:
+        discover_task = asyncio.create_task(run_discover_soapy())
+
+    try:
+        yield
+    finally:
+        logger.info("FastAPI lifespan cleanup...")
+        cleanup_everything()
+
+# Create an asynchronous Socket.IO server using ASGI mode.
+sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True)
+app = FastAPI(lifespan=lifespan)
+
+# Queues for the sound streams
+audio_queue = queue.Queue(maxsize=20)
+
+# Wrap the Socket.IO server with an ASGI application.
+# This allows non-Socket.IO routes (like the FastAPI endpoints) to be served as well.
+socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
+
+# Middleware setup
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
+
+# Feed in the Socket.IO server instance to the SDR process manager
+sdr_process_manager.set_sio(sio)
+
+def stop_tracker():
+    """
+    Simple function to kill the tracker process
+    """
+    try:
+        if tracker_process and tracker_process.is_alive():
+            tracker_process.kill()
+    except:
+        pass
 
 @sio.on('connect')
 async def connect(sid, environ, auth=None):
@@ -367,6 +381,13 @@ async def init_db():
 
 
 if __name__ == "__main__":
+    # Ensure process naming is set when running as main
+    if HAS_SETPROCTITLE:
+        setproctitle.setproctitle("Ground Station - Main Thread")
+
+    multiprocessing.current_process().name = "Ground Station - Main"
+    threading.current_thread().name = "Ground Station - Main Thread"
+
     logger.info("Configuring database connection...")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_db())
@@ -378,10 +399,12 @@ if __name__ == "__main__":
         uvicorn.run(socket_app, host=arguments.host, port=arguments.port, log_config=get_logger_config(arguments))
 
     except KeyboardInterrupt:
-        logger.info("Received keyboard interrupt, shutting down...")
-        sys.exit(0)
+        logger.info("KeyboardInterrupt in main")
+        cleanup_everything()
+        os._exit(0)
 
     except Exception as e:
         logger.error(f"Error starting Ground Station server: {str(e)}")
         logger.exception(e)
-        sys.exit(1)
+        cleanup_everything()
+        os._exit(1)
