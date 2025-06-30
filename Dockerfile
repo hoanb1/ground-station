@@ -53,6 +53,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     dbus \
     gpg-agent \
     libsamplerate0-dev \
+    python3-mako \
     && rm -rf /var/lib/apt/lists/*
 
 ## Add Ettus Research UHD Repository
