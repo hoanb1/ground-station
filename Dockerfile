@@ -76,18 +76,6 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 # Copy backend requirements
 COPY backend/requirements.txt .
 
-RUN python3 -m venv /app/venv
-ENV PATH="/app/venv/bin:$PATH"
-
-# Now pip will use the virtual environment
-RUN pip install --upgrade pip
-RUN pip install --no-cache-dir -r requirements.txt
-
-# Install python3-mako needed by uhd
-RUN pip install mako
-
-WORKDIR /src
-
 # Compile UHD from source with Python API
 WORKDIR /src
 RUN git clone https://github.com/EttusResearch/uhd.git
@@ -101,6 +89,18 @@ RUN sudo ldconfig
 
 # Copy UHD Python bindings to virtual environment
 RUN cp -r /usr/local/lib/python3.12/site-packages/uhd* /app/venv/lib/python3.12/site-packages/ || true
+
+RUN python3 -m venv /app/venv
+ENV PATH="/app/venv/bin:$PATH"
+
+# Now pip will use the virtual environment
+RUN pip install --upgrade pip
+RUN pip install --no-cache-dir -r requirements.txt
+
+# Install python3-mako needed by uhd
+RUN pip install mako
+
+WORKDIR /src
 
 # compile SoapySDR
 RUN git clone https://github.com/pothosware/SoapySDR.git
