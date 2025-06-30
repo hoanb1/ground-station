@@ -1,4 +1,3 @@
-
 # Copyright (c) 2024 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -56,9 +55,9 @@ try:
 except ImportError:
     HAS_SETPROCTITLE = False
 
-# Global references for cleanup
-audio_producer: Optional[threading.Thread] = None
-audio_consumer: Optional[threading.Thread] = None
+# Some globals for sound thread
+audio_producer: Optional[WebAudioProducer] = None
+audio_consumer: Optional[WebAudioConsumer] = None
 
 # Some globals for the tracker process
 tracker_process: Optional[multiprocessing.Process] = None
@@ -85,7 +84,8 @@ def cleanup_everything():
         from sdr.utils import active_sdr_clients
         if active_sdr_clients:
             logger.info(f"Cleaning up {len(active_sdr_clients)} SDR sessions...")
-            # Create a copy of the keys to avoid dictionary changed size during iteration
+
+            # Create a copy of the keys to avoid dictionary changing during iteration
             session_ids = list(active_sdr_clients.keys())
             for sid in session_ids:
                 try:
