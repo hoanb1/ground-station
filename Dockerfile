@@ -77,7 +77,7 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 COPY backend/requirements.txt .
 
 # Install numpy 2.3.1 so that UHD picks it up on compile
-RUN pip install numpy==2.3.1
+RUN pip install --break-system-packages --ignore-installed numpy==2.3.1
 
 # Install python3-mako needed by uhd
 RUN pip install mako
