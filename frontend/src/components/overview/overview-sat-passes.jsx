@@ -455,6 +455,7 @@ const NextPassesGroupIsland = React.memo(() => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const containerRef = useRef(null);
+    const hasFetchedRef = useRef(false);
     const [containerHeight, setContainerHeight] = useState(0);
     const {
         selectedSatGroupId,
@@ -470,13 +471,15 @@ const NextPassesGroupIsland = React.memo(() => {
     const [columnUpdateKey, setColumnUpdateKey] = useState(0);
 
     useEffect(() => {
-        if (selectedSatGroupId) {
+        if (selectedSatGroupId && !hasFetchedRef.current) {
+            hasFetchedRef.current = true;
             dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
         }
-        return () => {
 
+        return () => {
+            hasFetchedRef.current = false;
         };
-    }, [selectedSatGroupId]);
+    }, [selectedSatGroupId, dispatch, socket, nextPassesHours]);
 
     useEffect(() => {
         // Update the passes every two hours plus 5 mins to wait until the cache is invalidated

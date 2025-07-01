@@ -486,7 +486,7 @@ class SatelliteTracker:
 
         # Check azimuth limits
         if skypoint[0] > self.azimuth_limits[1] or skypoint[0] < self.azimuth_limits[0]:
-            logger.warning(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
+            #logger.warning(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
             if self.in_tracking_state() and not self.notified.get('azimuth_out_of_bounds', False):
                 events.append({'name': "azimuth_out_of_bounds"})
             self.notified['azimuth_out_of_bounds'] = True
@@ -495,7 +495,7 @@ class SatelliteTracker:
 
         # Check elevation limits
         if skypoint[1] < self.elevation_limits[0] or skypoint[1] > self.elevation_limits[1]:
-            logger.warning(f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}")
+            #logger.warning(f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}")
             if self.in_tracking_state() and not self.notified.get('elevation_out_of_bounds', False):
                 events.append({'name': "elevation_out_of_bounds"})
             self.notified['elevation_out_of_bounds'] = True
@@ -504,7 +504,7 @@ class SatelliteTracker:
 
         # Check minimum elevation
         if skypoint[1] < self.min_elevation:
-            logger.warning(f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}")
+            #logger.warning(f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}")
             if self.in_tracking_state() and not self.notified.get('minelevation_error', False):
                 events.append({'name': "minelevation_error"})
             self.notified['minelevation_error'] = True

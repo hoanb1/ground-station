@@ -362,6 +362,17 @@ class SDRProcessManager:
                 self.logger.warning(f"Forcing termination of SDR process for device {sdr_id}")
                 process_info['process'].terminate()
 
+            # Wait briefly for termination
+            for _ in range(10):  # Wait up to 1 second
+                if not process_info['process'].is_alive():
+                    break
+                await asyncio.sleep(0.1)
+
+            # If still alive, send SIGKILL
+            if process_info['process'].is_alive():
+                self.logger.warning(f"Process {sdr_id} still alive after terminate, sending SIGKILL")
+                process_info['process'].kill()
+
         # Clean up
         if sdr_id in self.processes:
             del self.processes[sdr_id]

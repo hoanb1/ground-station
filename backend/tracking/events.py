@@ -270,7 +270,7 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
                 satellite['tle2']
             ]]
 
-            # Create pool with named processes
+            # Create a pool with named processes
             with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
                 # Submit the calculation task to the pool
                 result = await asyncio.get_event_loop().run_in_executor(
