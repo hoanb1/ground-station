@@ -204,11 +204,6 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
 
-    console.info(
-        ["stopped", "disconnected", "connected"].includes(trackingState['rig_state']),
-        satelliteId === "", ["none", ""].includes(selectedRadioRig),
-        ["none", ""].includes(selectedTransmitter));
-
     return (
         <>
             {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>*/}
