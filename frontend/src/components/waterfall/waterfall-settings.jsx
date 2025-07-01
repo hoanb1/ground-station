@@ -18,7 +18,7 @@
  */
 
 
-import React, {useImperativeHandle, forwardRef, useCallback, useEffect, useState} from 'react';
+import React, {useImperativeHandle, forwardRef, useCallback, useEffect, useState, useRef} from 'react';
 import {styled} from '@mui/material/styles';
 import ArrowForwardIosSharpIcon from '@mui/icons-material/ArrowForwardIosSharp';
 import MuiAccordion from '@mui/material/Accordion';
@@ -233,6 +233,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
     const [localGain, setLocalGain] = useState(gain);
     const [localColorMap, setLocalColorMap] = useState(colorMap);
     const [localAutoDBRange, setLocalAutoDBRange] = useState(autoDBRange);
+    const hasInitializedRef = useRef(false);
 
     useEffect(() => {
         setLocalCenterFrequency(centerFrequency);
@@ -245,9 +246,12 @@ const WaterfallSettings = forwardRef((props, ref) => {
     }, [centerFrequency, dbRange, fftSize, sampleRate, gain, colorMap, autoDBRange]);
 
     useEffect(() => {
-        if (selectedSDRId) {
+        // Only run once on mount if selectedSDRId exists and we haven't initialized yet
+        if (selectedSDRId && !hasInitializedRef.current) {
+            hasInitializedRef.current = true;
             handleSDRChange({target: {value: selectedSDRId}});
         }
+        // No cleanup function - let the ref stay true to prevent any subsequent calls for StrictMode
     }, []);
 
     const handleAccordionChange = (panel) => (event, isExpanded) => {

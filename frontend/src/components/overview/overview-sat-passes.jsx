@@ -456,6 +456,7 @@ const NextPassesGroupIsland = React.memo(() => {
     const dispatch = useDispatch();
     const containerRef = useRef(null);
     const hasFetchedRef = useRef(false);
+    const lastFetchParamsRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
     const {
         selectedSatGroupId,
@@ -471,14 +472,26 @@ const NextPassesGroupIsland = React.memo(() => {
     const [columnUpdateKey, setColumnUpdateKey] = useState(0);
 
     useEffect(() => {
-        if (selectedSatGroupId && !hasFetchedRef.current) {
-            hasFetchedRef.current = true;
-            dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
+        if (selectedSatGroupId) {
+            const currentParams = `${selectedSatGroupId}-${nextPassesHours}`;
+
+            // Only fetch if parameters have changed
+            if (lastFetchParamsRef.current !== currentParams) {
+                lastFetchParamsRef.current = currentParams;
+                hasFetchedRef.current = false; // Reset for new parameters
+            }
+
+            if (!hasFetchedRef.current) {
+                hasFetchedRef.current = true;
+                console.info("iam here");
+                dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
+            }
         }
 
-        return () => {
-            hasFetchedRef.current = false;
-        };
+        // Don't reset hasFetchedRef in cleanup - that's what causes the double call in StrictMode
+        // return () => {
+        //     hasFetchedRef.current = false;
+        // };
     }, [selectedSatGroupId, dispatch, socket, nextPassesHours]);
 
     useEffect(() => {

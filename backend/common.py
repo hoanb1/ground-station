@@ -48,7 +48,7 @@ class ModelEncoder(json.JSONEncoder):
         if isinstance(obj, (numpy.integer, numpy.int_)):
             return int(obj)
 
-        if isinstance(obj, (numpy.floating, numpy.float_)):
+        if isinstance(obj, (numpy.floating, numpy.float64)):
             return float(obj)
 
         # Attempt to convert SQLAlchemy model objects

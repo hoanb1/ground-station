@@ -76,6 +76,12 @@ RUN ln -sf /usr/bin/python3 /usr/bin/python
 # Copy backend requirements
 COPY backend/requirements.txt .
 
+# Install numpy 2.3.1 so that UHD picks it up on compile
+RUN pip install numpy==2.3.1
+
+# Install python3-mako needed by uhd
+RUN pip install mako
+
 # Compile UHD from source with Python API
 WORKDIR /src
 RUN git clone https://github.com/EttusResearch/uhd.git
@@ -99,12 +105,8 @@ WORKDIR /app
 RUN pip install --upgrade pip
 RUN pip install --no-cache-dir -r requirements.txt
 
-# Install python3-mako needed by uhd
-RUN pip install mako
-
-WORKDIR /src
-
 # compile SoapySDR
+WORKDIR /src
 RUN git clone https://github.com/pothosware/SoapySDR.git
 WORKDIR SoapySDR/
 RUN mkdir build
@@ -176,7 +178,7 @@ WORKDIR LimeSuite/
 RUN git checkout stable
 # Fix the missing include for uint8_t
 RUN sed -i '1i\#include <cstdint>' src/lms7002m_mcu/MCU_File.cpp
-RUN mkdir builddir && cd builddir
+RUN mkdir builddir
 WORKDIR builddir/
 RUN cmake ../
 RUN make -j4
