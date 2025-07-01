@@ -43,7 +43,7 @@ import {
     TitleBar
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
-import {Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
+import {Box, Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import SatelliteList from "../target/target-sat-list.jsx";
 import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
@@ -266,7 +266,22 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
                             </MenuItem>
                             {availableTransmitters.map((transmitter, index) => {
                                 return <MenuItem value={transmitter.id} key={transmitter.id}>
-                                    {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Box
+                                            sx={{
+                                                width: 8,
+                                                height: 8,
+                                                borderRadius: '50%',
+                                                backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
+                                                boxShadow: transmitter.alive
+                                                    ? '0 0 6px rgba(76, 175, 80, 0.6)'
+                                                    : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                            }}
+                                        />
+                                        <span>
+                                                {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
+                                            </span>
+                                    </Box>
                                 </MenuItem>;
                             })}
                         </Select>

@@ -746,7 +746,38 @@ const MainWaterfallDisplay = React.memo(() => {
                             >
                                 {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
                             </IconButton>
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={handleZoomIn}
+                                color="primary"
+                                title="Zoom in"
+                            >
+                                <ZoomInIcon/>
+                            </IconButton>
 
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={handleZoomOut}
+                                color="primary"
+                                title="Zoom out"
+                            >
+                                <ZoomOutIcon/>
+                            </IconButton>
+
+                            <IconButton
+                                sx={{
+                                    borderRadius: 0,
+                                }}
+                                onClick={handleZoomReset}
+                                color="primary"
+                                title="Reset zoom"
+                            >
+                                <RestartAltIcon/>
+                            </IconButton>
                             <IconButton
                                 sx={{
                                     borderRadius: 0,
@@ -866,38 +897,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             >
                                 <VFO4Icon/>
                             </IconButton>
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={handleZoomIn}
-                                color="primary"
-                                title="Zoom in"
-                            >
-                                <ZoomInIcon/>
-                            </IconButton>
 
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={handleZoomOut}
-                                color="primary"
-                                title="Zoom out"
-                            >
-                                <ZoomOutIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={handleZoomReset}
-                                color="primary"
-                                title="Reset zoom"
-                            >
-                                <RestartAltIcon/>
-                            </IconButton>
                         </Stack>
                     </Box>
                 </Paper>
