@@ -67,21 +67,23 @@ import ControllerTabs from "../common/controller.jsx";
 import {SatelliteIcon} from "hugeicons-react";
 
 
-
 const SettingsPopover = () => {
     const [volume, setVolume] = useState(30);
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(buttonRef.current);
+    const [activeIcon, setActiveIcon] = useState(null);
 
     // Get rig and rotator data from Redux store
     const { rigData, rotatorData } = useSelector(state => state.targetSatTrack);
 
-    const handleClick = (event) => {
+    const handleClick = (event, iconType) => {
         setAnchorEl(event.currentTarget);
+        setActiveIcon(iconType);
     };
 
     const handleClose = () => {
         setAnchorEl(null);
+        setActiveIcon(null);
     };
 
     const open = Boolean(anchorEl);
@@ -120,7 +122,7 @@ const SettingsPopover = () => {
             <Stack direction="row" spacing={0.5}>
                 <Tooltip title={getRotatorTooltip()}>
                     <IconButton
-                        onClick={handleClick}
+                        onClick={(event) => handleClick(event, 'rotator')}
                         size="small"
                         sx={{
                             width: 40,
@@ -136,7 +138,7 @@ const SettingsPopover = () => {
                 <Tooltip title={getRigTooltip()}>
                     <IconButton
                         ref={buttonRef}
-                        onClick={handleClick}
+                        onClick={(event) => handleClick(event, 'rig')}
                         size="small"
                         sx={{
                             width: 40,
@@ -176,7 +178,7 @@ const SettingsPopover = () => {
                     width: 330,
                     backgroundColor: '#1e1e1e',
                 }}>
-                    <ControllerTabs />
+                    <ControllerTabs activeController={activeIcon} />
                 </Box>
             </Popover>
         </>

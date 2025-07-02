@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useState, useEffect} from 'react';
 import {Box, Tab, Tabs} from '@mui/material';
 import {styled} from "@mui/material/styles";
 import RotatorControl from '../target/rotator-control.jsx'
@@ -67,7 +67,7 @@ export const HardwareTabs = styled(Tabs)({
 });
 
 
-export default function ControllerTabs({waterfallSettingsComponentRef}) {
+export default function ControllerTabs({activeController}) {
     const [activeTab, setActiveTab] = useState(0);
     const {
         gridEditable: isTargetGridEditable,
@@ -82,6 +82,17 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
     const handleTabChange = (event, newValue) => {
         setActiveTab(newValue);
     };
+
+    useEffect(() => {
+        if (activeController === 'rotator') {
+            setActiveTab(0);
+        } else if (activeController === 'rig') {
+            setActiveTab(1);
+        } else {
+            setActiveTab(0);
+        }
+
+    }, [activeController]);
 
     return (
         <>
@@ -106,12 +117,9 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
                              iconPosition="start" label="Rotator"
                              sx={{
                                  borderRight: '1px solid #494949',
-
-
-
                              }}/>
-                        <Tab icon={<LedIcon color={rigData?.connected ? "#00ff00" : "#ff0000"}/>} iconPosition="start"
-                             label="Rig" sx={{}}/>
+                        <Tab icon={<LedIcon color={rigData?.connected ? "#00ff00" : "#ff0000"}/>}
+                             iconPosition="start" label="Rig" />
                     </HardwareTabs>
                 </Box>
                 <TabPanel value={activeTab} index={0}>
