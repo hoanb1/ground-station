@@ -4,6 +4,8 @@ import { useWakeLockContext } from './dashboard-wake-lock-provider.jsx';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import WarningIcon from '@mui/icons-material/Warning';
+import ScreenLockPortraitIcon from '@mui/icons-material/ScreenLockPortrait';
+import StayPrimaryPortraitIcon from '@mui/icons-material/StayPrimaryPortrait';
 
 const WakeLockStatus = ({ size = 'medium' }) => {
     const {
@@ -45,7 +47,7 @@ const WakeLockStatus = ({ size = 'medium' }) => {
         if (!isSupported) {
             return <WarningIcon color="warning" />;
         }
-        return isActive ? <LockIcon color="primary" /> : <LockOpenIcon color="action" />;
+        return isActive ? <ScreenLockPortraitIcon color="primary" /> : <StayPrimaryPortraitIcon color="action" />;
     };
 
     return (

@@ -89,17 +89,17 @@ const SettingsPopover = () => {
     // Determine colors based on connection and tracking status
     const getRigColor = () => {
         if (!rigData.connected) return '#6e1f19'; // Red for disconnected
-        if (rigData.tracking) return '#2196f3'; // Blue for tracking
-        return '#4caf50'; // Green for connected but not tracking
+        if (rigData.tracking) return '#62ec43'; // Blue for tracking
+        return '#245326'; // Green for connected but not tracking
     };
 
     const getRotatorColor = () => {
         if (!rotatorData.connected) return '#6e1f19'; // Red for disconnected
-        if (rotatorData.outofbounds) return "#7524d8";
-        if (rotatorData.minelevation) return "#ff7a33";
+        if (rotatorData.outofbounds) return "#7524d8"; //
+        if (rotatorData.minelevation) return "#ff7a33"; //
         if (rotatorData.slewing) return '#ff9800'; // Orange for slewing
-        if (rotatorData.tracking) return '#2196f3'; // Blue for tracking
-        return '#4caf50'; // Green for connected but not tracking
+        if (rotatorData.tracking) return '#62ec43'; // Light green for tracking
+        return '#245326'; // Green for connected but not tracking
     };
 
     const getRigTooltip = () => {
@@ -397,11 +397,17 @@ function TimeDisplay() {
                 p: 1,
                 borderRadius: "4px",
                 textAlign: "center",
-                maxWidth: "200px"
+                maxWidth: "100px",
+                display: "flex",
+                flexDirection: "column",
+                alignItems: "center"
             }}
         >
             <Typography variant="body2" sx={{fontWeight: "bold", fontFamily: "monospace"}}>
-                {formattedTime} {isUTC ? "UTC" : timeZoneAbbr}
+                {formattedTime}
+            </Typography>
+            <Typography variant="caption" sx={{fontSize: "0.65rem", fontFamily: "monospace", color: "#aaa"}}>
+                {isUTC ? "UTC" : timeZoneAbbr}
             </Typography>
         </Box>
     );
