@@ -395,6 +395,8 @@ function TimeDisplay() {
             sx={{
                 cursor: "pointer",
                 p: 1,
+                paddingTop: 0,
+                paddingBottom: 0,
                 borderRadius: "4px",
                 textAlign: "center",
                 maxWidth: "100px",
