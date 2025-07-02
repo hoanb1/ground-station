@@ -95,8 +95,8 @@ const SettingsPopover = () => {
 
     const getRotatorColor = () => {
         if (!rotatorData.connected) return '#6e1f19'; // Red for disconnected
-        if (rotatorData.outofbounds) return "#7524d8"; //
-        if (rotatorData.minelevation) return "#ff7a33"; //
+        if (rotatorData.outofbounds) return "#853eda"; //
+        if (rotatorData.minelevation) return "#e67a7a"; //
         if (rotatorData.slewing) return '#ff9800'; // Orange for slewing
         if (rotatorData.tracking) return '#62ec43'; // Light green for tracking
         return '#245326'; // Green for connected but not tracking
