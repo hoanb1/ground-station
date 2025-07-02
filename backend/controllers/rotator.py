@@ -292,7 +292,7 @@ class RotatorController:
         """Set the rotator position and yield updates until it reaches the target."""
         # Start the slew operation
         try:
-            self.logger.info(f"Setting rotator position to az={target_az}, el={target_el}")
+            self.logger.debug(f"Setting rotator position to az={target_az}, el={target_el}")
             
             # Format the set position command
             command = f"P {target_az} {target_el}"

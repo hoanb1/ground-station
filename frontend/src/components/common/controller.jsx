@@ -118,7 +118,7 @@ export default function ControllerTabs({waterfallSettingsComponentRef}) {
                     <RotatorControl/>
                 </TabPanel>
                 <TabPanel value={activeTab} index={1}>
-                    <RigControl waterfallSettingsComponentRef={waterfallSettingsComponentRef}/>
+                    <RigControl />
                 </TabPanel>
             </Box>
         </>

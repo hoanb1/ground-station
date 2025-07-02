@@ -163,7 +163,7 @@ class SDRController:
             Tuple[float, bool]: Current frequency and whether still tuning
         """
         self.check_connection()
-        self.logger.info(f"Setting SDR frequency to {target_freq} Hz")
+        self.logger.debug(f"Setting SDR frequency to {target_freq} Hz")
 
         try:
             # TODO: Implement set frequency logic for the SDR

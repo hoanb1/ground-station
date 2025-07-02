@@ -142,9 +142,9 @@ const WaterfallLayout = React.memo(function () {
         <StyledIslandParentScrollbar key="settings">
             <WaterfallSettings ref={waterfallComponentSettingsRef}/>
         </StyledIslandParentScrollbar>,
-        <StyledIslandParentScrollbar key="rig-control">
-            <ControllerTabs waterfallSettingsComponentRef={waterfallComponentSettingsRef}/>
-        </StyledIslandParentScrollbar>,
+        // <StyledIslandParentScrollbar key="rig-control">
+        //     <ControllerTabs />
+        // </StyledIslandParentScrollbar>,
     ];
 
     let ResponsiveGridLayoutParent = null;

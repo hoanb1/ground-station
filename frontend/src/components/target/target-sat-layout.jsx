@@ -502,9 +502,9 @@ const TargetSatelliteLayout = React.memo(function () {
         <StyledIslandParentScrollbar key="video">
             <CameraView/>
         </StyledIslandParentScrollbar>,
-        <StyledIslandParentScrollbar key="rotator-control">
-            <ControllerTabs waterfallSettingsComponentRef={null}/>
-        </StyledIslandParentScrollbar>,
+        // <StyledIslandParentScrollbar key="rotator-control">
+        //     <ControllerTabs />
+        // </StyledIslandParentScrollbar>,
     ];
 
     let ResponsiveGridLayoutParent = null;

@@ -51,7 +51,7 @@ import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
 import {setCenterFrequency} from "./waterfall-slice.jsx";
 
 
-const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
+const RigControl = React.memo(({}) => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {
@@ -149,16 +149,6 @@ const RigControl = React.memo(({waterfallSettingsComponentRef}) => {
 
         // Set the selected radio rig
         dispatch(setRadioRig(selectedValue));
-
-        // // Handle SDR-specific actions
-        // if (selectedType === "sdr") {
-        //     // Call the function in the waterfall settings component to handle the change
-        //     waterfallSettingsComponentRef.current.handleSDRChange(event);
-        // } else if (selectedType === "rig") {
-        //     // Handle rig-specific actions if needed
-        //     // Currently commented out in your code:
-        //     // waterfallSettingsComponentRef.current.handleSDRChange(event);
-        // }
     }
 
     function handleTransmitterChange(event) {

@@ -41,7 +41,7 @@ import {GroundStationLogoGreenBlue, GSRetroLogo} from "../common/icons.jsx";
 import {stringAvatar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
-import {useCallback, useEffect, useState} from "react";
+import {useCallback, useEffect, useRef, useState} from "react";
 import {handleSetGridEditableOverview as OverviewModeSetEditing} from '../overview/overview-sat-layout.jsx'
 import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target/target-sat-layout.jsx'
 import {handleSetGridEditableWaterfall as WaterfallModeSetEditing} from '../waterfall/waterfall-layout.jsx';
@@ -52,8 +52,134 @@ import {useDispatch, useSelector} from "react-redux";
 import {setIsEditing} from "./dashboard-slice.jsx";
 import WakeLockStatus from "./dashboard-wake-lock-status.jsx";
 import Tooltip from "@mui/material/Tooltip";
+import RadioIcon from '@mui/icons-material/Radio';
+import LanIcon from '@mui/icons-material/Lan';
+import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import { AudioProvider, useAudio } from "./dashboard-audio.jsx";
+import {
+    Popover,
+    Slider,
+    Switch,
+    FormControlLabel
+} from '@mui/material';
+import SettingsIcon from '@mui/icons-material/Settings';
+import ControllerTabs from "../common/controller.jsx";
+import {SatelliteIcon} from "hugeicons-react";
 
+
+
+const SettingsPopover = () => {
+    const [volume, setVolume] = useState(30);
+    const buttonRef = useRef(null);
+    const [anchorEl, setAnchorEl] = useState(buttonRef.current);
+
+    // Get rig and rotator data from Redux store
+    const { rigData, rotatorData } = useSelector(state => state.targetSatTrack);
+
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const open = Boolean(anchorEl);
+
+    // Determine colors based on connection and tracking status
+    const getRigColor = () => {
+        if (!rigData.connected) return '#f44336'; // Red for disconnected
+        if (rigData.tracking) return '#2196f3'; // Blue for tracking
+        return '#4caf50'; // Green for connected but not tracking
+    };
+
+    const getRotatorColor = () => {
+        if (!rotatorData.connected) return '#f44336'; // Red for disconnected
+        if (rotatorData.slewing) return '#ff9800'; // Orange for slewing
+        if (rotatorData.tracking) return '#2196f3'; // Blue for tracking
+        return '#4caf50'; // Green for connected but not tracking
+    };
+
+    const getRigTooltip = () => {
+        if (!rigData.connected) return 'Rig: Disconnected';
+        if (rigData.tracking) return `Rig: Tracking (${rigData.frequency} Hz)`;
+        return 'Rig: Connected';
+    };
+
+    const getRotatorTooltip = () => {
+        if (!rotatorData.connected) return 'Rotator: Disconnected';
+        if (rotatorData.tracking) return `Rotator: Tracking (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
+        if (rotatorData.slewing) return `Rotator: Slewing (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
+        return `Rotator: Connected (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
+    };
+
+    return (
+        <>
+            <Stack direction="row" spacing={0.5}>
+                <Tooltip title={getRotatorTooltip()}>
+                    <IconButton
+                        onClick={handleClick}
+                        size="small"
+                        sx={{
+                            width: 40,
+                            color: getRotatorColor(),
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            }
+                        }}
+                    >
+                        <SatelliteIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+                <Tooltip title={getRigTooltip()}>
+                    <IconButton
+                        ref={buttonRef}
+                        onClick={handleClick}
+                        size="small"
+                        sx={{
+                            width: 40,
+                            color: getRigColor(),
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            }
+                        }}
+                    >
+                        <RadioIcon fontSize="small" />
+                    </IconButton>
+                </Tooltip>
+            </Stack>
+            <Popover
+                sx={{
+                    '& .MuiPaper-root': {
+                        borderRadius: 0,
+                    }
+                }}
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handleClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+            >
+                <Box sx={{
+                    borderRadius: 0,
+                    border: '1px solid #424242',
+                    p: 0,
+                    minWidth: 330,
+                    width: 330,
+                    backgroundColor: '#1e1e1e',
+                }}>
+                    <ControllerTabs />
+                </Box>
+            </Popover>
+        </>
+    );
+};
 
 function DashboardEditor() {
     const dispatch = useDispatch();
@@ -115,25 +241,34 @@ function ConnectionStatus() {
         return () => clearInterval(interval);
     }, [socket]);
 
+    const getConnectionColor = () => {
+        if (transportType === "websocket") return '#4caf50'; // Green for websocket
+        if (transportType === "polling") return '#f57c00'; // Orange for polling
+        return '#f44336'; // Red for disconnected
+    };
+
+    const getConnectionTooltip = () => {
+        if (transportType === "websocket") return 'Network: Connected (WebSocket)';
+        if (transportType === "polling") return 'Network: Connected (Polling)';
+        if (transportType === 'connecting...') return 'Network: Connecting...';
+        return 'Network: Disconnected';
+    };
+
     return (
-        <>
-            <Tooltip title={`Connection Status: ${transportType}`}>
-                <Box
-                    sx={{
-                        mt: '10px',
-                        width: '12px',
-                        height: '12px',
-                        borderRadius: '50%',
-                        backgroundColor: transportType === "websocket"
-                            ? '#4caf50'
-                            : transportType === "polling"
-                                ? '#f57c00'
-                                : '#f44336', // Red for "disconnected"
-                        marginRight: '8px',
-                    }}
-                />
-            </Tooltip>
-        </>
+        <Tooltip title={getConnectionTooltip()}>
+            <IconButton
+                size="small"
+                sx={{
+                    width: 40,
+                    color: getConnectionColor(),
+                    '&:hover': {
+                        backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                    }
+                }}
+            >
+                <LanIcon fontSize="small" />
+            </IconButton>
+        </Tooltip>
     );
 }
 
@@ -141,10 +276,11 @@ function ConnectionStatus() {
 function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
-            <ConnectionStatus/>
-            <WakeLockStatus/>
-            <DashboardEditor/>
-            <TimeDisplay/>
+            <ConnectionStatus />
+            <SettingsPopover />
+            <WakeLockStatus />
+            <DashboardEditor />
+            <TimeDisplay />
             <ThemeSwitcher />
         </Stack>
     );

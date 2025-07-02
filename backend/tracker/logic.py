@@ -484,6 +484,7 @@ class SatelliteTracker:
         """Check if satellite position is within limits."""
         events = []
 
+
         # Check azimuth limits
         if skypoint[0] > self.azimuth_limits[1] or skypoint[0] < self.azimuth_limits[0]:
             #logger.warning(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
@@ -557,7 +558,7 @@ class SatelliteTracker:
             try:
                 current_frequency, is_tuning = await anext(frequency_gen)
                 self.rig_data['tuning'] = is_tuning
-                logger.info(f"Current frequency: {current_frequency}, tuning={is_tuning}")
+                logger.debug(f"Current frequency: {current_frequency}, tuning={is_tuning}")
             except StopAsyncIteration:
                 logger.info(f"Tuning to frequency {self.rig_data['observed_freq']} complete")
 
@@ -575,7 +576,7 @@ class SatelliteTracker:
                 try:
                     az, el, is_slewing = await anext(position_gen)
                     self.rotator_data['slewing'] = is_slewing
-                    logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
+                    logger.debug(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
                 except StopAsyncIteration:
                     logger.info(f"Slewing to AZ={skypoint[0]}° EL={skypoint[1]}° complete")
 
@@ -590,7 +591,7 @@ class SatelliteTracker:
                 try:
                     az, el, is_slewing = await anext(position_gen)
                     self.rotator_data['slewing'] = is_slewing
-                    logger.info(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
+                    logger.debug(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
                 except StopAsyncIteration:
                     logger.info(f"Slewing to AZ={az}° EL={el}° complete")
 
