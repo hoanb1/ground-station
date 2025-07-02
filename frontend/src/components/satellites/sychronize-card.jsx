@@ -167,56 +167,77 @@ const SynchronizeTLEsCard = function () {
                         </Box>
                     </Box>
 
-                    <Button
-                        disabled={synchronizing}
-                        variant="contained"
-                        color="primary"
-                        onClick={handleSynchronizeSatellites}
-                        size="small"
-                        sx={{
-                            background: 'linear-gradient(135deg, #0288d1 0%, #0277bd 100%)',
-                            boxShadow: '0 5px 15px rgba(2,136,209,0.3)',
-                            textTransform: 'uppercase',
-                            fontWeight: 600,
-                            letterSpacing: '1px',
-                            px: { xs: 2, sm: 3 },
-                            py: 1,
-                            borderRadius: '8px',
-                            position: 'relative',
-                            overflow: 'hidden',
-                            transition: 'all 0.3s ease',
-                            '&:hover': {
-                                background: 'linear-gradient(135deg, #039be5 0%, #0288d1 100%)',
-                                boxShadow: '0 5px 20px rgba(2,136,209,0.5)',
-                                transform: 'translateY(-2px)',
-                            },
-                            '&::before': {
-                                content: '""',
-                                position: 'absolute',
-                                top: 0,
-                                left: '-100%',
-                                width: '100%',
-                                height: '100%',
-                                background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
-                                transition: 'all 0.5s ease',
-                            },
-                            '&:hover::before': {
-                                left: '100%',
-                            },
-                            alignSelf: { xs: 'flex-start', sm: 'center' }
-                        }}
-                    >
-                        <SyncIcon sx={{
-                            mr: 1,
-                            animation: syncState['progress'] > 0 && syncState['progress'] < 100 ? 'rotate 2s infinite linear' : 'none',
-                            '@keyframes rotate': {
-                                '0%': { transform: 'rotate(0deg)' },
-                                '100%': { transform: 'rotate(360deg)' }
-                            },
-                            fontSize: { xs: '1rem', sm: '1.25rem' }
-                        }}/>
-                        Synchronize
-                    </Button>
+                    <Box sx={{
+                        display: 'flex',
+                        flexDirection: 'column',
+                        alignItems: { xs: 'flex-start', sm: 'center' }
+                    }}>
+                        <Button
+                            disabled={synchronizing}
+                            variant="contained"
+                            color="primary"
+                            onClick={handleSynchronizeSatellites}
+                            size="small"
+                            sx={{
+                                background: 'linear-gradient(135deg, #0288d1 0%, #0277bd 100%)',
+                                boxShadow: '0 5px 15px rgba(2,136,209,0.3)',
+                                textTransform: 'uppercase',
+                                fontWeight: 600,
+                                letterSpacing: '1px',
+                                px: { xs: 2, sm: 3 },
+                                py: 1,
+                                borderRadius: '8px',
+                                position: 'relative',
+                                overflow: 'hidden',
+                                transition: 'all 0.3s ease',
+                                '&:hover': {
+                                    background: 'linear-gradient(135deg, #039be5 0%, #0288d1 100%)',
+                                    boxShadow: '0 5px 20px rgba(2,136,209,0.5)',
+                                    transform: 'translateY(-2px)',
+                                },
+                                '&::before': {
+                                    content: '""',
+                                    position: 'absolute',
+                                    top: 0,
+                                    left: '-100%',
+                                    width: '100%',
+                                    height: '100%',
+                                    background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                                    transition: 'all 0.5s ease',
+                                },
+                                '&:hover::before': {
+                                    left: '100%',
+                                },
+                            }}
+                        >
+                            <SyncIcon sx={{
+                                mr: 1,
+                                animation: syncState['progress'] > 0 && syncState['progress'] < 100 ? 'rotate 2s infinite linear' : 'none',
+                                '@keyframes rotate': {
+                                    '0%': { transform: 'rotate(0deg)' },
+                                    '100%': { transform: 'rotate(360deg)' }
+                                },
+                                fontSize: { xs: '1rem', sm: '1.25rem' }
+                            }}/>
+                            Synchronize
+                        </Button>
+
+                        {/* Last update timestamp positioned directly beneath the button */}
+                        {syncState?.last_update && (
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    fontFamily: 'monospace',
+                                    color: '#888888',
+                                    fontSize: '0.65rem',
+                                    mt: 0.5,
+                                    textAlign: { xs: 'left', sm: 'center' },
+                                }}
+                            >
+                                Last update: {humanizeDate(syncState.last_update)}
+                            </Typography>
+                        )}
+                    </Box>
                 </Box>
 
                 {/* Progress section */}
@@ -330,37 +351,6 @@ const SynchronizeTLEsCard = function () {
                         )}
                     </Typography>
                 </Box>
-
-                    {/* Last update timestamp indicator using humanizeDate */}
-                    {syncState?.last_update && (
-                        <Box sx={{
-                            display: 'flex',
-                            alignItems: 'center',
-                            mb: 1,
-                            backgroundColor: 'rgba(0,0,0,0.2)',
-                            borderRadius: 1,
-                            p: 1,
-                            border: '1px solid rgba(45,72,86,0.4)',
-                        }}>
-                            <AccessTimeIcon
-                                sx={{
-                                    color: '#40c0ff',
-                                    mr: 1,
-                                    fontSize: '1rem'
-                                }}
-                            />
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    fontFamily: 'monospace',
-                                    color: '#bbbbbb',
-                                    fontSize: '0.8rem',
-                                }}
-                            >
-                                Last update: {humanizeDate(syncState.last_update)}
-                            </Typography>
-                        </Box>
-                    )}
 
                     {/* New items notification */}
                     {hasNewItems && (
@@ -527,8 +517,6 @@ const SynchronizeTLEsCard = function () {
                             </Collapse>
                         </Box>
                     )}
-
-
             </Box>
         </Card>
     );

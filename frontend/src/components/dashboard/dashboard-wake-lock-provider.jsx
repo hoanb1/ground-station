@@ -103,8 +103,8 @@ export const WakeLockProvider = ({ children }) => {
         }
 
         setHasManualRequest(true);
-        enqueueSnackbar('Manual wake lock activated', {
-            variant: 'info',
+        enqueueSnackbar('Screen wake lock activated', {
+            variant: 'success',
             autoHideDuration: 2000,
         });
         return true;
@@ -121,7 +121,7 @@ export const WakeLockProvider = ({ children }) => {
     const forceRelease = useCallback(() => {
         setWakeLockRequests(new Set());
         setHasManualRequest(false);
-        enqueueSnackbar('All wake locks forcefully released', {
+        enqueueSnackbar('Screen wake lock released', {
             variant: 'info',
             autoHideDuration: 2000,
         });

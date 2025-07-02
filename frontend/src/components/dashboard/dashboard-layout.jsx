@@ -88,13 +88,15 @@ const SettingsPopover = () => {
 
     // Determine colors based on connection and tracking status
     const getRigColor = () => {
-        if (!rigData.connected) return '#f44336'; // Red for disconnected
+        if (!rigData.connected) return '#6e1f19'; // Red for disconnected
         if (rigData.tracking) return '#2196f3'; // Blue for tracking
         return '#4caf50'; // Green for connected but not tracking
     };
 
     const getRotatorColor = () => {
-        if (!rotatorData.connected) return '#f44336'; // Red for disconnected
+        if (!rotatorData.connected) return '#6e1f19'; // Red for disconnected
+        if (rotatorData.outofbounds) return "#7524d8";
+        if (rotatorData.minelevation) return "#ff7a33";
         if (rotatorData.slewing) return '#ff9800'; // Orange for slewing
         if (rotatorData.tracking) return '#2196f3'; // Blue for tracking
         return '#4caf50'; // Green for connected but not tracking
@@ -209,14 +211,18 @@ function DashboardEditor() {
             {isEditing ? (
                 <Stack direction="row" spacing={2}>
                     <Tooltip title="Done editing">
-                        <IconButton size="small" onClick={handleSaveClick}>
+                        <IconButton size="small" onClick={handleSaveClick} sx={{
+                            width: 40,
+                        }}>
                             <CheckIcon color="success"/>
                         </IconButton>
                     </Tooltip>
                 </Stack>
             ) : (
                 <Tooltip title="Edit layout">
-                    <IconButton size="small" onClick={handleEditClick}>
+                    <IconButton size="small" onClick={handleEditClick} sx={{
+                        width: 40,
+                    }}>
                         <BorderColorIcon color="primary"/>
                     </IconButton>
                 </Tooltip>
