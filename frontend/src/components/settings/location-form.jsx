@@ -273,7 +273,7 @@ const LocationPage = () => {
                             zoom={2}
                             maxZoom={10}
                             whenReady={handleWhenReady}
-                            minZoom={3}
+                            minZoom={1}
                             dragging={true}
                             style={{ height: '100%', width: '100%' }}
                         >
