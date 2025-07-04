@@ -70,6 +70,8 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
         selectedTransmitter,
         availableTransmitters,
         gridEditable,
+        rigData,
+        rotatorData,
     } = useSelector((state) => state.targetSatTrack);
 
     const { rigs } = useSelector((state) => state.rigs);
@@ -112,7 +114,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
 
         };
     }, []);
-    
+
     const handleGroupChange = (e) => {
         const newGroupId = e.target.value;
         dispatch(setSatGroupId(newGroupId));
@@ -129,39 +131,76 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setSatelliteGroupSelectOpen(false));
     };
 
+    const handleTrackingStop = () => {
+        const newTrackingState = {
+            ...trackingState,
+            'rotator_state': "stopped",
+            'rig_state': "stopped",
+        };
+        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
+    };
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Select group and satellite</TitleBar>
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <FormControl disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                                 size={"small"}>
-                        <InputLabel htmlFor="grouped-select">Group</InputLabel>
-                        <Select onClose={handleSelectCloseEvent}
-                                onOpen={handleSelectOpenEvent}
-                                onChange={handleGroupChange}
-                                value={satGroups.length > 0? groupId: ""}
-                                id="grouped-select" label="Grouping" variant={"filled"}
-                                size={"small"}>
-                            <ListSubheader>User defined satellite groups</ListSubheader>
-                            {satGroups.map((group, index) => {
-                                if (group.type === "user") {
-                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                                }
-                            })}
-                            <ListSubheader>TLE source groups</ListSubheader>
-                            {satGroups.map((group, index) => {
-                                if (group.type === "system") {
-                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                                }
-                            })}
-                        </Select>
-                    </FormControl>
+                <Grid size={{ xs: 8, sm: 8, md: 8 }}>
+                    <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
+                        <FormControl disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                                     size={"small"}>
+                            <InputLabel htmlFor="grouped-select">Group</InputLabel>
+                            <Select onClose={handleSelectCloseEvent}
+                                    onOpen={handleSelectOpenEvent}
+                                    onChange={handleGroupChange}
+                                    value={satGroups.length > 0? groupId: ""}
+                                    id="grouped-select" label="Grouping" variant={"filled"}
+                                    size={"small"}>
+                                <ListSubheader>User defined satellite groups</ListSubheader>
+                                {satGroups.map((group, index) => {
+                                    if (group.type === "user") {
+                                        return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    }
+                                })}
+                                <ListSubheader>TLE source groups</ListSubheader>
+                                {satGroups.map((group, index) => {
+                                    if (group.type === "system") {
+                                        return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    }
+                                })}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+                    <Grid
+                        size={{ xs: 12, sm: 12, md: 12 }}
+                        style={{padding: '0rem 0.5rem 0rem 0.5rem'}}
+                    >
+                        <SatelliteList/>
+                    </Grid>
                 </Grid>
-
-                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
-                    <SatelliteList/>
+                <Grid
+                    size={{ xs: 4, sm: 4, md: 4 }}
+                    style={{
+                        padding: '0.5rem 0.5rem 0rem 0.5rem',
+                        display: 'flex',
+                        alignItems: 'center',
+                }}
+                >
+                    <Button
+                        variant="contained"
+                        color="error"
+                        disabled={rigData['tracking'] !== true && rotatorData['tracking'] !== true}
+                        size="large"
+                        onClick={handleTrackingStop}
+                        sx={{
+                            width: '100%',
+                            height: '100%',
+                            fontSize: '1rem',
+                            marginTop: 1,
+                            marginBottom: 1,
+                        }}
+                    >
+                        STOP TRACKING
+                    </Button>
                 </Grid>
             </Grid>
         </>

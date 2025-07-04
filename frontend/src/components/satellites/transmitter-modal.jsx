@@ -226,7 +226,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     py: 2.5
                 }}
             >
-                {isNew ? '📡 Add New Transmitter' : '✏️ Edit Transmitter'}
+                {isNew ? 'Add New Transmitter' : 'Edit Transmitter'}
             </DialogTitle>
             <DialogContent sx={{ backgroundColor: '#1a1a1a', px: 3, py: 3 }}>
                 {error && (
@@ -247,7 +247,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     {/* Basic Information Section */}
                     <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
-                        📋 Basic Information
+                        Basic Information
                     </Typography>
 
                     <TextField
@@ -336,10 +336,18 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                             disabled={loading}
                             sx={{
                                 color: '#ffffff',
-                                '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
-                                '& .MuiSelect-icon': { color: '#cccccc' },
-                                '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
+                                '& .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#555555'
+                                },
+                                '& .MuiSelect-icon': {
+                                    color: '#cccccc'
+                                },
+                                '&:hover .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#777777'
+                                },
+                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+                                    borderColor: '#90caf9'
+                                },
                             }}
                             MenuProps={{
                                 PaperProps: {
@@ -361,7 +369,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     {/* Uplink Frequencies Section */}
                     <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
-                        📡 Uplink Frequencies
+                        Uplink Frequencies
                     </Typography>
 
                     <TextField
@@ -402,7 +410,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     {/* Downlink Frequencies Section */}
                     <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
-                        📻 Downlink Frequencies
+                        Downlink Frequencies
                     </Typography>
 
                     <TextField
@@ -443,7 +451,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     {/* Transmission Settings Section */}
                     <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
-                        ⚙️ Transmission Settings
+                        Transmission Settings
                     </Typography>
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
@@ -607,8 +615,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     }}
                 >
                     {loading ?
-                        (isNew ? '⏳ Adding...' : '⏳ Saving...') :
-                        (isNew ? '✅ Add Transmitter' : '💾 Save Changes')
+                        (isNew ? 'Adding...' : 'Saving...') :
+                        (isNew ? 'Add Transmitter' : 'Save Changes')
                     }
                 </Button>
             </DialogActions>
