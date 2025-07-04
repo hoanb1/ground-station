@@ -329,6 +329,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                 {Object.keys(validationErrors).length > 0 && (
                     <Box sx={{
+                        mt: 2,
                         mb: 2,
                         p: 2,
                         backgroundColor: '#d32f2f',
@@ -341,7 +342,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </Box>
                 )}
 
-                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
+                <Box sx={{ mt: 2, display: 'flex', flexDirection: 'column', gap: 0 }}>
 
                     {/* Basic Information Section */}
                     <Typography variant="h6" sx={{ color: '#90caf9', mb: 2, fontWeight: 'bold' }}>
@@ -350,7 +351,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     <TextField
                         fullWidth
-                        label="Description *"
+                        label="Description"
                         value={formData.description}
                         onChange={handleChange('description')}
                         variant="filled"
