@@ -67,7 +67,7 @@ import ControllerTabs from "../common/controller.jsx";
 import {SatelliteIcon} from "hugeicons-react";
 
 
-const SettingsPopover = () => {
+const HardwareSettingsPopover = () => {
     const [volume, setVolume] = useState(30);
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(buttonRef.current);
@@ -237,58 +237,229 @@ function DashboardEditor() {
 }
 
 function ConnectionStatus() {
-    const socket = useSocket().socket;
-    const [transportType, setTransportType] = useState('connecting...');
+    const { socket, trafficStats } = useSocket();
+    const [anchorEl, setAnchorEl] = useState(null);
 
-    useEffect(() => {
-        const interval = setInterval(() => {
-            if (socket.connected) {
-                setTransportType(socket.io.engine.transport.name);
-            } else {
-                setTransportType('disconnected');
-            }
-        }, 1000);
-
-        return () => clearInterval(interval);
-    }, [socket]);
-
-    const getConnectionColor = () => {
-        if (transportType === "websocket") return '#4caf50'; // Green for websocket
-        if (transportType === "polling") return '#f57c00'; // Orange for polling
-        return '#f44336'; // Red for disconnected
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
     };
 
-    const getConnectionTooltip = () => {
-        if (transportType === "websocket") return 'Network: Connected (WebSocket)';
-        if (transportType === "polling") return 'Network: Connected (Polling)';
-        if (transportType === 'connecting...') return 'Network: Connecting...';
-        return 'Network: Disconnected';
+    const handleClose = () => {
+        setAnchorEl(null);
     };
+
+    const open = Boolean(anchorEl);
+
+    // Memoize connection color based on transport name
+    const connectionColor = React.useMemo(() => {
+        if (trafficStats.transport.name === "websocket") return '#4caf50';
+        if (trafficStats.transport.name === "polling") return '#f57c00';
+        if (trafficStats.transport.name === "connecting..." || trafficStats.transport.name === "unknown") return '#ff9800';
+        if (trafficStats.transport.name === "disconnected") return '#f44336';
+        return '#f44336';
+    }, [trafficStats.transport.name]);
+
+    // Memoize connection tooltip
+    const connectionTooltip = React.useMemo(() => {
+        if (trafficStats.transport.name === "websocket") return 'Network: Connected (WebSocket)';
+        if (trafficStats.transport.name === "polling") return 'Network: Connected (Polling)';
+        if (trafficStats.transport.name === 'connecting...' || trafficStats.transport.name === "unknown") return 'Network: Connecting...';
+        if (trafficStats.transport.name === "disconnected") return 'Network: Disconnected';
+        return 'Network: Unknown';
+    }, [trafficStats.transport.name]);
+
+    const formatBytes = useCallback((bytes) => {
+        if (bytes === 0) return '0 B/s';
+        const k = 1024;
+        const sizes = ['B/s', 'KB/s', 'MB/s', 'GB/s'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }, []);
+
+    const formatTotalBytes = useCallback((bytes) => {
+        if (bytes === 0) return '0 B';
+        const k = 1024;
+        const sizes = ['B', 'KB', 'MB', 'GB'];
+        const i = Math.floor(Math.log(bytes) / Math.log(k));
+        return parseFloat((bytes / Math.pow(k, i)).toFixed(2)) + ' ' + sizes[i];
+    }, []);
+
+    const formatDuration = useCallback((milliseconds) => {
+        const seconds = Math.floor(milliseconds / 1000);
+        const minutes = Math.floor(seconds / 60);
+        const hours = Math.floor(minutes / 60);
+
+        if (hours > 0) {
+            return `${hours}h ${minutes % 60}m ${seconds % 60}s`;
+        } else if (minutes > 0) {
+            return `${minutes}m ${seconds % 60}s`;
+        } else {
+            return `${seconds}s`;
+        }
+    }, []);
 
     return (
-        <Tooltip title={getConnectionTooltip()}>
-            <IconButton
-                size="small"
+        <>
+            <Tooltip title={connectionTooltip}>
+                <IconButton
+                    size="small"
+                    onClick={handleClick}
+                    sx={{
+                        width: 40,
+                        color: connectionColor,
+                        '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                        }
+                    }}
+                >
+                    <LanIcon fontSize="small" />
+                </IconButton>
+            </Tooltip>
+            <Popover
                 sx={{
-                    width: 40,
-                    color: getConnectionColor(),
-                    '&:hover': {
-                        backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                    '& .MuiPaper-root': {
+                        borderRadius: 0,
                     }
                 }}
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handleClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
             >
-                <LanIcon fontSize="small" />
-            </IconButton>
-        </Tooltip>
+                <Box sx={{
+                    borderRadius: 0,
+                    border: '1px solid #424242',
+                    p: 2,
+                    minWidth: 300,
+                    width: 300,
+                    backgroundColor: '#1e1e1e',
+                }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: '#fff' }}>
+                        Network Statistics
+                    </Typography>
+
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Connection Status
+                        </Typography>
+                        <Grid container spacing={2}>
+                            <Grid size={4}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Transport:
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: connectionColor }}>
+                                    {trafficStats.transport.name.toUpperCase()}
+                                </Typography>
+                            </Grid>
+                            <Grid size={4}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Duration:
+                                </Typography>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#fff' }}>
+                                    {formatDuration(trafficStats.session.duration)}
+                                </Typography>
+                            </Grid>
+                        </Grid>
+
+                        {trafficStats.manager.reconnecting && (
+                            <Typography variant="caption" sx={{ color: '#ff9800', fontFamily: 'monospace', mt: 1, display: 'block' }}>
+                                Reconnecting... (Attempt: {trafficStats.manager.reconnectAttempts})
+                            </Typography>
+                        )}
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    <Box sx={{ mb: 2 }}>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Current Traffic Rate
+                        </Typography>
+                        <Grid container spacing={2}>
+                            <Grid size={6}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Upload:
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
+                                    {formatBytes(trafficStats.rates.bytesPerSecond.sent)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {trafficStats.rates.packetsPerSecond.sent} msgs/s
+                                </Typography>
+                            </Grid>
+                            <Grid size={6}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Download:
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
+                                    {formatBytes(trafficStats.rates.bytesPerSecond.received)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {trafficStats.rates.packetsPerSecond.received} msgs/s
+                                </Typography>
+                            </Grid>
+                        </Grid>
+                    </Box>
+
+                    <Divider sx={{ my: 2 }} />
+
+                    <Box>
+                        <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                            Application Level (Session Total)
+                        </Typography>
+                        <Grid container spacing={2}>
+                            <Grid size={6}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Sent:
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
+                                    {formatTotalBytes(trafficStats.engine.bytesSent)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {trafficStats.engine.packetsSent} messages
+                                </Typography>
+                            </Grid>
+                            <Grid size={6}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Received:
+                                </Typography>
+                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
+                                    {formatTotalBytes(trafficStats.engine.bytesReceived)}
+                                </Typography>
+                                <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
+                                    {trafficStats.engine.packetsReceived} messages
+                                </Typography>
+                            </Grid>
+                        </Grid>
+
+                        {trafficStats.engine.upgradeAttempts > 0 && (
+                            <Box sx={{ mt: 1 }}>
+                                <Typography variant="caption" color="text.secondary">
+                                    Transport Upgrades:
+                                </Typography>
+                                <Typography variant="caption" sx={{ color: '#fff', fontFamily: 'monospace', ml: 1 }}>
+                                    {trafficStats.engine.upgradeAttempts}
+                                </Typography>
+                            </Box>
+                        )}
+                    </Box>
+                </Box>
+            </Popover>
+        </>
     );
 }
-
 
 function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
             <ConnectionStatus />
-            <SettingsPopover />
+            <HardwareSettingsPopover />
             <WakeLockStatus />
             <DashboardEditor />
             <TimeDisplay />

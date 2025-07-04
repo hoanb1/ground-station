@@ -1,3 +1,4 @@
+
 import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip} from "@mui/material";
 import Button from "@mui/material/Button";
 import * as React from "react";
@@ -27,7 +28,8 @@ import {useSocket} from "../common/socket.jsx";
 const STATUS_OPTIONS = [
     {name: "active", value: "active"},
     {name: "inactive", value: "inactive"},
-    {name: "dead", value: "dead"}
+    {name: "dead", value: "dead"},
+    {name: "alive", value: "alive"}
 ];
 const TYPE_OPTIONS = [
     {name: "Telemetry", value: "Telemetry"},
@@ -79,6 +81,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
         baud: "",
     });
 
+    const [validationErrors, setValidationErrors] = useState({});
+
     useEffect(() => {
         if (transmitter) {
             setFormData({
@@ -116,6 +120,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                 baud: "",
             });
         }
+        // Clear validation errors when modal opens/closes
+        setValidationErrors({});
     }, [transmitter, open]);
 
     const handleChange = (field) => (event) => {
@@ -123,9 +129,53 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
             ...prev,
             [field]: event.target.value
         }));
+
+        // Clear validation error for this field when user starts typing
+        if (validationErrors[field]) {
+            setValidationErrors(prev => ({
+                ...prev,
+                [field]: false
+            }));
+        }
+    };
+
+    const validateForm = () => {
+        const errors = {};
+
+        // Required fields
+        if (!formData.description.trim()) {
+            errors.description = true;
+        }
+        if (!formData.type) {
+            errors.type = true;
+        }
+        if (!formData.status) {
+            errors.status = true;
+        }
+        if (formData.alive === "" || formData.alive === null || formData.alive === undefined) {
+            errors.alive = true;
+        }
+
+        // At least one uplink or downlink value must be provided
+        const hasUplink = formData.uplinkLow || formData.uplinkHigh;
+        const hasDownlink = formData.downlinkLow || formData.downlinkHigh;
+
+        if (!hasUplink && !hasDownlink) {
+            errors.uplinkLow = true;
+            errors.uplinkHigh = true;
+            errors.downlinkLow = true;
+            errors.downlinkHigh = true;
+        }
+
+        setValidationErrors(errors);
+        return Object.keys(errors).length === 0;
     };
 
     const handleSave = async () => {
+        if (!validateForm()) {
+            return;
+        }
+
         const processedData = {
             ...formData,
             // Convert empty strings back to "-" for display
@@ -179,17 +229,26 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
         }
     };
 
-    const fieldSx = {
+    const getFieldSx = (fieldName) => ({
         '& .MuiOutlinedInput-root': {
             color: '#ffffff',
             backgroundColor: '#2a2a2a',
-            '& fieldset': { borderColor: '#555555' },
-            '&:hover fieldset': { borderColor: '#777777' },
-            '&.Mui-focused fieldset': { borderColor: '#90caf9' },
+            '& fieldset': {
+                borderColor: validationErrors[fieldName] ? '#f44336' : '#555555',
+                borderWidth: validationErrors[fieldName] ? '2px' : '1px'
+            },
+            '&:hover fieldset': {
+                borderColor: validationErrors[fieldName] ? '#f44336' : '#777777',
+                borderWidth: validationErrors[fieldName] ? '2px' : '1px'
+            },
+            '&.Mui-focused fieldset': {
+                borderColor: validationErrors[fieldName] ? '#f44336' : '#90caf9',
+                borderWidth: '2px'
+            },
         },
         '& .MuiInputLabel-root': {
-            color: '#cccccc',
-            '&.Mui-focused': { color: '#90caf9' }
+            color: validationErrors[fieldName] ? '#f44336' : '#cccccc',
+            '&.Mui-focused': { color: validationErrors[fieldName] ? '#f44336' : '#90caf9' }
         },
         '& .MuiSelect-select': {
             color: '#ffffff',
@@ -198,7 +257,32 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
             color: '#cccccc',
         },
         mb: 2.5
-    };
+    });
+
+    const getSelectSx = (fieldName) => ({
+        color: '#ffffff',
+        '& .MuiOutlinedInput-notchedOutline': {
+            borderColor: validationErrors[fieldName] ? '#f44336' : '#555555',
+            borderWidth: validationErrors[fieldName] ? '2px' : '1px'
+        },
+        '& .MuiSelect-icon': { color: '#cccccc' },
+        '&:hover .MuiOutlinedInput-notchedOutline': {
+            borderColor: validationErrors[fieldName] ? '#f44336' : '#777777',
+            borderWidth: validationErrors[fieldName] ? '2px' : '1px'
+        },
+        '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
+            borderColor: validationErrors[fieldName] ? '#f44336' : '#90caf9',
+            borderWidth: '2px'
+        },
+    });
+
+    const getInputLabelSx = (fieldName) => ({
+        color: validationErrors[fieldName] ? '#f44336' : '#cccccc',
+        '&.Mui-focused': { color: validationErrors[fieldName] ? '#f44336' : '#90caf9' }
+    });
+
+    const hasFrequencyErrors = validationErrors.uplinkLow || validationErrors.uplinkHigh ||
+        validationErrors.downlinkLow || validationErrors.downlinkHigh;
 
     return (
         <Dialog
@@ -243,6 +327,20 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                     </Box>
                 )}
 
+                {Object.keys(validationErrors).length > 0 && (
+                    <Box sx={{
+                        mb: 2,
+                        p: 2,
+                        backgroundColor: '#d32f2f',
+                        borderRadius: 1,
+                        color: '#ffffff'
+                    }}>
+                        <Typography variant="body2">
+                            Please fill in all required fields. {hasFrequencyErrors && 'At least one uplink or downlink frequency must be provided.'}
+                        </Typography>
+                    </Box>
+                )}
+
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0 }}>
 
                     {/* Basic Information Section */}
@@ -252,30 +350,26 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     <TextField
                         fullWidth
-                        label="Description"
+                        label="Description *"
                         value={formData.description}
                         onChange={handleChange('description')}
                         variant="filled"
                         placeholder="Enter transmitter description"
-                        sx={fieldSx}
+                        sx={getFieldSx('description')}
                         disabled={loading}
+                        error={validationErrors.description}
+                        required
                     />
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
-                        <FormControl fullWidth variant="outlined">
-                            <InputLabel sx={{ color: '#cccccc', '&.Mui-focused': { color: '#90caf9' } }}>Type</InputLabel>
+                        <FormControl fullWidth variant="outlined" error={validationErrors.type}>
+                            <InputLabel sx={getInputLabelSx('type')}>Type *</InputLabel>
                             <Select
                                 value={formData.type}
                                 onChange={handleChange('type')}
-                                label="Type"
+                                label="Type *"
                                 disabled={loading}
-                                sx={{
-                                    color: '#ffffff',
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
-                                    '& .MuiSelect-icon': { color: '#cccccc' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
-                                }}
+                                sx={getSelectSx('type')}
                                 MenuProps={{
                                     PaperProps: {
                                         sx: {
@@ -287,27 +381,22 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                         }
                                     }
                                 }}
-                             variant={'filled'}>
+                                variant={'filled'}
+                                required>
                                 {TYPE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
                             </Select>
                         </FormControl>
 
-                        <FormControl fullWidth variant="outlined">
-                            <InputLabel sx={{ color: '#cccccc', '&.Mui-focused': { color: '#90caf9' } }}>Status</InputLabel>
+                        <FormControl fullWidth variant="outlined" error={validationErrors.status}>
+                            <InputLabel sx={getInputLabelSx('status')}>Status *</InputLabel>
                             <Select
                                 value={formData.status}
                                 onChange={handleChange('status')}
-                                label="Status"
+                                label="Status *"
                                 disabled={loading}
-                                sx={{
-                                    color: '#ffffff',
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
-                                    '& .MuiSelect-icon': { color: '#cccccc' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
-                                }}
+                                sx={getSelectSx('status')}
                                 MenuProps={{
                                     PaperProps: {
                                         sx: {
@@ -319,7 +408,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                         }
                                     }
                                 }}
-                             variant={'filled'}>
+                                variant={'filled'}
+                                required>
                                 {STATUS_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -327,28 +417,14 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         </FormControl>
                     </Box>
 
-                    <FormControl fullWidth variant="outlined" sx={{ mb: 3 }}>
-                        <InputLabel sx={{ color: '#cccccc', '&.Mui-focused': { color: '#90caf9' } }}>Alive</InputLabel>
+                    <FormControl fullWidth variant="outlined" sx={{ mb: 3 }} error={validationErrors.alive}>
+                        <InputLabel sx={getInputLabelSx('alive')}>Alive *</InputLabel>
                         <Select
                             value={formData.alive}
                             onChange={handleChange('alive')}
-                            label="Alive"
+                            label="Alive *"
                             disabled={loading}
-                            sx={{
-                                color: '#ffffff',
-                                '& .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#555555'
-                                },
-                                '& .MuiSelect-icon': {
-                                    color: '#cccccc'
-                                },
-                                '&:hover .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#777777'
-                                },
-                                '&.Mui-focused .MuiOutlinedInput-notchedOutline': {
-                                    borderColor: '#90caf9'
-                                },
-                            }}
+                            sx={getSelectSx('alive')}
                             MenuProps={{
                                 PaperProps: {
                                     sx: {
@@ -360,7 +436,8 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                     }
                                 }}
                             }
-                         variant={'filled'}>
+                            variant={'filled'}
+                            required>
                             {ALIVE_OPTIONS.map((option) => (
                                 <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                             ))}
@@ -380,8 +457,9 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         variant="filled"
                         type="number"
                         placeholder="e.g., 435000000"
-                        sx={fieldSx}
+                        sx={getFieldSx('uplinkLow')}
                         disabled={loading}
+                        error={validationErrors.uplinkLow}
                     />
 
                     <TextField
@@ -392,8 +470,9 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         variant="filled"
                         type="number"
                         placeholder="e.g., 438000000"
-                        sx={fieldSx}
+                        sx={getFieldSx('uplinkHigh')}
                         disabled={loading}
+                        error={validationErrors.uplinkHigh}
                     />
 
                     <TextField
@@ -404,7 +483,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         variant="filled"
                         type="number"
                         placeholder="e.g., 1000"
-                        sx={{ ...fieldSx, mb: 3 }}
+                        sx={{ ...getFieldSx('uplinkDrift'), mb: 3 }}
                         disabled={loading}
                     />
 
@@ -421,8 +500,9 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         variant="filled"
                         type="number"
                         placeholder="e.g., 145800000"
-                        sx={fieldSx}
+                        sx={getFieldSx('downlinkLow')}
                         disabled={loading}
+                        error={validationErrors.downlinkLow}
                     />
 
                     <TextField
@@ -433,8 +513,9 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         variant="filled"
                         type="number"
                         placeholder="e.g., 145900000"
-                        sx={fieldSx}
+                        sx={getFieldSx('downlinkHigh')}
                         disabled={loading}
+                        error={validationErrors.downlinkHigh}
                     />
 
                     <TextField
@@ -445,7 +526,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         variant="filled"
                         type="number"
                         placeholder="e.g., 500"
-                        sx={{ ...fieldSx, mb: 3 }}
+                        sx={{ ...getFieldSx('downlinkDrift'), mb: 3 }}
                         disabled={loading}
                     />
 
@@ -456,19 +537,13 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
                         <FormControl fullWidth variant="outlined">
-                            <InputLabel sx={{ color: '#cccccc', '&.Mui-focused': { color: '#90caf9' } }}>Mode</InputLabel>
+                            <InputLabel sx={getInputLabelSx('mode')}>Mode</InputLabel>
                             <Select
                                 value={formData.mode}
                                 onChange={handleChange('mode')}
                                 label="Mode"
                                 disabled={loading}
-                                sx={{
-                                    color: '#ffffff',
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
-                                    '& .MuiSelect-icon': { color: '#cccccc' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
-                                }}
+                                sx={getSelectSx('mode')}
                                 MenuProps={{
                                     PaperProps: {
                                         sx: {
@@ -480,7 +555,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                         }
                                     }
                                 }}
-                             variant={'filled'}>
+                                variant={'filled'}>
                                 {MODE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -488,19 +563,13 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         </FormControl>
 
                         <FormControl fullWidth variant="outlined">
-                            <InputLabel sx={{ color: '#cccccc', '&.Mui-focused': { color: '#90caf9' } }}>Uplink Mode</InputLabel>
+                            <InputLabel sx={getInputLabelSx('uplinkMode')}>Uplink Mode</InputLabel>
                             <Select
                                 value={formData.uplinkMode}
                                 onChange={handleChange('uplinkMode')}
                                 label="Uplink Mode"
                                 disabled={loading}
-                                sx={{
-                                    color: '#ffffff',
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
-                                    '& .MuiSelect-icon': { color: '#cccccc' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
-                                }}
+                                sx={getSelectSx('uplinkMode')}
                                 MenuProps={{
                                     PaperProps: {
                                         sx: {
@@ -512,7 +581,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                         }
                                     }
                                 }}
-                             variant={'filled'}>
+                                variant={'filled'}>
                                 {MODE_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
@@ -522,19 +591,13 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 0 }}>
                         <FormControl fullWidth variant="outlined">
-                            <InputLabel sx={{ color: '#cccccc', '&.Mui-focused': { color: '#90caf9' } }}>Invert</InputLabel>
+                            <InputLabel sx={getInputLabelSx('invert')}>Invert</InputLabel>
                             <Select
                                 value={formData.invert}
                                 onChange={handleChange('invert')}
                                 label="Invert"
                                 disabled={loading}
-                                sx={{
-                                    color: '#ffffff',
-                                    '& .MuiOutlinedInput-notchedOutline': { borderColor: '#555555' },
-                                    '& .MuiSelect-icon': { color: '#cccccc' },
-                                    '&:hover .MuiOutlinedInput-notchedOutline': { borderColor: '#777777' },
-                                    '&.Mui-focused .MuiOutlinedInput-notchedOutline': { borderColor: '#90caf9' },
-                                }}
+                                sx={getSelectSx('invert')}
                                 MenuProps={{
                                     PaperProps: {
                                         sx: {
@@ -546,7 +609,7 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                                         }
                                     }
                                 }}
-                             variant={'filled'}>
+                                variant={'filled'}>
                                 {INVERT_OPTIONS.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>{option.name}</MenuItem>
                                 ))}
