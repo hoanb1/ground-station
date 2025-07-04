@@ -119,7 +119,7 @@ const SettingsPopover = () => {
 
     return (
         <>
-            <Stack direction="row" spacing={0.5}>
+            <Stack direction="row" spacing={0}>
                 <Tooltip title={getRotatorTooltip()}>
                     <IconButton
                         onClick={(event) => handleClick(event, 'rotator')}
@@ -129,6 +129,9 @@ const SettingsPopover = () => {
                             color: getRotatorColor(),
                             '&:hover': {
                                 backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            },
+                            '& svg': {
+                                height: '80%',
                             }
                         }}
                     >
@@ -145,7 +148,7 @@ const SettingsPopover = () => {
                             color: getRigColor(),
                             '&:hover': {
                                 backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                            }
+                            },
                         }}
                     >
                         <RadioIcon fontSize="small" />
