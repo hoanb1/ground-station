@@ -237,8 +237,15 @@ function DashboardEditor() {
 }
 
 function ConnectionStatus() {
-    const { socket, trafficStats } = useSocket();
+    const { socket, trafficStatsRef, forceUpdateStats } = useSocket();
     const [anchorEl, setAnchorEl] = useState(null);
+
+    // Force update stats every second to get fresh data
+    useEffect(() => {
+        const interval = setInterval(()=>{
+        }, 1000);
+        return () => clearInterval(interval);
+    }, []);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -252,21 +259,21 @@ function ConnectionStatus() {
 
     // Memoize connection color based on transport name
     const connectionColor = React.useMemo(() => {
-        if (trafficStats.transport.name === "websocket") return '#4caf50';
-        if (trafficStats.transport.name === "polling") return '#f57c00';
-        if (trafficStats.transport.name === "connecting..." || trafficStats.transport.name === "unknown") return '#ff9800';
-        if (trafficStats.transport.name === "disconnected") return '#f44336';
+        if (trafficStatsRef.current.transport.name === "websocket") return '#4caf50';
+        if (trafficStatsRef.current.transport.name === "polling") return '#f57c00';
+        if (trafficStatsRef.current.transport.name === "connecting..." || trafficStatsRef.current.transport.name === "unknown") return '#ff9800';
+        if (trafficStatsRef.current.transport.name === "disconnected") return '#f44336';
         return '#f44336';
-    }, [trafficStats.transport.name]);
+    }, [trafficStatsRef.current.transport.name]);
 
     // Memoize connection tooltip
     const connectionTooltip = React.useMemo(() => {
-        if (trafficStats.transport.name === "websocket") return 'Network: Connected (WebSocket)';
-        if (trafficStats.transport.name === "polling") return 'Network: Connected (Polling)';
-        if (trafficStats.transport.name === 'connecting...' || trafficStats.transport.name === "unknown") return 'Network: Connecting...';
-        if (trafficStats.transport.name === "disconnected") return 'Network: Disconnected';
+        if (trafficStatsRef.current.transport.name === "websocket") return 'Network: Connected (WebSocket)';
+        if (trafficStatsRef.current.transport.name === "polling") return 'Network: Connected (Polling)';
+        if (trafficStatsRef.current.transport.name === 'connecting...' || trafficStatsRef.current.transport.name === "unknown") return 'Network: Connecting...';
+        if (trafficStatsRef.current.transport.name === "disconnected") return 'Network: Disconnected';
         return 'Network: Unknown';
-    }, [trafficStats.transport.name]);
+    }, [trafficStatsRef.current.transport.name]);
 
     const formatBytes = useCallback((bytes) => {
         if (bytes === 0) return '0 B/s';
@@ -337,8 +344,8 @@ function ConnectionStatus() {
                     borderRadius: 0,
                     border: '1px solid #424242',
                     p: 2,
-                    minWidth: 300,
-                    width: 300,
+                    minWidth: 250,
+                    width: 250,
                     backgroundColor: '#1e1e1e',
                 }}>
                     <Typography variant="h6" sx={{ mb: 2, color: '#fff' }}>
@@ -350,27 +357,27 @@ function ConnectionStatus() {
                             Connection Status
                         </Typography>
                         <Grid container spacing={2}>
-                            <Grid size={4}>
+                            <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
                                     Transport:
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: connectionColor }}>
-                                    {trafficStats.transport.name.toUpperCase()}
+                                    {trafficStatsRef.current.transport.name.toUpperCase()}
                                 </Typography>
                             </Grid>
-                            <Grid size={4}>
+                            <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
                                     Duration:
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#fff' }}>
-                                    {formatDuration(trafficStats.session.duration)}
+                                    {formatDuration(trafficStatsRef.current.session.duration)}
                                 </Typography>
                             </Grid>
                         </Grid>
 
-                        {trafficStats.manager.reconnecting && (
+                        {trafficStatsRef.current.manager.reconnecting && (
                             <Typography variant="caption" sx={{ color: '#ff9800', fontFamily: 'monospace', mt: 1, display: 'block' }}>
-                                Reconnecting... (Attempt: {trafficStats.manager.reconnectAttempts})
+                                Reconnecting... (Attempt: {trafficStatsRef.current.manager.reconnectAttempts})
                             </Typography>
                         )}
                     </Box>
@@ -387,10 +394,10 @@ function ConnectionStatus() {
                                     Upload:
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
-                                    {formatBytes(trafficStats.rates.bytesPerSecond.sent)}
+                                    {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.sent)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStats.rates.packetsPerSecond.sent} msgs/s
+                                    {trafficStatsRef.current.rates.packetsPerSecond.sent} msgs/s
                                 </Typography>
                             </Grid>
                             <Grid size={6}>
@@ -398,10 +405,10 @@ function ConnectionStatus() {
                                     Download:
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
-                                    {formatBytes(trafficStats.rates.bytesPerSecond.received)}
+                                    {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.received)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStats.rates.packetsPerSecond.received} msgs/s
+                                    {trafficStatsRef.current.rates.packetsPerSecond.received} msgs/s
                                 </Typography>
                             </Grid>
                         </Grid>
@@ -419,10 +426,10 @@ function ConnectionStatus() {
                                     Sent:
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
-                                    {formatTotalBytes(trafficStats.engine.bytesSent)}
+                                    {formatTotalBytes(trafficStatsRef.current.engine.bytesSent)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStats.engine.packetsSent} messages
+                                    {trafficStatsRef.current.engine.packetsSent} messages
                                 </Typography>
                             </Grid>
                             <Grid size={6}>
@@ -430,21 +437,21 @@ function ConnectionStatus() {
                                     Received:
                                 </Typography>
                                 <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
-                                    {formatTotalBytes(trafficStats.engine.bytesReceived)}
+                                    {formatTotalBytes(trafficStatsRef.current.engine.bytesReceived)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStats.engine.packetsReceived} messages
+                                    {trafficStatsRef.current.engine.packetsReceived} messages
                                 </Typography>
                             </Grid>
                         </Grid>
 
-                        {trafficStats.engine.upgradeAttempts > 0 && (
+                        {trafficStatsRef.current.engine.upgradeAttempts > 0 && (
                             <Box sx={{ mt: 1 }}>
                                 <Typography variant="caption" color="text.secondary">
                                     Transport Upgrades:
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#fff', fontFamily: 'monospace', ml: 1 }}>
-                                    {trafficStats.engine.upgradeAttempts}
+                                    {trafficStatsRef.current.engine.upgradeAttempts}
                                 </Typography>
                             </Box>
                         )}

@@ -112,7 +112,7 @@ const OverviewSatelliteGroupSelector = React.memo(function () {
                                     return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
-                            <ListSubheader>Build-in satellite groups</ListSubheader>
+                            <ListSubheader>TLE sourced satellite groups</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "system") {
                                     return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;

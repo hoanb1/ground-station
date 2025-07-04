@@ -283,7 +283,6 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         <StyledIslandParentNoScrollbar key="sat-info">
             <SatelliteInfoCard/>
         </StyledIslandParentNoScrollbar>,
-
     ];
 
     let ResponsiveGridLayoutParent = null;

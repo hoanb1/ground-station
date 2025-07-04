@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -31,9 +30,12 @@ const SocketContext = createContext();
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const { enqueueSnackbar } = useSnackbar();
-    const [collectStats, setCollectStats] = useState(import.meta.env.PROD);
+    //const [collectStats, setCollectStats] = useState(import.meta.env.PROD);
+    const [collectStats, setCollectStats] = useState(true);
     const [token, setToken] = useState(null);
-    const [trafficStats, setTrafficStats] = useState({
+
+    // Replace state with ref for traffic stats
+    const trafficStatsRef = useRef({
         // Application Level Stats (since Socket.IO doesn't have built-in stats)
         engine: {
             bytesReceived: 0,
@@ -186,19 +188,19 @@ export const SocketProvider = ({ children }) => {
                 };
             }
 
-            // Update state with all stats
-            setTrafficStats(prev => ({
+            // Update ref directly (no re-render)
+            trafficStatsRef.current = {
                 engine: currentStats,
                 transport: transportInfo,
                 manager: managerInfo,
                 rates: rates,
                 session: {
-                    start: prev.session.start,
-                    duration: now - prev.session.start,
+                    start: trafficStatsRef.current.session.start,
+                    duration: now - trafficStatsRef.current.session.start,
                     lastUpdate: now
                 },
                 collecting: collectStats
-            }));
+            };
 
             // Update previous values for next rate calculation (only if collecting)
             if (collectStats) {
@@ -281,22 +283,22 @@ export const SocketProvider = ({ children }) => {
                 timestamp: now
             };
 
-            // Update session start time
-            setTrafficStats(prev => ({
-                ...prev,
+            // Update session start time in ref
+            trafficStatsRef.current = {
+                ...trafficStatsRef.current,
                 session: {
                     start: now,
                     duration: 0,
                     lastUpdate: now
                 },
                 collecting: true
-            }));
+            };
         } else {
             console.info('Stopping traffic collection');
-            setTrafficStats(prev => ({
-                ...prev,
+            trafficStatsRef.current = {
+                ...trafficStatsRef.current,
                 collecting: false
-            }));
+            };
         }
     }, [collectStats]);
 
@@ -365,9 +367,9 @@ export const SocketProvider = ({ children }) => {
                 };
             }
 
-            // Reset session start time
-            setTrafficStats(prev => ({
-                ...prev,
+            // Reset session start time in ref
+            trafficStatsRef.current = {
+                ...trafficStatsRef.current,
                 session: {
                     start: now,
                     duration: 0,
@@ -388,20 +390,20 @@ export const SocketProvider = ({ children }) => {
                     reconnectAttempts: 0
                 },
                 collecting: collectStats
-            }));
+            };
         });
 
         newSocket.on('disconnect', () => {
             console.info('Socket disconnected - updating traffic stats');
-            setTrafficStats(prev => ({
-                ...prev,
+            trafficStatsRef.current = {
+                ...trafficStatsRef.current,
                 transport: {
-                    ...prev.transport,
+                    ...trafficStatsRef.current.transport,
                     name: 'disconnected',
                     readyState: 'closed'
                 },
                 manager: {
-                    ...prev.manager,
+                    ...trafficStatsRef.current.manager,
                     readyState: 'closed',
                     reconnecting: false
                 },
@@ -409,19 +411,19 @@ export const SocketProvider = ({ children }) => {
                     bytesPerSecond: { sent: 0, received: 0 },
                     packetsPerSecond: { sent: 0, received: 0 }
                 }
-            }));
+            };
         });
 
         // Listen for transport events
         newSocket.io.on('upgrade', () => {
             console.info('Socket.IO transport upgraded');
-            setTrafficStats(prev => ({
-                ...prev,
+            trafficStatsRef.current = {
+                ...trafficStatsRef.current,
                 engine: {
-                    ...prev.engine,
-                    upgradeAttempts: prev.engine.upgradeAttempts + 1
+                    ...trafficStatsRef.current.engine,
+                    upgradeAttempts: trafficStatsRef.current.engine.upgradeAttempts + 1
                 }
-            }));
+            };
         });
 
         newSocket.io.on('upgradeError', (error) => {
@@ -439,10 +441,9 @@ export const SocketProvider = ({ children }) => {
         <SocketContext.Provider value={{
             socket,
             handleTokenChange,
-            trafficStats,
+            trafficStatsRef,
             getSocketIOEngineStats,
-            collectStats,
-            setCollectStats
+            setCollectStats,
         }}>
             {children}
         </SocketContext.Provider>

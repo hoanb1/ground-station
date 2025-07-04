@@ -483,7 +483,6 @@ const NextPassesGroupIsland = React.memo(() => {
 
             if (!hasFetchedRef.current) {
                 hasFetchedRef.current = true;
-                console.info("iam here");
                 dispatch(fetchNextPassesForGroup({socket, selectedSatGroupId, hours: nextPassesHours}));
             }
         }
