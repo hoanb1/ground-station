@@ -100,52 +100,6 @@ export const SocketProvider = ({ children }) => {
         if (!collectStats) return 0;
 
         try {
-            // Handle different data types
-            if (data instanceof ArrayBuffer) {
-                return data.byteLength;
-            }
-
-            if (data instanceof Uint8Array || data instanceof Int8Array ||
-                data instanceof Uint16Array || data instanceof Int16Array ||
-                data instanceof Uint32Array || data instanceof Int32Array ||
-                data instanceof Float32Array || data instanceof Float64Array) {
-                return data.byteLength;
-            }
-
-            if (data instanceof Blob) {
-                return data.size;
-            }
-
-            if (data instanceof File) {
-                return data.size;
-            }
-
-            // Handle Buffer objects (Node.js style)
-            if (typeof Buffer !== 'undefined' && data instanceof Buffer) {
-                return data.length;
-            }
-
-            // Handle arrays of data (common in Socket.IO)
-            if (Array.isArray(data)) {
-                return data.reduce((total, item) => {
-                    return total + calculateMessageSize(item);
-                }, 0);
-            }
-
-            // Handle objects that might contain binary data
-            if (typeof data === 'object' && data !== null) {
-                let totalSize = 0;
-
-                for (const [key, value] of Object.entries(data)) {
-                    // Add key size
-                    totalSize += new Blob([key]).size;
-                    // Add value size (recursive)
-                    totalSize += calculateMessageSize(value);
-                }
-
-                return totalSize;
-            }
-
             // Default case: serialize as JSON for text data
             const jsonString = JSON.stringify(data);
             return new Blob([jsonString]).size;
@@ -153,7 +107,7 @@ export const SocketProvider = ({ children }) => {
         } catch (error) {
             console.warn('Error calculating message size:', error);
             // Conservative fallback - assume moderate size for unknown data
-            return 1024; // 1KB fallback
+            return 0;
         }
     }, [collectStats]);
 
