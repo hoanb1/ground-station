@@ -393,7 +393,7 @@ function ConnectionStatus() {
                                 <Typography variant="caption" color="text.secondary">
                                     Upload:
                                 </Typography>
-                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
                                     {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.sent)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -404,7 +404,7 @@ function ConnectionStatus() {
                                 <Typography variant="caption" color="text.secondary">
                                     Download:
                                 </Typography>
-                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
                                     {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.received)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -425,7 +425,7 @@ function ConnectionStatus() {
                                 <Typography variant="caption" color="text.secondary">
                                     Sent:
                                 </Typography>
-                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
                                     {formatTotalBytes(trafficStatsRef.current.engine.bytesSent)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
@@ -436,7 +436,7 @@ function ConnectionStatus() {
                                 <Typography variant="caption" color="text.secondary">
                                     Received:
                                 </Typography>
-                                <Typography variant="body1" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
                                     {formatTotalBytes(trafficStatsRef.current.engine.bytesReceived)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
