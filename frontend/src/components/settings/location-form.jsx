@@ -115,6 +115,8 @@ const LocationPage = () => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const [nearestCity, setNearestCity] = React.useState('');
+    const [elevation, setElevation] = React.useState('');
+    const mapRef = React.useRef(null);
 
     // Grab data from Redux
     const {
@@ -160,24 +162,14 @@ const LocationPage = () => {
         setNearestCity(city);
     };
 
-    useEffect(() => {
-        const intervalUpdate = setInterval(() => {
-            MapObject.invalidateSize();
-            reCenterMap(location.lat, location.lon);
-        }, 1000);
-        return () => {
-            clearInterval(intervalUpdate);
-        };
-    }, [location]);
-
     const handleWhenReady = (map) => {
-        // set global variable
-        MapObject = map.target;
+        // Use ref instead of global variable
+        mapRef.current = map.target;
     };
 
     const reCenterMap = (lat, lon) => {
-        if (MapObject) {
-            MapObject.setView([lat, lon], MapObject.getZoom());
+        if (mapRef.current) {
+            mapRef.current.setView([lat, lon], mapRef.current.getZoom());
         }
     };
 
@@ -206,6 +198,19 @@ const LocationPage = () => {
         };
     }, [location]);
 
+    useEffect(() => {
+        const intervalUpdate = setInterval(() => {
+            // Use ref instead of global variable
+            if (mapRef.current) {
+                mapRef.current.invalidateSize();
+                reCenterMap(location.lat, location.lon);
+            }
+        }, 1000);
+        return () => {
+            clearInterval(intervalUpdate);
+        };
+    }, [location]);
+
     const getCurrentLocation = async () => {
         dispatch(setLocationLoading(true));
         if (!navigator.geolocation) {
@@ -214,22 +219,42 @@ const LocationPage = () => {
             });
             return;
         }
+
         navigator.geolocation.getCurrentPosition(
             (position) => {
-                enqueueSnackbar('Your location has been retrieved successfully', {
-                    variant: 'success',
-                });
-                const { latitude, longitude } = position.coords;
-                dispatch(setLocation({ lat: latitude, lon: longitude }));
+                const { latitude, longitude, altitude, altitudeAccuracy } = position.coords;
+
+                dispatch(setLocation({
+                    lat: latitude,
+                    lon: longitude,
+                    //altitude: altitude,
+                    //altitudeAccuracy: altitudeAccuracy
+                }));
                 dispatch(setQth(getMaidenhead(latitude, longitude)));
                 reCenterMap(latitude, longitude);
                 dispatch(setLocationLoading(false));
+
+                // Show altitude in notification if available
+                if (altitude !== null) {
+                    enqueueSnackbar(`Location retrieved (Alt: ${altitude.toFixed(1)}m)`, {
+                        variant: 'success',
+                    });
+                } else {
+                    enqueueSnackbar('Location retrieved (altitude unavailable)', {
+                        variant: 'success',
+                    });
+                }
             },
             (error) => {
                 enqueueSnackbar('Failed to get your current location', {
                     variant: 'error',
                 });
                 dispatch(setLocationLoading(false));
+            },
+            {
+                enableHighAccuracy: true, // This may help get altitude data
+                timeout: 10000,
+                maximumAge: 60000
             }
         );
     };
@@ -366,8 +391,7 @@ const LocationPage = () => {
                                             Elevation
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {/* Placeholder for elevation data */}
-                                            --- m ASL
+                                            {elevation} m ASL
                                         </Typography>
                                     </Box>
                                     <Box>
@@ -405,7 +429,6 @@ const LocationPage = () => {
                                             Station Name
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {/* Placeholder for station name */}
                                             Ground Station 1
                                         </Typography>
                                     </Box>
@@ -414,7 +437,6 @@ const LocationPage = () => {
                                             Antenna Height
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {/* Placeholder for antenna height */}
                                             --- m AGL
                                         </Typography>
                                     </Box>
@@ -423,8 +445,7 @@ const LocationPage = () => {
                                             Horizon Mask
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {/* Placeholder for horizon mask */}
-                                            ---°
+                                            10 °
                                         </Typography>
                                     </Box>
                                 </Box>
