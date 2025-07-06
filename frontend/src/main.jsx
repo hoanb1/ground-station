@@ -106,10 +106,10 @@ const router = createBrowserRouter([
                                 path: "location",
                                 Component: SettingsTabLocation,
                             },
-                            {
-                                path: "users",
-                                Component: SettingsTabUsers,
-                            },
+                            // {
+                            //     path: "users",
+                            //     Component: SettingsTabUsers,
+                            // },
                             {
                                 path: "maintenance",
                                 Component: SettingsTabMaintenance,

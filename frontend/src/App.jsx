@@ -225,11 +225,11 @@ export default function App(props) {
             title: 'Location',
             icon: <AddHomeIcon/>,
         },
-        {
-            segment: 'settings/users',
-            title: 'Users',
-            icon: <PeopleIcon/>,
-        },
+        // {
+        //     segment: 'settings/users',
+        //     title: 'Users',
+        //     icon: <PeopleIcon/>,
+        // },
         {
             segment: 'settings/maintenance',
             title: 'Maintenance',

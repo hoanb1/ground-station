@@ -114,6 +114,7 @@ function MapClickHandler({ onClick }) {
 const LocationPage = () => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const [nearestCity, setNearestCity] = React.useState('');
 
     // Grab data from Redux
     const {
@@ -125,10 +126,16 @@ const LocationPage = () => {
         polylines,
     } = useSelector((state) => state.location);
 
-    // // On mount, fetch the location
-    // useEffect(() => {
-    //     dispatch(fetchLocationForUserId({ socket }));
-    // }, [dispatch, socket]);
+    // On location change, fetch the nearest city
+    useEffect(() => {
+        getNearestCity(location.lat, location.lon)
+            .then((city) => {
+                setNearestCity(city);
+            })
+            .catch((error) => {
+
+            });
+    }, [location]);
 
     // Recompute polylines when location changes. Alternatively, you can handle this in the slice.
     useEffect(() => {
@@ -144,11 +151,13 @@ const LocationPage = () => {
         dispatch(setQth(getMaidenhead(location.lat, location.lon)));
     }, [location, dispatch]);
 
-    const handleMapClick = (e) => {
+    const handleMapClick = async (e) => {
         const { lat, lng } = e.latlng;
         dispatch(setLocation({ lat, lon: lng }));
         dispatch(setQth(getMaidenhead(lat, lng)));
         reCenterMap(lat, lng);
+        const city = await getNearestCity(location.lat, location.lon);
+        setNearestCity(city);
     };
 
     useEffect(() => {
@@ -171,6 +180,31 @@ const LocationPage = () => {
             MapObject.setView([lat, lon], MapObject.getZoom());
         }
     };
+
+    // Add this function to get nearest city
+    const getNearestCity = async (lat, lon) => {
+        try {
+            const response = await fetch(
+                `https://api.bigdatacloud.net/data/reverse-geocode-client?latitude=${lat}&longitude=${lon}&localityLanguage=en`
+            );
+            const data = await response.json();
+            return data.city || data.locality || data.principalSubdivision || 'Unknown';
+        } catch (error) {
+            console.error('Error fetching city:', error);
+            return 'Unknown';
+        }
+    };
+
+    // Call this in your location update logic
+    useEffect(() => {
+        const updateLocationDetails = async () => {
+            if (location.lat && location.lon) {
+                const city = await getNearestCity(location.lat, location.lon);
+                // Update your state with the city name
+                setNearestCity(city);
+            }
+        };
+    }, [location]);
 
     const getCurrentLocation = async () => {
         dispatch(setLocationLoading(true));
@@ -210,62 +244,16 @@ const LocationPage = () => {
                 <AlertTitle>Select location on map</AlertTitle>
                 Use the map below to set the ground station location
             </Alert>
-            <Grid container spacing={1} columns={{ xs: 1, sm: 1, md: 1, lg: 1 }}>
-                <Grid>
-                    <Box mt={3}>
-                        <Grid container rowSpacing={3} columnSpacing={3} columns={{ xs: 2, sm: 2, md: 2, lg: 2 }}>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                <Typography variant="subtitle1">
-                                    <strong>Latitude:</strong>
-                                </Typography>
-                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {location.lat?.toFixed(4)}
-                                </Typography>
-
-                            </Grid>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                <Typography variant="subtitle1">
-                                    <strong>Longitude:</strong>
-                                </Typography>
-                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {location.lon?.toFixed(4)}
-                                </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                <Typography variant="subtitle1">
-                                    <strong>QTH Locator:</strong>
-                                </Typography>
-                                <Typography variant="subtitle1" sx={{ fontFamily: 'monospace' }}>
-                                    {qth}
-                                </Typography>
-                            </Grid>
-                            <Grid size={{ xs: 1, md: 1 }}>
-                                <Button
-                                    variant="contained"
-                                    color="secondary"
-                                    loading={locationLoading}
-                                    onClick={async () => {
-                                        try {
-                                            await getCurrentLocation();
-                                        } catch (error) {
-                                            enqueueSnackbar('Failed to get current location', {
-                                                variant: 'error',
-                                            });
-                                        }
-                                    }}
-                                >
-                                    Query location
-                                </Button>
-                            </Grid>
-                        </Grid>
-                    </Box>
-                </Grid>
-                <Grid size={{ xs: 1, md: 8 }}>
+            <Grid container spacing={1} columns={{ xs: 1, sm: 1, md: 1, lg: 2 }} sx={{ pt: 2 }}>
+                <Grid size={{ xs: 1, md: 1 }}>
                     <Box
                         sx={{
                             width: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },
                             height: '500px',
+                            borderRadius: 1,
                             border: '1px solid #424242',
+                            boxShadow: 1,
+
                         }}
                     >
                         <MapContainer
@@ -316,7 +304,173 @@ const LocationPage = () => {
                         </MapContainer>
                     </Box>
                 </Grid>
-                <Grid size={{ xs: 6, md: 8 }}>
+                <Grid size={{ xs: 1, md: 1 }}>
+                    <Box
+                        sx={{
+                            mt: 0,
+                            p: 2,
+                            backgroundColor: 'background.paper',
+                            borderRadius: 1,
+                            boxShadow: 1,
+                            border: '1px solid',
+                            borderColor: 'divider',
+                            height: '100%',
+                        }}
+                    >
+                        <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'primary.main' }}>
+                            Ground Station Location
+                        </Typography>
+
+                        <Grid container spacing={2}>
+                            {/* Coordinates Section */}
+                            <Grid size={{ xs: 3 }}>
+                                <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                    Coordinates
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Latitude
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {location.lat?.toFixed(6)}°
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Longitude
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {location.lon?.toFixed(6)}°
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            QTH Locator
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {qth || 'N/A'}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            {/* Location Details Section */}
+                            <Grid size={{ xs: 3 }}>
+                                <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                    Location Details
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Elevation
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {/* Placeholder for elevation data */}
+                                            --- m ASL
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Time Zone
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {/* Placeholder for timezone */}
+                                            UTC{Intl.DateTimeFormat().resolvedOptions().timeZone ?
+                                            new Date().getTimezoneOffset() > 0 ?
+                                                `-${Math.abs(new Date().getTimezoneOffset() / 60)}` :
+                                                `+${Math.abs(new Date().getTimezoneOffset() / 60)}`
+                                            : ''}
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Nearest City
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {nearestCity}
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            {/* Station Information Section */}
+                            <Grid size={{ xs: 3 }}>
+                                <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                    Station Info
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Station Name
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {/* Placeholder for station name */}
+                                            Ground Station 1
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Antenna Height
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {/* Placeholder for antenna height */}
+                                            --- m AGL
+                                        </Typography>
+                                    </Box>
+                                    <Box>
+                                        <Typography variant="body2" color="text.secondary">
+                                            Horizon Mask
+                                        </Typography>
+                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
+                                            {/* Placeholder for horizon mask */}
+                                            ---°
+                                        </Typography>
+                                    </Box>
+                                </Box>
+                            </Grid>
+
+                            {/* Action Buttons Section */}
+                            <Grid size={{ xs: 2, md: 3 }}>
+                                <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
+                                    Actions
+                                </Typography>
+                                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+                                    <Button
+                                        variant="contained"
+                                        color="secondary"
+                                        loading={locationLoading}
+                                        fullWidth
+                                        onClick={async () => {
+                                            try {
+                                                await getCurrentLocation();
+                                            } catch (error) {
+                                                enqueueSnackbar('Failed to get current location', {
+                                                    variant: 'error',
+                                                });
+                                            }
+                                        }}
+                                    >
+                                        Get Current Location
+                                    </Button>
+                                    <Button
+                                        variant="outlined"
+                                        color="primary"
+                                        fullWidth
+                                        onClick={() => {
+                                            // Placeholder for export functionality
+                                            navigator.clipboard.writeText(`${location.lat?.toFixed(6)}, ${location.lon?.toFixed(6)}`);
+                                            enqueueSnackbar('Coordinates copied to clipboard', { variant: 'success' });
+                                        }}
+                                    >
+                                        Copy Coordinates
+                                    </Button>
+                                </Box>
+                            </Grid>
+                        </Grid>
+                    </Box>
+                </Grid>
+                <Grid size={{ xs: 6, md: 8 }} sx={{ pt: 2 }}>
                     <Button variant="contained" color="primary" onClick={() => handleSetLocation()}>
                         Save location
                     </Button>

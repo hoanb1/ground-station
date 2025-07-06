@@ -126,13 +126,20 @@ export const SocketProvider = ({ children }) => {
                     if (ArrayBuffer.isView(item)) {
                         return total + item.byteLength;
                     }
-                    // For non-binary items, use JSON size estimation
-                    return total + (JSON.stringify(item).length * 2);
+                    // For non-binary items, use JSON size estimation with safety check
+                    try {
+                        const jsonString = JSON.stringify(item);
+                        return total + (jsonString ? jsonString.length * 2 : 0);
+                    } catch (e) {
+                        // Handle circular references or other JSON.stringify errors
+                        return total + 256; // fallback size estimate
+                    }
                 }, 0);
             }
 
-            // Default: JSON serialization for text data
-            return JSON.stringify(data).length * 2; // UTF-16 encoding
+            // Default: JSON serialization for text data with safety check
+            const jsonString = JSON.stringify(data);
+            return jsonString ? jsonString.length * 2 : 0; // UTF-16 encoding
 
         } catch (error) {
             console.warn('Error calculating Socket.IO message size:', error);
