@@ -95,19 +95,51 @@ export const SocketProvider = ({ children }) => {
         setToken(token);
     }, []);
 
-    // Helper to calculate message size for both text and binary data
+    // Simplified helper for Socket.IO binary streams
     const calculateMessageSize = useCallback((data) => {
         if (!collectStats) return 0;
 
         try {
-            // Default case: serialize as JSON for text data
-            const jsonString = JSON.stringify(data);
-            return new Blob([jsonString]).size;
+            // Socket.IO binary data is typically sent as ArrayBuffer or Buffer
+            if (data instanceof ArrayBuffer) {
+                return data.byteLength;
+            }
+
+            if (typeof Buffer !== 'undefined' && data instanceof Buffer) {
+                return data.length;
+            }
+
+            // TypedArray views of binary data
+            if (ArrayBuffer.isView(data)) {
+                return data.byteLength;
+            }
+
+            // For Socket.IO, args array might contain binary data
+            if (Array.isArray(data)) {
+                return data.reduce((total, item) => {
+                    if (item instanceof ArrayBuffer) {
+                        return total + item.byteLength;
+                    }
+                    if (typeof Buffer !== 'undefined' && item instanceof Buffer) {
+                        return total + item.length;
+                    }
+                    if (ArrayBuffer.isView(item)) {
+                        return total + item.byteLength;
+                    }
+                    // For non-binary items, use JSON size estimation
+                    return total + (JSON.stringify(item).length * 2);
+                }, 0);
+            }
+
+            // Default: JSON serialization for text data
+            return JSON.stringify(data).length * 2; // UTF-16 encoding
 
         } catch (error) {
-            console.warn('Error calculating message size:', error);
-            // Conservative fallback - assume moderate size for unknown data
-            return 0;
+            console.warn('Error calculating Socket.IO message size:', error);
+            // For Socket.IO binary streams, use a reasonable default
+            return data instanceof ArrayBuffer ? data.byteLength :
+                (typeof Buffer !== 'undefined' && data instanceof Buffer) ? data.length :
+                    1024; // 1KB fallback
         }
     }, [collectStats]);
 
