@@ -325,7 +325,7 @@ const SatelliteInfoCard = () => {
                             fullWidth
                             sx={{py: 1}}
                         >
-                            {trackingSatelliteId === selectedSatelliteId ? "TRACKING NOW" : "START TRACKING"}
+                            {trackingSatelliteId === selectedSatelliteId ? "TARGETED" : "SET AS TARGET"}
                         </Button>
 
                         <Box sx={{

@@ -61,7 +61,7 @@ const SatelliteTrackSuggestion = ({
                         }}
                         title={"Start tracking " + (selectedSatellite['name'] || "this satellite") + " with the rotator and rig"}
                     >
-                        Track Satellite
+                        SET AS TARGET
                     </Button>
 
                     <IconButton
