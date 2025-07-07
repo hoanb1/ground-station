@@ -108,7 +108,7 @@ const HardwareSettingsPopover = () => {
 
     // Get overlay icon and color for the rig
     const getRigOverlay = () => {
-        if (!rigData.connected) return { icon: CloseIcon, color: '#ff5252' };
+        if (!rigData.connected) return { icon: CloseIcon, color: '#ffffff' };
         if (rigData.tracking) return { icon: CheckIcon, color: '#62ec43' };
 
         // No overlay for simple connected state
