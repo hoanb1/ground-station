@@ -273,65 +273,6 @@ const LocationPage = () => {
                 <Grid size={{ xs: 1, md: 1 }}>
                     <Box
                         sx={{
-                            width: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },
-                            height: '500px',
-                            borderRadius: 1,
-                            border: '1px solid #424242',
-                            boxShadow: 1,
-
-                        }}
-                    >
-                        <MapContainer
-                            center={[location.lat, location.lon]}
-                            zoom={2}
-                            maxZoom={10}
-                            whenReady={handleWhenReady}
-                            minZoom={1}
-                            dragging={true}
-                            style={{ height: '100%', width: '100%' }}
-                        >
-                            <TileLayer
-                                url={getTileLayerById("satellite")['url']}
-                                attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
-                            />
-                            <MapClickHandler onClick={handleMapClick} />
-                            <Marker position={location} icon={customIcon}>
-                                <Popup>Your Selected Location</Popup>
-                            </Marker>
-                            {polylines.map((polyline, index) => (
-                                <Polyline
-                                    key={index}
-                                    positions={polyline}
-                                    color="white"
-                                    opacity={0.8}
-                                    lineCap="round"
-                                    lineJoin="round"
-                                    dashArray="2, 2"
-                                    dashOffset="10"
-                                    interactive={false}
-                                    smoothFactor={1}
-                                    noClip={false}
-                                    className="leaflet-interactive"
-                                    weight={1}
-                                />
-                            ))}
-                            <Circle
-                                center={location}
-                                radius={400000}
-                                pathOptions={{
-                                    color: 'white',
-                                    fillOpacity: 0,
-                                    weight: 1,
-                                    opacity: 0.8,
-                                    dashArray: "2, 2",
-                                }}
-                            />
-                        </MapContainer>
-                    </Box>
-                </Grid>
-                <Grid size={{ xs: 1, md: 1 }}>
-                    <Box
-                        sx={{
                             mt: 0,
                             p: 2,
                             backgroundColor: 'background.paper',
@@ -489,6 +430,65 @@ const LocationPage = () => {
                                 </Box>
                             </Grid>
                         </Grid>
+                    </Box>
+                </Grid>
+                <Grid size={{ xs: 1, md: 1 }}>
+                    <Box
+                        sx={{
+                            width: { xs: '100%', sm: '100%', md: '100%', lg: '100%' },
+                            height: '500px',
+                            borderRadius: 1,
+                            border: '1px solid #424242',
+                            boxShadow: 1,
+
+                        }}
+                    >
+                        <MapContainer
+                            center={[location.lat, location.lon]}
+                            zoom={2}
+                            maxZoom={10}
+                            whenReady={handleWhenReady}
+                            minZoom={1}
+                            dragging={true}
+                            style={{ height: '100%', width: '100%' }}
+                        >
+                            <TileLayer
+                                url={getTileLayerById("satellite")['url']}
+                                attribution="Map tiles by Carto, under CC BY 3.0. Data by OpenStreetMap, under ODbL."
+                            />
+                            <MapClickHandler onClick={handleMapClick} />
+                            <Marker position={location} icon={customIcon}>
+                                <Popup>Your Selected Location</Popup>
+                            </Marker>
+                            {polylines.map((polyline, index) => (
+                                <Polyline
+                                    key={index}
+                                    positions={polyline}
+                                    color="white"
+                                    opacity={0.8}
+                                    lineCap="round"
+                                    lineJoin="round"
+                                    dashArray="2, 2"
+                                    dashOffset="10"
+                                    interactive={false}
+                                    smoothFactor={1}
+                                    noClip={false}
+                                    className="leaflet-interactive"
+                                    weight={1}
+                                />
+                            ))}
+                            <Circle
+                                center={location}
+                                radius={400000}
+                                pathOptions={{
+                                    color: 'white',
+                                    fillOpacity: 0,
+                                    weight: 1,
+                                    opacity: 0.8,
+                                    dashArray: "2, 2",
+                                }}
+                            />
+                        </MapContainer>
                     </Box>
                 </Grid>
                 <Grid size={{ xs: 6, md: 8 }} sx={{ pt: 2 }}>
