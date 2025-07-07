@@ -34,7 +34,7 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import MainWaterfallDisplay from "./waterfall-view.jsx";
 import WaterfallSettings from "./waterfall-settings.jsx";
-import RigControl from "./rig-control.jsx";
+import RigControl from "../target/rig-control.jsx";
 import ControllerTabs from '../common/controller.jsx';
 
 

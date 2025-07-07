@@ -87,4 +87,4 @@ def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, ob
     # Calculate the shift in Hz
     doppler_shift_hz = observed_freq_hz - transmitted_freq_hz
 
-    return round(float(observed_freq_hz), 2), round(float(doppler_shift_hz), 2)
+    return round(float(observed_freq_hz), 0), round(float(doppler_shift_hz), 0)

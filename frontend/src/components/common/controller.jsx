@@ -2,7 +2,7 @@ import React, {useState, useEffect} from 'react';
 import {Box, Tab, Tabs} from '@mui/material';
 import {styled} from "@mui/material/styles";
 import RotatorControl from '../target/rotator-control.jsx'
-import RigControl from '../waterfall/rig-control.jsx'
+import RigControl from '../target/rig-control.jsx'
 import {getClassNamesBasedOnGridEditing, TitleBar} from "./common.jsx";
 import {useSelector} from "react-redux";
 

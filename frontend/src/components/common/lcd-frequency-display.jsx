@@ -1,0 +1,372 @@
+import React from 'react';
+import { Box, Typography } from '@mui/material';
+import { styled } from '@mui/material/styles';
+
+const LCDContainer = styled(Box)(({ theme, variant = 'green' }) => {
+    const colors = {
+        green: {
+            bg: 'linear-gradient(145deg, #0a0f0a, #0d1a0d)',
+            border: '#1a3d1a',
+            text: '#00ff00',
+            glow: '#00ff00'
+        },
+        amber: {
+            bg: 'linear-gradient(145deg, #0f0f0a, #1a1a0d)',
+            border: '#3d3d1a',
+            text: '#ffcc00',
+            glow: '#ffcc00'
+        },
+        red: {
+            bg: 'linear-gradient(145deg, #0f0a0a, #1a0d0d)',
+            border: '#3d1a1a',
+            text: '#ff3333',
+            glow: '#ff3333'
+        }
+    };
+
+    const color = colors[variant];
+
+    return {
+        pt: '4px',
+        display: 'inline-block',
+        background: color.bg,
+        border: `1px solid ${color.border}`,
+        borderRadius: '3px',
+        padding: '3px 6px',
+        boxShadow: `inset 0 0 8px rgba(0, 0, 0, 0.4)`,
+        position: 'relative',
+        overflow: 'hidden',
+        minWidth: 'fit-content',
+
+        '&::before': {
+            content: '""',
+            position: 'absolute',
+            top: 0,
+            left: 0,
+            right: 0,
+            bottom: 0,
+            background: `repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 1px,
+        ${color.text}05 1px,
+        ${color.text}05 2px
+      )`,
+            pointerEvents: 'none',
+            zIndex: 1,
+        },
+
+        '& .lcd-content': {
+            position: 'relative',
+            zIndex: 2,
+        }
+    };
+});
+
+const LCDLabel = styled(Typography)(({ theme, variant = 'green' }) => {
+    const colors = {
+        green: { text: '#00ff00', glow: '#00ff00', shadow: '#003300' },
+        amber: { text: '#ffcc00', glow: '#ffcc00', shadow: '#332200' },
+        red: { text: '#ff3333', glow: '#ff3333', shadow: '#330000' }
+    };
+
+    const color = colors[variant];
+
+    return {
+        fontFamily: '"Courier New", "Lucida Console", monospace',
+        fontSize: '0.7rem',
+        color: color.text,
+        textShadow: `
+      0 0 2px ${color.glow},
+      0 1px 1px ${color.shadow}
+    `,
+        textAlign: 'center',
+        opacity: 0.9,
+        marginBottom: '2px',
+        lineHeight: 1,
+    };
+});
+
+const LCDDigits = styled(Box)(({ theme, variant = 'green' }) => {
+    const colors = {
+        green: { text: '#1dd11d', glow: 'rgba(10,128,10,0.63)', shadow: '#003300' },
+        amber: { text: '#ffcc00', glow: '#ffcc00', shadow: '#332200' },
+        red: { text: '#ff3333', glow: '#ff3333', shadow: '#330000' }
+    };
+
+    const color = colors[variant];
+
+    return {
+        display: 'flex',
+        alignItems: 'center',
+        justifyContent: 'center',
+        gap: '1px',
+        fontFamily: '"Courier New", "Lucida Console", monospace',
+        fontSize: '1.1rem',
+        fontWeight: 'bold',
+        color: color.text,
+        textShadow: `
+      0 0 4px ${color.glow},
+      0 0 8px ${color.glow},
+      0 1px 2px ${color.shadow}
+    `,
+        letterSpacing: '0.05em',
+        lineHeight: 1,
+
+        '& .lcd-digit': {
+            paddingTop: '3px',
+            display: 'inline-block',
+            width: '0.8em',
+            textAlign: 'center',
+            background: `rgba(0, 0, 0, 0.3)`,
+            borderRadius: '1px',
+            position: 'relative',
+            borderLeft: `1px solid ${color.text}20`,
+            borderRight: `1px solid ${color.text}20`,
+
+            '&::before': {
+                content: '"8"',
+                position: 'absolute',
+                top: 4,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                color: `${color.text}08`,
+                zIndex: -1,
+            }
+        },
+
+        '& .lcd-digit-empty': {
+            paddingTop: '3px',
+            display: 'inline-block',
+            width: '0.8em',
+            textAlign: 'center',
+            background: `rgba(0, 0, 0, 0.3)`,
+            borderRadius: '1px',
+            position: 'relative',
+            borderLeft: `1px solid ${color.text}20`,
+            borderRight: `1px solid ${color.text}20`,
+            opacity: 0.3,
+
+            '&::before': {
+                content: '"8"',
+                position: 'absolute',
+                top: 4,
+                left: 0,
+                right: 0,
+                bottom: 0,
+                color: `${color.text}08`,
+                zIndex: -1,
+            }
+        },
+
+        '& .lcd-separator': {
+            margin: '0 -4px -11px -3px',
+            fontSize: '0.8em',
+            opacity: 0.7,
+        }
+    };
+});
+
+const LCDUnit = styled(Typography)(({ theme, variant = 'green' }) => {
+    const colors = {
+        green: { text: '#00ff00', glow: '#00ff00', shadow: '#003300' },
+        amber: { text: '#ffcc00', glow: '#ffcc00', shadow: '#332200' },
+        red: { text: '#ff3333', glow: '#ff3333', shadow: '#330000' }
+    };
+
+    const color = colors[variant];
+
+    return {
+        fontFamily: '"Courier New", "Lucida Console", monospace',
+        fontSize: '0.6rem',
+        color: color.text,
+        textShadow: `
+      0 0 2px ${color.glow},
+      0 1px 1px ${color.shadow}
+    `,
+        textAlign: 'center',
+        opacity: 0.9,
+        marginTop: '1px',
+        lineHeight: 1,
+    };
+});
+
+const LCDFrequencyDisplay = ({
+                                 frequency,
+                                 digits = 8,
+                                 showDecimal = true,
+                                 unit = 'MHz',
+                                 variant = 'green',
+                                 size = 'small',
+                                 label = '',
+                                 fullWidth = true,
+                                 frequencyIsOffset = false,
+                             }) => {
+    // Format frequency to display with proper padding and separators
+    const formatFrequencyWithSeparators = (freq, isFullWidth, isOffset) => {
+        try {
+            if (!freq || freq === 0) {
+                if (isFullWidth) {
+                    // Return 11 empty digits for full width when frequency is 0
+                    const result = [];
+                    for (let i = 0; i < 11; i++) {
+                        result.push({ type: 'digit', value: '0', key: i, isEmpty: true });
+                        // Add separators at positions 3, 6, 9 from the right
+                        if ((11 - i - 1) % 3 === 0 && i < 10) {
+                            result.push({ type: 'separator', value: '·', key: `sep-${i}` });
+                        }
+                    }
+                    return result;
+                }
+                return [{ type: 'digit', value: '0', key: 0 }];
+            }
+
+            // Convert to string and handle negative numbers
+            const freqStr = freq.toString();
+            const isNegative = freqStr.startsWith('-');
+            const absFreqStr = isNegative ? freqStr.slice(1) : freqStr;
+
+            // Remove decimal point for processing
+            const cleanFreqStr = absFreqStr.replace('.', '');
+
+            let processedFreq = cleanFreqStr;
+
+            // Handle fullWidth mode
+            if (isFullWidth) {
+                if (!isOffset) {
+                    // For regular frequencies, pad to 11 digits
+                    processedFreq = cleanFreqStr.padStart(11, '0');
+                }
+                // For offset frequencies, keep processedFreq as is (no padding)
+            }
+
+            // Add separators every 3 digits from the right
+            const result = [];
+
+            // If fullWidth, create the full 11-digit structure
+            if (isFullWidth) {
+                if (isOffset) {
+                    // For offset frequencies: show empty digits on the left, actual digits on the right
+                    const actualDigits = cleanFreqStr.length;
+                    const negativeSignSpace = isNegative ? 1 : 0;
+                    const emptyDigits = 11 - actualDigits - negativeSignSpace;
+
+                    // Add empty digits first
+                    for (let i = 0; i < emptyDigits; i++) {
+                        const positionFromRight = 11 - i - 1;
+                        result.push({ type: 'digit', value: '0', key: i, isEmpty: true });
+
+                        // Add separator after every 3 digits (except for the last digit)
+                        if (positionFromRight > 0 && positionFromRight % 3 === 0) {
+                            result.push({ type: 'separator', value: '·', key: `sep-${i}` });
+                        }
+                    }
+
+                    // Add negative sign right before the actual digits
+                    if (isNegative) {
+                        result.push({ type: 'digit', value: '-', key: 'neg' });
+                    }
+
+                    // Add actual digits
+                    for (let i = 0; i < actualDigits; i++) {
+                        const digit = cleanFreqStr[i];
+                        const positionFromRight = actualDigits - i - 1;
+                        const actualIndex = emptyDigits + negativeSignSpace + i;
+
+                        result.push({ type: 'digit', value: digit, key: actualIndex });
+
+                        // Add separator after every 3 digits (except for the last digit)
+                        if (positionFromRight > 0 && positionFromRight % 3 === 0) {
+                            result.push({ type: 'separator', value: '·', key: `sep-${actualIndex}` });
+                        }
+                    }
+                } else {
+                    // Add negative sign at the beginning for regular frequencies
+                    if (isNegative) {
+                        result.push({ type: 'digit', value: '-', key: 'neg' });
+                    }
+
+                    // For regular frequencies, create 11 digit positions with padding
+                    for (let i = 0; i < 11; i++) {
+                        const digit = processedFreq[i] || '0';
+                        const positionFromRight = 11 - i - 1;
+                        const isEmpty = processedFreq[i] === '0' && i < (11 - cleanFreqStr.length);
+
+                        result.push({ type: 'digit', value: digit, key: i, isEmpty });
+
+                        // Add a separator after every 3 digits (except for the last digit)
+                        if (positionFromRight > 0 && positionFromRight % 3 === 0) {
+                            result.push({ type: 'separator', value: '·', key: `sep-${i}` });
+                        }
+                    }
+                }
+            } else {
+                // Add negative sign at the beginning for non-fullWidth
+                if (isNegative) {
+                    result.push({ type: 'digit', value: '-', key: 'neg' });
+                }
+
+                // Regular processing for non-fullWidth frequencies
+                for (let i = 0; i < processedFreq.length; i++) {
+                    const digit = processedFreq[i];
+                    const positionFromRight = processedFreq.length - i - 1;
+
+                    result.push({ type: 'digit', value: digit, key: i });
+
+                    // Add a separator after every 3 digits (except for the last digit)
+                    if (positionFromRight > 0 && positionFromRight % 3 === 0) {
+                        result.push({ type: 'separator', value: '·', key: `sep-${i}` });
+                    }
+                }
+            }
+
+            return result;
+        } catch (error) {
+            console.error('Error formatting frequency:', error);
+            // Fallback to simple zero
+            return [{ type: 'digit', value: '0', key: 0 }];
+        }
+    };
+
+    const formattedElements = formatFrequencyWithSeparators(frequency, fullWidth, frequencyIsOffset);
+    const fontSize = size === 'large' ? '1.4rem' : size === 'medium' ? '1.2rem' : '1.1rem';
+
+    // Ensure formattedElements is always an array
+    const elementsArray = Array.isArray(formattedElements) ? formattedElements : [];
+
+    return (
+        <LCDContainer variant={variant}>
+            <Box className="lcd-content">
+                {label && (
+                    <LCDLabel variant={variant}>
+                        {label}
+                    </LCDLabel>
+                )}
+                <LCDDigits variant={variant} sx={{ fontSize }}>
+                    {elementsArray.map((element) => (
+                        element.type === 'digit' ? (
+                            <span key={element.key} className={element.isEmpty ? "lcd-digit-empty" : "lcd-digit"}>
+                                {element.value}
+                            </span>
+                        ) : (
+                            <span key={element.key} className="lcd-separator">
+                                {element.value}
+                            </span>
+                        )
+                    ))}
+                    {/*{showDecimal && (*/}
+                    {/*    <span className="lcd-decimal">.</span>*/}
+                    {/*)}*/}
+                </LCDDigits>
+                {/*{unit && (*/}
+                {/*    <LCDUnit variant={variant}>*/}
+                {/*        {unit}*/}
+                {/*    </LCDUnit>*/}
+                {/*)}*/}
+            </Box>
+        </LCDContainer>
+    );
+};
+
+export default LCDFrequencyDisplay;

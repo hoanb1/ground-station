@@ -321,7 +321,7 @@ class RigController:
         Tuple[float, bool], None]:
         """Set the rig frequency and yield updates until it reaches the target."""
         # Start the frequency setting operation
-        self.logger.info(f"Setting rig frequency to {target_freq} Hz")
+        self.logger.debug(f"Setting rig frequency to {target_freq} Hz")
 
         try:
             # Format the set frequency command

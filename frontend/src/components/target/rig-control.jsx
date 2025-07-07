@@ -34,7 +34,7 @@ import {
     setSelectedTransmitter,
     setStarting,
     setTrackingStateInBackend
-} from "../target/target-sat-slice.jsx";
+} from "./target-sat-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {
     getClassNamesBasedOnGridEditing,
@@ -44,11 +44,12 @@ import {
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Box, Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import SatelliteList from "../target/target-sat-list.jsx";
+import SatelliteList from "./target-sat-list.jsx";
 import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";
-import {setCenterFrequency} from "./waterfall-slice.jsx";
+import {setCenterFrequency} from "../waterfall/waterfall-slice.jsx";
+import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 
 
 const RigControl = React.memo(({}) => {
@@ -199,7 +200,6 @@ const RigControl = React.memo(({}) => {
             {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Radio rig control</TitleBar>*/}
 
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
@@ -273,107 +273,81 @@ const RigControl = React.memo(({}) => {
                     </FormControl>
                 </Grid>
 
-                <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '185px', overflow: 'auto'}}>
-                    <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '2rem 0.5rem 0rem 0.5rem'}}>
-                        <Grid container direction="row" sx={{
-                            justifyContent: "space-between",
-                            alignItems: "stretch",
-                        }}>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="body2">
-                                    Frequency on Rig
-                                </Typography>
-                            </Grid>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="body2">
-                                    Doppler shift
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                        <Grid container direction="row" sx={{
-                            justifyContent: "space-between",
-                            alignItems: "stretch",
-                        }}>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="h7"
-                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                    {preciseHumanizeFrequency(rigData['frequency'])}
-                                </Typography>
-                            </Grid>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="h7"
-                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                    {preciseHumanizeFrequency(rigData['doppler_shift'])}
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                    </Grid>
-                    <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                        <Grid container direction="row" sx={{
-                            justifyContent: "space-between",
-                            alignItems: "stretch",
-                        }}>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="body2">
-                                    Original frequency
-                                </Typography>
-                            </Grid>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="body2">
-                                    Observed frequency
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                        <Grid container direction="row" sx={{
-                            justifyContent: "space-between",
-                            alignItems: "stretch",
-                        }}>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="h7"
-                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                    {preciseHumanizeFrequency(rigData['original_freq'])}
-                                </Typography>
-                            </Grid>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="h7"
-                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                    {preciseHumanizeFrequency(rigData['observed_freq'])}
-                                </Typography>
-                            </Grid>
-                        </Grid>
-                    </Grid>
 
+                <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '185px', overflow: 'auto', pt: 1.5}}>
                     <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
-                        <Grid container direction="row" sx={{
-                            justifyContent: "space-between",
-                            alignItems: "stretch",
-                        }}>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="body2">
-                                    -
-                                </Typography>
+                        <Grid container direction="column" spacing={1}>
+                            <Grid>
+                                <Grid container direction="row" sx={{
+                                    alignItems: "center",
+                                    gap: 0
+                                }}>
+                                    <Grid size="auto" style={{minWidth: '100px'}}>
+                                        <Typography variant="body2" sx={{color: 'text.secondary'}}>
+                                            On Rig:
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size="grow">
+                                        <Typography variant="h7"
+                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                            <LCDFrequencyDisplay frequency={rigData['frequency']} size="medium" />
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
                             </Grid>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="body2">
-                                    -
-                                </Typography>
+                            <Grid>
+                                <Grid container direction="row" sx={{
+                                    alignItems: "center",
+                                    gap: 0
+                                }}>
+                                    <Grid size="auto" style={{minWidth: '100px'}}>
+                                        <Typography variant="body2" sx={{color: 'text.secondary'}}>
+                                            Doppler shift:
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size="grow">
+                                        <Typography variant="h7"
+                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                            <LCDFrequencyDisplay frequency={rigData['doppler_shift']} size="medium" frequencyIsOffset={true}/>
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
                             </Grid>
-                        </Grid>
-                        <Grid container direction="row" sx={{
-                            justifyContent: "space-between",
-                            alignItems: "stretch",
-                        }}>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="h7"
-                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                    -
-                                </Typography>
+                            <Grid>
+                                <Grid container direction="row" sx={{
+                                    alignItems: "center",
+                                    gap: 0
+                                }}>
+                                    <Grid size="auto" style={{minWidth: '100px'}}>
+                                        <Typography variant="body2" sx={{color: 'text.secondary'}}>
+                                            Transmitted:
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size="grow">
+                                        <Typography variant="h7"
+                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                            <LCDFrequencyDisplay frequency={rigData['original_freq']} size="medium" />
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
                             </Grid>
-                            <Grid size="grow" style={{textAlign: 'center'}}>
-                                <Typography variant="h7"
-                                            style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
-                                    -
-                                </Typography>
+                            <Grid>
+                                <Grid container direction="row" sx={{
+                                    alignItems: "center",
+                                    gap: 0
+                                }}>
+                                    <Grid size="auto" style={{minWidth: '100px'}}>
+                                        <Typography variant="body2" sx={{color: 'text.secondary'}}>
+                                            Observed:
+                                        </Typography>
+                                    </Grid>
+                                    <Grid size="grow">
+                                        <Typography variant="h7"
+                                                    style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
+                                            <LCDFrequencyDisplay frequency={rigData['observed_freq']} size="medium" />
+                                        </Typography>
+                                    </Grid>
+                                </Grid>
                             </Grid>
                         </Grid>
                     </Grid>
