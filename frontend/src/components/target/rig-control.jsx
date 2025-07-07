@@ -275,7 +275,7 @@ const RigControl = React.memo(({}) => {
 
 
                 <Grid size={{xs: 12, sm: 12, md: 12}} sx={{height: '185px', overflow: 'auto', pt: 1.5}}>
-                    <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                    <Grid size={{xs: 12, sm: 12, md: 12}} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
                         <Grid container direction="column" spacing={1}>
                             <Grid>
                                 <Grid container direction="row" sx={{
