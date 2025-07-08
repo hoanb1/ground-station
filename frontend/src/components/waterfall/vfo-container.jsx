@@ -288,7 +288,7 @@ const VFOMarkersContainer = ({
         const newFrequency = marker.frequency + freqChange;
 
         // Ensure the frequency stays within the visible range
-        const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+        const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
 
         // Update the VFO frequency
         updateVFOProperty(selectedVFO, {
@@ -771,7 +771,7 @@ const VFOMarkersContainer = ({
             const newFrequency = marker.frequency + freqDelta;
 
             // Ensure the frequency stays within the visible range
-            const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+            const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
 
             updateVFOProperty(parseInt(activeMarker), {
                 frequency: limitedFreq,
@@ -784,7 +784,7 @@ const VFOMarkersContainer = ({
             const newBandwidth = currentBandwidth - (2 * freqDelta);
 
             // Enforce minimum bandwidth and maximum using the state values
-            const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
             updateVFOProperty(parseInt(activeMarker), {
                 bandwidth: limitedBandwidth,
@@ -797,7 +797,7 @@ const VFOMarkersContainer = ({
             const newBandwidth = currentBandwidth + (2 * freqDelta);
 
             // Enforce minimum bandwidth and maximum using the state values
-            const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
             updateVFOProperty(parseInt(activeMarker), {
                 bandwidth: limitedBandwidth,
@@ -858,7 +858,7 @@ const VFOMarkersContainer = ({
                     const newFrequency = marker.frequency + freqDelta;
 
                     // Ensure the frequency stays within the visible range
-                    const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+                    const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
 
                     updateVFOProperty(parseInt(activeMarker), {
                         frequency: limitedFreq,
@@ -871,7 +871,7 @@ const VFOMarkersContainer = ({
                     const newBandwidth = currentBandwidth - (2 * freqDelta);
 
                     // Enforce minimum bandwidth and maximum using the state values
-                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
                     updateVFOProperty(parseInt(activeMarker), {
                         bandwidth: limitedBandwidth,
@@ -884,7 +884,7 @@ const VFOMarkersContainer = ({
                     const newBandwidth = currentBandwidth + (2 * freqDelta);
 
                     // Enforce minimum bandwidth and maximum using the state values
-                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
                     updateVFOProperty(parseInt(activeMarker), {
                         bandwidth: limitedBandwidth,
@@ -964,7 +964,7 @@ const VFOMarkersContainer = ({
                     const newFrequency = marker.frequency + freqDelta;
 
                     // Ensure the frequency stays within the visible range
-                    const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+                    const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
 
                     updateVFOProperty(parseInt(activeMarker), {
                         frequency: limitedFreq,
@@ -973,7 +973,7 @@ const VFOMarkersContainer = ({
                 } else if (dragMode === 'leftEdge') {
                     const currentBandwidth = marker.bandwidth || 3000;
                     const newBandwidth = currentBandwidth - (2 * freqDelta);
-                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
                     updateVFOProperty(parseInt(activeMarker), {
                         bandwidth: limitedBandwidth,
@@ -982,7 +982,7 @@ const VFOMarkersContainer = ({
                 } else if (dragMode === 'rightEdge') {
                     const currentBandwidth = marker.bandwidth || 3000;
                     const newBandwidth = currentBandwidth + (2 * freqDelta);
-                    const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
                     updateVFOProperty(parseInt(activeMarker), {
                         bandwidth: limitedBandwidth,
@@ -1056,7 +1056,7 @@ const VFOMarkersContainer = ({
             // Implement dragging logic based on drag mode
             if (dragMode === 'body') {
                 const newFrequency = marker.frequency + freqDelta;
-                const limitedFreq = Math.max(startFreq, Math.min(newFrequency, endFreq));
+                const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
 
                 updateVFOProperty(parseInt(activeMarker), {
                     frequency: limitedFreq,
@@ -1065,7 +1065,7 @@ const VFOMarkersContainer = ({
             } else if (dragMode === 'leftEdge') {
                 const currentBandwidth = marker.bandwidth || 3000;
                 const newBandwidth = currentBandwidth - (2 * freqDelta);
-                const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+                const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
                 updateVFOProperty(parseInt(activeMarker), {
                     bandwidth: limitedBandwidth,
@@ -1074,7 +1074,7 @@ const VFOMarkersContainer = ({
             } else if (dragMode === 'rightEdge') {
                 const currentBandwidth = marker.bandwidth || 3000;
                 const newBandwidth = currentBandwidth + (2 * freqDelta);
-                const limitedBandwidth = Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth));
+                const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
 
                 updateVFOProperty(parseInt(activeMarker), {
                     bandwidth: limitedBandwidth,

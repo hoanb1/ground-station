@@ -92,6 +92,7 @@ import FrequencyDisplay from "./frequency-control.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import getValue from "lodash/_getValue.js";
+import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 
 const BANDWIDTHS = {
     "3300": "3.3 kHz",
@@ -823,12 +824,20 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     mb: 1,
                                     typography: 'body1',
                                     fontWeight: 'medium',
-                                    display: 'flex',
                                     alignItems: 'center'
                                 }}>
-                                    <Box sx={{flex: 1}}>Frequency:</Box>
                                     <Box
-                                        sx={{fontFamily: "Monospace", color: '#2196f3'}}>{preciseHumanizeFrequency(vfoMarkers[vfoIndex]?.frequency || 0)}</Box>
+                                        sx={{
+                                            fontFamily: "Monospace",
+                                            color: '#2196f3',
+                                            alignItems: 'center',
+                                            textAlign: 'center',
+                                            justifyContent: 'center'
+                                        }}>
+                                        <LCDFrequencyDisplay
+                                            frequency={vfoMarkers[vfoIndex]?.frequency || 0}
+                                            size={"large"}/>
+                                    </Box>
                                 </Box>
                                 <FormControlLabel
                                     control={

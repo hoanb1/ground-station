@@ -204,7 +204,6 @@ const LCDFrequencyDisplay = ({
                                  frequencyIsOffset = false,
                              }) => {
     // Format frequency to display with proper padding and separators
-
     const formatFrequencyWithSeparators = (freq, isFullWidth, isOffset) => {
         try {
             if (!freq || freq === 0) {
@@ -223,23 +222,29 @@ const LCDFrequencyDisplay = ({
                 return [{ type: 'digit', value: '0', key: 0 }];
             }
 
+            // If frequency is a float, truncate to integer part only
+            let processedFreq = freq;
+            if (typeof freq === 'number' && freq % 1 !== 0) {
+                processedFreq = Math.trunc(freq);
+            }
+
             // Convert to string and handle negative numbers
-            const freqStr = freq.toString();
+            const freqStr = processedFreq.toString();
             const isNegative = freqStr.startsWith('-');
             const absFreqStr = isNegative ? freqStr.slice(1) : freqStr;
 
-            // Remove decimal point for processing
+            // Remove decimal point for processing (shouldn't be needed now, but keeping for safety)
             const cleanFreqStr = absFreqStr.replace('.', '');
 
-            let processedFreq = cleanFreqStr;
+            let finalFreqStr = cleanFreqStr;
 
             // Handle fullWidth mode
             if (isFullWidth) {
                 if (!isOffset) {
                     // For regular frequencies, pad to 11 digits
-                    processedFreq = cleanFreqStr.padStart(11, '0');
+                    finalFreqStr = cleanFreqStr.padStart(11, '0');
                 }
-                // For offset frequencies, keep processedFreq as is (no padding)
+                // For offset frequencies, keep finalFreqStr as is (no padding)
             }
 
             // Add separators every 3 digits from the right
@@ -290,9 +295,9 @@ const LCDFrequencyDisplay = ({
 
                     // For regular frequencies, create 11 digit positions with padding
                     for (let i = 0; i < 11; i++) {
-                        const digit = processedFreq[i] || '0';
+                        const digit = finalFreqStr[i] || '0';
                         const positionFromRight = 11 - i - 1;
-                        const isEmpty = processedFreq[i] === '0' && i < (11 - cleanFreqStr.length);
+                        const isEmpty = finalFreqStr[i] === '0' && i < (11 - cleanFreqStr.length);
 
                         result.push({ type: 'digit', value: digit, key: i, isEmpty });
 
@@ -309,9 +314,9 @@ const LCDFrequencyDisplay = ({
                 }
 
                 // Regular processing for non-fullWidth frequencies
-                for (let i = 0; i < processedFreq.length; i++) {
-                    const digit = processedFreq[i];
-                    const positionFromRight = processedFreq.length - i - 1;
+                for (let i = 0; i < finalFreqStr.length; i++) {
+                    const digit = finalFreqStr[i];
+                    const positionFromRight = finalFreqStr.length - i - 1;
 
                     result.push({ type: 'digit', value: digit, key: i });
 
