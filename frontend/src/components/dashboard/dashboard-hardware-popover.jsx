@@ -50,7 +50,7 @@ const HardwareSettingsPopover = () => {
     const [anchorEl, setAnchorEl] = useState(buttonRef.current);
     const [activeIcon, setActiveIcon] = useState(null);
 
-    // Get rig and rotator data from Redux store
+    // Get rig and rotator data from the Redux store
     const {rigData, rotatorData} = useSelector(state => state.targetSatTrack);
 
     const handleClick = (event, iconType) => {
@@ -205,6 +205,7 @@ const HardwareSettingsPopover = () => {
                             backgroundColor: 'rgba(255, 255, 255, 0.08)'
                         }, '& svg': {
                             height: '100%',
+                            width: '80%',
                         }
                     }}
                 >
