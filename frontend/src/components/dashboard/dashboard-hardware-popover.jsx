@@ -142,7 +142,7 @@ const HardwareSettingsPopover = () => {
             icon: LocationSearchingIcon,
             color: '#ffffff',
             badgeBackgroundColor: '#184068',
-            badgeBorderColor: "#ffffff"
+            badgeBorderColor: "#184068"
         };
 
         // No overlay for "connected" state
@@ -199,7 +199,7 @@ const HardwareSettingsPopover = () => {
                         overlaySize={0.9}
                         fontSize="small"
                         badgeBackgroundColor={rigOverlay?.badgeBackgroundColor}
-                        badgeBorderColor={rotatorOverlay?.badgeBorderColor}
+                        badgeBorderColor={rigOverlay?.badgeBorderColor}
                     />
                 </IconButton>
             </Tooltip>
