@@ -66,13 +66,13 @@ const HardwareSettingsPopover = () => {
 
     // Determine colors based on connection and tracking status
     const getRigColor = () => {
-        if (!rigData.connected) return '#6e1f19'; // Red for disconnected
+        if (!rigData.connected) return '#c33124'; // Red for disconnected
         if (rigData.tracking) return '#62ec43'; // Blue for tracking
         return '#245326'; // Green for connected but not tracking
     };
 
     const getRotatorColor = () => {
-        if (!rotatorData.connected) return '#6e1f19'; // Red for disconnected
+        if (!rotatorData.connected) return '#c33124'; // Red for disconnected
         if (rotatorData.outofbounds) return "#853eda"; //
         if (rotatorData.minelevation) return "#e67a7a"; //
         if (rotatorData.slewing) return '#ff9800'; // Orange for slewing
@@ -95,13 +95,36 @@ const HardwareSettingsPopover = () => {
 
     // Get overlay icon and color for rotator
     const getRotatorOverlay = () => {
-        if (!rotatorData.connected) return {icon: CloseIcon, color: '#ffffff', badgeBackgroundColor: '#af2424'};
-        if (rotatorData.outofbounds) return {icon: WarningIcon, color: '#ffffff', badgeBackgroundColor: '#da3e3e'};
-        if (rotatorData.minelevation) return {
-            icon: ArrowDownwardIcon, color: '#e81c2d', badgeBackgroundColor: '#ffffff'
+        if (!rotatorData.connected) return {
+            icon: CloseIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#af2424',
+            badgeBorderColor: "#ffffff"
         };
-        if (rotatorData.slewing) return {icon: SyncIcon, color: '#ffffff', badgeBackgroundColor: '#15490d'};
-        if (rotatorData.tracking) return {icon: LocationSearchingIcon, color: '#ffffff', badgeBackgroundColor: '#184068'};
+        if (rotatorData.outofbounds) return {
+            icon: WarningIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#da3e3e',
+            badgeBorderColor: "#ffffff"
+        };
+        if (rotatorData.minelevation) return {
+            icon: ArrowDownwardIcon,
+            color: '#e81c2d',
+            badgeBackgroundColor: '#ffffff',
+            badgeBorderColor: "#e81c2d"
+        };
+        if (rotatorData.slewing) return {
+            icon: SyncIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#15490d',
+            badgeBorderColor: "#15490d"
+        };
+        if (rotatorData.tracking) return {
+            icon: LocationSearchingIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#184068',
+            badgeBorderColor: "#184068"
+        };
 
         // No overlay for "connected" states
         return null;
@@ -109,8 +132,18 @@ const HardwareSettingsPopover = () => {
 
     // Get overlay icon and color for the rig
     const getRigOverlay = () => {
-        if (!rigData.connected) return {icon: CloseIcon, color: '#ffffff', badgeBackgroundColor: '#af2424'};
-        if (rigData.tracking) return {icon: LocationSearchingIcon, color: '#ffffff', badgeBackgroundColor: '#184068'};
+        if (!rigData.connected) return {
+            icon: CloseIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#af2424',
+            badgeBorderColor: "#ffffff"
+        };
+        if (rigData.tracking) return {
+            icon: LocationSearchingIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#184068',
+            badgeBorderColor: "#ffffff"
+        };
 
         // No overlay for "connected" state
         return null;
@@ -120,83 +153,85 @@ const HardwareSettingsPopover = () => {
     const rigOverlay = getRigOverlay();
 
     return (<>
-            <Stack direction="row" spacing={0}>
-                <Tooltip title={getRotatorTooltip()}>
-                    <IconButton
-                        onClick={(event) => handleClick(event, 'rotator')}
-                        size="small"
-                        sx={{
-                            width: 40, color: getRotatorColor(), '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                            }, '& svg': {
-                                height: '100%',
-                            }
-                        }}
-                    >
-                        <OverlayIcon
-                            BaseIcon={SatelliteIcon}
-                            OverlayIcon={rotatorOverlay?.icon}
-                            overlayColor={rotatorOverlay?.color}
-                            overlayPosition="bottom-right"
-                            overlaySize={0.9}
-                            fontSize="small"
-                            badgeBackgroundColor={rotatorOverlay?.badgeBackgroundColor}
-                        />
-                    </IconButton>
-                </Tooltip>
-                <Tooltip title={getRigTooltip()}>
-                    <IconButton
-                        ref={buttonRef}
-                        onClick={(event) => handleClick(event, 'rig')}
-                        size="small"
-                        sx={{
-                            width: 40, color: getRigColor(), '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                            }, '& svg': {
-                                height: '100%',
-                            }
-                        }}
-                    >
-                        <OverlayIcon
-                            BaseIcon={RadioIcon}
-                            OverlayIcon={rigOverlay?.icon}
-                            overlayColor={rigOverlay?.color}
-                            overlayPosition="bottom-right"
-                            overlaySize={0.9}
-                            fontSize="small"
-                            badgeBackgroundColor={rigOverlay?.badgeBackgroundColor}
-                        />
-                    </IconButton>
-                </Tooltip>
-            </Stack>
-            <Popover
-                sx={{
-                    '& .MuiPaper-root': {
-                        borderRadius: 0,
-                    }
-                }}
-                open={open}
-                anchorEl={anchorEl}
-                onClose={handleClose}
-                anchorOrigin={{
-                    vertical: 'bottom', horizontal: 'right',
-                }}
-                transformOrigin={{
-                    vertical: 'top', horizontal: 'right',
-                }}
-            >
-                <Box sx={{
+        <Stack direction="row" spacing={0}>
+            <Tooltip title={getRotatorTooltip()}>
+                <IconButton
+                    onClick={(event) => handleClick(event, 'rotator')}
+                    size="small"
+                    sx={{
+                        width: 40, color: getRotatorColor(), '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                        }, '& svg': {
+                            height: '100%',
+                        }
+                    }}
+                >
+                    <OverlayIcon
+                        BaseIcon={SatelliteIcon}
+                        OverlayIcon={rotatorOverlay?.icon}
+                        overlayColor={rotatorOverlay?.color}
+                        overlayPosition="bottom-right"
+                        overlaySize={0.9}
+                        fontSize="small"
+                        badgeBackgroundColor={rotatorOverlay?.badgeBackgroundColor}
+                        badgeBorderColor={rotatorOverlay?.badgeBorderColor}
+                    />
+                </IconButton>
+            </Tooltip>
+            <Tooltip title={getRigTooltip()}>
+                <IconButton
+                    ref={buttonRef}
+                    onClick={(event) => handleClick(event, 'rig')}
+                    size="small"
+                    sx={{
+                        width: 40, color: getRigColor(), '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                        }, '& svg': {
+                            height: '100%',
+                        }
+                    }}
+                >
+                    <OverlayIcon
+                        BaseIcon={RadioIcon}
+                        OverlayIcon={rigOverlay?.icon}
+                        overlayColor={rigOverlay?.color}
+                        overlayPosition="bottom-right"
+                        overlaySize={0.9}
+                        fontSize="small"
+                        badgeBackgroundColor={rigOverlay?.badgeBackgroundColor}
+                        badgeBorderColor={rotatorOverlay?.badgeBorderColor}
+                    />
+                </IconButton>
+            </Tooltip>
+        </Stack>
+        <Popover
+            sx={{
+                '& .MuiPaper-root': {
                     borderRadius: 0,
-                    border: '1px solid #424242',
-                    p: 0,
-                    minWidth: 330,
-                    width: 330,
-                    backgroundColor: '#1e1e1e',
-                }}>
-                    <ControllerTabs activeController={activeIcon}/>
-                </Box>
-            </Popover>
-        </>);
+                }
+            }}
+            open={open}
+            anchorEl={anchorEl}
+            onClose={handleClose}
+            anchorOrigin={{
+                vertical: 'bottom', horizontal: 'right',
+            }}
+            transformOrigin={{
+                vertical: 'top', horizontal: 'right',
+            }}
+        >
+            <Box sx={{
+                borderRadius: 0,
+                border: '1px solid #424242',
+                p: 0,
+                minWidth: 330,
+                width: 330,
+                backgroundColor: '#1e1e1e',
+            }}>
+                <ControllerTabs activeController={activeIcon}/>
+            </Box>
+        </Popover>
+    </>);
 };
 
 export default HardwareSettingsPopover;
