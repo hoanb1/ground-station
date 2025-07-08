@@ -59,18 +59,13 @@ except ImportError:
 audio_producer: Optional[WebAudioProducer] = None
 audio_consumer: Optional[WebAudioConsumer] = None
 
-# Some globals for the tracker process
-tracker_process: Optional[multiprocessing.Process] = None
-queue_to_tracker: Optional[multiprocessing.Queue] = None
-queue_from_tracker: Optional[multiprocessing.Queue] = None
-tracker_stop_event: Optional[multiprocessing.Event] = None
-
 def cleanup_everything():
     """Cleanup function to stop all processes and threads"""
     logger.info("Cleaning up all processes and threads...")
 
     # Import here to avoid circular imports
     try:
+        from tracker.runner import tracker_process
         # Kill tracker process immediately - no graceful shutdown
         if tracker_process and tracker_process.is_alive():
             logger.info(f"Killing tracker process PID: {tracker_process.pid}")
@@ -177,6 +172,7 @@ async def handle_tracker_messages(sockio):
     """
     while True:
         try:
+            from tracker.runner import queue_to_tracker, queue_from_tracker
             if queue_from_tracker is not None and not queue_from_tracker.empty():
                 message = queue_from_tracker.get_nowait()
                 event = message.get('event')
@@ -201,16 +197,12 @@ async def lifespan(fastapiapp: FastAPI):
     Create and cleanup background tasks or other
     resources in this context manager.
     """
-    global audio_producer, audio_consumer, tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event
+    global audio_producer, audio_consumer
 
     logger.info("FastAPI lifespan startup...")
 
     # Start the tracker process here
-    _tracker_process, _queue_to_tracker, _queue_from_tracker, _tracker_stop_event = start_tracker_process()
-    tracker_process = _tracker_process
-    queue_to_tracker = _queue_to_tracker
-    queue_from_tracker = _queue_from_tracker
-    tracker_stop_event = _tracker_stop_event
+    tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event = start_tracker_process()
 
     # Get the current event loop
     event_loop = asyncio.get_event_loop()
@@ -268,9 +260,10 @@ def stop_tracker():
     Simple function to kill the tracker process
     """
     try:
+        from tracker.runner import tracker_process
         if tracker_process and tracker_process.is_alive():
             tracker_process.kill()
-    except:
+    except Exception as e:
         pass
 
 @sio.on('connect')

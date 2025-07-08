@@ -17,7 +17,7 @@ import asyncio
 import crud
 from typing import Union
 
-from app import queue_to_tracker
+from tracker.runner import queue_to_tracker
 from db import AsyncSessionLocal
 from db.models import SatelliteGroupType
 from tlesync.logic import synchronize_satellite_data

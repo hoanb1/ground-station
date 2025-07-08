@@ -18,9 +18,16 @@ import multiprocessing
 import setproctitle
 import asyncio
 import logging
+from typing import Optional
 from tracker.logic import SatelliteTracker
 
 logger = logging.getLogger("tracker-worker")
+
+# Some globals for the tracker process
+tracker_process = multiprocessing.Process()
+queue_to_tracker = multiprocessing.Queue()
+queue_from_tracker = multiprocessing.Queue()
+tracker_stop_event = multiprocessing.Event()
 
 
 def start_tracker_process():
@@ -31,8 +38,10 @@ def start_tracker_process():
     and the tracker process, and handles the lifecycle of the tracker process using the
     new SatelliteTracker class.
 
-    :return: A tuple containing (process, queue_in, queue_out, stop_event)
+    :return: A tuple containing (process, queue_in, queue_out, tracker_stop_event)
     """
+
+    global tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event
 
     # Define the process target function that will run the async tracking task
     def run_tracking_task():
@@ -48,7 +57,7 @@ def start_tracker_process():
 
         try:
             # Create and run the SatelliteTracker instance
-            tracker = SatelliteTracker(queue_from_tracker, queue_to_tracker, stop_event)
+            tracker = SatelliteTracker(queue_from_tracker, queue_to_tracker, tracker_stop_event)
             loop.run_until_complete(tracker.run())
 
         except Exception as e:
@@ -57,20 +66,16 @@ def start_tracker_process():
         finally:
             loop.close()
 
-    queue_to_tracker = multiprocessing.Queue()
-    queue_from_tracker = multiprocessing.Queue()
-    stop_event = multiprocessing.Event()
-
     # Create and start the process
-    tracker_proc = multiprocessing.Process(
+    tracker_process = multiprocessing.Process(
         target=run_tracking_task,
         name="Ground Station - SatelliteTracker"
     )
 
     # Process will terminate when main process exits
-    tracker_proc.daemon = True
-    tracker_proc.start()
+    tracker_process.daemon = True
+    tracker_process.start()
 
-    logger.info(f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_proc.pid}")
+    logger.info(f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_process.pid}")
 
-    return tracker_proc, queue_to_tracker, queue_from_tracker, stop_event
+    return tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event
