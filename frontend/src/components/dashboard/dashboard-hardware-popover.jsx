@@ -46,14 +46,40 @@ import LocationSearchingIcon from '@mui/icons-material/LocationSearching';
 import PauseIcon from '@mui/icons-material/Pause';
 
 const HardwareSettingsPopover = () => {
+    const {socket} = useSocket();
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(buttonRef.current);
     const [activeIcon, setActiveIcon] = useState(null);
+    const [connected, setConnected] = useState(false);
 
     // Get rig and rotator data from the Redux store
     const {rigData, rotatorData} = useSelector(state => state.targetSatTrack);
 
+    // Socket connection event handlers
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleConnect = () => {
+            setConnected(true);
+        };
+
+        const handleDisconnect = (reason) => {
+            setConnected(false);
+        };
+
+        // Add event listeners
+        socket.on('connect', handleConnect);
+        socket.on('disconnect', handleDisconnect);
+
+        // Cleanup function to remove listeners
+        return () => {
+            socket.off('connect', handleConnect);
+            socket.off('disconnect', handleDisconnect);
+        };
+    }, [socket]);
+
     const handleClick = (event, iconType) => {
+        if (!connected) return; // Don't open popover when socket is disconnected
         setAnchorEl(event.currentTarget);
         setActiveIcon(iconType);
     };
@@ -67,6 +93,7 @@ const HardwareSettingsPopover = () => {
 
     // Determine colors based on connection and tracking status
     const getRigColor = () => {
+        if (!connected) return '#666666'; // Grey when socket disconnected
         if (!rigData.connected) return '#c33124'; // Red for disconnected
         if (rigData.tracking) return '#62ec43'; // Blue for tracking
         if (rigData.stopped) return '#6f883b'; // Orange for stopped
@@ -74,6 +101,7 @@ const HardwareSettingsPopover = () => {
     };
 
     const getRotatorColor = () => {
+        if (!connected) return '#666666'; // Grey when socket disconnected
         if (!rotatorData.connected) return '#c33124'; // Red for disconnected
         if (rotatorData.outofbounds) return "#853eda"; //
         if (rotatorData.minelevation) return "#e67a7a"; //
@@ -84,6 +112,7 @@ const HardwareSettingsPopover = () => {
     };
 
     const getRigTooltip = () => {
+        if (!connected) return 'Socket: Disconnected';
         if (!rigData.connected) return 'Rig: Disconnected';
         if (rigData.tracking) return `Rig: Tracking (${rigData.frequency} Hz)`;
         if (rigData.stopped) return 'Rig: Stopped';
@@ -91,6 +120,7 @@ const HardwareSettingsPopover = () => {
     };
 
     const getRotatorTooltip = () => {
+        if (!connected) return 'Socket: Disconnected';
         if (!rotatorData.connected) return 'Rotator: Disconnected';
         if (rotatorData.tracking) return `Rotator: Tracking (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
         if (rotatorData.slewing) return `Rotator: Slewing (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
@@ -100,6 +130,7 @@ const HardwareSettingsPopover = () => {
 
     // Get overlay icon and color for rotator
     const getRotatorOverlay = () => {
+        if (!connected) return null; // No overlay when socket disconnected
         if (!rotatorData.connected) return {
             icon: CloseIcon,
             color: '#ffffff',
@@ -143,6 +174,7 @@ const HardwareSettingsPopover = () => {
 
     // Get overlay icon and color for the rig
     const getRigOverlay = () => {
+        if (!connected) return null; // No overlay when socket disconnected
         if (!rigData.connected) return {
             icon: CloseIcon,
             color: '#ffffff',

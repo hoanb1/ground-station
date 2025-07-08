@@ -114,7 +114,7 @@ function DashboardEditor() {
 }
 
 function ConnectionStatus() {
-    const { socket, trafficStatsRef, forceUpdateStats } = useSocket();
+    const { socket, trafficStatsRef } = useSocket();
     const [anchorEl, setAnchorEl] = useState(null);
 
     // Force update stats every second to get fresh data
