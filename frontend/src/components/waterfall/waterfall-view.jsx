@@ -920,6 +920,7 @@ const MainWaterfallDisplay = React.memo(() => {
                 }}>
                     {/* Left column - Y-axis canvases */}
                     <Box
+                        className={"left-vertical-bar"}
                         sx={{
                             width: bandscopeAxisYWidth,
                             minWidth: bandscopeAxisYWidth,
@@ -962,12 +963,14 @@ const MainWaterfallDisplay = React.memo(() => {
                             }}
                         />
                         <canvas
+                            className={"waterfall-left-margin-canvas"}
                             ref={waterFallLeftMarginCanvasRef}
                             width={bandscopeAxisYWidth}
                             height={waterFallCanvasHeight}
                             style={{
                                 width: '100%',
-                                height: `${dimensions['height'] - 230}px`,
+                                //height: `${dimensions['height'] - 230}px`,
+                                height: `${waterFallCanvasHeight}px`,
                                 display: 'block',
                                 backgroundColor: 'rgba(28, 28, 28, 1)',
                                 borderRight: '1px solid #535353',
@@ -990,6 +993,7 @@ const MainWaterfallDisplay = React.memo(() => {
                     />
 
                     <Box
+                        className={'right-vertical-bar'}
                         sx={{
                             width: '50px',
                             minWidth: '50px',

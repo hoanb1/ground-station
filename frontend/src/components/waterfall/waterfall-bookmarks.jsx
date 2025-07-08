@@ -428,6 +428,7 @@ const BookmarkCanvas = ({
             }}
         >
             <canvas
+                className={'bookmark-canvas'}
                 ref={canvasRef}
                 width={actualWidth}
                 height={height}

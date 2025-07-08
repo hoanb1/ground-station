@@ -1176,6 +1176,7 @@ const VFOMarkersContainer = ({
         >
             {/* Canvas for VFO markers */}
             <canvas
+                className={"vfo-markers-canvas"}
                 ref={canvasRef}
                 onClick={handleClick}
                 onMouseDown={handleMouseDown}

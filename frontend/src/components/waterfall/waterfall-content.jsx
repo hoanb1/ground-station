@@ -432,6 +432,7 @@ const WaterfallAndBandscope = forwardRef(({
                 {/* Bandscope container with relative positioning */}
                 <Box sx={{position: 'relative'}}>
                     <canvas
+                        className={"bandscope-canvas"}
                         ref={bandscopeCanvasRef}
                         width={waterFallCanvasWidth}
                         height={bandScopeHeight}
@@ -462,12 +463,15 @@ const WaterfallAndBandscope = forwardRef(({
                 />
 
                 <canvas
+                    className={"waterfall-canvas"}
                     ref={waterFallCanvasRef}
                     width={waterFallCanvasWidth}
-                    height={waterFallWindowHeight - 230}
+                    //height={waterFallWindowHeight - 230}
+                    height={waterFallCanvasHeight}
                     style={{
                         width: '100%',
-                        height: `${waterFallWindowHeight - 230}px`,
+                        //height: `${waterFallWindowHeight - 230}px`,
+                        height: `${waterFallCanvasHeight}px`,
                         display: 'block',
                         touchAction: 'pan-y',
                         //transform: 'translateZ(0)', // commented out because it breaks box-shadow CSS

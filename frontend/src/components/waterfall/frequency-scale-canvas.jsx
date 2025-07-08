@@ -230,6 +230,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
             }}
         >
             <canvas
+                className={'frequency-scale-canvas'}
                 ref={canvasRef}
                 width={actualWidth}
                 height={canvasHeight}
