@@ -16,6 +16,8 @@
 import asyncio
 import crud
 from typing import Union
+
+from app import queue_to_tracker
 from db import AsyncSessionLocal
 from db.models import SatelliteGroupType
 from tlesync.logic import synchronize_satellite_data
@@ -493,7 +495,6 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
         elif cmd == "nudge-rotator":
             logger.info(f'Nudging rotator, data: {data}')
             # Put command into the tracker queue
-            from tracker.state import queue_to_tracker
             queue_to_tracker.put({'command': data.get('cmd', None), 'data': None})
             reply = {'success': True, 'data': None}
 
