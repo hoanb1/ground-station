@@ -91,6 +91,7 @@ import VolumeUp from '@mui/icons-material/VolumeUp';
 import FrequencyDisplay from "./frequency-control.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
+import getValue from "lodash/_getValue.js";
 
 const BANDWIDTHS = {
     "3300": "3.3 kHz",
@@ -424,6 +425,18 @@ const WaterfallSettings = forwardRef((props, ref) => {
         return sendSDRConfigToBackend({offsetFrequency: offsetValue});
     }
 
+    function getProperTransmitterId() {
+        if (availableTransmitters.length > 0 && selectedTransmitterId) {
+            if (availableTransmitters.find(t => t.id === selectedTransmitterId)) {
+                return selectedTransmitterId;
+            } else {
+                return "none";
+            }
+        } else {
+            return "none";
+        }
+    }
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
@@ -458,7 +471,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             <InputLabel htmlFor="transmitter-select">Go to transmitter</InputLabel>
                             <Select
                                 id="transmitter-select"
-                                value={availableTransmitters.length > 0 ? selectedTransmitterId : "none"}
+                                value={getProperTransmitterId()}
                                 onChange={(event) => {
                                     handleTransmitterChange(event);
                                 }}
