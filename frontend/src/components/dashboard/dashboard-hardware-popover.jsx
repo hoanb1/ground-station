@@ -20,8 +20,7 @@
 import Stack from "@mui/material/Stack";
 import * as React from "react";
 import {
-    Box,
-    IconButton,
+    Box, IconButton,
 } from "@mui/material";
 import {useCallback, useEffect, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
@@ -45,13 +44,12 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 
 const HardwareSettingsPopover = () => {
-    const [volume, setVolume] = useState(30);
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(buttonRef.current);
     const [activeIcon, setActiveIcon] = useState(null);
 
     // Get rig and rotator data from Redux store
-    const { rigData, rotatorData } = useSelector(state => state.targetSatTrack);
+    const {rigData, rotatorData} = useSelector(state => state.targetSatTrack);
 
     const handleClick = (event, iconType) => {
         setAnchorEl(event.currentTarget);
@@ -96,43 +94,41 @@ const HardwareSettingsPopover = () => {
 
     // Get overlay icon and color for rotator
     const getRotatorOverlay = () => {
-        if (!rotatorData.connected) return { icon: CloseIcon, color: '#ffffff' };
-        if (rotatorData.outofbounds) return { icon: WarningIcon, color: '#da3e3e' };
-        if (rotatorData.minelevation) return { icon: ArrowDownwardIcon, color: '#e81c2d' };
-        if (rotatorData.slewing) return { icon: SyncIcon, color: '#5dff46' };
-        if (rotatorData.tracking) return { icon: CheckIcon, color: '#20ff00' };
+        if (!rotatorData.connected) return {icon: CloseIcon, color: '#ffffff', badgeBackgroundColor: '#af2424'};
+        if (rotatorData.outofbounds) return {icon: WarningIcon, color: '#ffffff', badgeBackgroundColor: '#da3e3e'};
+        if (rotatorData.minelevation) return {
+            icon: ArrowDownwardIcon, color: '#e81c2d', badgeBackgroundColor: '#ffffff'
+        };
+        if (rotatorData.slewing) return {icon: SyncIcon, color: '#15490d', badgeBackgroundColor: '#ffffff'};
+        if (rotatorData.tracking) return {icon: CheckIcon, color: '#14370f', badgeBackgroundColor: '#ffffff'};
 
-        // No overlay for simple connected states
+        // No overlay for "connected" states
         return null;
     };
 
     // Get overlay icon and color for the rig
     const getRigOverlay = () => {
-        if (!rigData.connected) return { icon: CloseIcon, color: '#ffffff' };
-        if (rigData.tracking) return { icon: CheckIcon, color: '#62ec43' };
+        if (!rigData.connected) return {icon: CloseIcon, color: '#ffffff', badgeBackgroundColor: '#af2424'};
+        if (rigData.tracking) return {icon: CheckIcon, color: '#276818', badgeBackgroundColor: '#ffffff'};
 
-        // No overlay for simple connected state
+        // No overlay for "connected" state
         return null;
     };
 
     const rotatorOverlay = getRotatorOverlay();
     const rigOverlay = getRigOverlay();
 
-    return (
-        <>
+    return (<>
             <Stack direction="row" spacing={0}>
                 <Tooltip title={getRotatorTooltip()}>
                     <IconButton
                         onClick={(event) => handleClick(event, 'rotator')}
                         size="small"
                         sx={{
-                            width: 40,
-                            color: getRotatorColor(),
-                            '&:hover': {
+                            width: 40, color: getRotatorColor(), '&:hover': {
                                 backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                            },
-                            '& svg': {
-                                height: '80%',
+                            }, '& svg': {
+                                height: '100%',
                             }
                         }}
                     >
@@ -140,9 +136,10 @@ const HardwareSettingsPopover = () => {
                             BaseIcon={SatelliteIcon}
                             OverlayIcon={rotatorOverlay?.icon}
                             overlayColor={rotatorOverlay?.color}
-                            overlayPosition="top-left"
+                            overlayPosition="bottom-right"
                             overlaySize={0.9}
                             fontSize="small"
+                            badgeBackgroundColor={rotatorOverlay?.badgeBackgroundColor}
                         />
                     </IconButton>
                 </Tooltip>
@@ -152,20 +149,21 @@ const HardwareSettingsPopover = () => {
                         onClick={(event) => handleClick(event, 'rig')}
                         size="small"
                         sx={{
-                            width: 40,
-                            color: getRigColor(),
-                            '&:hover': {
+                            width: 40, color: getRigColor(), '&:hover': {
                                 backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                            },
+                            }, '& svg': {
+                                height: '100%',
+                            }
                         }}
                     >
                         <OverlayIcon
                             BaseIcon={RadioIcon}
                             OverlayIcon={rigOverlay?.icon}
                             overlayColor={rigOverlay?.color}
-                            overlayPosition="top-left"
+                            overlayPosition="bottom-right"
                             overlaySize={0.9}
                             fontSize="small"
+                            badgeBackgroundColor={rigOverlay?.badgeBackgroundColor}
                         />
                     </IconButton>
                 </Tooltip>
@@ -180,12 +178,10 @@ const HardwareSettingsPopover = () => {
                 anchorEl={anchorEl}
                 onClose={handleClose}
                 anchorOrigin={{
-                    vertical: 'bottom',
-                    horizontal: 'right',
+                    vertical: 'bottom', horizontal: 'right',
                 }}
                 transformOrigin={{
-                    vertical: 'top',
-                    horizontal: 'right',
+                    vertical: 'top', horizontal: 'right',
                 }}
             >
                 <Box sx={{
@@ -196,11 +192,10 @@ const HardwareSettingsPopover = () => {
                     width: 330,
                     backgroundColor: '#1e1e1e',
                 }}>
-                    <ControllerTabs activeController={activeIcon} />
+                    <ControllerTabs activeController={activeIcon}/>
                 </Box>
             </Popover>
-        </>
-    );
+        </>);
 };
 
 export default HardwareSettingsPopover;

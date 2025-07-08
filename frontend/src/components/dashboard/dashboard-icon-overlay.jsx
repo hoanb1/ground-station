@@ -8,7 +8,7 @@ const OverlayIcon = ({
                          overlayPosition = 'top-right',
                          overlaySize = 0.5,
                          overlayColor = '#ff0000',
-                         badgeBackgroundColor = 'rgba(255,255,255,0)',
+                         badgeBackgroundColor = 'rgb(255,255,255)',
                          badgeBorderColor = 'rgba(255,255,255,0)',
                          badgeBorderWidth = 1,
                          showBadge = true,
@@ -25,7 +25,7 @@ const OverlayIcon = ({
         'center': { top: '50%', left: '50%', transform: 'translate(-50%, -50%)' }
     };
 
-    const badgeSize = `${overlaySize * 1.8}em`; // Badge is larger than icon for proper padding
+    const badgeSize = `${overlaySize * 1.1}em`; // Badge is larger than icon for proper padding
     const iconSize = `${overlaySize * 0.9}em`; // Icon is smaller to fit nicely in badge
 
     const overlayStyles = {

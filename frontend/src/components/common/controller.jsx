@@ -96,9 +96,9 @@ export default function ControllerTabs({activeController}) {
 
     return (
         <>
-            <TitleBar
-                className={getClassNamesBasedOnGridEditing(isTargetGridEditable || isWaterfallGridEditable, ["window-title-bar"])}>Hardware
-                control</TitleBar>
+            {/*<TitleBar*/}
+            {/*    className={getClassNamesBasedOnGridEditing(isTargetGridEditable || isWaterfallGridEditable, ["window-title-bar"])}>Hardware*/}
+            {/*    control</TitleBar>*/}
             <Box sx={{
                 width: '100%',
                 bgcolor: 'background.paper.main',
