@@ -251,8 +251,8 @@ const SatelliteTable = React.memo(function () {
     return (
         <Box elevation={3} sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>Satellites</AlertTitle>
-                Select one satellite group to see the satellites in it
+                <AlertTitle>Satellite Database</AlertTitle>
+                Browse and manage the satellite database organized by groups. Select a satellite group from the dropdown to view satellites with their operational status, frequency bands, countries, operators, and mission dates. Click on any satellite row to view detailed information including transmitter specifications, orbital parameters, and real-time tracking data. Satellite data is automatically synchronized from TLE sources and enriched with frequency information from the SatNOGS database.
             </Alert>
             <FormControl sx={{minWidth: 200, marginTop: 2, marginBottom: 1}} fullWidth variant={"filled"}>
                 <InputLabel htmlFor="grouped-select">Select one of the satellite groups</InputLabel>

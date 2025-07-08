@@ -262,15 +262,7 @@ L.Icon.Default.mergeOptions({
 const RotatorControlForm = () => {
 
     return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
-            <Alert severity="info">
-                <AlertTitle>Antenna rotator control setup</AlertTitle>
-                Configure and manage your antenna rotator control setup here
-            </Alert>
-            <Box component="form" sx={{mt: 2}}>
-                <AntennaRotatorTable/>
-            </Box>
-        </Paper>
+        <AntennaRotatorTable/>
     );
 };
 
@@ -278,15 +270,7 @@ const RotatorControlForm = () => {
 const CameraPage = () => {
 
     return (
-        <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
-            <Alert severity="info">
-                <AlertTitle>Camera control setup</AlertTitle>
-                Configure and manage your camera control setup here
-            </Alert>
-            <Box component="form" sx={{mt: 2}}>
-                <CameraTable/>
-            </Box>
-        </Paper>
+        <CameraTable/>
     );
 };
 
@@ -294,15 +278,7 @@ const CameraPage = () => {
 const RigControlForm = () => {
 
     return (
-        <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
-            <Alert severity="info">
-            <AlertTitle>Rig control setup</AlertTitle>
-                Configure and manage your rig control setup here
-            </Alert>
-            <Box component="form" sx={{mt: 2}}>
-                <RigTable/>
-            </Box>
-        </Paper>
+        <RigTable/>
     );
 };
 

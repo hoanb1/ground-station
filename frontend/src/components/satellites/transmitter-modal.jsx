@@ -538,11 +538,11 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
 
                     <Box sx={{ display: 'flex', gap: 2, mb: 2.5 }}>
                         <FormControl fullWidth variant="outlined">
-                            <InputLabel sx={getInputLabelSx('mode')}>Mode</InputLabel>
+                            <InputLabel sx={getInputLabelSx('mode')}>Downlink mode</InputLabel>
                             <Select
                                 value={formData.mode}
                                 onChange={handleChange('mode')}
-                                label="Mode"
+                                label="Downlink mode"
                                 disabled={loading}
                                 sx={getSelectSx('mode')}
                                 MenuProps={{
@@ -564,11 +564,11 @@ const TransmitterModal = ({ open, onClose, transmitter, satelliteId, isNew = fal
                         </FormControl>
 
                         <FormControl fullWidth variant="outlined">
-                            <InputLabel sx={getInputLabelSx('uplinkMode')}>Uplink Mode</InputLabel>
+                            <InputLabel sx={getInputLabelSx('uplinkMode')}>Uplink mode</InputLabel>
                             <Select
                                 value={formData.uplinkMode}
                                 onChange={handleChange('uplinkMode')}
-                                label="Uplink Mode"
+                                label="Uplink mode"
                                 disabled={loading}
                                 sx={getSelectSx('uplinkMode')}
                                 MenuProps={{

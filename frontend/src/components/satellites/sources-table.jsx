@@ -160,8 +160,8 @@ export default function SourcesTable() {
     return (
         <Box sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>TLE sources</AlertTitle>
-                TLE sources are loaded from Celestrak.org in TLE format and frequency data is loaded from the Satnogs API
+                <AlertTitle>TLE Data Sources</AlertTitle>
+                This page manages TLE (Two-Line Element) data sources for satellite tracking. You can add, edit, and delete custom TLE sources in 3LE format from various providers including Celestrak.org and other TLE data sources. The system automatically fetches orbital data from configured URLs and combines it with frequency information from the SatNOGS API. Use the synchronization controls to update all sources with the latest satellite data. Sources are stored locally and timestamps show when each source was added and last updated.
             </Alert>
             <SynchronizeTLEsCard/>
             <Box sx={{marginTop: 4}}>

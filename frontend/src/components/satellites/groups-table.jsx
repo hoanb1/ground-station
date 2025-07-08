@@ -145,8 +145,8 @@ const GroupsTable = () => {
     return (
         <Box sx={{ width: '100%', marginTop: 0 }}>
             <Alert severity="info">
-                <AlertTitle>Satellite groups</AlertTitle>
-                Manage satellite groups
+                <AlertTitle>Satellite Groups</AlertTitle>
+                Create and manage custom satellite groups to organize satellites by mission type, frequency band, or any criteria that suits your needs. Add, edit, or delete groups and assign satellites to them for easier filtering and tracking. Both system-defined and user-created groups are available for selection when browsing the satellite database. Groups help streamline satellite operations by categorizing satellites into logical collections.
             </Alert>
 
             <DataGrid

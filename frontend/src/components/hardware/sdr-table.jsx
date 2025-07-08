@@ -543,9 +543,16 @@ export default function SDRsPage() {
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info" sx={{mb: 2}}>
-                <AlertTitle>Configuring RTL-SDR Serial Numbers</AlertTitle>
-                Use these commands in terminal to change device serial numbers:
+                <AlertTitle>Software Defined Radio (SDR) Configuration</AlertTitle>
+                Configure and manage SDR devices for satellite signal reception and spectrum analysis. This system
+                supports multiple SDR platforms through SoapySDR for universal hardware compatibility, native
+                RTL-SDR drivers for cost-effective USB dongles, and native UHD support for professional USRP devices.
+                SoapySDR provides a hardware-independent API supporting RTL-SDR, AirSpy, BladeRF, HackRF, LimeSDR,
+                and many other devices. Configure connection parameters, frequency ranges, and device-specific
+                settings for local USB devices, network-attached SDRs, or remote SoapySDR servers.
                 <Box sx={{pl: 2, mt: 1}}>
+                    For RTL-SDR
+                    devices specifically, use these terminal commands to manage serial numbers:
                     <Typography component="div" variant="body2" color="text.secondary">
                         1. View current ID: <code>rtl_eeprom -d 0</code>
                         <br/>
