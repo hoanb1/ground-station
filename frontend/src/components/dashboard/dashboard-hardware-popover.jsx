@@ -43,6 +43,7 @@ import SyncIcon from '@mui/icons-material/Sync';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import LocationSearchingIcon from '@mui/icons-material/LocationSearching';
+import PauseIcon from '@mui/icons-material/Pause';
 
 const HardwareSettingsPopover = () => {
     const buttonRef = useRef(null);
@@ -68,6 +69,7 @@ const HardwareSettingsPopover = () => {
     const getRigColor = () => {
         if (!rigData.connected) return '#c33124'; // Red for disconnected
         if (rigData.tracking) return '#62ec43'; // Blue for tracking
+        if (rigData.stopped) return '#6f883b'; // Orange for stopped
         return '#245326'; // Green for connected but not tracking
     };
 
@@ -77,12 +79,14 @@ const HardwareSettingsPopover = () => {
         if (rotatorData.minelevation) return "#e67a7a"; //
         if (rotatorData.slewing) return '#ff9800'; // Orange for slewing
         if (rotatorData.tracking) return '#62ec43'; // Light green for tracking
+        if (rotatorData.stopped) return '#6f883b'; // Orange for stopped
         return '#245326'; // Green for connected but not tracking
     };
 
     const getRigTooltip = () => {
         if (!rigData.connected) return 'Rig: Disconnected';
         if (rigData.tracking) return `Rig: Tracking (${rigData.frequency} Hz)`;
+        if (rigData.stopped) return 'Rig: Stopped';
         return 'Rig: Connected';
     };
 
@@ -90,6 +94,7 @@ const HardwareSettingsPopover = () => {
         if (!rotatorData.connected) return 'Rotator: Disconnected';
         if (rotatorData.tracking) return `Rotator: Tracking (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
         if (rotatorData.slewing) return `Rotator: Slewing (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
+        if (rotatorData.stopped) return `Rotator: Stopped (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
         return `Rotator: Connected (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
     };
 
@@ -125,6 +130,12 @@ const HardwareSettingsPopover = () => {
             badgeBackgroundColor: '#184068',
             badgeBorderColor: "#184068"
         };
+        if (rotatorData.stopped) return {
+            icon: PauseIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#ff9800',
+            badgeBorderColor: "#ffffff"
+        };
 
         // No overlay for "connected" states
         return null;
@@ -143,6 +154,12 @@ const HardwareSettingsPopover = () => {
             color: '#ffffff',
             badgeBackgroundColor: '#184068',
             badgeBorderColor: "#184068"
+        };
+        if (rigData.stopped) return {
+            icon: PauseIcon,
+            color: '#ffffff',
+            badgeBackgroundColor: '#ff9800',
+            badgeBorderColor: "#ffffff"
         };
 
         // No overlay for "connected" state
