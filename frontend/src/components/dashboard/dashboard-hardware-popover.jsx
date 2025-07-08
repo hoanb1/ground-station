@@ -42,6 +42,7 @@ import ArrowDownwardIcon from '@mui/icons-material/ArrowDownward';
 import SyncIcon from '@mui/icons-material/Sync';
 import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
+import LocationSearchingIcon from '@mui/icons-material/LocationSearching';
 
 const HardwareSettingsPopover = () => {
     const buttonRef = useRef(null);
@@ -99,8 +100,8 @@ const HardwareSettingsPopover = () => {
         if (rotatorData.minelevation) return {
             icon: ArrowDownwardIcon, color: '#e81c2d', badgeBackgroundColor: '#ffffff'
         };
-        if (rotatorData.slewing) return {icon: SyncIcon, color: '#15490d', badgeBackgroundColor: '#ffffff'};
-        if (rotatorData.tracking) return {icon: CheckIcon, color: '#14370f', badgeBackgroundColor: '#ffffff'};
+        if (rotatorData.slewing) return {icon: SyncIcon, color: '#ffffff', badgeBackgroundColor: '#15490d'};
+        if (rotatorData.tracking) return {icon: LocationSearchingIcon, color: '#ffffff', badgeBackgroundColor: '#184068'};
 
         // No overlay for "connected" states
         return null;
@@ -109,7 +110,7 @@ const HardwareSettingsPopover = () => {
     // Get overlay icon and color for the rig
     const getRigOverlay = () => {
         if (!rigData.connected) return {icon: CloseIcon, color: '#ffffff', badgeBackgroundColor: '#af2424'};
-        if (rigData.tracking) return {icon: CheckIcon, color: '#276818', badgeBackgroundColor: '#ffffff'};
+        if (rigData.tracking) return {icon: LocationSearchingIcon, color: '#ffffff', badgeBackgroundColor: '#184068'};
 
         // No overlay for "connected" state
         return null;
