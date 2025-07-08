@@ -143,7 +143,7 @@ export const WaterfallStatusBar = styled(Paper)(({ theme }) => ({
     borderRadius: '0px 0px 0px 0px',
     borderTop: '1px solid #494949',
     zIndex: 450,
-    bottom: -1,
+    bottom: -2,
     textAlign: 'left',
     fontWeight: 'normal',
 }));
