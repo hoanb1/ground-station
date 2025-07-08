@@ -161,7 +161,7 @@ const LCDDigits = styled(Box)(({ theme, variant = 'green' }) => {
         },
 
         '& .lcd-separator': {
-            margin: '0 -4px -11px -3px',
+            margin: '0 -4px -14px -3px',
             fontSize: '0.8em',
             opacity: 0.7,
         }
@@ -204,6 +204,7 @@ const LCDFrequencyDisplay = ({
                                  frequencyIsOffset = false,
                              }) => {
     // Format frequency to display with proper padding and separators
+
     const formatFrequencyWithSeparators = (freq, isFullWidth, isOffset) => {
         try {
             if (!freq || freq === 0) {
@@ -249,8 +250,8 @@ const LCDFrequencyDisplay = ({
                 if (isOffset) {
                     // For offset frequencies: show empty digits on the left, actual digits on the right
                     const actualDigits = cleanFreqStr.length;
-                    const negativeSignSpace = isNegative ? 1 : 0;
-                    const emptyDigits = 11 - actualDigits - negativeSignSpace;
+                    const signSpace = isOffset ? 1 : 0; // Always reserve space for sign when isOffset
+                    const emptyDigits = 11 - actualDigits - signSpace;
 
                     // Add empty digits first
                     for (let i = 0; i < emptyDigits; i++) {
@@ -263,16 +264,16 @@ const LCDFrequencyDisplay = ({
                         }
                     }
 
-                    // Add negative sign right before the actual digits
-                    if (isNegative) {
-                        result.push({ type: 'digit', value: '-', key: 'neg' });
+                    // Add sign right before the actual digits (always show + or - for offset)
+                    if (isOffset) {
+                        result.push({ type: 'digit', value: isNegative ? '-' : '+', key: 'sign' });
                     }
 
                     // Add actual digits
                     for (let i = 0; i < actualDigits; i++) {
                         const digit = cleanFreqStr[i];
                         const positionFromRight = actualDigits - i - 1;
-                        const actualIndex = emptyDigits + negativeSignSpace + i;
+                        const actualIndex = emptyDigits + signSpace + i;
 
                         result.push({ type: 'digit', value: digit, key: actualIndex });
 
@@ -302,9 +303,9 @@ const LCDFrequencyDisplay = ({
                     }
                 }
             } else {
-                // Add negative sign at the beginning for non-fullWidth
-                if (isNegative) {
-                    result.push({ type: 'digit', value: '-', key: 'neg' });
+                // For non-fullWidth: show sign when it's an offset or when it's negative
+                if (isOffset || isNegative) {
+                    result.push({ type: 'digit', value: isNegative ? '-' : '+', key: 'sign' });
                 }
 
                 // Regular processing for non-fullWidth frequencies
