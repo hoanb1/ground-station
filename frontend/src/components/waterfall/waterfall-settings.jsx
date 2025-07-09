@@ -806,6 +806,9 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 '& .MuiTab-root': {
                                     minHeight: '32px',
                                     padding: '6px 12px'
+                                },
+                                '& .MuiTabs-indicator': {
+                                    backgroundColor: '#ffffffcc',
                                 }
                             }}
                         >
@@ -813,6 +816,11 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 <Tab key={index} label={`VFO ${index + 1}`} sx={{
                                     minWidth: '25%',
                                     backgroundColor: `${vfoColors[index]}40`, // CC = 80% opacity (204/255)
+                                    '&.Mui-selected': {
+                                        fontWeight: 'bold',
+                                        borderBottom: 'none',
+                                        color: '#ffffff',
+                                    },
                                 }}/>
                             ))}
 
@@ -821,7 +829,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                             <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
                                 <Box sx={{
                                     mt: 2,
-                                    mb: 1,
+                                    mb: 0,
                                     typography: 'body1',
                                     fontWeight: 'medium',
                                     alignItems: 'center'
@@ -839,6 +847,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                             size={"large"}/>
                                     </Box>
                                 </Box>
+
                                 <FormControlLabel
                                     control={
                                         <Switch
@@ -853,10 +862,10 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                         />
                                     }
                                     label="Active"
-                                    sx={{mt: 2}}
+                                    sx={{mt: 0, ml: 0}}
                                 />
 
-                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
+                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 1}}>
                                     <InputLabel>Step Size</InputLabel>
                                     <Select
                                         value={vfoMarkers[vfoIndex]?.stepSize || 1000}
