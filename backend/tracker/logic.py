@@ -196,13 +196,20 @@ class SatelliteTracker:
 
         if new == "connected":
             await self.connect_to_rotator()
+            self.rotator_data['connected'] = True
+            self.rotator_data['stopped'] = True
         elif new == "tracking":
             await self.connect_to_rotator()
             self.rotator_data['tracking'] = True
+            self.rotator_data['stopped'] = False
         elif new == "stopped":
-            self.rotator_data.update({'tracking': False, 'slewing': False, 'stopped': True})
+            self.rotator_data['tracking'] = False
+            self.rotator_data['slewing'] = False
+            self.rotator_data['stopped'] = True
         elif new == "disconnected":
             await self._disconnect_rotator()
+            self.rotator_data['tracking'] = False
+            self.rotator_data['stopped'] = True
         elif new == "parked":
             await self._park_rotator()
         else:
@@ -328,13 +335,21 @@ class SatelliteTracker:
 
         if new == "connected":
             await self.connect_to_rig()
+            self.rig_data['connected'] = True
+
         elif new == "disconnected":
             await self._disconnect_rig()
+            self.rig_data['connected'] = False
+            self.rig_data['tracking'] = False
+            self.rig_data['stopped'] = True
         elif new == "tracking":
             await self.connect_to_rig()
             self.rig_data['tracking'] = True
+            self.rig_data['stopped'] = False
         elif new == "stopped":
-            self.rig_data.update({'tracking': False, 'tuning': False, 'stopped': True})
+            self.rig_data['tracking'] = False
+            self.rig_data['tuning'] = False
+            self.rig_data['stopped'] = True
 
     async def _disconnect_rig(self):
         """Disconnect from rig."""
@@ -487,10 +502,9 @@ class SatelliteTracker:
         """Check if satellite position is within limits."""
         events = []
 
-
         # Check azimuth limits
         if skypoint[0] > self.azimuth_limits[1] or skypoint[0] < self.azimuth_limits[0]:
-            #logger.warning(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
+            logger.debug(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
             if self.in_tracking_state() and not self.notified.get('azimuth_out_of_bounds', False):
                 events.append({'name': "azimuth_out_of_bounds"})
             self.notified['azimuth_out_of_bounds'] = True
@@ -499,7 +513,7 @@ class SatelliteTracker:
 
         # Check elevation limits
         if skypoint[1] < self.elevation_limits[0] or skypoint[1] > self.elevation_limits[1]:
-            #logger.warning(f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}")
+            logger.debug(f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}")
             if self.in_tracking_state() and not self.notified.get('elevation_out_of_bounds', False):
                 events.append({'name': "elevation_out_of_bounds"})
             self.notified['elevation_out_of_bounds'] = True
@@ -508,7 +522,7 @@ class SatelliteTracker:
 
         # Check minimum elevation
         if skypoint[1] < self.min_elevation:
-            #logger.warning(f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}")
+            logger.debug(f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}")
             if self.in_tracking_state() and not self.notified.get('minelevation_error', False):
                 events.append({'name': "minelevation_error"})
             self.notified['minelevation_error'] = True
@@ -542,10 +556,13 @@ class SatelliteTracker:
                         current_transmitter.get('downlink_low', 0)
                     )
                     self.rig_data['tracking'] = True
+                    self.rig_data['stopped'] = False
+
                 else:
                     self.rig_data['observed_freq'] = 0
                     self.rig_data['doppler_shift'] = 0
                     self.rig_data['tracking'] = False
+                    self.rig_data['stopped'] = True
 
             self.rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
             self.rig_data['transmitter_id'] = self.current_transmitter_id
@@ -575,6 +592,7 @@ class SatelliteTracker:
                     abs(skypoint[1] - self.rotator_data['el']) > self.el_tolerance):
 
                 position_gen = self.rotator_controller.set_position(skypoint[0], skypoint[1])
+                self.rotator_data['stopped'] = False
 
                 try:
                     az, el, is_slewing = await anext(position_gen)

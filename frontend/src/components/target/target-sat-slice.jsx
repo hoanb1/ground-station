@@ -352,6 +352,9 @@ const targetSatTrackSlice = createSlice({
 
             // Detect state change for the rotator and do stuff there
             if (action.payload['rotator_data']) {
+                // Update the whole rotatorData object
+                state.rotatorData = action.payload['rotator_data'];
+
                 if (state.rotatorData['connected'] === true) {
                     if (action.payload['rotator_data']['connected'] === false) {
                         state.rotatorDisconnecting = false;
@@ -369,9 +372,6 @@ const targetSatTrackSlice = createSlice({
                     state.rotatorDisconnecting = false;
                 }
 
-                // Update the whole rotatorData object
-                state.rotatorData = action.payload['rotator_data'];
-
                 // Update rotator events
                 if (action.payload['rotator_data']['outofbounds']) {
                     state.lastRotatorEvent = 'outofbounds';
@@ -386,6 +386,7 @@ const targetSatTrackSlice = createSlice({
                 }
             }
 
+            // Update the whole rig_data object
             if (action.payload['rig_data']) {
                 state.rigData = action.payload['rig_data'];
             }
