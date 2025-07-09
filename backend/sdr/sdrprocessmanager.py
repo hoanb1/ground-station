@@ -18,6 +18,8 @@ import multiprocessing
 import asyncio
 import logging
 import signal
+import time
+from collections import defaultdict
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.soapysdrremoteworker import soapysdr_remote_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
@@ -79,6 +81,10 @@ class SDRProcessManager:
         self.processes = {}  # Map of sdr_id to process information
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
+
+        # Enforce some rate limiting for FFT data transmission, 15fps
+        self.target_fps = 15
+        self.fft_rate_limiters = defaultdict(lambda: {'last_emit': 0, 'min_interval': 1.0/self.target_fps})
 
     def set_sio(self, sio):
         """
@@ -449,10 +455,15 @@ class SDRProcessManager:
                         client_id = data.get('client_id')
 
                         if data_type == 'fft_data' and client_id:
-                            # Send FFT data to the client if still connected
                             if client_id in process_info['clients']:
-                                # Get client's Socket.IO room
-                                await self.sio.emit('sdr-fft-data', data['data'], room=sdr_id)
+                                # Rate limiting check
+                                current_time = time.time()
+                                rate_limiter = self.fft_rate_limiters[sdr_id]
+
+                                if current_time - rate_limiter['last_emit'] >= rate_limiter['min_interval']:
+                                    await self.sio.emit('sdr-fft-data', data['data'], room=sdr_id)
+                                    rate_limiter['last_emit'] = current_time
+                                    # If too frequent, silently drop the message
 
                         if data_type == 'streamingstart' and client_id:
                             if client_id in process_info['clients']:
@@ -493,9 +504,9 @@ class SDRProcessManager:
                     except Exception as e:
                         self.logger.error(f"Error processing data from SDR process: {str(e)}")
                         self.logger.exception(e)
-
-                # Short sleep to avoid CPU hogging
-                await asyncio.sleep(0.01)
+                else:
+                    # Short sleep to avoid CPU hogging
+                    await asyncio.sleep(0.001)
 
         except Exception as e:
             self.logger.error(f"Error monitoring data queue for device {sdr_id}: {str(e)}")
