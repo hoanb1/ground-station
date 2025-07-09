@@ -1084,13 +1084,9 @@ async def fetch_transmitter(session: AsyncSession, transmitter_id: Union[uuid.UU
     Fetch a single transmitter record by its UUID or string representation.
     """
     try:
-        if isinstance(transmitter_id, str):
-            try:
-                # Try to convert string to UUID if it's a UUID string
-                transmitter_id = uuid.UUID(transmitter_id)
-            except ValueError:
-                # If it's not a UUID string, use it as-is for querying
-                pass
+        # Since transmitter.id is a string, convert UUID to string if needed
+        if isinstance(transmitter_id, uuid.UUID):
+            transmitter_id = str(transmitter_id)
 
         stmt = select(Transmitters).filter(Transmitters.id == transmitter_id)
         result = await session.execute(stmt)

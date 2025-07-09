@@ -545,16 +545,19 @@ class SatelliteTracker:
                 current_transmitter = current_transmitter_reply.get('data', {})
 
             if current_transmitter:
+                self.rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
+
+                # Calculate doppler shift
+                self.rig_data['observed_freq'], self.rig_data['doppler_shift'] = calculate_doppler_shift(
+                    satellite_tles[0],
+                    satellite_tles[1],
+                    location['lat'],
+                    location['lon'],
+                    0,
+                    current_transmitter.get('downlink_low', 0)
+                )
+
                 if self.current_rig_state == "tracking":
-                    # Calculate doppler shift
-                    self.rig_data['observed_freq'], self.rig_data['doppler_shift'] = calculate_doppler_shift(
-                        satellite_tles[0],
-                        satellite_tles[1],
-                        location['lat'],
-                        location['lon'],
-                        0,
-                        current_transmitter.get('downlink_low', 0)
-                    )
                     self.rig_data['tracking'] = True
                     self.rig_data['stopped'] = False
 
@@ -564,11 +567,15 @@ class SatelliteTracker:
                     self.rig_data['tracking'] = False
                     self.rig_data['stopped'] = True
 
-            self.rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
             self.rig_data['transmitter_id'] = self.current_transmitter_id
+
         else:
             logger.debug("No satellite transmitter selected")
             self.rig_data['transmitter_id'] = self.current_transmitter_id
+            self.rig_data['observed_freq'] = 0
+            self.rig_data['doppler_shift'] = 0
+            self.rig_data['tracking'] = False
+            self.rig_data['stopped'] = True
 
     async def _control_rig_frequency(self):
         """Control rig frequency based on doppler calculations."""
@@ -578,6 +585,7 @@ class SatelliteTracker:
             try:
                 current_frequency, is_tuning = await anext(frequency_gen)
                 self.rig_data['tuning'] = is_tuning
+
                 logger.debug(f"Current frequency: {current_frequency}, tuning={is_tuning}")
             except StopAsyncIteration:
                 logger.info(f"Tuning to frequency {self.rig_data['observed_freq']} complete")
