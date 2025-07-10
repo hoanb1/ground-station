@@ -327,7 +327,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                     else:
                         # Error or timeout
                         logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
-                        time.sleep(0.1)
+                        #time.sleep(0.1)
 
                 # Check if we have enough samples for processing
                 if buffer_position < num_samples:

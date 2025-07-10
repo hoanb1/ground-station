@@ -289,12 +289,13 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                         samples_read = sr.ret
                         buffer_position += samples_read
                         logger.debug(f"Read {samples_read} samples, accumulated {buffer_position}/{num_samples}")
+
                     elif sr.ret == -4:  # SOAPY_SDR_OVERFLOW
                         # Overflow error - the internal ring buffer filled up because we didn't read fast enough
                         logger.warning("Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost")
 
                         # Short sleep to allow the internal buffers to clear
-                        time.sleep(0.01)
+                        #time.sleep(0.01)
 
                     elif sr.ret == -1:  # SOAPY_SDR_TIMEOUT
                         logger.warning("Stream timeout detected (SOAPY_SDR_TIMEOUT)")

@@ -230,8 +230,6 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                 metadata = uhd.types.RXMetadata()
                 num_rx_samples = streamer.recv(recv_buffer, metadata, 0.05)
 
-                logger.info(f"Received {num_rx_samples} samples")
-
                 if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
                     if metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
                         logger.warning("Receiver overflow - skipping frame")
@@ -411,8 +409,8 @@ def calculate_samples_per_scan(sample_rate):
     power_of_2 = 2 ** round(power_exp)
 
     # Handle edge cases - set minimum and maximum sample counts
-    min_samples = 512  # Minimum reasonable FFT size
-    max_samples = 8192  # Further reduced to prevent overflows
+    min_samples = 2**9  # Minimum reasonable FFT size
+    max_samples = 2**16  # Further reduced to prevent overflows
 
     samples = max(min(power_of_2, max_samples), min_samples)
 
