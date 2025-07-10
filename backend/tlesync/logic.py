@@ -15,16 +15,15 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import crud
+from crud import crud
 import requests
-import json
 import asyncio
 from .state import SatelliteSyncState
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 from db.models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
 from typing import List
-from exceptions import *
+from common.common import *
 from sqlalchemy import select
 
 

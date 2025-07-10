@@ -22,8 +22,8 @@ from typing import Optional
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
 from db.models import Users
-from arguments import arguments
-from db.models import ModelEncoder
+from common.arguments import arguments
+from common.common import ModelEncoder
 
 # Replace these placeholders with your actual secret key and algorithm
 JWT_ALGORITHM = "HS256"

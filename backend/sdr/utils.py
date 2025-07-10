@@ -15,7 +15,7 @@
 
 
 import logging
-import crud
+from crud import crud
 import asyncio
 import json
 from typing import Dict, Optional, Any, Union

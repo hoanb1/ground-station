@@ -15,15 +15,14 @@
 
 
 import time
-import math
 import json
 import uuid
 import functools
 import numpy
-from datetime import date, datetime, timedelta
-from logger import logger
+from datetime import date, timedelta
+from .logger import logger
 from skyfield.api import EarthSatellite, load, wgs84
-from datetime import datetime, UTC
+from datetime import datetime
 
 
 class ModelEncoder(json.JSONEncoder):

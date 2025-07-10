@@ -2,11 +2,11 @@ import json
 import time
 import hashlib
 import multiprocessing
-import crud
+from crud import crud
 import asyncio
 import logging
 from db import AsyncSessionLocal
-from db.models import ModelEncoder
+from common.common import ModelEncoder
 from typing import Union
 from .passes import calculate_next_events
 from multiprocessing import Manager

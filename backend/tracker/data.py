@@ -15,14 +15,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import crud
-import asyncio
+from crud import crud
 import logging
 import hashlib
-from common import is_geostationary, serialize_object
+from common.common import is_geostationary, serialize_object
 from datetime import datetime, timedelta
 from datetime import UTC
-from typing import Callable, Any, List, Union, Coroutine, Optional, Dict
+from typing import Any, Union, Optional, Dict
 from db import AsyncSessionLocal
 from tracking.footprint import get_satellite_coverage_circle
 from tracking.satellite import get_satellite_position_from_tle, get_satellite_az_el, get_satellite_path

@@ -17,8 +17,6 @@
 import sys
 import os
 import signal
-import json
-import asyncio
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import uvicorn
 import socketio
@@ -32,12 +30,11 @@ from fastapi.responses import FileResponse
 from contextlib import asynccontextmanager
 from fastapi import FastAPI, WebSocket, Request, HTTPException
 from db.models import Base
-from logger import get_logger_config
-from handlers import *
+from common.logger import get_logger_config
+from common.handlers import *
 from db import *
-from sqlalchemy.ext.asyncio import (AsyncSession)
 from fastapi.staticfiles import StaticFiles
-from logger import logger
+from common.logger import logger
 from engineio.payload import Payload
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel

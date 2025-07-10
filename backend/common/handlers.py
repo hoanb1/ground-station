@@ -14,7 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import asyncio
-import crud
+from crud import crud
 from typing import Union
 
 from tracker.runner import queue_to_tracker
@@ -22,11 +22,9 @@ from db import AsyncSessionLocal
 from db.models import SatelliteGroupType
 from tlesync.logic import synchronize_satellite_data
 from tlesync.state import sync_state_manager
-from auth import *
+from common.auth import *
 from tracking.events import (fetch_next_events_for_satellite, fetch_next_events_for_group)
 from tracker.data import get_ui_tracker_state, compiled_satellite_data
-from tracking.satellite import get_satellite_position_from_tle
-from common import is_geostationary
 from sdr.utils import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discovered_servers

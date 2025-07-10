@@ -20,7 +20,7 @@ import json
 import logging
 import numpy as np
 from skyfield.api import Loader, Topos
-from db.models import ModelEncoder
+from common.common import ModelEncoder
 from skyfield.api import EarthSatellite
 from typing import Union
 

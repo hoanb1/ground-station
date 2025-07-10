@@ -15,16 +15,15 @@
 
 
 import multiprocessing
-import crud
+from crud import crud
 import asyncio
-from io import StringIO
 from datetime import UTC
 import logging
 from db.__init__ import AsyncSessionLocal
 from controllers.rotator import RotatorController
 from controllers.rig import RigController
 from controllers.sdr import SDRController
-from arguments import arguments as args
+from common.arguments import arguments as args
 from datetime import datetime
 from tracking.doppler import calculate_doppler_shift
 from tracker.utils import pretty_dict

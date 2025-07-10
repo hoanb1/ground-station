@@ -456,14 +456,7 @@ class SDRProcessManager:
 
                         if data_type == 'fft_data' and client_id:
                             if client_id in process_info['clients']:
-                                # Rate limiting check
-                                current_time = time.time()
-                                rate_limiter = self.fft_rate_limiters[sdr_id]
-
-                                if current_time - rate_limiter['last_emit'] >= rate_limiter['min_interval']:
-                                    await self.sio.emit('sdr-fft-data', data['data'], room=sdr_id)
-                                    rate_limiter['last_emit'] = current_time
-                                    # If too frequent, silently drop the message
+                                await self.sio.emit('sdr-fft-data', data['data'], room=sdr_id)
 
                         if data_type == 'streamingstart' and client_id:
                             if client_id in process_info['clients']:

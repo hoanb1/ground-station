@@ -17,7 +17,7 @@
 import logging.config
 import logging
 import yaml
-from arguments import arguments
+from .arguments import arguments
 
 
 def get_logger_config(args):
