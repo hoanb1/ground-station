@@ -18,7 +18,7 @@ import numpy as np
 import time
 import logging
 import math
-from .common import window_functions
+from workers.common import window_functions
 
 # Configure logging for the worker process
 logger = logging.getLogger('uhd-worker')
@@ -84,6 +84,9 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         fft_size = config.get('fft_size', 16384)
         fft_window = config.get('fft_window', 'hanning')
 
+        # Insufficient samples handling mode: 'zero-pad' or 'drop' (skip frame)
+        insufficient_samples_mode = config.get('insufficient_samples_mode', 'drop')
+
         # Connect to the UHD device
         device_args = config.get('device_args', '')
         logger.info(f"Connecting to UHD with args: {device_args}...")
@@ -112,7 +115,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         UHD.set_rx_gain(gain, channel)
 
         # Allow time for the UHD to settle
-        time.sleep(0.1)
+        time.sleep(0.01)
 
         # Verify actual settings
         actual_rate = UHD.get_rx_rate(channel)
@@ -163,7 +166,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                             UHD.set_rx_rate(new_config['sample_rate'], channel)
                             actual_rate = UHD.get_rx_rate(channel)
 
-                            # Calculate new number of samples
+                            # Calculate a new number of samples
                             num_samples = calculate_samples_per_scan(actual_rate)
                             recv_buffer = np.zeros((1, num_samples), dtype=np.complex64)
 
@@ -201,6 +204,11 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                             UHD.set_rx_antenna(new_config['antenna'], channel)
                             logger.info(f"Updated antenna: {new_config['antenna']}")
 
+                    if 'insufficient_samples_mode' in new_config:
+                        if old_config.get('insufficient_samples_mode', None) != new_config['insufficient_samples_mode']:
+                            insufficient_samples_mode = new_config['insufficient_samples_mode']
+                            logger.info(f"Updated insufficient samples mode: {insufficient_samples_mode}")
+
                     old_config = new_config
 
             except Exception as e:
@@ -218,9 +226,11 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                     })
 
             try:
-                # Read samples from UHD with shorter timeout
+                # Read samples from UHD with a shorter timeout
                 metadata = uhd.types.RXMetadata()
-                num_rx_samps = streamer.recv(recv_buffer, metadata, 0.1)
+                num_rx_samples = streamer.recv(recv_buffer, metadata, 0.05)
+
+                logger.info(f"Received {num_rx_samples} samples")
 
                 if metadata.error_code != uhd.types.RXMetadataErrorCode.none:
                     if metadata.error_code == uhd.types.RXMetadataErrorCode.overflow:
@@ -232,30 +242,39 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                         continue
 
                 # Handle partial reads - process what we have
-                if num_rx_samps < num_samples:
+                if num_rx_samples < num_samples:
                     # For now, process what we have if it's at least minimum size
-                    if num_rx_samps < 1024:  # Skip very small reads
+                    if num_rx_samples < 1024:  # Skip very small reads
                         continue
 
                     # Use the samples we got
-                    samples = recv_buffer[0][:num_rx_samps]
+                    samples = recv_buffer[0][:num_rx_samples]
 
-                    # Always use the configured FFT size, pad if necessary
-                    if num_rx_samps < fft_size:
-                        # Pad with zeros to reach FFT size
-                        padded_samples = np.zeros(fft_size, dtype=np.complex64)
-                        padded_samples[:num_rx_samps] = samples
-                        samples = padded_samples
-                        actual_fft_size = fft_size
+                    # Handle insufficient samples based on mode
+                    if num_rx_samples < fft_size:
+                        if insufficient_samples_mode == 'drop':
+                            logger.debug(f"Dropping frame: received {num_rx_samples} samples, need {fft_size}")
+                            continue
+                        elif insufficient_samples_mode == 'zero-pad':
+                            # Pad with zeros to reach FFT size
+                            logger.debug(f"Zero-padding frame: received {num_rx_samples} samples, padding to {fft_size}")
+                            padded_samples = np.zeros(fft_size, dtype=np.complex64)
+                            padded_samples[:num_rx_samples] = samples
+                            samples = padded_samples
+                            actual_fft_size = fft_size
+                        else:
+                            logger.warning(f"Unknown insufficient_samples_mode: {insufficient_samples_mode}, defaulting to 'zero-pad'")
+                            # Default to zero-pad behavior
+                            padded_samples = np.zeros(fft_size, dtype=np.complex64)
+                            padded_samples[:num_rx_samples] = samples
+                            samples = padded_samples
+                            actual_fft_size = fft_size
                     else:
                         actual_fft_size = fft_size
                 else:
                     # Get the samples from the buffer
-                    samples = recv_buffer[0][:num_rx_samps]
+                    samples = recv_buffer[0][:num_rx_samples]
                     actual_fft_size = fft_size
-
-                # Remove DC offset
-                samples = remove_dc_offset(samples)
 
                 # Apply window function
                 window_func = window_functions.get(fft_window.lower(), np.hanning)
@@ -392,7 +411,7 @@ def calculate_samples_per_scan(sample_rate):
     power_of_2 = 2 ** round(power_exp)
 
     # Handle edge cases - set minimum and maximum sample counts
-    min_samples = 512   # Minimum reasonable FFT size
+    min_samples = 512  # Minimum reasonable FFT size
     max_samples = 8192  # Further reduced to prevent overflows
 
     samples = max(min(power_of_2, max_samples), min_samples)
@@ -401,17 +420,3 @@ def calculate_samples_per_scan(sample_rate):
                 f"expected FFT duration: {samples/sample_rate:.3f} sec")
 
     return samples
-
-
-def remove_dc_offset(samples):
-    """
-    Remove DC offset by subtracting the mean
-    """
-    # Calculate the mean of the complex samples
-    mean_i = np.mean(np.real(samples))
-    mean_q = np.mean(np.imag(samples))
-
-    # Subtract the mean
-    samples_no_dc = samples - (mean_i + 1j*mean_q)
-
-    return samples_no_dc
