@@ -597,16 +597,16 @@ export const getFrequencyBand = (frequency) => {
         {name: 'HF', min: 3000000, max: 30000000},              // 3 MHz - 30 MHz
         {name: 'VHF', min: 30000000, max: 300000000},      // 30 MHz - 300 MHz
         {name: 'UHF', min: 300000000, max: 1000000000},   // 300 MHz - 1 GHz
-        {name: 'L Band', min: 1000000000, max: 2000000000},                      // 1 GHz - 2 GHz
-        {name: 'S Band', min: 2000000000, max: 4000000000},                      // 2 GHz - 4 GHz
-        {name: 'C Band', min: 4000000000, max: 8000000000},                      // 4 GHz - 8 GHz
-        {name: 'X Band', min: 8000000000, max: 12000000000},                     // 8 GHz - 12 GHz
-        {name: 'Ku Band', min: 12000000000, max: 18000000000},                   // 12 GHz - 18 GHz
-        {name: 'K Band', min: 18000000000, max: 27000000000},                    // 18 GHz - 27 GHz
-        {name: 'Ka Band', min: 27000000000, max: 40000000000},                   // 27 GHz - 40 GHz
-        {name: 'V Band', min: 40000000000, max: 75000000000},                    // 40 GHz - 75 GHz
-        {name: 'W Band', min: 75000000000, max: 110000000000},                   // 75 GHz - 110 GHz
-        {name: 'mm Band', min: 110000000000, max: 300000000000},                 // 110 GHz - 300 GHz
+        {name: 'L-band', min: 1000000000, max: 2000000000},                      // 1 GHz - 2 GHz
+        {name: 'S-band', min: 2000000000, max: 4000000000},                      // 2 GHz - 4 GHz
+        {name: 'C-band', min: 4000000000, max: 8000000000},                      // 4 GHz - 8 GHz
+        {name: 'X-band', min: 8000000000, max: 12000000000},                     // 8 GHz - 12 GHz
+        {name: 'Ku-band', min: 12000000000, max: 18000000000},                   // 12 GHz - 18 GHz
+        {name: 'K-band', min: 18000000000, max: 27000000000},                    // 18 GHz - 27 GHz
+        {name: 'Ka-band', min: 27000000000, max: 40000000000},                   // 27 GHz - 40 GHz
+        {name: 'V-band', min: 40000000000, max: 75000000000},                    // 40 GHz - 75 GHz
+        {name: 'W-band', min: 75000000000, max: 110000000000},                   // 75 GHz - 110 GHz
+        {name: 'mm-band', min: 110000000000, max: 300000000000},                 // 110 GHz - 300 GHz
     ];
 
     // Find the appropriate band
@@ -637,13 +637,13 @@ export const getBandColor = (band) => {
         'HF': '#FF6B6B',
         'VHF': '#28716d',
         'UHF': '#1a4d59',
-        'L': '#4d6a5c',
-        'S': '#786948',
-        'C': '#635c88',
-        'X': '#885c6c',
-        'Ku': '#4b7560',
-        'K': '#7c2e8c',
-        'Ka': '#433487'
+        'L-band': '#4d6a5c',
+        'S-band': '#786948',
+        'C-band': '#635c88',
+        'X-band': '#885c6c',
+        'Ku-band': '#4b7560',
+        'K-band': '#7c2e8c',
+        'Ka-band': '#433487'
     };
     return colors[band] || '#666666';
 };

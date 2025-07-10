@@ -285,7 +285,7 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                     <div style={{display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center'}}>
                         {bands.map((band, index) => (
                             <>
-                                 <Chip
+                                {bandCounts[band]} ✕ <Chip
                                     key={index}
                                     label={`${band}`}
                                     size="small"
@@ -300,7 +300,7 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                                             filter: 'brightness(90%)',
                                         }
                                     }}
-                                /> x {bandCounts[band]}
+                                />
                             </>
                         ))}
                     </div>
