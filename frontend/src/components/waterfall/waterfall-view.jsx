@@ -613,9 +613,26 @@ const MainWaterfallDisplay = React.memo(() => {
         }
     };
 
+    function playButtonEnabledOrNot() {
+        // Return true if streaming is active
+        const isStreamingActive = isStreaming;
+
+        // Return true if no SDR device is selected
+        const noSDRSelected = selectedSDRId === "none";
+
+        // Return true if still loading SDR parameters
+        const isLoadingParameters = gettingSDRParameters;
+
+        // Return true if required parameters are missing
+        const missingRequiredParameters = !sampleRate || !gain || sampleRate === "none" || gain === "none" || selectedAntenna === "none";
+
+        // Return true if any of the above conditions are met
+        return isStreamingActive || noSDRSelected || isLoadingParameters || missingRequiredParameters;
+    }
+
     return (
         <div ref={mainWaterFallContainer}>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall &
+        <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall &
                 Spectrum</TitleBar>
             <Box
                 sx={{
@@ -651,7 +668,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         >
                             <IconButton
                                 loading={startStreamingLoading}
-                                disabled={isStreaming || (selectedSDRId === "none") || gettingSDRParameters || (!sampleRate || !gain)}
+                                disabled={playButtonEnabledOrNot()}
                                 color="primary"
                                 onClick={startStreaming}
                                 title="Start streaming"
