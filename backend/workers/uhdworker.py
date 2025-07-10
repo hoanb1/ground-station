@@ -366,13 +366,6 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
             except Exception as e:
                 logger.error(f"Error stopping UHD streaming: {str(e)}")
 
-        if UHD:
-            try:
-                # UHD cleanup is handled automatically by the destructor
-                logger.info(f"UHD device with id {sdr_id} closed")
-            except Exception as e:
-                logger.error(f"Error closing UHD device with id {sdr_id}: {str(e)}")
-
         # Send termination signal
         data_queue.put({
             'type': 'terminated',
