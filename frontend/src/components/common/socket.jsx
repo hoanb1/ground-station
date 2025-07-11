@@ -31,7 +31,7 @@ export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
     const { enqueueSnackbar } = useSnackbar();
     //const [collectStats, setCollectStats] = useState(import.meta.env.PROD);
-    const [collectStats, setCollectStats] = useState(true);
+    const [collectStats, setCollectStats] = useState(false);
     const [token, setToken] = useState(null);
 
     // Replace state with ref for traffic stats
