@@ -193,6 +193,8 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                             max_accumulation_size = fft_size * 4
                             # Clear accumulated samples when FFT size changes
                             accumulated_samples.clear()
+                            # Update num_samples when FFT size changes
+                            num_samples = calculate_samples_per_scan(actual_rate, fft_size)
                             logger.info(f"Updated FFT size: {fft_size}")
 
                     if 'fft_window' in new_config:

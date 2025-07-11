@@ -218,7 +218,9 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                     if 'fft_size' in new_config:
                         if old_config.get('fft_size', 0) != new_config['fft_size']:
                             fft_size = new_config['fft_size']
-                            logger.info(f"Updated FFT size: {fft_size}")
+                            # Update num_samples when FFT size changes
+                            num_samples = calculate_samples_per_scan(actual_sample_rate, fft_size)
+                            logger.info(f"Updated FFT size: {fft_size}, num_samples: {num_samples}")
 
                     if 'fft_window' in new_config:
                         if old_config.get('fft_window', None) != new_config['fft_window']:
