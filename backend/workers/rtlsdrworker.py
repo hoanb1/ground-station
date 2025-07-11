@@ -22,8 +22,8 @@ import time
 import logging
 import math
 from functools import partial
-from .rtlsdrtcpclient import RtlSdrTcpClient
-from .common import window_functions
+from workers.rtlsdrtcpclient import RtlSdrTcpClient
+from workers.common import window_functions, FFTAverager
 
 
 # Configure logging for the worker process
@@ -64,6 +64,9 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         fft_size = config.get('fft_size', 16384)
         fft_window = config.get('fft_window', 'hanning')
 
+        # FFT averaging configuration
+        fft_averaging = config.get('fft_averaging', 6)
+
         # Connect to the RTL-SDR device
         if config.get('connection_type') == 'tcp':
             hostname = config.get('hostname', '127.0.0.1')
@@ -86,7 +89,10 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.info(f"RTL-SDR configured: sample_rate={sdr.sample_rate}, center_freq={sdr.center_freq}, gain={sdr.gain}")
 
         # Calculate the number of samples based on sample rate
-        num_samples = calculate_samples_per_scan(sdr.sample_rate)
+        num_samples = calculate_samples_per_scan(sdr.sample_rate, fft_size)
+
+        # Initialize FFT averager
+        fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
 
         # if we reached here, we can set the UI to streaming
         data_queue.put({
@@ -108,7 +114,7 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                             sdr.sample_rate = new_config['sample_rate']
 
                             # Calculate the number of samples based on sample rate
-                            num_samples = calculate_samples_per_scan(sdr.sample_rate)
+                            num_samples = calculate_samples_per_scan(sdr.sample_rate, fft_size)
 
                             logger.info(f"Updated sample rate: {sdr.sample_rate}")
 
@@ -126,6 +132,12 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                         if old_config.get('fft_window', None) != new_config['fft_window']:
                             fft_window = new_config['fft_window']
                             logger.info(f"Updated FFT window: {fft_window}")
+
+                    if 'fft_averaging' in new_config:
+                        if old_config.get('fft_averaging', 4) != new_config['fft_averaging']:
+                            fft_averaging = new_config['fft_averaging']
+                            fft_averager.update_averaging_factor(fft_averaging)
+                            logger.info(f"Updated FFT averaging: {fft_averaging}")
 
                     if 'bias_t' in new_config:
                         if old_config.get('bias_t', None) != new_config['bias_t']:
@@ -215,13 +227,16 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 # Convert to Float32 for efficiency in transmission
                 fft_result = fft_result.astype(np.float32)
 
-                # Send the result back to the main process
-                data_queue.put({
-                    'type': 'fft_data',
-                    'client_id': client_id,
-                    'data': fft_result.tobytes(),
-                    'timestamp': time.time()
-                })
+                # Add FFT to averager and send only when ready
+                averaged_fft = fft_averager.add_fft(fft_result)
+                if averaged_fft is not None:
+                    # Send the averaged result back to the main process
+                    data_queue.put({
+                        'type': 'fft_data',
+                        'client_id': client_id,
+                        'data': averaged_fft.tobytes(),
+                        'timestamp': time.time()
+                    })
 
                 # Short sleep to prevent CPU hogging
                 time.sleep(0.01)
@@ -304,40 +319,11 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.info("RTL-SDR worker process terminated")
 
 
-def calculate_samples_per_scan(sample_rate):
-    """
-    Calculate samples needed to maintain a constant FFT production rate
-    regardless of sample rate.
+def calculate_samples_per_scan(sample_rate, fft_size):
+    if fft_size is None:
+        fft_size = 8192
 
-    Args:
-        sample_rate (float): The sample rate of the SDR in Hz
-
-    Returns:
-        int: Number of samples to collect (rounded to power of 2)
-    """
-    # Define your target FFT production rate (FFTs per second)
-    target_fft_rate = 15  # Adjust this value as needed
-
-    # Calculate time needed per FFT in seconds
-    time_per_fft = 1.0 / target_fft_rate
-
-    # Calculate samples needed at this sample rate
-    samples_needed = int(sample_rate * time_per_fft)
-
-    # Alternative rounding approach (to the closest power of 2)
-    power_exp = math.log2(samples_needed)
-    power_of_2 = 2 ** round(power_exp)
-
-    # Handle edge cases - set minimum and maximum sample counts
-    min_samples = 1024  # Minimum reasonable FFT size
-    max_samples = 1024 * 1024  # Maximum to prevent memory issues
-
-    samples = max(min(power_of_2, max_samples), min_samples)
-
-    logger.info(f"Sample rate: {sample_rate/1e6:.3f} MHz, samples: {samples}, "
-                f"expected FFT duration: {samples/sample_rate:.3f} sec")
-
-    return samples
+    return fft_size
 
 
 def remove_dc_offset(samples):

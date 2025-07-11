@@ -1,3 +1,4 @@
+
 # Copyright (c) 2024 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -23,7 +24,7 @@ import math
 from functools import partial
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
-from .common import window_functions
+from workers.common import window_functions, FFTAverager
 
 
 # Configure logging for the worker process
@@ -68,6 +69,10 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         client_id = config.get('client_id')
         fft_size = config.get('fft_size', 16384)
         fft_window = config.get('fft_window', 'hanning')
+
+        # FFT averaging configuration
+        fft_averaging = config.get('fft_averaging', 6)
+
         connection_type = config.get('connection_type', '')
         driver = config.get('driver', '')
         serial_number = config.get('serial_number', '')
@@ -134,7 +139,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
             logger.debug(f"Sample rate set to {actual_sample_rate/1e6} MHz")
 
             # Number of samples required for each iteration
-            num_samples = calculate_samples_per_scan(actual_sample_rate)
+            num_samples = calculate_samples_per_scan(actual_sample_rate, fft_size)
 
         except Exception as e:
             error_msg = f"Error connecting to SoapySDR device: {str(e)}"
@@ -187,6 +192,9 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         except Exception as e:
             logger.warning(f"Could not get stream MTU: {e}")
 
+        # Initialize FFT averager
+        fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
+
         # Activate the stream
         sdr.activateStream(rx_stream)
         logger.debug("SoapySDR stream activated")
@@ -221,7 +229,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                             sdr.activateStream(rx_stream)
 
                             # Number of samples required for each iteration
-                            num_samples = calculate_samples_per_scan(actual_sample_rate)
+                            num_samples = calculate_samples_per_scan(actual_sample_rate, fft_size)
 
                             logger.info(f"Updated sample rate: {actual_sample_rate}")
 
@@ -239,6 +247,12 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                         if old_config.get('fft_window', None) != new_config['fft_window']:
                             fft_window = new_config['fft_window']
                             logger.info(f"Updated FFT window: {fft_window}")
+
+                    if 'fft_averaging' in new_config:
+                        if old_config.get('fft_averaging', 4) != new_config['fft_averaging']:
+                            fft_averaging = new_config['fft_averaging']
+                            fft_averager.update_averaging_factor(fft_averaging)
+                            logger.info(f"Updated FFT averaging: {fft_averaging}")
 
                     if 'soapy_agc' in new_config:
                         if old_config.get('soapy_agc', False) != new_config['soapy_agc']:
@@ -285,7 +299,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                         'message': error_msg,
                         'timestamp': time.time()
                     })
-                
+
             try:
 
                 # Use the MTU value to determine read size if available, otherwise use a sensible default
@@ -332,7 +346,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 # Check if we have enough samples for processing
                 if buffer_position < num_samples:
                     logger.warning(f"Not enough samples accumulated: {buffer_position}/{num_samples}")
-                    time.sleep(0.1)
+                    time.sleep(0.01)
                     continue
 
                 # We have enough samples to process
@@ -381,13 +395,16 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 # Convert to Float32 for efficiency in transmission
                 fft_result = fft_result.astype(np.float32)
 
-                # Send the result back to the main process
-                data_queue.put({
-                    'type': 'fft_data',
-                    'client_id': client_id,
-                    'data': fft_result.tobytes(),
-                    'timestamp': time.time()
-                })
+                # Add FFT to averager and send only when ready
+                averaged_fft = fft_averager.add_fft(fft_result)
+                if averaged_fft is not None:
+                    # Send the averaged result back to the main process
+                    data_queue.put({
+                        'type': 'fft_data',
+                        'client_id': client_id,
+                        'data': averaged_fft.tobytes(),
+                        'timestamp': time.time()
+                    })
 
                 # Short sleep to prevent CPU hogging
                 time.sleep(0.01)
@@ -460,40 +477,11 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         logger.info("SoapySDR worker process terminated")
 
 
-def calculate_samples_per_scan(sample_rate):
-    """
-    Calculate samples needed to maintain a constant FFT production rate
-    regardless of sample rate.
+def calculate_samples_per_scan(sample_rate, fft_size):
+    if fft_size is None:
+        fft_size = 8192
 
-    Args:
-        sample_rate (float): The sample rate of the SDR in Hz
-
-    Returns:
-        int: Number of samples to collect (rounded to power of 2)
-    """
-    # Define your target FFT production rate (FFTs per second)
-    target_fft_rate = 15  # Adjust this value as needed
-
-    # Calculate time needed per FFT in seconds
-    time_per_fft = 1.0 / target_fft_rate
-
-    # Calculate samples needed at this sample rate
-    samples_needed = int(sample_rate * time_per_fft)
-
-    # Alternative rounding approach (to the closest power of 2)
-    power_exp = math.log2(samples_needed)
-    power_of_2 = 2 ** round(power_exp)
-
-    # Handle edge cases - set minimum and maximum sample counts
-    min_samples = 1024  # Minimum reasonable FFT size
-    max_samples = 1024 * 1024  # Maximum to prevent memory issues
-
-    samples = max(min(power_of_2, max_samples), min_samples)
-
-    logger.info(f"Sample rate: {sample_rate/1e6:.3f} MHz, samples: {samples}, "
-                f"expected FFT duration: {samples/sample_rate:.3f} sec")
-
-    return samples
+    return fft_size
 
 
 def remove_dc_offset(samples):
@@ -562,4 +550,3 @@ def list_available_devices(hostname, port):
         return available_devices
     except Exception as e:
         return [{'error': str(e)}]
-

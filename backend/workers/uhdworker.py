@@ -1,24 +1,9 @@
-# Copyright (c) 2024 Efstratios Goudelis
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-
 import numpy as np
 import time
 import logging
 import math
-from workers.common import window_functions
+from workers.common import window_functions, FFTAverager
+from collections import deque
 
 # Configure logging for the worker process
 logger = logging.getLogger('uhd-worker')
@@ -84,7 +69,10 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         fft_size = config.get('fft_size', 16384)
         fft_window = config.get('fft_window', 'hanning')
 
-        # Insufficient samples handling mode: 'zero-pad' or 'drop' (skip frame)
+        # FFT averaging configuration
+        fft_averaging = config.get('fft_averaging', 10)
+
+        # Sample accumulation mode: 'accumulate', 'zero-pad', or 'drop'
         insufficient_samples_mode = config.get('insufficient_samples_mode', 'drop')
 
         # Connect to the UHD device
@@ -132,10 +120,17 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         streamer = UHD.get_rx_stream(stream_args)
 
         # Calculate the number of samples based on sample rate
-        num_samples = calculate_samples_per_scan(actual_rate)
+        num_samples = calculate_samples_per_scan(actual_rate, fft_size)
 
         # Create receive buffer
         recv_buffer = np.zeros((1, num_samples), dtype=np.complex64)
+
+        # Initialize sample accumulation buffer
+        accumulated_samples = deque()
+        max_accumulation_size = fft_size * 4  # Prevent excessive memory usage
+
+        # Initialize FFT averager
+        fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
 
         # Start streaming
         stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
@@ -167,8 +162,11 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                             actual_rate = UHD.get_rx_rate(channel)
 
                             # Calculate a new number of samples
-                            num_samples = calculate_samples_per_scan(actual_rate)
+                            num_samples = calculate_samples_per_scan(actual_rate, fft_size)
                             recv_buffer = np.zeros((1, num_samples), dtype=np.complex64)
+
+                            # Clear accumulated samples when sample rate changes
+                            accumulated_samples.clear()
 
                             # Restart streaming
                             stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
@@ -192,12 +190,21 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                     if 'fft_size' in new_config:
                         if old_config.get('fft_size', 0) != new_config['fft_size']:
                             fft_size = new_config['fft_size']
+                            max_accumulation_size = fft_size * 4
+                            # Clear accumulated samples when FFT size changes
+                            accumulated_samples.clear()
                             logger.info(f"Updated FFT size: {fft_size}")
 
                     if 'fft_window' in new_config:
                         if old_config.get('fft_window', None) != new_config['fft_window']:
                             fft_window = new_config['fft_window']
                             logger.info(f"Updated FFT window: {fft_window}")
+
+                    if 'fft_averaging' in new_config:
+                        if old_config.get('fft_averaging', 4) != new_config['fft_averaging']:
+                            fft_averaging = new_config['fft_averaging']
+                            fft_averager.update_averaging_factor(fft_averaging)
+                            logger.info(f"Updated FFT averaging: {fft_averaging}")
 
                     if 'antenna' in new_config:
                         if old_config.get('antenna', None) != new_config['antenna']:
@@ -207,6 +214,8 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                     if 'insufficient_samples_mode' in new_config:
                         if old_config.get('insufficient_samples_mode', None) != new_config['insufficient_samples_mode']:
                             insufficient_samples_mode = new_config['insufficient_samples_mode']
+                            # Clear accumulated samples when mode changes to avoid mixed behavior
+                            accumulated_samples.clear()
                             logger.info(f"Updated insufficient samples mode: {insufficient_samples_mode}")
 
                     old_config = new_config
@@ -239,53 +248,87 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                         logger.warning(f"Receiver error: {metadata.strerror()}")
                         continue
 
-                # Handle partial reads - process what we have
-                if num_rx_samples < num_samples:
-                    # For now, process what we have if it's at least minimum size
-                    if num_rx_samples < 1024:  # Skip very small reads
+                # Skip very small reads
+                if num_rx_samples < 256:
+                    continue
+
+                # Get the samples from the buffer
+                new_samples = recv_buffer[0][:num_rx_samples].copy()
+
+                # Handle samples based on mode
+                if insufficient_samples_mode == 'accumulate':
+                    # Add new samples to the accumulation buffer
+                    accumulated_samples.extend(new_samples)
+
+                    # Prevent excessive memory usage
+                    while len(accumulated_samples) > max_accumulation_size:
+                        accumulated_samples.popleft()
+
+                    # Check if we have enough samples for processing
+                    if len(accumulated_samples) >= fft_size:
+                        # Extract samples for processing
+                        samples_array = np.array(list(accumulated_samples))
+
+                        # Use samples for FFT processing
+                        samples = samples_array[:len(samples_array)]
+
+                        # Keep overlap for the next iteration (50% overlap)
+                        overlap_size = min(fft_size // 2, len(accumulated_samples) // 2)
+
+                        # Remove processed samples but keep overlap
+                        samples_to_remove = len(accumulated_samples) - overlap_size
+                        for _ in range(samples_to_remove):
+                            if accumulated_samples:
+                                accumulated_samples.popleft()
+
+                        logger.debug(f"Processing {len(samples)} accumulated samples, keeping "
+                                     f"{len(accumulated_samples)} for overlap")
+                    else:
+                        # Not enough samples yet, continue accumulating
+                        logger.debug(f"Accumulating samples: {len(accumulated_samples)}/{fft_size}")
                         continue
 
-                    # Use the samples we got
-                    samples = recv_buffer[0][:num_rx_samples]
-
-                    # Handle insufficient samples based on mode
+                elif insufficient_samples_mode == 'drop':
                     if num_rx_samples < fft_size:
-                        if insufficient_samples_mode == 'drop':
-                            logger.debug(f"Dropping frame: received {num_rx_samples} samples, need {fft_size}")
-                            continue
-                        elif insufficient_samples_mode == 'zero-pad':
-                            # Pad with zeros to reach FFT size
-                            logger.debug(f"Zero-padding frame: received {num_rx_samples} samples, padding to {fft_size}")
-                            padded_samples = np.zeros(fft_size, dtype=np.complex64)
-                            padded_samples[:num_rx_samples] = samples
-                            samples = padded_samples
-                            actual_fft_size = fft_size
-                        else:
-                            logger.warning(f"Unknown insufficient_samples_mode: {insufficient_samples_mode}, defaulting to 'zero-pad'")
-                            # Default to zero-pad behavior
-                            padded_samples = np.zeros(fft_size, dtype=np.complex64)
-                            padded_samples[:num_rx_samples] = samples
-                            samples = padded_samples
-                            actual_fft_size = fft_size
+                        logger.debug(f"Dropping frame: received {num_rx_samples} samples, need {fft_size}")
+                        continue
+                    samples = new_samples
+
+                elif insufficient_samples_mode == 'zero-pad':
+                    if num_rx_samples < fft_size:
+                        # Pad with zeros to reach FFT size
+                        logger.debug(f"Zero-padding frame: received {num_rx_samples} samples, padding to {fft_size}")
+                        padded_samples = np.zeros(fft_size, dtype=np.complex64)
+                        padded_samples[:num_rx_samples] = new_samples
+                        samples = padded_samples
                     else:
-                        actual_fft_size = fft_size
+                        samples = new_samples
+
                 else:
-                    # Get the samples from the buffer
-                    samples = recv_buffer[0][:num_rx_samples]
-                    actual_fft_size = fft_size
+                    logger.warning(f"Unknown insufficient_samples_mode: {insufficient_samples_mode}, defaulting to 'accumulate'")
+                    # Fall back to accumulate mode
+                    accumulated_samples.extend(new_samples)
+                    if len(accumulated_samples) >= fft_size:
+                        samples = np.array(list(accumulated_samples)[:fft_size])
+                        # Clear processed samples
+                        for _ in range(fft_size // 2):
+                            if accumulated_samples:
+                                accumulated_samples.popleft()
+                    else:
+                        continue
 
                 # Apply window function
                 window_func = window_functions.get(fft_window.lower(), np.hanning)
-                window = window_func(actual_fft_size)
+                window = window_func(fft_size)
 
                 # Calculate FFT with 50% overlap - handle variable sizes
-                num_segments = max(1, (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2))
+                num_segments = max(1, (len(samples) - fft_size // 2) // (fft_size // 2))
 
-                fft_result = np.zeros(actual_fft_size)
+                fft_result = np.zeros(fft_size)
 
                 for i in range(num_segments):
-                    start_idx = i * (actual_fft_size // 2)
-                    end_idx = start_idx + actual_fft_size
+                    start_idx = i * (fft_size // 2)
+                    end_idx = start_idx + fft_size
 
                     if end_idx > len(samples):
                         break
@@ -312,13 +355,16 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                 # Convert to Float32 for efficiency in transmission
                 fft_result = fft_result.astype(np.float32)
 
-                # Send the result back to the main process
-                data_queue.put({
-                    'type': 'fft_data',
-                    'client_id': client_id,
-                    'data': fft_result.tobytes(),
-                    'timestamp': time.time()
-                })
+                # Add FFT to averager and send only when ready
+                averaged_fft = fft_averager.add_fft(fft_result)
+                if averaged_fft is not None:
+                    # Send the averaged result back to the main process
+                    data_queue.put({
+                        'type': 'fft_data',
+                        'client_id': client_id,
+                        'data': averaged_fft.tobytes(),
+                        'timestamp': time.time()
+                    })
 
                 # Minimal sleep to maintain data flow
                 time.sleep(0.001)  # Reduced from 0.01
@@ -377,37 +423,8 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         logger.info("UHD worker process terminated")
 
 
-def calculate_samples_per_scan(sample_rate):
-    """
-    Calculate samples needed to maintain a constant FFT production rate
-    regardless of sample rate.
+def calculate_samples_per_scan(sample_rate, fft_size):
+    if fft_size is None:
+        fft_size = 8192
 
-    Args:
-        sample_rate (float): The sample rate of the SDR in Hz
-
-    Returns:
-        int: Number of samples to collect (rounded to power of 2)
-    """
-    # Define your target FFT production rate (FFTs per second)
-    target_fft_rate = 15
-
-    # Calculate time needed per FFT in seconds
-    time_per_fft = 1.0 / target_fft_rate
-
-    # Calculate samples needed at this sample rate
-    samples_needed = int(sample_rate * time_per_fft)
-
-    # Alternative rounding approach (to the closest power of 2)
-    power_exp = math.log2(samples_needed)
-    power_of_2 = 2 ** round(power_exp)
-
-    # Handle edge cases - set minimum and maximum sample counts
-    min_samples = 2**9  # Minimum reasonable FFT size
-    max_samples = 2**16  # Further reduced to prevent overflows
-
-    samples = max(min(power_of_2, max_samples), min_samples)
-
-    logger.info(f"Sample rate: {sample_rate/1e6:.3f} MHz, samples: {samples}, "
-                f"expected FFT duration: {samples/sample_rate:.3f} sec")
-
-    return samples
+    return fft_size

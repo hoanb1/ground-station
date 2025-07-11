@@ -161,6 +161,18 @@ loggers:
       - default
     propagate: no
 
+  uhd-worker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  rtlsdr-worker:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
