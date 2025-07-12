@@ -238,8 +238,19 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
 
                     if 'center_freq' in new_config:
                         if actual_freq != new_config['center_freq']:
+                            # Deactivate stream to flush buffers
+                            sdr.deactivateStream(rx_stream)
+                            sdr.closeStream(rx_stream)
+
+                            # Set the new frequency
                             sdr.setFrequency(SOAPY_SDR_RX, channel, new_config['center_freq'] + offset_freq)
                             actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
+
+                            # Restart stream with the new frequency
+                            rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+                            sdr.activateStream(rx_stream)
+
+                            logger.info(f"Updated center frequency: {actual_freq}")
 
                     if 'fft_size' in new_config:
                         if old_config.get('fft_size', 0) != new_config['fft_size']:
@@ -289,9 +300,18 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
 
                     if 'offset_freq' in new_config:
                         if old_config.get('offset_freq', 0) != new_config['offset_freq']:
+                            # Deactivate stream to flush buffers
+                            sdr.deactivateStream(rx_stream)
+                            sdr.closeStream(rx_stream)
+
                             offset_freq = int(new_config['offset_freq'])
                             sdr.setFrequency(SOAPY_SDR_RX, channel, new_config['center_freq'] + offset_freq)
                             actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
+
+                            # Restart stream with new frequency
+                            rx_stream = sdr.setupStream(SOAPY_SDR_RX, SOAPY_SDR_CF32)
+                            sdr.activateStream(rx_stream)
+
                             logger.info(f"Updated offset frequency: {actual_freq}")
 
                     old_config = new_config

@@ -412,18 +412,18 @@ const WaterfallSettings = forwardRef((props, ref) => {
             return sendSDRConfigToBackend({offsetFrequency: 0});
         } else if (offsetValue === "manual") {
             dispatch(setSelectedOffsetMode(offsetValue));
-            return sendSDRConfigToBackend({offsetFrequency: selectedOffsetValue});
+            return sendSDRConfigToBackend({offsetFrequency: parseInt(selectedOffsetValue)});
         } else {
             dispatch(setSelectedOffsetValue(offsetValue));
             dispatch(setSelectedOffsetMode(offsetValue));
-            return sendSDRConfigToBackend({offsetFrequency: offsetValue});
+            return sendSDRConfigToBackend({offsetFrequency: parseInt(offsetValue)});
         }
     }
 
     function handleOffsetValueChange(param) {
         const offsetValue = param.target.value;
         dispatch(setSelectedOffsetValue(offsetValue));
-        return sendSDRConfigToBackend({offsetFrequency: offsetValue});
+        return sendSDRConfigToBackend({offsetFrequency: parseInt(offsetValue)});
     }
 
     function getProperTransmitterId() {

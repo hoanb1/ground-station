@@ -97,9 +97,22 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         center_freq = config.get('center_freq', 100e6)
         sample_rate = config.get('sample_rate', 2.048e6)
         gain = config.get('gain', 25.0)
+        # Add support for offset frequency (downconverter)
+        offset_freq = config.get('offset_freq', 0.0)
 
         UHD.set_rx_rate(sample_rate, channel)
-        UHD.set_rx_freq(uhd.types.TuneRequest(center_freq), channel)
+
+        # Apply offset frequency if specified
+        if offset_freq != 0.0:
+            # Create a tune request with offset
+            tune_request = uhd.types.TuneRequest(center_freq + offset_freq)
+            tune_request.rf_freq = center_freq + offset_freq
+            tune_request.dsp_freq = -offset_freq  # Compensate with DSP frequency
+            UHD.set_rx_freq(tune_request, channel)
+            logger.info(f"Applied offset frequency: {offset_freq} Hz")
+        else:
+            UHD.set_rx_freq(uhd.types.TuneRequest(center_freq), channel)
+
         UHD.set_rx_gain(gain, channel)
 
         # Allow time for the UHD to settle
@@ -110,7 +123,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         actual_freq = UHD.get_rx_freq(channel)
         actual_gain = UHD.get_rx_gain(channel)
 
-        logger.info(f"UHD configured: sample_rate={actual_rate}, center_freq={actual_freq}, gain={actual_gain}")
+        logger.info(f"UHD configured: sample_rate={actual_rate}, center_freq={actual_freq}, gain={actual_gain}, offset_freq={offset_freq}")
 
         # Setup streaming with smaller buffer sizes to prevent overflow
         stream_args = uhd.usrp.StreamArgs("fc32", "sc16")
@@ -177,9 +190,65 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
                     if 'center_freq' in new_config:
                         if actual_freq != new_config['center_freq']:
-                            UHD.set_rx_freq(uhd.types.TuneRequest(new_config['center_freq']), channel)
+                            # Stop streaming to flush buffers
+                            stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
+                            streamer.issue_stream_cmd(stream_cmd)
+
+                            # Update center frequency
+                            center_freq = new_config['center_freq']
+
+                            # Set new frequency with current offset
+                            if offset_freq != 0.0:
+                                # Create tune request with offset
+                                tune_request = uhd.types.TuneRequest(center_freq + offset_freq)
+                                tune_request.rf_freq = center_freq + offset_freq
+                                tune_request.dsp_freq = -offset_freq  # Compensate with DSP frequency
+                                UHD.set_rx_freq(tune_request, channel)
+                            else:
+                                UHD.set_rx_freq(uhd.types.TuneRequest(center_freq), channel)
+
                             actual_freq = UHD.get_rx_freq(channel)
+
+                            # Clear accumulated samples to prevent mixing old/new frequency data
+                            accumulated_samples.clear()
+
+                            # Restart streaming
+                            stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
+                            stream_cmd.stream_now = True
+                            streamer.issue_stream_cmd(stream_cmd)
+
                             logger.info(f"Updated center frequency: {actual_freq}")
+
+                    if 'offset_freq' in new_config:
+                        if offset_freq != new_config['offset_freq']:
+                            # Stop streaming to flush buffers
+                            stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
+                            streamer.issue_stream_cmd(stream_cmd)
+
+                            # Update offset frequency
+                            offset_freq = new_config['offset_freq']
+
+                            # Set frequency with new offset
+                            if offset_freq != 0.0:
+                                # Create tune request with offset
+                                tune_request = uhd.types.TuneRequest(center_freq + offset_freq)
+                                tune_request.rf_freq = center_freq + offset_freq
+                                tune_request.dsp_freq = -offset_freq  # Compensate with DSP frequency
+                                UHD.set_rx_freq(tune_request, channel)
+                                logger.info(f"Updated offset frequency: {offset_freq}")
+                            else:
+                                UHD.set_rx_freq(uhd.types.TuneRequest(center_freq), channel)
+                                logger.info(f"Disabled offset frequency")
+
+                            actual_freq = UHD.get_rx_freq(channel)
+
+                            # Clear accumulated samples to prevent mixing old/new frequency data
+                            accumulated_samples.clear()
+
+                            # Restart streaming
+                            stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
+                            stream_cmd.stream_now = True
+                            streamer.issue_stream_cmd(stream_cmd)
 
                     if 'gain' in new_config:
                         if actual_gain != new_config['gain']:
