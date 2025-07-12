@@ -44,6 +44,7 @@ import ErrorIcon from '@mui/icons-material/Error';
 import WarningIcon from '@mui/icons-material/Warning';
 import LocationSearchingIcon from '@mui/icons-material/LocationSearching';
 import PauseIcon from '@mui/icons-material/Pause';
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 
 const HardwareSettingsPopover = () => {
     const {socket} = useSocket();
@@ -150,10 +151,10 @@ const HardwareSettingsPopover = () => {
             badgeBorderColor: "#e81c2d"
         };
         if (rotatorData.slewing) return {
-            icon: SyncIcon,
+            icon: PlayArrowIcon,
             color: '#ffffff',
-            badgeBackgroundColor: '#15490d',
-            badgeBorderColor: "#15490d"
+            badgeBackgroundColor: '#237716',
+            badgeBorderColor: "#ffffff"
         };
         if (rotatorData.tracking) return {
             icon: LocationSearchingIcon,
