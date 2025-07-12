@@ -49,7 +49,14 @@ import CheckIcon from '@mui/icons-material/Check';
 import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
-import {setIsEditing} from "./dashboard-slice.jsx";
+import {
+    setIsEditing,
+    setConnecting,
+    setConnected,
+    setReconnecting,
+    setReConnectAttempt,
+    setConnectionError,
+} from "./dashboard-slice.jsx";
 import WakeLockStatus from "./dashboard-wake-lock-status.jsx";
 import Tooltip from "@mui/material/Tooltip";
 import RadioIcon from '@mui/icons-material/Radio';
@@ -63,6 +70,7 @@ import {
     FormControlLabel
 } from '@mui/material';
 import HardwareSettingsPopover from "./dashboard-hardware-popover.jsx";
+import ConnectionOverlay from "./dashboard-connection-overlay.jsx";
 
 
 function DashboardEditor() {
@@ -570,8 +578,15 @@ const createPreviewComponent = (mini) => {
 };
 
 export default function Layout() {
-    const [ loading, setLoading ] = useState(true);
+    const dispatch = useDispatch();
     const { socket } = useSocket();
+    const {
+        connecting,
+        connected,
+        disconnected,
+        reConnectAttempt,
+        connectionError,
+    } = useSelector((state) => state.dashboard);
 
     // Use the audio context
     const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
@@ -595,15 +610,46 @@ export default function Layout() {
     useEffect(() => {
         if (socket) {
             socket.on("connect", () => {
-                setLoading(false);
+                // Fired upon a successful connection
+                dispatch(setConnecting(false));
+                dispatch(setConnected(true));
             });
 
-            socket.on("error", () => {
-                setLoading(true);
+            socket.on("error", (error) => {
+                // Fired upon a connection error
+                console.error('Socket error', error);
+                dispatch(setConnectionError(error));
             });
 
             socket.on("disconnect", () => {
-                setLoading(true);
+                dispatch(setConnecting(true));
+                dispatch(setConnected(false));
+            });
+
+            socket.on('reconnect_attempt', (attemptNumber) => {
+                // Fired upon an attempt to reconnect
+                console.log(`Reconnection attempt #${attemptNumber}`);
+                dispatch(setReConnectAttempt(attemptNumber));
+            });
+
+            // Track reconnection errors with delay info
+            socket.on('reconnect_error', (error) => {
+                // Fired upon a reconnection attempt error
+                console.log('Reconnection failed:', error);
+            });
+
+            // Track successful reconnection
+            socket.on('reconnect', (attemptNumber) => {
+                // Fired upon a successful reconnection
+                console.log(`Reconnected after ${attemptNumber} attempts`);
+                dispatch(setConnecting(false));
+                dispatch(setConnected(true));
+            });
+
+            // Track reconnection failure (when max attempts reached)
+            socket.on('reconnect_failed', () => {
+                // Fired when couldn't reconnect within reconnectionAttempts
+                console.log('Reconnection failed - max attempts reached');
             });
 
             socket.on("audio-data", (data) => {
@@ -617,10 +663,14 @@ export default function Layout() {
                 socket.off("disconnect");
                 socket.off("error");
                 socket.off("audio-data");
+                socket.off('reconnect_attempt');
+                socket.off('reconnect_error');
+                socket.off('reconnect');
+                socket.off('reconnect_failed');
             }
         };
     }, [socket]);
-    
+
     return (
         <DashboardLayout
             sx={{
@@ -635,14 +685,8 @@ export default function Layout() {
                 toolbarAccount: () => {},
                 //sidebarFooter: SidebarFooterAccount
                 sidebarFooter: () => {}
-        }}>
-            {loading ? (
-                <Backdrop open={loading}>
-                    <CircularProgress color="inherit"/>
-                </Backdrop>
-            ) : (
-                <Outlet/>
-            )}
+            }}>
+            {connected? <Outlet />: <ConnectionOverlay />}
         </DashboardLayout>
     );
 }

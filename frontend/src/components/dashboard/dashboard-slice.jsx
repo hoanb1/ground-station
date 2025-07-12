@@ -24,16 +24,41 @@ const rigsSlice = createSlice({
     name: 'dashboard',
     initialState: {
         isEditing: false,
+        connecting: true,
+        connected: false,
+        reconnecting: false,
+        reConnectAttempt: 0,
+        connectionError: null,
     },
     reducers: {
         setIsEditing: (state, action) => {
             state.isEditing = action.payload;
-        }
+        },
+        setConnecting: (state, action) => {
+            state.connecting = action.payload;
+        },
+        setConnected: (state, action) => {
+            state.connected = action.payload;
+        },
+        setReconnecting: (state, action) => {
+            state.reconnecting = action.payload;
+        },
+        setReConnectAttempt: (state, action) => {
+            state.reConnectAttempt = action.payload;
+        },
+        setConnectionError: (state, action) => {
+            state.connectionError = action.payload;
+        },
     },
 });
 
 export const {
     setIsEditing,
+    setConnecting,
+    setConnected,
+    setReconnecting,
+    setReConnectAttempt,
+    setConnectionError,
 } = rigsSlice.actions;
 
 export default rigsSlice.reducer;
