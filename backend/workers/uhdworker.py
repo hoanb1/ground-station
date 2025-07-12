@@ -70,7 +70,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         fft_window = config.get('fft_window', 'hanning')
 
         # FFT averaging configuration
-        fft_averaging = config.get('fft_averaging', 10)
+        fft_averaging = config.get('fft_averaging', 12)
 
         # Sample accumulation mode: 'accumulate', 'zero-pad', or 'drop'
         insufficient_samples_mode = config.get('insufficient_samples_mode', 'drop')
@@ -191,10 +191,16 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                         if old_config.get('fft_size', 0) != new_config['fft_size']:
                             fft_size = new_config['fft_size']
                             max_accumulation_size = fft_size * 4
+
                             # Clear accumulated samples when FFT size changes
                             accumulated_samples.clear()
+
                             # Update num_samples when FFT size changes
                             num_samples = calculate_samples_per_scan(actual_rate, fft_size)
+
+                            # Create receive buffer
+                            recv_buffer = np.zeros((1, num_samples), dtype=np.complex64)
+
                             logger.info(f"Updated FFT size: {fft_size}")
 
                     if 'fft_window' in new_config:
@@ -247,7 +253,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                         # Skip this frame and continue to prevent accumulation
                         continue
                     else:
-                        logger.warning(f"Receiver error: {metadata.strerror()}")
+                        logger.warning(f"Receiver error: {metadata.strerror()} - skipping frame")
                         continue
 
                 # Skip very small reads

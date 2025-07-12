@@ -70,7 +70,7 @@ const initialState = {
     colorMap: 'cosmic',
     dbRange: [-80, -20],
     fftSizeOptions: [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536],
-    fftSize: 8192,
+    fftSize: 16384,
     fftWindow: 'hanning',
     fftWindows: ['hanning', 'hamming', 'blackman', 'kaiser', 'bartlett'],
     gain: "none",

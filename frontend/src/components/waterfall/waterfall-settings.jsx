@@ -785,6 +785,86 @@ const WaterfallSettings = forwardRef((props, ref) => {
                     </AccordionDetails>
                 </Accordion>
 
+                <Accordion expanded={expandedPanels.includes('fft')} onChange={handleAccordionChange('fft')}>
+                    <AccordionSummary
+                        sx={{
+                            boxShadow: '-1px 4px 7px #00000059',
+                        }}
+                        aria-controls="panel2d-content" id="panel2d-header">
+                        <Typography component="span">FFT</Typography>
+                    </AccordionSummary>
+                    <AccordionDetails sx={{
+                        backgroundColor: 'rgb(34,34,34)',
+                    }}>
+                        <LoadingOverlay loading={gettingSDRParameters}>
+                            <Box sx={{mb: 2}}>
+                                <FormControl disabled={gettingSDRParameters}
+                                             margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
+                                             fullWidth={true} variant="filled"
+                                             size="small">
+                                    <InputLabel>FFT Size</InputLabel>
+                                    <Select
+                                        disabled={gettingSDRParameters}
+                                        size={'small'}
+                                        value={fftSizeValues.length ? localFFTSize : ""}
+                                        onChange={(e) => {
+                                            setLocalFFTSize(e.target.value);
+                                            dispatch(updateFFTSize(e.target.value));
+                                        }}
+                                        variant={'filled'}>
+                                        {fftSizeValues.map(size => (
+                                            <MenuItem key={size} value={size}>{size}</MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+
+                                <FormControl disabled={gettingSDRParameters}
+                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                             variant="filled" size="small">
+                                    <InputLabel>FFT Window</InputLabel>
+                                    <Select
+                                        disabled={gettingSDRParameters}
+                                        size={'small'}
+                                        value={fftWindowValues.length ? fftWindow : ""}
+                                        onChange={(e) => {
+                                            dispatch(updateFFTWindow(e.target.value));
+                                        }}
+                                        variant={'filled'}>
+                                        {fftWindowValues.map(window => (
+                                            <MenuItem key={window} value={window}>
+                                                {window.charAt(0).toUpperCase() + window.slice(1)}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+
+                                <FormControl disabled={gettingSDRParameters}
+                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                             variant="filled"
+                                             size="small">
+                                    <InputLabel>Color Map</InputLabel>
+                                    <Select
+                                        disabled={gettingSDRParameters}
+                                        size={'small'}
+                                        value={localColorMap}
+                                        onChange={(e) => {
+                                            setLocalColorMap(e.target.value);
+                                            dispatch(setColorMap(e.target.value));
+                                        }}
+                                        label="Color Map"
+                                        variant={'filled'}>
+                                        {colorMaps.map(map => (
+                                            <MenuItem key={map} value={map}>
+                                                {map.charAt(0).toUpperCase() + map.slice(1)}
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Box>
+                        </LoadingOverlay>
+                    </AccordionDetails>
+                </Accordion>
+
                 <Accordion expanded={expandedPanels.includes('vfo')} onChange={handleAccordionChange('vfo')}>
                     <AccordionSummary
                         sx={{
@@ -952,86 +1032,6 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                 </Stack>
                             </Box>
                         ))}
-                    </AccordionDetails>
-                </Accordion>
-
-                <Accordion expanded={expandedPanels.includes('fft')} onChange={handleAccordionChange('fft')}>
-                    <AccordionSummary
-                        sx={{
-                            boxShadow: '-1px 4px 7px #00000059',
-                        }}
-                        aria-controls="panel2d-content" id="panel2d-header">
-                        <Typography component="span">FFT</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{
-                        backgroundColor: 'rgb(34,34,34)',
-                    }}>
-                        <LoadingOverlay loading={gettingSDRParameters}>
-                            <Box sx={{mb: 2}}>
-                                <FormControl disabled={gettingSDRParameters}
-                                             margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
-                                             fullWidth={true} variant="filled"
-                                             size="small">
-                                    <InputLabel>FFT Size</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={fftSizeValues.length ? localFFTSize : ""}
-                                        onChange={(e) => {
-                                            setLocalFFTSize(e.target.value);
-                                            dispatch(updateFFTSize(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        {fftSizeValues.map(size => (
-                                            <MenuItem key={size} value={size}>{size}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                             variant="filled" size="small">
-                                    <InputLabel>FFT Window</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={fftWindowValues.length ? fftWindow : ""}
-                                        onChange={(e) => {
-                                            dispatch(updateFFTWindow(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        {fftWindowValues.map(window => (
-                                            <MenuItem key={window} value={window}>
-                                                {window.charAt(0).toUpperCase() + window.slice(1)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                             variant="filled"
-                                             size="small">
-                                    <InputLabel>Color Map</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={localColorMap}
-                                        onChange={(e) => {
-                                            setLocalColorMap(e.target.value);
-                                            dispatch(setColorMap(e.target.value));
-                                        }}
-                                        label="Color Map"
-                                        variant={'filled'}>
-                                        {colorMaps.map(map => (
-                                            <MenuItem key={map} value={map}>
-                                                {map.charAt(0).toUpperCase() + map.slice(1)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Box>
-                        </LoadingOverlay>
                     </AccordionDetails>
                 </Accordion>
             </div>

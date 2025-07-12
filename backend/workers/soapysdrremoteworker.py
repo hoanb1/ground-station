@@ -71,7 +71,10 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         fft_window = config.get('fft_window', 'hanning')
 
         # FFT averaging configuration
-        fft_averaging = config.get('fft_averaging', 6)
+        fft_averaging = config.get('fft_averaging', 8)
+
+        # FFT overlap
+        fft_overlap = config.get('fft_overlap', False)
 
         connection_type = config.get('connection_type', '')
         driver = config.get('driver', '')
@@ -256,6 +259,11 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                             fft_averager.update_averaging_factor(fft_averaging)
                             logger.info(f"Updated FFT averaging: {fft_averaging}")
 
+                    if 'fft_overlap' in new_config:
+                        if old_config.get('fft_overlap', True) != new_config['fft_overlap']:
+                            fft_overlap = new_config['fft_overlap']
+                            logger.info(f"Updated FFT overlap: {fft_overlap}")
+
                     if 'soapy_agc' in new_config:
                         if old_config.get('soapy_agc', False) != new_config['soapy_agc']:
                             if new_config['soapy_agc']:
@@ -348,7 +356,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 # Check if we have enough samples for processing
                 if buffer_position < num_samples:
                     logger.warning(f"Not enough samples accumulated: {buffer_position}/{num_samples}")
-                    time.sleep(0.01)
+                    time.sleep(0.005)
                     continue
 
                 # We have enough samples to process
@@ -364,16 +372,25 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 window_func = window_functions.get(fft_window.lower(), np.hanning)
                 window = window_func(actual_fft_size)
 
-                # Calculate FFT with 50% overlap
-                num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
+                # Calculate FFT segments based on overlap setting
+                if fft_overlap:
+                    # Use 50% overlap
+                    overlap_step = actual_fft_size // 2
+                    num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
+                else:
+                    # No overlap - use non-overlapping segments
+                    overlap_step = actual_fft_size
+                    num_segments = len(samples) // actual_fft_size
+
                 if num_segments <= 0:
-                    logger.warning(f"Not enough samples for FFT with overlap: {len(samples)} < {actual_fft_size}")
+                    overlap_type = "with overlap" if fft_overlap else "without overlap"
+                    logger.warning(f"Not enough samples for FFT {overlap_type}: {len(samples)} < {actual_fft_size}")
                     continue
 
                 fft_result = np.zeros(actual_fft_size)
 
                 for i in range(num_segments):
-                    start_idx = i * (actual_fft_size // 2)
+                    start_idx = i * overlap_step
                     segment = samples[start_idx:start_idx + actual_fft_size]
 
                     windowed_segment = segment * window
@@ -386,7 +403,13 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
 
                     # Proper power normalization
                     N = len(fft_segment)
-                    window_correction = 1.0
+                    if fft_overlap:
+                        # Use simpler correction for overlapped FFTs
+                        window_correction = 1.0
+                    else:
+                        # Use proper window correction for non-overlapped FFTs
+                        window_correction = np.sum(window**2) / N
+
                     power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
                     fft_result += power
 
