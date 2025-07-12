@@ -482,7 +482,6 @@ function renderWaterfall() {
 
     // Draw bandscope with throttling
     throttledDrawBandscope();
-
 }
 
 function renderFFTRow(fftData) {

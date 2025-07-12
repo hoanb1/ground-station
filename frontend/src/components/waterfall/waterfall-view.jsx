@@ -492,14 +492,6 @@ const MainWaterfallDisplay = React.memo(() => {
             // Add bin count
             binCountRef.current += floatArray.length;
 
-            // Add new FFT data to the waterfall buffer
-            waterfallDataRef.current.unshift(floatArray);
-
-            // Keep only the most recent rows based on canvas height
-            if (waterFallCanvasRef.current && waterfallDataRef.current.length > waterFallCanvasRef.current.height) {
-                waterfallDataRef.current = waterfallDataRef.current.slice(0, waterFallCanvasRef.current.height);
-            }
-
             // Notify the worker that new data is available
             if (workerRef.current) {
                 workerRef.current.postMessage({
