@@ -41,7 +41,7 @@ import {
     getTrackingStateFromBackend,
     setSatelliteId,
 } from './target-sat-slice.jsx'
-import SatelliteInfoIsland from "./target-sat-info.jsx";
+import TargetSatelliteInfoIsland from "./target-sat-info.jsx";
 import NextPassesIsland from "./target-next-passes.jsx";
 import CameraView from "../common/camera-view.jsx";
 import {
@@ -491,7 +491,7 @@ const TargetSatelliteLayout = React.memo(function () {
             <TargetSatelliteMapContainer />
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="info">
-            <SatelliteInfoIsland/>
+            <TargetSatelliteInfoIsland/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesIsland/>

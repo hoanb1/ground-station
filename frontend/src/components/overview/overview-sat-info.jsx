@@ -39,7 +39,7 @@ import {enqueueSnackbar} from "notistack";
 import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 
-const SatelliteInfoCard = () => {
+const OverviewSatelliteInfoCard = () => {
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const {
@@ -361,4 +361,4 @@ const SatelliteInfoCard = () => {
     );
 };
 
-export default SatelliteInfoCard;
+export default OverviewSatelliteInfoCard;

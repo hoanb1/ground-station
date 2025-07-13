@@ -40,7 +40,7 @@ import {
 } from './overview-sat-slice.jsx';
 import NextPassesGroupIsland from "./overview-sat-passes.jsx";
 import WeatherDisplay from "./weather-card.jsx";
-import SatelliteInfoCard from "./overview-sat-info.jsx";
+import OverviewSatelliteInfoCard from "./overview-sat-info.jsx";
 import {setTrackingStateInBackend} from "../target/target-sat-slice.jsx";
 import SatelliteMapContainer from './overview-map.jsx';
 
@@ -281,7 +281,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
             <WeatherDisplay latitude={location.lat} longitude={location.lon}/>
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="sat-info">
-            <SatelliteInfoCard/>
+            <OverviewSatelliteInfoCard/>
         </StyledIslandParentNoScrollbar>,
     ];
 
