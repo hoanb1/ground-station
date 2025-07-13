@@ -349,7 +349,7 @@ const LocationPage = () => {
                                             Altitude
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {altitude} m ASL
+                                            {altitude}m ASL
                                         </Typography>
                                     </Box>
                                     <Box>
