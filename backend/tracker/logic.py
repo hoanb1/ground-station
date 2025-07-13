@@ -662,15 +662,17 @@ class SatelliteTracker:
                     assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
 
-                    # Get a data dict that contains all the information for the target satellite
-                    satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply['data']['value']['norad_id'])
-                    satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
-                    satellite_name = satellite_data['details']['name']
-
                     # Fetch the location of the ground station
                     location_reply = await crud.fetch_location_for_userid(dbsession, user_id=None)
                     location = location_reply['data']
                     tracker = tracking_state_reply['data']['value']
+
+                    # Get a data dict that contains all the information for the target satellite
+                    satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply['data']['value']['norad_id'])
+                    assert not satellite_data['error'], f"Could not compute satellite details for satellite {tracking_state_reply['data']['value']['norad_id']}"
+
+                    satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
+                    satellite_name = satellite_data['details']['name']
 
                 # Update current state variables
                 self.current_norad_id = tracker.get('norad_id', None)

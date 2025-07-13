@@ -178,85 +178,92 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         },
         'coverage': [],
         'transmitters': [],
+        'error': False,
     }
 
-    satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
+    try:
 
-    if not satellite.get('success', False):
-        raise Exception(f"No satellite found in the db for norad id {norad_id}")
+        satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
 
-    if len(satellite.get('data', [])) != 1:
-        raise Exception(f"Expected exactly one satellite in the result for norad id {norad_id} got"
-                        f" {len(satellite.get('data', []))}")
+        if not satellite.get('success', False):
+            raise Exception(f"No satellite found in the db for norad id {norad_id}")
 
-    satellite_data['details'] = satellite['data'][0]
-    satellite_data['details']['is_geostationary'] = is_geostationary([
-        satellite_data['details']['tle1'],
-        satellite_data['details']['tle2']
-    ])
+        if len(satellite.get('data', [])) != 1:
+            raise Exception(f"Expected exactly one satellite in the result for norad id {norad_id} got"
+                            f" {len(satellite.get('data', []))}")
 
-    # get target map settings
-    target_map_settings_reply = await crud.get_map_settings(dbsession, 'target-map-settings')
-    target_map_settings = target_map_settings_reply['data'].get('value', {})
+        satellite_data['details'] = satellite['data'][0]
+        satellite_data['details']['is_geostationary'] = is_geostationary([
+            satellite_data['details']['tle1'],
+            satellite_data['details']['tle2']
+        ])
 
-    # fetch transmitters
-    transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
-    satellite_data['transmitters'] = transmitters['data']
+        # get target map settings
+        target_map_settings_reply = await crud.get_map_settings(dbsession, 'target-map-settings')
+        target_map_settings = target_map_settings_reply['data'].get('value', {})
 
-    location = await crud.fetch_location_for_userid(dbsession, user_id=None)
-    if not location.get('success', False):
-        raise Exception(f"No location found in the db for user id None, please set one")
+        # fetch transmitters
+        transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
+        satellite_data['transmitters'] = transmitters['data']
 
-    # get current position
-    position = get_satellite_position_from_tle([
-        satellite_data['details']['name'],
-        satellite_data['details']['tle1'],
-        satellite_data['details']['tle2']
-    ])
+        location = await crud.fetch_location_for_userid(dbsession, user_id=None)
+        if not location.get('success', False) or location.get('data', None) is None:
+            raise Exception(f"No location found in the db for user id None, please set one")
 
-    # get position in the sky
-    home_lat = location['data']['lat']
-    home_lon = location['data']['lon']
-    sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
-                                    satellite['data'][0]['tle2'], datetime.now(UTC))
+        # get current position
+        position = get_satellite_position_from_tle([
+            satellite_data['details']['name'],
+            satellite_data['details']['tle1'],
+            satellite_data['details']['tle2']
+        ])
 
-    # calculate paths with caching
-    tle1 = satellite_data['details']['tle1']
-    tle2 = satellite_data['details']['tle2']
-    duration_minutes = int(target_map_settings.get('orbitProjectionDuration', 240))
-    step_minutes = 0.5
+        # get position in the sky
+        home_lat = location['data']['lat']
+        home_lon = location['data']['lon']
+        sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
+                                        satellite['data'][0]['tle2'], datetime.now(UTC))
 
-    # Try to get cached paths first
-    cached_paths = get_cached_satellite_paths(tle1, tle2, duration_minutes, step_minutes)
+        # calculate paths with caching
+        tle1 = satellite_data['details']['tle1']
+        tle2 = satellite_data['details']['tle2']
+        duration_minutes = int(target_map_settings.get('orbitProjectionDuration', 240))
+        step_minutes = 0.5
 
-    # Check for cached items
-    if cached_paths is not None:
-        logger.debug(f"Using cached satellite paths for NORAD ID: {norad_id}")
-        satellite_data['paths'] = cached_paths
-    else:
-        logger.info(f"Computing new satellite paths for NORAD ID: {norad_id}")
-        paths = get_satellite_path([tle1, tle2], duration_minutes=duration_minutes, step_minutes=step_minutes)
+        # Try to get cached paths first
+        cached_paths = get_cached_satellite_paths(tle1, tle2, duration_minutes, step_minutes)
 
-        # Cache the computed paths for 30 minutes
-        cache_satellite_paths(tle1, tle2, duration_minutes, step_minutes, paths, ttl_minutes=30)
-        satellite_data['paths'] = paths
+        # Check for cached items
+        if cached_paths is not None:
+            logger.debug(f"Using cached satellite paths for NORAD ID: {norad_id}")
+            satellite_data['paths'] = cached_paths
+        else:
+            logger.info(f"Computing new satellite paths for NORAD ID: {norad_id}")
+            paths = get_satellite_path([tle1, tle2], duration_minutes=duration_minutes, step_minutes=step_minutes)
 
-    # Add the coverage (footprint)
-    satellite_data['coverage'] = get_satellite_coverage_circle(
-        position['lat'],
-        position['lon'],
-        position['alt'] / 1000,
-        num_points=300
-    )
+            # Cache the computed paths for 30 minutes
+            cache_satellite_paths(tle1, tle2, duration_minutes, step_minutes, paths, ttl_minutes=30)
+            satellite_data['paths'] = paths
 
-    position['az'] = sky_point[0]
-    position['el'] = sky_point[1]
-    satellite_data['position'] = position
+        # Add the coverage (footprint)
+        satellite_data['coverage'] = get_satellite_coverage_circle(
+            position['lat'],
+            position['lon'],
+            position['alt'] / 1000,
+            num_points=300
+        )
 
-    satellite_data = serialize_object(satellite_data)
+        position['az'] = sky_point[0]
+        position['el'] = sky_point[1]
+        satellite_data['position'] = position
+
+        satellite_data = serialize_object(satellite_data)
+
+    except Exception as e:
+        logger.error(f"Failed to compile satellite data for norad id: {norad_id}, error: {e}")
+        logger.exception(e)
+        satellite_data['error'] = True
 
     return satellite_data
-
 
 async def get_ui_tracker_state(group_id: str, norad_id: int):
     """

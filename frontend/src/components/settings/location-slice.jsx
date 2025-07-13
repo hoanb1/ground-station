@@ -57,10 +57,10 @@ export const fetchLocationForUserId = createAsyncThunk(
 
 export const storeLocation = createAsyncThunk(
     'location/handleSetLocation',
-    async ({socket, location, locationId}, {rejectWithValue}) => {
+    async ({socket, location, altitude, locationId}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
             socket.emit('data_submission', 'submit-location-for-user-id',
-                {...location, name: "home", userid: null, id: locationId}, (response) => {
+                {...location, alt: altitude, name: "home", userid: null, id: locationId}, (response) => {
                     if (response['success']) {
                         enqueueSnackbar('Location set successfully', {
                             variant: 'success',
@@ -78,16 +78,16 @@ export const storeLocation = createAsyncThunk(
 );
 
 
-// Example slice
 const locationSlice = createSlice({
     name: 'location',
     initialState: {
         locationSaving: false,
         locationLoading: false,
         location: {lat: 0, lon: 0},
+        altitude: 0,
         locationId: null,
         locationUserId: null,
-        qth: '',       // e.g., maidenhead
+        qth: '',
         polylines: [],
         error: null,
     },
@@ -112,7 +112,10 @@ const locationSlice = createSlice({
         },
         setLocationSaving: (state, action) => {
             state.locationSaving = action.payload;
-        }
+        },
+        setAltitude: (state, action) => {
+            state.altitude = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -164,6 +167,7 @@ export const {
     setQth,
     setPolylines,
     setLocationLoading,
+    setAltitude,
 } = locationSlice.actions;
 
 export default locationSlice.reducer;

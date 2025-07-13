@@ -40,7 +40,8 @@ import {
     setPolylines,
     setQth,
     setLocationLoading,
-    storeLocation
+    storeLocation,
+    setAltitude,
 } from './location-slice.jsx';
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import 'leaflet/dist/leaflet.css';
@@ -115,7 +116,6 @@ const LocationPage = () => {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const [nearestCity, setNearestCity] = React.useState('');
-    const [elevation, setElevation] = React.useState('');
     const mapRef = React.useRef(null);
 
     // Grab data from Redux
@@ -126,6 +126,7 @@ const LocationPage = () => {
         locationUserId,
         qth,
         polylines,
+        altitude,
     } = useSelector((state) => state.location);
 
     // On location change, fetch the nearest city
@@ -139,7 +140,7 @@ const LocationPage = () => {
             });
     }, [location]);
 
-    // Recompute polylines when location changes. Alternatively, you can handle this in the slice.
+    // Recompute polylines when the location changes. Alternatively, you can handle this in the slice.
     useEffect(() => {
         const horizontalLine = [
             [location.lat, -270],
@@ -160,6 +161,8 @@ const LocationPage = () => {
         reCenterMap(lat, lng);
         const city = await getNearestCity(location.lat, location.lon);
         setNearestCity(city);
+
+
     };
 
     const handleWhenReady = (map) => {
@@ -198,6 +201,14 @@ const LocationPage = () => {
         };
     }, [location]);
 
+    const getElevation = async (lat, lon) => {
+        const response = await fetch(
+            `https://api.open-elevation.com/api/v1/lookup?locations=${lat},${lon}`
+        );
+        const data = await response.json();
+        return data.results[0].elevation; // Returns elevation in meters
+    };
+
     useEffect(() => {
         const intervalUpdate = setInterval(() => {
             // Use ref instead of global variable
@@ -227,23 +238,29 @@ const LocationPage = () => {
                 dispatch(setLocation({
                     lat: latitude,
                     lon: longitude,
-                    //altitude: altitude,
-                    //altitudeAccuracy: altitudeAccuracy
                 }));
+
+                if (altitude) {
+                    dispatch(setAltitude(altitude));
+                } else {
+                    getElevation(latitude, longitude)
+                        .then((elevation) => {
+                            dispatch(setAltitude(elevation));
+                        })
+                        .catch((error) => {
+                            console.error('Error fetching elevation:', error);
+                        }
+                        )
+                }
+
                 dispatch(setQth(getMaidenhead(latitude, longitude)));
+
                 reCenterMap(latitude, longitude);
                 dispatch(setLocationLoading(false));
 
-                // Show altitude in notification if available
-                if (altitude !== null) {
-                    enqueueSnackbar(`Location retrieved (Alt: ${altitude.toFixed(1)}m)`, {
-                        variant: 'success',
-                    });
-                } else {
-                    enqueueSnackbar('Location retrieved (altitude unavailable)', {
-                        variant: 'success',
-                    });
-                }
+                enqueueSnackbar(`Location retrieved`, {
+                    variant: 'success',
+                });
             },
             (error) => {
                 enqueueSnackbar('Failed to get your current location', {
@@ -252,15 +269,15 @@ const LocationPage = () => {
                 dispatch(setLocationLoading(false));
             },
             {
-                enableHighAccuracy: true, // This may help get altitude data
-                timeout: 10000,
+                enableHighAccuracy: true,
+                timeout: 5000,
                 maximumAge: 60000
             }
         );
     };
 
     const handleSetLocation = () => {
-        dispatch(storeLocation({socket, location, locationId}));
+        dispatch(storeLocation({socket, location, altitude, locationId}));
     }
 
     return (
@@ -329,10 +346,10 @@ const LocationPage = () => {
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Elevation
+                                            Altitude
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {elevation} m ASL
+                                            {altitude} m ASL
                                         </Typography>
                                     </Box>
                                     <Box>
@@ -371,14 +388,6 @@ const LocationPage = () => {
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             Ground Station 1
-                                        </Typography>
-                                    </Box>
-                                    <Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            Antenna Height
-                                        </Typography>
-                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            --- m AGL
                                         </Typography>
                                     </Box>
                                     <Box>

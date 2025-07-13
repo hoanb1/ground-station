@@ -206,6 +206,7 @@ class Locations(Base):
     name = Column(String, nullable=False)
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
+    alt = Column(Integer, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 

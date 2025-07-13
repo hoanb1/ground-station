@@ -522,9 +522,9 @@ const RotatorControl = React.memo(({}) => {
                 fgColor: 'info.dark'
             },
             'outofbounds': {
-                text: "Below the horizon",
-                bgColor: '#561f70',
-                fgColor: '#755395'
+                text: "Target below the horizon",
+                bgColor: '#701c49',
+                fgColor: '#f8440e'
             }
         };
 
