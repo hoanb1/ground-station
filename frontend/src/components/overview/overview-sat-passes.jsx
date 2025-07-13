@@ -216,7 +216,7 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                     {targetSatTrack.satelliteData['details']['name'] === params.value && (
                         <Typography component="span" sx={{
                             ml: 0.5,
-                            fontSize: '1rem',
+                            fontSize: '1.1rem',
                         }}>⦿</Typography>
                     )}
                 </>;
@@ -386,28 +386,36 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
         },
     ];
 
+    const getPassesRowStyles = (param) => {
+        if (param.row) {
+            const targetSatTrack = targetSatTrackRef.current();
+            if (targetSatTrack.satelliteData['details']['norad_id'] === param.row['norad_id']) {
+                if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+                    return "passes-cell-passed pointer-cursor";
+                } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
+                    return "passes-cell-active passes-cell-passing pointer-cursor";
+                } else {
+                    return "pointer-cursor";
+                }
+            } else {
+                if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+                    return "passes-cell-passed pointer-cursor";
+                } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
+                    return "passes-cell-passing pointer-cursor";
+                } else {
+                    return "pointer-cursor";
+                }
+            }
+        }
+    }
+
     return (
         <StyledDataGrid
             apiRef={apiRef}
             pageSizeOptions={[5, 10, 15, 20]}
             fullWidth={true}
             loading={passesLoading}
-            getRowClassName={(param) => {
-                if (param.row) {
-                    // const targetSatTrack = targetSatTrackRef.current();
-                    // if (targetSatTrack.satelliteData['details']['name'] === param.row['name']) {
-                    //     return "passes-cell-active pointer-cursor";
-                    // }
-
-                    if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
-                        return "passes-cell-passed pointer-cursor";
-                    } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
-                        return "passes-cell-passing pointer-cursor";
-                    } else {
-                        return "pointer-cursor";
-                    }
-                }
-            }}
+            getRowClassName={getPassesRowStyles}
             onRowClick={onRowClick}
             getRowId={(params) => {
                 return params.id;
