@@ -227,16 +227,16 @@ const SatelliteMapContainer = ({
                     const recentSatData = store.getState().overviewSatTrack.satelliteData;
 
                     // Update state
-                    // dispatch(setSatelliteData({
-                    //     ...recentSatData,
-                    //     position: {
-                    //         lat: lat,
-                    //         lon: lon,
-                    //         alt: altitude * 1000,
-                    //         vel: velocity,
-                    //         az: az,
-                    //         el: el,
-                    //     }}));
+                    dispatch(setSatelliteData({
+                        ...recentSatData,
+                        position: {
+                            lat: lat,
+                            lon: lon,
+                            alt: altitude * 1000,
+                            vel: velocity,
+                            az: az,
+                            el: el,
+                        }}));
                 }
 
                 if (selectedSatelliteId === noradId) {

@@ -47,14 +47,22 @@ const SATELLITE_NUMBER_LIMIT = 200;
 const OverviewSatelliteGroupSelector = React.memo(function () {
     const { socket } = useSocket();
     const dispatch = useDispatch();
-    const {
-        satelliteGroupId,
-        satGroups,
-        formGroupSelectError,
-        selectedSatGroupId,
-        gridEditable,
-        passesLoading,
-    } = useSelector(state => state.overviewSatTrack);
+    // const {
+    //     satelliteGroupId,
+    //     satGroups,
+    //     formGroupSelectError,
+    //     selectedSatGroupId,
+    //     gridEditable,
+    //     passesLoading,
+    // } = useSelector(state => state.overviewSatTrack);
+
+    // Use separate selectors for better performance
+    const satelliteGroupId = useSelector(state => state.overviewSatTrack.satelliteGroupId);
+    const satGroups = useSelector(state => state.overviewSatTrack.satGroups);
+    const formGroupSelectError = useSelector(state => state.overviewSatTrack.formGroupSelectError);
+    const selectedSatGroupId = useSelector(state => state.overviewSatTrack.selectedSatGroupId);
+    const gridEditable = useSelector(state => state.overviewSatTrack.gridEditable);
+    const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
         backgroundColor: "#1e1e1e",
