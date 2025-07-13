@@ -40,9 +40,8 @@ import {
     setSelectedSatellites,
     fetchSatellitesByGroupId,
 } from "./overview-sat-slice.jsx";
-import Typography from "@mui/material/Typography";
 
-const SATELLITE_NUMBER_LIMIT = 500;
+const SATELLITE_NUMBER_LIMIT = 200;
 
 
 const OverviewSatelliteGroupSelector = React.memo(function () {
