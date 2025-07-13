@@ -84,7 +84,7 @@ import {
     TextField,
     Tab,
     Tabs,
-    Stack
+    Stack, ListSubheader
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
@@ -584,17 +584,12 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                             handleSDRChange(event);
                                         }}
                                         variant={'filled'}>
-                                        <MenuItem value="" disabled>
-                                            <em>select a SDR</em>
-                                        </MenuItem>
                                         <MenuItem value="none">
                                             [no SDR selected]
                                         </MenuItem>
                                         {/* Local SDRs */}
                                         {sdrs.filter(sdr => sdr.type.toLowerCase().includes('local')).length > 0 && (
-                                            <MenuItem value="" disabled>
-                                                <em>Local SDRs</em>
-                                            </MenuItem>
+                                            <ListSubheader>Local SDRs</ListSubheader>
                                         )}
                                         {sdrs
                                             .filter(sdr => sdr.type.toLowerCase().includes('local'))
@@ -607,9 +602,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
 
                                         {/* Remote SDRs */}
                                         {sdrs.filter(sdr => sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                            <MenuItem value="" disabled>
-                                                <em>Remote SDRs</em>
-                                            </MenuItem>
+                                            <ListSubheader>Remote SDRs</ListSubheader>
                                         )}
                                         {sdrs
                                             .filter(sdr => sdr.type.toLowerCase().includes('remote'))
@@ -622,9 +615,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
 
                                         {/* Other SDRs (neither local nor remote) */}
                                         {sdrs.filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                            <MenuItem value="" disabled>
-                                                <em>Other SDRs</em>
-                                            </MenuItem>
+                                            <ListSubheader>Other SDRs</ListSubheader>
                                         )}
                                         {sdrs
                                             .filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote'))
