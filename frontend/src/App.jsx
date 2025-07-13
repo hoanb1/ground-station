@@ -85,7 +85,7 @@ function uponConnectionToBackEnd(socket) {
     store.dispatch(fetchSDRs({socket}));
     store.dispatch(fetchTLESources({socket}));
     store.dispatch(fetchSatelliteGroups({socket}));
-    store.dispatch(fetchUsers({socket}));
+    //store.dispatch(fetchUsers({socket}));
     store.dispatch(getTrackingStateFromBackend({socket}));
     store.dispatch(getOverviewMapSettings({socket}));
     store.dispatch(getTargetMapSettings({socket}));
