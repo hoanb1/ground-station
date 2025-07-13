@@ -197,7 +197,6 @@ const SatelliteMapContainer = ({
     }
 
     function satelliteUpdate(now) {
-        console.info(`Updating satellites position: selected ${selectedSatelliteId}`);
         let currentPos = [];
         let currentCoverage = [];
         let currentFuturePaths = [];
@@ -225,10 +224,10 @@ const SatelliteMapContainer = ({
                         alt: location['alt'],
                     }, now);
 
-
                     // Get the recent state
                     const recentSatData = store.getState().overviewSatTrack.satelliteData;
 
+                    // Update state
                     dispatch(setSatelliteData({
                         ...recentSatData,
                         position: {
