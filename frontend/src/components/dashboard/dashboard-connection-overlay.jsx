@@ -1,6 +1,6 @@
 
-import WifiOffIcon from '@mui/icons-material/WifiOff';
-import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import SyncProblemIcon from '@mui/icons-material/SyncProblem';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { keyframes } from '@emotion/react';
 import { Backdrop, Box, Typography } from "@mui/material";
@@ -47,7 +47,7 @@ function ConnectionOverlay() {
 
         if (reConnectAttempt > 0) {
             return {
-                icon: <SignalWifiOffIcon sx={{ fontSize: 24, color: '#ff9800' }} />,
+                icon: <SyncProblemIcon sx={{ fontSize: 24, color: '#ff9800' }} />,
                 title: 'Reconnecting',
                 message: `Attempt ${reConnectAttempt}`,
                 color: '#ff9800',
@@ -58,7 +58,7 @@ function ConnectionOverlay() {
 
         if (connecting || disconnected) {
             return {
-                icon: <WifiOffIcon sx={{ fontSize: 24, color: '#757575' }} />,
+                icon: <CloudOffIcon sx={{ fontSize: 24, color: '#757575' }} />,
                 title: 'Connecting',
                 message: 'Establishing connection',
                 color: '#757575',

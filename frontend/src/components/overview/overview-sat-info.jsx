@@ -173,52 +173,94 @@ const SatelliteInfoCard = () => {
                     <Box sx={{p: 1, flex: 1, overflow: 'auto'}}>
                         <Grid container spacing={1}>
                             {/* Position Data */}
+
                             <Grid>
                                 <Card sx={cardStyle}>
                                     <Typography variant="overline" sx={cardHeaderStyle}>
+                                        <ExploreIcon sx={iconStyle}/>
                                         POSITION DATA
                                     </Typography>
-                                    <Grid container spacing={2}>
-                                        <Grid>
-                                            <Box>
+                                    <Grid container spacing={1.5}>
+                                        <Grid size={6}>
+                                            <Box sx={{
+                                                p: 1,
+                                                bgcolor: 'rgba(255,255,255,0.02)',
+                                                borderRadius: 1,
+                                                border: '1px solid rgba(255,255,255,0.08)'
+                                            }}>
                                                 <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                                    <ExploreIcon sx={iconStyle}/>
-                                                    <Typography variant="caption" color="text.secondary">LAT</Typography>
+                                                    <Box sx={{
+                                                        width: 6,
+                                                        height: 6,
+                                                        borderRadius: '50%',
+                                                        bgcolor: '#4fc3f7',
+                                                        mr: 1
+                                                    }}/>
+                                                    <Typography variant="caption" color="text.secondary" sx={{fontWeight: 'medium'}}>
+                                                        LATITUDE
+                                                    </Typography>
                                                 </Box>
-                                                <Typography variant="body2">
+                                                <Typography variant="body1" sx={{fontWeight: 'bold', color: '#4fc3f7'}}>
                                                     {satelliteData && satelliteData['position'] ? humanizeLatitude(satelliteData['position']['lat']) : 'N/A'}
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid>
-                                            <Box>
+                                        <Grid size={6}>
+                                            <Box sx={{
+                                                p: 1,
+                                                bgcolor: 'rgba(255,255,255,0.02)',
+                                                borderRadius: 1,
+                                                border: '1px solid rgba(255,255,255,0.08)'
+                                            }}>
                                                 <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                                    <ExploreIcon sx={iconStyle}/>
-                                                    <Typography variant="caption" color="text.secondary">LON</Typography>
+                                                    <Box sx={{
+                                                        width: 6,
+                                                        height: 6,
+                                                        borderRadius: '50%',
+                                                        bgcolor: '#81c784',
+                                                        mr: 1
+                                                    }}/>
+                                                    <Typography variant="caption" color="text.secondary" sx={{fontWeight: 'medium'}}>
+                                                        LONGITUDE
+                                                    </Typography>
                                                 </Box>
-                                                <Typography variant="body2">
+                                                <Typography variant="body1" sx={{fontWeight: 'bold', color: '#81c784'}}>
                                                     {satelliteData && satelliteData['position'] ? humanizeLongitude(satelliteData['position']['lon']) : 'N/A'}
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid>
-                                            <Box>
+                                        <Grid size={6}>
+                                            <Box sx={{
+                                                p: 1,
+                                                bgcolor: 'rgba(255,255,255,0.02)',
+                                                borderRadius: 1,
+                                                border: '1px solid rgba(255,255,255,0.08)'
+                                            }}>
                                                 <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                                    <MyLocationIcon sx={iconStyle}/>
-                                                    <Typography variant="caption" color="text.secondary">AZIMUTH</Typography>
+                                                    <MyLocationIcon sx={{fontSize: 14, mr: 0.5, color: '#ffb74d'}}/>
+                                                    <Typography variant="caption" color="text.secondary" sx={{fontWeight: 'medium'}}>
+                                                        AZIMUTH
+                                                    </Typography>
                                                 </Box>
-                                                <Typography variant="body2">
+                                                <Typography variant="body1" sx={{fontWeight: 'bold', color: '#ffb74d'}}>
                                                     {satelliteData && satelliteData['position'] && satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
                                                 </Typography>
                                             </Box>
                                         </Grid>
-                                        <Grid>
-                                            <Box>
+                                        <Grid size={6}>
+                                            <Box sx={{
+                                                p: 1,
+                                                bgcolor: 'rgba(255,255,255,0.02)',
+                                                borderRadius: 1,
+                                                border: '1px solid rgba(255,255,255,0.08)'
+                                            }}>
                                                 <Box sx={{display: 'flex', alignItems: 'center', mb: 0.5}}>
-                                                    <HeightIcon sx={iconStyle}/>
-                                                    <Typography variant="caption" color="text.secondary">ELEVATION</Typography>
+                                                    <HeightIcon sx={{fontSize: 14, mr: 0.5, color: '#e57373'}}/>
+                                                    <Typography variant="caption" color="text.secondary" sx={{fontWeight: 'medium'}}>
+                                                        ELEVATION
+                                                    </Typography>
                                                 </Box>
-                                                <Typography variant="body2">
+                                                <Typography variant="body1" sx={{fontWeight: 'bold', color: '#e57373'}}>
                                                     {satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
                                                 </Typography>
                                             </Box>

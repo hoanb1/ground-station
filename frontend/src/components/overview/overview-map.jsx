@@ -34,7 +34,11 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import SettingsIcon from "@mui/icons-material/Settings";
 import { useDispatch, useSelector } from "react-redux";
-import {setOpenMapSettingsDialog, setMapZoomLevel, setSelectedSatelliteId} from './overview-sat-slice.jsx';
+import {
+    setOpenMapSettingsDialog,
+    setMapZoomLevel,
+    setSelectedSatelliteId
+} from './overview-sat-slice.jsx';
 import { getTileLayerById } from "../common/tile-layers.jsx";
 import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/icons.jsx';
 import {
@@ -49,11 +53,17 @@ import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
 import SatelliteTrackSuggestion from "./overview-map-trackbutton.jsx";
 import {
+    calculateSatelliteAzEl,
     getSatelliteCoverageCircle,
     getSatelliteLatLon,
     getSatellitePaths,
     isSatelliteVisible
 } from "../common/tracking-logic.jsx";
+
+import {
+    setSatelliteData,
+} from "./overview-sat-slice.jsx";
+
 import SatelliteMarker from "./overview-map-tooltip.jsx";
 import createTerminatorLine from "../common/terminator-line.jsx";
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
@@ -102,6 +112,7 @@ const SatelliteMapContainer = ({
         showGrid,
         selectedSatelliteId,
         selectedSatGroupId,
+        satelliteData,
     } = useSelector(state => state.overviewSatTrack);
     const {
         trackingState,
@@ -202,6 +213,26 @@ const SatelliteMapContainer = ({
                     satellite['tle1'],
                     satellite['tle2'],
                     now);
+
+                if (selectedSatelliteId === satellite['norad_id']) {
+                    // Let's also update the satellite info island with the new position data we have
+                    let [az, el, range] = calculateSatelliteAzEl(satellite['tle1'], satellite['tle2'], {
+                        lat: location['lat'],
+                        lon: location['lon'],
+                        alt: location['alt'],
+                    }, now);
+
+                    dispatch(setSatelliteData({
+                        ...satelliteData,
+                        position: {
+                            lat: lat,
+                            lon: lon,
+                            alt: altitude * 1000,
+                            vel: velocity,
+                            az: az,
+                            el: el,
+                        }}));
+                }
 
                 if (selectedSatelliteId === noradId) {
 

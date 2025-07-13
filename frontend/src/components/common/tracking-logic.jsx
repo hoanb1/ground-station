@@ -414,3 +414,91 @@ function calculateGreatCircleDistance(lat1, lon1, lat2, lon2) {
 function toRadians(deg) {
     return deg * (Math.PI / 180);
 }
+
+
+/**
+ * Calculates the current azimuth and elevation of a satellite from a ground station.
+ *
+ * @param {string} tleLine1 - The first line of the two-line element set (TLE).
+ * @param {string} tleLine2 - The second line of the two-line element set (TLE).
+ * @param {Object} groundStation - The ground station location.
+ * @param {number} groundStation.lat - Ground station latitude in degrees.
+ * @param {number} groundStation.lon - Ground station longitude in degrees.
+ * @param {number} [groundStation.alt=0] - Ground station altitude in meters (default: 0).
+ * @param {Date} [date=new Date()] - The date and time for calculation (default: current time).
+ * @returns {Object|null} An object containing azimuth and elevation in degrees, or null if calculation fails.
+ *                        Format: { azimuth: number, elevation: number, range: number }
+ */
+export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date = new Date()) {
+    try {
+        // Validate inputs
+        if (!tleLine1 || !tleLine2 || !groundStation ||
+            groundStation.lat === undefined || groundStation.lon === undefined) {
+            console.error("Invalid input parameters for satellite AzEl calculation");
+            return null;
+        }
+
+        // Extract ground station coordinates with defaults
+        const { lat, lon, alt = 0 } = groundStation;
+
+        // Validate coordinate ranges
+        if (lat < -90 || lat > 90) {
+            console.error("Latitude must be between -90 and 90 degrees");
+            return null;
+        }
+
+        // Normalize longitude to [-180, 180] range
+        let normalizedLon = lon;
+        while (normalizedLon > 180) normalizedLon -= 360;
+        while (normalizedLon < -180) normalizedLon += 360;
+
+        // Initialize satellite record from TLE data
+        const satrec = satellite.twoline2satrec(tleLine1, tleLine2);
+
+        // Get satellite position and velocity in ECI coordinates
+        const positionAndVelocity = satellite.propagate(satrec, date);
+        if (!positionAndVelocity.position) {
+            console.error("Failed to propagate satellite position");
+            return null;
+        }
+
+        // Set up observer's geodetic coordinates (using radians)
+        const observerGd = {
+            longitude: normalizedLon * (Math.PI / 180), // Convert to radians manually
+            latitude: lat * (Math.PI / 180),            // Convert to radians manually
+            height: alt / 1000 // Convert meters to kilometers
+        };
+
+        // Get current Greenwich Mean Sidereal Time
+        const gmst = satellite.gstime(date);
+
+        // Convert satellite position from ECI to ECEF coordinates
+        const positionEcf = satellite.eciToEcf(positionAndVelocity.position, gmst);
+
+        // Calculate look angles (azimuth, elevation, range) from observer to satellite
+        const lookAngles = satellite.ecfToLookAngles(observerGd, positionEcf);
+
+        // Convert from radians to degrees
+        let azimuthDeg = lookAngles.azimuth * (180 / Math.PI);
+        const elevationDeg = lookAngles.elevation * (180 / Math.PI);
+        const rangeKm = lookAngles.rangeSat; // Range in kilometers
+
+        // Normalize azimuth to 0-360 degrees
+        while (azimuthDeg < 0) azimuthDeg += 360;
+        while (azimuthDeg >= 360) azimuthDeg -= 360;
+
+        return [
+            azimuthDeg,
+            elevationDeg,
+            rangeKm
+        ];
+
+    } catch (error) {
+        console.error("Error calculating satellite azimuth and elevation:", error);
+        enqueueSnackbar("Error calculating satellite tracking data: " + error.message, {
+            variant: "error",
+            autoHideDuration: 5000,
+        });
+        return null;
+    }
+}
