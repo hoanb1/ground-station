@@ -1,7 +1,8 @@
-
 import React, {useEffect} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
-import {fetchSatelliteData} from './overview-sat-slice.jsx';
+import {
+    fetchSatelliteData
+} from './overview-sat-slice.jsx';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ExploreIcon from '@mui/icons-material/Explore';
 import HeightIcon from '@mui/icons-material/Height';
@@ -59,7 +60,7 @@ const SatelliteInfoCard = () => {
 
     useEffect(() => {
         if (selectedSatelliteId) {
-            dispatch(fetchSatelliteData({socket, noradId: selectedSatelliteId}));
+            dispatch(fetchSatelliteData({socket: socket, noradId: selectedSatelliteId}));
         }
     }, [selectedSatelliteId, dispatch]);
 
@@ -74,7 +75,7 @@ const SatelliteInfoCard = () => {
             'transmitter_id': selectedTransmitter,
         };
 
-        dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
+        dispatch(setTrackingStateInBackend({socket: socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
                 // Success handling

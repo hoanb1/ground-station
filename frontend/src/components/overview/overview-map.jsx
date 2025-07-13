@@ -18,7 +18,7 @@
  */
 
 
-import React, {useCallback, useEffect, useState} from 'react';
+import React, {useCallback, useEffect, useRef, useState} from 'react';
 import {
     MapContainer,
     TileLayer,
@@ -68,6 +68,7 @@ import SatelliteMarker from "./overview-map-tooltip.jsx";
 import createTerminatorLine from "../common/terminator-line.jsx";
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import {useSocket} from "../common/socket.jsx";
+import {store} from "../common/store.jsx";
 
 const viewSatelliteLimit = 100;
 
@@ -130,6 +131,7 @@ const SatelliteMapContainer = ({
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
     const { location } = useSelector((state) => state.location);
+    const updateTimeRef = useRef(null);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
         dispatch(setMapZoomLevel(zoomLevel));
@@ -195,6 +197,7 @@ const SatelliteMapContainer = ({
     }
 
     function satelliteUpdate(now) {
+        console.info(`Updating satellites position: selected ${selectedSatelliteId}`);
         let currentPos = [];
         let currentCoverage = [];
         let currentFuturePaths = [];
@@ -222,8 +225,12 @@ const SatelliteMapContainer = ({
                         alt: location['alt'],
                     }, now);
 
+
+                    // Get the recent state
+                    const recentSatData = store.getState().overviewSatTrack.satelliteData;
+
                     dispatch(setSatelliteData({
-                        ...satelliteData,
+                        ...recentSatData,
                         position: {
                             lat: lat,
                             lon: lon,
@@ -361,13 +368,21 @@ const SatelliteMapContainer = ({
 
     // Update the satellites position, day/night terminator every 3 seconds
     useEffect(() => {
+        // Clear the interval
+        if (updateTimeRef.current) {
+            clearTimeout(updateTimeRef.current);
+        }
+
+        // Call for an update
         satelliteUpdate(new Date());
-        const satelliteUpdateTimer = setInterval(() => {
+
+        // Recreate the interval
+        updateTimeRef.current = setInterval(() => {
             satelliteUpdate(new Date())
         }, 3000);
 
         return () => {
-            clearInterval(satelliteUpdateTimer);
+            clearInterval(updateTimeRef.current);
         };
     }, [selectedSatellites, showPastOrbitPath, showFutureOrbitPath, showSatelliteCoverage, showSunIcon, showMoonIcon,
         showTerminatorLine, pastOrbitLineColor, futureOrbitLineColor, satelliteCoverageColor, orbitProjectionDuration,
