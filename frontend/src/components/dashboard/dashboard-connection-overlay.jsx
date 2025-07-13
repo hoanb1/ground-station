@@ -3,33 +3,19 @@ import WifiOffIcon from '@mui/icons-material/WifiOff';
 import SignalWifiOffIcon from '@mui/icons-material/SignalWifiOff';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { keyframes } from '@emotion/react';
-import { Backdrop, Box, Typography, LinearProgress, Chip } from "@mui/material";
+import { Backdrop, Box, Typography } from "@mui/material";
 import { useSelector } from "react-redux";
 
-// Modern animations
-const slideUp = keyframes`
+// Minimal animations
+const fadeIn = keyframes`
     from {
         opacity: 0;
-        transform: translateY(30px) scale(0.95);
+        transform: translateY(10px);
     }
     to {
         opacity: 1;
-        transform: translateY(0) scale(1);
+        transform: translateY(0);
     }
-`;
-
-const shimmer = keyframes`
-    0% {
-        background-position: -200px 0;
-    }
-    100% {
-        background-position: calc(200px + 100%) 0;
-    }
-`;
-
-const float = keyframes`
-  0%, 100% { transform: translateY(0px); }
-  50% { transform: translateY(-4px); }
 `;
 
 function ConnectionOverlay() {
@@ -46,41 +32,38 @@ function ConnectionOverlay() {
         return null;
     }
 
-    // Determine the status and styling
+    // Determine the status and styling with industrial colors
     const getConnectionStatus = () => {
         if (connectionError) {
             return {
-                icon: <ErrorOutlineIcon sx={{ fontSize: 32, color: '#ffffff' }} />,
+                icon: <ErrorOutlineIcon sx={{ fontSize: 24, color: '#d32f2f' }} />,
                 title: 'Connection Failed',
-                message: 'Check your network connection',
-                color: '#ef4444',
-                bgGradient: 'linear-gradient(135deg, #ef4444 0%, #dc2626 100%)',
-                chipColor: '#fef2f2',
-                chipTextColor: '#991b1b'
+                message: 'Network error',
+                color: '#d32f2f',
+                bgColor: '#2a2a2a',
+                borderColor: '#d32f2f'
             };
         }
 
         if (reConnectAttempt > 0) {
             return {
-                icon: <SignalWifiOffIcon sx={{ fontSize: 32, color: '#ffffff' }} />,
+                icon: <SignalWifiOffIcon sx={{ fontSize: 24, color: '#ff9800' }} />,
                 title: 'Reconnecting',
-                message: 'Attempting to restore connection',
-                color: '#f59e0b',
-                bgGradient: 'linear-gradient(135deg, #f59e0b 0%, #d97706 100%)',
-                chipColor: '#fef3c7',
-                chipTextColor: '#92400e'
+                message: `Attempt ${reConnectAttempt}`,
+                color: '#ff9800',
+                bgColor: '#2a2a2a',
+                borderColor: '#ff9800'
             };
         }
 
         if (connecting || disconnected) {
             return {
-                icon: <WifiOffIcon sx={{ fontSize: 32, color: '#ffffff' }} />,
+                icon: <WifiOffIcon sx={{ fontSize: 24, color: '#757575' }} />,
                 title: 'Connecting',
-                message: 'Establishing secure connection',
-                color: '#3b82f6',
-                bgGradient: 'linear-gradient(135deg, #3b82f6 0%, #2563eb 100%)',
-                chipColor: '#dbeafe',
-                chipTextColor: '#1e40af'
+                message: 'Establishing connection',
+                color: '#757575',
+                bgColor: '#2a2a2a',
+                borderColor: '#757575'
             };
         }
 
@@ -96,194 +79,96 @@ function ConnectionOverlay() {
             open={true}
             sx={{
                 zIndex: (theme) => theme.zIndex.drawer + 1,
-                background: 'radial-gradient(circle at center, rgba(0,0,0,0.6) 0%, rgba(0,0,0,0.8) 100%)',
-                backdropFilter: 'blur(8px)'
+                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                backdropFilter: 'blur(4px)'
             }}
         >
             <Box
                 sx={{
-                    animation: `${slideUp} 0.4s cubic-bezier(0.4, 0, 0.2, 1)`,
-                    display: 'flex',
-                    flexDirection: 'column',
-                    alignItems: 'center',
-                    gap: 3,
-                    maxWidth: 420,
-                    width: '90%',
-                    mx: 'auto'
+                    animation: `${fadeIn} 0.2s ease-out`,
+                    backgroundColor: status.bgColor,
+                    border: `1px solid ${status.borderColor}`,
+                    borderRadius: 1,
+                    padding: 3,
+                    minWidth: 280,
+                    maxWidth: 320,
+                    boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
                 }}
             >
-                {/* Main Card */}
-                <Box
-                    sx={{
-                        background: status.bgGradient,
-                        borderRadius: 4,
-                        padding: 4,
-                        width: '100%',
-                        boxShadow: '0 25px 50px -12px rgba(0, 0, 0, 0.25)',
-                        border: '1px solid rgba(255, 255, 255, 0.1)',
-                        position: 'relative',
-                        overflow: 'hidden',
-                        '&::before': {
-                            content: '""',
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            height: '1px',
-                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent)',
-                        }
-                    }}
-                >
-                    {/* Shimmer effect */}
-                    <Box
-                        sx={{
-                            position: 'absolute',
-                            top: 0,
-                            left: 0,
-                            right: 0,
-                            bottom: 0,
-                            background: `linear-gradient(
-                                90deg,
-                                transparent,
-                                rgba(255, 255, 255, 0.1),
-                                transparent
-                            )`,
-                            backgroundSize: '200px 100%',
-                            animation: `${shimmer} 3s infinite`,
-                        }}
-                    />
-
-                    {/* Header */}
-                    <Box sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 2,
-                        mb: 3,
-                        position: 'relative',
-                        zIndex: 1
-                    }}>
-                        <Box
-                            sx={{
-                                animation: reConnectAttempt > 0 ? `${float} 2s infinite` : 'none',
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                width: 56,
-                                height: 56,
-                                borderRadius: 3,
-                                backgroundColor: 'rgba(255, 255, 255, 0.15)',
-                                backdropFilter: 'blur(10px)',
-                                border: '1px solid rgba(255, 255, 255, 0.2)',
-                            }}
-                        >
-                            {status.icon}
-                        </Box>
-                        <Box sx={{ flex: 1 }}>
-                            <Typography
-                                variant="h5"
-                                sx={{
-                                    color: 'white',
-                                    fontWeight: 600,
-                                    mb: 0.5,
-                                    textShadow: '0 2px 4px rgba(0, 0, 0, 0.2)'
-                                }}
-                            >
-                                {status.title}
-                            </Typography>
-                            <Typography
-                                variant="body2"
-                                sx={{
-                                    color: 'rgba(255, 255, 255, 0.9)',
-                                    opacity: 0.9
-                                }}
-                            >
-                                {status.message}
-                            </Typography>
-                        </Box>
-                    </Box>
-
-                    {/* Status Chip */}
-                    {reConnectAttempt > 0 && (
-                        <Box sx={{ mb: 3, display: 'flex', justifyContent: 'center' }}>
-                            <Chip
-                                label={`Attempt ${reConnectAttempt}`}
-                                size="small"
-                                sx={{
-                                    backgroundColor: status.chipColor,
-                                    color: status.chipTextColor,
-                                    fontWeight: 600,
-                                    border: 'none',
-                                    fontFamily: 'monospace',
-                                }}
-                            />
-                        </Box>
-                    )}
-
-                    {/* Progress Bar */}
-                    <Box sx={{ position: 'relative', zIndex: 1 }}>
-                        <LinearProgress
-                            sx={{
-                                height: 6,
-                                borderRadius: 3,
-                                backgroundColor: 'rgba(255, 255, 255, 0.2)',
-                                '& .MuiLinearProgress-bar': {
-                                    borderRadius: 3,
-                                    backgroundColor: 'rgba(255, 255, 255, 0.8)',
-                                }
-                            }}
-                        />
+                {/* Header */}
+                <Box sx={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    gap: 2,
+                    mb: 2,
+                }}>
+                    {status.icon}
+                    <Box sx={{ flex: 1 }}>
                         <Typography
-                            variant="caption"
+                            variant="subtitle1"
                             sx={{
-                                color: 'rgba(255, 255, 255, 0.8)',
-                                display: 'block',
-                                textAlign: 'center',
-                                mt: 1,
-                                fontSize: '0.7rem',
-                                fontFamily: 'monospace',
+                                color: '#ffffff',
+                                fontWeight: 500,
+                                mb: 0.5,
+                                fontSize: '1rem'
                             }}
                         >
-                            {connectionError ? 'Connection failed' :
-                                reConnectAttempt > 0 ? 'Retrying connection...' : 'Please wait...'}
+                            {status.title}
+                        </Typography>
+                        <Typography
+                            variant="body2"
+                            sx={{
+                                color: '#b0b0b0',
+                                fontSize: '0.875rem'
+                            }}
+                        >
+                            {status.message}
                         </Typography>
                     </Box>
                 </Box>
 
-                {/* Bottom status indicator */}
-                <Box sx={{
-                    display: 'flex',
-                    alignItems: 'center',
-                    gap: 1,
-                    padding: 2,
-                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
-                    borderRadius: 2,
-                    backdropFilter: 'blur(10px)',
-                    border: '1px solid rgba(255, 255, 255, 0.1)',
-                }}>
+                {/* Progress indicator */}
+                <Box
+                    sx={{
+                        width: '100%',
+                        height: 2,
+                        backgroundColor: '#424242',
+                        borderRadius: 1,
+                        overflow: 'hidden',
+                        position: 'relative'
+                    }}
+                >
                     <Box
                         sx={{
-                            width: 8,
-                            height: 8,
-                            borderRadius: '50%',
+                            height: '100%',
+                            width: '30%',
                             backgroundColor: status.color,
+                            borderRadius: 1,
                             animation: `${keyframes`
-                                0%, 100% { opacity: 0.5; transform: scale(1); }
-                                50% { opacity: 1; transform: scale(1.2); }
-                            `} 2s infinite`,
+                                0% { transform: translateX(-100%); }
+                                100% { transform: translateX(333%); }
+                            `} 2s infinite ease-in-out`,
                         }}
                     />
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            color: 'rgba(255, 255, 255, 0.9)',
-                            fontFamily: 'monospace',
-                            fontSize: '0.75rem',
-                        }}
-                    >
-                        {connectionError ? 'CONNECTION ERROR' :
-                            reConnectAttempt > 0 ? 'RECONNECTING' : 'CONNECTING'}
-                    </Typography>
                 </Box>
+
+                {/* Status text */}
+                <Typography
+                    variant="caption"
+                    sx={{
+                        color: '#757575',
+                        fontFamily: 'monospace',
+                        fontSize: '0.75rem',
+                        display: 'block',
+                        textAlign: 'center',
+                        mt: 1.5,
+                        textTransform: 'uppercase',
+                        letterSpacing: '0.5px'
+                    }}
+                >
+                    {connectionError ? 'ERROR' :
+                        reConnectAttempt > 0 ? 'RECONNECTING' : 'CONNECTING'}
+                </Typography>
             </Box>
         </Backdrop>
     );
