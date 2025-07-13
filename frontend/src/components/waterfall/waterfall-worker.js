@@ -550,7 +550,7 @@ function drawBandscope() {
 
     // Enable image smoothing (anti-aliasing)
     dBAxisCtx.imageSmoothingEnabled = true;
-    dBAxisCtx.imageSmoothingQuality = 'high'; // Options: 'low', 'medium', 'high'
+    dBAxisCtx.imageSmoothingQuality = 'high';
 
     const width = bandscopeCanvas.width;
     const height = bandscopeCanvas.height;
@@ -596,13 +596,6 @@ function drawDbAxis(ctx, width, height, [minDb, maxDb]) {
     // Draw background for the axis area
     ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
     ctx.fillRect(0, 0, dBAxisCanvas.width, height);
-
-    // Draw vertical line to separate axis from the plot
-    ctx.strokeStyle = 'rgba(200, 200, 200, 0.5)';
-    ctx.beginPath();
-    ctx.moveTo(dBAxisCanvas.width, 0);
-    ctx.lineTo(dBAxisCanvas.width, height);
-    ctx.stroke();
 
     // Draw dB marks and labels
     ctx.fillStyle = 'white';

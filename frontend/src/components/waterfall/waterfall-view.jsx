@@ -936,7 +936,7 @@ const MainWaterfallDisplay = React.memo(() => {
                             maxWidth: bandscopeAxisYWidth,
                             height: '1000px',
                             position: 'relative',
-                            borderRight: '1px solid rgba(255, 255, 255, 0.2)',
+                            //borderRight: '1px solid rgba(255, 255, 255, 0.2)',
                             display: showLeftSideWaterFallAccessories ? 'inherit' : 'none',
                             flexDirection: 'column',
                             flexShrink: 0,
@@ -954,6 +954,7 @@ const MainWaterfallDisplay = React.memo(() => {
                                 transform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 perspective: '1000px',
+                                borderRight: '1px solid #535353',
                             }}
                         />
                         <canvas
