@@ -1,4 +1,3 @@
-
 # Copyright (c) 2024 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -71,7 +70,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         fft_window = config.get('fft_window', 'hanning')
 
         # FFT averaging configuration
-        fft_averaging = config.get('fft_averaging', 8)
+        fft_averaging = config.get('fft_averaging', 6)
 
         # FFT overlap
         fft_overlap = config.get('fft_overlap', False)
@@ -80,22 +79,21 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         driver = config.get('driver', '')
         serial_number = config.get('serial_number', '')
 
-        if connection_type == 'soapysdrremote':
-            # Connect to remote SoapySDR server
-            hostname = config.get('hostname', '127.0.0.1')
-            port = config.get('port', 55132)
+        # Connect to remote SoapySDR server
+        hostname = config.get('hostname', '127.0.0.1')
+        port = config.get('port', 55132)
 
-            # The format should be 'remote:host=HOSTNAME:port=PORT,driver=DRIVER,serial=SERIAL'
-            device_args = f"remote=tcp://{hostname}:{port},driver=remote,remote:driver={driver}"
+        # The format should be 'remote:host=HOSTNAME:port=PORT,driver=DRIVER,serial=SERIAL'
+        device_args = f"remote=tcp://{hostname}:{port},driver=remote,remote:driver={driver}"
 
-            # Add a serial number if provided
-            if serial_number:
-                device_args += f",serial={serial_number}"
-        else:
-            # Local device - use driver and serial directly
-            device_args = f"driver={driver}"
-            if serial_number:
-                device_args += f",serial={serial_number}"
+        # Add a serial number if provided
+        if serial_number:
+            device_args += f",serial={serial_number}"
+
+        # Add verified SoapyRemote parameters
+        device_args += ",remote:timeout=1000000"  # 1 seconds timeout (in microseconds)
+        device_args += ",remote:mtu=8192"         # 8KB MTU (reasonable for network)
+        device_args += ",remote:window=65536"     # 64KB socket buffer
 
         logger.info(f"Connecting to SoapySDR device with args: {device_args}")
 
@@ -209,6 +207,8 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
             'message': None,
             'timestamp': time.time()
         })
+
+        frame_counter = 0
 
         # Main processing loop
         while not stop_event.is_set():
@@ -331,7 +331,6 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                     })
 
             try:
-
                 # Use the MTU value to determine read size if available, otherwise use a sensible default
                 read_size = mtu if mtu > 0 else 1024
                 logger.debug(f"Using read_size of {read_size} samples (MTU: {mtu})")
@@ -343,10 +342,15 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 samples_buffer = np.zeros(num_samples, dtype=np.complex64)
                 buffer_position = 0
 
-                # Loop until we have enough samples or encounter an error
+                # Add frame counter for debugging
+                frame_counter += 1
+
+                # Loop until we have enough samples or encounter too many errors
+                read_count = 0
                 while buffer_position < num_samples and not stop_event.is_set():
                     # Read samples from the device
-                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=1000000)
+                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=1000)
+                    read_count += 1
 
                     if sr.ret > 0:
                         # We got samples - measure how many we actually received
@@ -368,10 +372,24 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                         if buffer_position >= num_samples:
                             break
 
+                    elif sr.ret == 0:
+                        # Timeout - log this
+                        logger.warning(f"Frame {frame_counter}: readStream timeout (sr.ret=0)")
+
                     else:
-                        # Error or timeout
-                        logger.warning(f"readStream returned {sr.ret} - this may indicate an error")
-                        #time.sleep(0.1)
+                        # Error - should never happen based on your observation
+                        logger.error(f"Frame {frame_counter}: readStream error (sr.ret={sr.ret})")
+
+                        # Clear the buffer to prevent contamination
+                        buffer.fill(0)
+                        samples_buffer.fill(0)
+
+                        # Reset FFT averager to clear any stale data
+                        fft_averager.reset()
+
+                        # Reset to skip this frame
+                        buffer_position = 0
+                        break
 
                 # Check if we have enough samples for processing
                 if buffer_position < num_samples:

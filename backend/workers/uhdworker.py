@@ -70,7 +70,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         fft_window = config.get('fft_window', 'hanning')
 
         # FFT averaging configuration
-        fft_averaging = config.get('fft_averaging', 12)
+        fft_averaging = config.get('fft_averaging', 16)
 
         # Sample accumulation mode: 'accumulate', 'zero-pad', or 'drop'
         insufficient_samples_mode = config.get('insufficient_samples_mode', 'drop')
@@ -434,6 +434,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
                 # Add FFT to averager and send only when ready
                 averaged_fft = fft_averager.add_fft(fft_result)
+
                 if averaged_fft is not None:
                     # Send the averaged result back to the main process
                     data_queue.put({
