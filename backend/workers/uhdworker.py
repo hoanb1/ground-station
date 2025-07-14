@@ -503,9 +503,9 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
 def calculate_samples_per_scan(sample_rate, fft_size):
     if fft_size is None:
-        fft_size = 8192
+        fft_size = 16384
 
-    if fft_size <= 2048:
-        fft_size = 2048
+    if fft_size <= 16384:
+        fft_size = 16384
 
     return fft_size
