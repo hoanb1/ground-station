@@ -461,6 +461,10 @@ class SatelliteTracker:
                     'value': {'rotator_state': 'disconnected'}
                 })
 
+            self.rotator_data['connected'] = False
+            self.rotator_data['tracking'] = False
+            self.rotator_data['stopped'] = True
+
             self.queue_out.put({
                 'event': 'satellite-tracking',
                 'data': {
@@ -478,6 +482,10 @@ class SatelliteTracker:
                     'name': 'satellite-tracking',
                     'value': {'rig_state': 'disconnected'}
                 })
+
+            self.rig_data['connected'] = False
+            self.rig_data['tracking'] = False
+            self.rig_data['stopped'] = True
 
             self.queue_out.put({
                 'event': 'satellite-tracking',
