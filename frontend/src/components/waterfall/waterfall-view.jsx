@@ -446,16 +446,18 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-error', (error) => {
-            //console.error(`sdr-error`, error);
+            console.error(`sdr-error`, error);
+            
+            
 
             cancelAnimations();
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
             //dispatch(setIsStreaming(false));
             dispatch(setStartStreamingLoading(false));
-            enqueueSnackbar(`Error occurred while streaming from SDR: ${error.message}`, {
-                 variant: 'error'
-            });
+            // enqueueSnackbar(`Error occurred while streaming from SDR: ${error.message}`, {
+            //      variant: 'error'
+            // });
         });
 
         socket.on('sdr-config', (data) => {
@@ -1137,7 +1139,8 @@ const MainWaterfallDisplay = React.memo(() => {
                     <DialogContentText
                         id="error-dialog-description"
                         sx={{
-                            color: '#d32f2f'
+                            color: '#d32f2f',
+                            whiteSpace: 'pre-wrap',
                         }}
                     >
                         {errorMessage}
