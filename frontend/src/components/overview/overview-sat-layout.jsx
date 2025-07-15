@@ -277,9 +277,9 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         <StyledIslandParentNoScrollbar key="passes">
             <NextPassesGroupIsland/>
         </StyledIslandParentNoScrollbar>,
-        <StyledIslandParentNoScrollbar key="weather">
-            <WeatherDisplay latitude={location.lat} longitude={location.lon}/>
-        </StyledIslandParentNoScrollbar>,
+        // <StyledIslandParentNoScrollbar key="weather">
+        //     <WeatherDisplay latitude={location.lat} longitude={location.lon}/>
+        // </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="sat-info">
             <OverviewSatelliteInfoCard/>
         </StyledIslandParentNoScrollbar>,
