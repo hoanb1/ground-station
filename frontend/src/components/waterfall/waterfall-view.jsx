@@ -436,7 +436,6 @@ const MainWaterfallDisplay = React.memo(() => {
 
         socket.on('sdr-config-error', (error) => {
             //console.error(`sdr-config-error`, error);
-
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
             dispatch(setStartStreamingLoading(false));
@@ -446,10 +445,7 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-error', (error) => {
-            console.error(`sdr-error`, error);
-            
-            
-
+            //console.error(`sdr-error`, error);
             cancelAnimations();
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
