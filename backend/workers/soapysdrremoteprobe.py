@@ -61,6 +61,7 @@ def probe_remote_soapy_sdr(sdr_details):
     antennas = {'rx': [], 'tx': []}
     frequency_ranges = {}
     clock_info = {}
+    temp_info = {}
 
     reply['log'].append(f"INFO: Connecting to SoapySDR device with details: {sdr_details}")
 
@@ -78,7 +79,9 @@ def probe_remote_soapy_sdr(sdr_details):
         if serial_number:
             device_args += f",serial={serial_number}"
 
-        device_args += ",clock_source=external"
+        #device_args += ",clock_source=external"
+
+        reply['log'].append(f"INFO: Device args: {device_args}")
 
         # Create the device instance
         sdr = SoapySDR.Device(device_args)
@@ -184,6 +187,15 @@ def probe_remote_soapy_sdr(sdr_details):
         except Exception as e:
             reply['log'].append(f"WARNING: Could not get frequency range information: {e}")
 
+        # Get a list of available sensors
+        sensors = []
+        try:
+            sensors = sdr.listSensors()
+            clock_info['available_sensors'] = sensors
+            reply['log'].append(f"INFO: Available sensors: {sensors}")
+        except Exception as e:
+            reply['log'].append(f"INFO: Could not list sensors: {e}")
+
         # Check reference clock status and source
         try:
             # Initialize clock_info dictionary
@@ -194,27 +206,19 @@ def probe_remote_soapy_sdr(sdr_details):
                 'available_settings': {}
             }
 
-            # Get list of available sensors
-            try:
-                sensors = sdr.listSensors()
-                clock_info['available_sensors'] = sensors
-                reply['log'].append(f"INFO: Available sensors: {sensors}")
-            except Exception as e:
-                reply['log'].append(f"INFO: Could not list sensors: {e}")
-
             # Check if the device has a ref_locked sensor
-            if sdr.hasSensor("ref_locked"):
+            if "ref_locked" in sensors:
                 try:
-                    ref_locked = sdr.getSensorValue("ref_locked")
+                    ref_locked = sdr.readSensor("ref_locked")
                     clock_info['ref_locked'] = ref_locked
                     reply['log'].append(f"INFO: External reference clock locked: {ref_locked}")
                 except Exception as e:
                     reply['log'].append(f"WARNING: Error reading ref_locked sensor: {e}")
 
             # Check if the device has a clock_source sensor
-            if sdr.hasSensor("clock_source"):
+            if "clock_source" in sensors:
                 try:
-                    clock_source = sdr.getSensorValue("clock_source")
+                    clock_source = sdr.readSensor("clock_source")
                     clock_info['clock_source'] = clock_source
                     reply['log'].append(f"INFO: Current clock source: {clock_source}")
                 except Exception as e:
@@ -245,6 +249,28 @@ def probe_remote_soapy_sdr(sdr_details):
         except Exception as e:
             reply['log'].append(f"WARNING: Could not get reference clock information: {e}")
 
+        # Probe for temperature info
+        try:
+            # Check if the device has a RFIC_TEMP sensor
+            if "RFIC_TEMP" in sensors:
+                try:
+                    rfic_temp = sdr.readSensor("RFIC_TEMP")
+                    temp_info['rfic_temp'] = rfic_temp
+                    reply['log'].append(f"INFO: RFIC temperature: {rfic_temp}")
+                except Exception as e:
+                    reply['log'].append(f"WARNING: Error reading RFIC_TEMP sensor: {e}")
+            
+            # Check if the device has a lms7_temp sensor (for LimeSDR devices)
+            if "lms7_temp" in sensors:
+                try:
+                    lms7_temp = sdr.readSensor("lms7_temp")
+                    temp_info['lms7_temp'] = lms7_temp
+                    reply['log'].append(f"INFO: LMS7 temperature: {lms7_temp}")
+                except Exception as e:
+                    reply['log'].append(f"WARNING: Error reading lms7_temp sensor: {e}")
+        except Exception as e:
+            reply['log'].append(f"WARNING: Could not get temperature information: {e}")
+
         reply['success'] = True
 
     except Exception as e:
@@ -261,7 +287,8 @@ def probe_remote_soapy_sdr(sdr_details):
             'has_soapy_agc': has_agc,
             'antennas': antennas,
             'frequency_ranges': frequency_ranges,
-            'clock_info': clock_info
+            'clock_info': clock_info,
+            'temperature': temp_info,
         }
 
     return reply

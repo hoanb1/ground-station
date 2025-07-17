@@ -15,6 +15,8 @@
 
 
 import logging
+import pprint
+
 from crud import crud
 import asyncio
 import json
@@ -225,6 +227,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             sdr_params = sdr_params_reply['data']
 
             logger.debug(f'Got SDR parameters from SoapySDR server: {sdr_params}')
+            logger.info(sdr_params_reply['log'])
 
             # Common window functions
             window_function_names = list(window_functions.keys())
@@ -239,6 +242,9 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 'fft_window_values': window_function_names,
                 'has_soapy_agc': sdr_params['has_soapy_agc'],
                 'antennas': sdr_params['antennas'],
+                'frequency_ranges': sdr_params.get('frequency_ranges', {}),
+                'clock_info': sdr_params.get('clock_info', {}),
+                'temperature': sdr_params.get('temperature', {}),
             }
 
             # Cache the parameters
@@ -292,6 +298,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 'antennas': sdr_params['antennas'],
                 'frequency_ranges': sdr_params.get('frequency_ranges', {}),
                 'clock_info': sdr_params.get('clock_info', {}),
+                'temperature': sdr_params.get('temperature', {}),
             }
 
             # Cache the parameters
@@ -314,5 +321,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
 
     finally:
         pass
+
+    pprint.pprint(reply['data'])
 
     return reply
