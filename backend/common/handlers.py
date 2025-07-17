@@ -534,6 +534,14 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             )
 
             reply = {'success': True, 'data': {}}
+        
+        elif cmd == "delete-satellite":
+            logger.debug(f'Delete satellite, data: {data}')
+            delete_reply = await crud.delete_satellite(dbsession, data)
+
+            satellites = await crud.fetch_satellites(dbsession, None)
+            reply = {'success': (satellites['success'] & delete_reply['success']),
+                     'data': satellites.get('data', [])}
 
         else:
             logger.error(f'Unknown command: {cmd}')

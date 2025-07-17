@@ -35,6 +35,25 @@ const defaultSatellite = {
     updated: null,
 };
 
+export const deleteSatellite = createAsyncThunk(
+    'satellites/deleteSatellite',
+    async ({socket, noradId}, {rejectWithValue}) => {
+        try {
+            return await new Promise((resolve, reject) => {
+                socket.emit('data_submission', 'delete-satellite', noradId, (response) => {
+                    if (response.success) {
+                        resolve(response.data);
+                    } else {
+                        reject(new Error('Failed to delete satellite'));
+                    }
+                });
+            });
+        } catch (error) {
+            return rejectWithValue(error.message);
+        }
+    }
+);
+
 export const fetchSatellite = createAsyncThunk(
     'satellites/fetchSatellite',
     async ({ socket, noradId }, { rejectWithValue }) => {
@@ -280,6 +299,20 @@ const satellitesSlice = createSlice({
                 state.clickedSatellite = {...action.payload['details'], transmitters: action.payload['transmitters']};
             })
             .addCase(fetchSatellite.rejected, (state, action) => {
+                state.status = 'failed';
+                state.loading = false;
+                state.error = action.error?.message;
+            })
+            .addCase(deleteSatellite.pending, (state) => {
+                state.status = 'loading';
+                state.loading = true;
+                state.error = null;
+            })
+            .addCase(deleteSatellite.fulfilled, (state, action) => {
+                state.status = 'succeeded';
+                state.loading = false;
+            })
+            .addCase(deleteSatellite.rejected, (state, action) => {
                 state.status = 'failed';
                 state.loading = false;
                 state.error = action.error?.message;

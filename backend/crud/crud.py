@@ -1037,20 +1037,31 @@ async def edit_satellite(session: AsyncSession, satellite_id: uuid.UUID, **kwarg
         return {"success": False, "error": str(e)}
 
 
-async def delete_satellite(session: AsyncSession, satellite_id: uuid.UUID) -> dict:
+async def delete_satellite(session: AsyncSession, satellite_id: Union[uuid.UUID, str]) -> dict:
     """
     Delete a satellite record by its UUID.
+    First deletes all associated transmitters due to foreign key constraint.
     """
     try:
-        stmt = (
+        if isinstance(satellite_id, str):
+            satellite_id = uuid.UUID(satellite_id)
+
+        # First, delete all transmitters associated with this satellite
+        transmitters_stmt = delete(Transmitters).where(Transmitters.norad_cat_id == satellite_id)
+        await session.execute(transmitters_stmt)
+
+        # Then delete the satellite
+        satellite_stmt = (
             delete(Satellites)
             .where(Satellites.norad_id == satellite_id)
             .returning(Satellites)
         )
-        result = await session.execute(stmt)
+        result = await session.execute(satellite_stmt)
         deleted = result.scalar_one_or_none()
+
         if not deleted:
             return {"success": False, "error": f"Satellite with id {satellite_id} not found."}
+
         await session.commit()
         return {"success": True, "data": None, "error": None}
 

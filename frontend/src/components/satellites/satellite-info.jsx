@@ -34,7 +34,8 @@ import {
     setClickedSatellite,
     setClickedSatelliteTransmitters,
     fetchSatellites,
-    fetchSatellite
+    fetchSatellite,
+    deleteSatellite
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import TransmitterModal, {DeleteConfirmDialog} from "./transmitter-modal.jsx";
@@ -113,6 +114,7 @@ const SatelliteInfo = () => {
     const {socket} = useSocket();
     const [imageError, setImageError] = useState(false);
     const [satellitePosition, setSatellitePosition] = useState([0, 0]); // Default position
+    const [deleteSatelliteConfirmOpen, setDeleteSatelliteConfirmOpen] = useState(false);
 
     // Get satellite list, clickedSatellite and loading state from Redux store
     const { satellites, clickedSatellite, loading, error } = useSelector(state => state.satellites);
@@ -390,13 +392,58 @@ const SatelliteInfo = () => {
                 p: 3,
                 backgroundColor: '#262626',
             }}>
-            <Box sx={{ mb: 2 }}>
-                <IconButton onClick={handleBackClick} sx={{ mr: 2 }}>
-                    <ArrowBackIcon />
-                </IconButton>
-                <Typography variant="h6" display="inline">
-                    {clickedSatellite.name} - Satellite Information
-                </Typography>
+            <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
+                <Box>
+                    <IconButton onClick={handleBackClick} sx={{mr: 2}}>
+                        <ArrowBackIcon/>
+                    </IconButton>
+                    <Typography variant="h6" display="inline">
+                        {clickedSatellite.name} - Satellite Information
+                    </Typography>
+                </Box>
+
+                <Box>
+                    <Button
+                        variant="contained"
+                        color="error"
+                        onClick={() => setDeleteSatelliteConfirmOpen(true)}
+                    >
+                        Delete Satellite
+                    </Button>
+                    <Dialog open={deleteSatelliteConfirmOpen} onClose={() => setDeleteSatelliteConfirmOpen(false)}>
+                        <DialogTitle>Delete Satellite</DialogTitle>
+                        <DialogContent>
+                            Are you sure you want to delete this satellite? This action cannot be undone.
+                        </DialogContent>
+                        <DialogActions>
+                            <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>Cancel</Button>
+                            <Button
+                                variant="contained"
+                                color="error"
+                                onClick={async () => {
+                                    try {
+                                        await dispatch(deleteSatellite({
+                                            socket,
+                                            noradId: clickedSatellite.norad_id
+                                        })).unwrap();
+                                        navigate('/satellites/satellites');
+                                        enqueueSnackbar('Satellite deleted successfully', {
+                                            variant: 'success'
+                                        });
+                                    } catch (error) {
+                                        console.error('Failed to delete satellite:', error);
+                                        enqueueSnackbar(`Failed to delete satellite: ${error}`, {
+                                            variant: 'error'
+                                        });
+                                    }
+                                    setDeleteSatelliteConfirmOpen(false);
+                                }}
+                            >
+                                Delete
+                            </Button>
+                        </DialogActions>
+                    </Dialog>
+                </Box>
             </Box>
 
             {clickedSatellite.id !== null ? (
@@ -411,7 +458,7 @@ const SatelliteInfo = () => {
                         }}
                     >
                         <Grid
-                            size={{ xs: 12, lg: 4 }}
+                            size={{xs: 12, lg: 4}}
                             sx={{
                                 backgroundColor: '#1e1e1e',
                                 borderRadius: '8px',
