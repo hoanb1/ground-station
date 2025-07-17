@@ -22,6 +22,8 @@ from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete, String
 from common.common import *
 from datetime import datetime, UTC
+
+from common.utils import convert_strings_to_uuids
 from db.models import Users
 from db.models import Locations, SatelliteTrackingState, Cameras, SDRs
 from db.models import Preferences
@@ -1425,9 +1427,7 @@ async def add_satellite_group(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "data": None, "error": str(e)}
 
 
-async def edit_satellite_group(
-        session: AsyncSession, satellite_group_id: str, data: dict
-) -> dict:
+async def edit_satellite_group(session: AsyncSession, satellite_group_id: str, data: dict) -> dict:
     """
     Edit an existing satellite group record.
     """
@@ -1565,7 +1565,8 @@ async def get_tracking_state(session: AsyncSession, name: str) -> dict:
     Returns a dictionary with the data or an error message if not found.
     """
 
-    reply = {"success": None, "data": None, "error": None}
+    reply: dict[str, object] = {"success": None, "data": None, "error": None}
+    
     try:
         assert name is not None, "name is required when fetching tracking state"
 
