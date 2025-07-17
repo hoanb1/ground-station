@@ -22,8 +22,6 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32, SOAPY_SDR_TX
 import yaml
 import os
 
-from termios import TIOCM_RTS
-
 # Load logger configuration
 with open(os.path.join(os.path.dirname(__file__), '../logconfig.yaml'), 'r') as f:
     config = yaml.safe_load(f)
@@ -166,7 +164,7 @@ def probe_remote_soapy_sdr(sdr_details):
 
         # Get frequency range information
         try:
-            # Get frequency range for RX (receiving)
+            # Get the frequency range for RX (receiving)
             rx_freq_ranges = sdr.getFrequencyRange(SOAPY_SDR_RX, channel)
             min_freq_rx = min([r.minimum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
             max_freq_rx = max([r.maximum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
