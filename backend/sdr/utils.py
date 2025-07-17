@@ -91,6 +91,7 @@ async def get_local_soapy_sdr_devices():
     reply: dict[str, bool | dict | list | str | None] = {'success': None, 'data': None, 'error': None}
 
     try:
+        logger.info("Probing local SoapySDR devices...")
         # Call probe_available_usb_sdrs using a subprocess instead of multiprocessing.Pool
         probe_process = await asyncio.create_subprocess_exec(
             'python3', '-c',
@@ -124,8 +125,8 @@ async def get_local_soapy_sdr_devices():
         reply['success'] = False
         reply['error'] = str(e)
 
+    logger.info("Done probing local SoapySDR devices")
     return reply
-
 
 
 async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):

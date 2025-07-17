@@ -33,7 +33,7 @@ import {
     TextField,
     Typography
 } from "@mui/material";
-import {useEffect, useState} from "react";
+import {useEffect, useRef, useState} from "react";
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
@@ -138,10 +138,11 @@ const sdrTypeFields = {
 
 
 export default function SDRsPage() {
-    const {socket} = useSocket();
+    const { socket } = useSocket();
     const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
+    const hasInitialized = useRef(false);
 
     const {
         loading,
@@ -153,13 +154,19 @@ export default function SDRsPage() {
         formValues,
         soapyServers,
         selectedSdrDevice,
-        localSoapyDevices
+        localSoapyDevices,
+        loadingLocalSDRs,
     } = useSelector((state) => state.sdrs);
 
     useEffect(() => {
-        dispatch(fetchSoapySDRServers({socket}));
-        dispatch(fetchLocalSoapySDRDevices({socket}));
-    }, []);
+        if (!hasInitialized.current) {
+            hasInitialized.current = true;
+            dispatch(fetchSoapySDRServers({ socket }));
+            dispatch(fetchLocalSoapySDRDevices({ socket }));
+        }
+    }, [dispatch, socket]);
+
+
     const columns = [
         {
             field: 'name', headerName: 'Name', flex: 1, minWidth: 150
@@ -251,15 +258,6 @@ export default function SDRsPage() {
     const getFieldValue = (fieldName) => {
         const selectedType = formValues.type;
 
-        // // Special case for frequency fields to use frequency_range values
-        // if (fieldName === 'frequency_max' && formValues['frequency_range']?.['max'] !== undefined) {
-        //     return formValues['frequency_range']['max'];
-        // }
-        //
-        // if (fieldName === 'frequency_min' && formValues['frequency_range']?.['min'] !== undefined) {
-        //     return formValues['frequency_range']['min'];
-        // }
-
         // If we have a value in formValues, use it
         if (formValues[fieldName] !== undefined) {
             return formValues[fieldName];
@@ -310,8 +308,43 @@ export default function SDRsPage() {
 
             // Add a dropdown to select local Soapy USB devices
             if (selectedType === 'soapysdrlocal') {
-
-                if (localSoapyDevices && localSoapyDevices.length > 0) {
+                if (loadingLocalSDRs) {
+                    fields.push(
+                        <Alert
+                            key="loading-local-devices"
+                            severity="info"
+                            sx={{
+                                mt: 1,
+                                display: 'flex',
+                                alignItems: 'center',
+                                '& .MuiAlert-message': {
+                                    display: 'flex',
+                                    alignItems: 'center',
+                                    gap: 1
+                                }
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    display: 'inline-block',
+                                    width: '16px',
+                                    height: '16px',
+                                    border: '2px solid #e3f2fd',
+                                    borderTop: '2px solid #1976d2',
+                                    borderRadius: '50%',
+                                    animation: 'spin 1s linear infinite',
+                                    '@keyframes spin': {
+                                        '0%': { transform: 'rotate(0deg)' },
+                                        '100%': { transform: 'rotate(360deg)' }
+                                    }
+                                }}
+                            />
+                            <Typography variant="body2" component="span">
+                                Probing for local SoapySDR devices...
+                            </Typography>
+                        </Alert>
+                    );
+                } else if (localSoapyDevices && localSoapyDevices.length > 0) {
                     fields.push(
                         <FormControl key="local-sdr-device-select" fullWidth variant="filled">
                             <InputLabel id="local-sdr-device-label">Local SDR Device</InputLabel>
@@ -357,8 +390,6 @@ export default function SDRsPage() {
                     );
                 }
             }
-
-
 
             // Host field - only show for types that don't exclude it
             if (!config.excludeFields.includes('host')) {

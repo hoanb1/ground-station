@@ -144,6 +144,7 @@ const sdrsSlice = createSlice({
         openAddDialog: false,
         selected: [],
         loading: false,
+        loadingLocalSDRs: false,
         pageSize: 10,
         formValues: defaultSDR,
         soapyServers: {},
@@ -191,66 +192,59 @@ const sdrsSlice = createSlice({
         setSelectedSdrDevice: (state, action) => {
             state.selectedSdrDevice = action.payload;
         },
+        setLoadingLocalSDRs: (state, action) => {
+            state.loadingLocalSDRs = action.payload;
+        },
     },
     extraReducers: (builder) => {
         builder
-            // When the thunk is pending, mark status/loading states
             .addCase(fetchSDRs.pending, (state) => {
                 state.status = 'loading';
                 state.loading = true;
                 state.error = null;
             })
-            // When the thunk completes successfully
             .addCase(fetchSDRs.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.loading = false;
                 state.sdrs = action.payload; // the data returned by the thunk
             })
-            // If the thunk fails
             .addCase(fetchSDRs.rejected, (state, action) => {
                 state.status = 'failed';
                 state.loading = false;
                 state.error = action.payload;
             })
-            // Pending: set loading, clear errors as needed
             .addCase(deleteSDRs.pending, (state) => {
                 state.loading = true;
                 state.error = null;
                 state.status = 'loading';
             })
-            // Fulfilled: update the state with the new data from the server
             .addCase(deleteSDRs.fulfilled, (state, action) => {
                 state.loading = false;
                 state.status = 'succeeded';
                 state.sdrs = action.payload; // Updated SDR list from server
                 state.openDeleteConfirm = false;
             })
-            // Rejected: store the error
             .addCase(deleteSDRs.rejected, (state, action) => {
                 state.loading = false;
                 state.status = 'failed';
                 state.error = action.payload;
             })
-            // Pending: set loading state and clear errors as needed
             .addCase(submitOrEditSDR.pending, (state) => {
                 state.loading = true;
                 state.error = null;
                 state.status = 'loading';
             })
-            // Fulfilled: update the state and reset formValues
             .addCase(submitOrEditSDR.fulfilled, (state, action) => {
                 state.loading = false;
                 state.status = 'succeeded';
-                state.sdrs = action.payload; // Add a new SDR or update existing
-                state.formValues = defaultSDR; // Reset the form values
+                state.sdrs = action.payload;
+                state.formValues = defaultSDR;
             })
-            // Rejected: store the error message
             .addCase(submitOrEditSDR.rejected, (state, action) => {
                 state.loading = false;
                 state.status = 'failed';
                 state.error = action.payload;
             })
-            // Handle fetchSoapySDRServers states
             .addCase(fetchSoapySDRServers.pending, (state) => {
                 state.loading = true;
                 state.error = null;
@@ -266,19 +260,18 @@ const sdrsSlice = createSlice({
                 state.status = 'failed';
                 state.error = action.payload;
             })
-            // Handle fetchLocalSoapySDRDevices states
             .addCase(fetchLocalSoapySDRDevices.pending, (state) => {
-                state.loading = true;
+                state.loadingLocalSDRs = true;
                 state.error = null;
                 state.status = 'loading';
             })
             .addCase(fetchLocalSoapySDRDevices.fulfilled, (state, action) => {
-                state.loading = false;
+                state.loadingLocalSDRs = false;
                 state.status = 'succeeded';
                 state.localSoapyDevices = action.payload;
             })
             .addCase(fetchLocalSoapySDRDevices.rejected, (state, action) => {
-                state.loading = false;
+                state.loadingLocalSDRs = false;
                 state.status = 'failed';
                 state.error = action.payload;
             })
