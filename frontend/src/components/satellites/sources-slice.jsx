@@ -23,7 +23,6 @@ import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 const defaultTLESource = {
     id: null,
     name: '',
-    identifier: '',
     url: '',
     format: '',
     // Add any TLE source-specific fields here
@@ -56,7 +55,7 @@ export const deleteTLESources = createAsyncThunk(
             return await new Promise((resolve, reject) => {
                 socket.emit('data_submission', 'delete-tle-sources', selectedIds, (response) => {
                     if (response.success) {
-                        resolve(response.data);
+                        resolve({data: response.data, message: response.message, summary: response.summary});
                     } else {
                         reject(new Error('Failed to delete TLE sources'));
                     }
@@ -138,7 +137,6 @@ const sourcesSlice = createSlice({
         },
     },
     extraReducers: (builder) => {
-        // Handle AsyncThunk statuses
         builder
             .addCase(fetchTLESources.pending, (state) => {
                 state.status = 'loading';
@@ -148,7 +146,7 @@ const sourcesSlice = createSlice({
             .addCase(fetchTLESources.fulfilled, (state, action) => {
                 state.status = 'succeeded';
                 state.loading = false;
-                state.tleSources = action.payload; // <--- server data
+                state.tleSources = action.payload;
             })
             .addCase(fetchTLESources.rejected, (state, action) => {
                 state.status = 'failed';
@@ -156,12 +154,10 @@ const sourcesSlice = createSlice({
                 state.error = action.error?.message;
             })
             .addCase(deleteTLESources.pending, (state) => {
-                // Optional: set status/loading for deletion
                 state.loading = true;
             })
             .addCase(deleteTLESources.fulfilled, (state, action) => {
-                // Example: if the server returns an updated list
-                state.tleSources = action.payload;
+                state.tleSources = action.payload.data;
                 state.openDeleteConfirm = false;
                 state.loading = false;
             })

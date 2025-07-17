@@ -276,7 +276,8 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
 
             tle_sources = await crud.fetch_satellite_tle_source(dbsession)
             reply = {'success': (tle_sources['success'] & delete_reply['success']),
-                     'data': tle_sources.get('data', [])}
+                     'data': tle_sources.get('data', []), 'summary': delete_reply.get('deletion_summary', None),
+                     'message': delete_reply.get('data', None)}
 
         elif cmd == "edit-tle-source":
             logger.debug(f'Editing TLE source, data: {data}')

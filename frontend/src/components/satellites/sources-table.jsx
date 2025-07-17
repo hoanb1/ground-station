@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -43,7 +44,6 @@ import SynchronizeTLEsCard from "./sychronize-card.jsx";
 
 const columns = [
     {field: 'name', headerName: 'Name', width: 150},
-    {field: 'identifier', headerName: 'ID', width: 150},
     {field: 'url', headerName: 'URL', flex: 2},
     {field: 'format', headerName: 'Format', width: 90},
     {
@@ -78,7 +78,6 @@ export default function SourcesTable() {
     const {tleSources, loading, formValues, openDeleteConfirm, openAddDialog, selected} = useSelector((state) => state.tleSources);
     const defaultFormValues = {
         id: null,
-        identifier: '',
         name: '',
         url: '',
         format: '3le',
@@ -107,8 +106,8 @@ export default function SourcesTable() {
     const handleDeleteClick = () => {
         dispatch(deleteTLESources({socket, selectedIds: selected}))
             .unwrap()
-            .then(() => {
-                enqueueSnackbar("TLE sources deleted successfully", {
+            .then((data) => {
+                enqueueSnackbar(data.message, {
                     variant: 'success',
                     autoHideDuration: 4000,
                 })
@@ -222,14 +221,6 @@ export default function SourcesTable() {
                                 name="name"
                                 variant={"filled"}
                                 value={formValues.name}
-                                onChange={handleInputChange}
-                                fullWidth
-                            />
-                            <TextField
-                                label="ID"
-                                name="identifier"
-                                variant={"filled"}
-                                value={formValues.identifier}
                                 onChange={handleInputChange}
                                 fullWidth
                             />
