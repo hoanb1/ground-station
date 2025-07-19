@@ -33,15 +33,18 @@ import {
 import VFOMarkersContainer from './vfo-container.jsx';
 import {v4 as uuidv4} from 'uuid';
 import TuneIcon from '@mui/icons-material/Tune';
+import FrequencyBandOverlay from './waterfall-frequency-band.jsx';
+
 
 // Inside your WaterfallAndBandscope component, add:
 const WaterfallAndBandscope = forwardRef(({
-                                              bandscopeCanvasRef,
-                                              waterFallCanvasRef,
-                                              centerFrequency,
-                                              sampleRate,
-                                              waterFallWindowHeight,
-                                          }, ref) => {
+    bandscopeCanvasRef,
+    waterFallCanvasRef,
+    centerFrequency,
+    sampleRate,
+    waterFallWindowHeight,
+    frequencyBands = [], // Add this new prop for frequency bands
+}, ref) => {
 
 
     const containerRef = useRef(null);
@@ -154,11 +157,6 @@ const WaterfallAndBandscope = forwardRef(({
         };
 
     }, [handleResize]);
-
-    // Calculate the visual width including CSS transforms
-    function getScaledWidth(element, scaleX) {
-        return element.getBoundingClientRect().width;
-    }
 
     // Apply a transform directly to a DOM element
     const applyTransform = useCallback(() => {
@@ -453,6 +451,17 @@ const WaterfallAndBandscope = forwardRef(({
                         containerWidth={visualContainerWidth}
                         height={bandScopeHeight}
                         onBookmarkClick={handleBookmarkClick}
+                    />
+                    {/* Add the new FrequencyBandOverlay component */}
+                    <FrequencyBandOverlay
+                        centerFrequency={centerFrequency}
+                        sampleRate={sampleRate}
+                        containerWidth={visualContainerWidth}
+                        height={bandScopeHeight}
+                        bands={frequencyBands}
+                        bandHeight={20}
+                        zoomScale={scaleRef.current}
+                        panOffset={positionXRef.current}
                     />
                 </Box>
 

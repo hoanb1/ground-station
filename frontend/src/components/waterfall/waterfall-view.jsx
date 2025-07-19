@@ -124,6 +124,30 @@ export const createExternalWorker = () => {
     }
 };
 
+const exampleFrequencyBands = [
+    {
+        startFrequency: 144000000,  // 144 MHz
+        endFrequency: 146000000,    // 146 MHz
+        name: '2m Ham',
+        color: 'rgba(255, 0, 0, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 430000000,  // 430 MHz
+        endFrequency: 440000000,    // 440 MHz
+        name: '70cm Ham',
+        color: 'rgba(0, 255, 0, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 88000000,   // 88 MHz
+        endFrequency: 108000000,    // 108 MHz
+        name: 'FM Broadcast',
+        color: 'rgba(0, 0, 255, 0.3)',
+        textColor: '#ffffff'
+    }
+];
+
 const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
@@ -998,8 +1022,8 @@ const MainWaterfallDisplay = React.memo(() => {
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
                         waterFallWindowHeight={dimensions['height']}
+                        frequencyBands={exampleFrequencyBands}
                     />
-
                     <Box
                         className={'right-vertical-bar'}
                         sx={{
