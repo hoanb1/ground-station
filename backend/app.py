@@ -24,6 +24,8 @@ import httpx
 import queue
 import threading
 import multiprocessing
+import threading
+import time
 from demodulators.webaudioproducer import WebAudioProducer
 from demodulators.webaudioconsumer import WebAudioConsumer
 from fastapi.responses import FileResponse
@@ -363,6 +365,33 @@ async def webrtc_websocket(websocket: WebSocket, client_id: str):
     finally:
         if client_id in active_connections:
             del active_connections[client_id]
+
+@sio.on('service_control')
+async def handle_service_control_requests(sid, cmd, data=None):
+    logger.info(f'Received service control event from: {sid}, with cmd: {cmd}, and data: {data}')
+
+    if cmd == 'restart_service':
+        logger.info(f"Service restart requested by client {sid} with IP {SESSIONS[sid]['REMOTE_ADDR']}")
+
+        def delayed_shutdown():
+            """Shutdown after a small delay to allow response to be sent"""
+            time.sleep(2)
+            logger.info("Service restart requested via Socket.IO - initiating shutdown...")
+            cleanup_everything()
+            logger.info("Forcing container exit for restart...")
+            os._exit(0)
+
+        # Start shutdown in background thread
+        shutdown_thread = threading.Thread(target=delayed_shutdown)
+        shutdown_thread.daemon = True
+        shutdown_thread.start()
+
+        return {
+            'status': 'success',
+            'message': 'Service restart initiated. All processes will be stopped and container will restart in 2 seconds.'
+        }
+
+    return {'status': 'error', 'message': 'Unknown service control command'}
 
 # the satimages directory
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")

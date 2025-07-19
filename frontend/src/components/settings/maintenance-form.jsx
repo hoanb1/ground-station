@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -21,16 +20,20 @@
 import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/overview-sat-layout.jsx";
 import {gridLayoutStoreName as targetGridLayoutName} from "../target/target-sat-layout.jsx";
 import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/waterfall-layout.jsx";
-
 import Paper from "@mui/material/Paper";
-import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress} from "@mui/material";
+import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions} from "@mui/material";
 import Grid from "@mui/material/Grid2";
 import React, {useState} from "react";
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
 import CancelIcon from '@mui/icons-material/Cancel';
 import InfoIcon from '@mui/icons-material/Info';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
+import { useSocket } from "../common/socket.jsx";
 
 const MaintenanceForm = () => {
+    const { socket } = useSocket();
+
     // Feature detection states
     const [workersSupported, setWorkersSupported] = useState(null);
     const [offscreenCanvasSupported, setOffscreenCanvasSupported] = useState(null);
@@ -50,6 +53,11 @@ const MaintenanceForm = () => {
     const [offscreenInWorkerResult, setOffscreenInWorkerResult] = useState(null);
     const [canvasTransferResult, setCanvasTransferResult] = useState(null);
 
+    // Service restart states
+    const [isRestarting, setIsRestarting] = useState(false);
+    const [restartMessage, setRestartMessage] = useState('');
+    const [confirmRestartOpen, setConfirmRestartOpen] = useState(false);
+
     // Maintenance functions
     const clearLayoutLocalStorage = () => {
         localStorage.setItem(overviewGridLayoutName, null);
@@ -65,6 +73,35 @@ const MaintenanceForm = () => {
     const clearReduxPersistentState = () => {
         localStorage.setItem('persist:root', null);
     }
+
+    // Service restart function
+    const handleServiceRestart = () => {
+        setConfirmRestartOpen(false);
+        setIsRestarting(true);
+        setRestartMessage('Initiating service restart...');
+
+        socket.emit("service_control", "restart_service", null, (response) => {
+            if (response.status === "success") {
+                setRestartMessage('Service is restarting. All connections will be terminated.');
+
+                // Start countdown
+                let countdown = 15;
+                const countdownInterval = setInterval(() => {
+                    setRestartMessage(`Service restarting... Page will reload in ${countdown} seconds`);
+                    countdown--;
+
+                    if (countdown <= 0) {
+                        clearInterval(countdownInterval);
+                        window.location.reload();
+                    }
+                }, 1000);
+            } else {
+                console.error('Service restart failed:', response.error);
+                setRestartMessage(`Failed to restart service: ${response.error}`);
+                setIsRestarting(false);
+            }
+        });
+    };
 
     // Test transfer support once
     React.useEffect(() => {
@@ -400,6 +437,49 @@ const MaintenanceForm = () => {
 
                 <Divider sx={{ my: 3 }} />
 
+                <Alert severity="warning">
+                    <AlertTitle>Service Control</AlertTitle>
+                    Restart or shutdown the entire Ground Station service
+                </Alert>
+
+                <Grid container spacing={2} columns={16} sx={{ mt: 1 }}>
+                    <Grid size={8}>
+                        Restart Ground Station Service
+                        <Typography variant="body2" color="text.secondary">
+                            Restarts all processes including SDR, tracker, and web server. All connections will be dropped.
+                        </Typography>
+                    </Grid>
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Button
+                            variant="contained"
+                            color="error"
+                            startIcon={isRestarting ? <CircularProgress size={20} color="inherit" /> : <RestartAltIcon />}
+                            onClick={() => setConfirmRestartOpen(true)}
+                            disabled={isRestarting}
+                        >
+                            {isRestarting ? 'Restarting...' : 'Restart Service'}
+                        </Button>
+                    </Grid>
+
+                    {restartMessage && (
+                        <>
+                            <Grid size={8}>
+                                Restart Status
+                            </Grid>
+                            <Grid size={8}>
+                                <Alert
+                                    severity={restartMessage.includes('Failed') ? "error" : "warning"}
+                                    sx={{ mt: 1 }}
+                                >
+                                    {restartMessage}
+                                </Alert>
+                            </Grid>
+                        </>
+                    )}
+                </Grid>
+
+                <Divider sx={{ my: 3 }} />
+
                 <Alert severity="info">
                     <AlertTitle>Browser Feature Compatibility</AlertTitle>
                     Test browser compatibility for advanced features used in the waterfall display
@@ -596,6 +676,33 @@ const MaintenanceForm = () => {
                         </Grid>
                     )}
                 </Grid>
+
+                {/* Confirmation Dialog */}
+                <Dialog open={confirmRestartOpen} onClose={() => setConfirmRestartOpen(false)}>
+                    <DialogTitle>Confirm Service Restart</DialogTitle>
+                    <DialogContent>
+                        <Typography paragraph>
+                            This will restart the entire Ground Station service, including:
+                        </Typography>
+                        <ul>
+                            <li>All SDR sessions will be terminated</li>
+                            <li>Audio streams will be stopped</li>
+                            <li>Tracker processes will be restarted</li>
+                            <li>All WebSocket connections will be dropped</li>
+                            <li>Hardware will be reinitialized</li>
+                            <li>System daemons (dbus, avahi) will restart</li>
+                        </ul>
+                        <Typography paragraph>
+                            Are you sure you want to proceed?
+                        </Typography>
+                    </DialogContent>
+                    <DialogActions>
+                        <Button onClick={() => setConfirmRestartOpen(false)}>Cancel</Button>
+                        <Button onClick={handleServiceRestart} color="error" variant="contained">
+                            Yes, Restart Service
+                        </Button>
+                    </DialogActions>
+                </Dialog>
             </Box>
         </Paper>
     );
