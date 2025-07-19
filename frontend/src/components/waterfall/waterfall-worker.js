@@ -332,8 +332,8 @@ function autoScaleDbRange() {
         return;
     }
 
-    let min = Math.min(...filteredValues);
-    let max = Math.max(...filteredValues);
+    let min = filteredValues.reduce((a, b) => Math.min(a, b), filteredValues[0]);
+    let max = filteredValues.reduce((a, b) => Math.max(a, b), filteredValues[0]);
 
     // Add some padding to the range
     min = Math.floor(min);
