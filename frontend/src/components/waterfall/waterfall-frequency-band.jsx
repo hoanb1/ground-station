@@ -66,9 +66,7 @@ const FrequencyBandOverlay = ({
         ctx.clearRect(0, 0, canvas.width, height);
 
         // Calculate the band drawing area (bottom of the canvas)
-        const bandY = height - bandHeight;
-
-        console.info('Drawing bands - canvas size:', canvas.width, 'x', canvas.height);
+        const bandY = height - bandHeight - 1;
 
         // Draw bands and labels in one pass
         bands.forEach((band) => {
@@ -84,13 +82,10 @@ const FrequencyBandOverlay = ({
             const endX = frequencyToPixel(endFrequency);
             const bandWidth = endX - startX;
 
-            console.info(`Band ${name}: startX=${startX}, endX=${endX}, bandWidth=${bandWidth}`);
-
             // Draw the colored band (always draw the full band - let CSS transform handle clipping)
             if (bandWidth > 0) {
                 ctx.fillStyle = color;
                 ctx.fillRect(startX, bandY, bandWidth, bandHeight);
-                console.info(`Drew band rectangle for ${name}`);
             }
 
             // Draw the label if there's a name
@@ -166,8 +161,6 @@ const FrequencyBandOverlay = ({
                     // Final bounds check to ensure label stays within canvas
                     labelX = Math.max(totalLabelWidth / 2, Math.min(actualWidth - totalLabelWidth / 2, labelX));
 
-                    console.info(`Label "${name}" positioned at ${labelX} using strategy: ${strategy}`);
-
                     // Set text properties
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
@@ -200,11 +193,7 @@ const FrequencyBandOverlay = ({
                         ctx.lineTo(labelX, labelY);
                         ctx.stroke();
                         ctx.setLineDash([]); // Reset to solid line
-
-                        console.info(`Drew connecting line from ${connectToX} to ${labelX}`);
                     }
-
-                    console.info(`Drew label "${name}" at position ${labelX}, ${labelY}`);
 
                     // Reset shadow
                     ctx.shadowColor = 'transparent';
