@@ -56,7 +56,9 @@ const FrequencyBandOverlay = ({
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        const ctx = canvas.getContext('2d', {
+            willReadFrequently: true,
+        });
 
         // Set canvas width based on actual measured width
         canvas.width = actualWidth;
