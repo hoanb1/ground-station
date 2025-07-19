@@ -677,6 +677,7 @@ const MaintenanceForm = () => {
                     )}
                 </Grid>
 
+
                 {/* Confirmation Dialog */}
                 <Dialog open={confirmRestartOpen} onClose={() => setConfirmRestartOpen(false)}>
                     <DialogTitle>Confirm Service Restart</DialogTitle>
@@ -695,6 +696,16 @@ const MaintenanceForm = () => {
                         <Typography paragraph>
                             Are you sure you want to proceed?
                         </Typography>
+
+                        <Alert severity="info" sx={{ mt: 2 }}>
+                            <AlertTitle>Deployment Note</AlertTitle>
+                            <Typography variant="body2">
+                                <strong>Docker deployment:</strong> The service will automatically restart after shutdown.
+                            </Typography>
+                            <Typography variant="body2">
+                                <strong>Standalone/Development deployment:</strong> The service will only shutdown and must be manually restarted.
+                            </Typography>
+                        </Alert>
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => setConfirmRestartOpen(false)}>Cancel</Button>
