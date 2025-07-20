@@ -1,4 +1,3 @@
-
 # Copyright (c) 2024 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -18,177 +17,41 @@
 from crud import crud
 import requests
 import asyncio
-from .state import SatelliteSyncState
+from tlesync.state import SatelliteSyncState
+from tlesync.utils import update_satellite_group_with_removal_detection, get_norad_id_from_tle, \
+    get_transmitter_info_by_norad_id, get_satellite_by_norad_id, parse_date, simple_parse_3le, get_norad_ids
 from datetime import datetime, timezone
 from concurrent.futures import ThreadPoolExecutor
 from db.models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
-from typing import List
 from common.common import *
 from sqlalchemy import select
+from common.exceptions import SynchronizationErrorMainTLESource
 
 
 # Global state to track satellite synchronization progress
 sync_state = {
-    "status": "idle",  # idle, inprogress, complete
-    "progress": 0,      # 0-100 percentage
-    "message": "",      # Current operation message
-    "success": None,    # None, True, False
-    "last_update": None, # Timestamp of last update
-    "active_sources": [], # Currently processing sources
-    "completed_sources": [], # Successfully processed sources
-    "error": None,      # Last error message if any
-    "stats": {          # Statistics about the sync
+    "status": "inprogress",
+    "progress": 0,
+    "message": "Starting satellite data synchronization",
+    "success": None,
+    "last_update": datetime.now(timezone.utc).isoformat(),
+    "active_sources": [],
+    "completed_sources": [],
+    "error": None,
+    "stats": {
         "satellites_processed": 0,
         "transmitters_processed": 0,
         "groups_processed": 0
+    },
+    "newly_added": {
+        "satellites": [],
+        "transmitters": []
+    },
+    "removed": {  # This needs to be added
+        "satellites": [],
+        "transmitters": []
     }
 }
-
-
-def parse_date(date_str: str) -> datetime:
-    """
-    Parses a date string in ISO 8601 format with an optional 'Z' suffix
-    indicating UTC time and converts it to a datetime object.
-
-    :param date_str: The ISO 8601 formatted date string, which may
-        include a 'Z' suffix indicating UTC time.
-    :type date_str: str
-    :return: A datetime object corresponding to the provided date
-        string.
-    :rtype: datetime
-    """
-    date_str = date_str.replace("Z", "+00:00")
-    return datetime.fromisoformat(date_str)
-
-
-def get_norad_ids(tle_objects: list) -> list:
-    """
-    Extracts the NORAD ID from the 'line1' field in each object of the list.
-
-    :param tle_objects: A list of dictionaries containing {'name', 'line1', 'line2'}.
-    :return: A list of integer NORAD IDs.
-    """
-    return [parse_norad_id_from_line1(obj['line1']) for obj in tle_objects]
-
-
-def parse_norad_id_from_line1(line1: str) -> int:
-    """
-    Parses the NORAD ID from the TLE's first line.
-    Assumes the NORAD ID is located at indices 2..6 in the string.
-
-    :param line1: TLE line1 string (e.g. '1 25544U 98067A   23109.65481637 ...').
-    :return: The integer NORAD ID extracted from line1.
-    """
-    norad_str = line1[2:7].strip()
-    return int(norad_str)
-
-
-def get_norad_id_from_tle(tle: str) -> int:
-    """
-    Extracts the NORAD ID from a TLE (Two-Line Element) string.
-
-    Parameters:
-        tle (str): A TLE string that may include a satellite name line or just the two standard TLE lines.
-
-    Returns:
-        int: The NORAD ID extracted from the first TLE data line.
-
-    Raises:
-        ValueError: If a valid first data line is not found in the input.
-    """
-    # Split the TLE into individual lines and remove any surrounding whitespace.
-    lines = tle.strip().splitlines()
-
-    tle_line = None
-    # Loop through the lines to find the first TLE data line
-    for line in lines:
-        if line.startswith("1 "):
-            tle_line = line
-            break
-
-    if tle_line is None:
-        raise ValueError(f"A valid TLE first data line was not found in the provided input (TLE: {tle})")
-
-    # According to the TLE format, NORAD ID is within columns 3 to 7 (1-indexed)
-    # For Python (0-indexed), this translates to positions [2:7].
-    norad_id_str = tle_line[2:7].strip()
-
-    try:
-        return int(norad_id_str)
-    except ValueError as e:
-        raise ValueError("Failed to convert the extracted NORAD ID to an integer.") from e
-
-
-def get_satellite_by_norad_id(norad_id: int, satellites: List[dict]) -> dict | None:
-    """
-    Returns the satellite object from the provided list that matches the given NORAD ID.
-
-    Parameters:
-        norad_id (int): The NORAD ID to search for.
-        satellites (List[object]): A list of satellite objects which have a 'norad_id' attribute.
-
-    Returns:
-        The matching satellite object if found, otherwise None.
-    """
-    for satellite in satellites:
-        norad_id_from_list = satellite['norad_cat_id']
-        if norad_id_from_list == norad_id:
-            return satellite
-    return None
-
-
-def get_transmitter_info_by_norad_id(norad_id: int, transmitters: list) -> list:
-    """
-    Returns the satellite object from the provided list that matches the given NORAD ID.
-
-    Parameters:
-        norad_id (int): The NORAD ID to search for.
-        transmitters (List[object]): A list of satellite objects which have a 'norad_id' attribute.
-
-    Returns:
-        The matching satellite object if found, otherwise None.
-    """
-
-    trxs = []
-
-    for transmitter in transmitters:
-        norad_id_from_list = transmitter['norad_cat_id']
-        if norad_id_from_list == norad_id:
-            trxs.append(transmitter)
-    return trxs
-
-
-def simple_parse_3le(file_contents: str) -> list:
-    """
-    Parses satellite 3LE data from a string and returns a list of dictionaries.
-    Each dictionary has "name", "line1", and "line2" keys.
-
-    :param file_contents: str, the contents of a file with 3LE data
-    :return: list of dicts, each dict containing "name", "line1", and "line2"
-    """
-    # Split the file contents into lines, stripping out any extra whitespace
-    lines = file_contents.strip().splitlines()
-
-    # We'll store the parsed satellite data here
-    satellites = []
-
-    # 3 lines correspond to each satellite's set
-    # So we'll iterate in steps of 3
-    for i in range(0, len(lines), 3):
-        # Ensure we don't run out of lines
-        if i + 2 < len(lines):
-            name_line = lines[i].strip()
-            line1 = lines[i + 1].strip()
-            line2 = lines[i + 2].strip()
-
-            satellites.append({
-                "name": name_line,
-                "line1": line1,
-                "line2": line2
-            })
-
-    return satellites
-
 
 async def synchronize_satellite_data(dbsession, logger, sio):
     """
@@ -217,6 +80,10 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         },
         # Add new tracking lists for newly added items
         "newly_added": {
+            "satellites": [],
+            "transmitters": []
+        },
+        "removed": {  # Add this section
             "satellites": [],
             "transmitters": []
         }
@@ -367,27 +234,30 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
             logger.info(f"Group {tle_source_identifier} has {len(group_assignments[tle_source_identifier])} members")
 
-            # fetch the group by identifier
-            group = await crud.fetch_system_satellite_group_by_identifier(dbsession, tle_source_identifier)
-            group = group.get('data', {})
-
-            if group:
-                group['satellite_ids'] = group_assignments[tle_source_identifier]
-                await dbsession.commit()
-
-            else:
-                # make a system group and upsert it
-                new_group = SatelliteGroups(
-                    name=tle_source.get('name', None),
-                    identifier=tle_source.get('identifier', None),
-                    userid=None,
+            # Use the new removal detection function instead of the old group management code
+            try:
+                removed_data = await update_satellite_group_with_removal_detection(
+                    session=dbsession,
+                    tle_source_identifier=tle_source_identifier,
                     satellite_ids=group_assignments[tle_source_identifier],
-                    type=SatelliteGroupType.SYSTEM,
+                    group_name=tle_source_name
                 )
 
-                # merge and commit
-                await dbsession.merge(new_group)
+                if removed_data["satellites"] or removed_data["transmitters"]:
+                    # Add removed items to the global sync state
+                    sync_state["removed"]["satellites"].extend(removed_data["satellites"])
+                    sync_state["removed"]["transmitters"].extend(removed_data["transmitters"])
+
+                    removed_sats_count = len(removed_data["satellites"])
+                    removed_trx_count = len(removed_data["transmitters"])
+                    logger.info(f"Removed {removed_sats_count} satellites and {removed_trx_count} transmitters from TLE source '{tle_source_identifier}'")
+
+                # Commit the changes
                 await dbsession.commit()
+
+            except Exception as e:
+                logger.error(f"Error during satellite removal detection for TLE source '{tle_source_identifier}': {e}")
+                await dbsession.rollback()
 
             # Update completed sources and groups processed in state
             sync_state["completed_sources"].append(tle_source_name)
@@ -711,22 +581,27 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         completed_phases.add("process_satellites")
         completed_phases.add("process_transmitters")
 
-        # Log summary of newly added items
+        # Log summary of newly added and removed items
         new_satellites_count = len(sync_state["newly_added"]["satellites"])
         new_transmitters_count = len(sync_state["newly_added"]["transmitters"])
+        removed_satellites_count = len(sync_state["removed"]["satellites"])
+        removed_transmitters_count = len(sync_state["removed"]["transmitters"])
 
         logger.info(f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters")
         logger.info(f"New items added: {new_satellites_count} satellites, {new_transmitters_count} transmitters")
+        logger.info(f"Items removed: {removed_satellites_count} satellites, {removed_transmitters_count} transmitters")
 
         # Update final state - always set to 100% when complete
         sync_state["status"] = "complete"
         sync_state["progress"] = 100
         sync_state["success"] = True
 
-        # Create a detailed success message including newly added items
+        # Create a detailed success message including newly added and removed items
         success_message = f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'
         if new_satellites_count > 0 or new_transmitters_count > 0:
             success_message += f' (New: {new_satellites_count} satellites, {new_transmitters_count} transmitters)'
+        if removed_satellites_count > 0 or removed_transmitters_count > 0:
+            success_message += f' (Removed: {removed_satellites_count} satellites, {removed_transmitters_count} transmitters)'
 
         sync_state["message"] = success_message
         sync_state["active_sources"] = []

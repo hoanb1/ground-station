@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -40,6 +39,7 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import FiberNewIcon from '@mui/icons-material/FiberNew';
 import RadioIcon from '@mui/icons-material/Radio';
+import DeleteIcon from '@mui/icons-material/Delete'; // Add this import
 
 
 const SynchronizeTLEsCard = function () {
@@ -47,6 +47,7 @@ const SynchronizeTLEsCard = function () {
     const { socket } = useSocket();
     const { syncState, synchronizing } = useSelector((state) => state.syncSatellite);
     const [showNewItems, setShowNewItems] = useState(false);
+    const [showRemovedItems, setShowRemovedItems] = useState(false); // Add this state
 
     const handleSynchronizeSatellites = async () => {
         dispatch(startSatelliteSync({ socket }));
@@ -63,6 +64,13 @@ const SynchronizeTLEsCard = function () {
     const newSatellitesCount = syncState?.newly_added?.satellites?.length || 0;
     const newTransmittersCount = syncState?.newly_added?.transmitters?.length || 0;
 
+    // Check if there are removed items - Add this block
+    const hasRemovedItems = syncState?.removed &&
+        (syncState.removed.satellites?.length > 0 || syncState.removed.transmitters?.length > 0);
+
+    const removedSatellitesCount = syncState?.removed?.satellites?.length || 0;
+    const removedTransmittersCount = syncState?.removed?.transmitters?.length || 0;
+
     return (
         <Card sx={{
             position: 'relative',
@@ -74,7 +82,7 @@ const SynchronizeTLEsCard = function () {
             boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
             overflow: 'hidden',
         }}>
-            {/* Background grid pattern */}
+            {/* ... existing background and glow effects ... */}
             <Box sx={{
                 position: 'absolute',
                 top: 0,
@@ -86,7 +94,6 @@ const SynchronizeTLEsCard = function () {
                 background: 'url("data:image/svg+xml,%3Csvg width=\'100%25\' height=\'100%25\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'smallGrid\' width=\'8\' height=\'8\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M 8 0 L 0 0 0 8\' fill=\'none\' stroke=\'%233d5866\' stroke-width=\'0.5\'/%3E%3C/pattern%3E%3Cpattern id=\'grid\' width=\'80\' height=\'80\' patternUnits=\'userSpaceOnUse\'%3E%3Crect width=\'80\' height=\'80\' fill=\'url(%23smallGrid)\'/%3E%3Cpath d=\'M 80 0 L 0 0 0 80\' fill=\'none\' stroke=\'%232d4856\' stroke-width=\'1\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'url(%23grid)\' /%3E%3C/svg%3E")',
             }}/>
 
-            {/* Glow accent */}
             <Box sx={{
                 position: 'absolute',
                 top: -60,
@@ -99,13 +106,12 @@ const SynchronizeTLEsCard = function () {
                 zIndex: 0
             }}/>
 
-            {/* Card content container */}
+            {/* ... existing header, progress, and terminal sections ... */}
             <Box sx={{
                 position: 'relative',
                 zIndex: 1,
                 p: { xs: 2, sm: 3 },
             }}>
-                {/* Small decorative element */}
                 <Box sx={{
                     position: 'absolute',
                     top: 0,
@@ -116,7 +122,6 @@ const SynchronizeTLEsCard = function () {
                     boxShadow: '0 0 10px rgba(0,176,255,0.5)',
                 }}/>
 
-                {/* Header section with title and button */}
                 <Box sx={{
                     display: 'flex',
                     flexDirection: { xs: 'column', sm: 'row' },
@@ -222,7 +227,6 @@ const SynchronizeTLEsCard = function () {
                             Synchronize
                         </Button>
 
-                        {/* Last update timestamp positioned directly beneath the button */}
                         {syncState?.last_update && (
                             <Typography
                                 variant="caption"
@@ -240,76 +244,73 @@ const SynchronizeTLEsCard = function () {
                     </Box>
                 </Box>
 
-                {/* Progress section */}
-                    <Box sx={{
-                        display: 'flex',
-                        justifyContent: 'space-between',
-                        alignItems: 'center',
-                        mb: 1,
-                    }}>
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                color: '#aaaaaa',
-                                fontWeight: 500,
-                                textTransform: 'uppercase',
-                                letterSpacing: '1px',
-                                fontSize: '0.7rem',
-                            }}
-                        >
-                            Synchronization Progress
-                        </Typography>
-                        <Typography
-                            variant="h6"
-                            sx={{
-                                color: '#40c0ff',
-                                fontWeight: 700,
-                                textShadow: '0 0 5px rgba(64,192,255,0.3)',
-                                fontFamily: 'monospace',
-                                fontSize: '1.1rem',
-                            }}
-                        >
-                            {`${Math.round(syncState['progress'])}%`}
-                        </Typography>
-                    </Box>
+                <Box sx={{
+                    display: 'flex',
+                    justifyContent: 'space-between',
+                    alignItems: 'center',
+                    mb: 1,
+                }}>
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            color: '#aaaaaa',
+                            fontWeight: 500,
+                            textTransform: 'uppercase',
+                            letterSpacing: '1px',
+                            fontSize: '0.7rem',
+                        }}
+                    >
+                        Synchronization Progress
+                    </Typography>
+                    <Typography
+                        variant="h6"
+                        sx={{
+                            color: '#40c0ff',
+                            fontWeight: 700,
+                            textShadow: '0 0 5px rgba(64,192,255,0.3)',
+                            fontFamily: 'monospace',
+                            fontSize: '1.1rem',
+                        }}
+                    >
+                        {`${Math.round(syncState['progress'])}%`}
+                    </Typography>
+                </Box>
 
-                    <Box sx={{ position: 'relative', mb: 2 }}>
-                        <LinearProgress
-                            variant="determinate"
-                            value={syncState['progress']}
-                            sx={{
-                                height: 10,
+                <Box sx={{ position: 'relative', mb: 2 }}>
+                    <LinearProgress
+                        variant="determinate"
+                        value={syncState['progress']}
+                        sx={{
+                            height: 10,
+                            borderRadius: 5,
+                            backgroundColor: 'rgba(255,255,255,0.1)',
+                            '& .MuiLinearProgress-bar': {
+                                background: 'linear-gradient(90deg, #0288d1 0%, #40c0ff 100%)',
                                 borderRadius: 5,
-                                backgroundColor: 'rgba(255,255,255,0.1)',
-                                '& .MuiLinearProgress-bar': {
-                                    background: 'linear-gradient(90deg, #0288d1 0%, #40c0ff 100%)',
-                                    borderRadius: 5,
-                                    boxShadow: '0 0 10px rgba(64,192,255,0.5)',
-                                }
-                            }}
-                        />
+                                boxShadow: '0 0 10px rgba(64,192,255,0.5)',
+                            }
+                        }}
+                    />
 
-                        {/* Animated scanner effect */}
-                        {syncState['progress'] > 0 && syncState['progress'] < 100 && (
-                            <Box sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                height: '100%',
-                                width: '5px',
-                                background: 'rgba(255,255,255,0.7)',
-                                filter: 'blur(3px)',
-                                animation: 'scan 2s infinite linear',
-                                '@keyframes scan': {
-                                    '0%': { left: '0%' },
-                                    '100%': { left: '100%' }
-                                },
-                                zIndex: 2,
-                            }}/>
-                        )}
-                    </Box>
+                    {syncState['progress'] > 0 && syncState['progress'] < 100 && (
+                        <Box sx={{
+                            position: 'absolute',
+                            top: 0,
+                            left: 0,
+                            height: '100%',
+                            width: '5px',
+                            background: 'rgba(255,255,255,0.7)',
+                            filter: 'blur(3px)',
+                            animation: 'scan 2s infinite linear',
+                            '@keyframes scan': {
+                                '0%': { left: '0%' },
+                                '100%': { left: '100%' }
+                            },
+                            zIndex: 2,
+                        }}/>
+                    )}
+                </Box>
 
-                {/* Terminal effect for the status message */}
                 <Box sx={{
                     position: 'absolute',
                     top: 0,
@@ -352,171 +353,337 @@ const SynchronizeTLEsCard = function () {
                     </Typography>
                 </Box>
 
-                    {/* New items notification */}
-                    {hasNewItems && (
+                {/* New items notification - keep existing */}
+                {hasNewItems && (
+                    <Box sx={{
+                        backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                        border: '1px solid rgba(76, 175, 80, 0.3)',
+                        borderRadius: 1,
+                        p: 1,
+                        mb: 1,
+                    }}>
                         <Box sx={{
-                            backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                            border: '1px solid rgba(76, 175, 80, 0.3)',
-                            borderRadius: 1,
-                            p: 1,
-                            mb: 1,
-                        }}>
-                            <Box sx={{
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'space-between',
-                                cursor: 'pointer',
-                            }}
-                                 onClick={() => setShowNewItems(!showNewItems)}
-                            >
-                                <Box sx={{ display: 'flex', alignItems: 'center' }}>
-                                    <FiberNewIcon
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                        }}
+                             onClick={() => setShowNewItems(!showNewItems)}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <FiberNewIcon
+                                    sx={{
+                                        color: '#4caf50',
+                                        mr: 1,
+                                        fontSize: '1.2rem',
+                                        animation: 'glow 2s infinite ease-in-out',
+                                        '@keyframes glow': {
+                                            '0%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' },
+                                            '50%': { filter: 'drop-shadow(0 0 8px rgba(76,175,80,0.9))' },
+                                            '100%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' }
+                                        }
+                                    }}
+                                />
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: '#4caf50',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                        fontSize: '0.75rem',
+                                    }}
+                                >
+                                    New Items Added
+                                </Typography>
+                                <Box sx={{ ml: 1, display: 'flex', gap: 0.5 }}>
+                                    <Chip
+                                        label={`${newSatellitesCount} SAT`}
+                                        size="small"
                                         sx={{
+                                            backgroundColor: 'rgba(76, 175, 80, 0.2)',
                                             color: '#4caf50',
-                                            mr: 1,
-                                            fontSize: '1.2rem',
-                                            animation: 'glow 2s infinite ease-in-out',
-                                            '@keyframes glow': {
-                                                '0%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' },
-                                                '50%': { filter: 'drop-shadow(0 0 8px rgba(76,175,80,0.9))' },
-                                                '100%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' }
-                                            }
+                                            fontSize: '0.6rem',
+                                            height: '18px',
+                                            fontWeight: 600,
                                         }}
                                     />
-                                    <Typography
-                                        variant="caption"
+                                    <Chip
+                                        label={`${newTransmittersCount} TRX`}
+                                        size="small"
                                         sx={{
+                                            backgroundColor: 'rgba(76, 175, 80, 0.2)',
                                             color: '#4caf50',
+                                            fontSize: '0.6rem',
+                                            height: '18px',
                                             fontWeight: 600,
-                                            textTransform: 'uppercase',
-                                            letterSpacing: '0.5px',
-                                            fontSize: '0.75rem',
                                         }}
-                                    >
-                                        New Items Added
-                                    </Typography>
-                                    <Box sx={{ ml: 1, display: 'flex', gap: 0.5 }}>
-                                        <Chip
-                                            label={`${newSatellitesCount} SAT`}
-                                            size="small"
-                                            sx={{
-                                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                                                color: '#4caf50',
-                                                fontSize: '0.6rem',
-                                                height: '18px',
-                                                fontWeight: 600,
-                                            }}
-                                        />
-                                        <Chip
-                                            label={`${newTransmittersCount} TRX`}
-                                            size="small"
-                                            sx={{
-                                                backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                                                color: '#4caf50',
-                                                fontSize: '0.6rem',
-                                                height: '18px',
-                                                fontWeight: 600,
-                                            }}
-                                        />
-                                    </Box>
+                                    />
                                 </Box>
-                                <IconButton
-                                    size="small"
-                                    sx={{ color: '#4caf50', p: 0.5 }}
-                                >
-                                    {showNewItems ? <ExpandLessIcon /> : <ExpandMoreIcon />}
-                                </IconButton>
                             </Box>
-
-                            <Collapse in={showNewItems}>
-                                <Box sx={{ mt: 1, maxHeight: '200px', overflowY: 'auto' }}>
-                                    {newSatellitesCount > 0 && (
-                                        <Box sx={{ mb: 1 }}>
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    color: '#40c0ff',
-                                                    fontWeight: 600,
-                                                    fontSize: '0.7rem',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.5px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    mb: 0.5,
-                                                }}
-                                            >
-                                                <SatelliteAltIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
-                                                Satellites ({newSatellitesCount})
-                                            </Typography>
-                                            <Box sx={{
-                                                display: 'flex',
-                                                flexWrap: 'wrap',
-                                                gap: 0.5,
-                                                maxHeight: '60px',
-                                                overflowY: 'auto',
-                                            }}>
-                                                {syncState.newly_added.satellites.map((sat, index) => (
-                                                    <Chip
-                                                        key={index}
-                                                        label={`${sat.name} (${sat.norad_id})`}
-                                                        size="small"
-                                                        sx={{
-                                                            backgroundColor: 'rgba(64, 192, 255, 0.1)',
-                                                            color: '#40c0ff',
-                                                            fontSize: '0.65rem',
-                                                            fontFamily: 'monospace',
-                                                        }}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        </Box>
-                                    )}
-
-                                    {newTransmittersCount > 0 && (
-                                        <Box>
-                                            <Typography
-                                                variant="caption"
-                                                sx={{
-                                                    color: '#ff9800',
-                                                    fontWeight: 600,
-                                                    fontSize: '0.7rem',
-                                                    textTransform: 'uppercase',
-                                                    letterSpacing: '0.5px',
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    mb: 0.5,
-                                                }}
-                                            >
-                                                <RadioIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
-                                                Transmitters ({newTransmittersCount})
-                                            </Typography>
-                                            <Box sx={{
-                                                display: 'flex',
-                                                flexWrap: 'wrap',
-                                                gap: 0.5,
-                                                maxHeight: '60px',
-                                                overflowY: 'auto',
-                                            }}>
-                                                {syncState.newly_added.transmitters.map((trx, index) => (
-                                                    <Chip
-                                                        key={index}
-                                                        label={`${trx.description || 'Unknown'} (${trx.satellite_name})`}
-                                                        size="small"
-                                                        sx={{
-                                                            backgroundColor: 'rgba(255, 152, 0, 0.1)',
-                                                            color: '#ff9800',
-                                                            fontSize: '0.65rem',
-                                                            fontFamily: 'monospace',
-                                                        }}
-                                                    />
-                                                ))}
-                                            </Box>
-                                        </Box>
-                                    )}
-                                </Box>
-                            </Collapse>
+                            <IconButton
+                                size="small"
+                                sx={{ color: '#4caf50', p: 0.5 }}
+                            >
+                                {showNewItems ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
                         </Box>
-                    )}
+
+                        <Collapse in={showNewItems}>
+                            <Box sx={{ mt: 1, maxHeight: '200px', overflowY: 'auto' }}>
+                                {newSatellitesCount > 0 && (
+                                    <Box sx={{ mb: 1 }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: '#40c0ff',
+                                                fontWeight: 600,
+                                                fontSize: '0.7rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                mb: 0.5,
+                                            }}
+                                        >
+                                            <SatelliteAltIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+                                            Satellites ({newSatellitesCount})
+                                        </Typography>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                            maxHeight: '60px',
+                                            overflowY: 'auto',
+                                        }}>
+                                            {syncState.newly_added.satellites.map((sat, index) => (
+                                                <Chip
+                                                    key={index}
+                                                    label={`${sat.name} (${sat.norad_id})`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(64, 192, 255, 0.1)',
+                                                        color: '#40c0ff',
+                                                        fontSize: '0.65rem',
+                                                        fontFamily: 'monospace',
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                {newTransmittersCount > 0 && (
+                                    <Box>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: '#ff9800',
+                                                fontWeight: 600,
+                                                fontSize: '0.7rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                mb: 0.5,
+                                            }}
+                                        >
+                                            <RadioIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+                                            Transmitters ({newTransmittersCount})
+                                        </Typography>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                            maxHeight: '60px',
+                                            overflowY: 'auto',
+                                        }}>
+                                            {syncState.newly_added.transmitters.map((trx, index) => (
+                                                <Chip
+                                                    key={index}
+                                                    label={`${trx.description || 'Unknown'} (${trx.satellite_name})`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(255, 152, 0, 0.1)',
+                                                        color: '#ff9800',
+                                                        fontSize: '0.65rem',
+                                                        fontFamily: 'monospace',
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
+                            </Box>
+                        </Collapse>
+                    </Box>
+                )}
+
+                {/* Add removed items notification - NEW SECTION */}
+                {hasRemovedItems && (
+                    <Box sx={{
+                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                        border: '1px solid rgba(244, 67, 54, 0.3)',
+                        borderRadius: 1,
+                        p: 1,
+                        mb: 1,
+                    }}>
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                        }}
+                             onClick={() => setShowRemovedItems(!showRemovedItems)}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <DeleteIcon
+                                    sx={{
+                                        color: '#f44336',
+                                        mr: 1,
+                                        fontSize: '1.2rem',
+                                        animation: 'pulse 2s infinite ease-in-out',
+                                        '@keyframes pulse': {
+                                            '0%': { filter: 'drop-shadow(0 0 3px rgba(244,67,54,0.6))' },
+                                            '50%': { filter: 'drop-shadow(0 0 8px rgba(244,67,54,0.9))' },
+                                            '100%': { filter: 'drop-shadow(0 0 3px rgba(244,67,54,0.6))' }
+                                        }
+                                    }}
+                                />
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: '#f44336',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                        fontSize: '0.75rem',
+                                    }}
+                                >
+                                    Items Removed
+                                </Typography>
+                                <Box sx={{ ml: 1, display: 'flex', gap: 0.5 }}>
+                                    <Chip
+                                        label={`${removedSatellitesCount} SAT`}
+                                        size="small"
+                                        sx={{
+                                            backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                            color: '#f44336',
+                                            fontSize: '0.6rem',
+                                            height: '18px',
+                                            fontWeight: 600,
+                                        }}
+                                    />
+                                    <Chip
+                                        label={`${removedTransmittersCount} TRX`}
+                                        size="small"
+                                        sx={{
+                                            backgroundColor: 'rgba(244, 67, 54, 0.2)',
+                                            color: '#f44336',
+                                            fontSize: '0.6rem',
+                                            height: '18px',
+                                            fontWeight: 600,
+                                        }}
+                                    />
+                                </Box>
+                            </Box>
+                            <IconButton
+                                size="small"
+                                sx={{ color: '#f44336', p: 0.5 }}
+                            >
+                                {showRemovedItems ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                        </Box>
+
+                        <Collapse in={showRemovedItems}>
+                            <Box sx={{ mt: 1, maxHeight: '200px', overflowY: 'auto' }}>
+                                {removedSatellitesCount > 0 && (
+                                    <Box sx={{ mb: 1 }}>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: '#40c0ff',
+                                                fontWeight: 600,
+                                                fontSize: '0.7rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                mb: 0.5,
+                                            }}
+                                        >
+                                            <SatelliteAltIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+                                            Satellites ({removedSatellitesCount})
+                                        </Typography>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                            maxHeight: '60px',
+                                            overflowY: 'auto',
+                                        }}>
+                                            {syncState.removed.satellites.map((sat, index) => (
+                                                <Chip
+                                                    key={index}
+                                                    label={`${sat.name} (${sat.norad_id})`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                                                        color: '#f44336',
+                                                        fontSize: '0.65rem',
+                                                        fontFamily: 'monospace',
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
+
+                                {removedTransmittersCount > 0 && (
+                                    <Box>
+                                        <Typography
+                                            variant="caption"
+                                            sx={{
+                                                color: '#ff5722',
+                                                fontWeight: 600,
+                                                fontSize: '0.7rem',
+                                                textTransform: 'uppercase',
+                                                letterSpacing: '0.5px',
+                                                display: 'flex',
+                                                alignItems: 'center',
+                                                mb: 0.5,
+                                            }}
+                                        >
+                                            <RadioIcon sx={{ mr: 0.5, fontSize: '0.8rem' }} />
+                                            Transmitters ({removedTransmittersCount})
+                                        </Typography>
+                                        <Box sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                            maxHeight: '60px',
+                                            overflowY: 'auto',
+                                        }}>
+                                            {syncState.removed.transmitters.map((trx, index) => (
+                                                <Chip
+                                                    key={index}
+                                                    label={`${trx.description || 'Unknown'} (${trx.satellite_name})`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(255, 87, 34, 0.1)',
+                                                        color: '#ff5722',
+                                                        fontSize: '0.65rem',
+                                                        fontFamily: 'monospace',
+                                                    }}
+                                                />
+                                            ))}
+                                        </Box>
+                                    </Box>
+                                )}
+                            </Box>
+                        </Collapse>
+                    </Box>
+                )}
             </Box>
         </Card>
     );

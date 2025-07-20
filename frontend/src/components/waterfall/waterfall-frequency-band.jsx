@@ -31,7 +31,7 @@ const FrequencyBandOverlay = ({
             }
         }
     }, []);
-
+0
     // Convert frequency to pixel position (full spectrum coordinates)
     const frequencyToPixel = useCallback((frequency) => {
         const freqRange = endFreq - startFreq;

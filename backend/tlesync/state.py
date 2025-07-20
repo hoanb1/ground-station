@@ -44,6 +44,10 @@ class SatelliteSyncState:
             "newly_added": {    # Track newly added items
                 "satellites": [],   # List of newly added satellites
                 "transmitters": []  # List of newly added transmitters
+            },
+            "removed": {        # Track removed items
+                "satellites": [],   # List of removed satellites
+                "transmitters": []  # List of removed transmitters
             }
         }
 
