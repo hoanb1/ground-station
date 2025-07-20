@@ -33,9 +33,9 @@ export const AudioProvider = ({ children }) => {
     // Initialize Web Worker using your existing worker file
     const initializeWorker = useCallback(() => {
         try {
-            // Use your existing vfo-audio-worker.jsx file
+            // Use your existing vfo-audio-worker.js file
             audioWorkerRef.current = new Worker(
-                new URL('./vfo-audio-worker.jsx', import.meta.url),
+                new URL('./vfo-audio-worker.js', import.meta.url),
                 { type: 'module' }
             );
 
@@ -61,7 +61,7 @@ export const AudioProvider = ({ children }) => {
                 enqueueSnackbar('Audio worker failed', { variant: 'error' });
             };
 
-            console.log('Audio worker initialized from vfo-audio-worker.jsx');
+            console.log('Audio worker initialized from vfo-audio-worker.js');
         } catch (error) {
             console.warn('Failed to initialize audio worker, falling back to main thread:', error);
         }
