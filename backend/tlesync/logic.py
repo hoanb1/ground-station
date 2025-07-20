@@ -240,7 +240,8 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     session=dbsession,
                     tle_source_identifier=tle_source_identifier,
                     satellite_ids=group_assignments[tle_source_identifier],
-                    group_name=tle_source_name
+                    group_name=tle_source_name,
+                    logger=logger,
                 )
 
                 if removed_data["satellites"] or removed_data["transmitters"]:

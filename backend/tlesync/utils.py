@@ -165,7 +165,7 @@ def simple_parse_3le(file_contents: str) -> list:
     return satellites
 
 
-async def detect_and_remove_satellites(session, tle_source_identifier, current_satellite_ids):
+async def detect_and_remove_satellites(session, tle_source_identifier, current_satellite_ids, logger):
     """
     Detect satellites that were removed from a TLE source and handle their removal.
 
@@ -173,6 +173,7 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
         session: SQLAlchemy async session
         tle_source_identifier: The identifier of the TLE source
         current_satellite_ids: List of current satellite NORAD IDs from the TLE source
+        logger: logger object for logging messages
 
     Returns:
         Dict with removed satellite details including names
@@ -204,7 +205,7 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
     }
 
     if removed_satellite_ids:
-        print(f"Detected {len(removed_satellite_ids)} removed satellites from TLE source '{tle_source_identifier}': {removed_satellite_ids}")
+        logger.info(f"Detected {len(removed_satellite_ids)} removed satellites from TLE source '{tle_source_identifier}': {removed_satellite_ids}")
 
         # Handle removal of satellites and their transmitters
         for norad_id in removed_satellite_ids:
@@ -233,7 +234,7 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
 
                 if not satellite_in_other_sources:
                     # Satellite is not in any other TLE source, safe to remove
-                    print(f"Removing satellite {norad_id} ({satellite.name}) and its transmitters (not found in other TLE sources)")
+                    logger.info(f"Removing satellite {norad_id} ({satellite.name}) and its transmitters (not found in other TLE sources)")
 
                     # Get transmitter details before removing
                     transmitters_result = await session.execute(
@@ -259,7 +260,7 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
                     )
                     transmitters_deleted = transmitters_delete_result.rowcount
                     if transmitters_deleted > 0:
-                        print(f"Removed {transmitters_deleted} transmitters for satellite {norad_id}")
+                        logger.info(f"Removed {transmitters_deleted} transmitters for satellite {norad_id}")
 
                     # Add satellite details to removed data
                     removed_data["satellites"].append({
@@ -275,16 +276,16 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
                     )
                     satellite_deleted = satellite_delete_result.rowcount
                     if satellite_deleted > 0:
-                        print(f"Removed satellite {norad_id} ({satellite.name})")
+                        logger.info(f"Removed satellite {norad_id} ({satellite.name})")
                 else:
-                    print(f"Satellite {norad_id} ({satellite.name}) found in other TLE sources, keeping it")
+                    logger.info(f"Satellite {norad_id} ({satellite.name}) found in other TLE sources, keeping it")
             else:
-                print(f"Satellite {norad_id} not found in database, skipping removal")
+                logger.info(f"Satellite {norad_id} not found in database, skipping removal")
 
     return removed_data
 
 
-async def update_satellite_group_with_removal_detection(session, tle_source_identifier, satellite_ids, group_name):
+async def update_satellite_group_with_removal_detection(session, tle_source_identifier, satellite_ids, group_name, logger):
     """
     Update or create a satellite group and detect removed satellites.
 
@@ -293,13 +294,14 @@ async def update_satellite_group_with_removal_detection(session, tle_source_iden
         tle_source_identifier: The identifier of the TLE source
         satellite_ids: List of current satellite NORAD IDs
         group_name: Name for the satellite group
+        logger: logger object for logging messages
 
     Returns:
         Dict with removed satellite details including names
     """
 
     # First, detect and handle removed satellites
-    removed_data = await detect_and_remove_satellites(session, tle_source_identifier, satellite_ids)
+    removed_data = await detect_and_remove_satellites(session, tle_source_identifier, satellite_ids, logger)
 
     # Then update or create the satellite group
     result = await session.execute(
@@ -314,7 +316,7 @@ async def update_satellite_group_with_removal_detection(session, tle_source_iden
         # Update the existing group
         existing_group.satellite_ids = satellite_ids
         existing_group.updated = datetime.now(timezone.utc)
-        print(f"Updated satellite group '{group_name}' with {len(satellite_ids)} satellites")
+        logger.info(f"Updated satellite group '{group_name}' with {len(satellite_ids)} satellites")
     else:
         # Create a new group
         new_group = SatelliteGroups(
@@ -326,6 +328,6 @@ async def update_satellite_group_with_removal_detection(session, tle_source_iden
             updated=datetime.now(timezone.utc)
         )
         session.add(new_group)
-        print(f"Created new satellite group '{group_name}' with {len(satellite_ids)} satellites")
+        logger.info(f"Created new satellite group '{group_name}' with {len(satellite_ids)} satellites")
 
     return removed_data
