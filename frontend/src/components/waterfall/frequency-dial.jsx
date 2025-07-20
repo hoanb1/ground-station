@@ -18,7 +18,6 @@
  */
 
 
-
 import React, { useState, useEffect } from 'react';
 import { Box, Typography, IconButton } from '@mui/material';
 import ArrowDropUpIcon from '@mui/icons-material/ArrowDropUp';
@@ -27,9 +26,9 @@ import ArrowDropDownIcon from '@mui/icons-material/ArrowDropDown';
 const FrequencyDisplay = ({
                               initialFrequency = 1000.0,
                               onChange,
-                              integerDigits = 8, // New prop to configure the number of integer digits
-                              decimalDigits = 3, // Optional prop to configure decimal digits
-                              size = 'medium' // New prop to control size - can be 'small', 'medium', 'large' or a number
+                              integerDigits = 8, // prop to configure the number of integer digits
+                              decimalDigits = 3, // prop to configure decimal digits
+                              size = 'medium' // prop to control size - can be 'small', 'medium', 'large' or a number
                           }) => {
     const [frequency, setFrequency] = useState(initialFrequency);
 

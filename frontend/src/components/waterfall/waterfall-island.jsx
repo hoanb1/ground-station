@@ -59,7 +59,7 @@ import SettingsIcon from '@mui/icons-material/Settings';
 import HeightIcon from '@mui/icons-material/Height';
 import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
 import AlignHorizontalRightIcon from '@mui/icons-material/AlignHorizontalRight';
-import WaterfallAndBandscope from './waterfall-content.jsx'
+import WaterfallAndBandscope from './waterfall-bandscope.jsx'
 import {useSocket} from "../common/socket.jsx";
 import {
     setColorMap,

@@ -30,8 +30,8 @@ import satelliteGroupReducer from '../satellites/groups-slice.jsx';
 import locationReducer from '../settings/location-slice.jsx';
 import synchronizeReducer from '../satellites/synchronize-slice.jsx';
 import preferencesReducer from '../settings/preferences-slice.jsx';
-import targetSatTrackReducer from '../target/target-sat-slice.jsx'
-import overviewSatTrackReducer from '../overview/overview-sat-slice.jsx';
+import targetSatTrackReducer from '../target/target-slice.jsx'
+import overviewSatTrackReducer from '../overview/overview-slice.jsx';
 import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';

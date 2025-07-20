@@ -38,7 +38,7 @@ import {
     setOpenMapSettingsDialog,
     setMapZoomLevel,
     setSelectedSatelliteId
-} from './overview-sat-slice.jsx';
+} from './overview-slice.jsx';
 import { getTileLayerById } from "../common/tile-layers.jsx";
 import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/icons.jsx';
 import {
@@ -51,7 +51,7 @@ import {
 } from "../common/common.jsx";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
-import SatelliteTrackSuggestion from "./overview-map-trackbutton.jsx";
+import SatelliteTrackSuggestion from "./map-targetbutton.jsx";
 import {
     calculateSatelliteAzEl,
     getSatelliteCoverageCircle,
@@ -62,9 +62,9 @@ import {
 
 import {
     setSatelliteData,
-} from "./overview-sat-slice.jsx";
+} from "./overview-slice.jsx";
 
-import SatelliteMarker from "./overview-map-tooltip.jsx";
+import SatelliteMarker from "./map-tooltip.jsx";
 import createTerminatorLine from "../common/terminator-line.jsx";
 import {getSunMoonCoords} from "../common/sunmoon.jsx";
 import {useSocket} from "../common/socket.jsx";

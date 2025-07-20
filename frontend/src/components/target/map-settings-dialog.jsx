@@ -42,7 +42,7 @@ import {
     setTileLayerID,
     setOpenMapSettingsDialog,
     setShowGrid,
-} from "./target-sat-slice.jsx";
+} from "./target-slice.jsx";
 import {setOpenAddDialog} from "../hardware/camera-slice.jsx";
 
 function MapSettingsIslandDialog({updateBackend}) {

@@ -38,7 +38,7 @@ import {
     setActivePass,
     setRotatorConnecting,
     setRotatorDisconnecting, sendNudgeCommand,
-} from "./target-sat-slice.jsx";
+} from "./target-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";

@@ -43,8 +43,8 @@ import {
     setStarting,
     setRadioRig,
     setRotator, setSelectedTransmitter,
-} from './target-sat-slice.jsx';
-import SatelliteList from "./target-sat-list.jsx";
+} from './target-slice.jsx';
+import SatelliteList from "./satellite-dropdown.jsx";
 import {enqueueSnackbar} from "notistack";
 
 

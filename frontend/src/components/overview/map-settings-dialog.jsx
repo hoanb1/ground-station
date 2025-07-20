@@ -35,7 +35,7 @@ import {
     setShowSunIcon, setShowTerminatorLine, setShowTooltip, setTileLayerID,
     setOpenMapSettingsDialog,
     setShowGrid,
-} from "./overview-sat-slice.jsx";
+} from "./overview-slice.jsx";
 
 function MapSettingsIslandDialog({updateBackend}) {
     const dispatch = useDispatch();

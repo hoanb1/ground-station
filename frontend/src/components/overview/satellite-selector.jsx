@@ -39,7 +39,7 @@ import {
     setSelectedSatGroupId,
     setSelectedSatellites,
     fetchSatellitesByGroupId,
-} from "./overview-sat-slice.jsx";
+} from "./overview-slice.jsx";
 
 const SATELLITE_NUMBER_LIMIT = 200;
 

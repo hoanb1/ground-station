@@ -22,7 +22,7 @@
 import { createSlice } from '@reduxjs/toolkit';
 import {createAsyncThunk} from '@reduxjs/toolkit';
 import {useRef, useState} from "react";
-import {setSelectedTransmitter} from "../target/target-sat-slice.jsx";
+import {setSelectedTransmitter} from "../target/target-slice.jsx";
 
 // Mobile detection
 const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);

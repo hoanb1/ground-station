@@ -17,9 +17,9 @@
  *
  */
 
-import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/overview-sat-layout.jsx";
-import {gridLayoutStoreName as targetGridLayoutName} from "../target/target-sat-layout.jsx";
-import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/waterfall-layout.jsx";
+import {gridLayoutStoreName as overviewGridLayoutName} from "../overview/main-layout.jsx";
+import {gridLayoutStoreName as targetGridLayoutName} from "../target/main-layout.jsx";
+import {gridLayoutStoreName as waterfallGridLayoutName} from "../waterfall/main-layout.jsx";
 import Paper from "@mui/material/Paper";
 import {Alert, AlertTitle, Box, Button, Divider, Typography, CircularProgress, Dialog, DialogTitle, DialogContent, DialogActions} from "@mui/material";
 import Grid from "@mui/material/Grid2";

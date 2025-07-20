@@ -53,7 +53,7 @@ import {
     getTrackingStateFromBackend,
     setSatelliteId,
     setTargetMapSetting,
-} from './target-sat-slice.jsx';
+} from './target-slice.jsx';
 import { getTileLayerById } from "../common/tile-layers.jsx";
 import {homeIcon, sunIcon, moonIcon, satelliteIcon2} from '../common/icons.jsx';
 import {

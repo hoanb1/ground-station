@@ -17,7 +17,7 @@
  */
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
-import useWakeLock from './dashboard-wake-lock.jsx';
+import useWakeLock from './wake-lock-logic.jsx';
 import { enqueueSnackbar } from 'notistack';
 
 // Define the default context value

@@ -34,7 +34,7 @@ import {
     setSelectedTransmitter,
     setStarting,
     setTrackingStateInBackend
-} from "./target-sat-slice.jsx";
+} from "./target-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import {
     getClassNamesBasedOnGridEditing,
@@ -44,7 +44,7 @@ import {
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Box, Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import SatelliteList from "./target-sat-list.jsx";
+import SatelliteList from "./satellite-dropdown.jsx";
 import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";

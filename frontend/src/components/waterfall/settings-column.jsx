@@ -88,7 +88,7 @@ import {
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
-import FrequencyDisplay from "./frequency-control.jsx";
+import FrequencyDisplay from "./frequency-dial.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import getValue from "lodash/_getValue.js";

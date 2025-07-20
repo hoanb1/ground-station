@@ -39,7 +39,7 @@ import {
     fetchSatellitesByGroupId,
     setPasses,
     setSelectedSatelliteId,
-} from './overview-sat-slice.jsx';
+} from './overview-slice.jsx';
 import {Typography} from '@mui/material';
 import {useGridApiRef} from '@mui/x-data-grid';
 import {darken, lighten, styled} from '@mui/material/styles';

@@ -36,20 +36,20 @@ import {
     SettingsTabUsers, SettingsTabCamera,
     SettingsTabSDR
 } from "./components/settings/settings.jsx";
-import GlobalSatelliteTrackLayout from "./components/overview/overview-sat-layout.jsx";
+import GlobalSatelliteTrackLayout from "./components/overview/main-layout.jsx";
 import App from "./App.jsx";
 import Layout from "./components/dashboard/dashboard-layout.jsx";
-import TargetSatelliteLayout from "./components/target/target-sat-layout.jsx";
-import MainWaterfallDisplay from "./components/waterfall/waterfall-view.jsx";
+import TargetSatelliteLayout from "./components/target/main-layout.jsx";
+import MainWaterfallDisplay from "./components/waterfall/waterfall-island.jsx";
 import {SocketProvider, useSocket} from './components/common/socket.jsx';
 import {AuthProvider} from "./components/common/auth.jsx";
 import { Provider as ReduxProvider} from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './components/common/store.jsx';
 import ErrorPage from './components/common/error-page.jsx';
-import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
-import {WakeLockProvider} from "./components/dashboard/dashboard-wake-lock-provider.jsx";
-import { AudioProvider, useAudio } from "./components/dashboard/dashboard-audio.jsx";
+import MainLayout from "./components/waterfall/main-layout.jsx";
+import {WakeLockProvider} from "./components/dashboard/wake-lock-provider.jsx";
+import { AudioProvider, useAudio } from "./components/dashboard/audio-provider.jsx";
 import SatelliteInfo from "./components/satellites/satellite-info.jsx";
 
 
@@ -72,7 +72,7 @@ const router = createBrowserRouter([
                     },
                     {
                         path: "waterfall",
-                        Component: WaterfallLayout,
+                        Component: MainLayout,
                     },
                     {
                         path: "satellite/:noradId",

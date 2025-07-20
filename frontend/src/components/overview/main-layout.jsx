@@ -24,7 +24,7 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
 import {duration, styled} from "@mui/material/styles";
-import OverviewSatelliteGroupSelector from "./overview-sat-selector.jsx";
+import OverviewSatelliteGroupSelector from "./satellite-selector.jsx";
 import {
     StyledIslandParent,
     StyledIslandParentScrollbar,
@@ -37,11 +37,11 @@ import {useDispatch, useSelector} from "react-redux";
 import {
     setGridEditable,
     setMapZoomLevel,
-} from './overview-sat-slice.jsx';
-import NextPassesGroupIsland from "./overview-sat-passes.jsx";
+} from './overview-slice.jsx';
+import NextPassesGroupIsland from "./satellite-passes.jsx";
 import WeatherDisplay from "./weather-card.jsx";
-import OverviewSatelliteInfoCard from "./overview-sat-info.jsx";
-import {setTrackingStateInBackend} from "../target/target-sat-slice.jsx";
+import OverviewSatelliteInfoCard from "./satellite-info.jsx";
+import {setTrackingStateInBackend} from "../target/target-slice.jsx";
 import SatelliteMapContainer from './overview-map.jsx';
 
 const storageMapZoomValueKey = "overview-map-zoom-level";

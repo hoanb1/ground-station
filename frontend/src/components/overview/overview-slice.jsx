@@ -20,7 +20,7 @@
 
 
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
-import {getTargetMapSettings} from "../target/target-sat-slice.jsx";
+import {getTargetMapSettings} from "../target/target-slice.jsx";
 
 
 export const getOverviewMapSettings = createAsyncThunk(

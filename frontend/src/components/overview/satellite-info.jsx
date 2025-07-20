@@ -2,7 +2,7 @@ import React, {useEffect} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
 import {
     fetchSatelliteData
-} from './overview-sat-slice.jsx';
+} from './overview-slice.jsx';
 import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import ExploreIcon from '@mui/icons-material/Explore';
 import HeightIcon from '@mui/icons-material/Height';
@@ -34,7 +34,7 @@ import {
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {useSocket} from "../common/socket.jsx";
-import {setTrackingStateInBackend} from "../target/target-sat-slice.jsx";
+import {setTrackingStateInBackend} from "../target/target-slice.jsx";
 import {enqueueSnackbar} from "notistack";
 import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";

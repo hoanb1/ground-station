@@ -45,21 +45,21 @@ import { fetchPreferences } from './components/settings/preferences-slice.jsx';
 import { fetchLocationForUserId } from './components/settings/location-slice.jsx';
 import { setSyncState } from './components/satellites/synchronize-slice.jsx';
 import { setStatus } from "./components/hardware/rig-slice.jsx";
-import {setSatelliteData, getTargetMapSettings, fetchNextPasses} from './components/target/target-sat-slice.jsx';
+import {setSatelliteData, getTargetMapSettings, fetchNextPasses} from './components/target/target-slice.jsx';
 import { fetchRigs } from './components/hardware/rig-slice.jsx'
 import { fetchRotators } from './components/hardware/rotaror-slice.jsx'
 import { fetchTLESources } from './components/satellites/sources-slice.jsx'
 import { fetchSatelliteGroups } from './components/satellites/groups-slice.jsx';
 import { fetchUsers } from './components/settings/users-slice.jsx';
-import { getTrackingStateFromBackend } from './components/target/target-sat-slice.jsx';
+import { getTrackingStateFromBackend } from './components/target/target-slice.jsx';
 import { fetchCameras } from './components/hardware/camera-slice.jsx'
 import { fetchSDRs } from './components/hardware/sdr-slice.jsx'
-import { getOverviewMapSettings } from './components/overview/overview-sat-slice.jsx';
-import WaterfallLayout from "./components/waterfall/waterfall-layout.jsx";
+import { getOverviewMapSettings } from './components/overview/overview-slice.jsx';
+import MainLayout from "./components/waterfall/main-layout.jsx";
 import LoginForm from './components/common/login.jsx';
 import {useDispatch, useSelector} from "react-redux";
-import { AudioProvider, useAudio } from "./components/dashboard/dashboard-audio.jsx";
-import { setUITrackerValues } from "./components/target/target-sat-slice.jsx";
+import { AudioProvider, useAudio } from "./components/dashboard/audio-provider.jsx";
+import { setUITrackerValues } from "./components/target/target-slice.jsx";
 import { setSynchronizing } from "./components/satellites/synchronize-slice.jsx";
 import VideocamIcon from '@mui/icons-material/Videocam';
 

@@ -25,15 +25,15 @@ import AddIcon from "@mui/icons-material/Add";
 import RemoveIcon from "@mui/icons-material/Remove";
 import RestartAltIcon from "@mui/icons-material/RestartAlt";
 import BookmarkIcon from "@mui/icons-material/Bookmark";
-import FrequencyScale from "./frequency-scale-canvas.jsx";
-import BookmarkCanvas from "./waterfall-bookmarks.jsx";
+import FrequencyScale from "./frequency-scale.jsx";
+import BookmarkCanvas from "./bookmarks-overlay.jsx";
 import {
     setBookMarks
 } from "./waterfall-slice.jsx";
 import VFOMarkersContainer from './vfo-container.jsx';
 import {v4 as uuidv4} from 'uuid';
 import TuneIcon from '@mui/icons-material/Tune';
-import FrequencyBandOverlay from './waterfall-frequency-band.jsx';
+import FrequencyBandOverlay from './bandplan-overlay.jsx';
 
 
 // Inside your WaterfallAndBandscope component, add:

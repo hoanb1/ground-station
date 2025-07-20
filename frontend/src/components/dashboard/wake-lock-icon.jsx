@@ -1,6 +1,6 @@
 import React from 'react';
 import { Tooltip, IconButton } from '@mui/material';
-import { useWakeLockContext } from './dashboard-wake-lock-provider.jsx';
+import { useWakeLockContext } from './wake-lock-provider.jsx';
 import LockIcon from '@mui/icons-material/Lock';
 import LockOpenIcon from '@mui/icons-material/LockOpen';
 import WarningIcon from '@mui/icons-material/Warning';

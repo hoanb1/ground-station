@@ -32,7 +32,7 @@ import {
 } from '@mui/material';
 import ControllerTabs from "../common/controller.jsx";
 import {SatelliteIcon} from "hugeicons-react";
-import OverlayIcon from "./dashboard-icon-overlay.jsx";
+import OverlayIcon from "./icons-overlay.jsx";
 
 // Import overlay icons
 import CloseIcon from '@mui/icons-material/Close';

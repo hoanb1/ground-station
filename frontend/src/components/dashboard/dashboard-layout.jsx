@@ -42,9 +42,9 @@ import {stringAvatar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
 import {useCallback, useEffect, useRef, useState} from "react";
-import {handleSetGridEditableOverview as OverviewModeSetEditing} from '../overview/overview-sat-layout.jsx'
-import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target/target-sat-layout.jsx'
-import {handleSetGridEditableWaterfall as WaterfallModeSetEditing} from '../waterfall/waterfall-layout.jsx';
+import {handleSetGridEditableOverview as OverviewModeSetEditing} from '../overview/main-layout.jsx'
+import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target/main-layout.jsx'
+import {handleSetGridEditableWaterfall as WaterfallModeSetEditing} from '../waterfall/main-layout.jsx';
 import CheckIcon from '@mui/icons-material/Check';
 import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "../common/socket.jsx";
@@ -57,20 +57,20 @@ import {
     setReConnectAttempt,
     setConnectionError,
 } from "./dashboard-slice.jsx";
-import WakeLockStatus from "./dashboard-wake-lock-status.jsx";
+import WakeLockStatus from "./wake-lock-icon.jsx";
 import Tooltip from "@mui/material/Tooltip";
 import RadioIcon from '@mui/icons-material/Radio';
 import LanIcon from '@mui/icons-material/Lan';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
-import { AudioProvider, useAudio } from "./dashboard-audio.jsx";
+import { AudioProvider, useAudio } from "./audio-provider.jsx";
 import {
     Popover,
     Slider,
     Switch,
     FormControlLabel
 } from '@mui/material';
-import HardwareSettingsPopover from "./dashboard-hardware-popover.jsx";
-import ConnectionOverlay from "./dashboard-connection-overlay.jsx";
+import HardwareSettingsPopover from "./hardware-popover.jsx";
+import ConnectionOverlay from "./reconnecting-overlay.jsx";
 
 
 function DashboardEditor() {

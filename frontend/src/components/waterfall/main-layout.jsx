@@ -32,8 +32,8 @@ import {
 } from './waterfall-slice.jsx';
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
-import MainWaterfallDisplay from "./waterfall-view.jsx";
-import WaterfallSettings from "./waterfall-settings.jsx";
+import MainWaterfallDisplay from "./waterfall-island.jsx";
+import WaterfallSettings from "./settings-column.jsx";
 import RigControl from "../target/rig-control.jsx";
 import ControllerTabs from '../common/controller.jsx';
 
@@ -58,7 +58,7 @@ function saveLayoutsToLocalStorage(layouts) {
     localStorage.setItem(gridLayoutStoreName, JSON.stringify(layouts));
 }
 
-const WaterfallLayout = React.memo(function () {
+const MainLayout = React.memo(function () {
     const waterfallComponentSettingsRef = useRef(null);
     const {socket} = useSocket();
     const dispatch = useDispatch();
@@ -186,4 +186,4 @@ const WaterfallLayout = React.memo(function () {
     return ResponsiveGridLayoutParent;
 });
 
-export default WaterfallLayout;
+export default MainLayout;

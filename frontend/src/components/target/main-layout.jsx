@@ -25,7 +25,7 @@ import 'react-grid-layout/css/styles.css';
 import 'react-resizable/css/styles.css';
 import 'leaflet/dist/leaflet.css';
 import {Box, Fab, Slider} from "@mui/material";
-import SatSelectorIsland from "./target-sat-selector.jsx";
+import SatSelectorIsland from "./satellite-selector.jsx";
 import {
     StyledIslandParent,
     StyledIslandParentNoScrollbar,
@@ -40,9 +40,9 @@ import {
     setGridEditable,
     getTrackingStateFromBackend,
     setSatelliteId,
-} from './target-sat-slice.jsx'
-import TargetSatelliteInfoIsland from "./target-sat-info.jsx";
-import NextPassesIsland from "./target-next-passes.jsx";
+} from './target-slice.jsx'
+import TargetSatelliteInfoIsland from "./satellite-info.jsx";
+import NextPassesIsland from "./next-passes.jsx";
 import CameraView from "../common/camera-view.jsx";
 import {
     satellitePositionSelector,
@@ -53,7 +53,7 @@ import {
     satelliteTransmittersSelector
 } from './state-selectors.jsx';
 import ControllerTabs from "../common/controller.jsx";
-import TargetSatelliteMapContainer from './target-sat-map.jsx';
+import TargetSatelliteMapContainer from './satellite-map.jsx';
 
 
 // global leaflet map object

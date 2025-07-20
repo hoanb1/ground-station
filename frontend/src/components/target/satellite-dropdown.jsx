@@ -28,7 +28,7 @@ import {
     setSatelliteId,
     setTrackingStateInBackend,
     setAvailableTransmitters,
-} from './target-sat-slice.jsx';
+} from './target-slice.jsx';
 import { useSocket } from "../common/socket.jsx";
 
 

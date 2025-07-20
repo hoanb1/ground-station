@@ -29,7 +29,7 @@ import {
 } from "../common/common.jsx";
 import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
-import {fetchNextPasses, setSatellitePasses} from './target-sat-slice.jsx';
+import {fetchNextPasses, setSatellitePasses} from './target-slice.jsx';
 import {darken, lighten, styled} from "@mui/material/styles";
 
 
