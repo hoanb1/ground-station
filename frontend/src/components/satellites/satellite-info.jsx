@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -397,9 +396,13 @@ const SatelliteInfo = () => {
                     <IconButton onClick={handleBackClick} sx={{mr: 2}}>
                         <ArrowBackIcon/>
                     </IconButton>
-                    <Typography variant="h6" display="inline">
-                        {clickedSatellite.name} - Satellite Information
-                    </Typography>
+                    <Box sx={{
+                        display: 'inline-flex',
+                    }}>
+                        <Typography variant="h6" display="inline">
+                            {clickedSatellite.name} - Satellite Information
+                        </Typography>
+                    </Box>
                 </Box>
 
                 <Box>
