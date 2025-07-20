@@ -126,23 +126,30 @@ export const createExternalWorker = () => {
 
 const exampleFrequencyBands = [
     {
-        startFrequency: 144000000,  // 144 MHz
-        endFrequency: 146000000,    // 146 MHz
+        startFrequency: 144000000,
+        endFrequency: 146000000,
         name: '2m Ham',
         color: 'rgba(255, 0, 0, 0.3)',
         textColor: '#ffffff'
     },
     {
-        startFrequency: 430000000,  // 430 MHz
-        endFrequency: 440000000,    // 440 MHz
+        startFrequency: 430000000,
+        endFrequency: 440000000,
         name: '70cm Ham',
         color: 'rgba(0, 255, 0, 0.3)',
         textColor: '#ffffff'
     },
     {
-        startFrequency: 88000000,   // 88 MHz
-        endFrequency: 108000000,    // 108 MHz
+        startFrequency: 88000000,
+        endFrequency: 108000000,
         name: 'FM Broadcast',
+        color: 'rgba(0, 0, 255, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 433000000,
+        endFrequency: 434000000,
+        name: '433 ISM',
         color: 'rgba(0, 0, 255, 0.3)',
         textColor: '#ffffff'
     }
