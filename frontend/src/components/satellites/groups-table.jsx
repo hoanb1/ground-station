@@ -217,7 +217,7 @@ const GroupsTable = () => {
                 <DialogTitle>Confirm Deletion</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete the selected rig(s)?
+                        Are you sure you want to delete the selected group(s)?
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
