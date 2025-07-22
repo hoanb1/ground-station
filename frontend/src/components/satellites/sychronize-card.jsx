@@ -45,7 +45,10 @@ import DeleteIcon from '@mui/icons-material/Delete'; // Add this import
 const SynchronizeTLEsCard = function () {
     const dispatch = useDispatch();
     const { socket } = useSocket();
-    const { syncState, synchronizing } = useSelector((state) => state.syncSatellite);
+    const {
+        syncState,
+        synchronizing
+    } = useSelector((state) => state.syncSatellite);
     const [showNewItems, setShowNewItems] = useState(false);
     const [showRemovedItems, setShowRemovedItems] = useState(false); // Add this state
 
@@ -178,7 +181,7 @@ const SynchronizeTLEsCard = function () {
                         alignItems: { xs: 'flex-start', sm: 'center' }
                     }}>
                         <Button
-                            disabled={synchronizing}
+                            disabled={synchronizing || syncState['progress'] > 0 && syncState['progress'] < 100}
                             variant="contained"
                             color="primary"
                             onClick={handleSynchronizeSatellites}
@@ -322,7 +325,7 @@ const SynchronizeTLEsCard = function () {
                     pointerEvents: 'none',
                 }}/>
                 <Box sx={{
-                    height: '40px',
+                    height: '60px',
                 }}>
                     <Typography
                         variant="body2"
@@ -350,6 +353,7 @@ const SynchronizeTLEsCard = function () {
                                     ? 'Synchronization complete!'
                                     : 'Synchronizing satellite data...'
                         )}
+
                     </Typography>
                 </Box>
 
@@ -519,7 +523,7 @@ const SynchronizeTLEsCard = function () {
                     </Box>
                 )}
 
-                {/* Add removed items notification - NEW SECTION */}
+                {/* Add removed items notification */}
                 {hasRemovedItems && (
                     <Box sx={{
                         backgroundColor: 'rgba(244, 67, 54, 0.1)',
