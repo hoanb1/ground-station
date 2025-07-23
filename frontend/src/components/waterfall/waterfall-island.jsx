@@ -152,6 +152,13 @@ const exampleFrequencyBands = [
         name: '433 ISM',
         color: 'rgba(0, 0, 255, 0.3)',
         textColor: '#ffffff'
+    },
+    {
+        startFrequency: 225000000,
+        endFrequency: 350000000,
+        name: 'MIL SATCOM',
+        color: 'rgba(218,28,180,0.47)',
+        textColor: '#ffffff'
     }
 ];
 
