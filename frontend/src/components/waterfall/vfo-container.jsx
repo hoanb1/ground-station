@@ -182,7 +182,6 @@ const VFOMarkersContainer = ({
 
                 if (marker) {
                     const visibleRange = getVisibleFrequencyRange();
-                    console.info(visibleRange);
                     const needsFrequencyUpdate =
                         marker.frequency === null ||
                         marker.frequency < visibleRange.startFrequency ||
@@ -219,6 +218,68 @@ const VFOMarkersContainer = ({
             // Cleanup if needed
         };
     }, [vfoActive, vfoMarkers, vfoColors, dispatch]);
+
+    // Add this new function after the updateVFOProperty function
+    const handleDragMovement = useCallback((deltaX) => {
+        if (!activeMarker) return;
+
+        // Get the active marker
+        const marker = vfoMarkers[activeMarker];
+        if (!marker) return;
+
+        // Calculate the scaling factor between screen pixels and canvas pixels
+        const rect = canvasRef.current.getBoundingClientRect();
+        const scaleFactor = actualWidth / rect.width;
+        const scaledDelta = deltaX * scaleFactor;
+
+        // Calculate pixels to frequency change
+        const freqDelta = (scaledDelta / actualWidth) * freqRange;
+
+        if (dragMode === 'body') {
+            // Moving the entire VFO (center + bandwidth)
+            const newFrequency = marker.frequency + freqDelta;
+
+            // Ensure the frequency stays within the visible range
+            const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
+
+            updateVFOProperty(parseInt(activeMarker), {
+                frequency: limitedFreq,
+            });
+
+        } else if (dragMode === 'leftEdge') {
+            // Moving the left edge (adjust bandwidth)
+            const currentBandwidth = marker.bandwidth || 3000;
+            // When dragging left edge right (positive delta), bandwidth decreases
+            const newBandwidth = currentBandwidth - (2 * freqDelta);
+
+            // Enforce minimum bandwidth and maximum using the state values
+            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
+
+            updateVFOProperty(parseInt(activeMarker), {
+                bandwidth: limitedBandwidth,
+            });
+
+        } else if (dragMode === 'rightEdge') {
+            // Moving the right edge (adjust bandwidth)
+            const currentBandwidth = marker.bandwidth || 3000;
+            // When dragging right edge right (positive delta), bandwidth increases
+            const newBandwidth = currentBandwidth + (2 * freqDelta);
+
+            // Enforce minimum bandwidth and maximum using the state values
+            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
+
+            updateVFOProperty(parseInt(activeMarker), {
+                bandwidth: limitedBandwidth,
+            });
+        }
+    }, [activeMarker, vfoMarkers, actualWidth, freqRange, dragMode, startFreq, endFreq, minBandwidth, maxBandwidth, updateVFOProperty]);
+
+    // Add this function after handleDragMovement
+    const endDragOperation = useCallback(() => {
+        setIsDragging(false);
+        setActiveMarker(null);
+        setDragMode(null);
+    }, []);
 
     // Function to calculate visible frequency range considering zoom and pan
     const getVisibleFrequencyRange = () => {
@@ -754,55 +815,7 @@ const VFOMarkersContainer = ({
         const deltaX = touch.clientX - lastTouchXRef.current;
         lastTouchXRef.current = touch.clientX;
 
-        // Get the active marker
-        const marker = vfoMarkers[activeMarker];
-        if (!marker) return;
-
-        // Calculate the scaling factor between screen pixels and canvas pixels
-        const rect = canvasRef.current.getBoundingClientRect();
-        const scaleFactor = actualWidth / rect.width;
-        const scaledDelta = deltaX * scaleFactor;
-
-        // Calculate pixels to frequency change
-        const freqDelta = (scaledDelta / actualWidth) * freqRange;
-
-        if (dragMode === 'body') {
-            // Moving the entire VFO (center + bandwidth)
-            const newFrequency = marker.frequency + freqDelta;
-
-            // Ensure the frequency stays within the visible range
-            const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
-
-            updateVFOProperty(parseInt(activeMarker), {
-                frequency: limitedFreq,
-            });
-
-        } else if (dragMode === 'leftEdge') {
-            // Moving the left edge (adjust bandwidth)
-            const currentBandwidth = marker.bandwidth || 3000;
-            // When dragging left edge right (positive delta), bandwidth decreases
-            const newBandwidth = currentBandwidth - (2 * freqDelta);
-
-            // Enforce minimum bandwidth and maximum using the state values
-            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-            updateVFOProperty(parseInt(activeMarker), {
-                bandwidth: limitedBandwidth,
-            });
-
-        } else if (dragMode === 'rightEdge') {
-            // Moving the right edge (adjust bandwidth)
-            const currentBandwidth = marker.bandwidth || 3000;
-            // When dragging right edge right (positive delta), bandwidth increases
-            const newBandwidth = currentBandwidth + (2 * freqDelta);
-
-            // Enforce minimum bandwidth and maximum using the state values
-            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-            updateVFOProperty(parseInt(activeMarker), {
-                bandwidth: limitedBandwidth,
-            });
-        }
+        handleDragMovement(deltaX);
     };
 
     // Handle touch end for mobile devices
@@ -812,9 +825,7 @@ const VFOMarkersContainer = ({
             e.preventDefault();
             e.stopPropagation();
 
-            setIsDragging(false);
-            setActiveMarker(null);
-            setDragMode(null);
+            endDragOperation();
         }
     };
 
@@ -825,9 +836,7 @@ const VFOMarkersContainer = ({
             e.preventDefault();
             e.stopPropagation();
 
-            setIsDragging(false);
-            setActiveMarker(null);
-            setDragMode(null);
+            endDragOperation();
         }
     };
 
@@ -841,96 +850,22 @@ const VFOMarkersContainer = ({
                 const deltaX = e.clientX - lastClientXRef.current;
                 lastClientXRef.current = e.clientX;
 
-                // Get the active marker
-                const marker = vfoMarkers[activeMarker];
-                if (!marker) return;
-
-                // Calculate the scaling factor between screen pixels and canvas pixels
-                const rect = canvasRef.current.getBoundingClientRect();
-                const scaleFactor = actualWidth / rect.width;
-                const scaledDelta = deltaX * scaleFactor;
-
-                // Calculate pixels to frequency change
-                const freqDelta = (scaledDelta / actualWidth) * freqRange;
-
-                if (dragMode === 'body') {
-                    // Moving the entire VFO (center + bandwidth)
-                    const newFrequency = marker.frequency + freqDelta;
-
-                    // Ensure the frequency stays within the visible range
-                    const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
-
-                    updateVFOProperty(parseInt(activeMarker), {
-                        frequency: limitedFreq,
-                    });
-
-                } else if (dragMode === 'leftEdge') {
-                    // Moving the left edge (adjust bandwidth)
-                    const currentBandwidth = marker.bandwidth || 3000;
-                    // When dragging left edge right (positive delta), bandwidth decreases
-                    const newBandwidth = currentBandwidth - (2 * freqDelta);
-
-                    // Enforce minimum bandwidth and maximum using the state values
-                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-                    updateVFOProperty(parseInt(activeMarker), {
-                        bandwidth: limitedBandwidth,
-                    });
-
-                } else if (dragMode === 'rightEdge') {
-                    // Moving the right edge (adjust bandwidth)
-                    const currentBandwidth = marker.bandwidth || 3000;
-                    // When dragging right edge right (positive delta), bandwidth increases
-                    const newBandwidth = currentBandwidth + (2 * freqDelta);
-
-                    // Enforce minimum bandwidth and maximum using the state values
-                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-                    updateVFOProperty(parseInt(activeMarker), {
-                        bandwidth: limitedBandwidth,
-                    });
-                }
+                handleDragMovement(deltaX);
             };
 
-            const handleMouseUpEvent = (event) => {
-                setIsDragging(false);
-                setActiveMarker(null);
-                setDragMode(null);
-
-                // Reset cursor based on mouse position
-                if (canvasRef.current) {
-                    const rect = canvasRef.current.getBoundingClientRect();
-                    const mouseX = event.clientX - rect.left;
-                    const mouseY = event.clientY - rect.top;
-
-                    if (mouseX >= 0 && mouseX <= rect.width && mouseY >= 0 && mouseY <= rect.height) {
-                        const { element } = getHoverElement(mouseX, mouseY);
-
-                        if (element === 'body') {
-                            setCursor('ew-resize');
-                        } else if (element === 'leftEdge' || element === 'rightEdge') {
-                            setCursor('col-resize');
-                        } else {
-                            setCursor('default');
-                        }
-                    } else {
-                        setCursor('default');
-                    }
-                }
+            const handleMouseUp = () => {
+                endDragOperation();
             };
 
-            // Add the event listeners
             document.addEventListener('mousemove', handleMouseMoveEvent);
-            document.addEventListener('mouseup', handleMouseUpEvent);
+            document.addEventListener('mouseup', handleMouseUp);
 
-            // Clean up
             return () => {
                 document.removeEventListener('mousemove', handleMouseMoveEvent);
-                document.removeEventListener('mouseup', handleMouseUpEvent);
+                document.removeEventListener('mouseup', handleMouseUp);
             };
         }
-    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq,
-        freqRange, actualWidth, getHoverElement, dispatch]);
+    }, [isDragging, activeMarker, handleDragMovement, endDragOperation]);
 
     // For touch event dragging, we need a separate effect
     useEffect(() => {
@@ -947,82 +882,29 @@ const VFOMarkersContainer = ({
                 const deltaX = touch.clientX - lastTouchXRef.current;
                 lastTouchXRef.current = touch.clientX;
 
-                // Get the active marker
-                const marker = vfoMarkers[activeMarker];
-                if (!marker) return;
-
-                // Calculate the scaling factor between screen pixels and canvas pixels
-                const rect = canvasRef.current.getBoundingClientRect();
-                const scaleFactor = actualWidth / rect.width;
-                const scaledDelta = deltaX * scaleFactor;
-
-                // Calculate pixels to frequency change
-                const freqDelta = (scaledDelta / actualWidth) * freqRange;
-
-                if (dragMode === 'body') {
-                    // Moving the entire VFO (center + bandwidth)
-                    const newFrequency = marker.frequency + freqDelta;
-
-                    // Ensure the frequency stays within the visible range
-                    const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
-
-                    updateVFOProperty(parseInt(activeMarker), {
-                        frequency: limitedFreq,
-                    });
-
-                } else if (dragMode === 'leftEdge') {
-                    const currentBandwidth = marker.bandwidth || 3000;
-                    const newBandwidth = currentBandwidth - (2 * freqDelta);
-                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-                    updateVFOProperty(parseInt(activeMarker), {
-                        bandwidth: limitedBandwidth,
-                    });
-
-                } else if (dragMode === 'rightEdge') {
-                    const currentBandwidth = marker.bandwidth || 3000;
-                    const newBandwidth = currentBandwidth + (2 * freqDelta);
-                    const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-                    updateVFOProperty(parseInt(activeMarker), {
-                        bandwidth: limitedBandwidth,
-                    });
-                }
+                // Use the shared drag movement function
+                handleDragMovement(deltaX);
             };
 
-            // Function to handle touchend on document level
-            const handleDocumentTouchEnd = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                setIsDragging(false);
-                setActiveMarker(null);
-                setDragMode(null);
+            const handleDocumentTouchEnd = () => {
+                endDragOperation();
             };
 
-            // Function to handle touchcancel on document level
-            const handleDocumentTouchCancel = (e) => {
-                e.preventDefault();
-                e.stopPropagation();
-
-                setIsDragging(false);
-                setActiveMarker(null);
-                setDragMode(null);
+            const handleDocumentTouchCancel = () => {
+                endDragOperation();
             };
 
-            // Add document-level event listeners for touch events during drag
             document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
-            document.addEventListener('touchend', handleDocumentTouchEnd, { passive: false });
-            document.addEventListener('touchcancel', handleDocumentTouchCancel, { passive: false });
+            document.addEventListener('touchend', handleDocumentTouchEnd);
+            document.addEventListener('touchcancel', handleDocumentTouchCancel);
 
-            // Clean up
             return () => {
                 document.removeEventListener('touchmove', handleDocumentTouchMove);
                 document.removeEventListener('touchend', handleDocumentTouchEnd);
                 document.removeEventListener('touchcancel', handleDocumentTouchCancel);
             };
         }
-    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, dispatch]);
+    }, [isDragging, activeMarker, handleDragMovement, endDragOperation]);
 
     // Set up global event handlers to intercept touch events during dragging
     useEffect(() => {
