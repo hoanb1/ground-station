@@ -63,6 +63,7 @@ const VFOMarkersContainer = ({
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
     const workerRef = useRef(null);
+    const canvasTransferredRef = useRef(false);
     const [actualWidth, setActualWidth] = useState(containerWidth);
     const lastMeasuredWidthRef = useRef(0);
     const [activeMarker, setActiveMarker] = useState(null);
@@ -128,14 +129,19 @@ const VFOMarkersContainer = ({
                 const { type, success, error } = e.data;
 
                 switch (type) {
+                    case 'WORKER_READY':
+                        console.log('Worker is ready:', e.data.message);
+                        setWorkerInitialized(true);
+                        setUseWorker(true);
+                        break;
                     case 'CANVAS_INITIALIZED':
                         if (success) {
-                            setWorkerInitialized(true);
-                            setUseWorker(true);
-                            console.log('VFO renderer worker initialized successfully');
+                            console.log('VFO renderer worker canvas initialized successfully');
                         } else {
                             console.error('Failed to initialize worker canvas:', error);
                             setUseWorker(false);
+                            // Reset transfer flag on failure so it can be retried
+                            canvasTransferredRef.current = false;
                         }
                         break;
                     case 'RENDER_COMPLETE':
@@ -152,6 +158,8 @@ const VFOMarkersContainer = ({
             worker.onerror = (error) => {
                 console.error('Worker error:', error);
                 setUseWorker(false);
+                // Reset transfer flag on error
+                canvasTransferredRef.current = false;
             };
 
             return () => {
@@ -159,6 +167,8 @@ const VFOMarkersContainer = ({
                     workerRef.current.terminate();
                     workerRef.current = null;
                 }
+                // Reset transfer flag when cleaning up
+                canvasTransferredRef.current = false;
             };
         } catch (error) {
             console.error('Failed to create worker:', error);
@@ -166,15 +176,26 @@ const VFOMarkersContainer = ({
         }
     }, []);
 
-    // Initialize OffscreenCanvas when canvas is ready
+    // Initialize OffscreenCanvas when canvas is ready - WITH STRICTMODE PROTECTION
     useEffect(() => {
-        if (!workerRef.current || !canvasRef.current || !useWorker) return;
+        // Add the transferred check to prevent double execution
+        if (!workerRef.current ||
+            !canvasRef.current ||
+            !useWorker ||
+            !workerInitialized ||
+            canvasTransferredRef.current) {
+            return;
+        }
 
         const canvas = canvasRef.current;
 
         try {
+            console.log('Attempting canvas transfer...');
             // Transfer canvas to worker
             const offscreenCanvas = canvas.transferControlToOffscreen();
+
+            // Mark as transferred BEFORE posting message
+            canvasTransferredRef.current = true;
 
             workerRef.current.postMessage({
                 type: 'INIT_CANVAS',
@@ -184,11 +205,21 @@ const VFOMarkersContainer = ({
                     height: height
                 }
             }, [offscreenCanvas]);
+
+            console.log('Canvas successfully transferred to worker');
         } catch (error) {
             console.error('Failed to transfer canvas to worker:', error);
             setUseWorker(false);
+            // Reset the flag if transfer failed
+            canvasTransferredRef.current = false;
         }
-    }, [useWorker, actualWidth, height]);
+
+        // Important: Don't reset canvasTransferredRef.current in cleanup
+        // because StrictMode will call cleanup and then immediately call
+        // the effect again. We only want to reset it when there's an actual error
+        // or when the component unmounts (handled in worker cleanup above)
+
+    }, [useWorker, workerInitialized, actualWidth, height]);
 
     // When the VFO status changes, detect which VFO was just made active
     useEffect(() => {
@@ -422,7 +453,7 @@ const VFOMarkersContainer = ({
         updateActualWidth();
     }, [containerWidth, updateActualWidth]);
 
-    // Send render commands to worker or fallback to direct rendering
+    // Send render commands to the worker or fallback to direct rendering
     useEffect(() => {
         if (useWorker && workerInitialized && workerRef.current) {
             // Send rendering data to worker
@@ -443,188 +474,11 @@ const VFOMarkersContainer = ({
             });
         } else if (!useWorker) {
             // Fallback to direct canvas rendering
-            renderVFOMarkersDirect();
+            //renderVFOMarkersDirect();
+            console.info("VFO worker is not ready!");
         }
     }, [useWorker, workerInitialized, vfoActive, vfoMarkers, actualWidth, height,
         centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX]);
-
-    // Fallback rendering function for browsers without OffscreenCanvas support
-    const renderVFOMarkersDirect = () => {
-        const canvas = canvasRef.current;
-        if (!canvas) {
-            return;
-        }
-
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
-
-        // Set canvas width based on actual measured width
-        canvas.width = actualWidth;
-        canvas.height = height;
-
-        // Clear the canvas
-        ctx.clearRect(0, 0, canvas.width, height);
-
-        // Get active VFO keys and sort them so selected VFO is last (drawn on top)
-        const vfoKeys = Object.keys(vfoActive).filter(key => vfoActive[key]);
-
-        // Sort keys to put selected VFO at the end (drawn last)
-        const sortedVfoKeys = vfoKeys.sort((a, b) => {
-            // If a is selected, it should come after b (drawn on top)
-            if (parseInt(a) === selectedVFO) return 1;
-            // If b is selected, it should come after a
-            if (parseInt(b) === selectedVFO) return -1;
-            // Otherwise maintain original order
-            return parseInt(a) - parseInt(b);
-        });
-
-        // Draw each marker in sorted order (selected one drawn last)
-        sortedVfoKeys.forEach(markerIdx => {
-            const marker = vfoMarkers[markerIdx];
-            const bandwidth = marker.bandwidth || 3000;
-            const mode = (marker.mode || 'USB').toUpperCase();
-            const isSelected = parseInt(markerIdx) === selectedVFO;
-
-            // Skip if the marker is outside the visible range
-            // Calculate the frequency range based on mode
-            let markerLowFreq, markerHighFreq;
-
-            if (mode === 'USB') {
-                markerLowFreq = marker.frequency;
-                markerHighFreq = marker.frequency + bandwidth;
-            } else if (mode === 'LSB') {
-                markerLowFreq = marker.frequency - bandwidth;
-                markerHighFreq = marker.frequency;
-            } else { // For AM, FM, and other modes that use both sidebands
-                markerLowFreq = marker.frequency - bandwidth/2;
-                markerHighFreq = marker.frequency + bandwidth/2;
-            }
-
-            if (markerHighFreq < startFreq || markerLowFreq > endFreq) {
-                return;
-            }
-
-            // Calculate x position based on frequency
-            const centerX = ((marker.frequency - startFreq) / freqRange) * canvas.width;
-
-            // Calculate bandwidth edges positions based on mode
-            let leftEdgeX, rightEdgeX;
-
-            if (mode === 'USB') {
-                leftEdgeX = centerX;
-                rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * canvas.width;
-            } else if (mode === 'LSB') {
-                leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * canvas.width;
-                rightEdgeX = centerX;
-            } else { // AM, FM, etc.
-                leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * canvas.width;
-                rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * canvas.width;
-            }
-
-            // Ensure edges are within canvas
-            leftEdgeX = Math.max(0, leftEdgeX);
-            rightEdgeX = Math.min(canvas.width, rightEdgeX);
-
-            const areaOpacity = isSelected ? '33' : '15';
-            const lineOpacity = isSelected ? 'FF' : '99';
-
-            // Draw shaded bandwidth area with adjusted opacity
-            ctx.fillStyle = `${marker.color}${areaOpacity}`;
-            ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
-
-            // Draw center marker line with adjusted opacity
-            ctx.beginPath();
-            ctx.strokeStyle = `${marker.color}${lineOpacity}`;
-            ctx.lineWidth = isSelected ? 2 : 1.5; // Make line thicker when selected
-            ctx.moveTo(centerX, 0);
-            ctx.lineTo(centerX, height);
-            ctx.stroke();
-
-            // Draw bandwidth edge lines based on mode with adjusted opacity
-            ctx.beginPath();
-            ctx.strokeStyle = `${marker.color}${lineOpacity}`;
-            ctx.lineWidth = isSelected ? 1.5 : 1; // Make line thicker when selected
-            ctx.setLineDash([4, 4]); // Create dashed lines for the edges
-
-            if (mode === 'USB') {
-                // Only draw right edge for USB
-                ctx.moveTo(rightEdgeX, 0);
-                ctx.lineTo(rightEdgeX, height);
-            } else if (mode === 'LSB') {
-                // Only draw left edge for LSB
-                ctx.moveTo(leftEdgeX, 0);
-                ctx.lineTo(leftEdgeX, height);
-            } else {
-                // Draw both edges for other modes
-                ctx.moveTo(leftEdgeX, 0);
-                ctx.lineTo(leftEdgeX, height);
-
-                ctx.moveTo(rightEdgeX, 0);
-                ctx.lineTo(rightEdgeX, height);
-            }
-
-            ctx.stroke();
-            // Reset to solid line
-            ctx.setLineDash([]);
-
-            // Draw edge handles based on mode
-            ctx.fillStyle = `${marker.color}${lineOpacity}`;
-
-            // Configurable handle dimensions
-            const edgeHandleYPosition = edgeHandleYOffset;
-            const edgeHandleWidth = isSelected ? 14 : 6;
-
-            if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
-                // Right edge handle - vertical rectangle
-                ctx.beginPath();
-                ctx.roundRect(
-                    rightEdgeX - edgeHandleWidth / 2,
-                    edgeHandleYPosition - edgeHandleHeight / 2,
-                    edgeHandleWidth,
-                    edgeHandleHeight,
-                    2 // rounded corner radius
-                );
-                ctx.fill();
-            }
-
-            if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
-                // Left edge handle - vertical rectangle
-                ctx.beginPath();
-                ctx.roundRect(
-                    leftEdgeX - edgeHandleWidth / 2,
-                    edgeHandleYPosition - edgeHandleHeight / 2,
-                    edgeHandleWidth,
-                    edgeHandleHeight,
-                    2 // rounded corner radius
-                );
-                ctx.fill();
-            }
-
-            // Draw frequency label background
-            const modeText = ` [${mode}]`;
-            const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
-            const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
-            ctx.font = '12px Monospace';
-            const textMetrics = ctx.measureText(labelText);
-            const labelWidth = textMetrics.width + 10; // Add padding
-            const labelHeight = 14;
-
-            ctx.fillStyle = `${marker.color}${lineOpacity}`;
-            ctx.beginPath();
-            ctx.roundRect(
-                centerX - labelWidth / 2,
-                5,
-                labelWidth,
-                labelHeight,
-                2 // rounded corner radius
-            );
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.fillText(labelText, centerX, 16);
-
-        });
-    };
 
     // Check if mouse/touch is over a handle or edge
     const getHoverElement = useCallback((x, y) => {

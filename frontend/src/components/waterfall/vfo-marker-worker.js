@@ -50,7 +50,11 @@ self.onmessage = function(e) {
 function initializeCanvas({ canvas, width, height }) {
     try {
         offscreenCanvas = canvas;
-        ctx = offscreenCanvas.getContext('2d', { willReadFrequently: true });
+        ctx = offscreenCanvas.getContext('2d', {
+            alpha: true,
+            desynchronized: true,
+            willReadFrequently: false, // true breaks Webview on android and Hermit browser
+        });
 
         if (!ctx) {
             throw new Error('Failed to get 2D context from OffscreenCanvas');
@@ -64,6 +68,8 @@ function initializeCanvas({ canvas, width, height }) {
             type: 'CANVAS_INITIALIZED',
             success: true
         });
+
+        console.info('VFO canvas worker initialized');
     } catch (error) {
         self.postMessage({
             type: 'CANVAS_INITIALIZED',
@@ -398,3 +404,9 @@ self.onunhandledrejection = function(event) {
 };
 
 console.log('VFO Renderer Worker initialized');
+
+// Send ready signal to the main thread
+self.postMessage({
+    type: 'WORKER_READY',
+    message: 'Worker has loaded and is ready to receive canvas'
+});
