@@ -18,8 +18,8 @@
  */
 
 
-let offscreenCanvas = null;
-let ctx = null;
+let VFOOffscreenCanvas = null;
+let VFOCanvasContext = null;
 
 // Configuration constants (matches main thread)
 const EDGE_HANDLE_HEIGHT = 20;
@@ -49,20 +49,20 @@ self.onmessage = function(e) {
  */
 function initializeCanvas({ canvas, width, height }) {
     try {
-        offscreenCanvas = canvas;
-        ctx = offscreenCanvas.getContext('2d', {
+        VFOOffscreenCanvas = canvas;
+        VFOCanvasContext = VFOOffscreenCanvas.getContext('2d', {
             alpha: true,
-            desynchronized: true,
+            desynchronized: false,
             willReadFrequently: false, // true breaks Webview on android and Hermit browser
         });
 
-        if (!ctx) {
+        if (!VFOCanvasContext) {
             throw new Error('Failed to get 2D context from OffscreenCanvas');
         }
 
         // Set initial canvas dimensions
-        offscreenCanvas.width = width;
-        offscreenCanvas.height = height;
+        VFOOffscreenCanvas.width = width;
+        VFOOffscreenCanvas.height = height;
 
         self.postMessage({
             type: 'CANVAS_INITIALIZED',
@@ -83,12 +83,12 @@ function initializeCanvas({ canvas, width, height }) {
  * Resize the canvas
  */
 function resizeCanvas({ width, height }) {
-    if (!offscreenCanvas || !ctx) {
+    if (!VFOOffscreenCanvas || !VFOCanvasContext) {
         return;
     }
 
-    offscreenCanvas.width = width;
-    offscreenCanvas.height = height;
+    VFOOffscreenCanvas.width = width;
+    VFOOffscreenCanvas.height = height;
 
     self.postMessage({
         type: 'CANVAS_RESIZED',
@@ -168,46 +168,46 @@ function drawVFOMarker(marker, markerIdx, isSelected, startFreq, endFreq, freqRa
         return;
     }
 
-    // Adjust opacity based on selected state
+    // Adjust opacity based on the selected state
     const areaOpacity = isSelected ? '33' : '15';
     const lineOpacity = isSelected ? 'FF' : '99';
 
-    // Draw shaded bandwidth area
-    ctx.fillStyle = `${marker.color}${areaOpacity}`;
-    ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, canvasHeight);
+    // Draw a shaded bandwidth area
+    VFOCanvasContext.fillStyle = `${marker.color}${areaOpacity}`;
+    VFOCanvasContext.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, canvasHeight);
 
-    // Draw center marker line
-    ctx.beginPath();
-    ctx.strokeStyle = `${marker.color}${lineOpacity}`;
-    ctx.lineWidth = isSelected ? 2 : 1.5;
-    ctx.moveTo(centerX, 0);
-    ctx.lineTo(centerX, canvasHeight);
-    ctx.stroke();
+    // Draw the center marker line
+    VFOCanvasContext.beginPath();
+    VFOCanvasContext.strokeStyle = `${marker.color}${lineOpacity}`;
+    VFOCanvasContext.lineWidth = isSelected ? 2 : 1.5;
+    VFOCanvasContext.moveTo(centerX, 0);
+    VFOCanvasContext.lineTo(centerX, canvasHeight);
+    VFOCanvasContext.stroke();
 
     // Draw bandwidth edge lines based on mode
-    ctx.beginPath();
-    ctx.strokeStyle = `${marker.color}${lineOpacity}`;
-    ctx.lineWidth = isSelected ? 1.5 : 1;
-    ctx.setLineDash([4, 4]); // Create dashed lines
+    VFOCanvasContext.beginPath();
+    VFOCanvasContext.strokeStyle = `${marker.color}${lineOpacity}`;
+    VFOCanvasContext.lineWidth = isSelected ? 1.5 : 1;
+    VFOCanvasContext.setLineDash([4, 4]); // Create dashed lines
 
     if (mode === 'USB') {
         // Only draw right edge for USB
-        ctx.moveTo(rightEdgeX, 0);
-        ctx.lineTo(rightEdgeX, canvasHeight);
+        VFOCanvasContext.moveTo(rightEdgeX, 0);
+        VFOCanvasContext.lineTo(rightEdgeX, canvasHeight);
     } else if (mode === 'LSB') {
         // Only draw left edge for LSB
-        ctx.moveTo(leftEdgeX, 0);
-        ctx.lineTo(leftEdgeX, canvasHeight);
+        VFOCanvasContext.moveTo(leftEdgeX, 0);
+        VFOCanvasContext.lineTo(leftEdgeX, canvasHeight);
     } else {
         // Draw both edges for other modes
-        ctx.moveTo(leftEdgeX, 0);
-        ctx.lineTo(leftEdgeX, canvasHeight);
-        ctx.moveTo(rightEdgeX, 0);
-        ctx.lineTo(rightEdgeX, canvasHeight);
+        VFOCanvasContext.moveTo(leftEdgeX, 0);
+        VFOCanvasContext.lineTo(leftEdgeX, canvasHeight);
+        VFOCanvasContext.moveTo(rightEdgeX, 0);
+        VFOCanvasContext.lineTo(rightEdgeX, canvasHeight);
     }
 
-    ctx.stroke();
-    ctx.setLineDash([]); // Reset to solid line
+    VFOCanvasContext.stroke();
+    VFOCanvasContext.setLineDash([]); // Reset to solid line
 
     // Draw edge handles
     drawEdgeHandles(mode, leftEdgeX, rightEdgeX, marker.color, lineOpacity, isSelected);
@@ -220,35 +220,35 @@ function drawVFOMarker(marker, markerIdx, isSelected, startFreq, endFreq, freqRa
  * Draw edge handles for VFO marker
  */
 function drawEdgeHandles(mode, leftEdgeX, rightEdgeX, color, opacity, isSelected) {
-    ctx.fillStyle = `${color}${opacity}`;
+    VFOCanvasContext.fillStyle = `${color}${opacity}`;
 
     const edgeHandleYPosition = EDGE_HANDLE_Y_OFFSET;
     const edgeHandleWidth = isSelected ? 14 : 6;
 
     if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
         // Right edge handle
-        ctx.beginPath();
-        ctx.roundRect(
+        VFOCanvasContext.beginPath();
+        VFOCanvasContext.roundRect(
             rightEdgeX - edgeHandleWidth / 2,
             edgeHandleYPosition - EDGE_HANDLE_HEIGHT / 2,
             edgeHandleWidth,
             EDGE_HANDLE_HEIGHT,
             2
         );
-        ctx.fill();
+        VFOCanvasContext.fill();
     }
 
     if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
         // Left edge handle
-        ctx.beginPath();
-        ctx.roundRect(
+        VFOCanvasContext.beginPath();
+        VFOCanvasContext.roundRect(
             leftEdgeX - edgeHandleWidth / 2,
             edgeHandleYPosition - EDGE_HANDLE_HEIGHT / 2,
             edgeHandleWidth,
             EDGE_HANDLE_HEIGHT,
             2
         );
-        ctx.fill();
+        VFOCanvasContext.fill();
     }
 }
 
@@ -264,27 +264,27 @@ function drawFrequencyLabel(marker, centerX, bandwidth, mode, opacity) {
     const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
 
     // Set font and measure text
-    ctx.font = '12px Monospace';
-    const textMetrics = ctx.measureText(labelText);
+    VFOCanvasContext.font = '12px Monospace';
+    const textMetrics = VFOCanvasContext.measureText(labelText);
     const labelWidth = textMetrics.width + 10; // Add padding
     const labelHeight = 14;
 
     // Draw label background
-    ctx.fillStyle = `${marker.color}${opacity}`;
-    ctx.beginPath();
-    ctx.roundRect(
+    VFOCanvasContext.fillStyle = `${marker.color}${opacity}`;
+    VFOCanvasContext.beginPath();
+    VFOCanvasContext.roundRect(
         centerX - labelWidth / 2,
         5,
         labelWidth,
         labelHeight,
         2
     );
-    ctx.fill();
+    VFOCanvasContext.fill();
 
     // Draw label text
-    ctx.fillStyle = '#ffffff';
-    ctx.textAlign = 'center';
-    ctx.fillText(labelText, centerX, 16);
+    VFOCanvasContext.fillStyle = '#ffffff';
+    VFOCanvasContext.textAlign = 'center';
+    VFOCanvasContext.fillText(labelText, centerX, 16);
 }
 
 /**
@@ -304,19 +304,19 @@ function renderVFOMarkers(data) {
         currentPositionX
     } = data;
 
-    if (!offscreenCanvas || !ctx) {
+    if (!VFOOffscreenCanvas || !VFOCanvasContext) {
         console.error('Canvas not initialized');
         return;
     }
 
     // Update canvas dimensions if needed
-    if (offscreenCanvas.width !== canvasWidth || offscreenCanvas.height !== canvasHeight) {
-        offscreenCanvas.width = canvasWidth;
-        offscreenCanvas.height = canvasHeight;
+    if (VFOOffscreenCanvas.width !== canvasWidth || VFOOffscreenCanvas.height !== canvasHeight) {
+        VFOOffscreenCanvas.width = canvasWidth;
+        VFOOffscreenCanvas.height = canvasHeight;
     }
 
     // Clear the canvas
-    ctx.clearRect(0, 0, canvasWidth, canvasHeight);
+    VFOCanvasContext.clearRect(0, 0, canvasWidth, canvasHeight);
 
     // Calculate frequency range
     const startFreq = centerFrequency - sampleRate / 2;
