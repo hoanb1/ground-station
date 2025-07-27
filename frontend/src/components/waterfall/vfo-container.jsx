@@ -146,6 +146,72 @@ const VFOMarkersContainer = ({
         };
     }, [startFreq, freqRange, actualWidth]);
 
+    // Canvas drawing utilities
+    const canvasDrawingUtils = useMemo(() => ({
+        drawVFOArea: (ctx, leftEdgeX, rightEdgeX, height, color, opacity) => {
+            ctx.fillStyle = `${color}${opacity}`;
+            ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
+        },
+
+        drawVFOLine: (ctx, x, height, color, opacity, lineWidth) => {
+            ctx.beginPath();
+            ctx.strokeStyle = `${color}${opacity}`;
+            ctx.lineWidth = lineWidth;
+            ctx.moveTo(x, 0);
+            ctx.lineTo(x, height);
+            ctx.stroke();
+        },
+
+        drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth) => {
+            ctx.beginPath();
+            ctx.strokeStyle = `${color}${opacity}`;
+            ctx.lineWidth = lineWidth;
+            ctx.setLineDash([4, 4]);
+
+            if (mode === 'USB') {
+                ctx.moveTo(rightEdgeX, 0);
+                ctx.lineTo(rightEdgeX, height);
+            } else if (mode === 'LSB') {
+                ctx.moveTo(leftEdgeX, 0);
+                ctx.lineTo(leftEdgeX, height);
+            } else {
+                // Draw both edges for AM, FM, etc.
+                ctx.moveTo(leftEdgeX, 0);
+                ctx.lineTo(leftEdgeX, height);
+                ctx.moveTo(rightEdgeX, 0);
+                ctx.lineTo(rightEdgeX, height);
+            }
+
+            ctx.stroke();
+            ctx.setLineDash([]);
+        },
+
+        drawVFOHandle: (ctx, x, y, width, height, color, opacity) => {
+            ctx.fillStyle = `${color}${opacity}`;
+            ctx.beginPath();
+            ctx.roundRect(x - width / 2, y - height / 2, width, height, 2);
+            ctx.fill();
+        },
+
+        drawVFOLabel: (ctx, centerX, labelText, color, opacity) => {
+            ctx.font = '12px Monospace';
+            const textMetrics = ctx.measureText(labelText);
+            const labelWidth = textMetrics.width + 10;
+            const labelHeight = 14;
+
+            // Draw background
+            ctx.fillStyle = `${color}${opacity}`;
+            ctx.beginPath();
+            ctx.roundRect(centerX - labelWidth / 2, 5, labelWidth, labelHeight, 2);
+            ctx.fill();
+
+            // Draw text
+            ctx.fillStyle = '#ffffff';
+            ctx.textAlign = 'center';
+            ctx.fillText(labelText, centerX, 16);
+        }
+    }), []);
+
     // When the VFO status changes, detect which VFO was just made active
     useEffect(() => {
         // Compare current vfoActive with previous state
@@ -427,107 +493,32 @@ const VFOMarkersContainer = ({
             }
 
             const { leftEdgeX, rightEdgeX, centerX, mode, bandwidth } = bounds;
-
-            // Rest of your drawing code remains the same...
             const areaOpacity = isSelected ? '33' : '15';
             const lineOpacity = isSelected ? 'FF' : '99';
 
-            // Draw shaded bandwidth area with adjusted opacity
-            ctx.fillStyle = `${marker.color}${areaOpacity}`;
-            ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
-
-            // Draw center marker line with adjusted opacity
-            ctx.beginPath();
-            ctx.strokeStyle = `${marker.color}${lineOpacity}`;
-            ctx.lineWidth = isSelected ? 2 : 1.5; // Make line thicker when selected
-            ctx.moveTo(centerX, 0);
-            ctx.lineTo(centerX, height);
-            ctx.stroke();
-
-            // Draw bandwidth edge lines based on mode with adjusted opacity
-            ctx.beginPath();
-            ctx.strokeStyle = `${marker.color}${lineOpacity}`;
-            ctx.lineWidth = isSelected ? 1.5 : 1; // Make line thicker when selected
-            ctx.setLineDash([4, 4]); // Create dashed lines for the edges
-
-            if (mode === 'USB') {
-                // Only draw right edge for USB
-                ctx.moveTo(rightEdgeX, 0);
-                ctx.lineTo(rightEdgeX, height);
-            } else if (mode === 'LSB') {
-                // Only draw left edge for LSB
-                ctx.moveTo(leftEdgeX, 0);
-                ctx.lineTo(leftEdgeX, height);
-            } else {
-                // Draw both edges for other modes
-                ctx.moveTo(leftEdgeX, 0);
-                ctx.lineTo(leftEdgeX, height);
-
-                ctx.moveTo(rightEdgeX, 0);
-                ctx.lineTo(rightEdgeX, height);
-            }
-
-            ctx.stroke();
-            // Reset to solid line
-            ctx.setLineDash([]);
+            // Use drawing utilities
+            canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, marker.color, areaOpacity);
+            canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5);
+            canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1);
 
             // Draw edge handles based on mode
-            ctx.fillStyle = `${marker.color}${lineOpacity}`;
-
-            // Configurable handle dimensions
             const edgeHandleYPosition = edgeHandleYOffset;
             const edgeHandleWidth = isSelected ? 14 : 6;
 
             if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
-                // Right edge handle - vertical rectangle
-                ctx.beginPath();
-                ctx.roundRect(
-                    rightEdgeX - edgeHandleWidth / 2,
-                    edgeHandleYPosition - edgeHandleHeight / 2,
-                    edgeHandleWidth,
-                    edgeHandleHeight,
-                    2 // rounded corner radius
-                );
-                ctx.fill();
+                canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
             }
 
             if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
-                // Left edge handle - vertical rectangle
-                ctx.beginPath();
-                ctx.roundRect(
-                    leftEdgeX - edgeHandleWidth / 2,
-                    edgeHandleYPosition - edgeHandleHeight / 2,
-                    edgeHandleWidth,
-                    edgeHandleHeight,
-                    2 // rounded corner radius
-                );
-                ctx.fill();
+                canvasDrawingUtils.drawVFOHandle(ctx, leftEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
             }
 
-            // Draw frequency label background
+            // Draw frequency label
             const modeText = ` [${mode}]`;
             const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
             const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
-            ctx.font = '12px Monospace';
-            const textMetrics = ctx.measureText(labelText);
-            const labelWidth = textMetrics.width + 10; // Add padding
-            const labelHeight = 14;
 
-            ctx.fillStyle = `${marker.color}${lineOpacity}`;
-            ctx.beginPath();
-            ctx.roundRect(
-                centerX - labelWidth / 2,
-                5,
-                labelWidth,
-                labelHeight,
-                2 // rounded corner radius
-            );
-            ctx.fill();
-
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.fillText(labelText, centerX, 16);
-
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity);
         });
     };
 
