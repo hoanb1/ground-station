@@ -18,26 +18,15 @@
  */
 
 
-
 import React, {useState, useEffect, useCallback, useRef, useMemo} from "react";
 import { useDispatch, useSelector } from "react-redux";
 import { v4 as uuidv4 } from 'uuid';
 import { Box, IconButton } from '@mui/material';
 import TuneIcon from '@mui/icons-material/Tune';
 import {
-    enableVFO1,
-    enableVFO2,
-    enableVFO3,
-    enableVFO4,
-    disableVFO1,
-    disableVFO2,
-    disableVFO3,
-    disableVFO4,
     setVFOProperty,
     setSelectedVFO,
     updateVFOParameters,
-    setVfoActive,
-    setVfoInactive,
 } from './waterfall-slice.jsx';
 import {useSocket} from "../common/socket.jsx";
 
@@ -106,6 +95,20 @@ const VFOMarkersContainer = ({
             updates,
         }));
     }, [dispatch]);
+
+    // Utility function for bandwidth calculation
+    const calculateBandwidthChange = useCallback((currentBandwidth, freqDelta, dragMode) => {
+        let newBandwidth;
+        if (dragMode === 'leftEdge') {
+            newBandwidth = currentBandwidth - (2 * freqDelta);
+        } else if (dragMode === 'rightEdge') {
+            newBandwidth = currentBandwidth + (2 * freqDelta);
+        } else {
+            return currentBandwidth;
+        }
+
+        return Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
+    }, [minBandwidth, maxBandwidth]);
 
     // Utility function for VFO frequency calculations
     const calculateVFOFrequencyBounds = useCallback((marker) => {
@@ -262,67 +265,42 @@ const VFOMarkersContainer = ({
         };
     }, [vfoActive, vfoMarkers, vfoColors, dispatch]);
 
-    // Add this new function after the updateVFOProperty function
+    // Function after the updateVFOProperty function
     const handleDragMovement = useCallback((deltaX) => {
         if (!activeMarker) return;
 
-        // Get the active marker
         const marker = vfoMarkers[activeMarker];
         if (!marker) return;
 
-        // Calculate the scaling factor between screen pixels and canvas pixels
         const rect = canvasRef.current.getBoundingClientRect();
         const scaleFactor = actualWidth / rect.width;
         const scaledDelta = deltaX * scaleFactor;
-
-        // Calculate pixels to frequency change
         const freqDelta = (scaledDelta / actualWidth) * freqRange;
 
         if (dragMode === 'body') {
-            // Moving the entire VFO (center + bandwidth)
             const newFrequency = marker.frequency + freqDelta;
-
-            // Ensure the frequency stays within the visible range
             const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
-
-            updateVFOProperty(parseInt(activeMarker), {
-                frequency: limitedFreq,
-            });
-
-        } else if (dragMode === 'leftEdge') {
-            // Moving the left edge (adjust bandwidth)
+            updateVFOProperty(parseInt(activeMarker), { frequency: limitedFreq });
+        } else {
             const currentBandwidth = marker.bandwidth || 3000;
-            // When dragging left edge right (positive delta), bandwidth decreases
-            const newBandwidth = currentBandwidth - (2 * freqDelta);
-
-            // Enforce minimum bandwidth and maximum using the state values
-            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-            updateVFOProperty(parseInt(activeMarker), {
-                bandwidth: limitedBandwidth,
-            });
-
-        } else if (dragMode === 'rightEdge') {
-            // Moving the right edge (adjust bandwidth)
-            const currentBandwidth = marker.bandwidth || 3000;
-            // When dragging right edge right (positive delta), bandwidth increases
-            const newBandwidth = currentBandwidth + (2 * freqDelta);
-
-            // Enforce minimum bandwidth and maximum using the state values
-            const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-            updateVFOProperty(parseInt(activeMarker), {
-                bandwidth: limitedBandwidth,
-            });
+            const limitedBandwidth = calculateBandwidthChange(currentBandwidth, freqDelta, dragMode);
+            updateVFOProperty(parseInt(activeMarker), { bandwidth: limitedBandwidth });
         }
-    }, [activeMarker, vfoMarkers, actualWidth, freqRange, dragMode, startFreq, endFreq, minBandwidth, maxBandwidth, updateVFOProperty]);
+    }, [activeMarker, vfoMarkers, actualWidth, freqRange, dragMode, startFreq, endFreq, updateVFOProperty, calculateBandwidthChange]);
 
-    // Add this function after handleDragMovement
+    // Function after handleDragMovement
     const endDragOperation = useCallback(() => {
         setIsDragging(false);
         setActiveMarker(null);
         setDragMode(null);
     }, []);
+
+    // Utility function after canvasDrawingUtils:
+    const generateLabelText = useCallback((marker, mode, bandwidth) => {
+        const modeText = ` [${mode}]`;
+        const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
+        return `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
+    }, [formatFrequency]);
 
     // Function to calculate visible frequency range considering zoom and pan
     const getVisibleFrequencyRange = () => {
@@ -514,9 +492,7 @@ const VFOMarkersContainer = ({
             }
 
             // Draw frequency label
-            const modeText = ` [${mode}]`;
-            const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
-            const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
+            const labelText = generateLabelText(marker, mode, bandwidth);
 
             canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity);
         });
@@ -550,9 +526,7 @@ const VFOMarkersContainer = ({
             // Check label (y between 0-20px with enlarged touch area) - treat as body drag
             if (y >= 0 && y <= labelYRange) {
                 // Calculate label width (approximated based on drawing code)
-                const modeText = ` [${mode}]`;
-                const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
-                const labelText = `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
+                const labelText = generateLabelText(marker, mode, bandwidth);
 
                 // Create temporary canvas for text measurement
                 const tempCanvas = document.createElement('canvas');
@@ -768,51 +742,9 @@ const VFOMarkersContainer = ({
 
     // For touch event dragging, we need a separate effect
     useEffect(() => {
-        if (isDragging && activeMarker) {
-            // Function to handle touchmove on document level
-            const handleDocumentTouchMove = (e) => {
-                if (e.touches.length !== 1) return;
-
-                // Always prevent default for document-level touch events during drag
-                e.preventDefault();
-                e.stopPropagation();
-
-                const touch = e.touches[0];
-                const deltaX = touch.clientX - lastTouchXRef.current;
-                lastTouchXRef.current = touch.clientX;
-
-                // Use the shared drag movement function
-                handleDragMovement(deltaX);
-            };
-
-            const handleDocumentTouchEnd = () => {
-                endDragOperation();
-            };
-
-            const handleDocumentTouchCancel = () => {
-                endDragOperation();
-            };
-
-            document.addEventListener('touchmove', handleDocumentTouchMove, { passive: false });
-            document.addEventListener('touchend', handleDocumentTouchEnd);
-            document.addEventListener('touchcancel', handleDocumentTouchCancel);
-
-            return () => {
-                document.removeEventListener('touchmove', handleDocumentTouchMove);
-                document.removeEventListener('touchend', handleDocumentTouchEnd);
-                document.removeEventListener('touchcancel', handleDocumentTouchCancel);
-            };
-        }
-    }, [isDragging, activeMarker, handleDragMovement, endDragOperation]);
-
-    // Set up global event handlers to intercept touch events during dragging
-    useEffect(() => {
-        // Only set up if we're actively dragging
         if (!isDragging) return;
 
-        // Capture phase handler for document touchmove
         const handleDocumentTouchMove = (e) => {
-            // During active dragging, always prevent default and stop propagation
             e.preventDefault();
             e.stopPropagation();
 
@@ -822,72 +754,26 @@ const VFOMarkersContainer = ({
             const deltaX = touch.clientX - lastTouchXRef.current;
             lastTouchXRef.current = touch.clientX;
 
-            // Get the active marker
-            const marker = vfoMarkers[activeMarker];
-            if (!marker) return;
-
-            // Calculate the scaling factor between screen pixels and canvas pixels
-            const rect = canvasRef.current.getBoundingClientRect();
-            const scaleFactor = actualWidth / rect.width;
-            const scaledDelta = deltaX * scaleFactor;
-
-            // Calculate pixels to frequency change
-            const freqDelta = (scaledDelta / actualWidth) * freqRange;
-
-            // Implement dragging logic based on drag mode
-            if (dragMode === 'body') {
-                const newFrequency = marker.frequency + freqDelta;
-                const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
-
-                updateVFOProperty(parseInt(activeMarker), {
-                    frequency: limitedFreq,
-                });
-
-            } else if (dragMode === 'leftEdge') {
-                const currentBandwidth = marker.bandwidth || 3000;
-                const newBandwidth = currentBandwidth - (2 * freqDelta);
-                const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-                updateVFOProperty(parseInt(activeMarker), {
-                    bandwidth: limitedBandwidth,
-                });
-
-            } else if (dragMode === 'rightEdge') {
-                const currentBandwidth = marker.bandwidth || 3000;
-                const newBandwidth = currentBandwidth + (2 * freqDelta);
-                const limitedBandwidth = Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
-
-                updateVFOProperty(parseInt(activeMarker), {
-                    bandwidth: limitedBandwidth,
-                });
-            }
+            // Use the existing handleDragMovement function instead of duplicating logic
+            handleDragMovement(deltaX);
         };
 
-        // Capture phase handler for document touchend and touchcancel
         const handleDocumentTouchEnd = (e) => {
-            // During active dragging, always prevent default and stop propagation
             e.preventDefault();
             e.stopPropagation();
-
-            setIsDragging(false);
-            setActiveMarker(null);
-            setDragMode(null);
+            endDragOperation();
         };
 
-        // Add event listeners with capture: true to intercept events before they reach other elements
         document.addEventListener('touchmove', handleDocumentTouchMove, { capture: true, passive: false });
         document.addEventListener('touchend', handleDocumentTouchEnd, { capture: true, passive: false });
         document.addEventListener('touchcancel', handleDocumentTouchEnd, { capture: true, passive: false });
 
-        // Clean up
         return () => {
-            // Clean up listeners when effect is cleaned up
-            document.removeEventListener('touchmove', handleDocumentTouchMove, { capture: true, passive: false });
-            document.removeEventListener('touchend', handleDocumentTouchEnd, { capture: true, passive: false });
-            document.removeEventListener('touchcancel', handleDocumentTouchEnd, { capture: true, passive: false });
+            document.removeEventListener('touchmove', handleDocumentTouchMove, { capture: true });
+            document.removeEventListener('touchend', handleDocumentTouchEnd, { capture: true });
+            document.removeEventListener('touchcancel', handleDocumentTouchEnd, { capture: true });
         };
-
-    }, [isDragging, activeMarker, dragMode, vfoMarkers, startFreq, endFreq, freqRange, actualWidth, dispatch, minBandwidth, maxBandwidth, updateVFOProperty]);
+    }, [isDragging, handleDragMovement, endDragOperation]);
 
     // Updated click handler to use setSelectedVFO action
     const handleClick = (e) => {
