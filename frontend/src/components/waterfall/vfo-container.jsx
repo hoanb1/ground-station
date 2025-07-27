@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -51,6 +52,8 @@ const VFOMarkersContainer = ({
 
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
+    // Canvas context caching for performance
+    const canvasContextRef = useRef(null);
     const [actualWidth, setActualWidth] = useState(containerWidth);
     const lastMeasuredWidthRef = useRef(0);
     const [activeMarker, setActiveMarker] = useState(null);
@@ -87,6 +90,36 @@ const VFOMarkersContainer = ({
     const formatFrequency = (freq) => {
         return (freq / 1e6).toFixed(3);
     };
+
+    // Get or create canvas context with caching
+    const getCanvasContext = useCallback(() => {
+        const canvas = canvasRef.current;
+        if (!canvas) return null;
+
+        // Return cached context if available and canvas hasn't changed
+        if (canvasContextRef.current && canvasContextRef.current.canvas === canvas) {
+            return canvasContextRef.current;
+        }
+
+        // Create and cache new context
+        try {
+            const ctx = canvas.getContext('2d', { willReadFrequently: true });
+            if (ctx) {
+                canvasContextRef.current = ctx;
+                return ctx;
+            }
+        } catch (error) {
+            console.error('Failed to get canvas 2d context:', error);
+        }
+
+        return null;
+    }, []);
+
+    // Clear canvas context cache when canvas changes
+    useEffect(() => {
+        // Reset cached context when canvas ref changes
+        canvasContextRef.current = null;
+    }, [canvasRef.current]);
 
     // Consolidated function to set redux state
     const updateVFOProperty = useCallback((vfoNumber, updates) => {
@@ -428,16 +461,21 @@ const VFOMarkersContainer = ({
     }, [vfoActive, vfoMarkers, actualWidth, height,
         centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX]);
 
-    // Rendering function
+    // Rendering function with cached context
     const renderVFOMarkersDirect = () => {
         const canvas = canvasRef.current;
         if (!canvas) {
             return;
         }
 
-        const ctx = canvas.getContext('2d', { willReadFrequently: true });
+        // Use cached context
+        const ctx = getCanvasContext();
+        if (!ctx) {
+            console.warn('Could not get canvas 2d context');
+            return;
+        }
 
-        // Set canvas width based on actual measured width
+        // Set canvas dimensions
         canvas.width = actualWidth;
         canvas.height = height;
 
@@ -528,16 +566,17 @@ const VFOMarkersContainer = ({
                 // Calculate label width (approximated based on drawing code)
                 const labelText = generateLabelText(marker, mode, bandwidth);
 
-                // Create temporary canvas for text measurement
-                const tempCanvas = document.createElement('canvas');
-                const tempCtx = tempCanvas.getContext('2d');
-                tempCtx.font = '12px Monospace';
-                const textMetrics = tempCtx.measureText(labelText);
-                const labelWidth = textMetrics.width + 10;
+                // Use cached context for text measurement
+                const ctx = getCanvasContext();
+                if (ctx) {
+                    ctx.font = '12px Monospace';
+                    const textMetrics = ctx.measureText(labelText);
+                    const labelWidth = textMetrics.width + 10;
 
-                // Check if mouse is over label area
-                if (Math.abs(canvasX - centerX) <= labelWidth / 2) {
-                    return { key, element: 'body' };
+                    // Check if mouse is over label area
+                    if (Math.abs(canvasX - centerX) <= labelWidth / 2) {
+                        return { key, element: 'body' };
+                    }
                 }
             }
 
@@ -593,7 +632,7 @@ const VFOMarkersContainer = ({
 
         return { key: null, element: null };
     }, [vfoActive, actualWidth, startFreq, freqRange, selectedVFO, formatFrequency,
-        edgeHandleHeight, edgeHandleYOffset, vfoMarkers]);
+        edgeHandleHeight, edgeHandleYOffset, vfoMarkers, getCanvasContext]);
 
     // Handle mouse move to update cursor
     const handleMouseMove = useCallback((e) => {
