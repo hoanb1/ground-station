@@ -21,15 +21,11 @@
 
 import React, {useState, useEffect, useCallback, useRef, useMemo} from "react";
 import { useDispatch, useSelector } from "react-redux";
-import { v4 as uuidv4 } from 'uuid';
 import { Box, IconButton } from '@mui/material';
-import TuneIcon from '@mui/icons-material/Tune';
 import {
     setVFOProperty,
     setSelectedVFO,
-    updateVFOParameters,
 } from './waterfall-slice.jsx';
-import {useSocket} from "../common/socket.jsx";
 
 const VFOMarkersContainer = ({
                                  centerFrequency,
@@ -41,7 +37,6 @@ const VFOMarkersContainer = ({
                                  currentPositionX,
                              }) => {
     const dispatch = useDispatch();
-    const {socket} = useSocket();
     const {
         vfoMarkers,
         maxVFOMarkers,
@@ -443,7 +438,7 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         const interval = setInterval(() => {
             updateActualWidth();
-        }, 100);
+        }, 250);
 
         return () => {
             clearInterval(interval);
