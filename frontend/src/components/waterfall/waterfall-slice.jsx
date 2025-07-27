@@ -94,7 +94,7 @@ const initialState = {
     gridEditable: false,
     //waterFallCanvasWidth: isMobile? 4096: 8191,
     waterFallCanvasWidth: 4096,
-    waterFallCanvasHeight: 1300,
+    waterFallCanvasHeight: 1200,
     //waterFallVisualWidth: isMobile? 4096: 8191,
     waterFallVisualWidth: 4096,
     //bandScopeHeight: 125,

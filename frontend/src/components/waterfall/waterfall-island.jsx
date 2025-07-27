@@ -1028,7 +1028,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         />
                     </Box>
 
-                    {/* Right column - Main visualization canvases */}
+                    {/* Main visualization canvases */}
                     <WaterfallAndBandscope
                         ref={waterfallControlRef}
                         bandscopeCanvasRef={bandscopeCanvasRef}

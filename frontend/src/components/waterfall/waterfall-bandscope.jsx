@@ -30,15 +30,16 @@ import VFOMarkersContainer from './vfo-container.jsx';
 import FrequencyBandOverlay from './bandplan-overlay.jsx';
 
 
-// Inside your WaterfallAndBandscope component, add:
 const WaterfallAndBandscope = forwardRef(({
-    bandscopeCanvasRef,
-    waterFallCanvasRef,
-    centerFrequency,
-    sampleRate,
-    waterFallWindowHeight,
-    frequencyBands = [], // Add this new prop for frequency bands
-}, ref) => {
+                                              bandscopeCanvasRef,
+                                              waterFallCanvasRef,
+                                              centerFrequency,
+                                              sampleRate,
+                                              waterFallWindowHeight,
+                                              frequencyBands = [],
+                                              minZoom = 1,
+                                              maxZoom = 20,
+                                          }, ref) => {
 
 
     const containerRef = useRef(null);
@@ -186,7 +187,7 @@ const WaterfallAndBandscope = forwardRef(({
     // Zoom functionality
     const zoomOnXAxisOnly = useCallback((deltaScale, centerX) => {
         const prevScale = scaleRef.current;
-        const newScale = Math.max(1, Math.min(15, prevScale + deltaScale));
+        const newScale = Math.max(minZoom, Math.min(maxZoom, prevScale + deltaScale));
 
         // Exit if the scale didn't change
         if (newScale === prevScale) return;

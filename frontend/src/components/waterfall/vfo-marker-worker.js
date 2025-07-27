@@ -21,7 +21,7 @@
 let VFOOffscreenCanvas = null;
 let VFOCanvasContext = null;
 
-// Configuration constants (matches main thread)
+// Configuration constants
 const EDGE_HANDLE_HEIGHT = 20;
 const EDGE_HANDLE_Y_OFFSET = 50;
 
@@ -90,6 +90,7 @@ function resizeCanvas({ width, height }) {
     VFOOffscreenCanvas.width = width;
     VFOOffscreenCanvas.height = height;
 
+    console.info("VFO canvas resized to " + width + "x" + height + "");
     self.postMessage({
         type: 'CANVAS_RESIZED',
         width,
@@ -342,7 +343,7 @@ function renderVFOMarkers(data) {
         drawVFOMarker(marker, markerIdx, isSelected, startFreq, endFreq, freqRange, canvasWidth, canvasHeight);
     });
 
-    // Notify main thread that rendering is complete
+    // Notify the main thread that rendering is complete
     self.postMessage({
         type: 'RENDER_COMPLETE',
         timestamp: performance.now()
@@ -350,9 +351,10 @@ function renderVFOMarkers(data) {
 }
 
 /**
- * Calculate visible frequency range (utility function for potential future use)
+ * Calculate visible frequency range
  */
-function calculateVisibleFrequencyRange(centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX) {
+function calculateVisibleFrequencyRange(centerFrequency, sampleRate, actualWidth, containerWidth,
+                                        currentPositionX) {
     // When zoomed out, we see the full spectrum
     if (actualWidth <= containerWidth) {
         return {
