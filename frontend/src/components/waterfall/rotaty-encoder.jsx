@@ -300,11 +300,6 @@ const RotaryEncoder = ({
                 </Typography>
             )}
 
-            {currentVFO && !isVFOActive && (
-                <Typography variant="caption" sx={{ mt: 1, color: '#777', textAlign: 'center' }}>
-                    VFO {vfoNumber} inactive
-                </Typography>
-            )}
         </Box>
     );
 };
