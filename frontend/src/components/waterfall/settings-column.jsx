@@ -93,6 +93,7 @@ import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import getValue from "lodash/_getValue.js";
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
+import RotaryEncoder from "./rotaty-encoder.jsx";
 
 const BANDWIDTHS = {
     "3300": "3.3 kHz",
@@ -919,6 +920,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     </Box>
                                 </Box>
 
+                                <RotaryEncoder vfoNumber={vfoIndex} />
+
                                 <FormControlLabel
                                     control={
                                         <Switch
@@ -1009,7 +1012,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     />
                                     <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
                                 </Stack>
-                                
+
                                 <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
                                 <VolumeDown/>
                                     <Slider
