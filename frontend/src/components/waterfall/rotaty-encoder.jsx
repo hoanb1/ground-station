@@ -195,7 +195,6 @@ const RotaryEncoder = ({
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                padding: 2,
                 color: '#fff',
                 opacity: isDisabled ? 0.5 : 1,
                 ...style
