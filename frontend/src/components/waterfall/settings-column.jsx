@@ -84,7 +84,10 @@ import {
     TextField,
     Tab,
     Tabs,
-    Stack, ListSubheader
+    Stack,
+    ListSubheader,
+    ToggleButtonGroup,
+    ToggleButton,
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
@@ -939,65 +942,168 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     sx={{mt: 0, ml: 0}}
                                 />
 
-                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 1}}>
-                                    <InputLabel>Step Size</InputLabel>
-                                    <Select
+                                <Box sx={{ mt: 1 }}>
+                                    <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                        Step Size
+                                    </Typography>
+                                    <ToggleButtonGroup
                                         value={vfoMarkers[vfoIndex]?.stepSize || 1000}
-                                        variant={'filled'}
-                                        onChange={(e) => {
-                                            dispatch(setVFOProperty({
-                                                vfoNumber: vfoIndex,
-                                                updates: {stepSize: e.target.value}
-                                            }));
-                                        }}>
-                                        <MenuItem value={100}>100 Hz</MenuItem>
-                                        <MenuItem value={500}>500 Hz</MenuItem>
-                                        <MenuItem value={1000}>1 kHz</MenuItem>
-                                        <MenuItem value={2500}>2.5 kHz</MenuItem>
-                                        <MenuItem value={5000}>5 kHz</MenuItem>
-                                        <MenuItem value={10000}>10 kHz</MenuItem>
-                                        <MenuItem value={12500}>12.5 kHz</MenuItem>
-                                        <MenuItem value={20000}>20 kHz</MenuItem>
-                                        <MenuItem value={25000}>25 kHz</MenuItem>
-                                    </Select>
-                                </FormControl>
+                                        exclusive
+                                        onChange={(event, newValue) => {
+                                            if (newValue !== null) {
+                                                dispatch(setVFOProperty({
+                                                    vfoNumber: vfoIndex,
+                                                    updates: { stepSize: newValue }
+                                                }));
+                                            }
+                                        }}
+                                        sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                            '& .MuiToggleButton-root': {
+                                                width: '60px',
+                                                height: '28px',
+                                                minWidth: '70px',
+                                                maxWidth: '60px',
+                                                padding: '4px 6px',
+                                                fontSize: '0.7rem',
+                                                border: '1px solid rgba(255, 255, 255, 0.23)',
+                                                borderRadius: '4px',
+                                                color: 'text.secondary',
+                                                textAlign: 'center',
+                                                '&.Mui-selected': {
+                                                    backgroundColor: 'primary.main',
+                                                    color: 'primary.contrastText',
+                                                    '&:hover': {
+                                                        backgroundColor: 'primary.dark',
+                                                    }
+                                                },
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <ToggleButton value={100}>100 Hz</ToggleButton>
+                                        <ToggleButton value={500}>500 Hz</ToggleButton>
+                                        <ToggleButton value={1000}>1 kHz</ToggleButton>
+                                        <ToggleButton value={2500}>2.5 kHz</ToggleButton>
+                                        <ToggleButton value={5000}>5 kHz</ToggleButton>
+                                        <ToggleButton value={10000}>10 kHz</ToggleButton>
+                                        <ToggleButton value={12500}>12.5 kHz</ToggleButton>
+                                        <ToggleButton value={20000}>20 kHz</ToggleButton>
+                                        <ToggleButton value={25000}>25 kHz</ToggleButton>
+                                    </ToggleButtonGroup>
+                                </Box>
 
-                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
-                                <InputLabel>Modulation</InputLabel>
-                                    <Select
+                                <Box sx={{ mt: 2 }}>
+                                    <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                        Modulation
+                                    </Typography>
+                                    <ToggleButtonGroup
                                         value={vfoMarkers[vfoIndex]?.mode || 'none'}
-                                        variant={'filled'}
-                                        onChange={(e) => {
-                                            dispatch(setVFOProperty({
-                                                vfoNumber: vfoIndex,
-                                                updates: {mode: e.target.value}
-                                            }));
-                                        }}>
-                                        <MenuItem value="none">[no modulation]</MenuItem>
-                                        <MenuItem value="am">AM</MenuItem>
-                                        <MenuItem value="fm">FM</MenuItem>
-                                        <MenuItem value="lsb">LSB</MenuItem>
-                                        <MenuItem value="usb">USB</MenuItem>
-                                    </Select>
-                                </FormControl>
+                                        exclusive
+                                        onChange={(event, newValue) => {
+                                            if (newValue !== null) {
+                                                dispatch(setVFOProperty({
+                                                    vfoNumber: vfoIndex,
+                                                    updates: { mode: newValue }
+                                                }));
+                                            }
+                                        }}
+                                        sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                            '& .MuiToggleButton-root': {
+                                                width: '50px',
+                                                height: '28px',
+                                                minWidth: '50px',
+                                                maxWidth: '50px',
+                                                padding: '4px 6px',
+                                                fontSize: '0.7rem',
+                                                border: '1px solid rgba(255, 255, 255, 0.23)',
+                                                borderRadius: '4px',
+                                                color: 'text.secondary',
+                                                textAlign: 'center',
+                                                '&.Mui-selected': {
+                                                    backgroundColor: 'primary.main',
+                                                    color: 'primary.contrastText',
+                                                    '&:hover': {
+                                                        backgroundColor: 'primary.dark',
+                                                    }
+                                                },
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <ToggleButton value="none">None</ToggleButton>
+                                        <ToggleButton value="am">AM</ToggleButton>
+                                        <ToggleButton value="fm">FM</ToggleButton>
+                                        <ToggleButton value="lsb">LSB</ToggleButton>
+                                        <ToggleButton value="usb">USB</ToggleButton>
+                                    </ToggleButtonGroup>
+                                </Box>
 
-                                <FormControl fullWidth variant="filled" size="small" sx={{mt: 2}}>
-                                    <InputLabel>Bandwidth</InputLabel>
-                                    <Select
-                                        value={BANDWIDTHS.hasOwnProperty(vfoMarkers[vfoIndex]?.bandwidth) ? vfoMarkers[vfoIndex]?.bandwidth : 'custom'}
-                                        variant={'filled'}
-                                        onChange={(e) => {
-                                            dispatch(setVFOProperty({
-                                                vfoNumber: vfoIndex,
-                                                updates: {bandwidth: parseInt(e.target.value)}
-                                            }));
-                                        }}>
-                                        <MenuItem value="custom">[custom value]</MenuItem>
+                                <Box sx={{ mt: 2 }}>
+                                    <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
+                                        Bandwidth
+                                    </Typography>
+                                    <ToggleButtonGroup
+                                        value={BANDWIDTHS.hasOwnProperty(vfoMarkers[vfoIndex]?.bandwidth) ? vfoMarkers[vfoIndex]?.bandwidth.toString() : 'custom'}
+                                        exclusive
+                                        onChange={(event, newValue) => {
+                                            if (newValue !== null) {
+                                                if (newValue === 'custom') {
+                                                    // Keep current value or set a default
+                                                    return;
+                                                } else {
+                                                    dispatch(setVFOProperty({
+                                                        vfoNumber: vfoIndex,
+                                                        updates: { bandwidth: parseInt(newValue) }
+                                                    }));
+                                                }
+                                            }
+                                        }}
+                                        sx={{
+                                            display: 'flex',
+                                            flexWrap: 'wrap',
+                                            gap: 0.5,
+                                            '& .MuiToggleButton-root': {
+                                                width: '65px',
+                                                height: '28px',
+                                                minWidth: '65px',
+                                                maxWidth: '65px',
+                                                padding: '4px 6px',
+                                                fontSize: '0.7rem',
+                                                border: '1px solid rgba(255, 255, 255, 0.23)',
+                                                borderRadius: '4px',
+                                                color: 'text.secondary',
+                                                textAlign: 'center',
+                                                '&.Mui-selected': {
+                                                    backgroundColor: 'primary.main',
+                                                    color: 'primary.contrastText',
+                                                    '&:hover': {
+                                                        backgroundColor: 'primary.dark',
+                                                    }
+                                                },
+                                                '&:hover': {
+                                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                                }
+                                            }
+                                        }}
+                                    >
+                                        <ToggleButton value="custom">Custom</ToggleButton>
                                         {Object.entries(BANDWIDTHS).map(([value, label]) => (
-                                            <MenuItem key={value} value={value}>{label}</MenuItem>
+                                            <ToggleButton key={value} value={value}>
+                                                {label}
+                                            </ToggleButton>
                                         ))}
-                                    </Select>
-                                </FormControl>
+                                    </ToggleButtonGroup>
+                                </Box>
 
                                 <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
                                     <Box sx={{textAlign: 'left'}}><SquelchIcon size={24}/></Box>
