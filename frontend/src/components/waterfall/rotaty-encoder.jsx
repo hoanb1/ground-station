@@ -1,4 +1,3 @@
-
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Box, Typography, Paper } from '@mui/material';
@@ -56,6 +55,26 @@ const RotaryEncoder = ({
         };
     }, [size]);
 
+    // Check if a point is within the thumb pit area
+    const isPointInThumbPit = useCallback((x, y) => {
+        const center = getCenter();
+
+        // Calculate the thumb pit position based on current rotation
+        const thumbPitDistance = size * 0.25; // Distance from center to thumb pit center
+        const rotationRad = (rotation * Math.PI) / 180;
+
+        const thumbPitCenterX = center.x + Math.sin(rotationRad) * thumbPitDistance;
+        const thumbPitCenterY = center.y - Math.cos(rotationRad) * thumbPitDistance;
+
+        // Check if the point is within the thumb pit radius
+        const thumbPitRadius = size * 0.12; // Radius of the thumb pit
+        const distance = Math.sqrt(
+            Math.pow(x - thumbPitCenterX, 2) + Math.pow(y - thumbPitCenterY, 2)
+        );
+
+        return distance <= thumbPitRadius;
+    }, [size, rotation, getCenter]);
+
     // Handle frequency change based on rotation
     const handleFrequencyChange = useCallback((angleDelta) => {
         if (!currentVFO || !vfoNumber || !isVFOActive) return;
@@ -91,10 +110,15 @@ const RotaryEncoder = ({
         const x = e.clientX - rect.left;
         const y = e.clientY - rect.top;
 
+        // Check if the click is within the thumb pit area
+        if (!isPointInThumbPit(x, y)) {
+            return; // Ignore clicks outside the thumb pit
+        }
+
         setIsDragging(true);
         setLastAngle(calculateAngle(x, y, center.x, center.y));
         lastMouseRef.current = { x, y };
-    }, [isVFOActive, getCenter, calculateAngle]);
+    }, [isVFOActive, getCenter, calculateAngle, isPointInThumbPit]);
 
     const handleMouseMove = useCallback((e) => {
         if (!isDragging) return;
@@ -135,10 +159,15 @@ const RotaryEncoder = ({
         const x = touch.clientX - rect.left;
         const y = touch.clientY - rect.top;
 
+        // Check if the touch is within the thumb pit area
+        if (!isPointInThumbPit(x, y)) {
+            return; // Ignore touches outside the thumb pit
+        }
+
         setIsDragging(true);
         setLastAngle(calculateAngle(x, y, center.x, center.y));
         lastTouchRef.current = { x, y };
-    }, [isVFOActive, getCenter, calculateAngle]);
+    }, [isVFOActive, getCenter, calculateAngle, isPointInThumbPit]);
 
     const handleTouchMove = useCallback((e) => {
         if (!isDragging || e.touches.length !== 1) return;
@@ -254,6 +283,7 @@ const RotaryEncoder = ({
                             fill={isDisabled ? '#0a0a0a' : '#111'}
                             stroke={isDisabled ? '#333' : '#555'}
                             strokeWidth="1"
+                            style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                         />
                         {/* Inner shadow effect for the pit */}
                         <circle
@@ -261,6 +291,7 @@ const RotaryEncoder = ({
                             cy={size * 0.25}
                             r={size * 0.08}
                             fill={isDisabled ? '#050505' : '#080808'}
+                            style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                         />
                         {/* Innermost darker area */}
                         <circle
@@ -268,6 +299,7 @@ const RotaryEncoder = ({
                             cy={size * 0.25}
                             r={size * 0.06}
                             fill={isDisabled ? '#030303' : '#060606'}
+                            style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                         />
                     </g>
                 </svg>
