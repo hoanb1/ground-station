@@ -1,3 +1,4 @@
+
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Box, Typography, Paper } from '@mui/material';
@@ -104,7 +105,6 @@ const RotaryEncoder = ({
     const handleMouseDown = useCallback((e) => {
         if (!isVFOActive) return; // Don't allow interaction if VFO is not active
 
-        e.preventDefault();
         const rect = containerRef.current.getBoundingClientRect();
         const center = getCenter();
         const x = e.clientX - rect.left;
@@ -115,6 +115,7 @@ const RotaryEncoder = ({
             return; // Ignore clicks outside the thumb pit
         }
 
+        e.preventDefault();
         setIsDragging(true);
         setLastAngle(calculateAngle(x, y, center.x, center.y));
         lastMouseRef.current = { x, y };
@@ -150,7 +151,6 @@ const RotaryEncoder = ({
     const handleTouchStart = useCallback((e) => {
         if (!isVFOActive) return; // Don't allow interaction if VFO is not active
 
-        e.preventDefault();
         if (e.touches.length !== 1) return;
 
         const touch = e.touches[0];
@@ -161,9 +161,11 @@ const RotaryEncoder = ({
 
         // Check if the touch is within the thumb pit area
         if (!isPointInThumbPit(x, y)) {
-            return; // Ignore touches outside the thumb pit
+            return; // Allow touch event to propagate for scrolling
         }
 
+        // Only prevent default if we're handling the touch in the thumb pit
+        e.preventDefault();
         setIsDragging(true);
         setLastAngle(calculateAngle(x, y, center.x, center.y));
         lastTouchRef.current = { x, y };
@@ -192,10 +194,12 @@ const RotaryEncoder = ({
     }, [isDragging, getCenter, calculateAngle, lastAngle, handleFrequencyChange]);
 
     const handleTouchEnd = useCallback((e) => {
-        e.preventDefault();
+        if (isDragging) {
+            e.preventDefault();
+        }
         setIsDragging(false);
         rotationAccumulator.current = 0;
-    }, []);
+    }, [isDragging]);
 
     // Global event listeners for drag operations
     useEffect(() => {
@@ -248,7 +252,7 @@ const RotaryEncoder = ({
                     height: size,
                     cursor: isDisabled ? 'not-allowed' : (isDragging ? 'grabbing' : 'grab'),
                     userSelect: 'none',
-                    touchAction: 'none'
+                    // Remove touchAction: 'none' to allow scrolling on non-thumb-pit areas
                 }}
                 onMouseDown={handleMouseDown}
                 onTouchStart={handleTouchStart}
