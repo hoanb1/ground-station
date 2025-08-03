@@ -1,0 +1,382 @@
+
+/**
+ * @license
+ * Copyright (c) 2024 Efstratios Goudelis
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
+import * as React from "react";
+import {
+    Box,
+    IconButton,
+    Popover,
+    Typography,
+    Divider,
+    Chip,
+    Grid2,
+} from "@mui/material";
+import { useState, useRef } from "react";
+import { useSelector } from "react-redux";
+import Tooltip from "@mui/material/Tooltip";
+import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import InfoIcon from '@mui/icons-material/Info';
+
+const SatelliteInfoPopover = () => {
+    const buttonRef = useRef(null);
+    const [anchorEl, setAnchorEl] = useState(null);
+
+    // Get satellite data from Redux store
+    const { satelliteData, trackingState } = useSelector(state => state.targetSatTrack);
+
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const open = Boolean(anchorEl);
+
+    // Format date helper
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        return new Date(dateString).toLocaleDateString();
+    };
+
+    const getTooltipText = () => {
+        const satName = satelliteData.details.name || 'No satellite selected';
+        if (!satelliteData.details.norad_id) {
+            return `Satellite Info: ${satName}`;
+        }
+
+        const elevation = satelliteData.position.el;
+        const visibilityText = elevation > 0 ? 'Visible' : 'Below horizon';
+
+        return `Satellite Info: ${satName} (${visibilityText}, El: ${elevation?.toFixed(1)}°)`;
+    };
+
+    // Get icon color based on satellite visibility
+    const getSatelliteIconColor = () => {
+        if (!satelliteData.details.norad_id) {
+            return '#666666'; // Grey when no satellite selected
+        }
+
+        const elevation = satelliteData.position.el;
+
+        if (elevation < 0) {
+            return '#f44336'; // Red when satellite is below horizon
+        } else if (elevation < 10) {
+            return '#f57c00'; // Orange when satellite is low (0-10 degrees)
+        } else if (isTrackingActive) {
+            return '#62ec43'; // Bright green when actively tracking and above 10 degrees
+        } else {
+            return '#4fc3f7'; // Light blue when satellite is well above horizon (>10 degrees)
+        }
+    };
+
+    // Format frequency helper
+    const formatFrequency = (freq) => {
+        if (!freq) return 'N/A';
+        if (freq >= 1000000000) {
+            return `${(freq / 1000000000).toFixed(3)} GHz`;
+        } else if (freq >= 1000000) {
+            return `${(freq / 1000000).toFixed(3)} MHz`;
+        } else if (freq >= 1000) {
+            return `${(freq / 1000).toFixed(3)} kHz`;
+        }
+        return `${freq} Hz`;
+    };
+
+    // Get status color
+    const getStatusColor = (status) => {
+        switch (status?.toLowerCase()) {
+            case 'active':
+                return 'success';
+            case 'inactive':
+                return 'error';
+            case 'testing':
+                return 'warning';
+            default:
+                return 'default';
+        }
+    };
+
+    // Get elevation color based on value
+    const getElevationColor = (elevation) => {
+        if (elevation < 0) return '#f44336'; // Red
+        if (elevation < 10) return '#ff9800'; // Orange
+        if (elevation < 45) return '#4fc3f7'; // Light blue
+        return '#4caf50'; // Green
+    };
+
+    // Component for displaying numerical values with monospace font
+    const NumericValue = ({ children, color }) => (
+        <span style={{
+            fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+            color: color || '#64b5f6',
+            fontWeight: 'bold'
+        }}>
+            {children}
+        </span>
+    );
+
+    const isTrackingActive = trackingState.norad_id === satelliteData.details.norad_id;
+
+    return (
+        <>
+            <Tooltip title={getTooltipText()}>
+                <IconButton
+                    ref={buttonRef}
+                    onClick={handleClick}
+                    size="small"
+                    sx={{
+                        width: 40,
+                        color: getSatelliteIconColor(), // Changed from the previous logic
+                        '&:hover': {
+                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                        },
+                        '& svg': {
+                            height: '80%',
+                        }
+                    }}
+                >
+                    <SatelliteAltIcon />
+                </IconButton>
+            </Tooltip>
+
+            <Popover
+                sx={{
+                    '& .MuiPaper-root': {
+                        borderRadius: 0,
+                    }
+                }}
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handleClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+            >
+                <Box sx={{
+                    borderRadius: 0,
+                    border: '1px solid #424242',
+                    p: 2,
+                    minWidth: 320,
+                    maxWidth: 350,
+                    backgroundColor: '#1e1e1e',
+                    color: '#ffffff',
+                }}>
+                    {/* Header */}
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                        <SatelliteAltIcon sx={{ mr: 1, color: getSatelliteIconColor() }} />
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff' }}>
+                            {satelliteData.details.name || 'No Satellite Selected'}
+                        </Typography>
+                        {isTrackingActive && (
+                            <Chip
+                                label="TRACKING"
+                                size="small"
+                                color="success"
+                                sx={{ ml: 'auto', fontSize: '0.7rem' }}
+                            />
+                        )}
+                    </Box>
+
+                    {satelliteData.details.norad_id ? (
+                        <>
+                            {/* Basic Information */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ color: '#81c784', mb: 1, fontWeight: 'bold' }}>
+                                    Basic Information
+                                </Typography>
+                                <Grid2 container spacing={1}>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>NORAD ID:</strong> <NumericValue color="#ffa726">{satelliteData.details.norad_id}</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Status:</strong>
+                                            <Chip
+                                                label={satelliteData.details.status || 'Unknown'}
+                                                size="small"
+                                                color={getStatusColor(satelliteData.details.status)}
+                                                sx={{ ml: 1, fontSize: '0.6rem', height: 20 }}
+                                            />
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Operator:</strong> <span style={{ color: '#90caf9' }}>{satelliteData.details.operator || 'N/A'}</span>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Countries:</strong> <span style={{ color: '#90caf9' }}>{satelliteData.details.countries || 'N/A'}</span>
+                                        </Typography>
+                                    </Grid2>
+                                </Grid2>
+                            </Box>
+
+                            <Divider sx={{ borderColor: '#424242', mb: 2 }} />
+
+                            {/* Position Information */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold' }}>
+                                    Current Position
+                                </Typography>
+                                <Grid2 container spacing={1}>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Latitude:</strong> <NumericValue>{satelliteData.position.lat?.toFixed(4)}°</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Longitude:</strong> <NumericValue>{satelliteData.position.lon?.toFixed(4)}°</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Altitude:</strong> <NumericValue color="#a5d6a7">{satelliteData.position.alt?.toFixed(2)} km</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Velocity:</strong> <NumericValue color="#ffcc02">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Azimuth:</strong> <NumericValue color="#ce93d8">{satelliteData.position.az?.toFixed(2)}°</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Elevation:</strong> <NumericValue color={getElevationColor(satelliteData.position.el)}>{satelliteData.position.el?.toFixed(2)}°</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                </Grid2>
+                            </Box>
+
+                            <Divider sx={{ borderColor: '#424242', mb: 2 }} />
+
+                            {/* Mission Information */}
+                            <Box sx={{ mb: 2 }}>
+                                <Typography variant="subtitle2" sx={{ color: '#ffb74d', mb: 1, fontWeight: 'bold' }}>
+                                    Mission Information
+                                </Typography>
+                                <Grid2 container spacing={1}>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Launched:</strong> <span style={{ color: '#81c784' }}>{formatDate(satelliteData.details.launched)}</span>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 xs={6}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Deployed:</strong> <span style={{ color: '#81c784' }}>{formatDate(satelliteData.details.deployed)}</span>
+                                        </Typography>
+                                    </Grid2>
+                                    {satelliteData.details.decayed && (
+                                        <Grid2 xs={6}>
+                                            <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                                <strong>Decayed:</strong> <span style={{ color: '#f48fb1' }}>{formatDate(satelliteData.details.decayed)}</span>
+                                            </Typography>
+                                        </Grid2>
+                                    )}
+                                    <Grid2 xs={12}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                            <strong>Geostationary:</strong> <span style={{ color: satelliteData.details.is_geostationary ? '#4caf50' : '#f44336' }}>{satelliteData.details.is_geostationary ? 'Yes' : 'No'}</span>
+                                        </Typography>
+                                    </Grid2>
+                                </Grid2>
+                            </Box>
+
+                            {/* Transmitters */}
+                            {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
+                                <>
+                                    <Divider sx={{ borderColor: '#424242', mb: 2 }} />
+                                    <Box sx={{ mb: 2 }}>
+                                        <Typography variant="subtitle2" sx={{ color: '#ba68c8', mb: 1, fontWeight: 'bold' }}>
+                                            Transmitters (<NumericValue color="#ba68c8">{satelliteData.transmitters.length}</NumericValue>)
+                                        </Typography>
+                                        <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
+                                            {satelliteData.transmitters.slice(0, 3).map((transmitter, index) => (
+                                                <Box key={index} sx={{ mb: 1, p: 1, backgroundColor: '#2a2a2a', borderRadius: 1, border: '1px solid #333' }}>
+                                                    <Typography variant="body2" sx={{ mb: 0.5, color: '#ffffff' }}>
+                                                        <strong>{transmitter.description || `Transmitter ${index + 1}`}</strong>
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: '#b0b0b0' }}>
+                                                        Uplink: <NumericValue color="#81c784">{formatFrequency(transmitter.uplink_low)} - {formatFrequency(transmitter.uplink_high)}</NumericValue>
+                                                    </Typography>
+                                                    <br />
+                                                    <Typography variant="caption" sx={{ color: '#b0b0b0' }}>
+                                                        Downlink: <NumericValue color="#64b5f6">{formatFrequency(transmitter.downlink_low)} - {formatFrequency(transmitter.downlink_high)}</NumericValue>
+                                                    </Typography>
+                                                </Box>
+                                            ))}
+                                            {satelliteData.transmitters.length > 3 && (
+                                                <Typography variant="caption" sx={{ color: '#888', fontStyle: 'italic' }}>
+                                                    +<NumericValue color="#888">{satelliteData.transmitters.length - 3}</NumericValue> more transmitters...
+                                                </Typography>
+                                            )}
+                                        </Box>
+                                    </Box>
+                                </>
+                            )}
+
+                            {/* Website Link */}
+                            {satelliteData.details.website && (
+                                <Box sx={{ mt: 2, pt: 1, borderTop: '1px solid #424242' }}>
+                                    <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                        <strong>Website:</strong>
+                                        <a
+                                            href={satelliteData.details.website}
+                                            target="_blank"
+                                            rel="noopener noreferrer"
+                                            style={{ color: '#64b5f6', marginLeft: 4, textDecoration: 'none' }}
+                                        >
+                                            {satelliteData.details.website}
+                                        </a>
+                                    </Typography>
+                                </Box>
+                            )}
+                        </>
+                    ) : (
+                        <Box sx={{ textAlign: 'center', py: 3 }}>
+                            <InfoIcon sx={{ fontSize: 48, color: '#666', mb: 2 }} />
+                            <Typography variant="body1" sx={{ color: '#888' }}>
+                                No satellite data available
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#666', mt: 1 }}>
+                                Select a satellite to view detailed information
+                            </Typography>
+                        </Box>
+                    )}
+                </Box>
+            </Popover>
+        </>
+    );
+};
+
+export default SatelliteInfoPopover;

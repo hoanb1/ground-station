@@ -71,6 +71,7 @@ import {
 } from '@mui/material';
 import HardwareSettingsPopover from "./hardware-popover.jsx";
 import ConnectionOverlay from "./reconnecting-overlay.jsx";
+import SatelliteInfoPopover from "./target-popover.jsx";
 
 
 function DashboardEditor() {
@@ -351,6 +352,7 @@ function ToolbarActions() {
     return (
         <Stack direction="row" sx={{padding: "6px 0px 0px 0px"}}>
             <ConnectionStatus />
+            <SatelliteInfoPopover />
             <HardwareSettingsPopover />
             <WakeLockStatus />
             <DashboardEditor />
