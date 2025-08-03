@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -30,7 +31,8 @@ import RadioIcon from '@mui/icons-material/Radio';
 import {
     Popover,
 } from '@mui/material';
-import ControllerTabs from "../common/controller.jsx";
+import RotatorControl from "../target/rotator-control.jsx";
+import RigControl from "../target/rig-control.jsx";
 import {SatelliteIcon} from "hugeicons-react";
 import OverlayIcon from "./icons-overlay.jsx";
 
@@ -202,6 +204,16 @@ const HardwareSettingsPopover = () => {
     const rotatorOverlay = getRotatorOverlay();
     const rigOverlay = getRigOverlay();
 
+    // Render the appropriate component based on activeIcon
+    const renderActiveComponent = () => {
+        if (activeIcon === 'rotator') {
+            return <RotatorControl />;
+        } else if (activeIcon === 'rig') {
+            return <RigControl />;
+        }
+        return null;
+    };
+
     return (<>
         <Stack direction="row" spacing={0}>
             <Tooltip title={getRotatorTooltip()}>
@@ -279,7 +291,7 @@ const HardwareSettingsPopover = () => {
                 width: 330,
                 backgroundColor: '#1e1e1e',
             }}>
-                <ControllerTabs activeController={activeIcon}/>
+                {renderActiveComponent()}
             </Box>
         </Popover>
     </>);
