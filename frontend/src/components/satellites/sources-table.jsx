@@ -200,7 +200,13 @@ export default function SourcesTable() {
                     <Dialog open={openDeleteConfirm} onClose={() => dispatch(setOpenDeleteConfirm(false))}>
                         <DialogTitle>Confirm Deletion</DialogTitle>
                         <DialogContent>
-                            Are you sure you want to delete the selected TLE sources? This will also permanently delete all satellites and groups that are sourced from these TLE sources.
+                            <p>Are you sure you want to delete the selected TLE sources? This action will permanently delete:</p>
+                            <ul>
+                                <li>The TLE source(s)</li>
+                                <li>All satellites sourced from the selected TLE source(s)</li>
+                                <li>The corresponding satellite group</li>
+                            </ul>
+                            <p><strong>This action cannot be undone.</strong></p>
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={() => dispatch(setOpenDeleteConfirm(false))}>Cancel</Button>
