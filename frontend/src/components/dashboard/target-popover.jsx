@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -27,17 +26,21 @@ import {
     Divider,
     Chip,
     Grid2,
+    Button,
 } from "@mui/material";
 import { useState, useRef } from "react";
 import { useSelector } from "react-redux";
+import { useNavigate } from "react-router-dom";
 import Tooltip from "@mui/material/Tooltip";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import InfoIcon from '@mui/icons-material/Info';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../common/common.jsx";
 
 const SatelliteInfoPopover = () => {
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(null);
+    const navigate = useNavigate();
 
     // Get satellite data from Redux store
     const { satelliteData, trackingState } = useSelector(state => state.targetSatTrack);
@@ -48,6 +51,13 @@ const SatelliteInfoPopover = () => {
 
     const handleClose = () => {
         setAnchorEl(null);
+    };
+
+    const handleNavigateToSatelliteInfo = () => {
+        if (satelliteData.details.norad_id) {
+            navigate(`/satellite/${satelliteData.details.norad_id}`);
+            handleClose(); // Close the popover after navigation
+        }
     };
 
     const open = Boolean(anchorEl);
@@ -234,7 +244,7 @@ const SatelliteInfoPopover = () => {
                                         </Typography>
                                     </Grid2>
                                     <Grid2 xs={6}>
-                                    <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
                                             <strong>Velocity:</strong> <NumericValue color="#ffcc02">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
                                         </Typography>
                                     </Grid2>
@@ -300,6 +310,26 @@ const SatelliteInfoPopover = () => {
                                     </Typography>
                                 </Box>
                             )}
+
+                            {/* Satellite Info Page Button */}
+                            <Box sx={{ mt: 2, pt: 2, borderTop: '1px solid #424242' }}>
+                                <Button
+                                    variant="contained"
+                                    fullWidth
+                                    onClick={handleNavigateToSatelliteInfo}
+                                    startIcon={<OpenInNewIcon />}
+                                    sx={{
+                                        backgroundColor: '#64b5f6',
+                                        color: '#ffffff',
+                                        '&:hover': {
+                                            backgroundColor: '#42a5f5',
+                                        },
+                                        fontWeight: 'bold',
+                                    }}
+                                >
+                                    View Detailed Info
+                                </Button>
+                            </Box>
                         </>
                     ) : (
                         <Box sx={{ textAlign: 'center', py: 3 }}>
