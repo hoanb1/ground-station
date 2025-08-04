@@ -379,9 +379,11 @@ function CustomAppTitle() {
         <Grid container direction="row">
             <Grid row={1} column={1} sx={{display: 'flex', alignItems: 'center'}}>
                 <Stack direction="row" alignItems="center" spacing={2}>
-                    <img src={GroundStationLogoGreenBlue} alt="Ground Station" width="32" height="32" />
                     <Box display={{xs: "none", sm: "block"}}>
-                        <Typography variant="h6">Ground Station</Typography>
+                        <Box display="flex" alignItems="center" gap={1}>
+                            <img src={GroundStationLogoGreenBlue} alt="Ground Station" width="30" height="30" />
+                            <Typography variant="h6">Ground Station</Typography>
+                        </Box>
                     </Box>
                     <Box display={{xs: "block", sm: "none"}}>
                         <Typography variant="h6"></Typography>
@@ -487,7 +489,10 @@ function TimeDisplay() {
 
 function SidebarFooterAccountPopover() {
     return (
-        <Stack direction="column">
+        <Stack direction="column" sx={{
+            pl: '0px',
+            pr: '0px',
+        }}>
             <Typography variant="body2" mx={2} mt={1}>
                 Accounts
             </Typography>

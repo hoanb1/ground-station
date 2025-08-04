@@ -33,6 +33,7 @@ import { useSelector } from "react-redux";
 import Tooltip from "@mui/material/Tooltip";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import InfoIcon from '@mui/icons-material/Info';
+import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../common/common.jsx";
 
 const SatelliteInfoPopover = () => {
     const buttonRef = useRef(null);
@@ -51,7 +52,7 @@ const SatelliteInfoPopover = () => {
 
     const open = Boolean(anchorEl);
 
-    // Format date helper
+    // Format date helper - use common function
     const formatDate = (dateString) => {
         if (!dateString) return 'N/A';
         return new Date(dateString).toLocaleDateString();
@@ -88,33 +89,6 @@ const SatelliteInfoPopover = () => {
         }
     };
 
-    // Format frequency helper
-    const formatFrequency = (freq) => {
-        if (!freq) return 'N/A';
-        if (freq >= 1000000000) {
-            return `${(freq / 1000000000).toFixed(3)} GHz`;
-        } else if (freq >= 1000000) {
-            return `${(freq / 1000000).toFixed(3)} MHz`;
-        } else if (freq >= 1000) {
-            return `${(freq / 1000).toFixed(3)} kHz`;
-        }
-        return `${freq} Hz`;
-    };
-
-    // Get status color
-    const getStatusColor = (status) => {
-        switch (status?.toLowerCase()) {
-            case 'active':
-                return 'success';
-            case 'inactive':
-                return 'error';
-            case 'testing':
-                return 'warning';
-            default:
-                return 'default';
-        }
-    };
-
     // Get elevation color based on value
     const getElevationColor = (elevation) => {
         if (elevation < 0) return '#f44336'; // Red
@@ -145,7 +119,7 @@ const SatelliteInfoPopover = () => {
                     size="small"
                     sx={{
                         width: 40,
-                        color: getSatelliteIconColor(), // Changed from the previous logic
+                        color: getSatelliteIconColor(),
                         '&:hover': {
                             backgroundColor: 'rgba(255, 255, 255, 0.08)'
                         },
@@ -215,14 +189,11 @@ const SatelliteInfoPopover = () => {
                                         </Typography>
                                     </Grid2>
                                     <Grid2 xs={6}>
-                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                        <Typography variant="body2" sx={{ color: '#e0e0e0', display: 'flex', alignItems: 'center' }}>
                                             <strong>Status:</strong>
-                                            <Chip
-                                                label={satelliteData.details.status || 'Unknown'}
-                                                size="small"
-                                                color={getStatusColor(satelliteData.details.status)}
-                                                sx={{ ml: 1, fontSize: '0.6rem', height: 20 }}
-                                            />
+                                            <Box sx={{ ml: 1 }}>
+                                                {betterStatusValue(satelliteData.details.status)}
+                                            </Box>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 xs={6}>
@@ -311,39 +282,6 @@ const SatelliteInfoPopover = () => {
                                     </Grid2>
                                 </Grid2>
                             </Box>
-
-                            {/* Transmitters */}
-                            {satelliteData.transmitters && satelliteData.transmitters.length > 0 && (
-                                <>
-                                    <Divider sx={{ borderColor: '#424242', mb: 2 }} />
-                                    <Box sx={{ mb: 2 }}>
-                                        <Typography variant="subtitle2" sx={{ color: '#ba68c8', mb: 1, fontWeight: 'bold' }}>
-                                            Transmitters (<NumericValue color="#ba68c8">{satelliteData.transmitters.length}</NumericValue>)
-                                        </Typography>
-                                        <Box sx={{ maxHeight: 150, overflowY: 'auto' }}>
-                                            {satelliteData.transmitters.slice(0, 3).map((transmitter, index) => (
-                                                <Box key={index} sx={{ mb: 1, p: 1, backgroundColor: '#2a2a2a', borderRadius: 1, border: '1px solid #333' }}>
-                                                    <Typography variant="body2" sx={{ mb: 0.5, color: '#ffffff' }}>
-                                                        <strong>{transmitter.description || `Transmitter ${index + 1}`}</strong>
-                                                    </Typography>
-                                                    <Typography variant="caption" sx={{ color: '#b0b0b0' }}>
-                                                        Uplink: <NumericValue color="#81c784">{formatFrequency(transmitter.uplink_low)} - {formatFrequency(transmitter.uplink_high)}</NumericValue>
-                                                    </Typography>
-                                                    <br />
-                                                    <Typography variant="caption" sx={{ color: '#b0b0b0' }}>
-                                                        Downlink: <NumericValue color="#64b5f6">{formatFrequency(transmitter.downlink_low)} - {formatFrequency(transmitter.downlink_high)}</NumericValue>
-                                                    </Typography>
-                                                </Box>
-                                            ))}
-                                            {satelliteData.transmitters.length > 3 && (
-                                                <Typography variant="caption" sx={{ color: '#888', fontStyle: 'italic' }}>
-                                                    +<NumericValue color="#888">{satelliteData.transmitters.length - 3}</NumericValue> more transmitters...
-                                                </Typography>
-                                            )}
-                                        </Box>
-                                    </Box>
-                                </>
-                            )}
 
                             {/* Website Link */}
                             {satelliteData.details.website && (
