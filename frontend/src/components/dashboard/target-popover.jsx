@@ -228,12 +228,13 @@ const SatelliteInfoPopover = () => {
                                         </Typography>
                                     </Grid2>
                                     <Grid2 xs={6}>
-                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Altitude:</strong> <NumericValue color="#a5d6a7">{satelliteData.position.alt?.toFixed(2)} km</NumericValue>
+                                        <Typography variant="body2" sx={{color: '#e0e0e0'}}>
+                                            <strong>Altitude:</strong> <NumericValue
+                                            color="#a5d6a7">{(satelliteData.position.alt / 1000)?.toFixed(2)} km</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 xs={6}>
-                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
+                                    <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
                                             <strong>Velocity:</strong> <NumericValue color="#ffcc02">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
                                         </Typography>
                                     </Grid2>
