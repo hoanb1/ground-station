@@ -189,13 +189,6 @@ const exampleFrequencyBands = [
         textColor: '#ffffff'
     },
     {
-        startFrequency: 1575397000,
-        endFrequency: 1576493000,
-        name: 'Galileo E1',
-        color: 'rgba(76,175,80,0.4)',
-        textColor: '#ffffff'
-    },
-    {
         startFrequency: 1602000000,
         endFrequency: 1616000000,
         name: 'GLONASS L1',
@@ -214,20 +207,6 @@ const exampleFrequencyBands = [
         endFrequency: 1626500000,
         name: 'Iridium',
         color: 'rgba(121,85,72,0.4)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1530000000,
-        endFrequency: 1545000000,
-        name: 'Skynet (Est.)',
-        color: 'rgba(103,58,183,0.4)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1530000000,
-        endFrequency: 1545000000,
-        name: 'TDRSS (Est.)',
-        color: 'rgba(63,81,181,0.4)',
         textColor: '#ffffff'
     },
     {
