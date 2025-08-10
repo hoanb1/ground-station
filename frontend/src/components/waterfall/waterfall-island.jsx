@@ -168,17 +168,10 @@ const exampleFrequencyBands = [
         textColor: '#ffffff'
     },
     {
-        startFrequency: 1544400000,
-        endFrequency: 1544500000,
-        name: 'SARSAT (GEOSAR)',
+        startFrequency: 1544000000,
+        endFrequency: 1545000000,
+        name: 'SARSAT',
         color: 'rgba(255,0,0,0.5)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1544400000,
-        endFrequency: 1544700000,
-        name: 'SARSAT (LEOSAR)',
-        color: 'rgba(255,85,85,0.5)',
         textColor: '#ffffff'
     },
     {
