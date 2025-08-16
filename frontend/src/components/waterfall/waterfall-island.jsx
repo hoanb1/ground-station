@@ -202,12 +202,14 @@ const MainWaterfallDisplay = React.memo(() => {
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [isFullscreen, setIsFullscreen] = useState(false);
 
-    const rateWindowStartRef = useRef(performance.now());
-    const updatesInWindowRef = useRef(0);
+    // Rolling window rate limiting
     const overflowRef = useRef(false);
     const lastAllowedUpdateRef = useRef(0);
-    const allowedIntervalRef = useRef(1000 / fftDataOverflowLimit); // ms between allowed updates
-    const evaluationWindowMs = 200; // Evaluate every 200ms for faster response
+    const allowedIntervalRef = useRef(1000 / fftDataOverflowLimit);
+
+    // Rolling window for rate tracking and track last 1 second of timestamps
+    const timestampWindowRef = useRef([]);
+    const windowSizeMs = 1000;
 
     const handleZoomIn = useCallback(() => {
         if (waterfallControlRef.current) {
@@ -475,28 +477,26 @@ const MainWaterfallDisplay = React.memo(() => {
 
         socket.on('sdr-fft-data', (binaryData) => {
             const now = performance.now();
-            let windowElapsed = now - rateWindowStartRef.current;
 
-            // Evaluate the rate more frequently
-            if (windowElapsed >= evaluationWindowMs) {
-                const ratePerSec = updatesInWindowRef.current * (1000 / windowElapsed);
+            // Add current timestamp to rolling window
+            timestampWindowRef.current.push(now);
 
-                const shouldOverflow = ratePerSec > fftDataOverflowLimit;
-                if (shouldOverflow !== overflowRef.current) {
-                    overflowRef.current = shouldOverflow;
-                    dispatch(setFFTdataOverflow(shouldOverflow));
-
-                    // Update the allowed interval when overflow state changes
-                    allowedIntervalRef.current = 1000 / fftDataOverflowLimit;
-                }
-
-                // Reset window
-                rateWindowStartRef.current = now;
-                updatesInWindowRef.current = 0;
+            // Remove timestamps older than windowSizeMs
+            const cutoffTime = now - windowSizeMs;
+            while (timestampWindowRef.current.length > 0 && timestampWindowRef.current[0] < cutoffTime) {
+                timestampWindowRef.current.shift();
             }
 
-            // Count this incoming event in the current window
-            updatesInWindowRef.current += 1;
+            // Current rate is simply the count in the window (since it's 1 second)
+            const currentRate = timestampWindowRef.current.length;
+
+            // Check if overflow state should change
+            const shouldOverflow = currentRate > fftDataOverflowLimit;
+            if (shouldOverflow !== overflowRef.current) {
+                overflowRef.current = shouldOverflow;
+                dispatch(setFFTdataOverflow(shouldOverflow));
+                allowedIntervalRef.current = 1000 / fftDataOverflowLimit;
+            }
 
             // If overflow is active, implement rate limiting
             if (overflowRef.current) {
@@ -504,10 +504,11 @@ const MainWaterfallDisplay = React.memo(() => {
 
                 // Only allow updates at the specified rate limit
                 if (timeSinceLastAllowed < allowedIntervalRef.current) {
-                    return; // Skip this update to maintain rate limit
+                    // Remove this timestamp since we're not processing it
+                    timestampWindowRef.current.pop();
+                    return;
                 }
 
-                // Update the timestamp for the last allowed update
                 lastAllowedUpdateRef.current = now;
             }
 
