@@ -201,9 +201,12 @@ const MainWaterfallDisplay = React.memo(() => {
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [isFullscreen, setIsFullscreen] = useState(false);
+
     const rateWindowStartRef = useRef(performance.now());
     const updatesInWindowRef = useRef(0);
     const overflowRef = useRef(false);
+    const lastAllowedUpdateRef = useRef(0);
+    const allowedIntervalRef = useRef(1000 / fftDataOverflowLimit); // ms between allowed updates
 
     const handleZoomIn = useCallback(() => {
         if (waterfallControlRef.current) {
@@ -481,31 +484,30 @@ const MainWaterfallDisplay = React.memo(() => {
                 if (shouldOverflow !== overflowRef.current) {
                     overflowRef.current = shouldOverflow;
                     dispatch(setFFTdataOverflow(shouldOverflow));
+
+                    // Update the allowed interval when overflow state changes
+                    allowedIntervalRef.current = 1000 / fftDataOverflowLimit;
                 }
 
                 // Reset window
                 rateWindowStartRef.current = now;
                 updatesInWindowRef.current = 0;
-                windowElapsed = 0;
             }
 
             // Count this incoming event in the current window
             updatesInWindowRef.current += 1;
 
-            // Check if we should exit the overflow state during the window
-            // Calculate current rate within the window
-            // Only check after 100ms to avoid false negatives
-            if (overflowRef.current && windowElapsed > 100) {
-                const currentRateInWindow = updatesInWindowRef.current * (1000 / windowElapsed);
-                if (currentRateInWindow <= fftDataOverflowLimit) {
-                    overflowRef.current = false;
-                    dispatch(setFFTdataOverflow(false));
-                }
-            }
-
-            // If overflow is active, ignore this update
+            // If overflow is active, implement rate limiting
             if (overflowRef.current) {
-                return;
+                const timeSinceLastAllowed = now - lastAllowedUpdateRef.current;
+
+                // Only allow updates at the specified rate limit
+                if (timeSinceLastAllowed < allowedIntervalRef.current) {
+                    return; // Skip this update to maintain rate limit
+                }
+
+                // Update the timestamp for the last allowed update
+                lastAllowedUpdateRef.current = now;
             }
 
             const floatArray = new Float32Array(binaryData);
