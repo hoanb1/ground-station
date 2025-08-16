@@ -391,13 +391,12 @@ const WaterfallSettings = forwardRef((props, ref) => {
         return sendSDRConfigToBackend({fftWindow: fftWindow});
     };
 
-    const updateFFTAveraging = (fftAverage) => (dispatch) => {
-        dispatch(setFFTAveraging(fftAverage));
-        return sendSDRConfigToBackend({fftAverage: fftAverage});
+    const updateFFTAveraging = (fftAveraging) => (dispatch) => {
+        dispatch(setFFTAveraging(fftAveraging));
+        return sendSDRConfigToBackend({fftAveraging: fftAveraging});
     };
 
     const updateSelectedAntenna = (antenna) => (dispatch) => {
-        console.info("updateSelectedAntenna", antenna);
         dispatch(setSelectedAntenna(antenna));
         return sendSDRConfigToBackend({antenna: antenna});
     };
