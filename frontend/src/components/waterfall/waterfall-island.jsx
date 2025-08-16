@@ -207,6 +207,7 @@ const MainWaterfallDisplay = React.memo(() => {
     const overflowRef = useRef(false);
     const lastAllowedUpdateRef = useRef(0);
     const allowedIntervalRef = useRef(1000 / fftDataOverflowLimit); // ms between allowed updates
+    const evaluationWindowMs = 200; // Evaluate every 200ms for faster response
 
     const handleZoomIn = useCallback(() => {
         if (waterfallControlRef.current) {
@@ -476,8 +477,8 @@ const MainWaterfallDisplay = React.memo(() => {
             const now = performance.now();
             let windowElapsed = now - rateWindowStartRef.current;
 
-            // If more than a second passed, evaluate the rate and reset the window
-            if (windowElapsed >= 1000) {
+            // Evaluate the rate more frequently
+            if (windowElapsed >= evaluationWindowMs) {
                 const ratePerSec = updatesInWindowRef.current * (1000 / windowElapsed);
 
                 const shouldOverflow = ratePerSec > fftDataOverflowLimit;
