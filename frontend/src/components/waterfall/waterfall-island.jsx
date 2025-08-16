@@ -72,7 +72,11 @@ import {
     setStartStreamingLoading,
     setAutoDBRange,
     setShowRightSideWaterFallAccessories,
-    setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue,
+    setShowLeftSideWaterFallAccessories,
+    setFFTWindow,
+    setSelectedSDRId,
+    setSelectedOffsetValue,
+    setFFTAveraging,
 } from './waterfall-slice.jsx'
 import {
     enableVFO1,
@@ -452,7 +456,6 @@ const MainWaterfallDisplay = React.memo(() => {
 
         socket.on('sdr-config', (data) => {
             //console.info(`sdr-config`, data);
-
             dispatch(setCenterFrequency(data['center_freq']));
             dispatch(setSampleRate(data['sample_rate']));
             dispatch(setGain(data['gain']));
@@ -461,7 +464,7 @@ const MainWaterfallDisplay = React.memo(() => {
             dispatch(setBiasT(data['bias_t']));
             dispatch(setTunerAgc(data['tuner_agc']));
             dispatch(setRtlAgc(data['rtl_agc']));
-
+            dispatch(setFFTAveraging(data['fft_averaging']));
         });
 
         socket.on('sdr-status', (data) => {
