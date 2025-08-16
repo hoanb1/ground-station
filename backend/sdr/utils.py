@@ -322,6 +322,6 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
     finally:
         pass
 
-    pprint.pprint(reply['data'])
+    #pprint.pprint(reply['data'])
 
     return reply

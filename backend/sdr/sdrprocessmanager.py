@@ -83,8 +83,8 @@ class SDRProcessManager:
         signal.signal(signal.SIGTERM, self._signal_handler)
 
         # Enforce some rate limiting for FFT data transmission, 15fps
-        self.target_fps = 15
-        self.fft_rate_limiters = defaultdict(lambda: {'last_emit': 0, 'min_interval': 1.0/self.target_fps})
+        # self.target_fps = 15
+        # self.fft_rate_limiters = defaultdict(lambda: {'last_emit': 0, 'min_interval': 1.0/self.target_fps})
 
     def set_sio(self, sio):
         """
@@ -284,6 +284,7 @@ class SDRProcessManager:
                 'antenna': sdr_config.get('antenna', 'RX'),
                 'soapy_agc': sdr_config.get('soapy_agc', False),
                 'offset_freq': int(sdr_config.get('offset_freq', 0)),
+                'fft_averaging': sdr_config.get('fft_averaging', 1),
             }
 
             if not worker_process:

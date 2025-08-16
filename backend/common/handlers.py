@@ -703,6 +703,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # Read the FFT window
                 fft_window = data.get('fftWindow', 'hanning')
 
+                # FFT Averaging
+                fft_averaging = data.get('fftAveraging', 1)
+
                 # Antenna port
                 antenna = data.get('antenna', None)
 
@@ -722,6 +725,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     'tuner_agc': tuner_agc,
                     'rtl_agc': rtl_agc,
                     'fft_window': fft_window,
+                    'fft_averaging': fft_averaging,
                     'antenna': antenna,
                     'sdr_id': sdr_id,
                     'serial_number': sdr_serial,

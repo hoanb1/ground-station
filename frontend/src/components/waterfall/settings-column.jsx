@@ -48,6 +48,7 @@ import {
     setDbRange,
     setFFTSize,
     setFFTSizeOptions,
+    setFFTAveraging,
     setGain,
     setSampleRate,
     setCenterFrequency,
@@ -222,6 +223,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
         selectedVFOTab,
         vfoActive,
         vfoColors,
+        fftAveraging,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -288,6 +290,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                     antenna: selectedAntenna,
                     soapyAgc: soapyAgc,
                     offsetFrequency: selectedOffsetValue,
+                    fftAveraging: fftAveraging,
                 }
                 SDRSettings = {...SDRSettings, ...updates};
                 socket.emit('sdr_data', 'configure-sdr', SDRSettings);
@@ -301,10 +304,11 @@ const WaterfallSettings = forwardRef((props, ref) => {
             sampleRate,
             gain,
             fftSize,
+            fftWindow,
+            fftAveraging,
             biasT,
             tunerAgc,
             rtlAgc,
-            fftWindow,
             socket,
             selectedOffsetValue,
             selectedAntenna,
@@ -385,6 +389,11 @@ const WaterfallSettings = forwardRef((props, ref) => {
     const updateFFTWindow = (fftWindow) => (dispatch) => {
         dispatch(setFFTWindow(fftWindow));
         return sendSDRConfigToBackend({fftWindow: fftWindow});
+    };
+
+    const updateFFTAveraging = (fftAverage) => (dispatch) => {
+        dispatch(setFFTAveraging(fftAverage));
+        return sendSDRConfigToBackend({fftAverage: fftAverage});
     };
 
     const updateSelectedAntenna = (antenna) => (dispatch) => {
@@ -833,6 +842,26 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     </Select>
                                 </FormControl>
 
+                                <FormControl disabled={gettingSDRParameters}
+                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
+                                             variant="filled" size="small">
+                                    <InputLabel>FFT Averaging</InputLabel>
+                                    <Select
+                                        disabled={gettingSDRParameters}
+                                        size={'small'}
+                                        value={fftAveraging}
+                                        onChange={(e) => {
+                                            dispatch(updateFFTAveraging(e.target.value));
+                                        }}
+                                        variant={'filled'}>
+                                        <MenuItem value={1}>None</MenuItem>
+                                        <MenuItem value={2}>2 samples</MenuItem>
+                                        <MenuItem value={3}>3 samples</MenuItem>
+                                        <MenuItem value={4}>4 samples</MenuItem>
+                                        <MenuItem value={8}>8 samples</MenuItem>
+                                        <MenuItem value={16}>16 samples</MenuItem>
+                                    </Select>
+                                </FormControl>
                                 <FormControl disabled={gettingSDRParameters}
                                              sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                              variant="filled"
