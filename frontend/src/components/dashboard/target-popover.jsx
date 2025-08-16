@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -35,6 +36,10 @@ import Tooltip from "@mui/material/Tooltip";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import InfoIcon from '@mui/icons-material/Info';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
+import VisibilityIcon from '@mui/icons-material/Visibility';
+import VisibilityOffIcon from '@mui/icons-material/VisibilityOff';
+import TrendingUpIcon from '@mui/icons-material/TrendingUp';
+import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../common/common.jsx";
 
 const SatelliteInfoPopover = () => {
@@ -80,6 +85,8 @@ const SatelliteInfoPopover = () => {
         return `Satellite Info: ${satName} (${visibilityText}, El: ${elevation?.toFixed(1)}°)`;
     };
 
+    const isTrackingActive = trackingState.norad_id === satelliteData.details.norad_id;
+
     // Get icon color based on satellite visibility
     const getSatelliteIconColor = () => {
         if (!satelliteData.details.norad_id) {
@@ -96,6 +103,55 @@ const SatelliteInfoPopover = () => {
             return '#62ec43'; // Bright green when actively tracking and above 10 degrees
         } else {
             return '#4fc3f7'; // Light blue when satellite is well above horizon (>10 degrees)
+        }
+    };
+
+    // Get satellite status information
+    const getSatelliteStatus = () => {
+        if (!satelliteData.details.norad_id) {
+            return {
+                status: 'No Satellite',
+                color: '#666666',
+                backgroundColor: 'rgba(102, 102, 102, 0.1)',
+                icon: <InfoIcon />,
+                description: 'No satellite selected'
+            };
+        }
+
+        const elevation = satelliteData.position.el;
+
+        if (elevation < 0) {
+            return {
+                status: 'Below Horizon',
+                color: '#f44336',
+                backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                icon: <VisibilityOffIcon />,
+                description: 'Satellite is not visible from current location'
+            };
+        } else if (elevation < 10) {
+            return {
+                status: 'Low Elevation',
+                color: '#f57c00',
+                backgroundColor: 'rgba(245, 124, 0, 0.1)',
+                icon: <TrendingDownIcon />,
+                description: 'Satellite is visible but low on the horizon'
+            };
+        } else if (isTrackingActive) {
+            return {
+                status: 'Actively Tracking',
+                color: '#62ec43',
+                backgroundColor: 'rgba(98, 236, 67, 0.1)',
+                icon: <SatelliteAltIcon />,
+                description: 'Currently tracking this satellite'
+            };
+        } else {
+            return {
+                status: 'Visible',
+                color: '#4fc3f7',
+                backgroundColor: 'rgba(79, 195, 247, 0.1)',
+                icon: <VisibilityIcon />,
+                description: 'Satellite is well positioned above horizon'
+            };
         }
     };
 
@@ -118,7 +174,7 @@ const SatelliteInfoPopover = () => {
         </span>
     );
 
-    const isTrackingActive = trackingState.norad_id === satelliteData.details.norad_id;
+    const statusInfo = getSatelliteStatus();
 
     return (
         <>
@@ -169,10 +225,17 @@ const SatelliteInfoPopover = () => {
                     backgroundColor: '#1e1e1e',
                     color: '#ffffff',
                 }}>
-                    {/* Header */}
+                    {/* Header with Status */}
                     <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <SatelliteAltIcon sx={{ mr: 1, color: getSatelliteIconColor() }} />
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff' }}>
+                        <Box sx={{
+                            color: statusInfo.color,
+                            mr: 1,
+                            display: 'flex',
+                            alignItems: 'center'
+                        }}>
+                            {statusInfo.icon}
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff', flexGrow: 1 }}>
                             {satelliteData.details.name || 'No Satellite Selected'}
                         </Typography>
                         {isTrackingActive && (
@@ -180,8 +243,53 @@ const SatelliteInfoPopover = () => {
                                 label="TRACKING"
                                 size="small"
                                 color="success"
-                                sx={{ ml: 'auto', fontSize: '0.7rem' }}
+                                sx={{ ml: 1, fontSize: '0.7rem' }}
                             />
+                        )}
+                    </Box>
+
+                    {/* Status Banner */}
+                    <Box sx={{
+                        mb: 2,
+                        p: 1.5,
+                        borderRadius: 1,
+                        backgroundColor: statusInfo.backgroundColor,
+                        border: `1px solid ${statusInfo.color}`,
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 1
+                    }}>
+                        <Box sx={{ color: statusInfo.color, display: 'flex' }}>
+                            {statusInfo.icon}
+                        </Box>
+                        <Box sx={{ flexGrow: 1 }}>
+                            <Typography variant="subtitle1" sx={{
+                                color: statusInfo.color,
+                                fontWeight: 'bold',
+                                mb: 0.5
+                            }}>
+                                {statusInfo.status}
+                            </Typography>
+                            <Typography variant="body2" sx={{
+                                color: '#e0e0e0',
+                                fontSize: '0.85rem'
+                            }}>
+                                {statusInfo.description}
+                            </Typography>
+                        </Box>
+                        {satelliteData.details.norad_id && (
+                            <Box sx={{ textAlign: 'right' }}>
+                                <Typography variant="body2" sx={{ color: '#e0e0e0', fontSize: '0.75rem' }}>
+                                    Elevation
+                                </Typography>
+                                <Typography variant="h6" sx={{
+                                    color: getElevationColor(satelliteData.position.el),
+                                    fontWeight: 'bold',
+                                    fontFamily: 'Monaco, Consolas, "Courier New", monospace'
+                                }}>
+                                    {satelliteData.position.el?.toFixed(1)}°
+                                </Typography>
+                            </Box>
                         )}
                     </Box>
 
@@ -251,11 +359,6 @@ const SatelliteInfoPopover = () => {
                                     <Grid2 xs={6}>
                                         <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
                                             <strong>Azimuth:</strong> <NumericValue color="#ce93d8">{satelliteData.position.az?.toFixed(2)}°</NumericValue>
-                                        </Typography>
-                                    </Grid2>
-                                    <Grid2 xs={6}>
-                                        <Typography variant="body2" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Elevation:</strong> <NumericValue color={getElevationColor(satelliteData.position.el)}>{satelliteData.position.el?.toFixed(2)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
                                 </Grid2>
