@@ -61,6 +61,8 @@ export const updateVFOParameters = createAsyncThunk(
 );
 
 const initialState = {
+    fftDataOverflow: false,
+    fftDataOverflowLimit: 15,
     colorMaps: [
         'iceberg',
         'heat',
@@ -312,6 +314,9 @@ export const waterfallSlice = createSlice({
         setSelectedVFOTab: (state, action) => {
             state.selectedVFOTab = action.payload;
         },
+        setFFTdataOverflow: (state, action) => {
+            state.fftDataOverflow = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -348,6 +353,7 @@ export const waterfallSlice = createSlice({
 });
 
 export const {
+    setFFTdataOverflow,
     setColorMap,
     setColorMaps,
     setDbRange,

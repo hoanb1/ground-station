@@ -24,15 +24,12 @@ import {
     Typography,
     Paper,
     Button,
-    ButtonGroup,
     Stack,
-    Divider,
     Dialog,
     DialogTitle,
     DialogContent,
     DialogContentText,
-    DialogActions, Slider, ToggleButton,
-    ToggleButtonGroup,
+    DialogActions, Slider,
 } from '@mui/material';
 import ErrorIcon from '@mui/icons-material/Error';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
@@ -50,12 +47,8 @@ import {
     WaterfallStatusBar
 } from "../common/common.jsx";
 import {IconButton} from '@mui/material';
-import AddIcon from '@mui/icons-material/Add';
-import RemoveIcon from '@mui/icons-material/Remove';
 import StopIcon from '@mui/icons-material/Stop';
-import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import SettingsIcon from '@mui/icons-material/Settings';
 import HeightIcon from '@mui/icons-material/Height';
 import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
 import AlignHorizontalRightIcon from '@mui/icons-material/AlignHorizontalRight';
@@ -73,20 +66,10 @@ import {
     setErrorMessage,
     setErrorDialogOpen,
     setIsStreaming,
-    setTargetFPS,
-    setIsPlaying,
-    setSettingsDialogOpen,
-    setGridEditable,
     setBiasT,
     setTunerAgc,
     setRtlAgc,
-    setWaterFallCanvasWidth,
-    setWaterFallVisualWidth,
-    setWaterFallScaleX,
-    setWaterFallPositionX,
     setStartStreamingLoading,
-    setWaterFallCanvasHeight,
-    setBandScopeHeight,
     setAutoDBRange,
     setShowRightSideWaterFallAccessories,
     setShowLeftSideWaterFallAccessories, setFFTWindow, setSelectedSDRId, setSelectedOffsetValue,
@@ -103,12 +86,11 @@ import {
     setVFOProperty,
     setVfoInactive,
     setVfoActive,
+    setFFTdataOverflow,
 } from './waterfall-slice.jsx';
 import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from "../common/icons.jsx";
 import {enqueueSnackbar} from "notistack";
-import { useStore } from 'react-redux';
-import {v4 as uuidv4} from 'uuid';
-import TuneIcon from "@mui/icons-material/Tune";
+import {frequencyBands} from "./bandplans.jsx";
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -124,92 +106,6 @@ export const createExternalWorker = () => {
     }
 };
 
-const exampleFrequencyBands = [
-    {
-        startFrequency: 144000000,
-        endFrequency: 146000000,
-        name: '2m Ham',
-        color: 'rgba(255, 0, 0, 0.3)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 430000000,
-        endFrequency: 440000000,
-        name: '70cm Ham',
-        color: 'rgba(0, 255, 0, 0.3)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 88000000,
-        endFrequency: 108000000,
-        name: 'FM Broadcast',
-        color: 'rgba(0, 0, 255, 0.3)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 433000000,
-        endFrequency: 434000000,
-        name: '433 ISM',
-        color: 'rgba(0, 0, 255, 0.3)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 225000000,
-        endFrequency: 350000000,
-        name: 'MIL SATCOM',
-        color: 'rgba(218,28,180,0.47)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1525000000,
-        endFrequency: 1559000000,
-        name: 'Inmarsat',
-        color: 'rgba(0,128,255,0.4)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1544000000,
-        endFrequency: 1545000000,
-        name: 'SARSAT',
-        color: 'rgba(255,0,0,0.5)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1575397000,
-        endFrequency: 1576493000,
-        name: 'GPS L1',
-        color: 'rgba(0,200,83,0.4)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1602000000,
-        endFrequency: 1616000000,
-        name: 'GLONASS L1',
-        color: 'rgba(255,152,0,0.4)',
-        textColor: '#000000'
-    },
-    {
-        startFrequency: 1561098000,
-        endFrequency: 1565098000,
-        name: 'BeiDou B1',
-        color: 'rgba(205,220,57,0.4)',
-        textColor: '#000000'
-    },
-    {
-        startFrequency: 1616000000,
-        endFrequency: 1626500000,
-        name: 'Iridium',
-        color: 'rgba(121,85,72,0.4)',
-        textColor: '#ffffff'
-    },
-    {
-        startFrequency: 1575420000,
-        endFrequency: 1575420000,
-        name: 'QZSS L1',
-        color: 'rgba(0,150,136,0.4)',
-        textColor: '#ffffff'
-    }
-];
 
 const MainWaterfallDisplay = React.memo(() => {
     const {socket} = useSocket();
@@ -287,6 +183,8 @@ const MainWaterfallDisplay = React.memo(() => {
         maxVFOMarkers,
         vfoColors,
         vfoActive,
+        fftDataOverflow,
+        fftDataOverflowLimit,
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
@@ -303,6 +201,9 @@ const MainWaterfallDisplay = React.memo(() => {
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
     const [isFullscreen, setIsFullscreen] = useState(false);
+    const rateWindowStartRef = useRef(performance.now());
+    const updatesInWindowRef = useRef(0);
+    const overflowRef = useRef(false);
 
     const handleZoomIn = useCallback(() => {
         if (waterfallControlRef.current) {
@@ -569,12 +470,39 @@ const MainWaterfallDisplay = React.memo(() => {
         });
 
         socket.on('sdr-fft-data', (binaryData) => {
+            const now = performance.now();
+            let windowElapsed = now - rateWindowStartRef.current;
+
+            // If more than a second passed, evaluate the rate and reset the window
+            if (windowElapsed >= 1000) {
+                const ratePerSec = updatesInWindowRef.current * (1000 / windowElapsed);
+
+                const shouldOverflow = ratePerSec > fftDataOverflowLimit;
+                if (shouldOverflow !== overflowRef.current) {
+                    overflowRef.current = shouldOverflow;
+                    dispatch(setFFTdataOverflow(shouldOverflow));
+                }
+
+                // Reset window
+                rateWindowStartRef.current = now;
+                updatesInWindowRef.current = 0;
+                windowElapsed = 0;
+            }
+
+            // Count this incoming event in the current window
+            updatesInWindowRef.current += 1;
+
+            // If overflow is active, ignore this update
+            if (overflowRef.current) {
+                return;
+            }
+
             const floatArray = new Float32Array(binaryData);
 
-            // Increment event counter
+            // Increment event counter (only for processed updates)
             eventCountRef.current += 1;
 
-            // Add bin count
+            // Add bin count (only for processed updates)
             binCountRef.current += floatArray.length;
 
             // Notify the worker that new data is available
@@ -992,6 +920,22 @@ const MainWaterfallDisplay = React.memo(() => {
                                 <VFO4Icon/>
                             </IconButton>
 
+                            {fftDataOverflow && (
+                                <IconButton
+                                    sx={{
+                                        borderRadius: 0,
+                                        ml: 1,
+                                        backgroundColor: 'rgba(211, 47, 47, 0.15)',
+                                        '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.25)' }
+                                    }}
+                                    color="error"
+                                    title="FFT update rate overflow — incoming updates are being throttled"
+                                    disabled
+                                >
+                                    <ErrorIcon />
+                                </IconButton>
+                            )}
+
                         </Stack>
                     </Box>
                 </Paper>
@@ -1085,7 +1029,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
                         waterFallWindowHeight={dimensions['height']}
-                        frequencyBands={exampleFrequencyBands}
+                        frequencyBands={frequencyBands}
                     />
                     <Box
                         className={'right-vertical-bar'}
