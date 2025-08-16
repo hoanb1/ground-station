@@ -492,6 +492,17 @@ const MainWaterfallDisplay = React.memo(() => {
             // Count this incoming event in the current window
             updatesInWindowRef.current += 1;
 
+            // Check if we should exit the overflow state during the window
+            // Calculate current rate within the window
+            // Only check after 100ms to avoid false negatives
+            if (overflowRef.current && windowElapsed > 100) {
+                const currentRateInWindow = updatesInWindowRef.current * (1000 / windowElapsed);
+                if (currentRateInWindow <= fftDataOverflowLimit) {
+                    overflowRef.current = false;
+                    dispatch(setFFTdataOverflow(false));
+                }
+            }
+
             // If overflow is active, ignore this update
             if (overflowRef.current) {
                 return;
