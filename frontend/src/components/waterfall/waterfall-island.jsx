@@ -169,6 +169,7 @@ const MainWaterfallDisplay = React.memo(() => {
         tunerAgc,
         rtlAgc,
         fftWindow,
+        fftAveraging,
         dBRange,
         soapyAgc,
         waterFallVisualWidth,
@@ -611,6 +612,7 @@ const MainWaterfallDisplay = React.memo(() => {
                 antenna: selectedAntenna,
                 offsetFrequency: selectedOffsetValue,
                 soapyAgc: soapyAgc,
+                fftAveraging: fftAveraging,
             }, (response) => {
                 if (response['success']) {
                     // Start streaming after configuration is acknowledged
