@@ -1,4 +1,3 @@
-
 /**
  * @license
  * Copyright (c) 2024 Efstratios Goudelis
@@ -225,30 +224,7 @@ const SatelliteInfoPopover = () => {
                     backgroundColor: '#1e1e1e',
                     color: '#ffffff',
                 }}>
-                    {/* Header with Status */}
-                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                        <Box sx={{
-                            color: statusInfo.color,
-                            mr: 1,
-                            display: 'flex',
-                            alignItems: 'center'
-                        }}>
-                            {statusInfo.icon}
-                        </Box>
-                        <Typography variant="h6" sx={{ fontWeight: 'bold', color: '#ffffff', flexGrow: 1 }}>
-                            {satelliteData.details.name || 'No Satellite Selected'}
-                        </Typography>
-                        {isTrackingActive && (
-                            <Chip
-                                label="TRACKING"
-                                size="small"
-                                color="success"
-                                sx={{ ml: 1, fontSize: '0.7rem' }}
-                            />
-                        )}
-                    </Box>
-
-                    {/* Status Banner */}
+                    {/* Merged Status Banner with Satellite Name */}
                     <Box sx={{
                         mb: 2,
                         p: 1.5,
@@ -263,16 +239,34 @@ const SatelliteInfoPopover = () => {
                             {statusInfo.icon}
                         </Box>
                         <Box sx={{ flexGrow: 1 }}>
+                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
+                                <Typography variant="h6" sx={{
+                                    fontWeight: 'bold',
+                                    color: '#ffffff',
+                                    fontSize: '1.1rem'
+                                }}>
+                                    {satelliteData.details.name || 'No Satellite Selected'}
+                                </Typography>
+                                {isTrackingActive && (
+                                    <Chip
+                                        label="TRACKING"
+                                        size="small"
+                                        color="success"
+                                        sx={{ fontSize: '0.7rem', height: '20px' }}
+                                    />
+                                )}
+                            </Box>
                             <Typography variant="subtitle1" sx={{
                                 color: statusInfo.color,
                                 fontWeight: 'bold',
-                                mb: 0.5
+                                mb: 0.25,
+                                fontSize: '0.9rem'
                             }}>
                                 {statusInfo.status}
                             </Typography>
                             <Typography variant="body2" sx={{
                                 color: '#e0e0e0',
-                                fontSize: '0.85rem'
+                                fontSize: '0.8rem'
                             }}>
                                 {statusInfo.description}
                             </Typography>
