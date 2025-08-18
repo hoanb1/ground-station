@@ -218,13 +218,13 @@ const SatelliteInfoPopover = () => {
                 <Box sx={{
                     borderRadius: 0,
                     border: '1px solid #424242',
-                    p: 2,
+                    p: 1,
                     minWidth: 320,
                     maxWidth: 350,
                     backgroundColor: '#1e1e1e',
                     color: '#ffffff',
                 }}>
-                    {/* Merged Status Banner with Satellite Name */}
+                    {/* Status Banner with Satellite Name */}
                     <Box sx={{
                         mb: 2,
                         p: 1.5,
@@ -235,9 +235,6 @@ const SatelliteInfoPopover = () => {
                         alignItems: 'center',
                         gap: 1
                     }}>
-                        <Box sx={{ color: statusInfo.color, display: 'flex' }}>
-                            {statusInfo.icon}
-                        </Box>
                         <Box sx={{ flexGrow: 1 }}>
                             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5, gap: 1 }}>
                                 <Typography variant="h6" sx={{
@@ -247,14 +244,6 @@ const SatelliteInfoPopover = () => {
                                 }}>
                                     {satelliteData.details.name || 'No Satellite Selected'}
                                 </Typography>
-                                {isTrackingActive && (
-                                    <Chip
-                                        label="TRACKING"
-                                        size="small"
-                                        color="success"
-                                        sx={{ fontSize: '0.7rem', height: '20px' }}
-                                    />
-                                )}
                             </Box>
                             <Typography variant="subtitle1" sx={{
                                 color: statusInfo.color,

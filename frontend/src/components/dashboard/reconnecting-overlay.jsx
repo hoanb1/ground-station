@@ -166,8 +166,8 @@ function ConnectionOverlay() {
                         letterSpacing: '0.5px'
                     }}
                 >
-                    {connectionError ? 'ERROR' :
-                        reConnectAttempt > 0 ? 'RECONNECTING' : 'CONNECTING'}
+                    {/*{connectionError ? 'ERROR' :*/}
+                    {/*    reConnectAttempt > 0 ? 'RECONNECTING' : 'CONNECTING'}*/}
                 </Typography>
             </Box>
         </Backdrop>
