@@ -246,12 +246,18 @@ const RigControl = React.memo(({}) => {
                             <MenuItem value="none">
                                 [no frequency control]
                             </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>select a transmitter</em>
-                            </MenuItem>
+                            {availableTransmitters.length === 0 ? (
+                                <MenuItem value="" disabled>
+                                    <em>No transmitters available for this satellite</em>
+                                </MenuItem>
+                            ) : (
+                                <MenuItem value="" disabled>
+                                    <em>select a transmitter</em>
+                                </MenuItem>
+                            )}
                             {availableTransmitters.map((transmitter, index) => {
                                 return <MenuItem value={transmitter.id} key={transmitter.id}>
-                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                    <Box sx={{display: 'flex', alignItems: 'center', gap: 1}}>
                                         <Box
                                             sx={{
                                                 width: 8,
