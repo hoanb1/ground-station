@@ -18,7 +18,7 @@ class WebAudioConsumer(threading.Thread):
         self.audio_queue = audio_queue
         self.sio = sio
         self.loop = loop  # Pass the main event loop
-        self.vfo_manager = VFOManager()
+        self.vfo_manager = VFOManager() # Singleton VFO manager
         self.running = True
 
     def run(self):
@@ -87,10 +87,10 @@ class WebAudioConsumer(threading.Thread):
                         try:
                             future.result(timeout=0.1)  # Short timeout to avoid blocking
                         except asyncio.TimeoutError:
-                            logger.warning(f"Socket.IO emit timed out for session {session_id}")
+                            logger.warning(f"Socket.IO emit timed out for session {session_id} when sending audio data")
 
                     except Exception as e:
-                        logger.error(f"Error processing audio for session {session_id}: {e}")
+                        logger.error(f"Error processing audio for session {session_id} when sending audio data: {e}")
                         continue
 
                 # Mark the task as done after processing all sessions
