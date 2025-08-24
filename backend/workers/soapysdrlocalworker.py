@@ -1,4 +1,4 @@
-# Copyright (c) 2024 Efstratios Goudelis
+# Copyright (c) 2025 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -14,13 +14,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import multiprocessing
-import json
 import numpy as np
 import time
 import logging
-import math
-from functools import partial
 import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
 from workers.common import window_functions, FFTAverager

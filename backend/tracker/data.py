@@ -1,5 +1,5 @@
 
-# Copyright (c) 2024 Efstratios Goudelis
+# Copyright (c) 2025 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
