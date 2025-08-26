@@ -1125,12 +1125,25 @@ async def add_transmitter(session: AsyncSession, data: dict) -> dict:
 
         # rename some fields
         data["norad_cat_id"] = data.pop("satelliteId")
-        data["uplink_low"] = None if data.pop("uplinkLow") == '-' else data.pop("uplinkLow")
-        data["uplink_high"] = None if data.pop("uplinkHigh") == '-' else data.pop("uplinkHigh")
-        data["downlink_low"] = None if data.pop("downlinkLow") == '-' else data.pop("downlinkLow")
-        data["downlink_high"] = None if data.pop("downlinkHigh") == '-' else data.pop("downlinkHigh")
-        data["uplink_drift"] = None if data.pop("uplinkDrift") == '-' else data.pop("uplinkDrift")
-        data["downlink_drift"] = None if data.pop("downlinkDrift") == '-' else data.pop("downlinkDrift")
+
+        uplink_low_val = data.pop("uplinkLow")
+        data["uplink_low"] = None if uplink_low_val == '-' else uplink_low_val
+
+        uplink_high_val = data.pop("uplinkHigh")
+        data["uplink_high"] = None if uplink_high_val == '-' else uplink_high_val
+
+        downlink_low_val = data.pop("downlinkLow")
+        data["downlink_low"] = None if downlink_low_val == '-' else downlink_low_val
+
+        downlink_high_val = data.pop("downlinkHigh")
+        data["downlink_high"] = None if downlink_high_val == '-' else downlink_high_val
+
+        uplink_drift_val = data.pop("uplinkDrift")
+        data["uplink_drift"] = None if uplink_drift_val == '-' else uplink_drift_val
+
+        downlink_drift_val = data.pop("downlinkDrift")
+        data["downlink_drift"] = None if downlink_drift_val == '-' else downlink_drift_val
+
         data["uplink_mode"] = data.pop("uplinkMode")
 
         stmt = (
