@@ -83,7 +83,7 @@ class WebAudioConsumer(threading.Thread):
                             self.loop
                         )
 
-                        # Optional: wait for completion with timeout
+                        # Wait for completion with timeout
                         try:
                             future.result(timeout=0.1)  # Short timeout to avoid blocking
                         except asyncio.TimeoutError:

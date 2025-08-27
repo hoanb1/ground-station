@@ -3,7 +3,12 @@ import queue
 import time
 import numpy as np
 import socketio
+import logging
 from vfos.state import VFOManager
+
+# Configure logging
+logger = logging.getLogger('audio-producer')
+
 
 class WebAudioProducer(threading.Thread):
     def __init__(self, audio_queue):
@@ -23,8 +28,11 @@ class WebAudioProducer(threading.Thread):
         """Check if any session has active and selected VFOs."""
         session_ids = self.vfo_manager.get_all_session_ids()
 
+        #logger.info(f"session_ids: {session_ids}")
+
         for session_id in session_ids:
             selected_vfo = self.vfo_manager.get_selected_vfo(session_id)
+            #logger.info(f"session: {session_id} with selected vfo: {selected_vfo}")
             if selected_vfo and selected_vfo.active and selected_vfo.selected:
                 return True
 
@@ -39,7 +47,9 @@ class WebAudioProducer(threading.Thread):
                     time.sleep(0.1)  # 100ms sleep when no active VFOs
                     continue
 
-                # Generate continuous sine wave chunk
+                # We have at least one active and selected VFO from the user,
+                # let's generate a continuous sine wave chunk
+
                 # Calculate phase increment per sample
                 phase_increment = 2.0 * np.pi * self.frequency / self.sample_rate
 
