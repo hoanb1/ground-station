@@ -30,7 +30,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
             vfoNumber,
             updates:
                 {
-                    vfoNumber: updates.vfoNumber,
+                    vfoNumber: vfoNumber,
                     frequency: updates.frequency,
                     bandwidth: state.waterfall.vfoMarkers[vfoNumber].bandwidth,
                     color: updates.color,
