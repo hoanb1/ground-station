@@ -65,6 +65,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
         # Configure the SDR device
         sdr_id = config.get('sdr_id')
+        serial_number = config.get('serial_number')
         client_id = config.get('client_id')
         fft_size = config.get('fft_size', 16384)
         fft_window = config.get('fft_window', 'hanning')
@@ -76,8 +77,10 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         insufficient_samples_mode = config.get('insufficient_samples_mode', 'drop')
 
         # Connect to the UHD device
-        device_args = config.get('device_args', '')
-        logger.info(f"Connecting to UHD with args: {device_args}...")
+        logger.info(f'Connecting to UHD device with serial: {serial_number}...')
+
+        # Add the serial number to device_args
+        device_args = f"serial={serial_number}"
 
         # Create UHD device
         UHD = uhd.usrp.MultiUSRP(device_args)
