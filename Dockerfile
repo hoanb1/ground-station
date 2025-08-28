@@ -57,6 +57,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     python3-requests \
     libfftw3-dev \
     pkg-config \
+    wget \
     && rm -rf /var/lib/apt/lists/*
 
 ## Add Ettus Research UHD Repository
