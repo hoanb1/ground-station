@@ -857,8 +857,14 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                         <MenuItem value={2}>2 samples</MenuItem>
                                         <MenuItem value={3}>3 samples</MenuItem>
                                         <MenuItem value={4}>4 samples</MenuItem>
+                                        <MenuItem value={6}>6 samples</MenuItem>
                                         <MenuItem value={8}>8 samples</MenuItem>
+                                        <MenuItem value={10}>10 samples</MenuItem>
+                                        <MenuItem value={12}>12 samples</MenuItem>
                                         <MenuItem value={16}>16 samples</MenuItem>
+                                        <MenuItem value={18}>18 samples</MenuItem>
+                                        <MenuItem value={20}>20 samples</MenuItem>
+                                        <MenuItem value={24}>16 samples</MenuItem>
                                     </Select>
                                 </FormControl>
                                 <FormControl disabled={gettingSDRParameters}
