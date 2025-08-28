@@ -147,6 +147,7 @@ class SDRProcessManager:
 
         Args:
             sdr_device: Dictionary with device connection parameters
+            sdr_config: Dictionary with configuration parameters
             client_id: Client identifier
 
         Returns:
@@ -290,7 +291,7 @@ class SDRProcessManager:
             if not worker_process:
                 raise Exception(f"Worker process {worker_process} for SDR id: {sdr_id} not found")
 
-            # Create named worker function
+            # Create a named worker function
             named_worker = create_named_worker_process(worker_process, process_name)
 
             # Create and start the process with a descriptive name
@@ -457,7 +458,13 @@ class SDRProcessManager:
 
                         if data_type == 'fft_data' and client_id:
                             if client_id in process_info['clients']:
+                                # Send FFT data to the client
                                 await self.sio.emit('sdr-fft-data', data['data'], room=sdr_id)
+
+                        if data_type == 'audio_data' and client_id:
+                            if client_id in process_info['clients']:
+                                # Send audio data to the client
+                                await self.sio.emit('audio_data', data['data'], room=sdr_id)
 
                         if data_type == 'streamingstart' and client_id:
                             if client_id in process_info['clients']:
@@ -465,16 +472,16 @@ class SDRProcessManager:
                                 await self.sio.emit('sdr-status', {'streaming': True}, room=sdr_id)
 
                         elif data_type == 'config_error' and client_id:
-                            # Send config error to the client
                             if client_id in process_info['clients']:
+                                # Send config error to the client
                                 await self.sio.emit('sdr-config-error',
                                                     {'message': f"SDR error: {data['message']}"},
                                                     room=sdr_id)
                                 self.logger.error(f"Config error from SDR process for client {client_id}: {data['message']}")
 
                         elif data_type == 'error' and client_id:
-                            # Send error to the client
                             if client_id in process_info['clients']:
+                                # Send error to the client
                                 await self.sio.emit('sdr-error',
                                                {'message': f"SDR error: {data['message']}"},
                                                room=sdr_id)

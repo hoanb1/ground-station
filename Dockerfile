@@ -236,7 +236,7 @@ RUN ls -la /app/venv/lib/python3.12/site-packages/Hamlib
 
 # Download and place the USRP B210 FPGA binary for LibreSDR device
 RUN mkdir /usr/local/share/uhd/images
-RUN wget -O /usr/local/share/uhd/images/usrp_b210_fpga.bin \
+RUN wget -O /usr/local/share/uhd/images/libresdr_b210.bin \
     https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin
 
 WORKDIR /app
@@ -269,4 +269,5 @@ CMD dbus-daemon --system --nofork --nopidfile & \
     avahi-daemon --no-chroot -D & \
     sleep 2 && \
     /usr/local/bin/uhd_images_downloader && \
+    cp /usr/local/share/uhd/images/libresdr_b210.bin /usr/local/share/uhd/images/usrp_b210_fpga.bin && \
     python app.py --secret-key=AuZ9theig2geu4wu --log-level=INFO --host=0.0.0.0 --port=7000
