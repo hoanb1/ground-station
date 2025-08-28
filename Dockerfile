@@ -94,10 +94,6 @@ RUN make -j`nproc`
 RUN sudo make install
 RUN sudo ldconfig
 
-# Download and place the USRP B220 FPGA binary
-RUN wget -O /usr/local/share/uhd/images/usrp_b210_fpga.bin \
-    https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin
-
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
@@ -237,6 +233,11 @@ RUN cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12
 RUN cp /usr/local/lib/python3.12/site-packages/*SoapySDR* /app/venv/lib/python3.12/site-packages/
 
 RUN ls -la /app/venv/lib/python3.12/site-packages/Hamlib
+
+# Download and place the USRP B210 FPGA binary for LibreSDR device
+RUN mkdir /usr/local/share/uhd/images
+RUN wget -O /usr/local/share/uhd/images/usrp_b210_fpga.bin \
+    https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin
 
 WORKDIR /app
 
