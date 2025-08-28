@@ -93,6 +93,10 @@ RUN make -j`nproc`
 RUN sudo make install
 RUN sudo ldconfig
 
+# Download and place the USRP B220 FPGA binary
+RUN wget -O /usr/local/share/uhd/images/usrp_b210_fpga.bin \
+    https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin
+
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
 
