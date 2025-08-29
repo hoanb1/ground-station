@@ -475,6 +475,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                                     dispatch(updateCenterFrequency(newFrequency));
                                 }}
                                 size={"small"}
+                                hideHzDigits={true}
                             />
                         </Box>
 

@@ -28,7 +28,8 @@ const FrequencyDisplay = ({
                               onChange,
                               integerDigits = 8, // prop to configure the number of integer digits
                               decimalDigits = 3, // prop to configure decimal digits
-                              size = 'medium' // prop to control size - can be 'small', 'medium', 'large' or a number
+                              size = 'medium', // prop to control size - can be 'small', 'medium', 'large' or a number
+                              hideHzDigits = false // new prop to show disabled zeros instead of Hz digits
                           }) => {
     const [frequency, setFrequency] = useState(initialFrequency);
 
@@ -90,7 +91,7 @@ const FrequencyDisplay = ({
     };
 
     // Create a single digit with controls
-    const renderDigit = (digit, position, index) => {
+    const renderDigit = (digit, position, index, disabled = false) => {
         return (
             <Box
                 key={`digit-${index}`}
@@ -103,23 +104,30 @@ const FrequencyDisplay = ({
             >
                 <IconButton
                     size={iconSize}
-                    onClick={() => adjustDigit(position, 1)}
-                    sx={{ p: 0 }}
+                    onClick={() => !disabled && adjustDigit(position, 1)}
+                    sx={{ 
+                        p: 0,
+                        visibility: disabled ? 'hidden' : 'visible'
+                    }}
                 >
                     <ArrowDropUpIcon sx={iconSx} />
                 </IconButton>
                 <Typography 
                     sx={{ 
                         fontFamily: 'monospace',
-                        fontSize: fontSizes.digits
+                        fontSize: fontSizes.digits,
+                        color: disabled ? 'text.disabled' : 'text.primary'
                     }}
                 >
                     {digit}
                 </Typography>
                 <IconButton
                     size={iconSize}
-                    onClick={() => adjustDigit(position, -1)}
-                    sx={{ p: 0 }}
+                    onClick={() => !disabled && adjustDigit(position, -1)}
+                    sx={{ 
+                        p: 0,
+                        visibility: disabled ? 'hidden' : 'visible'
+                    }}
                 >
                     <ArrowDropDownIcon sx={iconSx} />
                 </IconButton>
@@ -206,14 +214,15 @@ const FrequencyDisplay = ({
             // Add the group and label
             groups.unshift({ digits: group, label });
         }
-        
+
         // Handle the decimal part as a separate group
-        if (decimalPart.length > 0) {
+        if (decimalDigits > 0) {
             const decimalGroup = [];
-            for (let i = 0; i < decimalPart.length; i++) {
-                const digit = decimalPart[i];
+            const numDigits = hideHzDigits ? 1 : decimalDigits;
+            for (let i = 0; i < numDigits; i++) {
+                const digit = hideHzDigits ? '0' : decimalPart[i];
                 const position = -(i + 1);
-                decimalGroup.push({ digit, position, index: integerPart.length + 1 + i });
+                decimalGroup.push({ digit, position, index: integerPart.length + 1 + i, disabled: hideHzDigits });
             }
             groups.push({ digits: decimalGroup, label: 'Hz' });
         }
@@ -235,7 +244,7 @@ const FrequencyDisplay = ({
                                 {/* Digits row */}
                                 <Box sx={{ display: 'flex' }}>
                                     {group.digits.map((digitObj, digitIndex) => 
-                                        renderDigit(digitObj.digit, digitObj.position, digitObj.index)
+                                        renderDigit(digitObj.digit, digitObj.position, digitObj.index, digitObj.disabled)
                                     )}
                                 </Box>
                                 
