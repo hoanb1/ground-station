@@ -42,7 +42,7 @@ let fftRateIntervalId = null;
 let binsUpdateCount = 0;
 let binsPerSecond = 0;
 let lastBandscopeDrawTime = 0;
-let bandscopeDrawInterval = 150;
+let bandscopeDrawInterval = 200;
 let dottedLineImageData = null;
 let rotatorEventQueue = [];
 let lastTimestamp = new Date();
@@ -65,7 +65,7 @@ let fftHistory = [];
 let maxFftHistoryLength = 5;
 
 // Smoothing type: 'simple', 'weighted', 'exponential'
-let smoothingType = 'exponential';
+let smoothingType = 'weighted';
 
 // For exponential smoothing (0-1, higher = more smoothing)
 let smoothingStrength = 0.9;
