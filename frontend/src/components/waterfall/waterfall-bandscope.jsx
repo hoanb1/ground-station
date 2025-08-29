@@ -430,6 +430,7 @@ const WaterfallAndBandscope = forwardRef(({
                         width={waterFallCanvasWidth}
                         height={bandScopeHeight}
                         style={{
+                            imageRendering: 'auto',
                             width: '100%',
                             height: `${bandScopeHeight}px`,
                             borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
@@ -473,6 +474,7 @@ const WaterfallAndBandscope = forwardRef(({
                     //height={waterFallWindowHeight - 230}
                     height={waterFallCanvasHeight}
                     style={{
+                        imageRendering: 'auto',
                         width: '100%',
                         //height: `${waterFallWindowHeight - 230}px`,
                         height: `${waterFallCanvasHeight}px`,

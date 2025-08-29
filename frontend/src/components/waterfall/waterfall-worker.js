@@ -104,6 +104,15 @@ self.onmessage = function(eventMessage) {
                 desynchronized: true,
                 willReadFrequently: false, // true breaks Webview on android and Hermit browser
             });
+
+            // Enable image smoothing (anti-aliasing)
+            waterfallCtx.imageSmoothingEnabled = true;
+            waterfallCtx.imageSmoothingQuality = 'high';
+            bandscopeCtx.imageSmoothingEnabled = true;
+            bandscopeCtx.imageSmoothingQuality = 'high';
+            dBAxisCtx.imageSmoothingEnabled = true;
+            dBAxisCtx.imageSmoothingQuality = 'high';
+
             setupCanvas(eventMessage.data.config);
 
             // Start monitoring when canvas is initialized
@@ -567,10 +576,6 @@ function drawBandscope() {
     if (!bandscopeCanvas || fftData.length === 0) {
         return;
     }
-
-    // Enable image smoothing (anti-aliasing)
-    dBAxisCtx.imageSmoothingEnabled = true;
-    dBAxisCtx.imageSmoothingQuality = 'high';
 
     const width = bandscopeCanvas.width;
     const height = bandscopeCanvas.height;
