@@ -15,14 +15,19 @@ class WebAudioProducer(threading.Thread):
         super().__init__(daemon=True, name="Ground Station - WebAudioProducer")
         self.audio_queue = audio_queue
         self.sample_rate = 44100
-        self.chunk_size = 4096  # Increased from 1024 to 4096 (about 93ms)
+        self.chunk_size = 2048  # Reduced from 4096 to 512 (~11.6ms latency)
         self.running = True
         self.vfo_manager = VFOManager()
 
         # Tone generation parameters
-        self.frequency = 440.0  # 440 Hz (A4 note)
-        self.phase = 0.0  # Track phase to ensure continuity between chunks
-        self.amplitude = 0.3  # Lower amplitude to avoid clipping
+        self.frequency = 440.0
+        self.phase = 0.0
+        self.amplitude = 0.3
+
+        # Pre-allocate buffers to avoid memory allocation during runtime
+        self.sample_indices = np.arange(self.chunk_size)
+        self.audio_buffer = np.zeros(self.chunk_size, dtype=np.float32)
+        self.phase_increment = 2.0 * np.pi * self.frequency / self.sample_rate
 
     def _has_active_selected_vfos(self) -> bool:
         """Check if any session has active and selected VFOs."""
@@ -54,22 +59,23 @@ class WebAudioProducer(threading.Thread):
                 phase_increment = 2.0 * np.pi * self.frequency / self.sample_rate
 
                 # Generate sample indices for this chunk
-                sample_indices = np.arange(self.chunk_size)
+                # sample_indices = np.arange(self.chunk_size)  # Remove this line
 
                 # Calculate phases for all samples in this chunk
-                phases = self.phase + (sample_indices * phase_increment)
+                phases = self.phase + (self.sample_indices * self.phase_increment)
 
-                # Generate sine wave
-                audio_chunk = (self.amplitude * np.sin(phases)).astype(np.float32)
+                # Generate sine wave directly into pre-allocated buffer
+                np.sin(phases, out=self.audio_buffer)
+                self.audio_buffer *= self.amplitude
 
                 # Update phase for next chunk (maintain continuity)
-                self.phase = (self.phase + (self.chunk_size * phase_increment)) % (2.0 * np.pi)
+                self.phase = (self.phase + (self.chunk_size * self.phase_increment)) % (2.0 * np.pi)
 
                 # Put chunk in queue
-                self.audio_queue.put(audio_chunk, timeout=1.0)
+                self.audio_queue.put(self.audio_buffer.copy(), timeout=1.0)
 
-                # More precise timing
-                sleep_time = (self.chunk_size / self.sample_rate) * 0.9  # Slight overlap
+                # More aggressive timing for lower latency
+                sleep_time = (self.chunk_size / self.sample_rate) * 0.8  # Reduced from 0.9 to 0.8
                 time.sleep(sleep_time)
 
             except queue.Full:

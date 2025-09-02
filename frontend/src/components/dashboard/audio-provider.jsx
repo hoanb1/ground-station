@@ -78,7 +78,13 @@ export const AudioProvider = ({ children }) => {
                 }
             });
 
-            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)();
+            // Configure AudioContext for low latency
+            const contextOptions = {
+                latencyHint: 'interactive', // Request lowest latency
+                sampleRate: 44100
+            };
+
+            audioContextRef.current = new (window.AudioContext || window.webkitAudioContext)(contextOptions);
             gainNodeRef.current = audioContextRef.current.createGain();
             gainNodeRef.current.connect(audioContextRef.current.destination);
             gainNodeRef.current.gain.value = volume;
@@ -93,6 +99,8 @@ export const AudioProvider = ({ children }) => {
             initializeWorker();
 
             setAudioEnabled(true);
+
+            console.log(`Audio initialized - Base latency: ${audioContextRef.current.baseLatency}s, Output latency: ${audioContextRef.current.outputLatency}s`);
 
         } catch (error) {
             console.error('Failed to initialize audio:', error);
@@ -121,8 +129,9 @@ export const AudioProvider = ({ children }) => {
             source.connect(gainNodeRef.current);
 
             const currentTime = audioContextRef.current.currentTime;
+            // Reduced from 0.05 to minimize latency
             if (nextPlayTimeRef.current < currentTime) {
-                nextPlayTimeRef.current = currentTime + 0.05;
+                nextPlayTimeRef.current = currentTime + 0.005; // 5ms instead of 50ms
             }
 
             source.start(nextPlayTimeRef.current);

@@ -236,7 +236,7 @@ sio = socketio.AsyncServer(async_mode='asgi', cors_allowed_origins='*', logger=T
 app = FastAPI(lifespan=lifespan)
 
 # Queues for the sound streams
-audio_queue = queue.Queue(maxsize=20)
+audio_queue = queue.Queue(maxsize=2)
 
 # Wrap the Socket.IO server with an ASGI application.
 # This allows non-Socket.IO routes (like the FastAPI endpoints) to be served as well.
