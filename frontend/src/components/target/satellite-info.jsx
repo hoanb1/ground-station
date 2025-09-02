@@ -29,7 +29,6 @@ import {
     humanizeLongitude,
     humanizeVelocity,
     renderCountryFlagsCSV,
-    ThemedStackIsland,
     TitleBar,
     getFrequencyBand,
     getBandColor
@@ -60,7 +59,7 @@ const TargetSatelliteInfoIsland = () => {
     const {satelliteData, gridEditable} = useSelector((state) => state.targetSatTrack);
 
     const DataPoint = ({ icon: Icon, label, value, color = '#ffffff', unit = '' }) => (
-        <Box sx={{ mb: 1 }}>
+        <Box sx={{ mb: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <Icon sx={{ fontSize: 14, mr: 0.5, color: color }} />
                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
@@ -74,7 +73,7 @@ const TargetSatelliteInfoIsland = () => {
     );
 
     const Section = ({ title, icon: Icon, children }) => (
-        <Box sx={{ mb: 2 }}>
+        <Box sx={{ mb: 1 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                 <Icon sx={{ fontSize: 16, mr: 1, color: 'secondary.main' }} />
                 <Typography variant="overline" sx={{
@@ -97,226 +96,230 @@ const TargetSatelliteInfoIsland = () => {
         : [];
 
     return (
-        <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, [])}>
+        <Box sx={{
+            height: '100%',
+            display: 'flex',
+            flexDirection: 'column',
+            bgcolor: "rgba(26, 26, 26, 0.95)",
+            backdropFilter: 'blur(10px)'
+        }}>
+            {/* Header */}
+            <TitleBar
+                className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+                sx={{
+                    bgcolor: "rgba(10, 10, 10, 0.8)",
+                    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                    backdropFilter: 'blur(10px)'
+                }}
+            >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <SatelliteAltIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            {satelliteData['details']['name']}
+                            {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "Satellite Info"}
                         </Typography>
                     </Box>
                     <Typography variant="caption" sx={{color: 'text.secondary'}}>
-                        ID: {satelliteData['details']['norad_id']}
+                        ID: {satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
                     </Typography>
                 </Box>
             </TitleBar>
 
-            <ThemedStackIsland>
-                <Box sx={{
-                    height: '100%',
-                    display: 'flex',
-                    flexDirection: 'column',
-                    bgcolor: "rgba(26, 26, 26, 0.95)",
-                    backdropFilter: 'blur(10px)'
-                }}>
-                    {/* Satellite Status Header */}
+            {/* Satellite Status Header */}
+            <Box sx={{
+                p: 1,
+                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
+            }}>
+                <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Box sx={{
-                        p: 1.5,
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                        borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
-                    }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
-                            <Box sx={{
-                                width: 10,
-                                height: 10,
-                                borderRadius: '50%',
-                                mr: 1.5,
-                                bgcolor: satelliteData['details']['status'] === 'active' ? 'success.main' : 'warning.main',
-                                boxShadow: `0 0 8px ${satelliteData['details']['status'] === 'active' ? '#4caf50' : '#ff9800'}40`
-                            }}/>
-                            <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
-                                {satelliteData['details']['name']}
-                            </Typography>
-                            {betterStatusValue(satelliteData['details']['status'])}
-                        </Box>
-
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
-                                <RocketLaunchIcon sx={{ fontSize: 12, mr: 0.5 }} />
-                                NORAD: {satelliteData['details']['norad_id']}
-                            </Typography>
-                            <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
-                                <UpdateIcon sx={{ fontSize: 12, mr: 0.5 }} />
-                                {humanizeDate(satelliteData['details']['updated'])}
-                            </Typography>
-                        </Box>
-                    </Box>
-
-                    {/* Main Content */}
-                    <Box sx={{ px: 2, py: 1.5, flex: 1, overflow: 'auto' }}>
-
-                        {/* Position Data */}
-                        <Section title="POSITION DATA" icon={ExploreIcon}>
-                            <Grid container spacing={1}>
-                                <Grid size={6}>
-                                    <DataPoint
-                                        icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#4fc3f7' }} />}
-                                        label="LATITUDE"
-                                        value={satelliteData['position']['lat'] ? humanizeLatitude(satelliteData['position']['lat']) : 'N/A'}
-                                        color="#4fc3f7"
-                                    />
-                                </Grid>
-                                <Grid size={6}>
-                                    <DataPoint
-                                        icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#81c784' }} />}
-                                        label="LONGITUDE"
-                                        value={satelliteData['position']['lon'] ? humanizeLongitude(satelliteData['position']['lon']) : 'N/A'}
-                                        color="#81c784"
-                                    />
-                                </Grid>
-                                <Grid size={6}>
-                                    <DataPoint
-                                        icon={MyLocationIcon}
-                                        label="AZIMUTH"
-                                        value={satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
-                                        color="#ffb74d"
-                                    />
-                                </Grid>
-                                <Grid size={6}>
-                                    <DataPoint
-                                        icon={HeightIcon}
-                                        label="ELEVATION"
-                                        value={satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
-                                        color="#e57373"
-                                    />
-                                </Grid>
-                            </Grid>
-                        </Section>
-
-                        <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-
-                        {/* Orbital Data */}
-                        <Section title="ORBITAL DATA" icon={SpeedIcon}>
-                            <Grid container spacing={1}>
-                                <Grid size={6}>
-                                    <DataPoint
-                                        icon={HeightIcon}
-                                        label="ALTITUDE"
-                                        value={satelliteData['position']['alt'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : 'N/A'}
-                                        color="#ba68c8"
-                                        unit="km"
-                                    />
-                                </Grid>
-                                <Grid size={6}>
-                                    <DataPoint
-                                        icon={SpeedIcon}
-                                        label="VELOCITY"
-                                        value={satelliteData['position']['vel'] ? humanizeVelocity(satelliteData['position']['vel']) : 'N/A'}
-                                        color="#4db6ac"
-                                        unit="km/s"
-                                    />
-                                </Grid>
-                            </Grid>
-                        </Section>
-
-                        <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-
-                        {/* Communication Data */}
-                        <Section title="COMMUNICATION" icon={SettingsInputAntennaIcon}>
-                            <Grid container spacing={1}>
-                                <Grid size={6}>
-                                    <Box sx={{ mb: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                            <SettingsRemoteIcon sx={{ fontSize: 14, mr: 0.5, color: '#ff9800' }} />
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
-                                                TRANSMITTERS
-                                            </Typography>
-                                        </Box>
-                                        <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
-                                            {satelliteData['transmitters'] ? satelliteData['transmitters'].length : 'N/A'}
-                                        </Typography>
-                                    </Box>
-                                </Grid>
-                                <Grid size={6}>
-                                    <Box sx={{ mb: 1 }}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                            {satelliteData['details']['is_geostationary'] ?
-                                                <CheckCircleIcon sx={{ fontSize: 14, mr: 0.5, color: 'success.main' }} /> :
-                                                <CancelIcon sx={{ fontSize: 14, mr: 0.5, color: 'error.main' }} />
-                                            }
-                                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
-                                                GEOSTATIONARY
-                                            </Typography>
-                                        </Box>
-                                        <Typography variant="body1" sx={{
-                                            fontWeight: 'bold',
-                                            color: satelliteData['details']['is_geostationary'] ? 'success.main' : 'error.main'
-                                        }}>
-                                            {satelliteData['details']['is_geostationary'] ? 'YES' : 'NO'}
-                                        </Typography>
-                                    </Box>
-                                </Grid>
-                            </Grid>
-
-                            {bands.length > 0 && (
-                                <Box sx={{ mt: 2 }}>
-                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 1, display: 'block' }}>
-                                        FREQUENCY BANDS
-                                    </Typography>
-                                    <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
-                                        {bands.map((band, index) => (
-                                            <Chip
-                                                key={index}
-                                                label={band}
-                                                size="small"
-                                                sx={{
-                                                    backgroundColor: getBandColor(band),
-                                                    color: '#ffffff',
-                                                    fontSize: '0.7rem',
-                                                    height: 24
-                                                }}
-                                            />
-                                        ))}
-                                    </Box>
-                                </Box>
-                            )}
-                        </Section>
-
-                        <Divider sx={{ my: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
-
-                        {/* Metadata */}
-                        <Section title="METADATA" icon={PublicIcon}>
-                            <Grid container spacing={1}>
-                                <Grid size={6}>
-                                    <Box sx={{ mb: 1 }}>
-                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                            LAUNCH DATE
-                                        </Typography>
-                                        <Typography variant="body2" sx={{ color: '#ffcc02', fontWeight: 'bold' }}>
-                                            {satelliteData['details']['launched'] ? humanizeDate(satelliteData['details']['launched']) : 'N/A'}
-                                        </Typography>
-                                    </Box>
-                                </Grid>
-                                <Grid size={6}>
-                                    <Box sx={{ mb: 1 }}>
-                                        <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                            COUNTRIES
-                                        </Typography>
-                                        <Box>
-                                            {satelliteData['details']['countries'] ?
-                                                renderCountryFlagsCSV(satelliteData['details']['countries']) :
-                                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>N/A</Typography>
-                                            }
-                                        </Box>
-                                    </Box>
-                                </Grid>
-                            </Grid>
-                        </Section>
-                    </Box>
+                        width: 10,
+                        height: 10,
+                        borderRadius: '50%',
+                        mr: 1.5,
+                        bgcolor: satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'active' ? 'success.main' : 'warning.main',
+                        boxShadow: `0 0 8px ${satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'active' ? '#4caf50' : '#ff9800'}40`
+                    }}/>
+                    <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
+                        {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
+                    </Typography>
+                    {satelliteData && satelliteData['details'] && betterStatusValue(satelliteData['details']['status'])}
                 </Box>
-            </ThemedStackIsland>
-        </>
+
+                <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
+                        <RocketLaunchIcon sx={{ fontSize: 12, mr: 0.5 }} />
+                        NORAD: {satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
+                    </Typography>
+                    <Typography variant="caption" sx={{ color: 'text.secondary', display: 'flex', alignItems: 'center' }}>
+                        <UpdateIcon sx={{ fontSize: 12, mr: 0.5 }} />
+                        {satelliteData && satelliteData['details'] ? humanizeDate(satelliteData['details']['updated']) : ''}
+                    </Typography>
+                </Box>
+            </Box>
+
+            {/* Main Content */}
+            <Box sx={{ pr: 2, pl: 2, pt: 1, flex: 1, overflow: 'auto' }}>
+
+                {/* Position Data */}
+                <Section title="POSITION DATA" icon={ExploreIcon}>
+                    <Grid container spacing={1}>
+                        <Grid size={6}>
+                            <DataPoint
+                                icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#4fc3f7' }} />}
+                                label="LATITUDE"
+                                value={satelliteData && satelliteData['position'] ? humanizeLatitude(satelliteData['position']['lat']) : 'N/A'}
+                                color="#4fc3f7"
+                            />
+                        </Grid>
+                        <Grid size={6}>
+                            <DataPoint
+                                icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#81c784' }} />}
+                                label="LONGITUDE"
+                                value={satelliteData && satelliteData['position'] ? humanizeLongitude(satelliteData['position']['lon']) : 'N/A'}
+                                color="#81c784"
+                            />
+                        </Grid>
+                        <Grid size={6}>
+                            <DataPoint
+                                icon={MyLocationIcon}
+                                label="AZIMUTH"
+                                value={satelliteData && satelliteData['position'] && satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
+                                color="#ffb74d"
+                            />
+                        </Grid>
+                        <Grid size={6}>
+                            <DataPoint
+                                icon={HeightIcon}
+                                label="ELEVATION"
+                                value={satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
+                                color="#e57373"
+                            />
+                        </Grid>
+                    </Grid>
+                </Section>
+
+                <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+                {/* Orbital Data */}
+                <Section title="ORBITAL DATA" icon={SpeedIcon}>
+                    <Grid container spacing={1}>
+                        <Grid size={6}>
+                            <DataPoint
+                                icon={HeightIcon}
+                                label="ALTITUDE"
+                                value={satelliteData && satelliteData['position'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : 'N/A'}
+                                color="#ba68c8"
+                                unit="km"
+                            />
+                        </Grid>
+                        <Grid size={6}>
+                            <DataPoint
+                                icon={SpeedIcon}
+                                label="VELOCITY"
+                                value={satelliteData && satelliteData['position'] ? humanizeVelocity(satelliteData['position']['vel']) : 'N/A'}
+                                color="#4db6ac"
+                                unit="km/s"
+                            />
+                        </Grid>
+                    </Grid>
+                </Section>
+
+                <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+                {/* Communication Data */}
+                <Section title="COMMUNICATION" icon={SettingsInputAntennaIcon}>
+                    <Grid container spacing={1}>
+                        <Grid size={6}>
+                            <Box sx={{ mb: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                    <SettingsRemoteIcon sx={{ fontSize: 14, mr: 0.5, color: '#ff9800' }} />
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
+                                        TRANSMITTERS
+                                    </Typography>
+                                </Box>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
+                                    {satelliteData && satelliteData['transmitters'] ? satelliteData['transmitters'].length : 'N/A'}
+                                </Typography>
+                            </Box>
+                        </Grid>
+                        <Grid size={6}>
+                            <Box sx={{ mb: 0 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
+                                    {satelliteData && satelliteData['details'] && satelliteData['details']['is_geostationary'] ?
+                                        <CheckCircleIcon sx={{ fontSize: 14, mr: 0.5, color: 'success.main' }} /> :
+                                        <CancelIcon sx={{ fontSize: 14, mr: 0.5, color: 'error.main' }} />
+                                    }
+                                    <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
+                                        GEOSTATIONARY
+                                    </Typography>
+                                </Box>
+                                <Typography variant="body1" sx={{
+                                    fontWeight: 'bold',
+                                    color: satelliteData && satelliteData['details'] && satelliteData['details']['is_geostationary'] ? 'success.main' : 'error.main'
+                                }}>
+                                    {satelliteData && satelliteData['details'] && satelliteData['details']['is_geostationary'] ? 'YES' : 'NO'}
+                                </Typography>
+                            </Box>
+                        </Grid>
+                    </Grid>
+
+                    {bands.length > 0 && (
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 1, display: 'block' }}>
+                                FREQUENCY BANDS
+                            </Typography>
+                            <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
+                                {bands.map((band, index) => (
+                                    <Chip
+                                        key={index}
+                                        label={band}
+                                        size="small"
+                                        sx={{
+                                            backgroundColor: getBandColor(band),
+                                            color: '#ffffff',
+                                            fontSize: '0.7rem',
+                                            height: 24
+                                        }}
+                                    />
+                                ))}
+                            </Box>
+                        </Box>
+                    )}
+                </Section>
+
+                <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+
+                {/* Metadata */}
+                <Section title="METADATA" icon={PublicIcon}>
+                    <Grid container spacing={1}>
+                        <Grid size={6}>
+                            <Box sx={{ mb: 0 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
+                                    LAUNCH DATE
+                                </Typography>
+                                <Typography variant="body2" sx={{ color: '#ffcc02', fontWeight: 'bold' }}>
+                                    {satelliteData && satelliteData['details'] && satelliteData['details']['launched'] ? humanizeDate(satelliteData['details']['launched']) : 'N/A'}
+                                </Typography>
+                            </Box>
+                        </Grid>
+                        <Grid size={6}>
+                            <Box sx={{ mb: 0 }}>
+                                <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
+                                    COUNTRIES
+                                </Typography>
+                                <Box>
+                                    {satelliteData && satelliteData['details'] && satelliteData['details']['countries'] ?
+                                        renderCountryFlagsCSV(satelliteData['details']['countries']) :
+                                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>N/A</Typography>
+                                    }
+                                </Box>
+                            </Box>
+                        </Grid>
+                    </Grid>
+                </Section>
+            </Box>
+        </Box>
     );
 }
 
