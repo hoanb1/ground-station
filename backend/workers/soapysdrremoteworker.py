@@ -370,20 +370,48 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                         # No data returned
                         logger.warning(f"Frame {frame_counter}: no data returned (sr.ret=0)")
 
-                    elif sr.ret == -1:
-                        # Timeout
-                        logger.warning(f"Frame {frame_counter}: readStream timeout (sr.ret=-1)")
+                    elif sr.ret < 0:
+                        # An error occurred, handle based on the error code
 
-                        # Clear the buffer to prevent contamination
-                        buffer.fill(0)
-                        samples_buffer.fill(0)
+                        # If the error is a timeout or stream error, clear the buffer to prevent contamination
+                        if sr.ret in [-1, -2  -3]:
+                            # Clear the buffer to prevent contamination
+                            buffer.fill(0)
+                            samples_buffer.fill(0)
 
-                        # Reset FFT averager to clear any stale data
-                        fft_averager.reset()
+                            # Reset FFT averager to clear any stale data
+                            fft_averager.reset()
 
-                        # Reset to skip this frame
-                        buffer_position = 0
-                        break
+                            # Reset to skip this frame
+                            buffer_position = 0
+                            break
+
+                        # Print out some warning messages based on the error code
+                        if sr.ret == -1:   # SOAPY_SDR_TIMEOUT
+                            # Timeout
+                            logger.warning(f"Frame {frame_counter}: readStream timeout (sr.ret=-1)")
+
+                        elif sr.ret == -2:  # SOAPY_SDR_STREAM_ERROR
+                            logger.warning(f"Stream error detected (SOAPY_SDR_STREAM_ERROR)")
+
+                        elif sr.ret == -3:  # SOAPY_SDR_CORRUPTION
+                            logger.warning(f"Data corruption detected (SOAPY_SDR_CORRUPTION)")
+
+                        elif sr.ret == -4:  # SOAPY_SDR_OVERFLOW
+                            # Overflow error - the internal ring buffer filled up because we didn't read fast enough
+                            logger.warning(f"Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost")
+
+                            # Short sleep to allow the internal buffers to clear
+                            #time.sleep(0.01)
+
+                        elif sr.ret == -5:  # SOAPY_SDR_NOT_SUPPORTED
+                            logger.warning(f"Operation not supported (SOAPY_SDR_NOT_SUPPORTED)")
+
+                        elif sr.ret == -6:  # SOAPY_SDR_TIME_ERROR
+                            logger.warning(f"Timestamp error detected (SOAPY_SDR_TIME_ERROR)")
+
+                        elif sr.ret == -7:  # SOAPY_SDR_UNDERFLOW
+                            logger.warning(f"Buffer underflow detected (SOAPY_SDR_UNDERFLOW)")
 
                     else:
                         # Error occurred
