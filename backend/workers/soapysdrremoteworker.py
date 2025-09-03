@@ -21,7 +21,6 @@ import SoapySDR
 from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
 from workers.common import window_functions, FFTAverager
 
-
 # Configure logging for the worker process
 logger = logging.getLogger('soapysdr-remote')
 
@@ -95,7 +94,6 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
 
         # Create the device instance
         try:
-
             # Attempt to connect to the specified device
             sdr = SoapySDR.Device(device_args)
 
@@ -345,7 +343,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 read_count = 0
                 while buffer_position < num_samples and not stop_event.is_set():
                     # Read samples from the device
-                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=5000)
+                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=10000)
                     read_count += 1
 
                     if sr.ret > 0:
@@ -376,6 +374,17 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                         # Timeout
                         logger.warning(f"Frame {frame_counter}: readStream timeout (sr.ret=-1)")
 
+                        # Clear the buffer to prevent contamination
+                        buffer.fill(0)
+                        samples_buffer.fill(0)
+
+                        # Reset FFT averager to clear any stale data
+                        fft_averager.reset()
+
+                        # Reset to skip this frame
+                        buffer_position = 0
+                        break
+
                     else:
                         # Error occurred
                         logger.error(f"Frame {frame_counter}: readStream error (sr.ret={sr.ret})")
@@ -401,7 +410,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 samples = samples_buffer[:buffer_position]
 
                 # Remove DC offset spike
-                samples = remove_dc_offset(samples)
+                #samples = remove_dc_offset(samples)
 
                 # Calculate the number of samples needed for the FFT
                 actual_fft_size = fft_size * 1
