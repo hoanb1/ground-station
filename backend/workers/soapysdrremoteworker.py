@@ -345,7 +345,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 read_count = 0
                 while buffer_position < num_samples and not stop_event.is_set():
                     # Read samples from the device
-                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=1000)
+                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=5000)
                     read_count += 1
 
                     if sr.ret > 0:
@@ -369,11 +369,15 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                             break
 
                     elif sr.ret == 0:
-                        # Timeout - log this
-                        logger.warning(f"Frame {frame_counter}: readStream timeout (sr.ret=0)")
+                        # No data returned
+                        logger.warning(f"Frame {frame_counter}: no data returned (sr.ret=0)")
+
+                    elif sr.ret == -1:
+                        # Timeout
+                        logger.warning(f"Frame {frame_counter}: readStream timeout (sr.ret=-1)")
 
                     else:
-                        # Error - should never happen based on your observation
+                        # Error occurred
                         logger.error(f"Frame {frame_counter}: readStream error (sr.ret={sr.ret})")
 
                         # Clear the buffer to prevent contamination
