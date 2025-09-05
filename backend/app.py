@@ -40,7 +40,7 @@ def main() -> None:
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_db())
 
-    # Then mount static files at the root (add this line)
+    # Lastly, mount static files at the root
     app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
     logger.info(f'Starting Ground Station server with parameters {arguments}')
