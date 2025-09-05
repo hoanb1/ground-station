@@ -5,17 +5,16 @@ import sys
 import asyncio
 import multiprocessing
 import threading
-
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 import uvicorn
-
 from common.arguments import arguments
 from common.logger import get_logger_config, logger
 from shutdown import cleanup_everything, signal_handler
 from server import app, socket_app, sio, init_db
 from socket_handlers import register_socketio_handlers
 from webrtc import register_webrtc_routes
+from fastapi.staticfiles import StaticFiles
+
 
 # Set process and thread names
 def configure_process_names():
@@ -40,6 +39,9 @@ def main() -> None:
     logger.info("Configuring database connection...")
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_db())
+
+    # Then mount static files at the root (add this line)
+    app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
     logger.info(f'Starting Ground Station server with parameters {arguments}')
     try:

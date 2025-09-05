@@ -3,22 +3,20 @@
 import asyncio
 import os
 import queue
-from contextlib import asynccontextmanager
-
 import socketio
+import shutdown
+from contextlib import asynccontextmanager
 from engineio.payload import Payload
 from fastapi import FastAPI, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
-
 from common.logger import logger
 from db import *  # noqa: F401,F403
 from db.models import Base
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
 from tracker.runner import start_tracker_process
-import shutdown
 from demodulators.webaudioproducer import WebAudioProducer
 from demodulators.webaudioconsumer import WebAudioConsumer
 from common.arguments import arguments
@@ -92,7 +90,7 @@ sdr_process_manager.set_sio(sio)
 
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
-app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
+#app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
 
 @app.get("/{full_path:path}")

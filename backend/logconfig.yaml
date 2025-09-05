@@ -24,13 +24,13 @@ handlers:
 
 loggers:
   uvicorn.error:
-    level: WARNING
+    level: INFO
     handlers:
       - default
     propagate: no
 
   uvicorn.access:
-    level: WARNING
+    level: INFO
     handlers:
       - access
     propagate: no
@@ -78,13 +78,13 @@ loggers:
     propagate: no
 
   httpcore.http11:
-    level: WARNING
+    level: INFO
     handlers:
       - default
     propagate: no
 
   httpcore.connection:
-    level: WARNING
+    level: INFO
     handlers:
       - default
     propagate: no
