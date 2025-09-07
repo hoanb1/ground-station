@@ -3,7 +3,7 @@ import React, {useEffect, useRef, useState} from "react";
 
 const ProgressFormatter = React.memo(({params}) => {
     const [, setForceUpdate] = useState(0);
-    const [progressBarHeight, setProgressBarHeight] = useState(12);
+    const [progressBarHeight, setProgressBarHeight] = useState(10);
 
     // Force component to update regularly
     useEffect(() => {
