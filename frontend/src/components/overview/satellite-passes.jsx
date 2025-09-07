@@ -45,6 +45,8 @@ import {useGridApiRef} from '@mui/x-data-grid';
 import {darken, lighten, styled} from '@mui/material/styles';
 import {Chip} from "@mui/material";
 import {useStore} from 'react-redux';
+import SkyPositionFormatter from './skyposition-widget.jsx';
+import ProgressFormatter from "./progressbar-widget.jsx";
 
 
 const TimeFormatter = React.memo(({params, value}) => {
@@ -110,7 +112,6 @@ const DurationFormatter = React.memo(({params, value, event_start, event_end}) =
         return `no value`;
     }
 });
-
 
 const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, passesAreCached = false}) => {
     const apiRef = useGridApiRef();
@@ -241,6 +242,24 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                     return '';
                 }
             }
+        },
+        {
+            field: 'progress',
+            minWidth: 100,
+            headerName: 'Progress',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            renderCell: (params) => <ProgressFormatter params={params} />
+        },
+        {
+            field: 'skyPosition',
+            minWidth: 80,
+            headerName: 'Sky Position',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            renderCell: (params) => <SkyPositionFormatter params={params} />
         },
         {
             field: 'duration',

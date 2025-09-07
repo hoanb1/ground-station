@@ -31,6 +31,8 @@ import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {fetchNextPasses, setSatellitePasses} from './target-slice.jsx';
 import {darken, lighten, styled} from "@mui/material/styles";
+import SkyPositionFormatter from '../overview/skyposition-widget.jsx';
+import ProgressFormatter from "../overview/progressbar-widget.jsx";
 
 
 const TimeFormatter = React.memo(({ value }) => {
@@ -173,9 +175,6 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
             headerName: 'Start',
             flex: 1,
             renderCell: (params) => <TimeFormatter value={params.value} />
-            // valueFormatter: (value) => {
-            //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-            // }
         },
         {
             field: 'event_end',
@@ -183,9 +182,6 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
             headerName: 'End',
             flex: 1,
             renderCell: (params) => <TimeFormatter value={params.value} />
-            // valueFormatter: (value) => {
-            //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-            // }
         },
         {
             field: 'duration',
@@ -199,9 +195,24 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
                     <DurationFormatter params={params} value={params.value} event_start={params.row.event_start} event_end={params.row.event_end}/>
                 </div>
             ),
-            // valueFormatter: (value) => {
-            //     return `${value}`;
-            // }
+        },
+        {
+            field: 'progress',
+            minWidth: 120,
+            headerName: 'Progress',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1.5,
+            renderCell: (params) => <ProgressFormatter params={params} />
+        },
+        {
+            field: 'sky_position',
+            minWidth: 100,
+            headerName: 'Sky Position',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            renderCell: (params) => <SkyPositionFormatter params={params} />
         },
         {
             field: 'distance_at_start',
