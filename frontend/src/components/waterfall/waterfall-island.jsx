@@ -134,15 +134,6 @@ const MainWaterfallDisplay = React.memo(() => {
     });
     const colorCache = useRef(new Map());
 
-    // // Add state for tracking metrics
-    // const [eventMetrics, setEventMetrics] = useState({
-    //     fftUpdatesPerSecond: 0,
-    //     binsPerSecond: 0,
-    //     totalUpdates: 0,
-    //     timeElapsed: 0,
-    //     renderWaterfallPerSecond: 0,
-    // });
-
     // Add state for tracking metrics
     const eventMetrics = useRef({
         fftUpdatesPerSecond: 0,
