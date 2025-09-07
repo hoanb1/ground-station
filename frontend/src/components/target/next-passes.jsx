@@ -206,15 +206,6 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
             renderCell: (params) => <ProgressFormatter params={params} />
         },
         {
-            field: 'sky_position',
-            minWidth: 100,
-            headerName: 'Sky Position',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            renderCell: (params) => <SkyPositionFormatter params={params} />
-        },
-        {
             field: 'distance_at_start',
             minWidth: 100,
             headerName: 'Distance at AOS',

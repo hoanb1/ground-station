@@ -253,15 +253,6 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
             renderCell: (params) => <ProgressFormatter params={params} />
         },
         {
-            field: 'skyPosition',
-            minWidth: 80,
-            headerName: 'Sky Position',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            renderCell: (params) => <SkyPositionFormatter params={params} />
-        },
-        {
             field: 'duration',
             minWidth: 100,
             headerName: 'Duration',
