@@ -1,13 +1,9 @@
 import React, {useEffect, useRef, useState} from "react";
-import {DataGrid, useGridApiRef} from "@mui/x-data-grid";
-import {useStore} from "react-redux";
-import {darken, lighten, styled} from "@mui/material/styles";
-import {Typography} from "@mui/material";
-import SkyPositionFormatter from "./skyposition-widget.jsx";
-import {getBandColor, getFrequencyBand} from "../common/common.jsx";
+
 
 const ProgressFormatter = React.memo(({params}) => {
     const [, setForceUpdate] = useState(0);
+    const [progressBarHeight, setProgressBarHeight] = useState(12);
 
     // Force component to update regularly
     useEffect(() => {
@@ -41,7 +37,7 @@ const ProgressFormatter = React.memo(({params}) => {
             <div style={{width: '100%', position: 'relative', height: '35px'}}>
                 {/* Timeline bar */}
                 <div style={{
-                    height: '8px',
+                    height: `${progressBarHeight}px`,
                     backgroundColor: '#e0e0e0',
                     width: '100%',
                     borderRadius: '4px',
@@ -52,7 +48,7 @@ const ProgressFormatter = React.memo(({params}) => {
 
                 {/* Peak marker */}
                 <div style={{
-                    height: '16px',
+                    height: `${progressBarHeight * 2}px`,
                     width: '2px',
                     backgroundColor: '#ff9800',
                     position: 'absolute',
@@ -64,12 +60,12 @@ const ProgressFormatter = React.memo(({params}) => {
 
                 {/* Peak indicator dot */}
                 <div style={{
-                    height: '8px',
-                    width: '8px',
+                    height: `${progressBarHeight}px`,
+                    width: `${progressBarHeight}px`,
                     backgroundColor: '#ff9800',
                     borderRadius: '50%',
                     position: 'absolute',
-                    left: `calc(${peakPosition}% - 4px)`,
+                    left: `calc(${peakPosition}% - ${progressBarHeight / 2}px)`,
                     top: '50%',
                     transform: 'translateY(-50%)',
                     zIndex: 3
@@ -97,7 +93,7 @@ const ProgressFormatter = React.memo(({params}) => {
             <div style={{width: '100%', position: 'relative', height: '35px'}}>
                 {/* Timeline bar - completed */}
                 <div style={{
-                    height: '8px',
+                    height: `${progressBarHeight}px`,
                     backgroundColor: '#4caf50',
                     width: '100%',
                     borderRadius: '4px',
@@ -108,7 +104,7 @@ const ProgressFormatter = React.memo(({params}) => {
 
                 {/* Peak marker */}
                 <div style={{
-                    height: '16px',
+                    height: `${progressBarHeight * 2}px`,
                     width: '2px',
                     backgroundColor: '#ff9800',
                     position: 'absolute',
@@ -120,15 +116,15 @@ const ProgressFormatter = React.memo(({params}) => {
 
                 {/* Peak indicator dot */}
                 <div style={{
-                    height: '8px',
-                    width: '8px',
+                    height: `${progressBarHeight}px`,
+                    width: `${progressBarHeight}px`,
                     backgroundColor: '#ff9800',
                     borderRadius: '50%',
                     position: 'absolute',
-                    left: `calc(${peakPosition}% - 4px)`,
+                    left: `calc(${peakPosition}% - ${progressBarHeight / 2}px)`,
                     top: '50%',
                     transform: 'translateY(-50%)',
-                    zIndex: 3
+                    zIndex: 3,
                 }} title={`Peak elevation: ${params.row.peak_altitude.toFixed(2)}°`}/>
 
                 {/* Progress percentage (100% for completed) */}
@@ -155,7 +151,7 @@ const ProgressFormatter = React.memo(({params}) => {
         <div style={{width: '100%', position: 'relative', height: '35px'}}>
             {/* Timeline background */}
             <div style={{
-                height: '8px',
+                height: `${progressBarHeight}px`,
                 backgroundColor: '#e0e0e0',
                 width: '100%',
                 borderRadius: '4px',
@@ -166,7 +162,7 @@ const ProgressFormatter = React.memo(({params}) => {
 
             {/* Progress filled part */}
             <div style={{
-                height: '8px',
+                height: `${progressBarHeight}px`,
                 backgroundColor: '#4caf50',
                 width: `${progressPercentage}%`,
                 borderRadius: '4px',
@@ -178,12 +174,12 @@ const ProgressFormatter = React.memo(({params}) => {
 
             {/* Current position indicator */}
             <div style={{
-                height: '16px',
-                width: '16px',
+                height: `${progressBarHeight * 1.5}px`,
+                width: `${progressBarHeight * 1.5}px`,
                 backgroundColor: '#1976d2',
                 borderRadius: '50%',
                 position: 'absolute',
-                left: `calc(${progressPercentage}% - 8px)`,
+                left: `calc(${progressPercentage}% - ${progressBarHeight}px)`,
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 4,
@@ -192,7 +188,7 @@ const ProgressFormatter = React.memo(({params}) => {
 
             {/* Peak marker */}
             <div style={{
-                height: '16px',
+                height: `${progressBarHeight * 2}px`,
                 width: '2px',
                 backgroundColor: '#ff9800',
                 position: 'absolute',
@@ -204,12 +200,12 @@ const ProgressFormatter = React.memo(({params}) => {
 
             {/* Peak indicator dot */}
             <div style={{
-                height: '8px',
-                width: '8px',
+                height: `${progressBarHeight}px`,
+                width: `${progressBarHeight}px`,
                 backgroundColor: '#ff9800',
                 borderRadius: '50%',
                 position: 'absolute',
-                left: `calc(${peakPosition}% - 4px)`,
+                left: `calc(${peakPosition}% - ${progressBarHeight / 2}px)`,
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 3
