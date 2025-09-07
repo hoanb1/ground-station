@@ -44,7 +44,7 @@ import {
     humanizeFrequency,
     humanizeNumber,
     TitleBar,
-    WaterfallStatusBar
+    WaterfallStatusBarPaper
 } from "../common/common.jsx";
 import {IconButton} from '@mui/material';
 import StopIcon from '@mui/icons-material/Stop';
@@ -95,6 +95,7 @@ import {
 import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from "../common/icons.jsx";
 import {enqueueSnackbar} from "notistack";
 import {frequencyBands} from "./bandplans.jsx";
+import WaterfallStatusBar from "./waterfall-statusbar.jsx";
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -133,8 +134,17 @@ const MainWaterfallDisplay = React.memo(() => {
     });
     const colorCache = useRef(new Map());
 
+    // // Add state for tracking metrics
+    // const [eventMetrics, setEventMetrics] = useState({
+    //     fftUpdatesPerSecond: 0,
+    //     binsPerSecond: 0,
+    //     totalUpdates: 0,
+    //     timeElapsed: 0,
+    //     renderWaterfallPerSecond: 0,
+    // });
+
     // Add state for tracking metrics
-    const [eventMetrics, setEventMetrics] = useState({
+    const eventMetrics = useRef({
         fftUpdatesPerSecond: 0,
         binsPerSecond: 0,
         totalUpdates: 0,
@@ -290,7 +300,8 @@ const MainWaterfallDisplay = React.memo(() => {
                         const { type, data } = event.data;
 
                         if (type === 'metrics') {
-                            setEventMetrics(data);
+                            //setEventMetrics(data);
+                            eventMetrics.current = data;
                         } else if (type === 'status') {
                             // Optional: handle status updates from the worker
                             //console.log('Worker status:', status);
@@ -1203,12 +1214,7 @@ const MainWaterfallDisplay = React.memo(() => {
                     </Button>
                 </DialogActions>
             </Dialog>
-            <WaterfallStatusBar>
-                {isStreaming ?
-                    `FPS: ${eventMetrics.renderWaterfallPerSecond}, FFTs/s: ${humanizeNumber(eventMetrics.fftUpdatesPerSecond)}, bins/s: ${humanizeNumber(eventMetrics.binsPerSecond)}, f: ${humanizeFrequency(centerFrequency)}, sr: ${humanizeFrequency(sampleRate)}, g: ${gain} dB`
-                    : `stopped`
-                }
-            </WaterfallStatusBar>
+            <WaterfallStatusBar isStreaming={isStreaming} eventMetrics={eventMetrics} centerFrequency={centerFrequency} sampleRate={sampleRate} gain={gain} />
         </div>
     );
 });

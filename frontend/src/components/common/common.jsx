@@ -134,7 +134,7 @@ export const MapStatusBar = styled(Paper)(({ theme }) => ({
     fontWeight: 'normal',
 }));
 
-export const WaterfallStatusBar = styled(Paper)(({ theme }) => ({
+export const WaterfallStatusBarPaper = styled(Paper)(({ theme }) => ({
     width: '100%',
     height: '30px',
     padding: '4px 8px',
