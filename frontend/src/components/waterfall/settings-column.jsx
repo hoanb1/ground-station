@@ -19,19 +19,8 @@
 
 
 import React, {useImperativeHandle, forwardRef, useCallback, useEffect, useState, useRef} from 'react';
-import {styled} from '@mui/material/styles';
-import ArrowForwardIosSharpIcon from '@mui/icons-material/ArrowForwardIosSharp';
-import MuiAccordion from '@mui/material/Accordion';
-import MuiAccordionSummary, {
-    accordionSummaryClasses,
-} from '@mui/material/AccordionSummary';
-import {SquelchIcon} from '../common/icons.jsx';
-import MuiAccordionDetails from '@mui/material/AccordionDetails';
-import Typography from '@mui/material/Typography';
 import {
     getClassNamesBasedOnGridEditing,
-    humanizeFrequency,
-    preciseHumanizeFrequency,
     TitleBar
 } from "../common/common.jsx";
 import {useSelector, useDispatch} from 'react-redux';
@@ -72,112 +61,16 @@ import {
     setVfoActive,
 } from './waterfall-slice.jsx';
 
-import {
-    Box,
-    CircularProgress,
-    FormControl,
-    FormControlLabel,
-    InputLabel,
-    MenuItem,
-    Select,
-    Slider,
-    Switch,
-    TextField,
-    Tab,
-    Tabs,
-    Stack,
-    ListSubheader,
-    ToggleButtonGroup,
-    ToggleButton,
-} from "@mui/material";
-import VolumeDown from '@mui/icons-material/VolumeDown';
-import VolumeUp from '@mui/icons-material/VolumeUp';
-import FrequencyDisplay from "./frequency-dial.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {enqueueSnackbar} from "notistack";
 import getValue from "lodash/_getValue.js";
-import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
-import RotaryEncoder from "./rotaty-encoder.jsx";
-
-const BANDWIDTHS = {
-    "3300": "3.3 kHz",
-    "5000": "5 kHz",
-    "10000": "10 kHz",
-    "12500": "12.5 kHz",
-    "15000": "15 kHz",
-    "20000": "20 kHz"
-}
-
-const LoadingOverlay = ({loading, children}) => {
-    return (
-        <Box sx={{position: 'relative'}}>
-            {children}
-
-            {loading && (
-                <Box
-                    sx={{
-                        position: 'absolute',
-                        top: 0,
-                        left: 0,
-                        right: 0,
-                        bottom: 0,
-                        display: 'flex',
-                        justifyContent: 'center',
-                        alignItems: 'center',
-                        zIndex: 1000,
-                    }}
-                >
-                    <CircularProgress/>
-                </Box>
-            )}
-        </Box>
-    );
-};
-
-
-const Accordion = styled((props) => (
-    <MuiAccordion disableGutters elevation={0} square {...props} />
-))(({theme}) => ({
-    border: `1px solid ${theme.palette.divider}`,
-    '&:not(:last-child)': {
-        borderBottom: 0,
-    },
-    '&::before': {
-        display: 'none',
-    },
-}));
-
-const AccordionSummary = styled((props) => (
-    <MuiAccordionSummary
-        expandIcon={<ArrowForwardIosSharpIcon sx={{fontSize: '0.9rem'}}/>}
-        {...props}
-    />
-))(({theme}) => ({
-    backgroundColor: 'rgba(0, 0, 0, .03)',
-    flexDirection: 'row-reverse',
-    minHeight: 34,
-    height: 34,
-    fontSize: '0.7rem',
-    [`& .${accordionSummaryClasses.expandIconWrapper}.${accordionSummaryClasses.expanded}`]:
-        {
-            transform: 'rotate(90deg)',
-        },
-    [`& .${accordionSummaryClasses.content}`]: {
-        marginLeft: theme.spacing(1),
-    },
-    ...theme.applyStyles('dark', {
-        backgroundColor: 'rgba(255, 255, 255, .05)',
-    }),
-}));
-
-const AccordionDetails = styled(MuiAccordionDetails)(({theme}) => ({
-    padding: theme.spacing(2),
-    borderTop: '1px solid rgba(0, 0, 0, .125)',
-}));
+import FrequencyControlAccordion from "./settings-frequency.jsx";
+import SdrAccordion from "./settings-sdr.jsx";
+import FftAccordion from "./settings-fft.jsx";
+import VfoAccordion from "./settings-vfo.jsx";
 
 const WaterfallSettings = forwardRef((props, ref) => {
     const dispatch = useDispatch();
-    const {socket} = useSocket();
 
     const {
         colorMap,
@@ -242,6 +135,8 @@ const WaterfallSettings = forwardRef((props, ref) => {
     const [localColorMap, setLocalColorMap] = useState(colorMap);
     const [localAutoDBRange, setLocalAutoDBRange] = useState(autoDBRange);
     const hasInitializedRef = useRef(false);
+
+    const {socket} = useSocket();
 
     useEffect(() => {
         setLocalCenterFrequency(centerFrequency);
@@ -343,7 +238,7 @@ const WaterfallSettings = forwardRef((props, ref) => {
                     dispatch(setErrorDialogOpen(true));
                 });
         }
-    }, []);
+    }, [dispatch, getSDRConfigParameters, setErrorDialogOpen, setErrorMessage, setIsStreaming, setSelectedSDRId, socket]);
 
     // Expose the function to parent components
     useImperativeHandle(ref, () => ({
@@ -450,728 +345,115 @@ const WaterfallSettings = forwardRef((props, ref) => {
         }
     }
 
+    const handleVFOPropertyChange = (vfoNumber, updates) => {
+        dispatch(setVFOProperty({ vfoNumber, updates }));
+    };
+
+    const handleVFOActiveChange = (vfoNumber, isActive) => {
+        if (isActive) {
+            dispatch(setVfoActive(vfoNumber));
+        } else {
+            dispatch(setVfoInactive(vfoNumber));
+        }
+    };
+
+    const handleVFOTabChange = (newValue) => {
+        dispatch(setSelectedVFOTab(newValue));
+    };
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
                 settings</TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
-                <Accordion expanded={expandedPanels.includes('freqControl')}
-                           onChange={handleAccordionChange('freqControl')}>
-                    <AccordionSummary
-                        sx={{
-                            boxShadow: '-1px 4px 7px #00000059',
-                        }}
-                        aria-controls="freq-content" id="freq-header">
-                        <Typography component="span">Frequency control</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{
-                        backgroundColor: 'rgb(34,34,34)',
-                    }}>
-                        <Box sx={{mb: 0, width: '100%'}}>
-                            <FrequencyDisplay
-                                initialFrequency={centerFrequency / 1000.0}
-                                onChange={(newFrequency) => {
-                                    dispatch(updateCenterFrequency(newFrequency));
-                                }}
-                                size={"small"}
-                                hideHzDigits={true}
-                            />
-                        </Box>
+                <FrequencyControlAccordion
+                    expanded={expandedPanels.includes('freqControl')}
+                    onAccordionChange={handleAccordionChange('freqControl')}
+                    centerFrequency={centerFrequency}
+                    onCenterFrequencyChange={(newFrequency) => {
+                        dispatch(updateCenterFrequency(newFrequency));
+                    }}
+                    availableTransmitters={availableTransmitters}
+                    getProperTransmitterId={getProperTransmitterId}
+                    onTransmitterChange={handleTransmitterChange}
+                    selectedOffsetMode={selectedOffsetMode}
+                    onOffsetModeChange={handleOffsetModeChange}
+                    selectedOffsetValue={selectedOffsetValue}
+                    onOffsetValueChange={handleOffsetValueChange}
+                />
 
-                        <FormControl disabled={false}
-                                     sx={{minWidth: 200, marginTop: 1, marginBottom: 0}} fullWidth variant="filled"
-                                     size="small">
-                            <InputLabel htmlFor="transmitter-select">Go to transmitter</InputLabel>
-                            <Select
-                                id="transmitter-select"
-                                value={getProperTransmitterId()}
-                                onChange={(event) => {
-                                    handleTransmitterChange(event);
-                                }}
-                                variant={'filled'}>
-                                <MenuItem value="none">
-                                    [no frequency selected]
-                                </MenuItem>
-                                <MenuItem value="" disabled>
-                                    <em>select a transmitter</em>
-                                </MenuItem>
-                                {availableTransmitters.map((transmitter, index) => {
-                                    return <MenuItem value={transmitter.id} key={transmitter.id}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
-                                            <Box
-                                                sx={{
-                                                    width: 8,
-                                                    height: 8,
-                                                    borderRadius: '50%',
-                                                    backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
-                                                    boxShadow: transmitter.alive
-                                                        ? '0 0 6px rgba(76, 175, 80, 0.6)'
-                                                        : '0 0 6px rgba(244, 67, 54, 0.6)',
-                                                }}
-                                            />
-                                            <span>
-                                                {transmitter['description']} ({humanizeFrequency(transmitter['downlink_low'])})
-                                            </span>
-                                        </Box>
-                                    </MenuItem>;
-                                })}
-                            </Select>
-                        </FormControl>
+                <SdrAccordion
+                    expanded={expandedPanels.includes('sdr')}
+                    onAccordionChange={handleAccordionChange('sdr')}
+                    gettingSDRParameters={gettingSDRParameters}
+                    isStreaming={isStreaming}
+                    sdrs={sdrs}
+                    selectedSDRId={selectedSDRId}
+                    onSDRChange={handleSDRChange}
+                    gainValues={gainValues}
+                    localGain={localGain}
+                    onGainChange={(value) => {
+                        setLocalGain(value);
+                        dispatch(updateSDRGain(value));
+                    }}
+                    sampleRateValues={sampleRateValues}
+                    localSampleRate={localSampleRate}
+                    onSampleRateChange={(value) => {
+                        setLocalSampleRate(value);
+                        dispatch(updateSampleRate(value));
+                    }}
+                    antennasList={antennasList}
+                    selectedAntenna={selectedAntenna}
+                    onAntennaChange={(value) => dispatch(updateSelectedAntenna(value))}
+                    hasBiasT={hasBiasT}
+                    biasT={biasT}
+                    onBiasTChange={(checked) => dispatch(updateBiasT(checked))}
+                    hasTunerAgc={hasTunerAgc}
+                    tunerAgc={tunerAgc}
+                    onTunerAgcChange={(checked) => dispatch(updateTunerAgc(checked))}
+                    hasSoapyAgc={hasSoapyAgc}
+                    soapyAgc={soapyAgc}
+                    onSoapyAgcChange={(checked) => dispatch(updateSoapyAgc(checked))}
+                    hasRtlAgc={hasRtlAgc}
+                    rtlAgc={rtlAgc}
+                    onRtlAgcChange={(checked) => dispatch(updateRtlAgc(checked))}
+                />
 
-                        <FormControl
-                            disabled={false}
-                            sx={{minWidth: 200, marginTop: 1, marginBottom: 0}}
-                            fullWidth
-                            variant="filled"
-                            size="small">
-                            <InputLabel htmlFor="frequency-offset-select">Frequency Offset</InputLabel>
-                            <Select
-                                id="frequency-offset-select"
-                                value={selectedOffsetMode || "none"}
-                                onChange={(event) => {
-                                    handleOffsetModeChange(event);
-                                }}
-                                variant={'filled'}>
-                                <MenuItem value="none">
-                                    [no frequency offset]
-                                </MenuItem>
-                                <MenuItem value="manual">Manual</MenuItem>
-                                <MenuItem value="" disabled>
-                                    <em>select an offset</em>
-                                </MenuItem>
-                                <MenuItem value="-6800000000">DK5AV X-Band (-6800MHz)</MenuItem>
-                                <MenuItem value="125000000">Ham-it-Up (+125MHz)</MenuItem>
-                                <MenuItem value="-10700000000">Ku LNB (-10700MHz)</MenuItem>
-                                <MenuItem value="-9750000000">Ku LNB (-9750MHz)</MenuItem>
-                                <MenuItem value="-1998000000">MMDS S-Band (-1998MHz)</MenuItem>
-                                <MenuItem value="120000000">SpyVerter (+120MHz)</MenuItem>
-                            </Select>
-                        </FormControl>
+                <FftAccordion
+                    expanded={expandedPanels.includes('fft')}
+                    onAccordionChange={handleAccordionChange('fft')}
+                    gettingSDRParameters={gettingSDRParameters}
+                    fftSizeValues={fftSizeValues}
+                    localFFTSize={localFFTSize}
+                    onFFTSizeChange={(value) => {
+                        setLocalFFTSize(value);
+                        dispatch(updateFFTSize(value));
+                    }}
+                    fftWindowValues={fftWindowValues}
+                    fftWindow={fftWindow}
+                    onFFTWindowChange={(value) => dispatch(updateFFTWindow(value))}
+                    fftAveraging={fftAveraging}
+                    onFFTAveragingChange={(value) => dispatch(updateFFTAveraging(value))}
+                    colorMaps={colorMaps}
+                    localColorMap={localColorMap}
+                    onColorMapChange={(value) => {
+                        setLocalColorMap(value);
+                        dispatch(setColorMap(value));
+                    }}
+                />
 
-                        <FormControl disabled={selectedOffsetMode !== "manual"} sx={{minWidth: 200, marginTop: 1}}
-                                     fullWidth variant="filled"
-                                     size="small">
-                            <TextField
-                                disabled={selectedOffsetMode !== "manual"}
-                                label="Manual Offset (Hz)"
-                                value={selectedOffsetValue}
-                                variant="filled"
-                                size="small"
-                                type="number"
-                                onChange={(e) => {
-                                    const offset = parseFloat(e.target.value);
-                                    if (!isNaN(offset)) {
-                                        handleOffsetValueChange({target: {value: offset.toString()}});
-                                    }
-                                }}
-                            />
-                        </FormControl>
-
-                    </AccordionDetails>
-                </Accordion>
-
-                <Accordion expanded={expandedPanels.includes('sdr')} onChange={handleAccordionChange('sdr')}>
-                    <AccordionSummary
-                        sx={{
-                            boxShadow: '-1px 4px 7px #00000059',
-                        }}
-                        aria-controls="panel3d-content" id="panel3d-header">
-                        <Typography component="span">SDR</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{
-                        backgroundColor: 'rgb(34,34,34)',
-                    }}>
-                        <LoadingOverlay loading={gettingSDRParameters}>
-                            <Box sx={{mb: 2}}>
-
-                                <FormControl disabled={isStreaming} margin="normal"
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth
-                                             variant="filled"
-                                             size="small">
-                                    <InputLabel htmlFor="sdr-select">SDR</InputLabel>
-                                    <Select
-                                        id="sdr-select"
-                                        value={sdrs.length > 0 ? selectedSDRId : "none"}
-                                        onChange={(event) => {
-                                            handleSDRChange(event);
-                                        }}
-                                        variant={'filled'}>
-                                        <MenuItem value="none">
-                                            [no SDR selected]
-                                        </MenuItem>
-                                        {/* Local SDRs */}
-                                        {sdrs.filter(sdr => sdr.type.toLowerCase().includes('local')).length > 0 && (
-                                            <ListSubheader>Local SDRs</ListSubheader>
-                                        )}
-                                        {sdrs
-                                            .filter(sdr => sdr.type.toLowerCase().includes('local'))
-                                            .map((sdr, index) => {
-                                                return <MenuItem value={sdr.id} key={`local-${index}`}>
-                                                    {sdr.name} ({sdr.type})
-                                                </MenuItem>;
-                                            })
-                                        }
-
-                                        {/* Remote SDRs */}
-                                        {sdrs.filter(sdr => sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                            <ListSubheader>Remote SDRs</ListSubheader>
-                                        )}
-                                        {sdrs
-                                            .filter(sdr => sdr.type.toLowerCase().includes('remote'))
-                                            .map((sdr, index) => {
-                                                return <MenuItem value={sdr.id} key={`remote-${index}`}>
-                                                    {sdr.name} ({sdr.type})
-                                                </MenuItem>;
-                                            })
-                                        }
-
-                                        {/* Other SDRs (neither local nor remote) */}
-                                        {sdrs.filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                            <ListSubheader>Other SDRs</ListSubheader>
-                                        )}
-                                        {sdrs
-                                            .filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote'))
-                                            .map((sdr, index) => {
-                                                return <MenuItem value={sdr.id} key={`other-${index}`}>
-                                                    {sdr.name} ({sdr.type})
-                                                </MenuItem>;
-                                            })
-                                        }
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
-                                             fullWidth={true}
-                                             variant="filled" size="small">
-                                    <InputLabel>Gain (dB)</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={gainValues.length ? localGain : "none"}
-                                        onChange={(e) => {
-                                            setLocalGain(e.target.value);
-                                            dispatch(updateSDRGain(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        <MenuItem value="none">
-                                            [no gain selected]
-                                        </MenuItem>
-                                        {gainValues.map(gain => (
-                                            <MenuItem key={gain} value={gain}>
-                                                {gain} dB
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
-                                             fullWidth={true}
-                                             variant="filled" size="small">
-                                    <InputLabel>Sample Rate</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={sampleRateValues.includes(localSampleRate) ? localSampleRate : "none"}
-                                        onChange={(e) => {
-                                            setLocalSampleRate(e.target.value);
-                                            dispatch(updateSampleRate(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        <MenuItem value="none">
-                                            [no rate selected]
-                                        </MenuItem>
-                                        {sampleRateValues.map(rate => {
-                                            // Format the sample rate for display
-                                            let displayValue;
-                                            if (rate >= 1000000) {
-                                                displayValue = `${(rate / 1000000).toFixed(rate % 1000000 === 0 ? 0 : 3)} MHz`;
-                                            } else {
-                                                displayValue = `${(rate / 1000).toFixed(rate % 1000 === 0 ? 0 : 3)} kHz`;
-                                            }
-                                            return (
-                                                <MenuItem key={rate} value={rate}>
-                                                    {displayValue}
-                                                </MenuItem>
-                                            );
-                                        })}
-                                    </Select>
-                                </FormControl>
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
-                                             fullWidth={true}
-                                             variant="filled" size="small">
-                                    <InputLabel>Antenna</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={antennasList.rx.includes(selectedAntenna) ? selectedAntenna : "none"}
-                                        onChange={(e) => {
-                                            dispatch(updateSelectedAntenna(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        <MenuItem value="none">
-                                            [no antenna selected]
-                                        </MenuItem>
-                                        {antennasList.rx && antennasList.rx.map(antenna => (
-                                            <MenuItem key={antenna} value={antenna}>
-                                                {antenna}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Box>
-
-                            <Box sx={{mb: 0, ml: 1.5}}>
-                                {hasBiasT && (
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                disabled={gettingSDRParameters}
-                                                size={'small'}
-                                                checked={biasT}
-                                                onChange={(e) => {
-                                                    dispatch(updateBiasT(e.target.checked));
-                                                }}
-                                            />
-                                        }
-                                        label="Enable Bias T"
-                                    />
-                                )}
-                                {hasTunerAgc && (
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                disabled={gettingSDRParameters}
-                                                size={'small'}
-                                                checked={tunerAgc}
-                                                onChange={(e) => {
-                                                    dispatch(updateTunerAgc(e.target.checked));
-                                                }}
-                                            />
-                                        }
-                                        label="Enable tuner AGC"
-                                    />
-                                )}
-                                {hasSoapyAgc && (
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                disabled={gettingSDRParameters}
-                                                size={'small'}
-                                                checked={soapyAgc}
-                                                onChange={(e) => {
-                                                    dispatch(updateSoapyAgc(e.target.checked));
-                                                }}
-                                            />
-                                        }
-                                        label="Enable AGC"
-                                    />
-                                )}
-                                {hasRtlAgc && (
-                                    <FormControlLabel
-                                        control={
-                                            <Switch
-                                                disabled={gettingSDRParameters}
-                                                size={'small'}
-                                                checked={rtlAgc}
-                                                onChange={(e) => {
-                                                    dispatch(updateRtlAgc(e.target.checked));
-                                                }}
-                                            />
-                                        }
-                                        label="Enable RTL AGC"
-                                    />
-                                )}
-                            </Box>
-                        </LoadingOverlay>
-                    </AccordionDetails>
-                </Accordion>
-
-                <Accordion expanded={expandedPanels.includes('fft')} onChange={handleAccordionChange('fft')}>
-                    <AccordionSummary
-                        sx={{
-                            boxShadow: '-1px 4px 7px #00000059',
-                        }}
-                        aria-controls="panel2d-content" id="panel2d-header">
-                        <Typography component="span">FFT</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{
-                        backgroundColor: 'rgb(34,34,34)',
-                    }}>
-                        <LoadingOverlay loading={gettingSDRParameters}>
-                            <Box sx={{mb: 2}}>
-                                <FormControl disabled={gettingSDRParameters}
-                                             margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
-                                             fullWidth={true} variant="filled"
-                                             size="small">
-                                    <InputLabel>FFT Size</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={fftSizeValues.length ? localFFTSize : ""}
-                                        onChange={(e) => {
-                                            setLocalFFTSize(e.target.value);
-                                            dispatch(updateFFTSize(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        {fftSizeValues.map(size => (
-                                            <MenuItem key={size} value={size}>{size}</MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                             variant="filled" size="small">
-                                    <InputLabel>FFT Window</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={fftWindowValues.length ? fftWindow : ""}
-                                        onChange={(e) => {
-                                            dispatch(updateFFTWindow(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        {fftWindowValues.map(window => (
-                                            <MenuItem key={window} value={window}>
-                                                {window.charAt(0).toUpperCase() + window.slice(1)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                             variant="filled" size="small">
-                                    <InputLabel>FFT Averaging</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={fftAveraging}
-                                        onChange={(e) => {
-                                            dispatch(updateFFTAveraging(e.target.value));
-                                        }}
-                                        variant={'filled'}>
-                                        <MenuItem value={1}>None</MenuItem>
-                                        <MenuItem value={2}>2 samples</MenuItem>
-                                        <MenuItem value={3}>3 samples</MenuItem>
-                                        <MenuItem value={4}>4 samples</MenuItem>
-                                        <MenuItem value={6}>6 samples</MenuItem>
-                                        <MenuItem value={8}>8 samples</MenuItem>
-                                        <MenuItem value={10}>10 samples</MenuItem>
-                                        <MenuItem value={12}>12 samples</MenuItem>
-                                        <MenuItem value={16}>16 samples</MenuItem>
-                                        <MenuItem value={18}>18 samples</MenuItem>
-                                        <MenuItem value={20}>20 samples</MenuItem>
-                                        <MenuItem value={24}>24 samples</MenuItem>
-                                    </Select>
-                                </FormControl>
-                                <FormControl disabled={gettingSDRParameters}
-                                             sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
-                                             variant="filled"
-                                             size="small">
-                                    <InputLabel>Color Map</InputLabel>
-                                    <Select
-                                        disabled={gettingSDRParameters}
-                                        size={'small'}
-                                        value={localColorMap}
-                                        onChange={(e) => {
-                                            setLocalColorMap(e.target.value);
-                                            dispatch(setColorMap(e.target.value));
-                                        }}
-                                        label="Color Map"
-                                        variant={'filled'}>
-                                        {colorMaps.map(map => (
-                                            <MenuItem key={map} value={map}>
-                                                {map.charAt(0).toUpperCase() + map.slice(1)}
-                                            </MenuItem>
-                                        ))}
-                                    </Select>
-                                </FormControl>
-                            </Box>
-                        </LoadingOverlay>
-                    </AccordionDetails>
-                </Accordion>
-
-                <Accordion expanded={expandedPanels.includes('vfo')} onChange={handleAccordionChange('vfo')}>
-                    <AccordionSummary
-                        sx={{
-                            boxShadow: '-1px 4px 7px #00000059',
-                        }}
-                        aria-controls="vfo-content" id="vfo-header">
-                        <Typography component="span">VFO Controls</Typography>
-                    </AccordionSummary>
-                    <AccordionDetails sx={{
-                        backgroundColor: 'rgb(34,34,34)',
-                    }}>
-                        <Tabs
-                            value={selectedVFOTab}
-                            onChange={(event, newValue) => {
-                                dispatch(setSelectedVFOTab(newValue));
-                            }}
-                            sx={{
-                                minHeight: '32px',
-                                '& .MuiTab-root': {
-                                    minHeight: '32px',
-                                    padding: '6px 12px'
-                                },
-                                '& .MuiTabs-indicator': {
-                                    backgroundColor: '#ffffffcc',
-                                }
-                            }}
-                        >
-                            {[0, 1, 2, 3].map((index) => (
-                                <Tab key={index} label={`VFO ${index + 1}`} sx={{
-                                    minWidth: '25%',
-                                    backgroundColor: `${vfoColors[index]}40`, // CC = 80% opacity (204/255)
-                                    '&.Mui-selected': {
-                                        fontWeight: 'bold',
-                                        borderBottom: 'none',
-                                        color: '#ffffff',
-                                    },
-                                }}/>
-                            ))}
-
-                        </Tabs>
-                        {[1, 2, 3, 4].map((vfoIndex) => (
-                            <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
-                                <Box sx={{
-                                    mt: 2,
-                                    mb: 0,
-                                    typography: 'body1',
-                                    fontWeight: 'medium',
-                                    alignItems: 'center'
-                                }}>
-                                    <Box
-                                        sx={{
-                                            fontFamily: "Monospace",
-                                            color: '#2196f3',
-                                            alignItems: 'center',
-                                            textAlign: 'center',
-                                            justifyContent: 'center'
-                                        }}>
-                                        <LCDFrequencyDisplay
-                                            frequency={vfoMarkers[vfoIndex]?.frequency || 0}
-                                            size={"large"}/>
-                                    </Box>
-                                </Box>
-
-                                <RotaryEncoder vfoNumber={vfoIndex} />
-
-                                <FormControlLabel
-                                    control={
-                                        <Switch
-                                            checked={vfoActive[vfoIndex] || false}
-                                            onChange={(e) => {
-                                                if (e.target.checked) {
-                                                    dispatch(setVfoActive(vfoIndex));
-                                                } else {
-                                                    dispatch(setVfoInactive(vfoIndex));
-                                                }
-                                            }}
-                                        />
-                                    }
-                                    label="Active"
-                                    sx={{mt: 0, ml: 0}}
-                                />
-
-                                <Box sx={{ mt: 1 }}>
-                                    <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                                        Step Size
-                                    </Typography>
-                                    <ToggleButtonGroup
-                                        value={vfoMarkers[vfoIndex]?.stepSize || 1000}
-                                        exclusive
-                                        onChange={(event, newValue) => {
-                                            if (newValue !== null) {
-                                                dispatch(setVFOProperty({
-                                                    vfoNumber: vfoIndex,
-                                                    updates: { stepSize: newValue }
-                                                }));
-                                            }
-                                        }}
-                                        sx={{
-                                            display: 'flex',
-                                            flexWrap: 'wrap',
-                                            gap: 0.5,
-                                            '& .MuiToggleButton-root': {
-                                                width: '60px',
-                                                height: '28px',
-                                                minWidth: '70px',
-                                                maxWidth: '60px',
-                                                padding: '4px 6px',
-                                                fontSize: '0.8rem',
-                                                border: '1px solid rgba(255, 255, 255, 0.23)',
-                                                borderRadius: '4px',
-                                                color: 'text.secondary',
-                                                textAlign: 'center',
-                                                textTransform: 'none',
-                                                '&.Mui-selected': {
-                                                    backgroundColor: 'primary.main',
-                                                    color: 'primary.contrastText',
-                                                    '&:hover': {
-                                                        backgroundColor: 'primary.dark',
-                                                    }
-                                                },
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <ToggleButton value={100}>100 Hz</ToggleButton>
-                                        <ToggleButton value={500}>500 Hz</ToggleButton>
-                                        <ToggleButton value={1000}>1 kHz</ToggleButton>
-                                        <ToggleButton value={2500}>2.5 kHz</ToggleButton>
-                                        <ToggleButton value={5000}>5 kHz</ToggleButton>
-                                        <ToggleButton value={10000}>10 kHz</ToggleButton>
-                                        <ToggleButton value={12500}>12.5 kHz</ToggleButton>
-                                        <ToggleButton value={20000}>20 kHz</ToggleButton>
-                                        <ToggleButton value={25000}>25 kHz</ToggleButton>
-                                    </ToggleButtonGroup>
-                                </Box>
-
-                                <Box sx={{ mt: 2 }}>
-                                    <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                                        Modulation
-                                    </Typography>
-                                    <ToggleButtonGroup
-                                        value={vfoMarkers[vfoIndex]?.mode || 'none'}
-                                        exclusive
-                                        onChange={(event, newValue) => {
-                                            if (newValue !== null) {
-                                                dispatch(setVFOProperty({
-                                                    vfoNumber: vfoIndex,
-                                                    updates: { mode: newValue }
-                                                }));
-                                            }
-                                        }}
-                                        sx={{
-                                            display: 'flex',
-                                            flexWrap: 'wrap',
-                                            gap: 0.5,
-                                            '& .MuiToggleButton-root': {
-                                                width: '50px',
-                                                height: '28px',
-                                                minWidth: '50px',
-                                                maxWidth: '50px',
-                                                padding: '4px 6px',
-                                                fontSize: '0.8rem',
-                                                border: '1px solid rgba(255, 255, 255, 0.23)',
-                                                borderRadius: '4px',
-                                                color: 'text.secondary',
-                                                textAlign: 'center',
-                                                textTransform: 'none',
-                                                '&.Mui-selected': {
-                                                    backgroundColor: 'primary.main',
-                                                    color: 'primary.contrastText',
-                                                    '&:hover': {
-                                                        backgroundColor: 'primary.dark',
-                                                    }
-                                                },
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <ToggleButton value="none">None</ToggleButton>
-                                        <ToggleButton value="am">AM</ToggleButton>
-                                        <ToggleButton value="fm">FM</ToggleButton>
-                                        <ToggleButton value="lsb">LSB</ToggleButton>
-                                        <ToggleButton value="usb">USB</ToggleButton>
-                                    </ToggleButtonGroup>
-                                </Box>
-
-                                <Box sx={{ mt: 2 }}>
-                                    <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                                        Bandwidth
-                                    </Typography>
-                                    <ToggleButtonGroup
-                                        value={BANDWIDTHS.hasOwnProperty(vfoMarkers[vfoIndex]?.bandwidth) ? vfoMarkers[vfoIndex]?.bandwidth.toString() : 'custom'}
-                                        exclusive
-                                        onChange={(event, newValue) => {
-                                            if (newValue !== null) {
-                                                if (newValue === 'custom') {
-                                                    // Keep current value or set a default
-                                                    return;
-                                                } else {
-                                                    dispatch(setVFOProperty({
-                                                        vfoNumber: vfoIndex,
-                                                        updates: { bandwidth: parseInt(newValue) }
-                                                    }));
-                                                }
-                                            }
-                                        }}
-                                        sx={{
-                                            display: 'flex',
-                                            flexWrap: 'wrap',
-                                            gap: 0.5,
-                                            '& .MuiToggleButton-root': {
-                                                width: '65px',
-                                                height: '28px',
-                                                minWidth: '65px',
-                                                maxWidth: '65px',
-                                                padding: '4px 6px',
-                                                fontSize: '0.8rem',
-                                                border: '1px solid rgba(255, 255, 255, 0.23)',
-                                                borderRadius: '4px',
-                                                color: 'text.secondary',
-                                                textAlign: 'center',
-                                                textTransform: 'none',
-                                                '&.Mui-selected': {
-                                                    backgroundColor: 'primary.main',
-                                                    color: 'primary.contrastText',
-                                                    '&:hover': {
-                                                        backgroundColor: 'primary.dark',
-                                                    }
-                                                },
-                                                '&:hover': {
-                                                    backgroundColor: 'rgba(255, 255, 255, 0.08)',
-                                                }
-                                            }
-                                        }}
-                                    >
-                                        <ToggleButton value="custom">Custom</ToggleButton>
-                                        {Object.entries(BANDWIDTHS).map(([value, label]) => (
-                                            <ToggleButton key={value} value={value}>
-                                                {label}
-                                            </ToggleButton>
-                                        ))}
-                                    </ToggleButtonGroup>
-                                </Box>
-
-                                <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
-                                    <Box sx={{textAlign: 'left'}}><SquelchIcon size={24}/></Box>
-                                    <Slider
-                                        value={vfoMarkers[vfoIndex]?.squelch || -150}
-                                        min={-150}
-                                        max={0}
-                                        onChange={(e, val) => dispatch(setVFOProperty({
-                                            vfoNumber: vfoIndex,
-                                            updates: {squelch: val}
-                                        }))}
-                                    />
-                                    <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
-                                </Stack>
-
-                                <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
-                                <VolumeDown/>
-                                    <Slider
-                                        value={vfoMarkers[vfoIndex]?.volume || 50}
-                                        onChange={(e, val) => dispatch(setVFOProperty({
-                                            vfoNumber: vfoIndex,
-                                            updates: {volume: val}
-                                        }))}
-                                    />
-                                    <VolumeUp/>
-                                </Stack>
-                            </Box>
-                        ))}
-                    </AccordionDetails>
-                </Accordion>
+                <VfoAccordion
+                    expanded={expandedPanels.includes('vfo')}
+                    onAccordionChange={handleAccordionChange('vfo')}
+                    selectedVFOTab={selectedVFOTab}
+                    onVFOTabChange={handleVFOTabChange}
+                    vfoColors={vfoColors}
+                    vfoMarkers={vfoMarkers}
+                    vfoActive={vfoActive}
+                    onVFOActiveChange={handleVFOActiveChange}
+                    onVFOPropertyChange={handleVFOPropertyChange}
+                />
             </div>
         </>
     );
