@@ -15,7 +15,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-from crud import crud
+from crud import satellites, preferences, locations
 import logging
 import hashlib
 from common.common import is_geostationary, serialize_object
@@ -183,7 +183,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
 
     try:
 
-        satellite = await crud.fetch_satellites(dbsession, norad_id=norad_id)
+        satellite = await satellites.fetch_satellites(dbsession, norad_id=norad_id)
 
         if not satellite.get('success', False):
             raise Exception(f"No satellite found in the db for norad id {norad_id}")
@@ -199,14 +199,14 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         ])
 
         # get target map settings
-        target_map_settings_reply = await crud.get_map_settings(dbsession, 'target-map-settings')
+        target_map_settings_reply = await preferences.get_map_settings(dbsession, 'target-map-settings')
         target_map_settings = target_map_settings_reply['data'].get('value', {})
 
         # fetch transmitters
-        transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
+        transmitters = await satellites.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
         satellite_data['transmitters'] = transmitters['data']
 
-        location = await crud.fetch_location_for_userid(dbsession, user_id=None)
+        location = await locations.fetch_location_for_userid(dbsession, user_id=None)
         if not location.get('success', False) or location.get('data', None) is None:
             raise Exception(f"No location found in the db for user id None, please set one")
 
@@ -295,10 +295,10 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
 
     try:
         async with (AsyncSessionLocal() as dbsession):
-            groups = await crud.fetch_satellite_group(dbsession)
-            satellites = await crud.fetch_satellites_for_group_id(dbsession, group_id=group_id)
-            tracking_state = await crud.get_tracking_state(dbsession, name='satellite-tracking')
-            transmitters = await crud.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
+            groups = await satellites.fetch_satellite_group(dbsession)
+            satellites = await satellites.fetch_satellites_for_group_id(dbsession, group_id=group_id)
+            tracking_state = await satellites.get_tracking_state(dbsession, name='satellite-tracking')
+            transmitters = await satellites.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
             data['groups'] = groups['data']
             data['satellites'] = satellites['data']
             data['group_id'] = group_id

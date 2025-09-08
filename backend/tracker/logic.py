@@ -15,7 +15,7 @@
 
 
 import multiprocessing
-from crud import crud
+from crud import satellites, hardware, locations
 import asyncio
 from datetime import UTC
 import logging
@@ -118,7 +118,7 @@ class SatelliteTracker:
 
         # Update rig state in database
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.set_tracking_state(dbsession, {
+            new_tracking_state = await satellites.set_tracking_state(dbsession, {
                 'name': 'satellite-tracking',
                 'value': {
                     'transmitter_id': "none",
@@ -135,7 +135,7 @@ class SatelliteTracker:
         if self.current_rotator_id is not None and self.rotator_controller is None:
             try:
                 async with AsyncSessionLocal() as dbsession:
-                    rotator_details_reply = await crud.fetch_rotators(dbsession, rotator_id=self.current_rotator_id)
+                    rotator_details_reply = await hardware.fetch_rotators(dbsession, rotator_id=self.current_rotator_id)
                     rotator_details = rotator_details_reply['data']
 
                 self.rotator_controller = RotatorController(
@@ -171,7 +171,7 @@ class SatelliteTracker:
         })
 
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.set_tracking_state(dbsession, {
+            new_tracking_state = await satellites.set_tracking_state(dbsession, {
                 'name': 'satellite-tracking',
                 'value': {'rotator_state': 'disconnected'}
             })
@@ -265,13 +265,13 @@ class SatelliteTracker:
             try:
                 async with AsyncSessionLocal() as dbsession:
                     # Try the hardware rig first
-                    rig_details_reply = await crud.fetch_rigs(dbsession, rig_id=self.current_rig_id)
+                    rig_details_reply = await hardware.fetch_rigs(dbsession, rig_id=self.current_rig_id)
 
                     if rig_details_reply.get('data') is not None:
                         rig_type = 'radio'
                     else:
                         # Try SDR
-                        rig_details_reply = await crud.fetch_sdr(dbsession, sdr_id=self.current_rig_id)
+                        rig_details_reply = await hardware.fetch_sdr(dbsession, sdr_id=self.current_rig_id)
                         if not rig_details_reply.get('data', None):
                             raise Exception(f"No rig or SDR found with ID: {self.current_rig_id}")
                         rig_type = 'sdr'
@@ -312,7 +312,7 @@ class SatelliteTracker:
         })
 
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.set_tracking_state(dbsession, {
+            new_tracking_state = await satellites.set_tracking_state(dbsession, {
                 'name': 'satellite-tracking',
                 'value': {'rig_state': 'disconnected'}
             })
@@ -456,7 +456,7 @@ class SatelliteTracker:
             logger.warning("Tracking state said rotator must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.set_tracking_state(dbsession, {
+                new_tracking_state = await satellites.set_tracking_state(dbsession, {
                     'name': 'satellite-tracking',
                     'value': {'rotator_state': 'disconnected'}
                 })
@@ -478,7 +478,7 @@ class SatelliteTracker:
             logger.warning("Tracking state said rig must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.set_tracking_state(dbsession, {
+                new_tracking_state = await satellites.set_tracking_state(dbsession, {
                     'name': 'satellite-tracking',
                     'value': {'rig_state': 'disconnected'}
                 })
@@ -547,7 +547,7 @@ class SatelliteTracker:
         """Handle transmitter selection and doppler calculation."""
         if self.current_transmitter_id != "none":
             async with AsyncSessionLocal() as dbsession:
-                current_transmitter_reply = await crud.fetch_transmitter(dbsession,
+                current_transmitter_reply = await satellites.fetch_transmitter(dbsession,
                                                                          transmitter_id=self.current_transmitter_id)
                 current_transmitter = current_transmitter_reply.get('data', {})
 
@@ -665,13 +665,13 @@ class SatelliteTracker:
                 async with AsyncSessionLocal() as dbsession:
 
                     # Get tracking state from the db
-                    tracking_state_reply = await crud.get_tracking_state(dbsession, name='satellite-tracking')
+                    tracking_state_reply = await satellites.get_tracking_state(dbsession, name='satellite-tracking')
                     assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
 
                     # Fetch the location of the ground station
-                    location_reply = await crud.fetch_location_for_userid(dbsession, user_id=None)
+                    location_reply = await locations.fetch_location_for_userid(dbsession, user_id=None)
                     location = location_reply['data']
                     tracker = tracking_state_reply['data']['value']
 
