@@ -1,8 +1,8 @@
 import json
 import time
 import hashlib
+import crud
 import multiprocessing
-from crud import locations, satellites
 import asyncio
 import logging
 from db import AsyncSessionLocal
@@ -154,7 +154,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
     async with AsyncSessionLocal() as dbsession:
         try:
             # Get home location
-            home = await locations.fetch_location_for_userid(dbsession, user_id=None)
+            home = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
 
             if home['data'] is None:
                 raise Exception("No home location found in the database")
@@ -163,7 +163,7 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
             homelon = float(home['data']['lon'])
 
             # Fetch satellite data
-            satellites = await satellites.fetch_satellites_for_group_id(dbsession, group_id)
+            satellites = await crud.satellites.fetch_satellites_for_group_id(dbsession, group_id)
             satellites = json.loads(json.dumps(satellites['data'], cls=ModelEncoder))
 
             # Prepare TLE groups list
@@ -255,12 +255,12 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
     async with AsyncSessionLocal() as dbsession:
         try:
             # Get home location
-            home = await locations.fetch_location_for_userid(dbsession, user_id=None)
+            home = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
             homelat = float(home['data']['lat'])
             homelon = float(home['data']['lon'])
 
             # Fetch satellite data
-            satellite_reply = await satellites.fetch_satellites(dbsession, norad_id=norad_id)
+            satellite_reply = await crud.satellites.fetch_satellites(dbsession, norad_id=norad_id)
             satellite = json.loads(json.dumps(satellite_reply['data'][0], cls=ModelEncoder))
 
             # Prepare TLE group for single satellite
