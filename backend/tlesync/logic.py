@@ -14,7 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-from crud import crud
+from crud import satellites
 import requests
 import asyncio
 from tlesync.state import SatelliteSyncState
@@ -161,7 +161,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     celestrak_list = []
     group_assignments = {}
 
-    tle_sources_reply = await crud.fetch_satellite_tle_source(dbsession)
+    tle_sources_reply = await satellites.fetch_satellite_tle_source(dbsession)
     tle_sources = tle_sources_reply.get('data', [])
 
     # Use a single ThreadPoolExecutor for all async_fetch calls

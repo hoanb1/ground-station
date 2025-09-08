@@ -17,7 +17,7 @@
 import logging
 import pprint
 
-from crud import crud
+from crud import hardware
 import asyncio
 import json
 from typing import Dict, Optional, Any, Union
@@ -145,7 +145,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
 
     try:
         # Fetch SDR device details from database
-        sdr_device_reply = await crud.fetch_sdr(dbsession, sdr_id)
+        sdr_device_reply = await hardware.fetch_sdr(dbsession, sdr_id)
 
         if not sdr_device_reply['data']:
             raise Exception(f"SDR device with id {sdr_id} not found in database")

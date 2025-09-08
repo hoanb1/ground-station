@@ -1,0 +1,336 @@
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+import uuid
+import traceback
+from typing import Optional, Union
+from sqlalchemy.ext.asyncio import AsyncSession
+from sqlalchemy import select, insert, update, delete
+from datetime import datetime, UTC
+from db.models import Preferences, SatelliteTrackingState
+from common.common import logger, serialize_object
+
+async def fetch_preference(session: AsyncSession, preference_id: uuid.UUID) -> dict:
+    """
+    Fetch a single preference by its UUID.
+    """
+    try:
+        stmt = select(Preferences).filter(Preferences.id == preference_id)
+        result = await session.execute(stmt)
+        preference = result.scalar_one_or_none()
+        preference = serialize_object(preference)
+        return {"success": True, "data": preference, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching a preference users: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[uuid.UUID] = None) -> dict:
+    """
+    Fetch all preferences for a given user ID or all preferences if user_id is None.
+    If a preference does not exist for a key in the defaults, use the default value.
+    """
+
+    defaults = {
+        'timezone': 'Europe/Athens',
+        'language': 'en_US',
+        'theme': 'dark',
+        'stadia_maps_api_key': "",
+        'openweather_api_key': "",
+    }
+
+    try:
+        stmt = select(Preferences)
+        if user_id is not None:
+            stmt = stmt.filter(Preferences.userid == user_id)
+        else:
+            stmt = stmt.filter(Preferences.userid == None)
+
+        result = await session.execute(stmt)
+        preferences = result.scalars().all()
+        preferences_dict = {pref.name: pref.value for pref in preferences}
+
+        # Combine defaults with existing preferences
+        combined_preferences = [
+            {"id": preferences_dict.get("id", None), "name": key, "value": preferences_dict.get(key, value)} for key, value in defaults.items()
+        ]
+
+        combined_preferences = serialize_object(combined_preferences)
+        return {"success": True, "data": combined_preferences, "error": None}
+
+    except Exception as e:
+        logger.error(f"Error fetching preferences for user: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def add_preference(session: AsyncSession, data: dict) -> dict:
+    """
+    Create and add a new preference record.
+    """
+    try:
+        new_id = uuid.uuid4()
+        now = datetime.now(UTC)
+        stmt = (
+            insert(Preferences)
+            .values(
+                id=new_id,
+                userid=data["userid"],
+                name=data["name"],
+                value=data["value"],
+                added=now,
+                updated=now
+            )
+            .returning(Preferences)
+        )
+        result = await session.execute(stmt)
+        await session.commit()
+        new_preference = result.scalar_one()
+        new_preference = serialize_object(new_preference)
+        return {"success": True, "data": new_preference, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error adding a preference: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def edit_preference(session: AsyncSession, data: dict) -> dict:
+    """
+    Edit an existing preference record by updating provided fields.
+    """
+    try:
+        # extract preference_id from data
+        preference_id = data.pop("id", None)
+        if not preference_id:
+            raise ValueError("Preference id cannot be empty.")
+
+        if isinstance(preference_id, str):
+            preference_id = uuid.UUID(preference_id)
+
+        # Confirm the preference exists first
+        stmt = select(Preferences).filter(Preferences.id == preference_id)
+        result = await session.execute(stmt)
+        preference = result.scalar_one_or_none()
+        if not preference:
+            return {"success": False, "error": f"Preference with id {preference_id} not found."}
+
+        # Update the timestamp
+        data["updated"] = datetime.now(UTC)
+
+        upd_stmt = (
+            update(Preferences)
+            .where(Preferences.id == preference_id)
+            .values(**data)
+            .returning(Preferences)
+        )
+        upd_result = await session.execute(upd_stmt)
+        await session.commit()
+        updated_preference = upd_result.scalar_one_or_none()
+        updated_preference = serialize_object(updated_preference)
+        return {"success": True, "data": updated_preference, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error editing a preference: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dict:
+    """
+    Edit or upsert preference records for provided fields.
+    """
+    try:
+        updated_preferences = []
+
+        for data in preferences:
+            preference_id = data.pop("id", None)
+            if preference_id:
+                if isinstance(preference_id, str):
+                    preference_id = uuid.UUID(preference_id)
+
+                # Confirm the preference exists
+                stmt = select(Preferences).filter(Preferences.id == preference_id)
+                result = await session.execute(stmt)
+                preference = result.scalar_one_or_none()
+
+                if preference:
+                    # Update existing preference
+                    del data['added']
+                    data["updated"] = datetime.now(UTC)
+                    upd_stmt = (
+                        update(Preferences)
+                        .where(Preferences.id == preference_id)
+                        .values(**data)
+                        .returning(Preferences)
+                    )
+                    upd_result = await session.execute(upd_stmt)
+                    updated_preferences.append(upd_result.scalar_one_or_none())
+
+                else:
+                    # Insert a new preference (upsert case)
+                    new_id = uuid.uuid4()
+                    now = datetime.now(UTC)
+                    data["id"] = preference_id
+                    data["added"] = now
+                    data["updated"] = now
+                    stmt = (
+                        insert(Preferences)
+                        .values(**data)
+                        .returning(Preferences)
+                    )
+                    result = await session.execute(stmt)
+                    updated_preferences.append(result.scalar_one())
+
+            else:
+                # Insert a new preference if no ID is provided
+                new_id = uuid.uuid4()
+                now = datetime.now(UTC)
+                data["id"] = new_id
+                data["added"] = now
+                data["updated"] = now
+                stmt = (
+                    insert(Preferences)
+                    .values(**data)
+                    .returning(Preferences)
+                )
+                result = await session.execute(stmt)
+                updated_preferences.append(result.scalar_one())
+
+        await session.commit()
+        updated_preferences = serialize_object(updated_preferences)
+        return {"success": True, "data": updated_preferences, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error setting multiple preferences: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def delete_preference(session: AsyncSession, preference_id: Union[uuid.UUID, str]) -> dict:
+    """
+    Delete a preference record by its UUID.
+    """
+    try:
+        stmt = (
+            delete(Preferences)
+            .where(Preferences.id == preference_id)
+            .returning(Preferences)
+        )
+        result = await session.execute(stmt)
+        deleted = result.scalar_one_or_none()
+        if not deleted:
+            return {"success": False, "error": f"Preference with id {preference_id} not found."}
+        await session.commit()
+        return {"success": True, "data": None, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error deleting a preference: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def set_map_settings(session: AsyncSession, data: dict ) -> dict:
+    """
+    Updates satellite tracking state or inserts new settings into the database.
+
+    This function handles updating settings for satellite tracking by name. If a
+    record with the given name exists, it will update the existing record. Otherwise,
+    it will insert a new record with the provided data. The updated/created record
+    is serialized and returned alongside the success status. In case of errors,
+    a failure status and error message are returned, and the transaction is rolled back.
+
+    :param session:
+        An AsyncSession instance for handling database operations.
+    :param data:
+        A dictionary containing the satellite tracking settings to set. The keys
+        must include 'name' and 'value'. Additional keys will be used to update
+        or insert the record.
+    :return:
+        A dictionary containing the success status, serialized record data if
+        successful, and error information in case of failure.
+    """
+    try:
+        assert data.get('name', None) is not None, "name is required when setting map settings"
+        assert data.get('value', None) is not None, "value is required when setting map settings"
+
+        now = datetime.now(UTC)
+        data["updated"] = now
+
+        existing_record = await session.execute(
+            select(SatelliteTrackingState).where(SatelliteTrackingState.name == data['name'])
+        )
+        existing_record = existing_record.scalar_one_or_none()
+
+        if existing_record:
+            for key, value in data.items():
+                setattr(existing_record, key, value)
+            new_record = existing_record
+        else:
+            new_record = SatelliteTrackingState(**data)
+
+        await session.merge(new_record)
+        await session.commit()
+        new_record = serialize_object(new_record)
+        return {"success": True, "data": new_record, "error": None}
+
+    except Exception as e:
+        await session.rollback()
+        logger.error(f"Error storing satellite tracking state: {e}")
+        logger.error(traceback.format_exc())
+        return {"success": False, "error": str(e)}
+
+
+async def get_map_settings(session: AsyncSession, name: str) -> dict:
+    """
+    Retrieve map settings for the given name.
+
+    This asynchronous function queries the database to fetch the map
+    settings related to satellite tracking state. If data is successfully
+    retrieved, it returns the settings in a structured format. If no data is
+    found, an empty dictionary is provided. In case of an error during
+    execution, the function logs the error and returns a failure response.
+
+    :param session: Database session instance to execute queries
+    :param name: The name identifier related to the map settings
+    :return: A dictionary containing either the map settings 'data'
+        or an empty dictionary and a 'success' status indicating
+        the operation's outcome
+    """
+    try:
+        # Query map settings from the database using the provided name
+        map_settings = await session.execute(
+            select(SatelliteTrackingState).where(SatelliteTrackingState.name == name)
+        )
+        map_settings_row = map_settings.scalars().first()
+
+        if map_settings_row:
+            map_settings_row = serialize_object(map_settings_row)
+            return {'success': True, 'data': map_settings_row}
+        else:
+            return {'success': True, 'data': {}}
+
+    except Exception as e:
+        logger.error(f"Error retrieving map settings: {str(e)}")
+        logger.exception(e)
+        return {'success': False, 'data': {}, 'error': str(e)}
+
+
