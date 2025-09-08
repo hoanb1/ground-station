@@ -79,7 +79,7 @@ import {frequencyBands} from "./bandplans.jsx";
 import WaterfallStatusBar from "./waterfall-statusbar.jsx";
 import WaterfallControlBar from "./waterfall-control-bar.jsx";
 import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
-import useWaterfallStream from "./useWaterfallStream.js";
+import WaterfallStream from "./waterfall-stream.jsx";
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -390,7 +390,7 @@ const MainWaterfallDisplay = React.memo(() => {
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
 
-    const { startStreaming, stopStreaming, playButtonEnabledOrNot } = useWaterfallStream({
+    const { startStreaming, stopStreaming, playButtonEnabledOrNot } = WaterfallStream({
         workerRef,
         targetFPSRef
     });

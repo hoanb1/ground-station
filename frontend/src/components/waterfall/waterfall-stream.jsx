@@ -19,7 +19,7 @@ import {
 } from './waterfall-slice.jsx';
 import { enqueueSnackbar } from 'notistack';
 
-const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
+const WaterfallStream = ({ workerRef, targetFPSRef }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const {
@@ -201,4 +201,4 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
     return { startStreaming, stopStreaming, playButtonEnabledOrNot };
 };
 
-export default useWaterfallStream;
+export default WaterfallStream;
