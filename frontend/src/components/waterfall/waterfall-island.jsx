@@ -22,22 +22,11 @@ import React, {useEffect, useRef, useState, useCallback} from 'react';
 import {
     Box,
     Typography,
-    Paper,
     Button,
     Stack,
-    Dialog,
-    DialogTitle,
-    DialogContent,
-    DialogContentText,
-    DialogActions, Slider,
+    Slider,
 } from '@mui/material';
-import ErrorIcon from '@mui/icons-material/Error';
-import ZoomInIcon from '@mui/icons-material/ZoomIn';
-import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
-import AutoGraphIcon from '@mui/icons-material/AutoGraph';
-import FullscreenIcon from '@mui/icons-material/Fullscreen';
-import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
+import HeightIcon from '@mui/icons-material/Height';
 import {useDispatch, useSelector} from "react-redux";
 import {
     getClassNamesBasedOnGridEditing,
@@ -46,14 +35,7 @@ import {
     TitleBar,
     WaterfallStatusBarPaper
 } from "../common/common.jsx";
-import {IconButton} from '@mui/material';
-import StopIcon from '@mui/icons-material/Stop';
-import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import HeightIcon from '@mui/icons-material/Height';
-import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
-import AlignHorizontalRightIcon from '@mui/icons-material/AlignHorizontalRight';
 import WaterfallAndBandscope from './waterfall-bandscope.jsx'
-import {useSocket} from "../common/socket.jsx";
 import {
     setColorMap,
     setColorMaps,
@@ -92,10 +74,12 @@ import {
     setVfoActive,
     setFFTdataOverflow,
 } from './waterfall-slice.jsx';
-import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from "../common/icons.jsx";
 import {enqueueSnackbar} from "notistack";
 import {frequencyBands} from "./bandplans.jsx";
 import WaterfallStatusBar from "./waterfall-statusbar.jsx";
+import WaterfallControlBar from "./waterfall-control-bar.jsx";
+import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
+import useWaterfallStream from "./useWaterfallStream.js";
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -113,16 +97,12 @@ export const createExternalWorker = () => {
 
 
 const MainWaterfallDisplay = React.memo(() => {
-    const {socket} = useSocket();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
     const bandscopeCanvasRef = useRef(null);
     const dBAxisScopeCanvasRef = useRef(null);
     const waterFallLeftMarginCanvasRef = useRef(null);
-    const waterfallDataRef = useRef(new Array(1024).fill(-120));
-    const animationFrameRef = useRef(null);
     const workerRef = useRef(null);
-    const bandscopeAnimationFrameRef = useRef(null);
     const dottedLineImageDataRef = useRef(null);
     const canvasTransferredRef = useRef(false);
     const visualSettingsRef = useRef({
@@ -369,24 +349,6 @@ const MainWaterfallDisplay = React.memo(() => {
         };
     }, []);
 
-    const cancelAnimations = () => {
-        // Stop the worker
-        if (workerRef.current) {
-            workerRef.current.postMessage({cmd: 'stop'});
-        }
-
-        // Clear any leftover animation frames
-        if (animationFrameRef.current) {
-            cancelAnimationFrame(animationFrameRef.current);
-            animationFrameRef.current = null;
-        }
-
-        if (bandscopeAnimationFrameRef.current) {
-            cancelAnimationFrame(bandscopeAnimationFrameRef.current);
-            bandscopeAnimationFrameRef.current = null;
-        }
-    }
-
     // Update refs when Redux state changes
     useEffect(() => {
         centerFrequencyRef.current = centerFrequency;
@@ -428,126 +390,10 @@ const MainWaterfallDisplay = React.memo(() => {
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
 
-    useEffect(() => {
-
-        socket.on('disconnect', () => {
-            cancelAnimations();
-            dispatch(setIsStreaming(false));
-        });
-
-        socket.on('sdr-config-error', (error) => {
-            //console.error(`sdr-config-error`, error);
-            dispatch(setErrorMessage(error.message));
-            dispatch(setErrorDialogOpen(true));
-            dispatch(setStartStreamingLoading(false));
-            enqueueSnackbar(`Failed to configure SDR: ${error.message}`, {
-                variant: 'error'
-            });
-        });
-
-        socket.on('sdr-error', (error) => {
-            //console.error(`sdr-error`, error);
-            cancelAnimations();
-            dispatch(setErrorMessage(error.message));
-            dispatch(setErrorDialogOpen(true));
-            //dispatch(setIsStreaming(false));
-            dispatch(setStartStreamingLoading(false));
-            // enqueueSnackbar(`Error occurred while streaming from SDR: ${error.message}`, {
-            //      variant: 'error'
-            // });
-        });
-
-        socket.on('sdr-config', (data) => {
-            //console.info(`sdr-config`, data);
-            dispatch(setCenterFrequency(data['center_freq']));
-            dispatch(setSampleRate(data['sample_rate']));
-            dispatch(setGain(data['gain']));
-            dispatch(setFFTSize(data['fft_size']));
-            dispatch(setFFTWindow(data['fft_window']));
-            dispatch(setBiasT(data['bias_t']));
-            dispatch(setTunerAgc(data['tuner_agc']));
-            dispatch(setRtlAgc(data['rtl_agc']));
-            dispatch(setFFTAveraging(data['fft_averaging']));
-        });
-
-        socket.on('sdr-status', (data) => {
-            if (data['streaming'] === true) {
-                dispatch(setIsStreaming(true));
-                dispatch(setStartStreamingLoading(false));
-            } else if (data['streaming'] === false) {
-                cancelAnimations();
-                dispatch(setIsStreaming(false));
-                dispatch(setStartStreamingLoading(false));
-            }
-        });
-
-        socket.on('sdr-fft-data', (binaryData) => {
-            const now = performance.now();
-
-            // Add current timestamp to rolling window
-            timestampWindowRef.current.push(now);
-
-            // Remove timestamps older than windowSizeMs
-            const cutoffTime = now - windowSizeMs;
-            while (timestampWindowRef.current.length > 0 && timestampWindowRef.current[0] < cutoffTime) {
-                timestampWindowRef.current.shift();
-            }
-
-            // Current rate is simply the count in the window (since it's 1 second)
-            const currentRate = timestampWindowRef.current.length;
-
-            // Check if overflow state should change
-            const shouldOverflow = currentRate > fftDataOverflowLimit;
-            if (shouldOverflow !== overflowRef.current) {
-                overflowRef.current = shouldOverflow;
-                dispatch(setFFTdataOverflow(shouldOverflow));
-                allowedIntervalRef.current = 1000 / fftDataOverflowLimit;
-            }
-
-            // If overflow is active, implement rate limiting
-            if (overflowRef.current) {
-                const timeSinceLastAllowed = now - lastAllowedUpdateRef.current;
-
-                // Only allow updates at the specified rate limit
-                if (timeSinceLastAllowed < allowedIntervalRef.current) {
-                    // Remove this timestamp since we're not processing it
-                    timestampWindowRef.current.pop();
-                    return;
-                }
-
-                lastAllowedUpdateRef.current = now;
-            }
-
-            const floatArray = new Float32Array(binaryData);
-
-            // Increment event counter (only for processed updates)
-            eventCountRef.current += 1;
-
-            // Add bin count (only for processed updates)
-            binCountRef.current += floatArray.length;
-
-            // Notify the worker that new data is available
-            if (workerRef.current) {
-                workerRef.current.postMessage({
-                    cmd: 'updateFFTData',
-                    fft: floatArray,
-                    immediate: true,
-                });
-            }
-        });
-
-        return () => {
-            // Cleanup animations
-            cancelAnimations();
-
-            // Clean up socket listeners
-            socket.off('sdr-config-error');
-            socket.off('sdr-error');
-            socket.off('sdr-fft-data');
-            socket.off('sdr-status');
-            socket.off('sdr-config');
-        };
-    }, []);
+    const { startStreaming, stopStreaming, playButtonEnabledOrNot } = useWaterfallStream({
+        workerRef,
+        targetFPSRef
+    });
 
     useEffect(() => {
         if (!workerRef.current) return;
@@ -588,79 +434,25 @@ const MainWaterfallDisplay = React.memo(() => {
             }
         };
     }, [isStreaming, autoDBRange]);
-
-    // Configure SDR and start streaming
-    const startStreaming = () => {
-
-        if (!isStreaming) {
-            // Clean up the last rotator event
-            lastRotatorEventRef.current = "";
-
-            // Set the loading flags and clear errors
-            dispatch(setStartStreamingLoading(true));
-            dispatch(setErrorMessage(''));
-
-            // Send command to the backend to configure the SDR settings
-            socket.emit('sdr_data', 'configure-sdr', {
-                selectedSDRId: selectedSDRId,
-                centerFrequency: centerFrequency,
-                sampleRate: sampleRate,
-                gain: gain,
-                fftSize: fftSize,
-                biasT: biasT,
-                tunerAgc: tunerAgc,
-                rtlAgc: rtlAgc,
-                fftWindow: fftWindow,
-                antenna: selectedAntenna,
-                offsetFrequency: selectedOffsetValue,
-                soapyAgc: soapyAgc,
-                fftAveraging: fftAveraging,
-            }, (response) => {
-                if (response['success']) {
-                    // Start streaming after configuration is acknowledged
-                    socket.emit('sdr_data', 'start-streaming', {selectedSDRId});
-
-                    // Start the worker
-                    if (workerRef.current) {
-                        workerRef.current.postMessage({
-                            cmd: 'start',
-                            data: {fps: targetFPSRef.current}
-                        });
-                    }
-                }
-            });
+    const toggleLeftSide = () => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories));
+    const toggleRightSide = () => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories));
+    const toggleAutoRange = () => dispatch(setAutoDBRange(!autoDBRange));
+    const autoScale = () => {
+        if (workerRef.current) {
+            workerRef.current.postMessage({ cmd: 'autoScaleDbRange' });
         }
     };
-
-    const stopStreaming = () => {
-        if (isStreaming) {
-            socket.emit('sdr_data', 'stop-streaming', {selectedSDRId});
-            dispatch(setIsStreaming(false));
-            cancelAnimations();
+    const handleToggleVfo = (index) => {
+        if (vfoActive[index]) {
+            dispatch(setVfoInactive(index));
+        } else {
+            dispatch(setVfoActive(index));
         }
     };
-
-    function playButtonEnabledOrNot() {
-        // Return true if streaming is active
-        const isStreamingActive = isStreaming;
-
-        // Return true if no SDR device is selected
-        const noSDRSelected = selectedSDRId === "none";
-
-        // Return true if still loading SDR parameters
-        const isLoadingParameters = gettingSDRParameters;
-
-        // Return true if required parameters are missing
-        const missingRequiredParameters = !sampleRate || !gain || sampleRate === "none" || gain === "none" || selectedAntenna === "none";
-
-        // Return true if any of the above conditions are met
-        return isStreamingActive || noSDRSelected || isLoadingParameters || missingRequiredParameters;
-    }
 
     return (
         <div ref={mainWaterFallContainer}>
-        <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall &
-                Spectrum</TitleBar>
+        <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall & Spectrum</TitleBar>
             <Box
                 sx={{
                     display: 'flex',
@@ -669,300 +461,33 @@ const MainWaterfallDisplay = React.memo(() => {
                     flexWrap: 'wrap',
                 }}
             >
-                <Paper elevation={1} sx={{
-                    p: 0,
-                    display: 'inline-block',
-                    width: '100%',
-                    borderBottom: '1px solid',
-                    borderColor: '#434343',
-                    paddingBottom: '0px',
-                    borderRadius: 0,
-                }}>
-                    <Box sx={{
-                        width: '100%',
-                        overflowX: 'auto',
-                        msOverflowStyle: 'none',
-                        scrollbarWidth: 'none',
-                        '&::-webkit-scrollbar': { display: 'none' }
-                    }}>
-                        <Stack
-                            direction="row"
-                            spacing={0}
-                            sx={{
-                                minWidth: 'min-content',
-                                flexWrap: 'nowrap'
-                            }}
-                        >
-                            <IconButton
-                                loading={startStreamingLoading}
-                                disabled={playButtonEnabledOrNot()}
-                                color="primary"
-                                onClick={startStreaming}
-                                title="Start streaming"
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                            >
-                                <PlayArrowIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                disabled={!isStreaming}
-                                color="error"
-                                onClick={stopStreaming}
-                                title="Stop streaming"
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                            >
-                                <StopIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                color={showLeftSideWaterFallAccessories ? "warning" : "default"}
-                                onClick={() => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories))}
-                                size="small"
-                                title="Toggle left side panel"
-                                sx={{
-                                    borderRadius: 0,
-                                    backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
-                                    }
-                                }}
-                            >
-                                <AlignHorizontalLeftIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                color={showRightSideWaterFallAccessories ? "warning" : "default"}
-                                onClick={() => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories))}
-                                size="small"
-                                title="Toggle right side panel"
-                                sx={{
-                                    borderRadius: 0,
-                                    backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
-                                    }
-                                }}
-                            >
-                                <AlignHorizontalRightIcon/>
-                            </IconButton>
-                            <IconButton
-                                onClick={() => dispatch(setAutoDBRange(!autoDBRange))}
-                                size="small"
-                                color={autoDBRange ? "warning" : "primary"}
-                                title="Toggle automatic dB range"
-                                sx={{
-                                    borderRadius: 0,
-                                    backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.2)' : 'rgba(25, 118, 210, 0.1)'
-                                    }
-                                }}
-                            >
-                                <AutoGraphIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={() => {
-                                    // Trigger auto-scaling
-                                    workerRef.current.postMessage({ cmd: 'autoScaleDbRange' });
-                                }}
-                                size="small"
-                                color="primary"
-                                title="Auto scale dB range once"
-                            >
-                                <HeightIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={toggleFullscreen}
-                                color="primary"
-                                title="Toggle fullscreen"
-                            >
-                                {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
-                            </IconButton>
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={handleZoomIn}
-                                color="primary"
-                                title="Zoom in"
-                            >
-                                <ZoomInIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={handleZoomOut}
-                                color="primary"
-                                title="Zoom out"
-                            >
-                                <ZoomOutIcon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                }}
-                                onClick={handleZoomReset}
-                                color="primary"
-                                title="Reset zoom"
-                            >
-                                <RestartAltIcon/>
-                            </IconButton>
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                    width: 40,
-                                    fontSize: '1.25rem',
-                                    fontFamily: "Monospace",
-                                    fontWeight: "bold",
-                                    color: vfoColors[0],
-                                    backgroundColor: vfoActive[1] ? `rgba(255, 0, 0, 0.1)` : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: vfoActive[1] ? `rgba(255, 0, 0, 0.2)` : 'rgba(0,0,0,0.1)'
-                                    },
-                                    '& .MuiTouchRipple-root': {
-                                        border: vfoActive[1] ? '1px solid' : 'none',
-                                        borderColor: '#ff0000',
-                                    },
-                                }}
-                                onClick={() => {
-                                    if (vfoActive[1]) {
-                                        dispatch(setVfoInactive(1));
-                                    } else {
-                                        dispatch(setVfoActive(1));
-                                    }
-                                }}
-                                color={vfoActive[1] ? "warning" : "primary"}
-                                title="Toggle VFO 1"
-                            >
-                                <VFO1Icon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                    width: 40,
-                                    fontSize: '1.25rem',
-                                    fontFamily: "Monospace",
-                                    fontWeight: "bold",
-                                    color: vfoColors[1],
-                                    backgroundColor: vfoActive[2] ? 'rgba(0,255,0,0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: vfoActive[2] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
-                                    },
-                                    '& .MuiTouchRipple-root': {
-                                        border: vfoActive[2] ? '1px solid': 'none',
-                                        borderColor: 'rgba(0,255,0,0.7)',
-                                    },
-                                }}
-                                onClick={() => {
-                                    if (vfoActive[2]) {
-                                        dispatch(setVfoInactive(2));
-                                    } else {
-                                        dispatch(setVfoActive(2));
-                                    }
-                                }}
-                                color={vfoActive[2] ? "warning" : "primary"}
-                                title="Toggle VFO 2"
-                            >
-                                <VFO2Icon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                    width: 40,
-                                    fontSize: '1.25rem',
-                                    fontFamily: "Monospace",
-                                    fontWeight: "bold",
-                                    color: vfoColors[2],
-                                    backgroundColor: vfoActive[3] ? 'rgba(0,0,255,0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: vfoActive[3] ? 'rgba(18,49,255,0.78)' : 'rgba(0,0,0,0.1)'
-                                    },
-                                    '& .MuiTouchRipple-root': {
-                                        border: vfoActive[3] ? '1px solid': 'none',
-                                        borderColor: 'rgba(18,49,255,0.8)',
-                                    },
-                                }}
-                                onClick={() => {
-                                    if (vfoActive[3]) {
-                                        dispatch(setVfoInactive(3));
-                                    } else {
-                                        dispatch(setVfoActive(3));
-                                    }
-                                }}
-                                color={vfoActive[3] ? "warning" : "primary"}
-                                title="Toggle VFO 3"
-                            >
-                                <VFO3Icon/>
-                            </IconButton>
-
-                            <IconButton
-                                sx={{
-                                    borderRadius: 0,
-                                    width: 40,
-                                    fontSize: '1.25rem',
-                                    fontFamily: "Monospace",
-                                    fontWeight: "bold",
-                                    color: vfoColors[3],
-                                    backgroundColor: vfoActive[4] ? 'rgba(255,0,255,0.1)' : 'transparent',
-                                    '&:hover': {
-                                        backgroundColor: vfoActive[4] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
-                                    },
-                                    '& .MuiTouchRipple-root': {
-                                        border: vfoActive[4] ? '1px solid': 'none',
-                                        borderColor: 'rgba(163,0,218,0.77)',
-                                    },
-                                }}
-                                onClick={() => {
-                                    if (vfoActive[4]) {
-                                        dispatch(setVfoInactive(4));
-                                    } else {
-                                        dispatch(setVfoActive(4));
-                                    }
-                                }}
-                                color={vfoActive[4] ? "warning" : "primary"}
-                                title="Toggle VFO 4"
-                            >
-                                <VFO4Icon/>
-                            </IconButton>
-
-                            {fftDataOverflow && (
-                                <IconButton
-                                    sx={{
-                                        borderRadius: 0,
-                                        ml: 1,
-                                        backgroundColor: 'rgba(211, 47, 47, 0.15)',
-                                        '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.25)' }
-                                    }}
-                                    color="error"
-                                    title="FFT update rate overflow — incoming updates are being throttled"
-                                    disabled
-                                >
-                                    <ErrorIcon />
-                                </IconButton>
-                            )}
-
-                        </Stack>
-                    </Box>
-                </Paper>
+                <WaterfallControlBar
+                    startStreamingLoading={startStreamingLoading}
+                    playButtonDisabled={playButtonEnabledOrNot()}
+                    startStreaming={startStreaming}
+                    stopStreaming={stopStreaming}
+                    isStreaming={isStreaming}
+                    showLeftSideWaterFallAccessories={showLeftSideWaterFallAccessories}
+                    toggleLeftSideWaterFallAccessories={toggleLeftSide}
+                    showRightSideWaterFallAccessories={showRightSideWaterFallAccessories}
+                    toggleRightSideWaterFallAccessories={toggleRightSide}
+                    autoDBRange={autoDBRange}
+                    toggleAutoDBRange={toggleAutoRange}
+                    autoScale={autoScale}
+                    toggleFullscreen={toggleFullscreen}
+                    isFullscreen={isFullscreen}
+                    handleZoomIn={handleZoomIn}
+                    handleZoomOut={handleZoomOut}
+                    handleZoomReset={handleZoomReset}
+                    vfoColors={vfoColors}
+                    vfoActive={vfoActive}
+                    toggleVfo={handleToggleVfo}
+                    fftDataOverflow={fftDataOverflow}
+                />
             </Box>
+
             {/* Container for both bandscope and waterfall */}
+
             <Box
                 sx={{
                     width: '100%',
@@ -1160,51 +685,11 @@ const MainWaterfallDisplay = React.memo(() => {
                 </Box>
             </Box>
 
-            <Dialog
+            <WaterfallErrorDialog
                 open={errorMessage !== '' && errorDialogOpen}
+                message={errorMessage}
                 onClose={() => dispatch(setErrorDialogOpen(false))}
-                aria-labelledby="error-dialog-title"
-                aria-describedby="error-dialog-description"
-                PaperProps={{
-                    style: {
-                        backgroundColor: '#ffebee',
-                        border: '1px solid #ef9a9a'
-                    }
-                }}
-            >
-                <DialogTitle
-                    id="error-dialog-title"
-                    sx={{
-                        color: '#c62828',
-                        display: 'flex',
-                        alignItems: 'center',
-                        gap: 1
-                    }}
-                >
-                    <ErrorIcon color="error"/>
-                    Error Occurred
-                </DialogTitle>
-                <DialogContent>
-                    <DialogContentText
-                        id="error-dialog-description"
-                        sx={{
-                            color: '#d32f2f',
-                            whiteSpace: 'pre-wrap',
-                        }}
-                    >
-                        {errorMessage}
-                    </DialogContentText>
-                </DialogContent>
-                <DialogActions>
-                    <Button
-                        onClick={() => dispatch(setErrorDialogOpen(false))}
-                        variant="contained"
-                        color="error"
-                    >
-                        Close
-                    </Button>
-                </DialogActions>
-            </Dialog>
+            />
             <WaterfallStatusBar isStreaming={isStreaming} eventMetrics={eventMetrics} centerFrequency={centerFrequency} sampleRate={sampleRate} gain={gain} />
         </div>
     );
