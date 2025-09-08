@@ -183,7 +183,8 @@ const ProgressFormatter = React.memo(({params}) => {
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 4,
-                border: '2px solid white'
+                border: '2px solid white',
+                display: 'none',
             }} title={`Current progress: ${progressPercentage}%`}/>
 
             {/* Peak marker */}
