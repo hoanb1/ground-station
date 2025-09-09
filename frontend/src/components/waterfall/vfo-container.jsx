@@ -921,6 +921,9 @@ const VFOMarkersContainer = ({
                     // MozUserSelect: 'none',
                     // msUserSelect: 'none',
                     // userSelect: 'none',
+                    transform: 'translateZ(0)', // this it breaks box-shadow CSS
+                    backfaceVisibility: 'hidden',
+                    perspective: '1000px',
                 }}
             />
         </Box>

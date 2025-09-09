@@ -471,18 +471,16 @@ const WaterfallAndBandscope = forwardRef(({
                     className={"waterfall-canvas"}
                     ref={waterFallCanvasRef}
                     width={waterFallCanvasWidth}
-                    //height={waterFallWindowHeight - 230}
                     height={waterFallCanvasHeight}
                     style={{
                         imageRendering: 'auto',
                         width: '100%',
-                        //height: `${waterFallWindowHeight - 230}px`,
                         height: `${waterFallCanvasHeight}px`,
                         display: 'block',
                         touchAction: 'pan-y',
-                        //transform: 'translateZ(0)', // commented out because it breaks box-shadow CSS
-                        //backfaceVisibility: 'hidden',
-                        //perspective: '1000px',
+                        transform: 'translateZ(0)', // this it breaks box-shadow CSS
+                        backfaceVisibility: 'hidden',
+                        perspective: '1000px',
                     }}
                 />
                 <VFOMarkersContainer
