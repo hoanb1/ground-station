@@ -18,8 +18,7 @@ flowchart LR
 
 - **Frontend:** React, Redux Toolkit, Material UI, Vite
 - **Realtime:** socket.io for bidirectional events
-- **Backend:** Python with FastAPI, SQLAlchemy and Skyfield/SGP4 for orbital
-  mechanics
+- **Backend:** Python with FastAPI, SQLAlchemy and Skyfield/SGP4 for orbital mechanics
 - **External APIs:** CelesTrak and SatNOGS for TLE data
 
 ## SDR Device Support
@@ -28,8 +27,7 @@ Dedicated worker processes provide FFT and streaming support for multiple
 receiver families:
 
 - **RTL‑SDR** (USB or `rtl_tcp`) workers
-- **SoapySDR** devices locally or through SoapyRemote (Airspy, HackRF,
-  LimeSDR, etc.)
+- **SoapySDR** devices locally or through SoapyRemote (Airspy, HackRF, LimeSDR, etc.)
 - **UHD/USRP** radios via a UHD worker
 
 ## Developer Setup
