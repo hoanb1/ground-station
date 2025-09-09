@@ -10,8 +10,8 @@ transmissions and automate antenna control.
 
 ```mermaid
 flowchart LR
-  A[Frontend\nReact + Redux + MUI] -->|socket.io| B[Backend\nFastAPI]
-  B --> C[Workers\nSatellite tracking & SDR streaming]
+  A[Frontend React + Redux + MUI] -->|socket.io| B[Backend FastAPI]
+  B --> C[Workers Satellite tracking & SDR streaming]
 ```
 
 ## Technologies and APIs
