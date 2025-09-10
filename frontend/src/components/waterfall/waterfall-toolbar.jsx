@@ -12,31 +12,35 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import ErrorIcon from '@mui/icons-material/Error';
+import TimelineIcon from '@mui/icons-material/Timeline';
+import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from '../common/icons.jsx';
 
-const WaterfallControlBar = ({
-    startStreamingLoading,
-    playButtonDisabled,
-    startStreaming,
-    stopStreaming,
-    isStreaming,
-    showLeftSideWaterFallAccessories,
-    toggleLeftSideWaterFallAccessories,
-    showRightSideWaterFallAccessories,
-    toggleRightSideWaterFallAccessories,
-    autoDBRange,
-    toggleAutoDBRange,
-    autoScale,
-    toggleFullscreen,
-    isFullscreen,
-    handleZoomIn,
-    handleZoomOut,
-    handleZoomReset,
-    vfoColors,
-    vfoActive,
-    toggleVfo,
-    fftDataOverflow
-}) => (
+const WaterfallToolbar = ({
+                              startStreamingLoading,
+                              playButtonDisabled,
+                              startStreaming,
+                              stopStreaming,
+                              isStreaming,
+                              showLeftSideWaterFallAccessories,
+                              toggleLeftSideWaterFallAccessories,
+                              showRightSideWaterFallAccessories,
+                              toggleRightSideWaterFallAccessories,
+                              autoDBRange,
+                              toggleAutoDBRange,
+                              autoScale,
+                              toggleFullscreen,
+                              isFullscreen,
+                              handleZoomIn,
+                              handleZoomOut,
+                              handleZoomReset,
+                              vfoColors,
+                              vfoActive,
+                              toggleVfo,
+                              fftDataOverflow,
+                              showRotatorDottedLines,
+                              toggleRotatorDottedLines
+                          }) => (
     <Paper elevation={1} sx={{
         p: 0,
         display: 'inline-block',
@@ -90,7 +94,7 @@ const WaterfallControlBar = ({
                     sx={{
                         borderRadius: 0,
                         backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
-        '&:hover': {
+                        '&:hover': {
                             backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
                         }
                     }}
@@ -173,6 +177,27 @@ const WaterfallControlBar = ({
                 >
                     <RestartAltIcon/>
                 </IconButton>
+
+                {/* New toggle button for rotator dotted lines */}
+                <IconButton
+                    onClick={() => {
+                        console.info("before:", showRotatorDottedLines);
+                        toggleRotatorDottedLines(!showRotatorDottedLines);
+                    }}
+                    size="small"
+                    color={showRotatorDottedLines ? 'warning' : 'primary'}
+                    title="Toggle rotator event dotted lines"
+                    sx={{
+                        borderRadius: 0,
+                        backgroundColor: showRotatorDottedLines ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                        '&:hover': {
+                            backgroundColor: showRotatorDottedLines ? 'rgba(46, 125, 50, 0.2)' : 'rgba(25, 118, 210, 0.1)'
+                        }
+                    }}
+                >
+                    <HorizontalRuleIcon/>
+                </IconButton>
+
                 <IconButton
                     sx={{
                         borderRadius: 0,
@@ -289,4 +314,4 @@ const WaterfallControlBar = ({
     </Paper>
 );
 
-export default WaterfallControlBar;
+export default WaterfallToolbar;

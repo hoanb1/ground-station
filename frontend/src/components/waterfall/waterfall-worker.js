@@ -48,6 +48,7 @@ let rotatorEventQueue = [];
 let lastTimestamp = new Date();
 let renderWaterfallCount = 0;
 let vfoMarkers = [];
+let showRotatorDottedLines = true;
 
 // Store waterfall history for auto-scaling
 let waterfallHistory = [];
@@ -133,6 +134,11 @@ self.onmessage = function(eventMessage) {
 
         case 'updateFPS':
             updateFPS(eventMessage.data.fps);
+            break;
+
+        case 'toggleRotatorDottedLines':
+            // Toggle the visibility of dotted lines for rotator events
+            showRotatorDottedLines = eventMessage.data.show;
             break;
 
         case 'updateFFTData':
@@ -438,7 +444,6 @@ function startFftRateMonitoring() {
     }, 1000);
 }
 
-
 function stopFftRateMonitoring() {
     if (fftRateIntervalId) {
         clearInterval(fftRateIntervalId);
@@ -459,6 +464,7 @@ function setupCanvas(config) {
     colorMap = config.colorMap;
     dbRange = config.dbRange;
     fftSize = config.fftSize;
+    showRotatorDottedLines = config.showRotatorDottedLines;
 
     // IMPORTANT: Reset smoothing arrays when FFT size changes
     fftHistory = [];
@@ -740,35 +746,38 @@ function updateWaterfallLeftMargin() {
         waterFallLeftMarginCtx.textBaseline = 'top';
         waterFallLeftMarginCtx.fillText(newRotatorEvent, dBAxisCanvas.width / 2, 2);
 
-        // Get or create the imageData for the dotted line
-        let imageData;
+        // Draw dotted line only if showRotatorDottedLines is enabled
+        if (showRotatorDottedLines) {
+            // Get or create the imageData for the dotted line
+            let imageData;
 
-        // Check if we have a cached imageData for the dotted line
-        if (!dottedLineImageData || dottedLineImageData.width !== waterfallCanvas.width) {
-            // Create new ImageData if none exists or if width changed
-            imageData = waterfallCtx.createImageData(waterfallCanvas.width, 1);
-            dottedLineImageData = imageData;
+            // Check if we have a cached imageData for the dotted line
+            if (!dottedLineImageData || dottedLineImageData.width !== waterfallCanvas.width) {
+                // Create new ImageData if none exists or if width changed
+                imageData = waterfallCtx.createImageData(waterfallCanvas.width, 1);
+                dottedLineImageData = imageData;
 
-            // Pre-fill the dotted line pattern
-            const data = imageData.data;
-            for (let i = 0; i < data.length; i += 32) { // Increase step to create dots
-                for (let j = 0; j < 4; j++) { // Dot width of 1 pixel
-                    const idx = i + (j * 4);
-                    if (idx < data.length) {
-                        data[idx] = 255;     // R
-                        data[idx + 1] = 255; // G
-                        data[idx + 2] = 255; // B
-                        data[idx + 3] = 100; // A
+                // Pre-fill the dotted line pattern
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 32) { // Increase step to create dots
+                    for (let j = 0; j < 4; j++) { // Dot width of 1 pixel
+                        const idx = i + (j * 4);
+                        if (idx < data.length) {
+                            data[idx] = 255;     // R
+                            data[idx + 1] = 255; // G
+                            data[idx + 2] = 255; // B
+                            data[idx + 3] = 100; // A
+                        }
                     }
                 }
+            } else {
+                // Reuse the cached imageData
+                imageData = dottedLineImageData;
             }
-        } else {
-            // Reuse the cached imageData
-            imageData = dottedLineImageData;
-        }
 
-        // Draw the dotted line
-        waterfallCtx.putImageData(imageData, 0, 0);
+            // Draw the dotted line
+            waterfallCtx.putImageData(imageData, 0, 0);
+        }
     }
 
     // Calculate seconds since the epoch and check if divisible by 15

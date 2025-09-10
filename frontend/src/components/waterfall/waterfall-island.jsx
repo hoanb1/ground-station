@@ -58,7 +58,7 @@ import {
     setFFTWindow,
     setSelectedSDRId,
     setSelectedOffsetValue,
-    setFFTAveraging,
+    setFFTAveraging, setShowRotatorDottedLines,
 } from './waterfall-slice.jsx'
 import {
     enableVFO1,
@@ -77,7 +77,7 @@ import {
 import {enqueueSnackbar} from "notistack";
 import {frequencyBands} from "./bandplans.jsx";
 import WaterfallStatusBar from "./waterfall-statusbar.jsx";
-import WaterfallControlBar from "./waterfall-control-bar.jsx";
+import WaterfallToolbar from "./waterfall-toolbar.jsx";
 import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
 import WaterfallStream from "./waterfall-stream.jsx";
 
@@ -171,6 +171,7 @@ const MainWaterfallDisplay = React.memo(() => {
         vfoActive,
         fftDataOverflow,
         fftDataOverflowLimit,
+        showRotatorDottedLines,
     } = useSelector((state) => state.waterfall);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
@@ -212,6 +213,19 @@ const MainWaterfallDisplay = React.memo(() => {
     const handleZoomReset = useCallback(() => {
         if (waterfallControlRef.current) {
             waterfallControlRef.current.resetCustomTransform();
+        }
+    }, []);
+
+    const toggleRotatorDottedLines = useCallback((value) => {
+        console.log("Toggle Rotator Dotted Lines", value);
+        dispatch(setShowRotatorDottedLines(value));
+
+        // Send the toggle command to the worker
+        if (workerRef.current) {
+            workerRef.current.postMessage({
+                cmd: 'toggleRotatorDottedLines',
+                show: value,
+            });
         }
     }, []);
 
@@ -302,6 +316,7 @@ const MainWaterfallDisplay = React.memo(() => {
                         colorMap: colorMap,
                         dbRange: dbRange,
                         fftSize: fftSize,
+                        showRotatorDottedLines: showRotatorDottedLines,
                     }
                 }, [waterfallOffscreenCanvas, bandscopeOffscreenCanvas, dBAxisOffScreenCanvas, waterfallLeftMarginCanvas]);
 
@@ -434,6 +449,7 @@ const MainWaterfallDisplay = React.memo(() => {
             }
         };
     }, [isStreaming, autoDBRange]);
+
     const toggleLeftSide = () => dispatch(setShowLeftSideWaterFallAccessories(!showLeftSideWaterFallAccessories));
     const toggleRightSide = () => dispatch(setShowRightSideWaterFallAccessories(!showRightSideWaterFallAccessories));
     const toggleAutoRange = () => dispatch(setAutoDBRange(!autoDBRange));
@@ -461,7 +477,7 @@ const MainWaterfallDisplay = React.memo(() => {
                     flexWrap: 'wrap',
                 }}
             >
-                <WaterfallControlBar
+                <WaterfallToolbar
                     startStreamingLoading={startStreamingLoading}
                     playButtonDisabled={playButtonEnabledOrNot()}
                     startStreaming={startStreaming}
@@ -483,6 +499,8 @@ const MainWaterfallDisplay = React.memo(() => {
                     vfoActive={vfoActive}
                     toggleVfo={handleToggleVfo}
                     fftDataOverflow={fftDataOverflow}
+                    showRotatorDottedLines={showRotatorDottedLines}
+                    toggleRotatorDottedLines={toggleRotatorDottedLines}
                 />
             </Box>
 
