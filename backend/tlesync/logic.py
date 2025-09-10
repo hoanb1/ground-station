@@ -50,6 +50,10 @@ sync_state = {
     "removed": {  # This needs to be added
         "satellites": [],
         "transmitters": []
+    },
+    "modified": {
+        "satellites": [],
+        "transmitters": []
     }
 }
 
@@ -84,6 +88,10 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             "transmitters": []
         },
         "removed": {  # Add this section
+            "satellites": [],
+            "transmitters": []
+        },
+        "modified": {
             "satellites": [],
             "transmitters": []
         }
@@ -394,15 +402,43 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     # Get existing satellite and transmitter IDs from database
     existing_satellite_norad_ids = set()
     existing_transmitter_uuids = set()
+    
+    # Create dictionaries to store current satellite and transmitter data for comparison
+    existing_satellites = {}
+    existing_transmitters = {}
 
     try:
         # Query existing satellites
-        satellite_result = await dbsession.execute(select(Satellites.norad_id))
-        existing_satellite_norad_ids = {row[0] for row in satellite_result.fetchall()}
+        satellite_result = await dbsession.execute(select(Satellites))
+        for row in satellite_result.scalars().all():
+            existing_satellite_norad_ids.add(row.norad_id)
+            # Store the current satellite data for comparison
+            existing_satellites[row.norad_id] = {
+                "name": row.name,
+                "sat_id": row.sat_id,
+                "status": row.status,
+                "tle1": row.tle1,
+                "tle2": row.tle2,
+                "operator": row.operator,
+                "countries": row.countries,
+                "is_frequency_violator": row.is_frequency_violator
+            }
 
         # Query existing transmitters
-        transmitter_result = await dbsession.execute(select(Transmitters.id))
-        existing_transmitter_uuids = {row[0] for row in transmitter_result.fetchall()}
+        transmitter_result = await dbsession.execute(select(Transmitters))
+        for row in transmitter_result.scalars().all():
+            existing_transmitter_uuids.add(row.id)
+            # Store the current transmitter data for comparison
+            existing_transmitters[row.id] = {
+                "description": row.description,
+                "alive": row.alive,
+                "type": row.type,
+                "downlink_low": row.downlink_low,
+                "downlink_high": row.downlink_high,
+                "mode": row.mode,
+                "status": row.status,
+                "frequency_violation": row.frequency_violation
+            }
 
         logger.info(f"Found {len(existing_satellite_norad_ids)} existing satellites and {len(existing_transmitter_uuids)} existing transmitters in database")
 
@@ -411,6 +447,8 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         # Continue with empty sets if query fails
         existing_satellite_norad_ids = set()
         existing_transmitter_uuids = set()
+        existing_satellites = {}
+        existing_transmitters = {}
 
     #  we now have everything, TLE from celestrak sat info and transmitter info from satnogs, lets put them in the db
     count_sats = 0
@@ -434,6 +472,13 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
             # Check if this is a new satellite
             is_new_satellite = norad_id not in existing_satellite_norad_ids
+            
+            # Create a copy of the satellite for modification detection
+            satellite_data_for_comparison = {
+                "name": sat['name'],
+                "tle1": sat['line1'],
+                "tle2": sat['line2']
+            }
 
             satellite = Satellites(
                 norad_id=norad_id,
@@ -490,6 +535,39 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 satellite.citation = satnogs_sat_info.get('citation', None)
                 satellite.is_frequency_violator = satnogs_sat_info.get('is_frequency_violator', None)
                 satellite.associated_satellites = json.dumps(satnogs_sat_info.get('associated_satellites', {}))
+                
+                # Update the comparison data with SATNOGS info
+                satellite_data_for_comparison.update({
+                    "sat_id": satellite.sat_id,
+                    "name": satellite.name,
+                    "status": satellite.status,
+                    "operator": satellite.operator,
+                    "countries": satellite.countries,
+                    "is_frequency_violator": satellite.is_frequency_violator
+                })
+
+            # Check if satellite was modified (not new but has changes)
+            is_modified = False
+            if not is_new_satellite and norad_id in existing_satellites:
+                # Compare with existing data to detect modifications
+                existing_data = existing_satellites[norad_id]
+                changes = {}
+                
+                for key, new_value in satellite_data_for_comparison.items():
+                    if key in existing_data and existing_data[key] != new_value:
+                        changes[key] = {
+                            "old": existing_data[key],
+                            "new": new_value
+                        }
+                
+                if changes:
+                    is_modified = True
+                    sync_state["modified"]["satellites"].append({
+                        "norad_id": norad_id,
+                        "name": satellite.name,
+                        "changes": changes
+                    })
+                    logger.info(f"Satellite modified: {satellite.name} (NORAD ID: {norad_id}), changes: {changes}")
 
             # add sto dbsession
             await dbsession.merge(satellite)
@@ -514,6 +592,18 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
                 # Check if this is a new transmitter
                 is_new_transmitter = transmitter_uuid not in existing_transmitter_uuids
+                
+                # Create a data object for comparison
+                transmitter_data_for_comparison = {
+                    "description": transmitter_info.get('description', None),
+                    "alive": transmitter_info.get('alive', None),
+                    "type": transmitter_info.get('type', None),
+                    "downlink_low": transmitter_info.get('downlink_low', None),
+                    "downlink_high": transmitter_info.get('downlink_high', None),
+                    "mode": transmitter_info.get('mode', None),
+                    "status": transmitter_info.get('status', None),
+                    "frequency_violation": transmitter_info.get('frequency_violation', None)
+                }
 
                 transmitter = Transmitters(
                     id=transmitter_uuid,
@@ -559,6 +649,31 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     # Every 20 transmitters, emit an update to avoid flooding
                     if count_transmitters % 20 == 0 or (i == total_satellites - 1 and j == len(satnogs_transmitter_info) - 1):
                         await sio.emit('sat-sync-events', progress_state)
+                        
+                # Check if transmitter was modified (not new but has changes)
+                is_modified = False
+                if not is_new_transmitter and transmitter_uuid in existing_transmitters:
+                    # Compare with existing data to detect modifications
+                    existing_data = existing_transmitters[transmitter_uuid]
+                    changes = {}
+                    
+                    for key, new_value in transmitter_data_for_comparison.items():
+                        if key in existing_data and existing_data[key] != new_value:
+                            changes[key] = {
+                                "old": existing_data[key],
+                                "new": new_value
+                            }
+                    
+                    if changes:
+                        is_modified = True
+                        sync_state["modified"]["transmitters"].append({
+                            "uuid": transmitter_uuid,
+                            "description": transmitter.description,
+                            "satellite_name": satellite.name,
+                            "norad_id": norad_id,
+                            "changes": changes
+                        })
+                        logger.info(f"Transmitter modified: {transmitter.description} for satellite {satellite.name} (UUID: {transmitter_uuid}), changes: {changes}")
 
                 await dbsession.merge(transmitter)
 
@@ -587,20 +702,25 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         new_transmitters_count = len(sync_state["newly_added"]["transmitters"])
         removed_satellites_count = len(sync_state["removed"]["satellites"])
         removed_transmitters_count = len(sync_state["removed"]["transmitters"])
+        modified_satellites_count = len(sync_state["modified"]["satellites"])
+        modified_transmitters_count = len(sync_state["modified"]["transmitters"])
 
         logger.info(f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters")
         logger.info(f"New items added: {new_satellites_count} satellites, {new_transmitters_count} transmitters")
         logger.info(f"Items removed: {removed_satellites_count} satellites, {removed_transmitters_count} transmitters")
+        logger.info(f"Items modified: {modified_satellites_count} satellites, {modified_transmitters_count} transmitters")
 
         # Update final state - always set to 100% when complete
         sync_state["status"] = "complete"
         sync_state["progress"] = 100
         sync_state["success"] = True
 
-        # Create a detailed success message including newly added and removed items
+        # Create a detailed success message including newly added, modified, and removed items
         success_message = f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'
         if new_satellites_count > 0 or new_transmitters_count > 0:
             success_message += f' (New: {new_satellites_count} satellites, {new_transmitters_count} transmitters)'
+        if modified_satellites_count > 0 or modified_transmitters_count > 0:
+            success_message += f' (Modified: {modified_satellites_count} satellites, {modified_transmitters_count} transmitters)'
         if removed_satellites_count > 0 or removed_transmitters_count > 0:
             success_message += f' (Removed: {removed_satellites_count} satellites, {removed_transmitters_count} transmitters)'
 

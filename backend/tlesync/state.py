@@ -48,6 +48,10 @@ class SatelliteSyncState:
             "removed": {        # Track removed items
                 "satellites": [],   # List of removed satellites
                 "transmitters": []  # List of removed transmitters
+            },
+            "modified": {
+                "satellites": [],
+                "transmitters": []
             }
         }
 
