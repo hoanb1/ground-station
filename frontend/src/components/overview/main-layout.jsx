@@ -125,7 +125,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
     // Default layout if none in localStorage
     const defaultLayouts = {
         "lg": [{
-            "w": 5,
+            "w": 6,
             "h": 17,
             "x": 0,
             "y": 0,
@@ -136,7 +136,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         }, {
             "w": 2,
             "h": 3,
-            "x": 5,
+            "x": 10,
             "y": 0,
             "i": "satselector",
             "moved": false,
@@ -155,14 +155,14 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         }, {
             "w": 2,
             "h": 14,
-            "x": 5,
+            "x": 10,
             "y": 3,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 5, "h": 17, "x": 7, "y": 0, "i": "satellite-group", "moved": false, "static": false}],
+        }, {"w": 4, "h": 17, "x": 6, "y": 0, "i": "satellite-group", "moved": false, "static": false}],
         "xs": [{
             "w": 2,
             "h": 17,
