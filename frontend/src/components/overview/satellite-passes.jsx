@@ -294,28 +294,28 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                 return (
                     <div style={{display: 'flex', gap: 2, flexWrap: 'wrap', justifyContent: 'center'}}>
                         {bands.map((band, index) => (
-                            <>
+                            <React.Fragment key={index}>
                                 {bandCounts[band]} ✕ <Chip
-                                    key={index}
-                                    label={`${band}`}
-                                    size="small"
-                                    sx={{
-                                        mt: '8px',
-                                        height: '18px',
-                                        fontSize: '0.65rem',
-                                        fontWeight: 'bold',
-                                        backgroundColor: getBandColor(band),
-                                        color: '#ffffff',
-                                        '&:hover': {
-                                            filter: 'brightness(90%)',
-                                        }
-                                    }}
-                                />
-                            </>
+                                label={`${band}`}
+                                size="small"
+                                sx={{
+                                    mt: '8px',
+                                    height: '18px',
+                                    fontSize: '0.65rem',
+                                    fontWeight: 'bold',
+                                    backgroundColor: getBandColor(band),
+                                    color: '#ffffff',
+                                    '&:hover': {
+                                        filter: 'brightness(90%)',
+                                    }
+                                }}
+                            />
+                            </React.Fragment>
                         ))}
                     </div>
                 );
             }
+
         },
         {
             field: 'event_start',
