@@ -1,4 +1,3 @@
-
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Card, Box, CardContent, Typography, Button, Collapse, Chip, IconButton } from '@mui/material';
@@ -444,7 +443,7 @@ const SynchronizeTLEsCard = function () {
                                             maxHeight: '80px',
                                             overflowY: 'auto',
                                         }}>
-                                            {syncState.modified.satellites.map((sat, index) => (
+                                            {syncState.modified.satellites.slice(0, 1000).map((sat, index) => (
                                                 <Chip
                                                     key={index}
                                                     label={`${sat.name} (${sat.norad_id})`}
@@ -458,6 +457,18 @@ const SynchronizeTLEsCard = function () {
                                                     title={Object.keys(sat.changes || {}).join(', ')}
                                                 />
                                             ))}
+                                            {modifiedSatellitesCount > 1000 && (
+                                                <Chip
+                                                    label={`+${modifiedSatellitesCount - 1000} more`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(3, 169, 244, 0.05)',
+                                                        color: '#03a9f4',
+                                                        fontSize: '0.65rem',
+                                                        fontStyle: 'italic',
+                                                    }}
+                                                />
+                                            )}
                                         </Box>
                                     </Box>
                                 )}
@@ -487,7 +498,7 @@ const SynchronizeTLEsCard = function () {
                                             maxHeight: '80px',
                                             overflowY: 'auto',
                                         }}>
-                                            {syncState.modified.transmitters.map((trx, index) => (
+                                            {syncState.modified.transmitters.slice(0, 1000).map((trx, index) => (
                                                 <Chip
                                                     key={index}
                                                     label={`${trx.description || 'Unknown'} (${trx.satellite_name})`}
@@ -501,6 +512,18 @@ const SynchronizeTLEsCard = function () {
                                                     title={Object.keys(trx.changes || {}).join(', ')}
                                                 />
                                             ))}
+                                            {modifiedTransmittersCount > 1000 && (
+                                                <Chip
+                                                    label={`+${modifiedTransmittersCount - 1000} more`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(156, 39, 176, 0.05)',
+                                                        color: '#9c27b0',
+                                                        fontSize: '0.65rem',
+                                                        fontStyle: 'italic',
+                                                    }}
+                                                />
+                                            )}
                                         </Box>
                                     </Box>
                                 )}
@@ -612,7 +635,7 @@ const SynchronizeTLEsCard = function () {
                                             maxHeight: '60px',
                                             overflowY: 'auto',
                                         }}>
-                                            {syncState.newly_added.satellites.map((sat, index) => (
+                                            {syncState.newly_added.satellites.slice(0, 1000).map((sat, index) => (
                                                 <Chip
                                                     key={index}
                                                     label={`${sat.name} (${sat.norad_id})`}
@@ -625,6 +648,18 @@ const SynchronizeTLEsCard = function () {
                                                     }}
                                                 />
                                             ))}
+                                            {newSatellitesCount > 1000 && (
+                                                <Chip
+                                                    label={`+${newSatellitesCount - 1000} more`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(64, 192, 255, 0.05)',
+                                                        color: '#40c0ff',
+                                                        fontSize: '0.65rem',
+                                                        fontStyle: 'italic',
+                                                    }}
+                                                />
+                                            )}
                                         </Box>
                                     </Box>
                                 )}
@@ -654,7 +689,7 @@ const SynchronizeTLEsCard = function () {
                                             maxHeight: '60px',
                                             overflowY: 'auto',
                                         }}>
-                                            {syncState.newly_added.transmitters.map((trx, index) => (
+                                            {syncState.newly_added.transmitters.slice(0, 1000).map((trx, index) => (
                                                 <Chip
                                                     key={index}
                                                     label={`${trx.description || 'Unknown'} (${trx.satellite_name})`}
@@ -667,6 +702,18 @@ const SynchronizeTLEsCard = function () {
                                                     }}
                                                 />
                                             ))}
+                                            {newTransmittersCount > 1000 && (
+                                                <Chip
+                                                    label={`+${newTransmittersCount - 1000} more`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(255, 152, 0, 0.05)',
+                                                        color: '#ff9800',
+                                                        fontSize: '0.65rem',
+                                                        fontStyle: 'italic',
+                                                    }}
+                                                />
+                                            )}
                                         </Box>
                                     </Box>
                                 )}
@@ -778,7 +825,7 @@ const SynchronizeTLEsCard = function () {
                                             maxHeight: '60px',
                                             overflowY: 'auto',
                                         }}>
-                                            {syncState.removed.satellites.map((sat, index) => (
+                                            {syncState.removed.satellites.slice(0, 1000).map((sat, index) => (
                                                 <Chip
                                                     key={index}
                                                     label={`${sat.name} (${sat.norad_id})`}
@@ -791,6 +838,18 @@ const SynchronizeTLEsCard = function () {
                                                     }}
                                                 />
                                             ))}
+                                            {removedSatellitesCount > 1000 && (
+                                                <Chip
+                                                    label={`+${removedSatellitesCount - 1000} more`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(244, 67, 54, 0.05)',
+                                                        color: '#f44336',
+                                                        fontSize: '0.65rem',
+                                                        fontStyle: 'italic',
+                                                    }}
+                                                />
+                                            )}
                                         </Box>
                                     </Box>
                                 )}
@@ -820,7 +879,7 @@ const SynchronizeTLEsCard = function () {
                                             maxHeight: '60px',
                                             overflowY: 'auto',
                                         }}>
-                                            {syncState.removed.transmitters.map((trx, index) => (
+                                            {syncState.removed.transmitters.slice(0, 1000).map((trx, index) => (
                                                 <Chip
                                                     key={index}
                                                     label={`${trx.description || 'Unknown'} (${trx.satellite_name})`}
@@ -833,6 +892,18 @@ const SynchronizeTLEsCard = function () {
                                                     }}
                                                 />
                                             ))}
+                                            {removedTransmittersCount > 1000 && (
+                                                <Chip
+                                                    label={`+${removedTransmittersCount - 1000} more`}
+                                                    size="small"
+                                                    sx={{
+                                                        backgroundColor: 'rgba(255, 87, 34, 0.05)',
+                                                        color: '#ff5722',
+                                                        fontSize: '0.65rem',
+                                                        fontStyle: 'italic',
+                                                    }}
+                                                />
+                                            )}
                                         </Box>
                                     </Box>
                                 )}
