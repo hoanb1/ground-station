@@ -921,8 +921,8 @@ const VFOMarkersContainer = ({
                     // MozUserSelect: 'none',
                     // msUserSelect: 'none',
                     // userSelect: 'none',
-                    transform: 'translateZ(0)', // this it breaks box-shadow CSS
-                    backfaceVisibility: 'hidden',
+                    //transform: 'translateZ(0)', // this it breaks box-shadow CSS and also makes the canvas blurry in Chrome
+                    //backfaceVisibility: 'hidden',
                     perspective: '1000px',
                 }}
             />

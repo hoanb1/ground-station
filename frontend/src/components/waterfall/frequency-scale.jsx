@@ -69,7 +69,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
         const canvas = canvasRef.current;
         if (!canvas) return;
 
-        const ctx = canvas.getContext('2d');
+        const ctx = canvas.getContext('2d', { alpha: false });
         const height = 20;
 
         // Set canvas width based on actual measured width
@@ -156,7 +156,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
 
             // Determine font size based on available space
             const fontSizeBase = Math.min(11, Math.max(8, Math.floor(actualWidth / 100 + 8)));
-            ctx.font = `bold ${fontSizeBase}px monospace`;
+            ctx.font = `${fontSizeBase}px monospace`;
 
             // Draw minor and major ticks
             for (let freq = firstTick - (minorTicksPerMajor > 0 ? minorStep * minorTicksPerMajor : 0);
@@ -168,7 +168,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                 }
 
                 const isBigTick = Math.abs(Math.round(freq / tickStep) * tickStep - freq) < tickStep / 100;
-                const x = ((freq - startFreq) / freqRange) * canvas.width;
+                const x = Math.round(((freq - startFreq) / freqRange) * canvas.width);
 
                 if (isBigTick) {
                     // Draw a big tick
@@ -184,7 +184,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                     ctx.fillStyle = 'white';
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'top';
-                    ctx.fillText(freqText, x, 4);
+                    ctx.fillText(freqText, x, 2);
 
                 } else if (minorStep > 0) {
                     // Allow some minor ticks to have labels when there's room
@@ -209,8 +209,8 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                             ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'top';
-                            ctx.font = `bold ${fontSizeBase}px monospace`;
-                            ctx.fillText(minorFreqText, x, 4);
+                            ctx.font = `${fontSizeBase}px Monospace`;
+                            ctx.fillText(minorFreqText, x, 2);
                         }
                     }
                 }
@@ -240,9 +240,6 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                     height: '100%',
                     backgroundColor: 'rgba(36, 36, 36, 1)',
                     touchAction: 'pan-y',
-                    transform: 'translateZ(0)',
-                    backfaceVisibility: 'hidden',
-                    perspective: '1000px',
                 }}
             />
         </div>
