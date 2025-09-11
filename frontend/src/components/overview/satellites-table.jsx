@@ -176,8 +176,16 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
                         label={label}
                         color={color}
                         size="small"
-                        sx={{ fontWeight: 'bold' }}
+                        sx={{
+                            fontWeight: 'bold',
+                            height: '20px',
+                            fontSize: '0.7rem',
+                            '& .MuiChip-label': {
+                                padding: '0 4px 0px 4px'
+                            }
+                        }}
                     />
+
                 );
             }
         },
