@@ -43,6 +43,7 @@ import WeatherDisplay from "./weather-card.jsx";
 import OverviewSatelliteInfoCard from "./satellite-info.jsx";
 import {setTrackingStateInBackend} from "../target/target-slice.jsx";
 import SatelliteMapContainer from './overview-map.jsx';
+import SatelliteDetailsTable from "./satellites-table.jsx";
 
 const storageMapZoomValueKey = "overview-map-zoom-level";
 
@@ -124,7 +125,7 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
     // Default layout if none in localStorage
     const defaultLayouts = {
         "lg": [{
-            "w": 8,
+            "w": 5,
             "h": 17,
             "x": 0,
             "y": 0,
@@ -135,14 +136,14 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         }, {
             "w": 2,
             "h": 3,
-            "x": 10,
+            "x": 5,
             "y": 0,
             "i": "satselector",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 8,
+            "w": 12,
             "h": 9,
             "x": 0,
             "y": 17,
@@ -153,26 +154,94 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 5,
-            "x": 10,
+            "h": 14,
+            "x": 5,
             "y": 3,
-            "i": "weather",
-            "minH": 5,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 17,
-            "x": 8,
-            "y": 0,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
+        }, {"w": 5, "h": 17, "x": 7, "y": 0, "i": "satellite-group", "moved": false, "static": false}],
         "xs": [{
+            "w": 2,
+            "h": 17,
+            "x": 0,
+            "y": 3,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 3,
+            "x": 0,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 9,
+            "x": 0,
+            "y": 32,
+            "i": "passes",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 14,
+            "x": 0,
+            "y": 41,
+            "i": "sat-info",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {"w": 2, "h": 12, "x": 0, "y": 20, "i": "satellite-group", "moved": false, "static": false}],
+        "sm": [{
+            "w": 6,
+            "h": 17,
+            "x": 0,
+            "y": 3,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 3,
+            "x": 0,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 9,
+            "x": 0,
+            "y": 30,
+            "i": "passes",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 12,
+            "x": 0,
+            "y": 39,
+            "i": "sat-info",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {"w": 6, "h": 10, "x": 0, "y": 20, "i": "satellite-group", "moved": false, "static": false}],
+        "xxs": [{
             "w": 2,
             "h": 17,
             "x": 0,
@@ -202,25 +271,54 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 5,
-            "x": 0,
-            "y": 29,
-            "i": "weather",
-            "minH": 5,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
             "h": 14,
             "x": 0,
-            "y": 34,
+            "y": 29,
             "i": "sat-info",
             "minH": 7,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }]
+        }],
+        "md": [{
+            "w": 7,
+            "h": 17,
+            "x": 0,
+            "y": 0,
+            "i": "map",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 3,
+            "h": 3,
+            "x": 7,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 10,
+            "h": 9,
+            "x": 0,
+            "y": 25,
+            "i": "passes",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 3,
+            "h": 14,
+            "x": 7,
+            "y": 3,
+            "i": "sat-info",
+            "minH": 7,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {"w": 10, "h": 8, "x": 0, "y": 17, "i": "satellite-group", "moved": false, "static": false}]
     };
 
     // globalize the callback
@@ -282,6 +380,9 @@ const GlobalSatelliteTrackLayout = React.memo(function () {
         // </StyledIslandParentNoScrollbar>,
         <StyledIslandParentNoScrollbar key="sat-info">
             <OverviewSatelliteInfoCard/>
+        </StyledIslandParentNoScrollbar>,
+        <StyledIslandParentNoScrollbar key="satellite-group">
+            <SatelliteDetailsTable/>
         </StyledIslandParentNoScrollbar>,
     ];
 
