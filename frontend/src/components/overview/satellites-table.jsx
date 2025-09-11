@@ -62,6 +62,31 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             },
             textDecoration: 'line-through',
         },
+        '& .satellite-cell-reentered': {
+            ...getBackgroundColor(theme.palette.warning.main, theme, 0.8),
+            '&:hover': {
+                ...getBackgroundColor(theme.palette.warning.main, theme, 0.7),
+            },
+            '&.Mui-selected': {
+                ...getBackgroundColor(theme.palette.warning.main, theme, 0.6),
+                '&:hover': {
+                    ...getBackgroundColor(theme.palette.warning.main, theme, 0.5),
+                },
+            },
+            textDecoration: 'line-through',
+        },
+        '& .satellite-cell-unknown': {
+            ...getBackgroundColor(theme.palette.grey[500], theme, 0.8),
+            '&:hover': {
+                ...getBackgroundColor(theme.palette.grey[500], theme, 0.7),
+            },
+            '&.Mui-selected': {
+                ...getBackgroundColor(theme.palette.grey[500], theme, 0.6),
+                '&:hover': {
+                    ...getBackgroundColor(theme.palette.grey[500], theme, 0.5),
+                },
+            },
+        },
         '& .satellite-cell-selected': {
             ...getBackgroundColor(theme.palette.secondary.dark, theme, 0.7),
             fontWeight: 'bold',
@@ -122,11 +147,29 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             headerAlign: 'center',
             flex: 1,
             renderCell: (params) => {
-                if (!params || !params.value) return <Chip label="Unknown" size="small" />;
+                if (!params || !params.value) return <Chip label="Unknown" color="default" size="small" />;
 
                 const status = params.value;
-                const color = status === 'alive' ? 'success' : 'error';
-                const label = status === 'alive' ? 'Active' : 'Inactive';
+                let color = 'default';
+                let label = 'Unknown';
+
+                switch (status) {
+                    case 'alive':
+                        color = 'success';
+                        label = 'Active';
+                        break;
+                    case 'dead':
+                        color = 'error';
+                        label = 'Inactive';
+                        break;
+                    case 're-entered':
+                        color = 'warning';
+                        label = 'Re-entered';
+                        break;
+                    default:
+                        color = 'default';
+                        label = 'Unknown';
+                }
 
                 return (
                     <Chip
@@ -189,10 +232,18 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
 
         if (selectedSatelliteId === params.row.norad_id) {
             return "satellite-cell-selected pointer-cursor";
-        } else if (params.row.status === 'alive') {
-            return "satellite-cell-alive pointer-cursor";
-        } else {
-            return "satellite-cell-dead pointer-cursor";
+        } 
+        
+        // Handle different status values
+        switch (params.row.status) {
+            case 'alive':
+                return "satellite-cell-alive pointer-cursor";
+            case 'dead':
+                return "satellite-cell-dead pointer-cursor";
+            case 're-entered':
+                return "satellite-cell-reentered pointer-cursor";
+            default:
+                return "satellite-cell-unknown pointer-cursor";
         }
     }, [selectedSatelliteId]);
 
@@ -219,7 +270,7 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             initialState={{
                 pagination: { paginationModel: { pageSize: 50 } },
                 sorting: {
-                    sortModel: [{ field: 'name', sort: 'asc' }],
+                    sortModel: [{ field: 'launched', sort: 'desc' }],
                 },
             }}
             columns={columns}
