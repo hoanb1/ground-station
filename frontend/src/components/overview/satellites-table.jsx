@@ -206,7 +206,7 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
         {
             field: 'launched',
             minWidth: 120,
-            headerName: 'Launch Date',
+            headerName: 'Launch',
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -232,7 +232,7 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
         {
             field: 'updated',
             minWidth: 140,
-            headerName: 'Last Updated',
+            headerName: 'Updated',
             align: 'center',
             headerAlign: 'center',
             flex: 1.5,
