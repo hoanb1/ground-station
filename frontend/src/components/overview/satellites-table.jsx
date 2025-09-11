@@ -133,15 +133,15 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
         },
         {
             field: 'norad_id',
-            minWidth: 100,
-            headerName: 'NORAD ID',
+            minWidth: 80,
+            headerName: 'NORAD',
             align: 'center',
             headerAlign: 'center',
             flex: 1
         },
         {
             field: 'status',
-            minWidth: 80,
+            minWidth: 90,
             headerName: 'Status',
             align: 'center',
             headerAlign: 'center',
@@ -157,7 +157,7 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
                             height: '20px',
                             fontSize: '0.7rem',
                             '& .MuiChip-label': {
-                                padding: '0 4px 0px 4px'
+                                padding: '0 8px 0px 8px'
                             }
                         }}
                     />;
@@ -204,29 +204,17 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             }
         },
         {
-            field: 'launched',
-            minWidth: 120,
-            headerName: 'Launch',
+            field: 'transmitters',
+            minWidth: 100,
+            headerName: 'Transmitters',
             align: 'center',
             headerAlign: 'center',
             flex: 1,
             renderCell: (params) => {
-                if (!params || params.value === undefined || params.value === null) {
-                    return <span>N/A</span>;
+                if (!params || !params.row || !params.row.transmitters) {
+                    return <span>0</span>;
                 }
-                return <span>{formatDate(params.value)}</span>;
-            }
-        },
-        {
-            field: 'countries',
-            minWidth: 80,
-            headerName: 'Country',
-            align: 'center',
-            headerAlign: 'center',
-            flex: 1,
-            valueGetter: (params) => {
-                if (!params || !params.value) return 'N/A';
-                return params.value;
+                return <span>{params.row.transmitters.length}</span>;
             }
         },
         {
