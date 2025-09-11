@@ -60,7 +60,7 @@ const VFOMarkersContainer = ({
     const height = bandscopeHeight;
     const [cursor, setCursor] = useState('default');
 
-    // Track previous VFO active state to detect changes
+    // Track the previous VFO active state to detect changes
     const prevVfoActiveRef = useRef({});
 
     // Configurable bandwidth limits
@@ -375,7 +375,7 @@ const VFOMarkersContainer = ({
 
     // Handle mousewheel events for frequency adjustment
     const handleWheel = useCallback((e) => {
-        // Only handle plain mousewheel events (not with shift key)
+        // Only handle plain mousewheel events (not with a shift key)
         if (e.shiftKey) {
             return; // Let the underlying canvas handle shift+wheel events
         }
@@ -893,7 +893,7 @@ const VFOMarkersContainer = ({
                     if (tapLength < 500 && tapLength > 0) {
                         //handleDoubleTap(e);
                     } else {
-                        // First check if this is a drag operation
+                        // First, check if this is a drag operation
                         handleTouchStart(e);
 
                         // If not a drag, then it might be a tap for selection
