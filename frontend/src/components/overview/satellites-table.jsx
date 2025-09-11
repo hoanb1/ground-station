@@ -23,7 +23,7 @@ import { DataGrid, gridClasses } from "@mui/x-data-grid";
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
 import { Typography, Chip, Tooltip } from "@mui/material";
-import { getClassNamesBasedOnGridEditing, TitleBar } from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, humanizeDate, TitleBar} from "../common/common.jsx";
 import { setSelectedSatelliteId } from './overview-slice.jsx';
 
 const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSatelliteId }) => {
@@ -240,7 +240,7 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
                 if (!params || !params.value) return <span>N/A</span>;
                 try {
                     const date = new Date(params.value);
-                    return <span>{date.toLocaleString('en-US')}</span>;
+                    return <span>{humanizeDate(date)}</span>;
                 } catch (e) {
                     return <span>Invalid date</span>;
                 }
