@@ -147,7 +147,21 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             headerAlign: 'center',
             flex: 1,
             renderCell: (params) => {
-                if (!params || !params.value) return <Chip label="Unknown" color="default" size="small" />;
+                if (!params || !params.value) {
+                    return <Chip
+                        label="Unknown"
+                        color="default"
+                        size="small"
+                        sx={{
+                            fontWeight: 'bold',
+                            height: '20px',
+                            fontSize: '0.7rem',
+                            '& .MuiChip-label': {
+                                padding: '0 4px 0px 4px'
+                            }
+                        }}
+                    />;
+                }
 
                 const status = params.value;
                 let color = 'default';
