@@ -47,7 +47,7 @@ sync_state = {
         "satellites": [],
         "transmitters": []
     },
-    "removed": {  # This needs to be added
+    "removed": {
         "satellites": [],
         "transmitters": []
     },
@@ -82,12 +82,11 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             "transmitters_processed": 0,
             "groups_processed": 0
         },
-        # Add new tracking lists for newly added items
         "newly_added": {
             "satellites": [],
             "transmitters": []
         },
-        "removed": {  # Add this section
+        "removed": {
             "satellites": [],
             "transmitters": []
         },
@@ -650,7 +649,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     if count_transmitters % 20 == 0 or (i == total_satellites - 1 and j == len(satnogs_transmitter_info) - 1):
                         await sio.emit('sat-sync-events', progress_state)
                         
-                # Check if transmitter was modified (not new but has changes)
+                # Check if the transmitter was modified (not new but has changes)
                 is_modified = False
                 if not is_new_transmitter and transmitter_uuid in existing_transmitters:
                     # Compare with existing data to detect modifications
