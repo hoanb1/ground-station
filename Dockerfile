@@ -65,6 +65,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/* && \
     mkdir -p /var/run/avahi-daemon /var/run/dbus && \
+    mkdir -p /src && \
     ln -sf /usr/bin/python3 /usr/bin/python
 
 # Copy backend requirements
@@ -128,7 +129,7 @@ RUN cd /src && \
     make -j`nproc` && \
     sudo make install && \
     sudo ldconfig && \
-    # Airspy Module
+    # Airspy Module \
     cd /src && \
     git clone https://github.com/pothosware/SoapyAirspy.git && \
     cd SoapyAirspy/ && \
@@ -138,7 +139,7 @@ RUN cd /src && \
     make -j`nproc` && \
     sudo make install && \
     sudo ldconfig && \
-    # UHD Module
+    # UHD Module \
     cd /src && \
     git clone https://github.com/pothosware/SoapyUHD.git && \
     cd SoapyUHD/ && \
@@ -148,7 +149,7 @@ RUN cd /src && \
     make -j`nproc` && \
     sudo make install && \
     sudo ldconfig && \
-    # HackRF Module
+    # HackRF Module \
     cd /src && \
     git clone https://github.com/pothosware/SoapyHackRF.git && \
     cd SoapyHackRF/ && \
