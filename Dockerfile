@@ -257,8 +257,8 @@ COPY backend/ ./backend/
 # Inject version information
 ARG VERSION_BUILD_NUMBER
 ARG VERSION_GIT_COMMIT
-RUN sed -i "s/BUILD_NUMBER = \"dev\"/BUILD_NUMBER = \"${VERSION_BUILD_NUMBER}\"/g" backend/common/version.py
-RUN sed -i "s/GIT_COMMIT = \"unknown\"/GIT_COMMIT = \"${VERSION_GIT_COMMIT}\"/g" backend/common/version.py
+RUN sed -i "s/BUILD_NUMBER = \"dev\"/BUILD_NUMBER = \"${VERSION_BUILD_NUMBER}\"/g" backend/server/version.py
+RUN sed -i "s/GIT_COMMIT = \"unknown\"/GIT_COMMIT = \"${VERSION_GIT_COMMIT}\"/g" backend/server/version.py
 
 # Copy the built frontend from the previous stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
