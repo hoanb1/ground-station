@@ -45,12 +45,8 @@ steps:
         fi
         echo "Building version: $VERSION"
 
-      # Build the new image for amd64 with version arguments
-      - |
-        docker build --platform linux/amd64 \
-        --build-arg VERSION_BUILD_NUMBER=$VERSION \
-        --build-arg VERSION_GIT_COMMIT=$GIT_SHA \
-        -t ground-station:$VERSION .
+      # Build the new image for amd64
+      - docker build --platform linux/amd64 -t ground-station:$VERSION .
 
       # Tag the image for Docker Hub
       - docker tag ground-station:$VERSION sgoudelis/ground-station:$VERSION
@@ -60,17 +56,10 @@ steps:
       - docker rm -f ground-station-prod || true
 
       # Run the new container with the versioned image
-      - |
-        docker run -d -p 0.0.0.0:7000:7000 \
-        --device=/dev/bus/usb \
-        --restart=unless-stopped \
-        --privileged \
-        --name ground-station-prod \
-        -v /media/pool1/volumes/ground-station-data:/app/backend/data \
-        sgoudelis/ground-station:$VERSION
+      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data sgoudelis/ground-station:$VERSION
 
       # Check that it's running
-      - sleep 3
+      - sleep 5
       - |
         CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' ground-station-prod)
         if [ "$CONTAINER_STATUS" != "running" ]; then

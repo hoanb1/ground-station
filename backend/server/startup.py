@@ -18,7 +18,6 @@ from tracker.runner import start_tracker_process
 from demodulators.webaudioproducer import WebAudioProducer
 from demodulators.webaudioconsumer import WebAudioConsumer
 from common.arguments import arguments
-from server.version import VERSION, VERSION_FULL, GIT_COMMIT
 
 Payload.max_decode_packets = 50
 
@@ -91,15 +90,6 @@ sdr_process_manager.set_sio(sio)
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 #app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
-# Add version endpoint
-@app.get("/api/version")
-async def get_version():
-    """Return the current version information"""
-    return {
-        "version": VERSION,
-        "version_full": VERSION_FULL,
-        "git_commit": GIT_COMMIT
-    }
 
 @app.get("/{full_path:path}")
 async def serve_spa(request: Request, full_path: str):

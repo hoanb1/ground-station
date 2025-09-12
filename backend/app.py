@@ -14,7 +14,6 @@ from server.startup import app, socket_app, sio, init_db
 from web.socket_handlers import register_socketio_handlers
 from video.webrtc import register_webrtc_routes
 from fastapi.staticfiles import StaticFiles
-from server.version import VERSION, VERSION_FULL, GIT_COMMIT
 
 
 # Set process and thread names
@@ -44,7 +43,6 @@ def main() -> None:
     # Lastly, mount static files at the root
     app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
-    logger.info(f'Starting Ground Station server version {VERSION_FULL}')
     logger.info(f'Starting Ground Station server with parameters {arguments}')
     try:
         uvicorn.run(
