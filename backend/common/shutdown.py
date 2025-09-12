@@ -1,4 +1,3 @@
-# Shutdown and cleanup utilities for Ground Station backend
 import asyncio
 import os
 from typing import Optional

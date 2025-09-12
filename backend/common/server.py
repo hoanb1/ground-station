@@ -4,7 +4,7 @@ import asyncio
 import os
 import queue
 import socketio
-import shutdown
+from common import shutdown
 from contextlib import asynccontextmanager
 from engineio.payload import Payload
 from fastapi import FastAPI, Request
@@ -95,7 +95,7 @@ app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
 @app.get("/{full_path:path}")
 async def serve_spa(request: Request, full_path: str):
-    static_files_dir = os.environ.get("STATIC_FILES_DIR", "../frontend/dist")
+    static_files_dir = os.environ.get("STATIC_FILES_DIR", "../../frontend/dist")
     if full_path.startswith(("static/", "assets/", "favicon.ico")):
         return FileResponse(os.path.join(static_files_dir, full_path))
     return FileResponse(os.path.join(static_files_dir, "index.html"))

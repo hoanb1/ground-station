@@ -9,10 +9,10 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import uvicorn
 from common.arguments import arguments
 from common.logger import get_logger_config, logger
-from shutdown import cleanup_everything, signal_handler
-from server import app, socket_app, sio, init_db
-from socket_handlers import register_socketio_handlers
-from webrtc import register_webrtc_routes
+from common.shutdown import cleanup_everything, signal_handler
+from common.server import app, socket_app, sio, init_db
+from web.socket_handlers import register_socketio_handlers
+from video.webrtc import register_webrtc_routes
 from fastapi.staticfiles import StaticFiles
 
 
