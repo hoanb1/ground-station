@@ -1,5 +1,3 @@
-"""ASGI server setup and application startup."""
-
 import asyncio
 import os
 import queue
