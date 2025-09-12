@@ -60,10 +60,17 @@ steps:
       - docker rm -f ground-station-prod || true
 
       # Run the new container with the versioned image
-      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data sgoudelis/ground-station:$VERSION
+      - |
+        docker run -d -p 0.0.0.0:7000:7000 \
+        --device=/dev/bus/usb \
+        --restart=unless-stopped \
+        --privileged \
+        --name ground-station-prod \
+        -v /media/pool1/volumes/ground-station-data:/app/backend/data \
+        sgoudelis/ground-station:$VERSION
 
       # Check that it's running
-      - sleep 5
+      - sleep 3
       - |
         CONTAINER_STATUS=$(docker inspect --format='{{.State.Status}}' ground-station-prod)
         if [ "$CONTAINER_STATUS" != "running" ]; then

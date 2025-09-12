@@ -6,7 +6,7 @@ This file is used as the source of truth for versioning across the application.
 # Version information: MAJOR.MINOR.PATCH
 VERSION_MAJOR = 0
 VERSION_MINOR = 1
-VERSION_PATCH = 0
+VERSION_PATCH = 1
 
 # Build information (auto-filled by build scripts)
 BUILD_NUMBER = "dev"  # Will be populated during build time
