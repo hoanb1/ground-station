@@ -46,10 +46,11 @@ steps:
         echo "Building version: $VERSION"
 
       # Build the new image for amd64 with version arguments
-      - docker build --platform linux/amd64 \
-          --build-arg VERSION_BUILD_NUMBER=$VERSION \
-          --build-arg VERSION_GIT_COMMIT=$GIT_SHA \
-          -t ground-station:$VERSION .
+      - |
+        docker build --platform linux/amd64 \
+        --build-arg VERSION_BUILD_NUMBER=$VERSION \
+        --build-arg VERSION_GIT_COMMIT=$GIT_SHA \
+        -t ground-station:$VERSION .
 
       # Tag the image for Docker Hub
       - docker tag ground-station:$VERSION sgoudelis/ground-station:$VERSION
