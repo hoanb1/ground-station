@@ -1,3 +1,7 @@
+# Build arguments for versioning
+ARG VERSION_BUILD_NUMBER=dev
+ARG VERSION_GIT_COMMIT=unknown
+
 # Stage 1: Build the frontend
 FROM node:20-alpine AS frontend-builder
 
@@ -14,6 +18,12 @@ COPY frontend/ ./
 
 # copy the .env template
 RUN cp .env.production .env
+
+# Add version info to environment
+ARG VERSION_BUILD_NUMBER
+ARG VERSION_GIT_COMMIT
+RUN echo "VITE_APP_VERSION_BUILD=${VERSION_BUILD_NUMBER}" >> .env
+RUN echo "VITE_APP_VERSION_COMMIT=${VERSION_GIT_COMMIT}" >> .env
 
 # Build the frontend for production
 RUN npm run build
@@ -243,6 +253,12 @@ WORKDIR /app
 
 # Copy backend code
 COPY backend/ ./backend/
+
+# Inject version information
+ARG VERSION_BUILD_NUMBER
+ARG VERSION_GIT_COMMIT
+RUN sed -i "s/BUILD_NUMBER = \"dev\"/BUILD_NUMBER = \"${VERSION_BUILD_NUMBER}\"/g" backend/common/version.py
+RUN sed -i "s/GIT_COMMIT = \"unknown\"/GIT_COMMIT = \"${VERSION_GIT_COMMIT}\"/g" backend/common/version.py
 
 # Copy the built frontend from the previous stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
