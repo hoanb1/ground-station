@@ -13,7 +13,7 @@ from common.handlers import (
 )
 from common.logger import logger
 from sdr.utils import cleanup_sdr_session
-from common.shutdown import cleanup_everything
+from server.shutdown import cleanup_everything
 
 # hold a list of sessions
 SESSIONS: Dict[str, Dict] = {}
