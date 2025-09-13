@@ -62,6 +62,7 @@ import { AudioProvider, useAudio } from "./components/dashboard/audio-provider.j
 import { setUITrackerValues } from "./components/target/target-slice.jsx";
 import { setSynchronizing } from "./components/satellites/synchronize-slice.jsx";
 import VideocamIcon from '@mui/icons-material/Videocam';
+import {fetchVersionInfo} from "./components/dashboard/version-slice.jsx";
 
 
 const BRANDING = {
@@ -77,6 +78,7 @@ const BRANDING = {
 
 function uponConnectionToBackEnd(socket) {
     // called when the connection to backend has been established to fill in the local state with information
+    store.dispatch(fetchVersionInfo());
     store.dispatch(fetchPreferences({socket}));
     store.dispatch(fetchLocationForUserId({socket}));
     store.dispatch(fetchRigs({socket}));

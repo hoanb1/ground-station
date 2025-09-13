@@ -5,7 +5,7 @@ import socketio
 from server import shutdown
 from contextlib import asynccontextmanager
 from engineio.payload import Payload
-from fastapi import FastAPI, Request
+from fastapi import FastAPI, Request, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
@@ -18,6 +18,7 @@ from tracker.runner import start_tracker_process
 from demodulators.webaudioproducer import WebAudioProducer
 from demodulators.webaudioconsumer import WebAudioConsumer
 from common.arguments import arguments
+from server.version import get_full_version_info
 
 Payload.max_decode_packets = 50
 
@@ -88,9 +89,21 @@ sdr_process_manager.set_sio(sio)
 
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
-#app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
 
+# Add the version API endpoint BEFORE the catch-all route
+@app.get("/api/version")
+async def get_version():
+    """Return the current version information of the application."""
+    try:
+        logger.info("Version request received")
+        version_info = get_full_version_info()
+        logger.info(f"Returning version info: {version_info}")
+        return version_info
+    except Exception as e:
+        logger.error(f"Error retrieving version information: {str(e)}")
+        raise HTTPException(status_code=500, detail=f"Failed to retrieve version information: {str(e)}")
 
+# This catch-all route comes AFTER specific API routes
 @app.get("/{full_path:path}")
 async def serve_spa(request: Request, full_path: str):
     static_files_dir = os.environ.get("STATIC_FILES_DIR", "../../frontend/dist")

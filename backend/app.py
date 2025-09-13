@@ -1,4 +1,3 @@
-"""Entry point for Ground Station backend."""
 import os
 import signal
 import sys
@@ -33,6 +32,7 @@ def main() -> None:
 
     configure_process_names()
 
+    # Register other routes
     register_webrtc_routes(app)
     register_socketio_handlers(sio)
 
@@ -40,8 +40,7 @@ def main() -> None:
     loop = asyncio.get_event_loop()
     loop.run_until_complete(init_db())
 
-    # Lastly, mount static files at the root
-    app.mount("/", StaticFiles(directory=os.environ.get("STATIC_FILES_DIR", "../frontend/dist"), html=True), name="static")
+    # Note: Static files and API routes are already configured in startup.py
 
     logger.info(f'Starting Ground Station server with parameters {arguments}')
     try:

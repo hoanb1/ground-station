@@ -64,6 +64,7 @@ import { AudioProvider, useAudio } from "./audio-provider.jsx";
 import HardwareSettingsPopover from "./hardware-popover.jsx";
 import ConnectionOverlay from "./reconnecting-overlay.jsx";
 import SatelliteInfoPopover from "./target-popover.jsx";
+import VersionInfo from "./version-info.jsx";
 
 
 function DashboardEditor() {
@@ -149,6 +150,7 @@ function CustomAppTitle() {
                         <Box display="flex" alignItems="center" gap={1}>
                             <img src={GroundStationLogoGreenBlue} alt="Ground Station" width="30" height="30" />
                             <Typography variant="h6">Ground Station</Typography>
+                            <VersionInfo minimal={true}/>
                         </Box>
                     </Box>
                     <Box display={{xs: "block", sm: "none"}}>

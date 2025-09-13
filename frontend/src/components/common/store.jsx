@@ -37,6 +37,7 @@ import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
+import versionReducer from "../dashboard/version-slice.jsx";
 import backendSyncMiddleware from '../waterfall/waterfall-middleware.jsx';
 
 
@@ -154,6 +155,14 @@ const sdrPersistConfig = {
     whitelist: []
 };
 
+// Persist configuration for VersionInfo slice
+const versionInfoConfig = {
+    key: 'version',
+    storage,
+    whitelist: []
+};
+
+
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
 const persistedRigsReducer = persistReducer(rigsPersistConfig, rigsReducer);
@@ -171,6 +180,7 @@ const persistedDashboardReducer = persistReducer(dashboardPersistConfig, dashboa
 const persistedWeatherReducer = persistReducer(weatherPersistConfig, weatherReducer);
 const persistedCameraReducer = persistReducer(cameraPersistConfig, cameraReducer);
 const persistedSdrReducer = persistReducer(sdrPersistConfig, sdrsReducer);
+const persistedVersionInfoReducer = persistReducer(versionInfoConfig, versionReducer);
 
 
 export const store = configureStore({
@@ -191,6 +201,7 @@ export const store = configureStore({
         weather: persistedWeatherReducer,
         cameras: persistedCameraReducer,
         sdrs: persistedSdrReducer,
+        version: persistedVersionInfoReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>

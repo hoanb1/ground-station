@@ -1,5 +1,3 @@
-"""Socket.IO event handlers."""
-
 import os
 import threading
 import time
