@@ -23,7 +23,7 @@ import { DataGrid, gridClasses } from "@mui/x-data-grid";
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
 import {Typography, Chip, Tooltip, Box} from "@mui/material";
-import {getClassNamesBasedOnGridEditing, humanizeDate, TitleBar} from "../common/common.jsx";
+import {getClassNamesBasedOnGridEditing, humanizeDate, renderCountryFlagsCSV, TitleBar} from "../common/common.jsx";
 import { setSelectedSatelliteId } from './overview-slice.jsx';
 
 const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSatelliteId }) => {
@@ -119,13 +119,27 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
     const columns = [
         {
             field: 'name',
-            minWidth: 150,
+            minWidth: 130,
             headerName: 'Satellite Name',
             flex: 2,
             renderCell: (params) => {
                 if (!params || !params.row) return <Typography>-</Typography>;
                 return (
                     <Tooltip title={params.row.name_other || params.row.alternative_name || ''}>
+                        <span>{params.value || '-'}</span>
+                    </Tooltip>
+                );
+            }
+        },
+        {
+            field: 'alternative_name',
+            minWidth: 130,
+            headerName: 'Alternative Name',
+            flex: 2,
+            renderCell: (params) => {
+                if (!params || !params.row) return <Typography>-</Typography>;
+                return (
+                    <Tooltip title={params.row.name_other || ''}>
                         <span>{params.value || '-'}</span>
                     </Tooltip>
                 );
@@ -205,7 +219,7 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
         },
         {
             field: 'transmitters',
-            minWidth: 120,
+            minWidth: 90,
             headerName: 'Transmitters',
             align: 'center',
             headerAlign: 'center',
@@ -244,6 +258,32 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             }
         },
         {
+            field: 'countries',
+            minWidth: 120,
+            headerName: 'Countries',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1.5,
+            renderCell: (params) => {
+                if (!params?.value) {
+                    return <span>-</span>;
+                }
+                return renderCountryFlagsCSV(params.value);
+            }
+        },
+        {
+            field: 'decayed',
+            minWidth: 140,
+            headerName: 'Decayed',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1.5,
+            renderCell: (params) => {
+                if (!params || !params.value) return <span>-</span>;
+                return <span>{formatDate(params.value)}</span>;
+            }
+        },
+        {
             field: 'updated',
             minWidth: 140,
             headerName: 'Updated',
@@ -258,6 +298,18 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
                 } catch (e) {
                     return <span>Invalid date</span>;
                 }
+            }
+        },
+        {
+            field: 'launched',
+            minWidth: 140,
+            headerName: 'Launched',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1.5,
+            renderCell: (params) => {
+                if (!params || !params.value) return <span>N/A</span>;
+                return <span>{formatDate(params.value)}</span>;
             }
         }
     ];
@@ -308,6 +360,15 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
                 sorting: {
                     sortModel: [{ field: 'launched', sort: 'desc' }],
                 },
+                columns: {
+                    columnVisibilityModel: {
+                        launched: false,
+                        alternative_name: false,
+                        countries: false,
+                        decayed: false,
+                    },
+                },
+
             }}
             columns={columns}
             pageSize={50}

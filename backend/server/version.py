@@ -4,7 +4,7 @@ from datetime import datetime
 import json
 
 # Base version - update this manually for major/minor releases
-VERSION_BASE = "1.0.0"
+VERSION_BASE = "0.1.0"
 
 # Path to store version info during build
 VERSION_FILE_PATH = os.path.join(os.path.dirname(__file__), "version_info.json")
