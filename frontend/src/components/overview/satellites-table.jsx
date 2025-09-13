@@ -237,7 +237,7 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
                         borderRadius: '50%',
                         display: 'inline-block'
                     }}></span>
-                            <span style={{ fontSize: '0.75rem' }}>{deadCount}</span>
+                            <span style={{ fontSize: '1rem' }}>{deadCount}</span>
                         </div>
                     </div>
                 );
