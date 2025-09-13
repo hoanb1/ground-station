@@ -22,6 +22,18 @@ RUN npm run build
 #FROM python:3.12-slim
 FROM ubuntu:noble-20250127
 
+# Add build arguments for version information
+ARG GIT_COMMIT
+ARG BUILD_DATE
+ARG BUILD_VERSION
+ARG GS_ENVIRONMENT=production
+
+# Set as environment variables for the container
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV BUILD_DATE=${BUILD_DATE}
+ENV BUILD_VERSION=${BUILD_VERSION}
+ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
+
 WORKDIR /app
 
 # Install system dependencies
@@ -219,6 +231,8 @@ RUN ldconfig -v | grep "/usr/local/lib"
 
 WORKDIR /app
 
+RUN cd /app/backend && python -c "from server.version import write_version_info_during_build; write_version_info_during_build()"
+
 RUN mkdir "/app/venv/lib/python3.12/site-packages/Hamlib"
 RUN mkdir -p "/app/venv/lib/python3.12/site-packages/Hamlib/"
 
@@ -254,7 +268,6 @@ VOLUME /app/data
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV STATIC_FILES_DIR=/app/frontend/dist
-ENV GS_ENVIRONMENT=production
 
 # Expose the port the app runs on
 EXPOSE 7000
