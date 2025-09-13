@@ -22,7 +22,7 @@ import { useDispatch, useSelector } from "react-redux";
 import { DataGrid, gridClasses } from "@mui/x-data-grid";
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
-import { Typography, Chip, Tooltip } from "@mui/material";
+import {Typography, Chip, Tooltip, Box} from "@mui/material";
 import {getClassNamesBasedOnGridEditing, humanizeDate, TitleBar} from "../common/common.jsx";
 import { setSelectedSatelliteId } from './overview-slice.jsx';
 
@@ -205,16 +205,42 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
         },
         {
             field: 'transmitters',
-            minWidth: 100,
+            minWidth: 120,
             headerName: 'Transmitters',
             align: 'center',
             headerAlign: 'center',
-            flex: 1,
+            flex: 1.2,
             renderCell: (params) => {
-                if (!params || !params.row || !params.row.transmitters) {
-                    return <span>0</span>;
-                }
-                return <span>{params.row.transmitters.length}</span>;
+                if (!params?.row?.transmitters) return <span>0</span>;
+
+                const transmitters = params.row.transmitters;
+                const aliveCount = transmitters.filter(t => t.alive).length;
+                const deadCount = transmitters.length - aliveCount;
+
+                return (
+                    <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: '#4caf50',
+                        borderRadius: '50%',
+                        display: 'inline-block'
+                    }}></span>
+                            <span style={{ fontSize: '1rem' }}>{aliveCount}</span>
+                        </div>
+                        <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                    <span style={{
+                        width: '8px',
+                        height: '8px',
+                        backgroundColor: '#f44336',
+                        borderRadius: '50%',
+                        display: 'inline-block'
+                    }}></span>
+                            <span style={{ fontSize: '0.75rem' }}>{deadCount}</span>
+                        </div>
+                    </div>
+                );
             }
         },
         {
