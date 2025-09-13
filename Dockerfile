@@ -231,8 +231,6 @@ RUN ldconfig -v | grep "/usr/local/lib"
 
 WORKDIR /app
 
-RUN cd /app/backend && python -c "from server.version import write_version_info_during_build; write_version_info_during_build()"
-
 RUN mkdir "/app/venv/lib/python3.12/site-packages/Hamlib"
 RUN mkdir -p "/app/venv/lib/python3.12/site-packages/Hamlib/"
 
@@ -257,6 +255,8 @@ WORKDIR /app
 
 # Copy backend code
 COPY backend/ ./backend/
+
+RUN cd /app/backend && python -c "from server.version import write_version_info_during_build; write_version_info_during_build()"
 
 # Copy the built frontend from the previous stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
