@@ -1,7 +1,7 @@
 import os
-import subprocess
-from datetime import datetime
 import json
+import subprocess
+from datetime import datetime, timezone
 
 # Base version - update this manually for major/minor releases
 VERSION_BASE = "0.1.0"
@@ -21,7 +21,7 @@ def get_git_revision_short_hash():
 
 def get_build_date():
     """Get the build date in ISO format."""
-    return datetime.utcnow().strftime("%Y%m%d")
+    return datetime.now(timezone.utc).strftime("%Y%m%d")
 
 
 def get_version_info():
@@ -38,7 +38,7 @@ def get_version_info():
     # Determine environment (development by default)
     environment = os.environ.get("GS_ENVIRONMENT", "development")
 
-    # Check if version is provided by environment (e.g., from CI pipeline)
+    # Check if version is provided by environment (e.g., from the CI pipeline)
     if "BUILD_VERSION" in os.environ:
         version_info = {
             "version": os.environ["BUILD_VERSION"],
@@ -47,7 +47,7 @@ def get_version_info():
             "environment": environment
         }
     else:
-        # Otherwise generate version from components
+        # Otherwise generate a version from components
         git_hash = get_git_revision_short_hash()
         build_date = get_build_date()
 
