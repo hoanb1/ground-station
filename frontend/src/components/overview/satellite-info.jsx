@@ -172,7 +172,16 @@ const OverviewSatelliteInfoCard = () => {
                     {/* Satellite Name & Status */}
                     <Box sx={{
                         p: 1,
-                        background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
+                        background: satelliteData && satelliteData['details'] ? 
+                            (() => {
+                                const status = satelliteData['details']['status'];
+                                switch(status) {
+                                    case 'alive': return 'linear-gradient(135deg, rgba(76,175,80,0.15) 0%, rgba(76,175,80,0.05) 100%)';
+                                    case 'dead': return 'linear-gradient(135deg, rgba(244,67,54,0.15) 0%, rgba(244,67,54,0.05) 100%)';
+                                    case 're-entered': return 'linear-gradient(135deg, rgba(255,152,0,0.15) 0%, rgba(255,152,0,0.05) 100%)';
+                                    default: return 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)';
+                                }
+                            })() : 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
                         borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
                     }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
@@ -181,8 +190,26 @@ const OverviewSatelliteInfoCard = () => {
                                 height: 10,
                                 borderRadius: '50%',
                                 mr: 1.5,
-                                bgcolor: satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'active' ? 'success.main' : 'warning.main',
-                                boxShadow: `0 0 8px ${satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'active' ? '#4caf50' : '#ff9800'}40`
+                                bgcolor: satelliteData && satelliteData['details'] ? 
+                                    (() => {
+                                        const status = satelliteData['details']['status'];
+                                        switch(status) {
+                                            case 'alive': return 'success.main';
+                                            case 'dead': return 'error.main';
+                                            case 're-entered': return 'warning.main';
+                                            default: return 'info.main';
+                                        }
+                                    })() : 'info.main',
+                                boxShadow: satelliteData && satelliteData['details'] ? 
+                                    (() => {
+                                        const status = satelliteData['details']['status'];
+                                        switch(status) {
+                                            case 'alive': return '0 0 8px #4caf5040';
+                                            case 'dead': return '0 0 8px #f4433440';
+                                            case 're-entered': return '0 0 8px #ff980040';
+                                            default: return '0 0 8px #2196f340';
+                                        }
+                                    })() : '0 0 8px #2196f340'
                             }}/>
                             <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
                                 {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
