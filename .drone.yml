@@ -38,25 +38,32 @@ steps:
         if [ -n "$DRONE_TAG" ]; then
           # If this is a tagged build, use the tag
           VERSION=$DRONE_TAG
+          ENV_TYPE="production"
         else
           # Otherwise use branch-commit format
           GIT_SHA=$(git rev-parse --short HEAD)
           VERSION=${DRONE_BRANCH:-main}-$GIT_SHA
+          if [ "$DRONE_BRANCH" = "main" ]; then
+            ENV_TYPE="staging"
+          else
+            ENV_TYPE="development"
+          fi
         fi
-        echo "Building version: $VERSION"
+        echo "Building version: $VERSION for environment: $ENV_TYPE"
 
       # Build the new image for amd64
-      - docker build --platform linux/amd64 -t ground-station:$VERSION .
+      - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE -t ground-station:$VERSION .
 
       # Tag the image for Docker Hub
       - docker tag ground-station:$VERSION sgoudelis/ground-station:$VERSION
       - docker tag ground-station:$VERSION sgoudelis/ground-station:latest
+      - docker tag ground-station:$VERSION sgoudelis/ground-station:$ENV_TYPE-latest
 
       # Stop and remove the existing container if it exists
       - docker rm -f ground-station-prod || true
 
       # Run the new container with the versioned image
-      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data sgoudelis/ground-station:$VERSION
+      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data -e GS_ENVIRONMENT=$ENV_TYPE sgoudelis/ground-station:$VERSION
 
       # Check that it's running
       - sleep 5
@@ -69,7 +76,7 @@ steps:
         fi
 
       # Display container info and version
-      - echo "✅ New container version $VERSION is running on host port 7000"
+      - echo "✅ New container version $VERSION ($ENV_TYPE) is running on host port 7000"
       - docker ps | grep ground-station-prod
 
   - name: verify-docker-connection

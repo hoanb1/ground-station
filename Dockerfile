@@ -254,6 +254,7 @@ VOLUME /app/data
 # Set environment variables
 ENV PYTHONPATH=/app
 ENV STATIC_FILES_DIR=/app/frontend/dist
+ENV GS_ENVIRONMENT=production
 
 # Expose the port the app runs on
 EXPOSE 7000

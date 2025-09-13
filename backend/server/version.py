@@ -35,23 +35,31 @@ def get_version_info():
             # If file exists but is invalid, continue with normal version generation
             pass
 
+    # Determine environment (development by default)
+    environment = os.environ.get("GS_ENVIRONMENT", "development")
+
     # Check if version is provided by environment (e.g., from CI pipeline)
     if "BUILD_VERSION" in os.environ:
         version_info = {
             "version": os.environ["BUILD_VERSION"],
             "buildDate": os.environ.get("BUILD_DATE", get_build_date()),
-            "gitCommit": os.environ.get("GIT_COMMIT", "unknown")
+            "gitCommit": os.environ.get("GIT_COMMIT", "unknown"),
+            "environment": environment
         }
     else:
         # Otherwise generate version from components
         git_hash = get_git_revision_short_hash()
         build_date = get_build_date()
-        version = f"{VERSION_BASE}-{build_date}-{git_hash}"
+
+        # Include environment indicator in dev builds
+        env_suffix = "" if environment == "production" else f"-{environment}"
+        version = f"{VERSION_BASE}{env_suffix}-{build_date}-{git_hash}"
 
         version_info = {
             "version": version,
             "buildDate": build_date,
-            "gitCommit": git_hash
+            "gitCommit": git_hash,
+            "environment": environment
         }
 
     # Write to file for persistence
