@@ -33,59 +33,37 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     commands:
-      # Debug current working directory and files
-      - pwd
-      - ls -la
-      - ls -la backend || echo "No backend directory found"
-      - ls -la backend/server || echo "No backend/server directory found"
-
-      # Determine version
-      - |
-        # Extract VERSION_BASE from version.json
-        VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
-        
-        if [ -z "$VERSION_BASE" ]; then
-          echo "Failed to extract version from version.json, using default"
-          VERSION_BASE="0.0.0"
-        fi
-        
-        # Get git hash
-        GIT_SHA=$(git rev-parse --short HEAD)
-        
-        # Set environment type
-        if [ "$DRONE_BRANCH" = "main" ]; then
-          ENV_TYPE="production"
-        else
-          ENV_TYPE="development"
-        fi
-        
-        # Create full version string
-        echo "VERSION_BASE: $VERSION_BASE"
-        echo "DRONE_BRANCH: $DRONE_BRANCH"
-        echo "GIT_SHA: $GIT_SHA"
-        echo "ENV_TYPE: $ENV_TYPE"
-        FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH}-${GIT_SHA}"
-        echo "FULL_VERSION: $$FULL_VERSION"
-        
-        # Get build date
-        BUILD_DATE=$(date -u +'%Y%m%d')
-        echo "BUILD_DATE: $BUILD_DATE"
-        
-        echo "Building version: $FULL_VERSION for environment: $ENV_TYPE"
-        
-        # Write values to .env for subsequent steps
-        echo "VERSION_BASE=${VERSION_BASE}" > .env
-        echo "GIT_SHA=${GIT_SHA}" >> .env
-        echo "BUILD_DATE=${BUILD_DATE}" >> .env
-        echo "GS_ENVIRONMENT=${ENV_TYPE}" >> .env
-        echo "FULL_VERSION=${FULL_VERSION}" >> .env
-        echo "DRONE_BRANCH=${DRONE_BRANCH}" >> .env
+      # Extract version in a more reliable way
+      - VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+      - echo "Extracted VERSION_BASE=$VERSION_BASE"
       
-        cat .env
-
-      # Build the new image for amd64 with build args
-      - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$FULL_VERSION -t ground-station:$FULL_VERSION .
-
+      # Get git hash
+      - GIT_SHA=$(git rev-parse --short HEAD)
+      - echo "Extracted GIT_SHA=$GIT_SHA"
+      
+      # Set environment type
+      - if [ "$DRONE_BRANCH" = "main" ]; then ENV_TYPE="production"; else ENV_TYPE="development"; fi
+      - echo "ENV_TYPE=$ENV_TYPE"
+      
+      # Get build date
+      - BUILD_DATE=$(date -u +'%Y%m%d')
+      - echo "BUILD_DATE=$BUILD_DATE"
+      
+      # Create full version string
+      - FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH}-${GIT_SHA}"
+      - echo "FULL_VERSION=$FULL_VERSION"
+      
+      # Write each variable to .env file INDIVIDUALLY
+      - echo "VERSION_BASE=$VERSION_BASE" > .env
+      - echo "GIT_SHA=$GIT_SHA" >> .env
+      - echo "BUILD_DATE=$BUILD_DATE" >> .env
+      - echo "GS_ENVIRONMENT=$ENV_TYPE" >> .env
+      - echo "FULL_VERSION=$FULL_VERSION" >> .env
+      - echo "DRONE_BRANCH=${DRONE_BRANCH}" >> .env
+      
+      # Show the result
+      - cat .env
+      
       # Tag the image for Docker Hub
       - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:$FULL_VERSION
       - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:latest
