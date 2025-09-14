@@ -140,6 +140,7 @@ steps:
       platforms:
         - linux/amd64
       build_args:
+        - VERSION_BASE=${VERSION_BASE}
         - GS_ENVIRONMENT=${GS_ENVIRONMENT}
         - GIT_COMMIT=${GIT_SHA}
         - BUILD_DATE=${BUILD_DATE}
@@ -177,6 +178,7 @@ steps:
       platforms:
         - linux/arm64
       build_args:
+        - VERSION_BASE=${VERSION_BASE}
         - GS_ENVIRONMENT=${GS_ENVIRONMENT}
         - GIT_COMMIT=${GIT_SHA}
         - BUILD_DATE=${BUILD_DATE}
