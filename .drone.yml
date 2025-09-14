@@ -63,7 +63,10 @@ steps:
       
       # Debug the contents
       - cat .env
-      
+
+      # Build the new image for amd64 with build args
+      - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$FULL_VERSION -t ground-station:$FULL_VERSION .
+
       # Tag the image for Docker Hub
       - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:$FULL_VERSION
       - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:latest
