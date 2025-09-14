@@ -36,14 +36,13 @@ steps:
       # Determine version
       - |
         # Extract VERSION_BASE from version.json
-        ls -l 
-        ls -l backend/server
         VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
-        echo $VERSION_BASE
+        
         if [ -z "$VERSION_BASE" ]; then
           echo "Failed to extract version from version.json, using default"
           VERSION_BASE="0.0.0"
         fi
+        echo $VERSION_BASE
         
         # Otherwise use base-branch-commit format
         GIT_SHA=$(git rev-parse --short HEAD)
@@ -55,7 +54,7 @@ steps:
           ENV_TYPE="development"
           ENV_SUFFIX="-development"
         fi
-          
+        
         VERSION="${VERSION_BASE}${ENV_SUFFIX}-${DRONE_BRANCH:-main}-$GIT_SHA"
         echo "Building version: $VERSION for environment: $ENV_TYPE"
         BUILD_DATE=$(date -u +'%Y%m%d')
