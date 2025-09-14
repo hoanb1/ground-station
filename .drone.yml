@@ -178,7 +178,7 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     depends_on:
-      - docker-auth
+      - build-amd64
 
   # Create manifest for multi-arch
   - name: manifest
