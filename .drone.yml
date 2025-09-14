@@ -59,7 +59,9 @@ steps:
         
         # Create full version string
         FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH:-main}-${GIT_SHA}"
+        PIPES="${VERSION_BASE}-${DRONE_BRANCH:-main}-${GIT_SHA}"
         echo "FULL_VERSION: $FULL_VERSION"
+        echo "PIPES: $PIPES"
         
         # Get build date
         BUILD_DATE=$(date -u +'%Y%m%d')
