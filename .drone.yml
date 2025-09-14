@@ -46,16 +46,18 @@ steps:
         
         # Otherwise use base-branch-commit format
         GIT_SHA=$(git rev-parse --short HEAD)
+        echo $GIT_SHA
         
         if [ "$DRONE_BRANCH" = "main" ]; then
           ENV_TYPE="production"
-          ENV_SUFFIX=""
+          ENV_SUFFIX="-production"
         else
           ENV_TYPE="development"
           ENV_SUFFIX="-development"
         fi
         
         VERSION="${VERSION_BASE}${ENV_SUFFIX}-${DRONE_BRANCH:-main}-$GIT_SHA"
+        echo $VERSION
         echo "Building version: $VERSION for environment: $ENV_TYPE"
         BUILD_DATE=$(date -u +'%Y%m%d')
 
