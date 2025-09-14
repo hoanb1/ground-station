@@ -124,32 +124,22 @@ steps:
         from_secret: docker_password
       repo: sgoudelis/ground-station
       tags:
-        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-amd64
-        - ${VERSION_BASE}-latest-amd64
+        - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-amd64
+        - latest-amd64
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
       build_args:
-        - VERSION_BASE=${VERSION_BASE}
-        - GS_ENVIRONMENT=${GS_ENVIRONMENT}
-        - GIT_COMMIT=${GIT_SHA}
-        - BUILD_DATE=${BUILD_DATE}
-        - BUILD_VERSION=${FULL_VERSION}
+        - GS_ENVIRONMENT=production
+        - GIT_COMMIT=${DRONE_COMMIT_SHA}
+        - BUILD_DATE=${DRONE_BUILD_STARTED}
+        - BUILD_VERSION=${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
       daemon_off: true
       custom_dns: 8.8.8.8
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
-      # Import variables from .env here
-      VERSION_BASE:
-        from_file: .env
-      GIT_SHA:
-        from_file: .env
-      BUILD_DATE:
-        from_file: .env
-      GS_ENVIRONMENT:
-        from_file: .env
-      FULL_VERSION:
-        from_file: .env
+    depends_on:
+      - build-and-deploy
 
   # ARM64 Build
   - name: build-arm64
@@ -162,17 +152,16 @@ steps:
         from_secret: docker_password
       repo: sgoudelis/ground-station
       tags:
-        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-arm64
-        - ${VERSION_BASE}-latest-arm64
+        - ${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-arm64
+        - latest-arm64
       dockerfile: Dockerfile
       platforms:
         - linux/arm64
       build_args:
-        - VERSION_BASE=${VERSION_BASE}
-        - GS_ENVIRONMENT=${GS_ENVIRONMENT}
-        - GIT_COMMIT=${GIT_SHA}
-        - BUILD_DATE=${BUILD_DATE}
-        - BUILD_VERSION=${FULL_VERSION}
+        - GS_ENVIRONMENT=production
+        - GIT_COMMIT=${DRONE_COMMIT_SHA}
+        - BUILD_DATE=${DRONE_BUILD_STARTED}
+        - BUILD_VERSION=${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
       buildkit: true
       cache_from:
         - sgoudelis/ground-station:latest-arm64
@@ -182,19 +171,8 @@ steps:
       custom_dns: 8.8.8.8
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
-      # Import variables from .env here
-      VERSION_BASE:
-        from_file: .env
-      GIT_SHA:
-        from_file: .env
-      BUILD_DATE:
-        from_file: .env
-      GS_ENVIRONMENT:
-        from_file: .env
-      FULL_VERSION:
-        from_file: .env
-      DRONE_BRANCH:
-        from_file: .env
+    depends_on:
+      - build-and-deploy
 
   # Create manifest for multi-arch
   - name: manifest
@@ -204,21 +182,11 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
-      target: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
-      template: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-ARCH
+      target: sgoudelis/ground-station:${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+      template: sgoudelis/ground-station:${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-ARCH
       platforms:
         - linux/amd64
         - linux/arm64
-    environment:
-      VERSION_BASE:
-        from_file: .env
-      GIT_SHA:
-        from_file: .env
-      BUILD_DATE:
-        from_file: .env
-      GS_ENVIRONMENT:
-        from_file: .env
-      FULL_VERSION:
-        from_file: .env
-      DRONE_BRANCH:
-        from_file: .env
+    depends_on:
+      - build-amd64
+      - build-arm64
