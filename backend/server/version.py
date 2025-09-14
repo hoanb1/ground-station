@@ -1,13 +1,31 @@
+
 import os
 import json
 import subprocess
 from datetime import datetime, timezone
+from common.logger import logger
 
-# Base version - update this manually for major/minor releases
-VERSION_BASE = "0.1.0"
+
+# Path to the version.json file containing the base version
+VERSION_JSON_PATH = os.path.join(os.path.dirname(__file__), "version.json")
 
 # Path to store version info during build
-VERSION_FILE_PATH = os.path.join(os.path.dirname(__file__), "version_info.json")
+VERSION_FILE_PATH = os.path.join(os.path.dirname(__file__), "version-info.json")
+
+
+def get_version_base():
+    """Get the base version from version.json file."""
+    try:
+        if os.path.exists(VERSION_JSON_PATH):
+            with open(VERSION_JSON_PATH, 'r') as f:
+                version_data = json.load(f)
+                return version_data.get("version", "0.0.0")  # Default to 0.0.0 if not found
+        else:
+            logger.warning(f"Version file not found: {VERSION_JSON_PATH}, using default version")
+            return "0.0.0"
+    except (json.JSONDecodeError, IOError) as e:
+        logger.error(f"Error reading version file: {e}")
+        return "0.0.0"
 
 
 def get_git_revision_short_hash():
@@ -26,7 +44,7 @@ def get_build_date():
 
 def get_version_info():
     """Get complete version information."""
-    # First check if we have a version_info.json file (created during build)
+    # First check if we have a version-info.json file (created during build)
     if os.path.exists(VERSION_FILE_PATH):
         try:
             with open(VERSION_FILE_PATH, 'r') as f:
@@ -50,10 +68,11 @@ def get_version_info():
         # Otherwise generate a version from components
         git_hash = get_git_revision_short_hash()
         build_date = get_build_date()
+        version_base = get_version_base()
 
         # Include environment indicator in dev builds
         env_suffix = "" if environment == "production" else f"-{environment}"
-        version = f"{VERSION_BASE}{env_suffix}-{build_date}-{git_hash}"
+        version = f"{version_base}{env_suffix}-{build_date}-{git_hash}"
 
         version_info = {
             "version": version,
@@ -68,7 +87,7 @@ def get_version_info():
             json.dump(version_info, f)
     except IOError:
         # Not critical if we can't write the file
-        pass
+        logger.warning(f"Warning: Failed to write version info to {VERSION_FILE_PATH}")
 
     return version_info
 
@@ -101,5 +120,5 @@ def write_version_info_during_build():
     version_info = get_version_info()
     with open(VERSION_FILE_PATH, 'w') as f:
         json.dump(version_info, f)
-    print(f"Version information written to {VERSION_FILE_PATH}: {version_info}")
+    logger.info(f"Version information written to {VERSION_FILE_PATH}: {version_info}")
     return version_info

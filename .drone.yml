@@ -40,14 +40,25 @@ steps:
           VERSION=$DRONE_TAG
           ENV_TYPE="production"
         else
-          # Otherwise use branch-commit format
+          # Extract VERSION_BASE from version.json
+          VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+          if [ -z "$VERSION_BASE" ]; then
+            echo "Failed to extract version from version.json, using default"
+            VERSION_BASE="0.0.0"
+          fi
+          
+          # Otherwise use base-branch-commit format
           GIT_SHA=$(git rev-parse --short HEAD)
-          VERSION=${DRONE_BRANCH:-main}-$GIT_SHA
+          
           if [ "$DRONE_BRANCH" = "main" ]; then
             ENV_TYPE="staging"
+            ENV_SUFFIX=""
           else
             ENV_TYPE="development"
+            ENV_SUFFIX="-development"
           fi
+          
+          VERSION="${VERSION_BASE}${ENV_SUFFIX}-${DRONE_BRANCH:-main}-$GIT_SHA"
         fi
         echo "Building version: $VERSION for environment: $ENV_TYPE"
         BUILD_DATE=$(date -u +'%Y%m%d')
