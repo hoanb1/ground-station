@@ -131,6 +131,7 @@ steps:
       repo: sgoudelis/ground-station
       tags:
         - ${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-amd64
+        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-latest-amd64
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
