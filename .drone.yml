@@ -53,8 +53,7 @@ steps:
           ENV_SUFFIX="-development"
         fi
           
-          VERSION="${VERSION_BASE}${ENV_SUFFIX}-${DRONE_BRANCH:-main}-$GIT_SHA"
-        fi
+        VERSION="${VERSION_BASE}${ENV_SUFFIX}-${DRONE_BRANCH:-main}-$GIT_SHA"
         echo "Building version: $VERSION for environment: $ENV_TYPE"
         BUILD_DATE=$(date -u +'%Y%m%d')
 
