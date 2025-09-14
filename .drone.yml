@@ -58,7 +58,7 @@ steps:
         echo "DRONE_BRANCH: $DRONE_BRANCH"
         echo "GIT_SHA: $GIT_SHA"
         echo "ENV_TYPE: $ENV_TYPE"
-        - FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH}-${GIT_SHA}"
+        FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH}-${GIT_SHA}"
         echo "FULL_VERSION: $FULL_VERSION"
         
         # Get build date
