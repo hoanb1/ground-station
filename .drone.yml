@@ -33,6 +33,12 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     commands:
+      # Debug current working directory and files
+      - pwd
+      - ls -la
+      - ls -la backend || echo "No backend directory found"
+      - ls -la backend/server || echo "No backend/server directory found"
+
       # Determine version
       - |
         # Extract VERSION_BASE from version.json
