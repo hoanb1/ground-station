@@ -51,7 +51,7 @@ steps:
         
         # Set environment type
         if [ "$DRONE_BRANCH" = "main" ]; then
-          ENV_TYPE="staging"
+          ENV_TYPE="production"
         else
           ENV_TYPE="development"
         fi
