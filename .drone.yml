@@ -1,4 +1,3 @@
-
 kind: pipeline
 type: docker
 name: default
@@ -59,16 +58,21 @@ steps:
         echo "DRONE_BRANCH: $DRONE_BRANCH"
         echo "GIT_SHA: $GIT_SHA"
         echo "ENV_TYPE: $ENV_TYPE"
-        FULL_VERSION="$${VERSION_BASE}-$${DRONE_BRANCH}-$${GIT_SHA}"
-        PIPES="${VERSION_BASE}-${DRONE_BRANCH}-${GIT_SHA}"
+        FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH}-${GIT_SHA}"
         echo "FULL_VERSION: $FULL_VERSION"
-        echo "PIPES: $PIPES"
         
         # Get build date
         BUILD_DATE=$(date -u +'%Y%m%d')
         echo "BUILD_DATE: $BUILD_DATE"
         
         echo "Building version: $FULL_VERSION for environment: $ENV_TYPE"
+        
+        # Write values to .env for subsequent steps
+        echo "VERSION_BASE=${VERSION_BASE}" > .env
+        echo "GIT_SHA=${GIT_SHA}" >> .env
+        echo "BUILD_DATE=${BUILD_DATE}" >> .env
+        echo "GS_ENVIRONMENT=${ENV_TYPE}" >> .env
+        echo "FULL_VERSION=${FULL_VERSION}" >> .env
 
       # Build the new image for amd64 with build args
       - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$FULL_VERSION -t ground-station:$FULL_VERSION .
@@ -131,14 +135,30 @@ steps:
       repo: sgoudelis/ground-station
       tags:
         - ${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-amd64
-        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-latest-amd64
+        - ${VERSION_BASE}-latest-amd64
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
+      build_args:
+        - GS_ENVIRONMENT=${GS_ENVIRONMENT}
+        - GIT_COMMIT=${GIT_SHA}
+        - BUILD_DATE=${BUILD_DATE}
+        - BUILD_VERSION=${FULL_VERSION}
       daemon_off: true
       custom_dns: 8.8.8.8
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
+      # Import variables from .env here
+      VERSION_BASE:
+        from_file: .env
+      GIT_SHA:
+        from_file: .env
+      BUILD_DATE:
+        from_file: .env
+      GS_ENVIRONMENT:
+        from_file: .env
+      FULL_VERSION:
+        from_file: .env
 
   # ARM64 Build
   - name: build-arm64
@@ -152,10 +172,15 @@ steps:
       repo: sgoudelis/ground-station
       tags:
         - ${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-arm64
-        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-latest-arm64
+        - ${VERSION_BASE}-latest-arm64
       dockerfile: Dockerfile
       platforms:
         - linux/arm64
+      build_args:
+        - GS_ENVIRONMENT=${GS_ENVIRONMENT}
+        - GIT_COMMIT=${GIT_SHA}
+        - BUILD_DATE=${BUILD_DATE}
+        - BUILD_VERSION=${FULL_VERSION}
       buildkit: true
       cache_from:
         - sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH:-main}-latest-arm64
@@ -181,8 +206,15 @@ steps:
       platforms:
         - linux/amd64
         - linux/arm64
-
-volumes:
-  - name: dockersock
-    host:
-      path: /var/run/docker.sock
+    environment:
+      # Import variables from .env here
+      VERSION_BASE:
+        from_file: .env
+      GIT_SHA:
+        from_file: .env
+      BUILD_DATE:
+        from_file: .env
+      GS_ENVIRONMENT:
+        from_file: .env
+      FULL_VERSION:
+        from_file: .env
