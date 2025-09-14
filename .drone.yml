@@ -1,3 +1,4 @@
+
 kind: pipeline
 type: docker
 name: default
@@ -42,43 +43,43 @@ steps:
           echo "Failed to extract version from version.json, using default"
           VERSION_BASE="0.0.0"
         fi
-        echo "VERSION_BASE:" $VERSION_BASE
+        echo "VERSION_BASE: $VERSION_BASE"
         
-        # Otherwise use base-branch-commit format
+        # Get git hash
         GIT_SHA=$(git rev-parse --short HEAD)
-        echo "GIT_SHA" $GIT_SHA
+        echo "GIT_SHA: $GIT_SHA"
         
+        # Set environment type
         if [ "$DRONE_BRANCH" = "main" ]; then
-          ENV_TYPE="production"
-          ENV_SUFFIX="-production"
+          ENV_TYPE="staging"
         else
           ENV_TYPE="development"
-          ENV_SUFFIX="-development"
         fi
+        echo "ENV_TYPE: $ENV_TYPE"
         
-        echo "ENV_TYPE" $ENV_TYPE
-        echo "ENV_SUFFIX" $ENV_SUFFIX
+        # Create full version string
+        FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH:-main}-${GIT_SHA}"
+        echo "FULL_VERSION: $FULL_VERSION"
         
-        VERSION="${VERSION_BASE}${ENV_SUFFIX}-${DRONE_BRANCH:-main}-$GIT_SHA"
-        echo "VERSION" $VERSION
-        echo "Building version: $VERSION for environment: $ENV_TYPE"
+        # Get build date
         BUILD_DATE=$(date -u +'%Y%m%d')
+        echo "BUILD_DATE: $BUILD_DATE"
         
-        echo "BUILD_DATE" $BUILD_DATE
+        echo "Building version: $FULL_VERSION for environment: $ENV_TYPE"
 
       # Build the new image for amd64 with build args
-      - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$VERSION -t ground-station:$VERSION .
+      - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$FULL_VERSION -t ground-station:$FULL_VERSION .
 
       # Tag the image for Docker Hub
-      - docker tag ground-station:$VERSION sgoudelis/ground-station:$VERSION
-      - docker tag ground-station:$VERSION sgoudelis/ground-station:latest
-      - docker tag ground-station:$VERSION sgoudelis/ground-station:$ENV_TYPE-latest
+      - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:$FULL_VERSION
+      - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:latest
+      - docker tag ground-station:$FULL_VERSION sgoudelis/ground-station:$ENV_TYPE-latest
 
       # Stop and remove the existing container if it exists
       - docker rm -f ground-station-prod || true
 
       # Run the new container with the versioned image
-      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data -e GS_ENVIRONMENT=$ENV_TYPE sgoudelis/ground-station:$VERSION
+      - docker run -d -p 0.0.0.0:7000:7000 --device=/dev/bus/usb --restart=unless-stopped --privileged --name ground-station-prod -v /media/pool1/volumes/ground-station-data:/app/backend/data -e GS_ENVIRONMENT=$ENV_TYPE sgoudelis/ground-station:$FULL_VERSION
 
       # Check that it's running
       - sleep 5
@@ -91,7 +92,7 @@ steps:
         fi
 
       # Display container info and version
-      - echo "✅ New container version $VERSION ($ENV_TYPE) is running on host port 7000"
+      - echo "✅ New container version $FULL_VERSION ($ENV_TYPE) is running on host port 7000"
       - docker ps | grep ground-station-prod
 
   - name: verify-docker-connection
@@ -126,7 +127,7 @@ steps:
         from_secret: docker_password
       repo: sgoudelis/ground-station
       tags:
-        - ${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-amd64
+        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-amd64
       dockerfile: Dockerfile
       platforms:
         - linux/amd64
@@ -146,15 +147,15 @@ steps:
         from_secret: docker_password
       repo: sgoudelis/ground-station
       tags:
-        - ${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-arm64
-        - ${DRONE_BRANCH:-main}-latest-arm64
+        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-arm64
+        - ${VERSION_BASE}-${DRONE_BRANCH:-main}-latest-arm64
       dockerfile: Dockerfile
       platforms:
         - linux/arm64
       buildkit: true
       cache_from:
-        - sgoudelis/ground-station:${DRONE_BRANCH:-main}-latest-arm64
-        - sgoudelis/ground-station:main-latest-arm64
+        - sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH:-main}-latest-arm64
+        - sgoudelis/ground-station:${VERSION_BASE}-main-latest-arm64
         - sgoudelis/ground-station:latest-arm64
         - sgoudelis/ground-station:latest
       pull: true
@@ -171,8 +172,8 @@ steps:
         from_secret: docker_username
       password:
         from_secret: docker_password
-      target: sgoudelis/ground-station:${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}
-      template: sgoudelis/ground-station:${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-ARCH
+      target: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}
+      template: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-ARCH
       platforms:
         - linux/amd64
         - linux/arm64
