@@ -36,6 +36,7 @@ steps:
       # Determine version
       - |
         # Extract VERSION_BASE from version.json
+        ls -l 
         VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
         if [ -z "$VERSION_BASE" ]; then
           echo "Failed to extract version from version.json, using default"
