@@ -37,7 +37,9 @@ steps:
       - |
         # Extract VERSION_BASE from version.json
         ls -l 
+        ls -l backend/server
         VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+        echo $VERSION_BASE
         if [ -z "$VERSION_BASE" ]; then
           echo "Failed to extract version from version.json, using default"
           VERSION_BASE="0.0.0"
