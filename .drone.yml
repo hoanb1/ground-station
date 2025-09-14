@@ -30,6 +30,8 @@ steps:
 
   - name: build-and-deploy
     image: docker:cli
+    depends_on:
+      - clone
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     commands:
