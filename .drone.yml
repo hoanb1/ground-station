@@ -58,7 +58,7 @@ steps:
         echo "DRONE_BRANCH: $DRONE_BRANCH"
         echo "GIT_SHA: $GIT_SHA"
         echo "ENV_TYPE: $ENV_TYPE"
-        FULL_VERSION="$${VERSION_BASE}-$${DRONE_BRANCH}-$${GIT_SHA}"
+        - FULL_VERSION="${VERSION_BASE}-${DRONE_BRANCH}-${GIT_SHA}"
         echo "FULL_VERSION: $FULL_VERSION"
         
         # Get build date
@@ -73,6 +73,7 @@ steps:
         echo "BUILD_DATE=${BUILD_DATE}" >> .env
         echo "GS_ENVIRONMENT=${ENV_TYPE}" >> .env
         echo "FULL_VERSION=${FULL_VERSION}" >> .env
+        - echo "DRONE_BRANCH=${DRONE_BRANCH}" >> .env
 
       # Build the new image for amd64 with build args
       - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$FULL_VERSION -t ground-station:$FULL_VERSION .
@@ -185,8 +186,6 @@ steps:
         - BUILD_VERSION=${FULL_VERSION}
       buildkit: true
       cache_from:
-        - sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH:-main}-latest-arm64
-        - sgoudelis/ground-station:${VERSION_BASE}-main-latest-arm64
         - sgoudelis/ground-station:latest-arm64
         - sgoudelis/ground-station:latest
       pull: true
@@ -194,21 +193,6 @@ steps:
       custom_dns: 8.8.8.8
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
-
-  # Create manifest for multi-arch
-  - name: manifest
-    image: plugins/manifest
-    settings:
-      username:
-        from_secret: docker_username
-      password:
-        from_secret: docker_password
-      target: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}
-      template: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH:-main}-${DRONE_COMMIT_SHA:0:7}-ARCH
-      platforms:
-        - linux/amd64
-        - linux/arm64
-    environment:
       # Import variables from .env here
       VERSION_BASE:
         from_file: .env
@@ -219,4 +203,33 @@ steps:
       GS_ENVIRONMENT:
         from_file: .env
       FULL_VERSION:
+        from_file: .env
+      DRONE_BRANCH:
+        from_file: .env
+
+  # Create manifest for multi-arch
+  - name: manifest
+    image: plugins/manifest
+    settings:
+      username:
+        from_secret: docker_username
+      password:
+        from_secret: docker_password
+      target: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+      template: sgoudelis/ground-station:${VERSION_BASE}-${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}-ARCH
+      platforms:
+        - linux/amd64
+        - linux/arm64
+    environment:
+      VERSION_BASE:
+        from_file: .env
+      GIT_SHA:
+        from_file: .env
+      BUILD_DATE:
+        from_file: .env
+      GS_ENVIRONMENT:
+        from_file: .env
+      FULL_VERSION:
+        from_file: .env
+      DRONE_BRANCH:
         from_file: .env
