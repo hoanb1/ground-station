@@ -99,6 +99,8 @@ steps:
     commands:
       - docker info
       - echo "Docker connection verified"
+    depends_on:
+      - build-and-deploy
 
   - name: docker-auth
     image: docker:cli
@@ -112,6 +114,8 @@ steps:
       - echo "Attempting Docker Hub authentication..."
       - echo "$DOCKER_PASSWORD" | docker login -u "$DOCKER_USERNAME" --password-stdin
       - echo "✅ Docker Hub authentication successful"
+    depends_on:
+      - verify-docker-connection
 
   # AMD64 Build
   - name: build-amd64
@@ -139,7 +143,7 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     depends_on:
-      - build-and-deploy
+      - docker-auth
 
   # ARM64 Build
   - name: build-arm64
@@ -172,7 +176,7 @@ steps:
     environment:
       DOCKER_HOST: tcp://192.168.60.98:2375
     depends_on:
-      - build-and-deploy
+      - docker-auth
 
   # Create manifest for multi-arch
   - name: manifest
