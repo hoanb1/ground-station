@@ -42,11 +42,11 @@ steps:
           echo "Failed to extract version from version.json, using default"
           VERSION_BASE="0.0.0"
         fi
-        echo $VERSION_BASE
+        echo "$VERSION_BASE:" $VERSION_BASE
         
         # Otherwise use base-branch-commit format
         GIT_SHA=$(git rev-parse --short HEAD)
-        echo $GIT_SHA
+        echo "$GIT_SHA" $GIT_SHA
         
         if [ "$DRONE_BRANCH" = "main" ]; then
           ENV_TYPE="production"
@@ -56,8 +56,11 @@ steps:
           ENV_SUFFIX="-development"
         fi
         
+        echo "$ENV_TYPE" $ENV_TYPE
+        echo "$ENV_SUFFIX" $ENV_SUFFIX
+        
         VERSION="${VERSION_BASE}${ENV_SUFFIX}-${DRONE_BRANCH:-main}-$GIT_SHA"
-        echo $VERSION
+        echo "$VERSION" $VERSION
         echo "Building version: $VERSION for environment: $ENV_TYPE"
         BUILD_DATE=$(date -u +'%Y%m%d')
 
