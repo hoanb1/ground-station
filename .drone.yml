@@ -51,20 +51,9 @@ steps:
       - BUILD_DATE=$(date -u +'%Y%m%d')
       - echo "BUILD_DATE=$BUILD_DATE"
       
-      # Explicitly construct FULL_VERSION - using direct concatenation instead of variable substitution
+      # Make a full version string
       - FULL_VERSION=$VERSION_BASE-$DRONE_BRANCH-$GIT_SHA
       - echo "FULL_VERSION=$FULL_VERSION"
-      
-      # Write each variable to .env file
-      - echo "VERSION_BASE=$VERSION_BASE" > .env
-      - echo "GIT_SHA=$GIT_SHA" >> .env
-      - echo "BUILD_DATE=$BUILD_DATE" >> .env
-      - echo "GS_ENVIRONMENT=$ENV_TYPE" >> .env
-      - echo "FULL_VERSION=$FULL_VERSION" >> .env
-      - echo "DRONE_BRANCH=$DRONE_BRANCH" >> .env
-      
-      # Debug the contents
-      - cat .env
 
       # Build the new image for amd64 with build args
       - docker build --platform linux/amd64 --build-arg GS_ENVIRONMENT=$ENV_TYPE --build-arg GIT_COMMIT=$GIT_SHA --build-arg BUILD_DATE=$BUILD_DATE --build-arg BUILD_VERSION=$FULL_VERSION -t ground-station:$FULL_VERSION .
