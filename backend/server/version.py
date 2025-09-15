@@ -13,6 +13,7 @@ VERSION_JSON_PATH = os.path.join(os.path.dirname(__file__), "version.json")
 VERSION_FILE_PATH = os.path.join(os.path.dirname(__file__), "version-info.json")
 
 
+
 def get_version_base():
     """Get the base version from version.json file."""
     try:
