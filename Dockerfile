@@ -243,21 +243,20 @@ WORKDIR /app
 # Copy backend code
 COPY backend/ ./backend/
 
-## Add build arguments for version information
-#ARG GIT_COMMIT
-#ARG BUILD_DATE
-#ARG BUILD_VERSION
-#ARG GS_ENVIRONMENT=production
-#
-## Set as environment variables for the container
-#ENV GIT_COMMIT=${GIT_COMMIT}
-#ENV BUILD_DATE=${BUILD_DATE}
-#ENV BUILD_VERSION=${BUILD_VERSION}
-#ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
+# Add build arguments for version information
+ARG GIT_COMMIT
+ARG BUILD_DATE
+ARG BUILD_VERSION
+ARG GS_ENVIRONMENT=production
+
+# Set as environment variables for the container
+ENV GIT_COMMIT=${GIT_COMMIT}
+ENV BUILD_DATE=${BUILD_DATE}
+ENV BUILD_VERSION=${BUILD_VERSION}
+ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
 
 # Run the version info file creation utility with an override, the git commit hash
-#RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build({'gitCommit': os.environ.get('GIT_COMMIT', 'unknown')})"
-RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build()"
+RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build({'gitCommit': os.environ.get('GIT_COMMIT', 'unknown')})"
 
 # Copy the built frontend from the previous stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
