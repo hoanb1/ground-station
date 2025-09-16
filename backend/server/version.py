@@ -102,12 +102,22 @@ def get_full_version_info():
     return _version_info
 
 
-def write_version_info_during_build():
+def write_version_info_during_build(version_info_override=None):
     """
     CLI utility to write version info during the build process.
     This allows capturing the git commit at build time rather than runtime.
+
+    Args:
+        version_info_override (dict, optional): Dictionary with version info values to override.
+                                              Any keys provided will override the corresponding values
+                                              from get_version_info().
     """
     version_info = get_version_info()
+
+    # Apply overrides if provided
+    if version_info_override:
+        version_info.update(version_info_override)
+
     with open(VERSION_FILE_PATH, 'w') as f:
         json.dump(version_info, f)
     logger.info(f"Version information written to {VERSION_FILE_PATH}: {version_info}")
