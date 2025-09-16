@@ -224,8 +224,7 @@ RUN git clone https://github.com/jketterl/pycsdr.git
 WORKDIR pycsdr/
 RUN ./setup.py install install_headers
 
-RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
-    ldconfig
+RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && ldconfig
 
 RUN ldconfig -v | grep "/usr/local/lib"
 
