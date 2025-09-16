@@ -120,5 +120,6 @@ def write_version_info_during_build(version_info_override=None):
 
     with open(VERSION_FILE_PATH, 'w') as f:
         json.dump(version_info, f)
-    logger.info(f"Version information written to {VERSION_FILE_PATH}: {version_info}")
+    logger.info(f"Version information written to {VERSION_FILE_PATH}: {version_info} with overrides: "
+                f"{version_info_override}")
     return version_info
