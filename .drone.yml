@@ -129,6 +129,11 @@ steps:
         - GIT_COMMIT=${DRONE_COMMIT_SHA}
         - BUILD_DATE=${DRONE_BUILD_STARTED}
         - BUILD_VERSION=${DRONE_BRANCH}-${DRONE_COMMIT_SHA:0:7}
+      buildkit: true
+      cache_from:
+        - sgoudelis/ground-station:latest-amd64
+        - sgoudelis/ground-station:latest
+      pull: true
       daemon_off: true
       custom_dns: 8.8.8.8
     environment:

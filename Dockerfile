@@ -22,17 +22,17 @@ RUN npm run build
 #FROM python:3.12-slim
 FROM ubuntu:noble-20250127
 
-# Add build arguments for version information
-ARG GIT_COMMIT
-ARG BUILD_DATE
-ARG BUILD_VERSION
-ARG GS_ENVIRONMENT=production
-
-# Set as environment variables for the container
-ENV GIT_COMMIT=${GIT_COMMIT}
-ENV BUILD_DATE=${BUILD_DATE}
-ENV BUILD_VERSION=${BUILD_VERSION}
-ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
+## Add build arguments for version information
+#ARG GIT_COMMIT
+#ARG BUILD_DATE
+#ARG BUILD_VERSION
+#ARG GS_ENVIRONMENT=production
+#
+## Set as environment variables for the container
+#ENV GIT_COMMIT=${GIT_COMMIT}
+#ENV BUILD_DATE=${BUILD_DATE}
+#ENV BUILD_VERSION=${BUILD_VERSION}
+#ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
 
 WORKDIR /app
 
@@ -272,9 +272,6 @@ ENV STATIC_FILES_DIR=/app/frontend/dist
 EXPOSE 7000
 
 WORKDIR backend/
-
-# Command to run the application
-#CMD ["python", "app.py", "--secret-key=AuZ9theig2geu4wu", "--log-level=INFO", "--host=0.0.0.0", "--port=7000"]
 
 # Command to run the application with UHD images downloader
 CMD dbus-daemon --system --nofork --nopidfile & \
