@@ -255,8 +255,11 @@ ENV BUILD_DATE=${BUILD_DATE}
 ENV BUILD_VERSION=${BUILD_VERSION}
 ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
 
+RUN echo $GIT_COMMIT $BUILD_DATE $BUILD_VERSION $GS_ENVIRONMENT
+
 # Run the version info file creation utility with an override, the git commit hash
-RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build({'gitCommit': os.environ.get('GIT_COMMIT', 'unknown')})"
+#RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build({'gitCommit': os.environ.get('GIT_COMMIT', 'unknown')})"
+RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build()"
 
 # Copy the built frontend from the previous stage
 COPY --from=frontend-builder /app/frontend/dist ./frontend/dist
