@@ -22,7 +22,7 @@ const VersionInfo = ({ minimal = false }) => {
     if (minimal) {
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Tooltip title={`Full version: ${data?.version || 'Unknown'}`}>
+                <Tooltip title={`${data?.version || 'Unknown'}`}>
                     <Chip
                         label={data?.version?.split('-')[0] || 'v?.?.?'}
                         size="small"

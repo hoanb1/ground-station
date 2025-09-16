@@ -78,6 +78,7 @@ const BRANDING = {
 
 function uponConnectionToBackEnd(socket) {
     // called when the connection to backend has been established to fill in the local state with information
+    store.dispatch(fetchVersionInfo());
     store.dispatch(fetchPreferences({socket}));
     store.dispatch(fetchLocationForUserId({socket}));
     store.dispatch(fetchRigs({socket}));

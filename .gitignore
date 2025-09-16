@@ -74,3 +74,4 @@ venv.bak/
 /backend/db/gs.db
 /backend/de421.bsp
 /backend/data/gs.db
+/backend/server/version-info.json

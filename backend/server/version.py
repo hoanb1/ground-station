@@ -1,4 +1,3 @@
-
 import os
 import json
 import subprocess
@@ -12,6 +11,8 @@ VERSION_JSON_PATH = os.path.join(os.path.dirname(__file__), "version.json")
 # Path to store version info during build
 VERSION_FILE_PATH = os.path.join(os.path.dirname(__file__), "version-info.json")
 
+# Singleton instance of version info
+_version_info = None
 
 
 def get_version_base():
@@ -20,7 +21,7 @@ def get_version_base():
         if os.path.exists(VERSION_JSON_PATH):
             with open(VERSION_JSON_PATH, 'r') as f:
                 version_data = json.load(f)
-                return version_data.get("version", "0.0.0")  # Default to 0.0.0 if not found
+                return version_data.get("version", "0.0.0")
         else:
             logger.warning(f"Version file not found: {VERSION_JSON_PATH}, using default version")
             return "0.0.0"
@@ -82,19 +83,7 @@ def get_version_info():
             "environment": environment
         }
 
-    # Write to file for persistence
-    try:
-        with open(VERSION_FILE_PATH, 'w') as f:
-            json.dump(version_info, f)
-    except IOError:
-        # Not critical if we can't write the file
-        logger.warning(f"Warning: Failed to write version info to {VERSION_FILE_PATH}")
-
     return version_info
-
-
-# Singleton instance of version info
-_version_info = None
 
 
 def get_version():
