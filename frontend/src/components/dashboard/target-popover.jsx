@@ -210,6 +210,7 @@ const SatelliteInfoPopover = () => {
                             border: `1px solid ${getElevationColor(satelliteData.position.el)}`,
                             borderRadius: '3px',
                             paddingLeft: 0.6,
+                            paddingTop: 0.2,
                             minWidth: 22,
                             width: 30,
                             display: 'flex',
