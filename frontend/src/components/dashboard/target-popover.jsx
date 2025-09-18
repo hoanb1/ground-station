@@ -178,25 +178,63 @@ const SatelliteInfoPopover = () => {
 
     return (
         <>
-            <Tooltip title={getTooltipText()}>
-                <IconButton
-                    ref={buttonRef}
-                    onClick={handleClick}
-                    size="small"
-                    sx={{
-                        width: 40,
-                        color: getSatelliteIconColor(),
-                        '&:hover': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
-                        },
-                        '& svg': {
-                            height: '75%',
-                        }
-                    }}
-                >
-                    <SatelliteAltIcon />
-                </IconButton>
-            </Tooltip>
+            <Box sx={{ position: 'relative', display: 'inline-block' }}>
+                <Tooltip title={getTooltipText()}>
+                    <IconButton
+                        ref={buttonRef}
+                        onClick={handleClick}
+                        size="small"
+                        sx={{
+                            width: 40,
+                            color: getSatelliteIconColor(),
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            },
+                            '& svg': {
+                                height: '75%',
+                            }
+                        }}
+                    >
+                        <SatelliteAltIcon />
+                    </IconButton>
+                </Tooltip>
+
+                {/* Elevation Overlay */}
+                {satelliteData.details.norad_id && (
+                    <Box
+                        sx={{
+                            position: 'absolute',
+                            bottom: 5,
+                            right: 6,
+                            backgroundColor: 'rgba(0, 0, 0, 0.8)',
+                            border: `1px solid ${getElevationColor(satelliteData.position.el)}`,
+                            borderRadius: '3px',
+                            paddingLeft: 0.6,
+                            minWidth: 22,
+                            width: 30,
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'center',
+                            pointerEvents: 'none',
+                            zIndex: 1
+                        }}
+                    >
+                        <Typography
+                            variant="caption"
+                            sx={{
+                                color: getElevationColor(satelliteData.position.el),
+                                fontSize: '0.55rem',
+                                fontWeight: 'bold',
+                                fontFamily: 'Monaco, Consolas, "Courier New", monospace',
+                                lineHeight: 1
+                            }}
+                        >
+                            {satelliteData.position.el >= 0 ? '+' : ''}{satelliteData.position.el?.toFixed(0)}°
+                        </Typography>
+                    </Box>
+                )}
+
+            </Box>
 
             <Popover
                 sx={{

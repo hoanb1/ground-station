@@ -37,7 +37,7 @@ import {
     MenuList
 } from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GroundStationLogoGreenBlue, GSRetroLogo} from "../common/icons.jsx";
+import {GroundStationLogoGreenBlue} from "../common/icons.jsx";
 import {stringAvatar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';
@@ -46,7 +46,6 @@ import {handleSetGridEditableOverview as OverviewModeSetEditing} from '../overvi
 import {handleSetGridEditableTarget as TargetModeSetEditing} from '../target/main-layout.jsx'
 import {handleSetGridEditableWaterfall as WaterfallModeSetEditing} from '../waterfall/main-layout.jsx';
 import CheckIcon from '@mui/icons-material/Check';
-import CircularProgress from "@mui/material/CircularProgress";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {
