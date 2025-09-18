@@ -224,7 +224,7 @@ const SatelliteInfoPopover = () => {
                             variant="caption"
                             sx={{
                                 color: getElevationColor(satelliteData.position.el),
-                                fontSize: '0.55rem',
+                                fontSize: '0.65rem',
                                 fontWeight: 'bold',
                                 fontFamily: 'Monaco, Consolas, "Courier New", monospace',
                                 lineHeight: 1
