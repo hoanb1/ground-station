@@ -316,8 +316,7 @@ function SidebarFooterAccount({ mini }) {
                             elevation: 0,
                             sx: {
                                 overflow: 'visible',
-                                filter: (theme) =>
-                                    `drop-shadow(0px 2px 8px ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.32)'})`,
+                                // filter: (theme) => `drop-shadow(0px 2px 8px ${theme.palette.mode === 'dark' ? 'rgba(255,255,255,0.10)' : 'rgba(0,0,0,0.32)'})`,
                                 mt: 1,
                                 '&::before': {
                                     content: '""',
@@ -449,7 +448,7 @@ export default function Layout() {
         <DashboardLayout
             sx={{
                 '& .MuiToolbar-root': {
-                    boxShadow: '4px 8px 8px rgba(0, 0, 0, 0.35)',
+                    //boxShadow: '4px 8px 8px rgba(0, 0, 0, 0.35)',
                 },
             }}
             defaultSidebarCollapsed
