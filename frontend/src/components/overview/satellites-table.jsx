@@ -18,13 +18,55 @@
  */
 
 import React, { useRef, useState, useEffect, useCallback } from "react";
+import { useStore } from 'react-redux';
 import { useDispatch, useSelector } from "react-redux";
 import { DataGrid, gridClasses } from "@mui/x-data-grid";
 import { useGridApiRef } from '@mui/x-data-grid';
 import { darken, lighten, styled } from '@mui/material/styles';
 import {Typography, Chip, Tooltip, Box} from "@mui/material";
-import {getClassNamesBasedOnGridEditing, humanizeDate, renderCountryFlagsCSV, TitleBar} from "../common/common.jsx";
-import { setSelectedSatelliteId } from './overview-slice.jsx';
+import {
+    getClassNamesBasedOnGridEditing,
+    humanizeDate,
+    renderCountryFlagsCSV,
+    TitleBar
+} from "../common/common.jsx";
+import {
+    setSelectedSatelliteId,
+} from './overview-slice.jsx';
+
+// Create a separate component for the elevation cell that uses useStore
+const ElevationCell = React.memo(({ noradId }) => {
+    const [elevation, setElevation] = useState(null);
+    const store = useStore();
+
+    useEffect(() => {
+        const updateElevation = () => {
+            const state = store.getState();
+            const selectedSatellitePositions = state.overviewSatTrack.selectedSatellitePositions;
+            const satellitePosition = selectedSatellitePositions?.[noradId];
+
+            if (satellitePosition && satellitePosition.el !== undefined) {
+                setElevation(satellitePosition.el);
+            } else {
+                setElevation(null);
+            }
+        };
+
+        // Initial update
+        updateElevation();
+
+        // Poll every 3 seconds
+        const interval = setInterval(updateElevation, 3000);
+
+        return () => clearInterval(interval);
+    }, [noradId, store]);
+
+    if (elevation === null) {
+        return <span>-</span>;
+    }
+
+    return <span>{elevation.toFixed(1)}°</span>;
+});
 
 const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSatelliteId }) => {
     const apiRef = useGridApiRef();
@@ -152,6 +194,21 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             align: 'center',
             headerAlign: 'center',
             flex: 1
+        },
+        {
+            field: 'elevation',
+            minWidth: 100,
+            headerName: 'Elevation',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            renderCell: (params) => {
+                if (!params?.row?.norad_id) return <span>-</span>;
+
+                return (
+                    <ElevationCell noradId={params.row.norad_id} />
+                );
+            }
         },
         {
             field: 'status',
@@ -384,6 +441,7 @@ const SatelliteDetailsTable = React.memo(() => {
 
     // Use memoized selectors to prevent unnecessary rerenders
     const selectedSatellites = useSelector(state => state.overviewSatTrack.selectedSatellites);
+    const selectedSatellitePositions = useSelector(state => state.overviewSatTrack.selectedSatellitePositions);
     const gridEditable = useSelector(state => state.overviewSatTrack.gridEditable);
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
 

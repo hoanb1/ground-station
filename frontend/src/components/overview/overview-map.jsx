@@ -37,7 +37,7 @@ import {useDispatch, useSelector} from "react-redux";
 import {
     setOpenMapSettingsDialog,
     setMapZoomLevel,
-    setSelectedSatelliteId
+    setSelectedSatelliteId, setSelectedSatellitePositions
 } from './overview-slice.jsx';
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/icons.jsx';
@@ -114,12 +114,14 @@ const SatelliteMapContainer = ({
         selectedSatelliteId,
         selectedSatGroupId,
     } = useSelector(state => state.overviewSatTrack);
+
     const {
         trackingState,
         satelliteId: trackingSatelliteId,
         selectedRadioRig,
         selectedRotator,
-        selectedTransmitter
+        selectedTransmitter,
+        selectedSatellitePositions,
     } = useSelector(state => state.targetSatTrack);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
@@ -201,6 +203,7 @@ const SatelliteMapContainer = ({
         let currentFuturePaths = [];
         let currentPastPaths = [];
         let satIndex = 0;
+        let selectedSatPos = {};
 
         selectedSatellites.forEach(satellite => {
             try {
@@ -215,14 +218,17 @@ const SatelliteMapContainer = ({
                     satellite['tle2'],
                     now);
 
-                if (selectedSatelliteId === satellite['norad_id']) {
-                    // Let's also update the satellite info island with the new position data we have
-                    let [az, el, range] = calculateSatelliteAzEl(satellite['tle1'], satellite['tle2'], {
-                        lat: location['lat'],
-                        lon: location['lon'],
-                        alt: location['alt'],
-                    }, now);
+                // Let's also update the satellite info island with the new position data we have
+                let [az, el, range] = calculateSatelliteAzEl(satellite['tle1'], satellite['tle2'], {
+                    lat: location['lat'],
+                    lon: location['lon'],
+                    alt: location['alt'],
+                }, now);
 
+                // Accumulate the selected satellite position
+                selectedSatPos[noradId] = {az, el, range};
+
+                if (selectedSatelliteId === satellite['norad_id']) {
                     // Get the recent state
                     const recentSatData = store.getState().overviewSatTrack.satelliteData;
 
@@ -363,6 +369,8 @@ const SatelliteMapContainer = ({
         const [sunPos, moonPos] = getSunMoonCoords();
         setSunPos(sunPos);
         setMoonPos(moonPos);
+
+        dispatch(setSelectedSatellitePositions(selectedSatPos));
     }
 
     // Update the satellites position, day/night terminator every 3 seconds

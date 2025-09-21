@@ -180,6 +180,7 @@ const overviewSlice = createSlice({
         showGrid: true,
         gridEditable: false,
         selectedSatellites: [],
+        selectedSatellitePositions: {},
         currentPastSatellitesPaths: [],
         currentFutureSatellitesPaths: [],
         currentSatellitesPosition: [],
@@ -287,6 +288,9 @@ const overviewSlice = createSlice({
         setSatelliteData(state, action) {
             state.satelliteData = action.payload;
         },
+        setSelectedSatellitePositions(state, action) {
+            state.selectedSatellitePositions = action.payload;
+        }
     },
     extraReducers: (builder) => {
         builder
@@ -399,6 +403,7 @@ export const {
     setShowGrid,
     setSelectedSatelliteId,
     setSatelliteData,
+    setSelectedSatellitePositions,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;
