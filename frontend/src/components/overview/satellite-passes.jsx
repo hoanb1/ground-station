@@ -274,9 +274,9 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                 }
 
                 let color;
-                if (elevation < 0) {
+                if (elevation < 10) {
                     color = '#f44336';
-                } else if (elevation <= 10) {
+                } else if (elevation >= 10 && elevation < 45) {
                     color = '#ff9800';
                 } else {
                     color = '#4caf50';
