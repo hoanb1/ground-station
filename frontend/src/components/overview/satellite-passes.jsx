@@ -40,7 +40,7 @@ import {
     setPasses,
     setSelectedSatelliteId,
 } from './overview-slice.jsx';
-import {Typography} from '@mui/material';
+import {Typography, Box} from '@mui/material';
 import {useGridApiRef} from '@mui/x-data-grid';
 import {darken, lighten, styled} from '@mui/material/styles';
 import {Chip} from "@mui/material";
@@ -121,6 +121,11 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
     const targetSatTrackRef = useRef(() => {
         const state = store.getState();
         return state.targetSatTrack;
+    });
+
+    const selectedSatellitePositionsRef = useRef(() => {
+        const state = store.getState();
+        return state.overviewSatTrack.selectedSatellitePositions;
     });
 
     const getBackgroundColor = (color, theme, coefficient) => ({
@@ -226,7 +231,7 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
         {
             field: 'peak_altitude',
             minWidth: 80,
-            headerName: 'Max elevation',
+            headerName: 'Peak elevation',
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -241,6 +246,47 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                 } else {
                     return '';
                 }
+            }
+        },
+        {
+            field: 'elevation',
+            minWidth: 80,
+            headerName: 'Current Elevation',
+            align: 'center',
+            headerAlign: 'center',
+            flex: 1,
+            sortable: false,
+            renderCell: (params) => {
+                const now = new Date();
+                const isActive = new Date(params.row.event_start) < now && new Date(params.row.event_end) > now;
+
+                if (!isActive) {
+                    return <span>-</span>;
+                }
+
+                const selectedSatellitePositions = selectedSatellitePositionsRef.current();
+                const noradId = params.row.id.split("_")[1];
+                const position = selectedSatellitePositions?.[noradId];
+                const elevation = position?.el;
+
+                if (elevation === null || elevation === undefined) {
+                    return <span>-</span>;
+                }
+
+                let color;
+                if (elevation < 0) {
+                    color = '#f44336';
+                } else if (elevation <= 10) {
+                    color = '#ff9800';
+                } else {
+                    color = '#4caf50';
+                }
+
+                return (
+                    <Box component="span" sx={{ color, fontWeight: 'bold' }}>
+                        {elevation.toFixed(1)}°
+                    </Box>
+                );
             }
         },
         {
