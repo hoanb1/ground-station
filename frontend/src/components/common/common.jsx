@@ -110,11 +110,11 @@ export const MapTitleBar = styled(Paper)(({ theme }) => ({
     height: '30px',
     padding: '4px 8px',
     ...theme.typography.body2,
-    position: 'absolute',
+    //position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
     borderBottom: '1px solid #494949',
     zIndex: 400,
-    top: 0,
+    //top: 0,
     fontWeight: 'bold',
     textAlign: 'left',
     backgroundColor: "#1e261c",
@@ -125,11 +125,11 @@ export const MapStatusBar = styled(Paper)(({ theme }) => ({
     height: '30px',
     padding: '4px 8px',
     ...theme.typography.body2,
-    position: 'absolute',
+    //position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
     borderTop: '1px solid #494949',
     zIndex: 450,
-    bottom: -1,
+    //bottom: -1,
     textAlign: 'left',
     fontWeight: 'normal',
 }));
@@ -344,8 +344,8 @@ export const MapArrowControls = function ({mapObject}) {
 
     return (
         <Box sx={{'& > :not(style)': {m: 1}}} style={{
-            right: 15,
-            bottom: 42,
+            right: 10,
+            bottom: 10,
             position: 'absolute',
             display: 'flex',
             flexDirection: 'column',

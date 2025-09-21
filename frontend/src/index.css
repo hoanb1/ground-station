@@ -26,9 +26,9 @@
     background-color: #121212 !important;
 }
 
-.leaflet-left{
-    top: 32px !important;
-}
+/*.leaflet-left{*/
+/*    top: 32px !important;*/
+/*}*/
 
 .leaflet-control-fullscreen {
     display: none;
@@ -42,7 +42,6 @@
     color: #959595;
     font-size: 12px;
     line-height: 20px;
-
 }
 
 .leaflet-link {

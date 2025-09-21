@@ -26,7 +26,7 @@ const SatelliteTrackSuggestion = ({
             elevation={4}
             sx={{
                 position: 'absolute',
-                bottom: 40,
+                bottom: 10,
                 left: 10,
                 zIndex: 1000,
                 padding: 2,

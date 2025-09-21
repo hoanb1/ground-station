@@ -26,13 +26,13 @@ import {
     Polygon,
     useMapEvents,
 } from 'react-leaflet';
-import { Box, Fab, Slider } from "@mui/material";
-import { SatelliteAlt } from '@mui/icons-material';
+import {Box, Fab, Slider} from "@mui/material";
+import {SatelliteAlt} from '@mui/icons-material';
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import SettingsIcon from '@mui/icons-material/Settings';
-import { useDispatch, useSelector } from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {
     setOpenMapSettingsDialog,
     setSatGroupId,
@@ -54,7 +54,7 @@ import {
     setSatelliteId,
     setTargetMapSetting,
 } from './target-slice.jsx';
-import { getTileLayerById } from "../common/tile-layers.jsx";
+import {getTileLayerById} from "../common/tile-layers.jsx";
 import {homeIcon, sunIcon, moonIcon, satelliteIcon2} from '../common/icons.jsx';
 import {
     MapTitleBar,
@@ -86,7 +86,7 @@ const storageMapZoomValueKey = "target-map-zoom-level";
 // global leaflet map object
 let MapObject = null;
 
-const MapSlider = function ({ handleSliderChange }) {
+const MapSlider = function ({handleSliderChange}) {
     const marks = [
         {
             value: 0,
@@ -203,7 +203,7 @@ const TargetSatelliteMapContainer = ({}) => {
     }, [dispatch]);
 
     // Subscribe to map events
-    function MapEventComponent({ handleSetMapZoomLevel }) {
+    function MapEventComponent({handleSetMapZoomLevel}) {
         const mapEvents = useMapEvents({
             zoomend: () => {
                 const mapZoom = mapEvents.getZoom();
@@ -221,7 +221,7 @@ const TargetSatelliteMapContainer = ({}) => {
 
         return (
             <Fab size="small" color="primary" aria-label="Map settings" onClick={handleClick}>
-                <SettingsIcon />
+                <SettingsIcon/>
             </Fab>
         );
     }
@@ -234,7 +234,7 @@ const TargetSatelliteMapContainer = ({}) => {
 
         return (
             <Fab size="small" color="primary" aria-label="Go home" onClick={handleClick}>
-                <HomeIcon />
+                <HomeIcon/>
             </Fab>
         );
     }
@@ -247,7 +247,7 @@ const TargetSatelliteMapContainer = ({}) => {
 
         return (
             <Fab size="small" color="primary" aria-label="Go to center of map" onClick={handleClick}>
-                <FilterCenterFocusIcon />
+                <FilterCenterFocusIcon/>
             </Fab>
         );
     }
@@ -281,7 +281,7 @@ const TargetSatelliteMapContainer = ({}) => {
 
         return (
             <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={handleMapFullscreen}>
-                <FullscreenIcon />
+                <FullscreenIcon/>
             </Fab>
         );
     }
@@ -455,106 +455,107 @@ const TargetSatelliteMapContainer = ({}) => {
     }, [noradId]);
 
     return (
-        <MapContainer
-            center={[0, 0]}
-            zoom={mapZoomLevel}
-            style={{ width: '100%', height: '100%' }}
-            dragging={false}
-            scrollWheelZoom={false}
-            maxZoom={10}
-            minZoom={0}
-            whenReady={handleWhenReady}
-            zoomSnap={0.25}
-            zoomDelta={0.25}
-            keyboard={false}
-            bounceAtZoomLimits={false}
-            closePopupOnClick={false}
-        >
+        <>
             <MapTitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
             >
                 Target tracking
             </MapTitleBar>
+            <MapContainer
+                center={[0, 0]}
+                zoom={mapZoomLevel}
+                style={{width: '100%', height: 'calc(100% - 60px)'}}
+                dragging={false}
+                scrollWheelZoom={false}
+                maxZoom={10}
+                minZoom={0}
+                whenReady={handleWhenReady}
+                zoomSnap={0.25}
+                zoomDelta={0.25}
+                keyboard={false}
+                bounceAtZoomLimits={false}
+                closePopupOnClick={false}
+            >
+                <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
 
-            <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel} />
+                <TileLayer url={getTileLayerById(tileLayerID)['url']}/>
 
-            <TileLayer url={getTileLayerById(tileLayerID)['url']} />
+                <Box sx={{'& > :not(style)': {m: 1}}} style={{right: 5, top: 5, position: 'absolute'}}>
+                    <MapSettingsButton/>
+                    <CenterHomeButton/>
+                    <CenterMapButton/>
+                    <FullscreenMapButton/>
+                </Box>
 
-            <Box sx={{ '& > :not(style)': { m: 1 } }} style={{ right: 5, top: 30, position: 'absolute' }}>
-                <MapSettingsButton />
-                <CenterHomeButton />
-                <CenterMapButton />
-                <FullscreenMapButton />
-            </Box>
+                <MapSettingsIslandDialog updateBackend={() => {
+                    const key = 'target-map-settings';
+                    dispatch(setTargetMapSetting({socket, key: key}));
+                }}/>
 
-            <MapSettingsIslandDialog updateBackend={() => {
-                const key = 'target-map-settings';
-                dispatch(setTargetMapSetting({socket, key: key}));
-            }} />
+                {sunPos && showSunIcon ? (
+                    <Marker position={sunPos} icon={sunIcon} opacity={0.5}/>
+                ) : null}
 
-            {sunPos && showSunIcon ? (
-                <Marker position={sunPos} icon={sunIcon} opacity={0.5} />
-            ) : null}
+                {moonPos && showMoonIcon ? (
+                    <Marker position={moonPos} icon={moonIcon} opacity={0.5}/>
+                ) : null}
 
-            {moonPos && showMoonIcon ? (
-                <Marker position={moonPos} icon={moonIcon} opacity={0.5} />
-            ) : null}
+                {daySidePolygon.length > 1 && showTerminatorLine && (
+                    <Polygon
+                        positions={daySidePolygon}
+                        pathOptions={{
+                            fillColor: 'black',
+                            fillOpacity: 0.4,
+                            color: 'white',
+                            opacity: 0.5,
+                            weight: 0,
+                            smoothFactor: 1,
+                        }}
+                    />
+                )}
 
-            {daySidePolygon.length > 1 && showTerminatorLine && (
-                <Polygon
-                    positions={daySidePolygon}
-                    pathOptions={{
-                        fillColor: 'black',
-                        fillOpacity: 0.4,
-                        color: 'white',
-                        opacity: 0.5,
-                        weight: 0,
-                        smoothFactor: 1,
-                    }}
-                />
-            )}
+                {terminatorLine.length > 1 && showTerminatorLine && (
+                    <Polyline
+                        positions={terminatorLine}
+                        pathOptions={{
+                            color: 'white',
+                            weight: 1,
+                            opacity: 0.1,
+                        }}
+                    />
+                )}
 
-            {terminatorLine.length > 1 && showTerminatorLine && (
-                <Polyline
-                    positions={terminatorLine}
-                    pathOptions={{
-                        color: 'white',
-                        weight: 1,
-                        opacity: 0.1,
-                    }}
-                />
-            )}
+                {InternationalDateLinePolyline()}
 
-            {InternationalDateLinePolyline()}
+                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
 
-            <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8} />
+                {showPastOrbitPath ? currentPastSatellitesPaths : null}
+                {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
+                {currentSatellitesPosition}
+                {showSatelliteCoverage ? currentSatellitesCoverage : null}
 
-            {showPastOrbitPath ? currentPastSatellitesPaths : null}
-            {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
-            {currentSatellitesPosition}
-            {showSatelliteCoverage ? currentSatellitesCoverage : null}
 
+                <MapArrowControls mapObject={MapObject}/>
+
+                {showGrid && (
+                    <CoordinateGrid
+                        latInterval={15}
+                        lngInterval={15}
+                        latColor="#FFFFFF"
+                        lngColor="#FFFFFF"
+                        weight={1}
+                        opacity={0.5}
+                        showLabels={false}
+                    />
+                )}
+            </MapContainer>
             <MapStatusBar>
                 <SimpleTruncatedHtml
                     className={"attribution"}
                     htmlString={`<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank" rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}
                 />
             </MapStatusBar>
-
-            <MapArrowControls mapObject={MapObject} />
-
-            {showGrid && (
-                <CoordinateGrid
-                    latInterval={15}
-                    lngInterval={15}
-                    latColor="#FFFFFF"
-                    lngColor="#FFFFFF"
-                    weight={1}
-                    opacity={0.5}
-                    showLabels={false}
-                />
-            )}
-        </MapContainer>
+        </>
     );
 };
 

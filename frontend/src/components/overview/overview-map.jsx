@@ -28,18 +28,18 @@ import {
     useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
-import { Box, Fab } from "@mui/material";
+import {Box, Fab} from "@mui/material";
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import SettingsIcon from "@mui/icons-material/Settings";
-import { useDispatch, useSelector } from "react-redux";
+import {useDispatch, useSelector} from "react-redux";
 import {
     setOpenMapSettingsDialog,
     setMapZoomLevel,
     setSelectedSatelliteId
 } from './overview-slice.jsx';
-import { getTileLayerById } from "../common/tile-layers.jsx";
+import {getTileLayerById} from "../common/tile-layers.jsx";
 import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/icons.jsx';
 import {
     MapTitleBar,
@@ -129,7 +129,7 @@ const SatelliteMapContainer = ({
     const [daySidePolygon, setDaySidePolygon] = useState([]);
     const [sunPos, setSunPos] = useState(null);
     const [moonPos, setMoonPos] = useState(null);
-    const { location } = useSelector((state) => state.location);
+    const {location} = useSelector((state) => state.location);
     const updateTimeRef = useRef(null);
 
     const handleSetMapZoomLevel = useCallback((zoomLevel) => {
@@ -137,7 +137,7 @@ const SatelliteMapContainer = ({
     }, [dispatch]);
 
     // Subscribe to map events
-    function MapEventComponent({ handleSetMapZoomLevel }) {
+    function MapEventComponent({handleSetMapZoomLevel}) {
         const mapEvents = useMapEvents({
             zoomend: () => {
                 const mapZoom = mapEvents.getZoom();
@@ -155,7 +155,7 @@ const SatelliteMapContainer = ({
         };
         return (
             <Fab size="small" color="primary" aria-label="Go home" onClick={handleClick}>
-                <HomeIcon />
+                <HomeIcon/>
             </Fab>
         );
     }
@@ -167,7 +167,7 @@ const SatelliteMapContainer = ({
         };
         return (
             <Fab size="small" color="primary" aria-label="Go to center of map" onClick={handleClick}>
-                <FilterCenterFocusIcon />
+                <FilterCenterFocusIcon/>
             </Fab>
         );
     }
@@ -178,7 +178,7 @@ const SatelliteMapContainer = ({
         };
         return (
             <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={handleMapFullscreen}>
-                <FullscreenIcon />
+                <FullscreenIcon/>
             </Fab>
         );
     }
@@ -190,7 +190,7 @@ const SatelliteMapContainer = ({
 
         return (
             <Fab size="small" color="primary" aria-label="Map settings" onClick={handleClick}>
-                <SettingsIcon />
+                <SettingsIcon/>
             </Fab>
         );
     }
@@ -236,7 +236,8 @@ const SatelliteMapContainer = ({
                             vel: velocity,
                             az: az,
                             el: el,
-                        }}));
+                        }
+                    }));
                 }
 
                 if (selectedSatelliteId === noradId) {
@@ -404,7 +405,7 @@ const SatelliteMapContainer = ({
         };
     }, [tileLayerID]);
 
-    // On component mount, load the map zoom level from localStorage
+    // On the component mount, load the map zoom level from localStorage
     useEffect(() => {
         const savedZoomLevel = localStorage.getItem(storageMapZoomValueKey);
         const initialMapZoom = savedZoomLevel ? parseFloat(savedZoomLevel) : 1;
@@ -429,111 +430,114 @@ const SatelliteMapContainer = ({
     };
 
     return (
-        <MapContainer
-            fullscreenControl={true}
-            center={[0, 0]}
-            zoom={mapZoomLevel}
-            style={{ width: '100%', height: '100%' }}
-            dragging={false}
-            scrollWheelZoom={false}
-            maxZoom={10}
-            minZoom={0}
-            whenReady={handleWhenReady}
-            zoomSnap={0.25}
-            zoomDelta={0.25}
-            keyboard={false}
-            bounceAtZoomLimits={false}
-            closePopupOnClick={false}
-        >
+        <>
             <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
                 Birds eye view
             </MapTitleBar>
-            <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel} />
-            <TileLayer url={getTileLayerById(tileLayerID)['url']} />
+            <MapContainer
+                fullscreenControl={true}
+                center={[0, 0]}
+                zoom={mapZoomLevel}
+                style={{width: '100%', height: 'calc(100% - 60px)'}}
+                dragging={false}
+                scrollWheelZoom={false}
+                maxZoom={10}
+                minZoom={0}
+                whenReady={handleWhenReady}
+                zoomSnap={0.25}
+                zoomDelta={0.25}
+                keyboard={false}
+                bounceAtZoomLimits={false}
+                closePopupOnClick={false}
+            >
 
-            <Box sx={{ '& > :not(style)': { m: 1 } }} style={{ right: 5, top: 30, position: 'absolute' }}>
-                <MapSettingsButton />
-                <CenterHomeButton />
-                <CenterMapButton />
-                <FullscreenMapButton />
-            </Box>
+                <MapEventComponent handleSetMapZoomLevel={handleSetMapZoomLevel}/>
+                <TileLayer url={getTileLayerById(tileLayerID)['url']}/>
 
-            <MapSettingsIslandDialog updateBackend={() => {
-                const key = 'overview-map-settings';
-                // Note: This will need to be passed as a prop or handled differently
-                // dispatch(setOverviewMapSetting({socket, key: key}));
-            }} />
+                <Box sx={{'& > :not(style)': {m: 1}}} style={{right: 5, top: 5, position: 'absolute'}}>
+                    <MapSettingsButton/>
+                    <CenterHomeButton/>
+                    <CenterMapButton/>
+                    <FullscreenMapButton/>
+                </Box>
 
-            {sunPos && showSunIcon ? (
-                <Marker position={sunPos} icon={sunIcon} opacity={0.5} />
-            ) : null}
+                <MapSettingsIslandDialog updateBackend={() => {
+                    const key = 'overview-map-settings';
+                    // Note: This will need to be passed as a prop or handled differently
+                    // dispatch(setOverviewMapSetting({socket, key: key}));
+                }}/>
 
-            {moonPos && showMoonIcon ? (
-                <Marker position={moonPos} icon={moonIcon} opacity={0.5} />
-            ) : null}
+                {sunPos && showSunIcon ? (
+                    <Marker position={sunPos} icon={sunIcon} opacity={0.5}/>
+                ) : null}
 
-            {daySidePolygon.length > 1 && showTerminatorLine && (
-                <Polygon
-                    positions={daySidePolygon}
-                    pathOptions={{
-                        fillColor: 'black',
-                        fillOpacity: 0.4,
-                        color: 'white',
-                        opacity: 0.5,
-                        weight: 0,
-                        smoothFactor: 1,
-                    }}
+                {moonPos && showMoonIcon ? (
+                    <Marker position={moonPos} icon={moonIcon} opacity={0.5}/>
+                ) : null}
+
+                {daySidePolygon.length > 1 && showTerminatorLine && (
+                    <Polygon
+                        positions={daySidePolygon}
+                        pathOptions={{
+                            fillColor: 'black',
+                            fillOpacity: 0.4,
+                            color: 'white',
+                            opacity: 0.5,
+                            weight: 0,
+                            smoothFactor: 1,
+                        }}
+                    />
+                )}
+
+                {terminatorLine.length > 1 && showTerminatorLine && (
+                    <Polyline
+                        positions={terminatorLine}
+                        pathOptions={{
+                            color: 'white',
+                            weight: 1,
+                            opacity: 0.1,
+                        }}
+                    />
+                )}
+
+                {InternationalDateLinePolyline()}
+
+                <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8}/>
+
+                {showPastOrbitPath ? currentPastSatellitesPaths : null}
+                {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
+                {currentSatellitesPosition}
+                {showSatelliteCoverage ? currentSatellitesCoverage : null}
+
+                <MapArrowControls mapObject={MapObject}/>
+
+                {showGrid && (
+                    <CoordinateGrid
+                        latInterval={15}
+                        lngInterval={15}
+                        latColor="#FFFFFF"
+                        lngColor="#FFFFFF"
+                        weight={1}
+                        opacity={0.5}
+                        showLabels={false}
+                    />
+                )}
+
+                <SatelliteTrackSuggestion
+                    selectedSatelliteId={selectedSatelliteId}
+                    trackingSatelliteId={trackingSatelliteId}
+                    selectedSatellite={selectedSatellites.find(sat => sat.norad_id === selectedSatelliteId)}
+                    handleSetTrackingOnBackend={handleSetTrackingOnBackend}
                 />
-            )}
 
-            {terminatorLine.length > 1 && showTerminatorLine && (
-                <Polyline
-                    positions={terminatorLine}
-                    pathOptions={{
-                        color: 'white',
-                        weight: 1,
-                        opacity: 0.1,
-                    }}
-                />
-            )}
-
-            {InternationalDateLinePolyline()}
-
-            <Marker position={[location.lat, location.lon]} icon={homeIcon} opacity={0.8} />
-
-            {showPastOrbitPath ? currentPastSatellitesPaths : null}
-            {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
-            {currentSatellitesPosition}
-            {showSatelliteCoverage ? currentSatellitesCoverage : null}
-
+            </MapContainer>
             <MapStatusBar>
                 <SimpleTruncatedHtml
                     className={"attribution"}
                     htmlString={`<a href="https://leafletjs.com" title="A JavaScript library for interactive maps" target="_blank" rel="noopener noreferrer">Leaflet</a> | ${getTileLayerById(tileLayerID)['attribution']}`}
                 />
             </MapStatusBar>
-
-            <MapArrowControls mapObject={MapObject} />
-
-            {showGrid && (
-                <CoordinateGrid
-                    latInterval={15}
-                    lngInterval={15}
-                    latColor="#FFFFFF"
-                    lngColor="#FFFFFF"
-                    weight={1}
-                    opacity={0.5}
-                    showLabels={false}
-                />
-            )}
-
-            <SatelliteTrackSuggestion
-                selectedSatelliteId={selectedSatelliteId}
-                trackingSatelliteId={trackingSatelliteId}
-                selectedSatellite={selectedSatellites.find(sat => sat.norad_id === selectedSatelliteId)}
-                handleSetTrackingOnBackend={handleSetTrackingOnBackend}
-            />
-        </MapContainer>
+        </>
     );
 };
 
