@@ -67,10 +67,13 @@ const ElevationCell = React.memo(({ noradId }) => {
 
     return <span>{elevation.toFixed(1)}°</span>;
 });
-
-const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSatelliteId }) => {
-    const apiRef = useGridApiRef();
-
+ 
+const MemoizedStyledDataGrid = React.memo(({
+                                               apiRef,
+                                               satellites,
+                                               onRowClick,
+                                               selectedSatelliteId,
+                                            }) => {
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
         ...theme.applyStyles('light', {
@@ -203,11 +206,11 @@ const MemoizedStyledDataGrid = React.memo(({ satellites, onRowClick, selectedSat
             headerAlign: 'center',
             flex: 1,
             renderCell: (params) => {
-                if (!params?.row?.norad_id) return <span>-</span>;
-
-                return (
-                    <ElevationCell noradId={params.row.norad_id} />
-                );
+                const elevation = params.value;
+                if (elevation === null || elevation === undefined) {
+                    return <span>-</span>;
+                }
+                return <span>{elevation.toFixed(1)}°</span>;
             }
         },
         {
@@ -438,6 +441,7 @@ const SatelliteDetailsTable = React.memo(() => {
     const dispatch = useDispatch();
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
+    const apiRef = useGridApiRef();
 
     // Use memoized selectors to prevent unnecessary rerenders
     const selectedSatellites = useSelector(state => state.overviewSatTrack.selectedSatellites);
@@ -446,6 +450,25 @@ const SatelliteDetailsTable = React.memo(() => {
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
 
     const minHeight = 200;
+
+    const satelliteRows = React.useMemo(() => {
+        return (selectedSatellites || []).map(satellite => ({
+            ...satellite,
+            elevation: selectedSatellitePositions?.[satellite.norad_id]?.el ?? null,
+        }));
+    }, [selectedSatellites]);
+
+    useEffect(() => {
+        if (!apiRef.current?.updateRows || !satelliteRows.length) return;
+
+        (satelliteRows || []).forEach(row => {
+            const position = selectedSatellitePositions?.[row.norad_id];
+            if (position && position.el !== undefined) {
+                const newRow = { ...row, elevation: position.el };
+                apiRef.current.updateRows([newRow]);
+            }
+        });
+    }, [selectedSatellitePositions, apiRef, satelliteRows]);
 
     useEffect(() => {
         const target = containerRef.current;
@@ -478,7 +501,8 @@ const SatelliteDetailsTable = React.memo(() => {
                     minHeight,
                 }}>
                     <MemoizedStyledDataGrid
-                        satellites={selectedSatellites || []}
+                        apiRef={apiRef}
+                        satellites={satelliteRows}
                         onRowClick={handleOnRowClick}
                         selectedSatelliteId={selectedSatelliteId}
                     />
