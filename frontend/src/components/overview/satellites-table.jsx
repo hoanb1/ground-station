@@ -164,7 +164,7 @@ const MemoizedStyledDataGrid = React.memo(({
     const columns = [
         {
             field: 'name',
-            minWidth: 130,
+            minWidth: 100,
             headerName: 'Satellite Name',
             flex: 2,
             renderCell: (params) => {
@@ -178,7 +178,7 @@ const MemoizedStyledDataGrid = React.memo(({
         },
         {
             field: 'alternative_name',
-            minWidth: 130,
+            minWidth: 100,
             headerName: 'Alternative Name',
             flex: 2,
             renderCell: (params) => {
@@ -192,7 +192,7 @@ const MemoizedStyledDataGrid = React.memo(({
         },
         {
             field: 'norad_id',
-            minWidth: 80,
+            minWidth: 70,
             headerName: 'NORAD',
             align: 'center',
             headerAlign: 'center',
@@ -200,7 +200,7 @@ const MemoizedStyledDataGrid = React.memo(({
         },
         {
             field: 'elevation',
-            minWidth: 100,
+            minWidth: 50,
             headerName: 'Elevation',
             align: 'center',
             headerAlign: 'center',
@@ -210,7 +210,21 @@ const MemoizedStyledDataGrid = React.memo(({
                 if (elevation === null || elevation === undefined) {
                     return <span>-</span>;
                 }
-                return <span>{elevation.toFixed(1)}°</span>;
+
+                let color;
+                if (elevation < 0) {
+                    color = '#f44336';
+                } else if (elevation <= 10) {
+                    color = '#ff9800';
+                } else {
+                    color = '#4caf50';
+                }
+
+                return (
+                    <Box component="span" sx={{ color, fontWeight: 'bold' }}>
+                        {elevation.toFixed(1)}°
+                    </Box>
+                );
             }
         },
         {
@@ -418,7 +432,7 @@ const MemoizedStyledDataGrid = React.memo(({
             initialState={{
                 pagination: { paginationModel: { pageSize: 50 } },
                 sorting: {
-                    sortModel: [{ field: 'launched', sort: 'desc' }],
+                    sortModel: [{ field: 'elevation', sort: 'desc' }],
                 },
                 columns: {
                     columnVisibilityModel: {
