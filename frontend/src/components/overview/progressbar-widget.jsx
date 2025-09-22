@@ -86,7 +86,7 @@ const ProgressFormatter = React.memo(({params}) => {
                     right: '2px',
                     bottom: '0px',
                     fontSize: '9px',
-                    color: 'rgba(0, 0, 0, 0.6)',
+                    color: 'rgba(0, 0, 0, 1)',
                     fontWeight: 'bold',
                     zIndex: 5
                 }}>
