@@ -37,7 +37,7 @@ sync_state = {
     "last_update": datetime.now(timezone.utc).isoformat(),
     "active_sources": [],
     "completed_sources": [],
-    "error": None,
+    "errors": [],
     "stats": {
         "satellites_processed": 0,
         "transmitters_processed": 0,
@@ -76,7 +76,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         "last_update": datetime.now(timezone.utc).isoformat(),
         "active_sources": [],
         "completed_sources": [],
-        "error": None,
+        "errors": [],
         "stats": {
             "satellites_processed": 0,
             "transmitters_processed": 0,
@@ -196,7 +196,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 response = await async_fetch(tle_source_url, pool)
                 if response.status_code != 200:
                     logger.error(f"HTTP Error: Received status code {response.status_code} from {tle_source_url}")
-                    raise Exception(f"Unable to fetch data from {tle_source_url}, error code was {response.status_code}")
+                    raise requests.exceptions.RequestException(f"Unable to fetch data from {tle_source_url}, error code was {response.status_code}")
                 else:
                     satellite_data = simple_parse_3le(response.text)
                     group_assignments[tle_source_identifier] = get_norad_ids(satellite_data)
@@ -209,26 +209,28 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                 logger.error(error_msg)
 
                 # Update error in state
-                sync_state["error"] = error_msg
+                sync_state["errors"].append(error_msg)
                 sync_state["success"] = False
                 sync_state["message"] = e.message
                 sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
                 sync_state_manager.set_state(sync_state)
 
                 await sio.emit('sat-sync-events', sync_state)
+                continue
 
             except requests.exceptions.RequestException as e:
                 error_msg = f'Failed to fetch data from {tle_source["url"]}: {e}'
                 logger.error(error_msg)
 
                 # Update error in state
-                sync_state["error"] = error_msg
+                sync_state["errors"].append(error_msg)
                 sync_state["success"] = False
                 sync_state["message"] = str(e)
                 sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
                 sync_state_manager.set_state(sync_state)
 
                 await sio.emit('sat-sync-events', sync_state)
+                continue
 
             # Update progress, completed sources, and emit event
             progress_state = update_progress(
@@ -294,7 +296,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             sync_state["progress"] = 100
             sync_state["success"] = False
             sync_state["message"] = 'No TLEs were fetched from any TLE source'
-            sync_state["error"] = 'No TLEs were fetched from any TLE source'
+            sync_state["errors"].append('No TLEs were fetched from any TLE source')
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
@@ -340,7 +342,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             logger.error(error_msg)
 
             # Update error in state
-            sync_state["error"] = error_msg
+            sync_state["errors"].append(error_msg)
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
@@ -383,7 +385,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             logger.error(error_msg)
 
             # Update error in state
-            sync_state["error"] = error_msg
+            sync_state["errors"].append(error_msg)
             sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
             sync_state_manager.set_state(sync_state)
 
@@ -741,7 +743,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
         sync_state["progress"] = 100
         sync_state["success"] = False
         sync_state["message"] = f"Error: {str(e)}"
-        sync_state["error"] = str(e)
+        sync_state["errors"].append(str(e))
         sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
         sync_state_manager.set_state(sync_state)
 

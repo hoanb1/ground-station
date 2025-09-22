@@ -21,6 +21,7 @@ import FiberNewIcon from '@mui/icons-material/FiberNew';
 import RadioIcon from '@mui/icons-material/Radio';
 import DeleteIcon from '@mui/icons-material/Delete';
 import UpdateIcon from '@mui/icons-material/Update'; // Add this import for modified items
+import ErrorIcon from '@mui/icons-material/Error';
 
 
 const SynchronizeTLEsCard = function () {
@@ -33,6 +34,7 @@ const SynchronizeTLEsCard = function () {
     const [showNewItems, setShowNewItems] = useState(false);
     const [showRemovedItems, setShowRemovedItems] = useState(false);
     const [showModifiedItems, setShowModifiedItems] = useState(false); // Add this state
+    const [showErrors, setShowErrors] = useState(false);
 
     const handleSynchronizeSatellites = async () => {
         dispatch(startSatelliteSync({ socket }));
@@ -62,6 +64,9 @@ const SynchronizeTLEsCard = function () {
 
     const modifiedSatellitesCount = syncState?.modified?.satellites?.length || 0;
     const modifiedTransmittersCount = syncState?.modified?.transmitters?.length || 0;
+
+    const hasErrors = syncState?.errors && syncState.errors.length > 0;
+    const errorsCount = syncState?.errors?.length || 0;
 
     return (
         <Card sx={{
@@ -345,6 +350,82 @@ const SynchronizeTLEsCard = function () {
 
                     </Typography>
                 </Box>
+
+                {/* Errors Notification */}
+                {hasErrors && (
+                    <Box sx={{
+                        backgroundColor: 'rgba(244, 67, 54, 0.1)',
+                        border: '1px solid rgba(244, 67, 54, 0.3)',
+                        borderRadius: 1,
+                        p: 1,
+                        mb: 1,
+                    }}>
+                        <Box sx={{
+                            display: 'flex',
+                            alignItems: 'center',
+                            justifyContent: 'space-between',
+                            cursor: 'pointer',
+                        }}
+                             onClick={() => setShowErrors(!showErrors)}
+                        >
+                            <Box sx={{ display: 'flex', alignItems: 'center' }}>
+                                <ErrorIcon
+                                    sx={{
+                                        color: '#f44336',
+                                        mr: 1,
+                                        fontSize: '1.2rem',
+                                        animation: 'pulseError 2s infinite ease-in-out',
+                                        '@keyframes pulseError': {
+                                            '0%': { filter: 'drop-shadow(0 0 3px rgba(244,67,54,0.6))' },
+                                            '50%': { filter: 'drop-shadow(0 0 8px rgba(244,67,54,0.9))' },
+                                            '100%': { filter: 'drop-shadow(0 0 3px rgba(244,67,54,0.6))' }
+                                        }
+                                    }}
+                                />
+                                <Typography
+                                    variant="caption"
+                                    sx={{
+                                        color: '#f44336',
+                                        fontWeight: 600,
+                                        textTransform: 'uppercase',
+                                        letterSpacing: '0.5px',
+                                        fontSize: '0.75rem',
+                                    }}
+                                >
+                                    {errorsCount} {errorsCount > 1 ? 'Errors' : 'Error'} Occurred
+                                </Typography>
+                            </Box>
+                            <IconButton
+                                size="small"
+                                sx={{ color: '#f44336', p: 0.5 }}
+                            >
+                                {showErrors ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+                            </IconButton>
+                        </Box>
+
+                        <Collapse in={showErrors}>
+                            <Box sx={{ mt: 1, maxHeight: '200px', overflowY: 'auto', p: 1, backgroundColor: 'rgba(0,0,0,0.2)', borderRadius: 1 }}>
+                                {syncState.errors.map((error, index) => (
+                                    <Typography
+                                        key={index}
+                                        variant="caption"
+                                        component="div"
+                                        sx={{
+                                            fontFamily: 'monospace',
+                                            color: '#ffcdd2',
+                                            fontSize: '0.75rem',
+                                            mb: 1,
+                                            whiteSpace: 'pre-wrap',
+                                            wordBreak: 'break-word',
+                                        }}
+                                    >
+                                        - {error}
+                                    </Typography>
+                                ))}
+                            </Box>
+                        </Collapse>
+                    </Box>
+                )}
 
                 {/* Modified items notification - Add this section */}
                 {hasModifiedItems && (

@@ -35,7 +35,7 @@ class SatelliteSyncState:
             "last_update": None, # Timestamp of last update
             "active_sources": [], # Currently processing sources
             "completed_sources": [], # Successfully processed sources
-            "error": None,      # Last error message if any
+            "errors": [],      # A list of all error messages if any
             "stats": {          # Statistics about the sync
                 "satellites_processed": 0,
                 "transmitters_processed": 0,
