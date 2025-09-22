@@ -31,7 +31,6 @@ import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {fetchNextPasses, setSatellitePasses} from './target-slice.jsx';
 import {darken, lighten, styled} from "@mui/material/styles";
-import SkyPositionFormatter from '../overview/skyposition-widget.jsx';
 import ProgressFormatter from "../overview/progressbar-widget.jsx";
 
 

@@ -45,7 +45,6 @@ import {useGridApiRef} from '@mui/x-data-grid';
 import {darken, lighten, styled} from '@mui/material/styles';
 import {Chip} from "@mui/material";
 import {useStore} from 'react-redux';
-import SkyPositionFormatter from './skyposition-widget.jsx';
 import ProgressFormatter from "./progressbar-widget.jsx";
 
 

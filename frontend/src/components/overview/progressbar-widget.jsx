@@ -3,7 +3,7 @@ import React, {useEffect, useRef, useState} from "react";
 
 const ProgressFormatter = React.memo(({params}) => {
     const [, setForceUpdate] = useState(0);
-    const [progressBarHeight, setProgressBarHeight] = useState(10);
+    const [progressBarHeight, setProgressBarHeight] = useState(12);
 
     // Force component to update regularly
     useEffect(() => {
@@ -30,6 +30,7 @@ const ProgressFormatter = React.memo(({params}) => {
     // Calculate positions as percentages of the total timeline
     const totalDuration = endDate - startDate;
     const peakPosition = ((peakTime - startDate) / totalDuration) * 100;
+    const passGradient = `linear-gradient(to right, #ffa726, #43a047 ${peakPosition}%, #ffa726)`;
 
     // If the pass hasn't started yet
     if (startDate > now) {
@@ -38,38 +39,14 @@ const ProgressFormatter = React.memo(({params}) => {
                 {/* Timeline bar */}
                 <div style={{
                     height: `${progressBarHeight}px`,
-                    backgroundColor: '#e0e0e0',
+                    backgroundColor: 'white',
                     width: '100%',
                     borderRadius: '4px',
                     position: 'absolute',
                     top: '50%',
-                    transform: 'translateY(-50%)'
-                }}/>
-
-                {/* Peak marker */}
-                <div style={{
-                    height: `${progressBarHeight * 2}px`,
-                    width: '2px',
-                    backgroundColor: '#ff9800',
-                    position: 'absolute',
-                    left: `${peakPosition}%`,
-                    top: '50%',
                     transform: 'translateY(-50%)',
-                    zIndex: 2
+                    border: '1px solid white'
                 }}/>
-
-                {/* Peak indicator dot */}
-                <div style={{
-                    height: `${progressBarHeight}px`,
-                    width: `${progressBarHeight}px`,
-                    backgroundColor: '#ff9800',
-                    borderRadius: '50%',
-                    position: 'absolute',
-                    left: `calc(${peakPosition}% - ${progressBarHeight / 2}px)`,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 3
-                }} title={`Peak elevation: ${params.row.peak_altitude.toFixed(2)}°`}/>
 
                 {/* Progress percentage (0% for not started) */}
                 <div style={{
@@ -94,38 +71,14 @@ const ProgressFormatter = React.memo(({params}) => {
                 {/* Timeline bar - completed */}
                 <div style={{
                     height: `${progressBarHeight}px`,
-                    backgroundColor: '#4caf50',
+                    background: passGradient,
                     width: '100%',
                     borderRadius: '4px',
                     position: 'absolute',
                     top: '50%',
-                    transform: 'translateY(-50%)'
-                }}/>
-
-                {/* Peak marker */}
-                <div style={{
-                    height: `${progressBarHeight * 2}px`,
-                    width: '2px',
-                    backgroundColor: '#ff9800',
-                    position: 'absolute',
-                    left: `${peakPosition}%`,
-                    top: '50%',
                     transform: 'translateY(-50%)',
-                    zIndex: 2
+                    border: '1px solid white'
                 }}/>
-
-                {/* Peak indicator dot */}
-                <div style={{
-                    height: `${progressBarHeight}px`,
-                    width: `${progressBarHeight}px`,
-                    backgroundColor: '#ff9800',
-                    borderRadius: '50%',
-                    position: 'absolute',
-                    left: `calc(${peakPosition}% - ${progressBarHeight / 2}px)`,
-                    top: '50%',
-                    transform: 'translateY(-50%)',
-                    zIndex: 3,
-                }} title={`Peak elevation: ${params.row.peak_altitude.toFixed(2)}°`}/>
 
                 {/* Progress percentage (100% for completed) */}
                 <div style={{
@@ -152,24 +105,27 @@ const ProgressFormatter = React.memo(({params}) => {
             {/* Timeline background */}
             <div style={{
                 height: `${progressBarHeight}px`,
-                backgroundColor: '#e0e0e0',
+                backgroundColor: 'white',
                 width: '100%',
                 borderRadius: '4px',
                 position: 'absolute',
                 top: '50%',
-                transform: 'translateY(-50%)'
+                transform: 'translateY(-50%)',
+                border: '1px solid white'
             }}/>
 
             {/* Progress filled part */}
             <div style={{
                 height: `${progressBarHeight}px`,
-                backgroundColor: '#4caf50',
-                width: `${progressPercentage}%`,
+                background: passGradient,
+                width: '100%',
                 borderRadius: '4px',
                 position: 'absolute',
                 top: '50%',
                 transform: 'translateY(-50%)',
-                zIndex: 1
+                zIndex: 1,
+                clipPath: `polygon(0 0, ${progressPercentage}% 0, ${progressPercentage}% 100%, 0 100%)`,
+                border: '1px solid white'
             }}/>
 
             {/* Current position indicator */}
@@ -186,31 +142,6 @@ const ProgressFormatter = React.memo(({params}) => {
                 border: '2px solid white',
                 display: 'none',
             }} title={`Current progress: ${progressPercentage}%`}/>
-
-            {/* Peak marker */}
-            <div style={{
-                height: `${progressBarHeight * 2}px`,
-                width: '2px',
-                backgroundColor: '#ff9800',
-                position: 'absolute',
-                left: `${peakPosition}%`,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 2
-            }}/>
-
-            {/* Peak indicator dot */}
-            <div style={{
-                height: `${progressBarHeight}px`,
-                width: `${progressBarHeight}px`,
-                backgroundColor: '#ff9800',
-                borderRadius: '50%',
-                position: 'absolute',
-                left: `calc(${peakPosition}% - ${progressBarHeight / 2}px)`,
-                top: '50%',
-                transform: 'translateY(-50%)',
-                zIndex: 3
-            }} title={`Peak elevation: ${params.row.peak_altitude.toFixed(2)}°`}/>
 
             {/* Progress percentage (current %) */}
             <div style={{
