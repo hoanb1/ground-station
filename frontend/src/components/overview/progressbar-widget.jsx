@@ -30,7 +30,7 @@ const ProgressFormatter = React.memo(({params}) => {
     // Calculate positions as percentages of the total timeline
     const totalDuration = endDate - startDate;
     const peakPosition = ((peakTime - startDate) / totalDuration) * 100;
-    const passGradient = `linear-gradient(to right, #ffa726, #43a047 ${peakPosition}%, #ffa726)`;
+    const passGradient = `linear-gradient(to right, #ef5350, #ffa726, #66bb6a ${peakPosition}%, #ffa726, #ef5350)`;
 
     // If the pass hasn't started yet
     if (startDate > now) {
@@ -86,9 +86,10 @@ const ProgressFormatter = React.memo(({params}) => {
                     right: '2px',
                     bottom: '0px',
                     fontSize: '9px',
-                    color: 'rgba(0, 0, 0, 1)',
+                    color: 'white',
                     fontWeight: 'bold',
-                    zIndex: 5
+                    zIndex: 5,
+                    textShadow: '0 0 2px black'
                 }}>
                     100%
                 </div>
@@ -154,6 +155,29 @@ const ProgressFormatter = React.memo(({params}) => {
                 zIndex: 5
             }}>
                 {progressPercentage}%
+            </div>
+
+            {/* Clipped container for foreground text */}
+            <div style={{
+                position: 'absolute',
+                top: 0,
+                left: 0,
+                width: '100%',
+                height: '100%',
+                clipPath: `polygon(0 0, ${progressPercentage}% 0, ${progressPercentage}% 100%, 0 100%)`,
+            }}>
+                <div style={{
+                    position: 'absolute',
+                    right: '2px',
+                    bottom: '0px',
+                    fontSize: '9px',
+                    color: 'white',
+                    fontWeight: 'bold',
+                    zIndex: 6,
+                    textShadow: '0 0 2px black'
+                }}>
+                    {progressPercentage}%
+                </div>
             </div>
         </div>
     );
