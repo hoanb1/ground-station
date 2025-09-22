@@ -268,13 +268,13 @@ export default function App(props) {
             socket.on("sat-sync-events", (data) => {
                 store.dispatch(setSyncState(data));
 
-                if (data.success === false) {
-                    enqueueSnackbar("Satellite data synchronization failed", {
-                        variant: 'error',
-                        autoHideDuration: 4000,
-                    });
-                    dispatch(setSynchronizing(false));
-                }
+                // if (data.success === false) {
+                //     enqueueSnackbar("Satellite data synchronization failed", {
+                //         variant: 'error',
+                //         autoHideDuration: 4000,
+                //     });
+                //     dispatch(setSynchronizing(false));
+                // }
 
                 if (data.status === 'complete') {
                     enqueueSnackbar("Satellite data synchronization completed successfully", {

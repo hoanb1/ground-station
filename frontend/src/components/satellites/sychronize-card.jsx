@@ -1,7 +1,6 @@
 import React, { useEffect, useState } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Card, Box, CardContent, Typography, Button, Collapse, Chip, IconButton } from '@mui/material';
-import { enqueueSnackbar } from 'notistack';
 import { useSocket } from '../common/socket.jsx';
 import {
     startSatelliteSync,
