@@ -304,7 +304,7 @@ const SatelliteMapContainer = ({
                             fill: true,
                             opacity: 0.8,
                             fillOpacity: selectedSatelliteId === noradId ? 0.5 : 0.1,
-                            dashArray: "3 4",
+                            dashArray: "1 2",
                         }}
                         positions={coverage}
                     />);

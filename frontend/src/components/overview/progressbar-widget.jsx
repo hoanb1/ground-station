@@ -30,7 +30,12 @@ const ProgressFormatter = React.memo(({params}) => {
     // Calculate positions as percentages of the total timeline
     const totalDuration = endDate - startDate;
     const peakPosition = ((peakTime - startDate) / totalDuration) * 100;
-    const passGradient = `linear-gradient(to right, #ef5350, #ffa726, #66bb6a ${peakPosition}%, #ffa726, #ef5350)`;
+    const color1 = '#ef5350';
+    const color2 = '#ffa726';
+    const color3 = '#66bb6a';
+    const color4 = '#ffa726';
+    const color5 = '#ef5350';
+    const passGradient = `linear-gradient(to right, ${color1}, ${color2}, ${color3} ${peakPosition}%, ${color4}, ${color5})`;
 
     // If the pass hasn't started yet
     if (startDate > now) {
@@ -140,7 +145,7 @@ const ProgressFormatter = React.memo(({params}) => {
                 top: '50%',
                 transform: 'translateY(-50%)',
                 zIndex: 4,
-                border: '2px solid white',
+                border: '1px solid white',
                 display: 'none',
             }} title={`Current progress: ${progressPercentage}%`}/>
 
