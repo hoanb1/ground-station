@@ -57,7 +57,8 @@ const ProgressFormatter = React.memo(({params}) => {
                 <div style={{
                     position: 'absolute',
                     right: '2px',
-                    bottom: '0px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     fontSize: '12px',
                     color: 'rgba(0, 0, 0, 1)',
                     fontWeight: 'bold',
@@ -89,7 +90,8 @@ const ProgressFormatter = React.memo(({params}) => {
                 <div style={{
                     position: 'absolute',
                     right: '2px',
-                    bottom: '0px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     fontSize: '12px',
                     color: 'white',
                     fontWeight: 'bold',
@@ -153,7 +155,8 @@ const ProgressFormatter = React.memo(({params}) => {
             <div style={{
                 position: 'absolute',
                 right: '2px',
-                bottom: '0px',
+                top: '50%',
+                transform: 'translateY(-50%)',
                 fontSize: '12px',
                 color: 'rgba(0, 0, 0, 1)',
                 fontWeight: 'bold',
@@ -174,7 +177,8 @@ const ProgressFormatter = React.memo(({params}) => {
                 <div style={{
                     position: 'absolute',
                     right: '2px',
-                    bottom: '0px',
+                    top: '50%',
+                    transform: 'translateY(-50%)',
                     fontSize: '12px',
                     color: 'white',
                     fontWeight: 'bold',
