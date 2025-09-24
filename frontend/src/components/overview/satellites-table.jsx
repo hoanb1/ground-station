@@ -73,6 +73,7 @@ const MemoizedStyledDataGrid = React.memo(({
                                                satellites,
                                                onRowClick,
                                                selectedSatelliteId,
+                                               loadingSatellites,
                                             }) => {
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
@@ -411,6 +412,7 @@ const MemoizedStyledDataGrid = React.memo(({
 
     return (
         <StyledDataGrid
+            loading={loadingSatellites}
             apiRef={apiRef}
             pageSizeOptions={[5, 10, 15, 20, 50]}
             fullWidth={true}
@@ -461,6 +463,7 @@ const SatelliteDetailsTable = React.memo(() => {
     const selectedSatellites = useSelector(state => state.overviewSatTrack.selectedSatellites);
     const selectedSatellitePositions = useSelector(state => state.overviewSatTrack.selectedSatellitePositions);
     const gridEditable = useSelector(state => state.overviewSatTrack.gridEditable);
+    const loadingSatellites = useSelector(state => state.overviewSatTrack.loadingSatellites);
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
 
     const minHeight = 200;
@@ -519,6 +522,7 @@ const SatelliteDetailsTable = React.memo(() => {
                         satellites={satelliteRows}
                         onRowClick={handleOnRowClick}
                         selectedSatelliteId={selectedSatelliteId}
+                        loadingSatellite={loadingSatellites}
                     />
                 </div>
             </div>

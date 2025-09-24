@@ -179,6 +179,7 @@ const overviewSlice = createSlice({
         showTooltip: true,
         showGrid: true,
         gridEditable: false,
+        loadingSatellites: true,
         selectedSatellites: [],
         selectedSatellitePositions: {},
         currentPastSatellitesPaths: [],
@@ -290,6 +291,9 @@ const overviewSlice = createSlice({
         },
         setSelectedSatellitePositions(state, action) {
             state.selectedSatellitePositions = action.payload;
+        },
+        setLoadingSatellites(state, action) {
+            state.loadingSatellites = action.payload;
         }
     },
     extraReducers: (builder) => {
@@ -305,12 +309,15 @@ const overviewSlice = createSlice({
             })
             .addCase(fetchSatellitesByGroupId.pending, (state) => {
                 state.formGroupSelectError = false;
+                state.loadingSatellites = true;
             })
             .addCase(fetchSatellitesByGroupId.fulfilled, (state, action) => {
                 state.selectedSatellites = action.payload;
+                state.loadingSatellites = false;
             })
             .addCase(fetchSatellitesByGroupId.rejected, (state, action) => {
                 state.formGroupSelectError = true;
+                state.loadingSatellites = false;
             })
             .addCase(fetchNextPassesForGroup.pending, (state) => {
                 state.passesLoading = true;
@@ -404,6 +411,7 @@ export const {
     setSelectedSatelliteId,
     setSatelliteData,
     setSelectedSatellitePositions,
+    setLoadingSatellites,
 } = overviewSlice.actions;
 
 export default overviewSlice.reducer;
