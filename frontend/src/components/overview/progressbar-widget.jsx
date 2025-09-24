@@ -3,7 +3,7 @@ import React, {useEffect, useRef, useState} from "react";
 
 const ProgressFormatter = React.memo(({params}) => {
     const [, setForceUpdate] = useState(0);
-    const [progressBarHeight, setProgressBarHeight] = useState(12);
+    const [progressBarHeight, setProgressBarHeight] = useState(14);
 
     // Force component to update regularly
     useEffect(() => {
@@ -58,7 +58,7 @@ const ProgressFormatter = React.memo(({params}) => {
                     position: 'absolute',
                     right: '2px',
                     bottom: '0px',
-                    fontSize: '9px',
+                    fontSize: '12px',
                     color: 'rgba(0, 0, 0, 1)',
                     fontWeight: 'bold',
                     zIndex: 5
@@ -90,7 +90,7 @@ const ProgressFormatter = React.memo(({params}) => {
                     position: 'absolute',
                     right: '2px',
                     bottom: '0px',
-                    fontSize: '9px',
+                    fontSize: '12px',
                     color: 'white',
                     fontWeight: 'bold',
                     zIndex: 5,
@@ -154,7 +154,7 @@ const ProgressFormatter = React.memo(({params}) => {
                 position: 'absolute',
                 right: '2px',
                 bottom: '0px',
-                fontSize: '9px',
+                fontSize: '12px',
                 color: 'rgba(0, 0, 0, 1)',
                 fontWeight: 'bold',
                 zIndex: 5
@@ -175,7 +175,7 @@ const ProgressFormatter = React.memo(({params}) => {
                     position: 'absolute',
                     right: '2px',
                     bottom: '0px',
-                    fontSize: '9px',
+                    fontSize: '12px',
                     color: 'white',
                     fontWeight: 'bold',
                     zIndex: 6,
