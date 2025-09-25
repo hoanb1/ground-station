@@ -37,7 +37,7 @@ import {useDispatch, useSelector} from "react-redux";
 import {
     setOpenMapSettingsDialog,
     setMapZoomLevel,
-    setSelectedSatelliteId, setSelectedSatellitePositions
+    setSelectedSatelliteId, setSelectedSatellitePositions, setOverviewMapSetting
 } from './overview-slice.jsx';
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/icons.jsx';
@@ -475,8 +475,7 @@ const SatelliteMapContainer = ({
 
                 <MapSettingsIslandDialog updateBackend={() => {
                     const key = 'overview-map-settings';
-                    // Note: This will need to be passed as a prop or handled differently
-                    // dispatch(setOverviewMapSetting({socket, key: key}));
+                    dispatch(setOverviewMapSetting({socket, key: key}));
                 }}/>
 
                 {sunPos && showSunIcon ? (
