@@ -51,7 +51,7 @@ import {
 } from "../common/common.jsx";
 import MapSettingsIslandDialog from './map-settings-dialog.jsx';
 import CoordinateGrid from "../common/mercator-grid.jsx";
-import SatelliteTrackSuggestion from "./map-targetbutton.jsx";
+import SatelliteTrackSuggestion from "./map-target-button.jsx";
 import {
     calculateSatelliteAzEl,
     getSatelliteCoverageCircle,
