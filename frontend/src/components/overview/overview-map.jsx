@@ -292,7 +292,8 @@ const SatelliteMapContainer = ({
 
                 const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);
 
-                if (isVisible) {
+                // If the satellite is visible, draw the coverage circle
+                if (isVisible && showSatelliteCoverage) {
                     let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
                     currentCoverage.push(<Polyline
                         noClip={true}
@@ -308,22 +309,25 @@ const SatelliteMapContainer = ({
                         }}
                         positions={coverage}
                     />);
-                } else if (selectedSatelliteId === noradId) {
-                    let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
-                    currentCoverage.push(<Polyline
-                        noClip={true}
-                        key={"coverage-" + satellite['name']}
-                        pathOptions={{
-                            color: "#ffffff",
-                            fillColor: satelliteCoverageColor,
-                            weight: 2,
-                            fill: true,
-                            opacity: 0.9,
-                            fillOpacity: 0.5,
-                            dashArray: "",
-                        }}
-                        positions={coverage}
-                    />);
+                } else {
+                    // If the satellite is selected, draw the coverage circle
+                    if (selectedSatelliteId === noradId) {
+                        let coverage = getSatelliteCoverageCircle(lat, lon, altitude, 360);
+                        currentCoverage.push(<Polyline
+                            noClip={true}
+                            key={"coverage-" + satellite['name']}
+                            pathOptions={{
+                                color: "#ffffff",
+                                fillColor: satelliteCoverageColor,
+                                weight: 2,
+                                fill: true,
+                                opacity: 0.9,
+                                fillOpacity: 0.5,
+                                dashArray: "",
+                            }}
+                            positions={coverage}
+                        />);
+                    }
                 }
 
                 if (showTooltip || selectedSatelliteId === noradId) {
@@ -515,7 +519,7 @@ const SatelliteMapContainer = ({
                 {showPastOrbitPath ? currentPastSatellitesPaths : null}
                 {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
                 {currentSatellitesPosition}
-                {showSatelliteCoverage ? currentSatellitesCoverage : null}
+                {currentSatellitesCoverage}
 
                 <MapArrowControls mapObject={MapObject}/>
 
