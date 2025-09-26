@@ -310,9 +310,6 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
                                        event_end={params.row.event_end}/>
                 </div>
             )
-            // valueFormatter: (value) => {
-            //     return value.split('.')[0];
-            // }
         },
         {
             field: 'transmitters',
@@ -368,9 +365,6 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
             headerName: 'Start',
             flex: 2,
             renderCell: (params) => <TimeFormatter params={params} value={params.value}/>
-            // valueFormatter: (value) => {
-            //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-            // }
         },
         {
             field: 'event_end',
@@ -378,9 +372,6 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
             headerName: 'End',
             flex: 2,
             renderCell: (params) => <TimeFormatter params={params} value={params.value}/>
-            // valueFormatter: (value) => {
-            //     return `${getTimeFromISO(value)} (${humanizeFutureDateInMinutes(value)})`;
-            // }
         },
         {
             field: 'distance_at_start',
@@ -600,8 +591,11 @@ const NextPassesGroupIsland = React.memo(() => {
                     height: containerHeight - 25,
                     minHeight,
                 }}>
-                    <MemoizedStyledDataGrid passes={passes} passesLoading={passesLoading}
-                                            onRowClick={handleOnRowClick}/>
+                    <MemoizedStyledDataGrid
+                        passes={passes}
+                        passesLoading={passesLoading}
+                        onRowClick={handleOnRowClick}
+                    />
                 </div>
             </div>
         </>
