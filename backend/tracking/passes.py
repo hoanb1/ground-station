@@ -26,15 +26,16 @@ from typing import Union
 logger = logging.getLogger('passes-worker')
 
 
-def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, float], hours: float = 6.0,
+def calculate_next_events(satellite_data: Union[dict, list], home_location: dict[str, float], hours: float = 6.0,
                           above_el=0, step_minutes=1) -> dict:
     """
-    This function calculates upcoming satellite observation events based on TLE lines, observation location,
+    This function calculates upcoming satellite observation events based on satellite data, observation location,
     duration, and elevation threshold. It primarily uses Skyfield's efficient find_events method.
     If find_events yields no results for a satellite, it falls back to a more exhaustive time-step
     approach to ensure all passes are detected.
 
-    :param tle_groups: List of lists containing three strings each: [norad_id, TLE line 1, TLE line 2]
+    :param satellite_data: Either a single satellite dictionary or list of satellite dictionaries,
+        each containing 'norad_id', 'tle1', 'tle2', and other satellite information
     :param home_location: Dictionary containing 'lat' and 'lon' keys with float values for observer location
     :param hours: Observation duration in hours.
     :param above_el: Minimum elevation angle (in degrees) above the horizon for
@@ -49,7 +50,39 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
     reply: dict[str, Union[bool, None, list, None, dict, str]] = {'success': None, 'data': None, 'parameters': None, 'error': None}
     events = []
 
-    logger.info(f"Calculating passes for {len(tle_groups)} satellites for the next {hours} hours.")
+    # Convert satellite_data to tle_groups format for processing
+    tle_groups = []
+    
+    if isinstance(satellite_data, dict):
+        # Single satellite case
+        tle_groups = [[
+            satellite_data['norad_id'],
+            satellite_data['tle1'],
+            satellite_data['tle2']
+        ]]
+        satellites_count = 1
+    elif isinstance(satellite_data, list) and len(satellite_data) > 0:
+        # Multiple satellites case
+        if isinstance(satellite_data[0], dict):
+            # List of satellite dictionaries
+            for sat in satellite_data:
+                tle_groups.append([
+                    sat['norad_id'],
+                    sat['tle1'],
+                    sat['tle2']
+                ])
+            satellites_count = len(satellite_data)
+        else:
+            # Fallback for old format (list of tle_groups directly)
+            tle_groups = satellite_data
+            satellites_count = len(satellite_data)
+    else:
+        # Invalid input
+        reply['success'] = False
+        reply['error'] = "Invalid satellite_data format. Expected dict or list of dicts."
+        return reply
+
+    logger.info(f"Calculating passes for {satellites_count} satellites for the next {hours} hours.")
 
     try:
         assert isinstance(tle_groups, list), "tle_groups must be a list of lists"
@@ -361,7 +394,7 @@ def calculate_next_events(tle_groups: list[list[str]], home_location: dict[str, 
 
         reply['data'] = events
         reply['parameters'] = {
-            'tle_count': len(tle_groups),
+            'satellite_count': satellites_count,
             'hours': hours,
             'above_el': above_el,
             'step_minutes': step_minutes

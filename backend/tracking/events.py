@@ -54,7 +54,7 @@ def _named_worker_init():
     multiprocessing.current_process().name = "Ground Station - SatellitePassWorker"
 
 
-def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_minutes, use_cache=True):
+def run_events_calculation(satellite_data, homelat, homelon, hours, above_el, step_minutes, use_cache=True):
     # Set process name if not already set by pool initializer
     current_proc = multiprocessing.current_process()
     if current_proc.name.startswith('ForkPoolWorker'):
@@ -64,9 +64,34 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
 
     cache_key = None
 
+    # Extract TLE data for cache key generation (maintaining compatibility with existing cache)
+    if isinstance(satellite_data, dict):
+        # Single satellite case
+        tle_groups_for_cache = [[
+            satellite_data['norad_id'],
+            satellite_data['tle1'],
+            satellite_data['tle2']
+        ]]
+    elif isinstance(satellite_data, list):
+        # Multiple satellites case
+        tle_groups_for_cache = []
+        for sat in satellite_data:
+            if isinstance(sat, dict):
+                tle_groups_for_cache.append([
+                    sat['norad_id'],
+                    sat['tle1'],
+                    sat['tle2']
+                ])
+            else:
+                # Fallback for old format
+                tle_groups_for_cache.append(sat)
+    else:
+        # Fallback for old format (tle_groups directly)
+        tle_groups_for_cache = satellite_data
+
     if use_cache:
-        # Generate a unique cache key (without hours)
-        cache_key = _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minutes)
+        # Generate a unique cache key (without hours) using TLE data for compatibility
+        cache_key = _generate_cache_key(tle_groups_for_cache, homelat, homelon, hours, above_el, step_minutes)
 
         # Get current time
         current_time = time.time()
@@ -92,7 +117,7 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
     # Calculate events as before if no cache hit or cache disabled
     logger.info("Calculating satellite passes (cache miss or disabled)")
     events = calculate_next_events(
-        tle_groups=tle_groups,
+        satellite_data=satellite_data,  # Pass the full satellite data directly
         home_location={"lat": homelat, "lon": homelon},
         hours=hours,
         above_el=above_el,
@@ -119,7 +144,6 @@ def run_events_calculation(tle_groups, homelat, homelon, hours, above_el, step_m
                 del _cache[k]
 
     return events
-
 
 async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el=0, step_minutes=1):
     """
@@ -166,23 +190,14 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
             satellites = await crud.satellites.fetch_satellites_for_group_id(dbsession, group_id)
             satellites = json.loads(json.dumps(satellites['data'], cls=ModelEncoder))
 
-            # Prepare TLE groups list
-            tle_groups = []
-            for satellite in satellites:
-                tle_groups.append([
-                    satellite['norad_id'],
-                    satellite['tle1'],
-                    satellite['tle2']
-                ])
-
             # Create pool with named processes
             with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
-                # Submit the calculation task to the pool
+                # Submit the calculation task to the pool, passing the serialized satellites list
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
                     pool.apply,
                     run_events_calculation,
-                    (tle_groups, homelat, homelon, hours, above_el, step_minutes)
+                    (satellites, homelat, homelon, hours, above_el, step_minutes)
                 )
 
             if result.get('success', False):
@@ -263,21 +278,14 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
             satellite_reply = await crud.satellites.fetch_satellites(dbsession, norad_id=norad_id)
             satellite = json.loads(json.dumps(satellite_reply['data'][0], cls=ModelEncoder))
 
-            # Prepare TLE group for single satellite
-            tle_group = [[
-                satellite['norad_id'],
-                satellite['tle1'],
-                satellite['tle2']
-            ]]
-
             # Create a pool with named processes
             with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
-                # Submit the calculation task to the pool
+                # Submit the calculation task to the pool, passing the serialized satellite dict
                 result = await asyncio.get_event_loop().run_in_executor(
                     None,
                     pool.apply,
                     run_events_calculation,
-                    (tle_group, homelat, homelon, hours, above_el, step_minutes)
+                    (satellite, homelat, homelon, hours, above_el, step_minutes)
                 )
 
             if result.get('success', False):
