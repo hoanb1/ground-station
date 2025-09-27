@@ -1,0 +1,140 @@
+import React from 'react';
+import { Box, Typography, Button } from '@mui/material';
+import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import SyncIcon from '@mui/icons-material/Sync';
+import { humanizeDate } from '../common/common.jsx';
+import PropTypes from 'prop-types';
+
+const SyncCardHeader = ({ syncState, synchronizing, onSynchronize }) => {
+    return (
+        <Box sx={{
+            display: 'flex',
+            flexDirection: { xs: 'column', sm: 'row' },
+            justifyContent: 'space-between',
+            alignItems: { xs: 'flex-start', sm: 'center' },
+            mb: 2,
+        }}>
+            <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1.5, sm: 0 } }}>
+                <SatelliteAltIcon sx={{
+                    mr: 1,
+                    color: '#40c0ff',
+                    filter: 'drop-shadow(0 0 3px rgba(64,192,255,0.6))',
+                    animation: 'pulse 3s infinite ease-in-out',
+                    '@keyframes pulse': {
+                        '0%': { opacity: 0.8 },
+                        '50%': { opacity: 1 },
+                        '100%': { opacity: 0.8 }
+                    }
+                }}/>
+                <Box>
+                    <Typography
+                        component="div"
+                        variant="h6"
+                        sx={{
+                            fontWeight: 700,
+                            color: '#ffffff',
+                            textShadow: '0 0 10px rgba(0,0,0,0.5)',
+                            letterSpacing: '0.5px',
+                            textTransform: 'uppercase',
+                            fontSize: { xs: '1rem', sm: '1.25rem' },
+                        }}
+                    >
+                        TLE Data Sync
+                    </Typography>
+                    <Typography
+                        variant="subtitle2"
+                        component="div"
+                        sx={{
+                            color: '#aaaaaa',
+                            fontSize: '0.8rem',
+                            fontWeight: 300,
+                            letterSpacing: '0.3px',
+                            display: { xs: 'none', sm: 'block' },
+                        }}
+                    >
+                        Fetch orbital data from satellite sources
+                    </Typography>
+                </Box>
+            </Box>
+
+            <Box sx={{
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: { xs: 'flex-start', sm: 'center' }
+            }}>
+                <Button
+                    disabled={synchronizing || (syncState['progress'] > 0 && syncState['progress'] < 100)}
+                    variant="contained"
+                    color="primary"
+                    onClick={onSynchronize}
+                    size="small"
+                    sx={{
+                        background: 'linear-gradient(135deg, #0288d1 0%, #0277bd 100%)',
+                        boxShadow: '0 5px 15px rgba(2,136,209,0.3)',
+                        textTransform: 'uppercase',
+                        fontWeight: 600,
+                        letterSpacing: '1px',
+                        px: { xs: 2, sm: 3 },
+                        py: 1,
+                        borderRadius: '8px',
+                        position: 'relative',
+                        overflow: 'hidden',
+                        transition: 'all 0.3s ease',
+                        '&:hover': {
+                            background: 'linear-gradient(135deg, #039be5 0%, #0288d1 100%)',
+                            boxShadow: '0 5px 20px rgba(2,136,209,0.5)',
+                            transform: 'translateY(-2px)',
+                        },
+                        '&::before': {
+                            content: '""',
+                            position: 'absolute',
+                            top: 0,
+                            left: '-100%',
+                            width: '100%',
+                            height: '100%',
+                            background: 'linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)',
+                            transition: 'all 0.5s ease',
+                        },
+                        '&:hover::before': {
+                            left: '100%',
+                        },
+                    }}
+                >
+                    <SyncIcon sx={{
+                        mr: 1,
+                        animation: (syncState['progress'] > 0 && syncState['progress'] < 100) ? 'rotate 2s infinite linear' : 'none',
+                        '@keyframes rotate': {
+                            '0%': { transform: 'rotate(0deg)' },
+                            '100%': { transform: 'rotate(360deg)' }
+                        },
+                        fontSize: { xs: '1rem', sm: '1.25rem' }
+                    }}/>
+                    Synchronize
+                </Button>
+
+                {syncState?.last_update && (
+                    <Typography
+                        variant="caption"
+                        sx={{
+                            fontFamily: 'monospace',
+                            color: '#888888',
+                            fontSize: '0.65rem',
+                            mt: 0.5,
+                            textAlign: { xs: 'left', sm: 'center' },
+                        }}
+                    >
+                        Last update: {humanizeDate(syncState.last_update)}
+                    </Typography>
+                )}
+            </Box>
+        </Box>
+    );
+};
+
+SyncCardHeader.propTypes = {
+    syncState: PropTypes.object.isRequired,
+    synchronizing: PropTypes.bool.isRequired,
+    onSynchronize: PropTypes.func.isRequired,
+};
+
+export default SyncCardHeader;
