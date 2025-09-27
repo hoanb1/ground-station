@@ -52,6 +52,7 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
 
     # Convert satellite_data to tle_groups format for processing
     tle_groups = []
+    satellite_info = {}  # Map norad_id to full satellite data
     
     if isinstance(satellite_data, dict):
         # Single satellite case
@@ -60,6 +61,7 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
             satellite_data['tle1'],
             satellite_data['tle2']
         ]]
+        satellite_info[satellite_data['norad_id']] = satellite_data
         satellites_count = 1
     elif isinstance(satellite_data, list) and len(satellite_data) > 0:
         # Multiple satellites case
@@ -71,6 +73,7 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
                     sat['tle1'],
                     sat['tle2']
                 ])
+                satellite_info[sat['norad_id']] = sat
             satellites_count = len(satellite_data)
         else:
             # Fallback for old format (list of tle_groups directly)
@@ -117,6 +120,9 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
             satellite_orbit_info = analyze_satellite_orbit(satellite)
             is_geostationary = satellite_orbit_info['is_geostationary']
             is_geosynchronous = satellite_orbit_info['is_geosynchronous']
+
+            # Get the status from the satellite info
+            status = satellite_info.get(norad_id, {}).get('status', None)
 
             difference = satellite - observer
             satellite_events = []
@@ -212,6 +218,7 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
 
                     satellite_events.append({
                         'norad_id': norad_id,
+                        'status': status,
                         'is_geostationary': is_geostationary,
                         'is_geosynchronous': is_geosynchronous,
                         'event_start': current_pass['start_time'].utc_iso(),
@@ -287,6 +294,7 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
 
                 satellite_events.append({
                     'norad_id': norad_id,
+                    'status': status,
                     'is_geostationary': is_geostationary,
                     'is_geosynchronous': is_geosynchronous,
                     'event_start': current_pass['start_time'].utc_iso(),
@@ -364,6 +372,7 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
 
                     timestep_events.append({
                         'norad_id': norad_id,
+                        'status': status,
                         'is_geostationary': is_geostationary,
                         'is_geosynchronous': is_geosynchronous,
                         'event_start': start_time.utc_iso(),
