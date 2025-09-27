@@ -28,19 +28,6 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                 justifyContent: 'center',
                 flexShrink: 0,
             }}>
-                <DeleteIcon
-                    sx={{
-                        color: '#f44336',
-                        mr: { xs: 0.5, sm: 1 },
-                        fontSize: { xs: '1rem', sm: '1.2rem' },
-                        animation: 'pulse 2s infinite ease-in-out',
-                        '@keyframes pulse': {
-                            '0%': { filter: 'drop-shadow(0 0 3px rgba(244,67,54,0.6))' },
-                            '50%': { filter: 'drop-shadow(0 0 8px rgba(244,67,54,0.9))' },
-                            '100%': { filter: 'drop-shadow(0 0 3px rgba(244,67,54,0.6))' }
-                        }
-                    }}
-                />
                 <Typography
                     variant="subtitle1"
                     sx={{

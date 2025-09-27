@@ -28,19 +28,6 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 justifyContent: 'center',
                 flexShrink: 0,
             }}>
-                <FiberNewIcon
-                    sx={{
-                        color: '#4caf50',
-                        mr: { xs: 0.5, sm: 1 },
-                        fontSize: { xs: '1rem', sm: '1.2rem' },
-                        animation: 'glow 2s infinite ease-in-out',
-                        '@keyframes glow': {
-                            '0%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' },
-                            '50%': { filter: 'drop-shadow(0 0 8px rgba(76,175,80,0.9))' },
-                            '100%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' }
-                        }
-                    }}
-                />
                 <Typography
                     variant="subtitle1"
                     sx={{

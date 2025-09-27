@@ -28,13 +28,6 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                 justifyContent: 'center',
                 flexShrink: 0,
             }}>
-                <UpdateIcon
-                    sx={{
-                        color: '#03a9f4',
-                        mr: { xs: 0.5, sm: 1 },
-                        fontSize: { xs: '1rem', sm: '1.2rem' },
-                    }}
-                />
                 <Typography
                     variant="subtitle1"
                     sx={{
