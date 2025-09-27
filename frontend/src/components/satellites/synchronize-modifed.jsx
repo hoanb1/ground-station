@@ -1,4 +1,3 @@
-
 import React from 'react';
 import { Box, Typography, Paper, Tooltip, Chip } from '@mui/material';
 import UpdateIcon from '@mui/icons-material/Update';
@@ -17,12 +16,13 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                height: 400,
+                height: { xs: 350, sm: 380, md: 400 },
+                minHeight: 300,
             }}
         >
             <Box sx={{
                 backgroundColor: 'rgba(3, 169, 244, 0.2)',
-                p: 1.5,
+                p: { xs: 1, sm: 1.5 },
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -31,8 +31,8 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                 <UpdateIcon
                     sx={{
                         color: '#03a9f4',
-                        mr: 1,
-                        fontSize: '1.2rem',
+                        mr: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: '1rem', sm: '1.2rem' },
                     }}
                 />
                 <Typography
@@ -42,7 +42,7 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
-                        fontSize: '0.85rem',
+                        fontSize: { xs: '0.75rem', sm: '0.85rem' },
                     }}
                 >
                     Modified Items
@@ -57,14 +57,14 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
             }}>
                 <Box sx={{
                     display: 'grid',
-                    gridTemplateColumns: '80px 1fr 100px',
-                    gap: 1,
-                    p: 1,
+                    gridTemplateColumns: { xs: '50px 1fr 70px', sm: '60px 1fr 80px', md: '80px 1fr 100px' },
+                    gap: { xs: 0.5, sm: 0.75, md: 1 },
+                    p: { xs: 0.75, sm: 1 },
                 }}>
                     <Typography sx={{
                         color: '#03a9f4',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
@@ -73,17 +73,17 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                     <Typography sx={{
                         color: '#03a9f4',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'left',
-                        pl: 1,
+                        pl: { xs: 0.5, sm: 0.75, md: 1 },
                     }}>
                         Name
                     </Typography>
                     <Typography sx={{
                         color: '#03a9f4',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
@@ -97,7 +97,7 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                 flex: 1,
                 overflow: 'auto',
                 '&::-webkit-scrollbar': {
-                    width: '8px',
+                    width: { xs: '4px', sm: '6px', md: '8px' },
                 },
                 '&::-webkit-scrollbar-track': {
                     backgroundColor: 'rgba(3, 169, 244, 0.1)',
@@ -116,9 +116,9 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                         key={`sat-${index}`}
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: '80px 1fr 100px',
-                            gap: 1,
-                            p: 1,
+                            gridTemplateColumns: { xs: '50px 1fr 70px', sm: '60px 1fr 80px', md: '80px 1fr 100px' },
+                            gap: { xs: 0.5, sm: 0.75, md: 1 },
+                            p: { xs: 0.75, sm: 1 },
                             borderBottom: '1px solid rgba(3, 169, 244, 0.1)',
                             '&:nth-of-type(even)': { backgroundColor: 'rgba(3, 169, 244, 0.05)' },
                             '&:hover': { backgroundColor: 'rgba(3, 169, 244, 0.1)' },
@@ -127,24 +127,27 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                     >
                         <Box sx={{
                             color: '#40c0ff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <SatelliteAltIcon sx={{ fontSize: '0.8rem', mr: 0.5 }} />
-                            SAT
+                            <SatelliteAltIcon sx={{
+                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+                                mr: { xs: 0.25, sm: 0.5 }
+                            }} />
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>SAT</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             textAlign: 'left',
-                            pl: 1,
+                            pl: { xs: 0.5, sm: 0.75, md: 1 },
                         }}>
                             <Tooltip title={`${sat.name} (${sat.norad_id})`} placement="top">
                                 <span>{sat.name}</span>
@@ -152,7 +155,7 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                         </Box>
                         <Box sx={{
                             color: '#aaaaaa',
-                            fontSize: '0.65rem',
+                            fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -172,9 +175,9 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                         key={`trx-${index}`}
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: '80px 1fr 100px',
-                            gap: 1,
-                            p: 1,
+                            gridTemplateColumns: { xs: '50px 1fr 70px', sm: '60px 1fr 80px', md: '80px 1fr 100px' },
+                            gap: { xs: 0.5, sm: 0.75, md: 1 },
+                            p: { xs: 0.75, sm: 1 },
                             borderBottom: '1px solid rgba(3, 169, 244, 0.1)',
                             '&:nth-of-type(even)': { backgroundColor: 'rgba(3, 169, 244, 0.05)' },
                             '&:hover': { backgroundColor: 'rgba(3, 169, 244, 0.1)' },
@@ -183,24 +186,27 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                     >
                         <Box sx={{
                             color: '#9c27b0',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <RadioIcon sx={{ fontSize: '0.8rem', mr: 0.5 }} />
-                            TRX
+                            <RadioIcon sx={{
+                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+                                mr: { xs: 0.25, sm: 0.5 }
+                            }} />
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>TRX</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             textAlign: 'left',
-                            pl: 1,
+                            pl: { xs: 0.5, sm: 0.75, md: 1 },
                         }}>
                             <Tooltip title={`${trx.description || 'Unknown'} (${trx.satellite_name})`} placement="top">
                                 <span>{trx.description || 'Unknown'}</span>
@@ -208,7 +214,7 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                         </Box>
                         <Box sx={{
                             color: '#aaaaaa',
-                            fontSize: '0.65rem',
+                            fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
@@ -227,9 +233,9 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                     <Box sx={{
                         textAlign: 'center',
                         color: '#03a9f4',
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         fontStyle: 'italic',
-                        p: 2,
+                        p: { xs: 1.5, sm: 2 },
                     }}>
                         +{(modifiedSatellitesCount + modifiedTransmittersCount) - 100} more items...
                     </Box>
@@ -237,12 +243,13 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
             </Box>
 
             <Box sx={{
-                p: 1,
+                p: { xs: 0.75, sm: 1 },
                 backgroundColor: 'rgba(3, 169, 244, 0.1)',
                 display: 'flex',
                 justifyContent: 'center',
-                gap: 1,
+                gap: { xs: 0.5, sm: 1 },
                 flexShrink: 0,
+                flexWrap: 'wrap',
             }}>
                 <Chip
                     label={`${modifiedSatellitesCount} Satellites`}
@@ -250,8 +257,9 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                     sx={{
                         backgroundColor: 'rgba(64, 192, 255, 0.2)',
                         color: '#40c0ff',
-                        fontSize: '0.65rem',
+                        fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
+                        height: { xs: 16, sm: 18 },
                     }}
                 />
                 <Chip
@@ -260,8 +268,9 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                     sx={{
                         backgroundColor: 'rgba(156, 39, 176, 0.2)',
                         color: '#9c27b0',
-                        fontSize: '0.65rem',
+                        fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
+                        height: { xs: 16, sm: 18 },
                     }}
                 />
             </Box>

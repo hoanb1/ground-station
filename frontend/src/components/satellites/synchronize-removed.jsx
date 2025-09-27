@@ -16,12 +16,13 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                height: 400,
+                height: { xs: 350, sm: 380, md: 400 },
+                minHeight: 300,
             }}
         >
             <Box sx={{
                 backgroundColor: 'rgba(244, 67, 54, 0.2)',
-                p: 1.5,
+                p: { xs: 1, sm: 1.5 },
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -30,8 +31,8 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                 <DeleteIcon
                     sx={{
                         color: '#f44336',
-                        mr: 1,
-                        fontSize: '1.2rem',
+                        mr: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: '1rem', sm: '1.2rem' },
                         animation: 'pulse 2s infinite ease-in-out',
                         '@keyframes pulse': {
                             '0%': { filter: 'drop-shadow(0 0 3px rgba(244,67,54,0.6))' },
@@ -47,7 +48,7 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
-                        fontSize: '0.85rem',
+                        fontSize: { xs: '0.75rem', sm: '0.85rem' },
                     }}
                 >
                     Removed Items
@@ -62,14 +63,14 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
             }}>
                 <Box sx={{
                     display: 'grid',
-                    gridTemplateColumns: '80px 1fr 80px',
-                    gap: 1,
-                    p: 1,
+                    gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
+                    gap: { xs: 0.5, sm: 0.75, md: 1 },
+                    p: { xs: 0.75, sm: 1 },
                 }}>
                     <Typography sx={{
                         color: '#f44336',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
@@ -78,17 +79,17 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                     <Typography sx={{
                         color: '#f44336',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'left',
-                        pl: 1,
+                        pl: { xs: 0.5, sm: 0.75, md: 1 },
                     }}>
                         Name
                     </Typography>
                     <Typography sx={{
                         color: '#f44336',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
@@ -102,7 +103,7 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                 flex: 1,
                 overflow: 'auto',
                 '&::-webkit-scrollbar': {
-                    width: '8px',
+                    width: { xs: '4px', sm: '6px', md: '8px' },
                 },
                 '&::-webkit-scrollbar-track': {
                     backgroundColor: 'rgba(244, 67, 54, 0.1)',
@@ -121,9 +122,9 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                         key={`sat-${index}`}
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: '80px 1fr 80px',
-                            gap: 1,
-                            p: 1,
+                            gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
+                            gap: { xs: 0.5, sm: 0.75, md: 1 },
+                            p: { xs: 0.75, sm: 1 },
                             borderBottom: '1px solid rgba(244, 67, 54, 0.1)',
                             '&:nth-of-type(even)': { backgroundColor: 'rgba(244, 67, 54, 0.05)' },
                             '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' },
@@ -132,24 +133,27 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                     >
                         <Box sx={{
                             color: '#40c0ff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <SatelliteAltIcon sx={{ fontSize: '0.8rem', mr: 0.5 }} />
-                            SAT
+                            <SatelliteAltIcon sx={{
+                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+                                mr: { xs: 0.25, sm: 0.5 }
+                            }} />
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>SAT</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             textAlign: 'left',
-                            pl: 1,
+                            pl: { xs: 0.5, sm: 0.75, md: 1 },
                         }}>
                             <Tooltip title={sat.name} placement="top">
                                 <span>{sat.name}</span>
@@ -157,9 +161,11 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                         </Box>
                         <Box sx={{
                             color: '#aaaaaa',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                         }}>
                             {sat.norad_id}
                         </Box>
@@ -172,9 +178,9 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                         key={`trx-${index}`}
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: '80px 1fr 80px',
-                            gap: 1,
-                            p: 1,
+                            gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
+                            gap: { xs: 0.5, sm: 0.75, md: 1 },
+                            p: { xs: 0.75, sm: 1 },
                             borderBottom: '1px solid rgba(244, 67, 54, 0.1)',
                             '&:nth-of-type(even)': { backgroundColor: 'rgba(244, 67, 54, 0.05)' },
                             '&:hover': { backgroundColor: 'rgba(244, 67, 54, 0.1)' },
@@ -183,24 +189,27 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                     >
                         <Box sx={{
                             color: '#ff5722',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <RadioIcon sx={{ fontSize: '0.8rem', mr: 0.5 }} />
-                            TRX
+                            <RadioIcon sx={{
+                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+                                mr: { xs: 0.25, sm: 0.5 }
+                            }} />
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>TRX</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             textAlign: 'left',
-                            pl: 1,
+                            pl: { xs: 0.5, sm: 0.75, md: 1 },
                         }}>
                             <Tooltip title={`${trx.description || 'Unknown'} (${trx.satellite_name})`} placement="top">
                                 <span>{trx.description || 'Unknown'}</span>
@@ -208,9 +217,11 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                         </Box>
                         <Box sx={{
                             color: '#aaaaaa',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                         }}>
                             {trx.satellite_name}
                         </Box>
@@ -222,9 +233,9 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                     <Box sx={{
                         textAlign: 'center',
                         color: '#f44336',
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         fontStyle: 'italic',
-                        p: 2,
+                        p: { xs: 1.5, sm: 2 },
                     }}>
                         +{(removedSatellitesCount + removedTransmittersCount) - 100} more items...
                     </Box>
@@ -232,12 +243,13 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
             </Box>
 
             <Box sx={{
-                p: 1,
+                p: { xs: 0.75, sm: 1 },
                 backgroundColor: 'rgba(244, 67, 54, 0.1)',
                 display: 'flex',
                 justifyContent: 'center',
-                gap: 1,
+                gap: { xs: 0.5, sm: 1 },
                 flexShrink: 0,
+                flexWrap: 'wrap',
             }}>
                 <Chip
                     label={`${removedSatellitesCount} Satellites`}
@@ -245,8 +257,9 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                     sx={{
                         backgroundColor: 'rgba(64, 192, 255, 0.2)',
                         color: '#40c0ff',
-                        fontSize: '0.65rem',
+                        fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
+                        height: { xs: 16, sm: 18 },
                     }}
                 />
                 <Chip
@@ -255,8 +268,9 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                     sx={{
                         backgroundColor: 'rgba(255, 87, 34, 0.2)',
                         color: '#ff5722',
-                        fontSize: '0.65rem',
+                        fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
+                        height: { xs: 16, sm: 18 },
                     }}
                 />
             </Box>

@@ -16,12 +16,13 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
-                height: 400,
+                height: { xs: 350, sm: 380, md: 400 },
+                minHeight: 300,
             }}
         >
             <Box sx={{
                 backgroundColor: 'rgba(76, 175, 80, 0.2)',
-                p: 1.5,
+                p: { xs: 1, sm: 1.5 },
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
@@ -30,8 +31,8 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 <FiberNewIcon
                     sx={{
                         color: '#4caf50',
-                        mr: 1,
-                        fontSize: '1.2rem',
+                        mr: { xs: 0.5, sm: 1 },
+                        fontSize: { xs: '1rem', sm: '1.2rem' },
                         animation: 'glow 2s infinite ease-in-out',
                         '@keyframes glow': {
                             '0%': { filter: 'drop-shadow(0 0 3px rgba(76,175,80,0.6))' },
@@ -47,7 +48,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
-                        fontSize: '0.85rem',
+                        fontSize: { xs: '0.75rem', sm: '0.85rem' },
                     }}
                 >
                     Added Items
@@ -62,14 +63,14 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
             }}>
                 <Box sx={{
                     display: 'grid',
-                    gridTemplateColumns: '80px 1fr 80px',
-                    gap: 1,
-                    p: 1,
+                    gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
+                    gap: { xs: 0.5, sm: 0.75, md: 1 },
+                    p: { xs: 0.75, sm: 1 },
                 }}>
                     <Typography sx={{
                         color: '#4caf50',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
@@ -78,17 +79,17 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     <Typography sx={{
                         color: '#4caf50',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'left',
-                        pl: 1,
+                        pl: { xs: 0.5, sm: 0.75, md: 1 },
                     }}>
                         Name
                     </Typography>
                     <Typography sx={{
                         color: '#4caf50',
                         fontWeight: 600,
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
@@ -102,7 +103,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 flex: 1,
                 overflow: 'auto',
                 '&::-webkit-scrollbar': {
-                    width: '8px',
+                    width: { xs: '4px', sm: '6px', md: '8px' },
                 },
                 '&::-webkit-scrollbar-track': {
                     backgroundColor: 'rgba(76, 175, 80, 0.1)',
@@ -121,9 +122,9 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         key={`sat-${index}`}
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: '80px 1fr 80px',
-                            gap: 1,
-                            p: 1,
+                            gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
+                            gap: { xs: 0.5, sm: 0.75, md: 1 },
+                            p: { xs: 0.75, sm: 1 },
                             borderBottom: '1px solid rgba(76, 175, 80, 0.1)',
                             '&:nth-of-type(even)': { backgroundColor: 'rgba(76, 175, 80, 0.05)' },
                             '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
@@ -132,24 +133,27 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     >
                         <Box sx={{
                             color: '#40c0ff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <SatelliteAltIcon sx={{ fontSize: '0.8rem', mr: 0.5 }} />
-                            SAT
+                            <SatelliteAltIcon sx={{
+                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+                                mr: { xs: 0.25, sm: 0.5 }
+                            }} />
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>SAT</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             textAlign: 'left',
-                            pl: 1,
+                            pl: { xs: 0.5, sm: 0.75, md: 1 },
                         }}>
                             <Tooltip title={sat.name} placement="top">
                                 <span>{sat.name}</span>
@@ -157,9 +161,11 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         </Box>
                         <Box sx={{
                             color: '#aaaaaa',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                         }}>
                             {sat.norad_id}
                         </Box>
@@ -172,9 +178,9 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         key={`trx-${index}`}
                         sx={{
                             display: 'grid',
-                            gridTemplateColumns: '80px 1fr 80px',
-                            gap: 1,
-                            p: 1,
+                            gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
+                            gap: { xs: 0.5, sm: 0.75, md: 1 },
+                            p: { xs: 0.75, sm: 1 },
                             borderBottom: '1px solid rgba(76, 175, 80, 0.1)',
                             '&:nth-of-type(even)': { backgroundColor: 'rgba(76, 175, 80, 0.05)' },
                             '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
@@ -183,24 +189,27 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     >
                         <Box sx={{
                             color: '#ff9800',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
                             alignItems: 'center',
                             justifyContent: 'center',
                         }}>
-                            <RadioIcon sx={{ fontSize: '0.8rem', mr: 0.5 }} />
-                            TRX
+                            <RadioIcon sx={{
+                                fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
+                                mr: { xs: 0.25, sm: 0.5 }
+                            }} />
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>TRX</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
                             textOverflow: 'ellipsis',
                             whiteSpace: 'nowrap',
                             textAlign: 'left',
-                            pl: 1,
+                            pl: { xs: 0.5, sm: 0.75, md: 1 },
                         }}>
                             <Tooltip title={`${trx.description || 'Unknown'} (${trx.satellite_name})`} placement="top">
                                 <span>{trx.description || 'Unknown'}</span>
@@ -208,9 +217,11 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         </Box>
                         <Box sx={{
                             color: '#aaaaaa',
-                            fontSize: '0.7rem',
+                            fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             textAlign: 'center',
+                            overflow: 'hidden',
+                            textOverflow: 'ellipsis',
                         }}>
                             {trx.satellite_name}
                         </Box>
@@ -222,9 +233,9 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     <Box sx={{
                         textAlign: 'center',
                         color: '#4caf50',
-                        fontSize: '0.7rem',
+                        fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         fontStyle: 'italic',
-                        p: 2,
+                        p: { xs: 1.5, sm: 2 },
                     }}>
                         +{(newSatellitesCount + newTransmittersCount) - 100} more items...
                     </Box>
@@ -232,12 +243,13 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
             </Box>
 
             <Box sx={{
-                p: 1,
+                p: { xs: 0.75, sm: 1 },
                 backgroundColor: 'rgba(76, 175, 80, 0.1)',
                 display: 'flex',
                 justifyContent: 'center',
-                gap: 1,
+                gap: { xs: 0.5, sm: 1 },
                 flexShrink: 0,
+                flexWrap: 'wrap',
             }}>
                 <Chip
                     label={`${newSatellitesCount} Satellites`}
@@ -245,8 +257,9 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     sx={{
                         backgroundColor: 'rgba(64, 192, 255, 0.2)',
                         color: '#40c0ff',
-                        fontSize: '0.65rem',
+                        fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
+                        height: { xs: 16, sm: 18 },
                     }}
                 />
                 <Chip
@@ -255,8 +268,9 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     sx={{
                         backgroundColor: 'rgba(255, 152, 0, 0.2)',
                         color: '#ff9800',
-                        fontSize: '0.65rem',
+                        fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
+                        height: { xs: 16, sm: 18 },
                     }}
                 />
             </Box>

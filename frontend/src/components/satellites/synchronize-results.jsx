@@ -21,11 +21,31 @@ const SyncResultsTable = ({
                           }) => {
     if (!hasNewItems && !hasModifiedItems && !hasRemovedItems) return null;
 
+    // Calculate dynamic column sizing
+    const columnCount = [hasNewItems, hasModifiedItems, hasRemovedItems].filter(Boolean).length;
+
+    // Define responsive breakpoints based on column count
+    const getResponsiveSize = () => {
+        if (columnCount === 1) return { xs: 12, sm: 12, md: 12, lg: 10, xl: 8 };
+        if (columnCount === 2) return { xs: 12, sm: 12, md: 6, lg: 6, xl: 6 };
+        return { xs: 12, sm: 12, md: 4, lg: 4, xl: 4 };
+    };
+
+    const gridSize = getResponsiveSize();
+
     return (
         <Box sx={{ mt: 2 }}>
-            <Grid2 container spacing={1} sx={{ width: '100%' }}>
+
+            <Grid2
+                container
+                spacing={{ xs: 1, sm: 1.5, md: 2 }}
+                sx={{
+                    width: '100%',
+                    justifyContent: columnCount === 1 ? 'center' : 'flex-start'
+                }}
+            >
                 {hasNewItems && (
-                    <Grid2 xs={12} md={4} size="grow">
+                    <Grid2 size={gridSize}>
                         <AddedItemsTable
                             newSatellitesCount={newSatellitesCount}
                             newTransmittersCount={newTransmittersCount}
@@ -35,7 +55,7 @@ const SyncResultsTable = ({
                 )}
 
                 {hasModifiedItems && (
-                    <Grid2 xs={12} md={4} size="grow">
+                    <Grid2 size={gridSize}>
                         <ModifiedItemsTable
                             modifiedSatellitesCount={modifiedSatellitesCount}
                             modifiedTransmittersCount={modifiedTransmittersCount}
@@ -45,7 +65,7 @@ const SyncResultsTable = ({
                 )}
 
                 {hasRemovedItems && (
-                    <Grid2 xs={12} md={4} size="grow">
+                    <Grid2 size={gridSize}>
                         <RemovedItemsTable
                             removedSatellitesCount={removedSatellitesCount}
                             removedTransmittersCount={removedTransmittersCount}
