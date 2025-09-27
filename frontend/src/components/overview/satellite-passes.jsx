@@ -160,6 +160,19 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
             },
             textDecoration: 'line-through',
         },
+        '& .passes-cell-dead': {
+            ...getBackgroundColor(theme.palette.error.main, theme, 0.7),
+            '&:hover': {
+                ...getBackgroundColor(theme.palette.error.main, theme, 0.6),
+            },
+            '&.Mui-selected': {
+                ...getBackgroundColor(theme.palette.error.main, theme, 0.5),
+                '&:hover': {
+                    ...getBackgroundColor(theme.palette.error.main, theme, 0.4),
+                },
+            },
+            textDecoration: 'line-through',
+        },
         '& .passes-cell-warning': {
             color: theme.palette.error.main,
             textDecoration: 'line-through',
@@ -435,18 +448,28 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
     const getPassesRowStyles = (param) => {
         if (param.row) {
             const targetSatTrack = targetSatTrackRef.current();
-            if (targetSatTrack.satelliteData['details']['norad_id'] === param.row['norad_id']) {
-                if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+            const isTargetSat = targetSatTrack.satelliteData['details']['norad_id'] === param.row['norad_id'];
+            const now = new Date();
+            const eventStart = new Date(param.row['event_start']);
+            const eventEnd = new Date(param.row['event_end']);
+            
+            // Check for dead status first
+            if (param.row.status === 'dead') {
+                return "passes-cell-dead pointer-cursor";
+            }
+            
+            if (isTargetSat) {
+                if (eventStart < now && eventEnd < now) {
                     return "passes-cell-passed pointer-cursor";
-                } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
+                } else if (eventStart < now && eventEnd > now) {
                     return "passes-cell-active passes-cell-passing pointer-cursor";
                 } else {
                     return "pointer-cursor";
                 }
             } else {
-                if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) < new Date()) {
+                if (eventStart < now && eventEnd < now) {
                     return "passes-cell-passed pointer-cursor";
-                } else if (new Date(param.row['event_start']) < new Date() && new Date(param.row['event_end']) > new Date()) {
+                } else if (eventStart < now && eventEnd > now) {
                     return "passes-cell-passing pointer-cursor";
                 } else {
                     return "pointer-cursor";
