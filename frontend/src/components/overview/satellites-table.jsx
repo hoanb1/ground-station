@@ -208,7 +208,7 @@ const MemoizedStyledDataGrid = React.memo(({
             flex: 1,
             renderCell: (params) => {
                 const elevation = params.value;
-                if (elevation === null || elevation === undefined || elevation < 1) {
+                if (elevation === null || elevation === undefined || elevation < 0) {
                     return <span>-</span>;
                 }
 
