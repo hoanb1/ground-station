@@ -7,19 +7,19 @@ import RemovedItemsTable from './synchronize-removed.jsx';
 import PropTypes from 'prop-types';
 
 const SyncResultsTable = ({
-                              hasNewItems,
-                              hasModifiedItems,
-                              hasRemovedItems,
-                              newSatellitesCount,
-                              newTransmittersCount,
-                              modifiedSatellitesCount,
-                              modifiedTransmittersCount,
-                              removedSatellitesCount,
-                              removedTransmittersCount,
+                              hasNewItems=true,
+                              hasModifiedItems=true,
+                              hasRemovedItems=true,
+                              newSatellitesCount=0,
+                              newTransmittersCount=0,
+                              modifiedSatellitesCount=0,
+                              modifiedTransmittersCount=0,
+                              removedSatellitesCount=0,
+                              removedTransmittersCount=0,
                               syncState
                           }) => {
 
-    if (!hasNewItems && !hasModifiedItems && !hasRemovedItems) return null;
+    //if (!hasNewItems && !hasModifiedItems && !hasRemovedItems) return null;
 
     return (
         <Box sx={{mt: 2}}>

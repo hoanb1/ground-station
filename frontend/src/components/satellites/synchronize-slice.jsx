@@ -69,7 +69,9 @@ const syncSatelliteSlice = createSlice({
         synchronizing: false,
         syncState: {
             progress: 0,
-
+            newly_added: 0,
+            modified: 0,
+            removed: 0,
         }
     },
     reducers: {
