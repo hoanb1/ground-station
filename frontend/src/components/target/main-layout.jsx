@@ -54,6 +54,7 @@ import {
 } from './state-selectors.jsx';
 import ControllerTabs from "../common/controller.jsx";
 import TargetSatelliteMapContainer from './satellite-map.jsx';
+import TargetSatelliteTransmittersIsland from "./satellite-transmitters.jsx";
 
 
 // global leaflet map object
@@ -211,8 +212,8 @@ const TargetSatelliteLayout = React.memo(function () {
     // default layout if none in localStorage
     const defaultLayouts = {
         "lg": [{
-            "w": 7,
-            "h": 18,
+            "w": 6,
+            "h": 19,
             "x": 0,
             "y": 0,
             "i": "map",
@@ -221,125 +222,85 @@ const TargetSatelliteLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 3,
-            "h": 11,
-            "x": 7,
-            "y": 4,
+            "h": 13,
+            "x": 6,
+            "y": 6,
             "i": "info",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 7,
+            "w": 12,
             "h": 7,
             "x": 0,
-            "y": 18,
+            "y": 19,
             "i": "passes",
             "minH": 6,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 3,
-            "h": 4,
-            "x": 7,
+            "w": 6,
+            "h": 6,
+            "x": 6,
             "y": 0,
             "i": "satselector",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 3,
-            "h": 10,
-            "x": 7,
-            "y": 15,
-            "i": "video",
-            "minH": 4,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 13,
-            "x": 10,
-            "y": 0,
-            "i": "rotator-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
+        }, {"w": 3, "h": 13, "x": 9, "y": 6, "i": "transmitters", "moved": false, "static": false}],
         "md": [{
-            "w": 6,
+            "w": 10,
             "h": 17,
             "x": 0,
-            "y": 0,
+            "y": 6,
             "i": "map",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 4,
-            "h": 11,
-            "x": 6,
-            "y": 15,
-            "i": "info",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 6,
-            "h": 9,
-            "x": 0,
-            "y": 17,
-            "i": "passes",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 4,
-            "h": 5,
-            "x": 6,
-            "y": 0,
-            "i": "satselector",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 4,
-            "h": 10,
-            "x": 6,
-            "y": 5,
-            "i": "video",
-            "minH": 4,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 5,
-            "h": 11,
+            "h": 15,
             "x": 0,
-            "y": 26,
-            "i": "rotator-control",
+            "y": 23,
+            "i": "info",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 10,
+            "h": 9,
+            "x": 0,
+            "y": 38,
+            "i": "passes",
             "minH": 6,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
+        }, {
+            "w": 10,
+            "h": 6,
+            "x": 0,
+            "y": 0,
+            "i": "satselector",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {"w": 5, "h": 15, "x": 5, "y": 23, "i": "transmitters", "moved": false, "static": false}],
         "sm": [{
             "w": 6,
             "h": 15,
             "x": 0,
-            "y": 4,
+            "y": 6,
             "i": "map",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 2,
-            "h": 11,
-            "x": 4,
-            "y": 28,
+            "w": 3,
+            "h": 15,
+            "x": 0,
+            "y": 30,
             "i": "info",
             "moved": false,
             "static": false,
@@ -348,7 +309,7 @@ const TargetSatelliteLayout = React.memo(function () {
             "w": 6,
             "h": 9,
             "x": 0,
-            "y": 19,
+            "y": 21,
             "i": "passes",
             "minH": 6,
             "moved": false,
@@ -356,48 +317,28 @@ const TargetSatelliteLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 6,
-            "h": 4,
+            "h": 6,
             "x": 0,
             "y": 0,
             "i": "satselector",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 7,
-            "x": 2,
-            "y": 28,
-            "i": "video",
-            "minH": 4,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 11,
-            "x": 0,
-            "y": 28,
-            "i": "rotator-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }],
+        }, {"w": 3, "h": 15, "x": 3, "y": 30, "i": "transmitters", "moved": false, "static": false}],
         "xs": [{
             "w": 2,
             "h": 15,
             "x": 0,
-            "y": 4,
+            "y": 6,
             "i": "map",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 11,
+            "h": 12,
             "x": 0,
-            "y": 28,
+            "y": 30,
             "i": "info",
             "moved": false,
             "static": false,
@@ -406,7 +347,7 @@ const TargetSatelliteLayout = React.memo(function () {
             "w": 2,
             "h": 9,
             "x": 0,
-            "y": 19,
+            "y": 21,
             "i": "passes",
             "minH": 6,
             "moved": false,
@@ -414,34 +355,14 @@ const TargetSatelliteLayout = React.memo(function () {
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
             "w": 2,
-            "h": 4,
+            "h": 6,
             "x": 0,
             "y": 0,
             "i": "satselector",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 11,
-            "x": 0,
-            "y": 39,
-            "i": "video",
-            "minH": 4,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 11,
-            "x": 0,
-            "y": 50,
-            "i": "rotator-control",
-            "minH": 6,
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }]
+        }, {"w": 2, "h": 16, "x": 0, "y": 42, "i": "transmitters", "moved": false, "static": false}]
     };
 
     // globalize the callback
@@ -488,7 +409,7 @@ const TargetSatelliteLayout = React.memo(function () {
     // pre-make the components
     let gridContents = [
         <StyledIslandParent key="map">
-            <TargetSatelliteMapContainer />
+            <TargetSatelliteMapContainer/>
         </StyledIslandParent>,
         <StyledIslandParentScrollbar key="info">
             <TargetSatelliteInfoIsland/>
@@ -498,6 +419,9 @@ const TargetSatelliteLayout = React.memo(function () {
         </StyledIslandParentNoScrollbar>,
         <StyledIslandParentScrollbar key="satselector">
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
+        </StyledIslandParentScrollbar>,
+        <StyledIslandParentScrollbar key="transmitters">
+            <TargetSatelliteTransmittersIsland/>
         </StyledIslandParentScrollbar>,
         // <StyledIslandParentScrollbar key="video">
         //     <CameraView/>

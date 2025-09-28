@@ -150,28 +150,30 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Select group and satellite</TitleBar>
-            <Grid container spacing={{ xs: 2, md: 2 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 12, sm: 12, md: 6 }}>
-                    <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0rem 0.5rem 0.5rem'}}>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
+                Select a satellite
+            </TitleBar>
+            <Grid container spacing={0} columns={12}>
+                <Grid size={12}>
+                    <Grid size={12} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                         <SatelliteSearchAutocomplete onSatelliteSelect={handleSatelliteSelect} />
                     </Grid>
                 </Grid>
-                <Grid size={{ xs: 12, sm: 12, md: 6 }}>
-                    <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                        <Grid size={{ xs: 8, sm: 8, md: 8 }}>
-                            <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0rem 0.0rem 0rem'}}>
+                <Grid size={12}>
+                    <Grid container spacing={1} columns={12}>
+                        <Grid size={8}>
+                            <Grid size={12} style={{padding: '0rem 0rem 0.0rem 0.5rem'}}>
                                 <GroupDropdown />
                             </Grid>
                             <Grid
-                                size={{ xs: 12, sm: 12, md: 12 }}
-                                style={{ padding: '0rem 0rem 0.5rem 0rem' }}
+                                size={12}
+                                style={{ padding: '0rem 0rem 0.5rem 0.5rem' }}
                             >
                                 <SatelliteList/>
                             </Grid>
                         </Grid>
                         <Grid
-                            size={{ xs: 4, sm: 4, md: 4 }}
+                            size={4}
                             style={{
                                 display: 'flex',
                                 alignItems: 'center',

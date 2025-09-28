@@ -18,7 +18,6 @@ const SatelliteSearchAutocomplete = React.memo(({onSatelliteSelect}) => {
             setLoading(true);
             socket.emit("data_request", "get-satellite-search", keyword, (response) => {
                 if (response.success) {
-                    console.log(response.data);
                     setOptions(response.data);
                 } else {
                     console.error(response.error);
@@ -49,7 +48,6 @@ const SatelliteSearchAutocomplete = React.memo(({onSatelliteSelect}) => {
     };
 
     const handleOptionSelect = (event, selectedSatellite) => {
-        console.info(selectedSatellite);
         if (selectedSatellite !== null) {
             selectedSatellite['id'] = selectedSatellite['norad_id'];
             onSatelliteSelect(selectedSatellite);
