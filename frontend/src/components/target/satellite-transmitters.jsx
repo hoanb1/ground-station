@@ -158,7 +158,7 @@ const TargetSatelliteTransmittersIsland = () => {
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <RadioIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            Transmitters - {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "Unknown Satellite"}
+                            Transmitters
                         </Typography>
                     </Box>
                     <Typography variant="caption" sx={{color: 'text.secondary'}}>

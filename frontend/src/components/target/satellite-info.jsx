@@ -107,24 +107,13 @@ const TargetSatelliteInfoIsland = () => {
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <SatelliteAltIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "Satellite Info"}
+                            {"Satellite Info"}
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
                         <Typography variant="caption" sx={{color: 'text.secondary'}}>
                             ID: {satelliteData && satelliteData['details'] ? satelliteData['details']['norad_id'] : ''}
                         </Typography>
-                        {satelliteData && satelliteData['details'] && satelliteData['details']['website'] && (
-                            <Tooltip title="Visit website">
-                                <IconButton
-                                    size="small"
-                                    onClick={() => window.open(satelliteData['details']['website'], '_blank')}
-                                    sx={{ color: 'secondary.light' }}
-                                >
-                                    <LaunchIcon fontSize="small" />
-                                </IconButton>
-                            </Tooltip>
-                        )}
                     </Box>
                 </Box>
             </TitleBar>
