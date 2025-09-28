@@ -13,37 +13,128 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-
+import json
+import requests
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import select, delete
 from db.models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
 from typing import List
 from datetime import datetime, UTC, timezone
 
 
-def parse_date(date_str: str) -> datetime:
+def create_initial_sync_state():
     """
-    Parses a date string in ISO 8601 format with an optional 'Z' suffix
-    indicating UTC time and converts it to a datetime object.
+    Create the initial synchronization state structure.
 
-    :param date_str: The ISO 8601 formatted date string, which may
-        include a 'Z' suffix indicating UTC time.
-    :type date_str: str
-    :return: A datetime object corresponding to the provided date
-        string.
-    :rtype: datetime
+    Returns:
+        dict: Initial sync state dictionary
     """
-    date_str = date_str.replace("Z", "+00:00")
-    return datetime.fromisoformat(date_str)
+    return {
+        "status": "inprogress",
+        "progress": 0,
+        "message": "Starting satellite data synchronization",
+        "success": None,
+        "last_update": datetime.now(timezone.utc).isoformat(),
+        "active_sources": [],
+        "completed_sources": [],
+        "errors": [],
+        "stats": {
+            "satellites_processed": 0,
+            "transmitters_processed": 0,
+            "groups_processed": 0
+        },
+        "newly_added": {
+            "satellites": [],
+            "transmitters": []
+        },
+        "removed": {
+            "satellites": [],
+            "transmitters": []
+        },
+        "modified": {
+            "satellites": [],
+            "transmitters": []
+        }
+    }
 
 
-def get_norad_ids(tle_objects: list) -> list:
+def create_progress_tracker(progress_phases, sync_state, sync_state_manager):
     """
-    Extracts the NORAD ID from the 'line1' field in each object of the list.
+    Create a progress tracking function with monotonic guarantees.
 
-    :param tle_objects: A list of dictionaries containing {'name', 'line1', 'line2'}.
-    :return: A list of integer NORAD IDs.
+    Args:
+        progress_phases (dict): Dictionary of phase names and their weights
+        sync_state (dict): The sync state dictionary to update
+        sync_state_manager: The state manager instance
+
+    Returns:
+        tuple: (update_progress function, completed_phases set, highest_progress counter)
     """
-    return [parse_norad_id_from_line1(obj['line1']) for obj in tle_objects]
+    completed_phases = set()
+    highest_progress = [0]  # Use list to make it mutable in closure
+
+    def update_progress(phase, completed, total=1, message=None):
+        """Update progress for a specific phase based on completion percentage with monotonic guarantee"""
+        if total <= 0:
+            phase_percentage = 0
+        else:
+            phase_percentage = min(1.0, completed / total)
+
+        # Calculate overall progress
+        overall_progress = 0
+        for p, weight in progress_phases.items():
+            if p == phase:
+                overall_progress += weight * phase_percentage
+            elif p in completed_phases:
+                overall_progress += weight
+
+        # Round the calculated progress
+        calculated_progress = round(overall_progress)
+
+        # Ensure progress never decreases
+        if calculated_progress < highest_progress[0]:
+            sync_state["progress"] = highest_progress[0]
+        else:
+            sync_state["progress"] = calculated_progress
+            highest_progress[0] = calculated_progress
+
+        if message:
+            sync_state["message"] = message
+        sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
+        sync_state_manager.set_state(sync_state)
+        return sync_state
+
+    return update_progress, completed_phases, highest_progress
+
+
+def sync_fetch(url: str) -> requests.Response | None:
+    """
+    Synchronously fetch data from a URL.
+
+    Args:
+        url (str): The URL to fetch
+
+    Returns:
+        requests.Response or None: The response object
+    """
+    reply = requests.get(url, timeout=5)
+    return reply
+
+
+async def async_fetch(url: str, executor: ThreadPoolExecutor) -> requests.Response:
+    """
+    Asynchronously fetch data from a URL using a thread pool executor.
+
+    Args:
+        url (str): The URL to fetch
+        executor (ThreadPoolExecutor): The thread pool executor to use
+
+    Returns:
+        requests.Response: The response object
+    """
+    loop = asyncio.get_running_loop()
+    return await loop.run_in_executor(executor, sync_fetch, url)
 
 
 def parse_norad_id_from_line1(line1: str) -> int:
@@ -92,6 +183,405 @@ def get_norad_id_from_tle(tle: str) -> int:
         return int(norad_id_str)
     except ValueError as e:
         raise ValueError("Failed to convert the extracted NORAD ID to an integer.") from e
+
+
+
+def detect_duplicate_satellites(celestrak_list, logger):
+    """
+    Detect satellites that appear in multiple TLE sources with potentially different names.
+
+    Args:
+        celestrak_list: List of satellite TLE data from all sources
+        logger: Logger instance for reporting
+
+    Returns:
+        dict: Contains duplicate information and deduplicated list
+    """
+    # Track satellites by NORAD ID
+    satellites_by_norad = {}
+    duplicates_info = {}
+
+    for sat in celestrak_list:
+        norad_id = get_norad_id_from_tle(sat['line1'])
+
+        if norad_id not in satellites_by_norad:
+            # First occurrence of this satellite
+            satellites_by_norad[norad_id] = sat
+            duplicates_info[norad_id] = {
+                'names': [sat['name']],
+                'occurrences': 1,
+                'is_duplicate': False
+            }
+        else:
+            # Duplicate found
+            duplicates_info[norad_id]['occurrences'] += 1
+            duplicates_info[norad_id]['is_duplicate'] = True
+
+            # Add the name if it's different
+            if sat['name'] not in duplicates_info[norad_id]['names']:
+                duplicates_info[norad_id]['names'].append(sat['name'])
+
+            # Keep the satellite entry with the most recent TLE or prefer certain naming conventions
+            # For now, we'll keep the first one found, but you could implement preference logic here
+            logger.info(f"Duplicate satellite detected - NORAD ID: {norad_id}, "
+                        f"Names: {duplicates_info[norad_id]['names']}, "
+                        f"Occurrences: {duplicates_info[norad_id]['occurrences']}")
+
+    # Create deduplicated list
+    deduplicated_list = list(satellites_by_norad.values())
+
+    # Report duplicates
+    duplicate_count = sum(1 for info in duplicates_info.values() if info['is_duplicate'])
+    total_duplicates = sum(info['occurrences'] - 1 for info in duplicates_info.values() if info['is_duplicate'])
+
+    logger.info(f"Duplicate detection complete: {duplicate_count} unique satellites have duplicates, "
+                f"{total_duplicates} total duplicate entries found")
+    logger.info(f"Original list: {len(celestrak_list)} satellites, "
+                f"Deduplicated list: {len(deduplicated_list)} satellites")
+
+    return {
+        'duplicates_info': duplicates_info,
+        'deduplicated_list': deduplicated_list,
+        'duplicate_count': duplicate_count,
+        'total_duplicates': total_duplicates
+    }
+
+
+async def query_existing_data(dbsession, logger):
+    """
+    Query existing satellites and transmitters from the database.
+
+    Args:
+        dbsession: Database session
+        logger: Logger instance
+
+    Returns:
+        dict: Contains existing data information
+    """
+    existing_satellite_norad_ids = set()
+    existing_transmitter_uuids = set()
+    existing_satellites = {}
+    existing_transmitters = {}
+
+    try:
+        # Query existing satellites
+        satellite_result = await dbsession.execute(select(Satellites))
+        for row in satellite_result.scalars().all():
+            existing_satellite_norad_ids.add(row.norad_id)
+            # Store the current satellite data for comparison
+            existing_satellites[row.norad_id] = {
+                "name": row.name,
+                "sat_id": row.sat_id,
+                "status": row.status,
+                "tle1": row.tle1,
+                "tle2": row.tle2,
+                "operator": row.operator,
+                "countries": row.countries,
+                "is_frequency_violator": row.is_frequency_violator
+            }
+
+        # Query existing transmitters
+        transmitter_result = await dbsession.execute(select(Transmitters))
+        for row in transmitter_result.scalars().all():
+            existing_transmitter_uuids.add(row.id)
+            # Store the current transmitter data for comparison
+            existing_transmitters[row.id] = {
+                "description": row.description,
+                "alive": row.alive,
+                "type": row.type,
+                "downlink_low": row.downlink_low,
+                "downlink_high": row.downlink_high,
+                "mode": row.mode,
+                "status": row.status,
+                "frequency_violation": row.frequency_violation
+            }
+
+        logger.info(f"Found {len(existing_satellite_norad_ids)} existing satellites and {len(existing_transmitter_uuids)} existing transmitters in database")
+
+    except Exception as e:
+        logger.error(f"Error querying existing data: {e}")
+        # Return empty data structures if query fails
+
+    return {
+        "satellite_norad_ids": existing_satellite_norad_ids,
+        "transmitter_uuids": existing_transmitter_uuids,
+        "satellites": existing_satellites,
+        "transmitters": existing_transmitters
+    }
+
+
+def create_satellite_from_tle_data(sat, norad_id):
+    """
+    Create a Satellites object from TLE data.
+
+    Args:
+        sat (dict): Satellite TLE data
+        norad_id (int): NORAD ID
+
+    Returns:
+        Satellites: The created satellite object
+    """
+    return Satellites(
+        norad_id=norad_id,
+        name=sat['name'],
+        name_other=None,
+        alternative_name=None,
+        image=None,
+        sat_id=None,
+        tle1=sat['line1'],
+        tle2=sat['line2'],
+        status=None,
+        decayed=None,
+        launched=None,
+        deployed=None,
+        website=None,
+        operator=None,
+        countries=None,
+        citation=None,
+        is_frequency_violator=None,
+        associated_satellites=None,
+    )
+
+
+def update_satellite_with_satnogs_data(satellite, satnogs_sat_info):
+    """
+    Update satellite object with SATNOGS data.
+
+    Args:
+        satellite (Satellites): The satellite object to update
+        satnogs_sat_info (dict): SATNOGS satellite information
+
+    Returns:
+        dict: Satellite data for comparison
+    """
+    if not satnogs_sat_info:
+        return {
+            "name": satellite.name,
+            "tle1": satellite.tle1,
+            "tle2": satellite.tle2
+        }
+
+    satellite.sat_id = satnogs_sat_info.get('sat_id', None)
+    satellite.name = satnogs_sat_info.get('name', None)
+    satellite.image = satnogs_sat_info.get('image', None)
+    satellite.status = satnogs_sat_info.get('status', None)
+    satellite.decayed = parse_date(satnogs_sat_info.get('decayed')) if satnogs_sat_info.get('decayed', None) else None
+    satellite.launched = parse_date(satnogs_sat_info.get('launched')) if satnogs_sat_info.get('launched', None) else None
+    satellite.deployed = parse_date(satnogs_sat_info.get('deployed')) if satnogs_sat_info.get('deployed', None) else None
+    satellite.website = satnogs_sat_info.get('website', None)
+    satellite.operator = satnogs_sat_info.get('operator', None)
+    satellite.countries = satnogs_sat_info.get('countries', None)
+    satellite.telemetries = satnogs_sat_info.get('telemetries', None)
+    satellite.citation = satnogs_sat_info.get('citation', None)
+    satellite.is_frequency_violator = satnogs_sat_info.get('is_frequency_violator', None)
+    satellite.associated_satellites = json.dumps(satnogs_sat_info.get('associated_satellites', {}))
+
+    return {
+        "name": satellite.name,
+        "sat_id": satellite.sat_id,
+        "status": satellite.status,
+        "tle1": satellite.tle1,
+        "tle2": satellite.tle2,
+        "operator": satellite.operator,
+        "countries": satellite.countries,
+        "is_frequency_violator": satellite.is_frequency_violator
+    }
+
+
+def detect_satellite_modifications(norad_id, satellite_data_for_comparison, existing_satellites, sync_state, logger):
+    """
+    Detect if a satellite has been modified and update sync state.
+
+    Args:
+        norad_id (int): NORAD ID of the satellite
+        satellite_data_for_comparison (dict): New satellite data
+        existing_satellites (dict): Existing satellite data
+        sync_state (dict): Sync state to update
+        logger: Logger instance
+
+    Returns:
+        bool: True if satellite was modified, False otherwise
+    """
+    if norad_id not in existing_satellites:
+        return False
+
+    existing_data = existing_satellites[norad_id]
+    changes = {}
+
+    for key, new_value in satellite_data_for_comparison.items():
+        if key in existing_data and existing_data[key] != new_value:
+            changes[key] = {
+                "old": existing_data[key],
+                "new": new_value
+            }
+
+    if changes:
+        sync_state["modified"]["satellites"].append({
+            "norad_id": norad_id,
+            "name": satellite_data_for_comparison.get("name", "Unknown"),
+            "changes": changes
+        })
+        logger.debug(f"Satellite modified: {satellite_data_for_comparison.get('name', 'Unknown')} (NORAD ID: {norad_id}), changes: {changes}")
+        return True
+
+    return False
+
+
+def create_transmitter_from_satnogs_data(transmitter_info):
+    """
+    Create a Transmitters object from SATNOGS transmitter data.
+
+    Args:
+        transmitter_info (dict): SATNOGS transmitter information
+
+    Returns:
+        tuple: (Transmitters object, comparison data dict)
+    """
+    transmitter_uuid = transmitter_info.get('uuid', None)
+
+    transmitter_data_for_comparison = {
+        "description": transmitter_info.get('description', None),
+        "alive": transmitter_info.get('alive', None),
+        "type": transmitter_info.get('type', None),
+        "downlink_low": transmitter_info.get('downlink_low', None),
+        "downlink_high": transmitter_info.get('downlink_high', None),
+        "mode": transmitter_info.get('mode', None),
+        "status": transmitter_info.get('status', None),
+        "frequency_violation": transmitter_info.get('frequency_violation', None)
+    }
+
+    transmitter = Transmitters(
+        id=transmitter_uuid,
+        description=transmitter_info.get('description', None),
+        alive=transmitter_info.get('alive', None),
+        type=transmitter_info.get('type', None),
+        uplink_low=transmitter_info.get('uplink_low', None),
+        uplink_high=transmitter_info.get('uplink_high', None),
+        uplink_drift=transmitter_info.get('uplink_drift', None),
+        downlink_low=transmitter_info.get('downlink_low', None),
+        downlink_high=transmitter_info.get('downlink_high', None),
+        downlink_drift=transmitter_info.get('downlink_drift', None),
+        mode=transmitter_info.get('mode', None),
+        mode_id=transmitter_info.get('mode_id', None),
+        uplink_mode=transmitter_info.get('uplink_mode', None),
+        invert=transmitter_info.get('invert', None),
+        baud=transmitter_info.get('baud', None),
+        sat_id=transmitter_info.get('sat_id', None),
+        norad_cat_id=transmitter_info.get('norad_cat_id', None),
+        norad_follow_id=transmitter_info.get('norad_follow_id', None),
+        status=transmitter_info.get('status', None),
+        citation=transmitter_info.get('citation', None),
+        service=transmitter_info.get('service', None),
+        iaru_coordination=transmitter_info.get('iaru_coordination', None),
+        iaru_coordination_url=transmitter_info.get('iaru_coordination_url', None),
+        itu_notification=transmitter_info.get('itu_notification', None),
+        frequency_violation=transmitter_info.get('frequency_violation', None),
+        unconfirmed=transmitter_info.get('unconfirmed', None),
+    )
+
+    return transmitter, transmitter_data_for_comparison
+
+
+def detect_transmitter_modifications(transmitter_uuid, transmitter_data_for_comparison, existing_transmitters, sync_state, satellite_name, norad_id, logger):
+    """
+    Detect if a transmitter has been modified and update sync state.
+
+    Args:
+        transmitter_uuid (str): UUID of the transmitter
+        transmitter_data_for_comparison (dict): New transmitter data
+        existing_transmitters (dict): Existing transmitter data
+        sync_state (dict): Sync state to update
+        satellite_name (str): Name of the satellite this transmitter belongs to
+        norad_id (int): NORAD ID of the satellite
+        logger: Logger instance
+
+    Returns:
+        bool: True if transmitter was modified, False otherwise
+    """
+    if transmitter_uuid not in existing_transmitters:
+        return False
+
+    existing_data = existing_transmitters[transmitter_uuid]
+    changes = {}
+
+    for key, new_value in transmitter_data_for_comparison.items():
+        if key in existing_data and existing_data[key] != new_value:
+            changes[key] = {
+                "old": existing_data[key],
+                "new": new_value
+            }
+
+    if changes:
+        sync_state["modified"]["transmitters"].append({
+            "uuid": transmitter_uuid,
+            "description": transmitter_data_for_comparison.get("description", "Unknown"),
+            "satellite_name": satellite_name,
+            "norad_id": norad_id,
+            "changes": changes
+        })
+        logger.info(f"Transmitter modified: {transmitter_data_for_comparison.get('description', 'Unknown')} for satellite {satellite_name} (UUID: {transmitter_uuid}), changes: {changes}")
+        return True
+
+    return False
+
+
+def create_final_success_message(count_sats, count_transmitters, sync_state):
+    """
+    Create a detailed success message for synchronization completion.
+
+    Args:
+        count_sats (int): Number of satellites processed
+        count_transmitters (int): Number of transmitters processed
+        sync_state (dict): Current sync state
+
+    Returns:
+        str: Formatted success message
+    """
+    new_satellites_count = len(sync_state["newly_added"]["satellites"])
+    new_transmitters_count = len(sync_state["newly_added"]["transmitters"])
+    removed_satellites_count = len(sync_state["removed"]["satellites"])
+    removed_transmitters_count = len(sync_state["removed"]["transmitters"])
+    modified_satellites_count = len(sync_state["modified"]["satellites"])
+    modified_transmitters_count = len(sync_state["modified"]["transmitters"])
+
+    success_message = f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'
+
+    if new_satellites_count > 0 or new_transmitters_count > 0:
+        success_message += f' (New: {new_satellites_count} satellites, {new_transmitters_count} transmitters)'
+
+    if modified_satellites_count > 0 or modified_transmitters_count > 0:
+        success_message += f' (Modified: {modified_satellites_count} satellites, {modified_transmitters_count} transmitters)'
+
+    if removed_satellites_count > 0 or removed_transmitters_count > 0:
+        success_message += f' (Removed: {removed_satellites_count} satellites, {removed_transmitters_count} transmitters)'
+
+    return success_message
+
+
+def parse_date(date_str: str) -> datetime:
+    """
+    Parses a date string in ISO 8601 format with an optional 'Z' suffix
+    indicating UTC time and converts it to a datetime object.
+
+    :param date_str: The ISO 8601 formatted date string, which may
+        include a 'Z' suffix indicating UTC time.
+    :type date_str: str
+    :return: A datetime object corresponding to the provided date
+        string.
+    :rtype: datetime
+    """
+    date_str = date_str.replace("Z", "+00:00")
+    return datetime.fromisoformat(date_str)
+
+
+def get_norad_ids(tle_objects: list) -> list:
+    """
+    Extracts the NORAD ID from the 'line1' field in each object of the list.
+
+    :param tle_objects: A list of dictionaries containing {'name', 'line1', 'line2'}.
+    :return: A list of integer NORAD IDs.
+    """
+    return [parse_norad_id_from_line1(obj['line1']) for obj in tle_objects]
 
 
 def get_satellite_by_norad_id(norad_id: int, satellites: List[dict]) -> dict | None:
