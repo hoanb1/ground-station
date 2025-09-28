@@ -27,6 +27,67 @@ from common.common import *
 from sqlalchemy import select
 from common.exceptions import SynchronizationErrorMainTLESource
 
+def detect_duplicate_satellites(celestrak_list, logger):
+    """
+    Detect satellites that appear in multiple TLE sources with potentially different names.
+    
+    Args:
+        celestrak_list: List of satellite TLE data from all sources
+        logger: Logger instance for reporting
+        
+    Returns:
+        dict: Contains duplicate information and deduplicated list
+    """
+    from tlesync.utils import get_norad_id_from_tle
+    
+    # Track satellites by NORAD ID
+    satellites_by_norad = {}
+    duplicates_info = {}
+    
+    for sat in celestrak_list:
+        norad_id = get_norad_id_from_tle(sat['line1'])
+        
+        if norad_id not in satellites_by_norad:
+            # First occurrence of this satellite
+            satellites_by_norad[norad_id] = sat
+            duplicates_info[norad_id] = {
+                'names': [sat['name']],
+                'occurrences': 1,
+                'is_duplicate': False
+            }
+        else:
+            # Duplicate found
+            duplicates_info[norad_id]['occurrences'] += 1
+            duplicates_info[norad_id]['is_duplicate'] = True
+            
+            # Add the name if it's different
+            if sat['name'] not in duplicates_info[norad_id]['names']:
+                duplicates_info[norad_id]['names'].append(sat['name'])
+            
+            # Keep the satellite entry with the most recent TLE or prefer certain naming conventions
+            # For now, we'll keep the first one found, but you could implement preference logic here
+            logger.info(f"Duplicate satellite detected - NORAD ID: {norad_id}, "
+                       f"Names: {duplicates_info[norad_id]['names']}, "
+                       f"Occurrences: {duplicates_info[norad_id]['occurrences']}")
+    
+    # Create deduplicated list
+    deduplicated_list = list(satellites_by_norad.values())
+    
+    # Report duplicates
+    duplicate_count = sum(1 for info in duplicates_info.values() if info['is_duplicate'])
+    total_duplicates = sum(info['occurrences'] - 1 for info in duplicates_info.values() if info['is_duplicate'])
+    
+    logger.info(f"Duplicate detection complete: {duplicate_count} unique satellites have duplicates, "
+               f"{total_duplicates} total duplicate entries found")
+    logger.info(f"Original list: {len(celestrak_list)} satellites, "
+               f"Deduplicated list: {len(deduplicated_list)} satellites")
+    
+    return {
+        'duplicates_info': duplicates_info,
+        'deduplicated_list': deduplicated_list,
+        'duplicate_count': duplicate_count,
+        'total_duplicates': total_duplicates
+    }
 
 # Global state to track satellite synchronization progress
 sync_state = {
@@ -290,7 +351,6 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
         if not celestrak_list:
             logger.error("No TLEs were fetched from any TLE source, aborting!")
-
             # Update state for error
             sync_state["status"] = "complete"
             sync_state["progress"] = 100
@@ -302,6 +362,27 @@ async def synchronize_satellite_data(dbsession, logger, sio):
 
             await sio.emit('sat-sync-events', sync_state)
             return
+
+        # Detect and handle duplicate satellites
+        logger.info("Detecting duplicate satellites across TLE sources...")
+        duplicate_detection_result = detect_duplicate_satellites(celestrak_list, logger)
+        
+        # Log duplicate information
+        if duplicate_detection_result['duplicate_count'] > 0:
+            logger.warning(f"Found {duplicate_detection_result['duplicate_count']} satellites "
+                         f"with {duplicate_detection_result['total_duplicates']} duplicate entries")
+            
+            # Log specific duplicates for debugging
+            for norad_id, info in duplicate_detection_result['duplicates_info'].items():
+                if info['is_duplicate']:
+                    logger.warning(f"NORAD ID {norad_id} appears {info['occurrences']} times "
+                                 f"with names: {', '.join(info['names'])}")
+        
+        # Use deduplicated list for processing
+        celestrak_list = duplicate_detection_result['deduplicated_list']
+        logger.info(f"Proceeding with {len(celestrak_list)} unique satellites")
+
+        # Start fetching satellite data from SATNOGS
 
         # Start fetching satellite data from SATNOGS
         progress_state = update_progress(
@@ -568,7 +649,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                         "name": satellite.name,
                         "changes": changes
                     })
-                    logger.info(f"Satellite modified: {satellite.name} (NORAD ID: {norad_id}), changes: {changes}")
+                    logger.debug(f"Satellite modified: {satellite.name} (NORAD ID: {norad_id}), changes: {changes}")
 
             # add sto dbsession
             await dbsession.merge(satellite)
