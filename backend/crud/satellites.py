@@ -100,6 +100,7 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
 
     If 'keyword' is provided, return a list of satellite records that have a matching norad_id
     or part of it, or a name or part of it. Otherwise, return all satellite records.
+    Each satellite will include information about which groups it belongs to.
     """
     try:
         if keyword is None:
@@ -116,12 +117,35 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
         result = await session.execute(stmt)
         satellites = result.scalars().all()
         satellites = serialize_object(satellites)
+
+        # For each satellite, find which groups it belongs to
+        for satellite in satellites:
+            norad_id = satellite['norad_id']
+
+            # Get all groups and filter them in Python since JSON querying can be database-specific
+            all_groups_stmt = select(SatelliteGroups)
+            all_groups_result = await session.execute(all_groups_stmt)
+            all_groups = all_groups_result.scalars().all()
+
+            # Filter groups that contain this satellite's NORAD ID
+            matching_groups = []
+            for group in all_groups:
+                if group.satellite_ids and norad_id in group.satellite_ids:
+                    matching_groups.append(group)
+
+            # Sort groups by number of member satellites (fewer first)
+            matching_groups.sort(key=lambda g: len(g.satellite_ids) if g.satellite_ids else 0)
+
+            # Add group information to the satellite
+            satellite['groups'] = serialize_object(matching_groups) if matching_groups else []
+
         return {"success": True, "data": satellites, "error": None}
 
     except Exception as e:
         logger.error(f"Error fetching satellite(s): {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
+
 
 async def fetch_satellites(session: AsyncSession, norad_id: Union[str, int, list[int], None]) -> dict:
     """

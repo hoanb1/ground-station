@@ -499,9 +499,9 @@ const TargetSatelliteLayout = React.memo(function () {
         <StyledIslandParentScrollbar key="satselector">
             <SatSelectorIsland initialNoradId={noradId} initialGroupId={groupId}/>
         </StyledIslandParentScrollbar>,
-        <StyledIslandParentScrollbar key="video">
-            <CameraView/>
-        </StyledIslandParentScrollbar>,
+        // <StyledIslandParentScrollbar key="video">
+        //     <CameraView/>
+        // </StyledIslandParentScrollbar>,
         // <StyledIslandParentScrollbar key="rotator-control">
         //     <ControllerTabs />
         // </StyledIslandParentScrollbar>,

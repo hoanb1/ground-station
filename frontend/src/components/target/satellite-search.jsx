@@ -1,0 +1,99 @@
+import * as React from "react";
+import {useSocket} from "../common/socket.jsx";
+import {useDispatch, useSelector} from "react-redux";
+import {Fragment, useCallback, useEffect} from "react";
+import {enqueueSnackbar} from "notistack";
+import Autocomplete from "@mui/material/Autocomplete";
+import {CircularProgress, TextField} from "@mui/material";
+
+
+const SatelliteSearchAutocomplete = React.memo(({onSatelliteSelect}) => {
+    const {socket} = useSocket();
+    const [open, setOpen] = React.useState(false);
+    const [options, setOptions] = React.useState([]);
+    const [loading, setLoading] = React.useState(false);
+
+    const search = (keyword) => {
+        (async () => {
+            setLoading(true);
+            socket.emit("data_request", "get-satellite-search", keyword, (response) => {
+                if (response.success) {
+                    console.log(response.data);
+                    setOptions(response.data);
+                } else {
+                    console.error(response.error);
+                    enqueueSnackbar(`Error searching for satellites: ${response.error}`, {
+                        variant: 'error',
+                        autoHideDuration: 5000,
+                    });
+                    setOptions([]);
+                }
+                setLoading(false);
+            });
+        })();
+    };
+
+    const handleOpen = () => {
+        setOpen(true);
+    };
+
+    const handleClose = () => {
+        setOpen(false);
+        setOptions([]);
+    };
+
+    const handleInputChange = (event, newInputValue) => {
+        if (newInputValue.length > 2) {
+            search(newInputValue);
+        }
+    };
+
+    const handleOptionSelect = (event, selectedSatellite) => {
+        console.info(selectedSatellite);
+        if (selectedSatellite !== null) {
+            selectedSatellite['id'] = selectedSatellite['norad_id'];
+            onSatelliteSelect(selectedSatellite);
+        }
+    }
+
+    return (
+        <Autocomplete
+            size={"small"}
+            sx={{ minWidth: 200 }}
+            open={open}
+            fullWidth={true}
+            onOpen={handleOpen}
+            onClose={handleClose}
+            onInputChange={handleInputChange}
+            onChange={handleOptionSelect}
+            isOptionEqualToValue={(option, value) => option.name === value.name}
+            getOptionLabel={(option) => {
+                return `${option['norad_id']} - ${option['name']}`;
+            }}
+            options={options}
+            loading={loading}
+            renderInput={(params) => (
+                <TextField
+                    size={"small"}
+                    variant={"filled"}
+                    fullWidth={true}
+                    {...params}
+                    label="Search satellites (by name or NORAD ID)"
+                    slotProps={{
+                        input: {
+                            ...params.InputProps,
+                            endAdornment: (
+                                <Fragment>
+                                    {loading ? <CircularProgress color="inherit" size={20} /> : null}
+                                    {params.InputProps.endAdornment}
+                                </Fragment>
+                            ),
+                        },
+                    }}
+                />
+            )}
+        />
+    );
+});
+
+export default SatelliteSearchAutocomplete;

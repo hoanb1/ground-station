@@ -29,7 +29,7 @@ import {
     setTrackingStateInBackend,
     setAvailableTransmitters,
 } from './target-slice.jsx';
-import { useSocket } from "../common/socket.jsx";
+import {useSocket} from "../common/socket.jsx";
 
 
 function SatelliteList() {
@@ -64,12 +64,16 @@ function SatelliteList() {
         return [];
     }
 
-    function handleUIElementChange(event) {
-        const satelliteId = event.target.value;
+    function setTargetSatellite(eventOrSatelliteId) {
+        // Determine the satelliteId based on the input type
+        const satelliteId = typeof eventOrSatelliteId === 'object'
+            ? eventOrSatelliteId.target.value
+            : eventOrSatelliteId;
+
         dispatch(setSatelliteId(satelliteId));
         dispatch(setAvailableTransmitters(getTransmittersForSatelliteId(satelliteId)));
 
-        // set the tracking state in the backend to the new norad id and leave the state as is
+        // Set the tracking state in the backend to the new norad id and leave the state as is
         const data = {
             ...trackingState,
             norad_id: satelliteId,
@@ -78,7 +82,7 @@ function SatelliteList() {
             rotator_id: selectedRotator,
             transmitter_id: selectedTransmitter,
         };
-        dispatch(setTrackingStateInBackend({ socket, data: data}));
+        dispatch(setTrackingStateInBackend({socket, data: data}));
     }
 
     const handleSelectOpenEvent = (event) => {
@@ -90,12 +94,18 @@ function SatelliteList() {
     };
 
     return (
-        <FormControl disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"} fullWidth={true} variant={"filled"} size={"small"}>
+        <FormControl
+            disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"}
+            fullWidth={true} variant={"filled"} size={"small"}>
             <InputLabel htmlFor="satellite-select">Satellite</InputLabel>
-            <Select onClose={handleSelectCloseEvent} onOpen={handleSelectOpenEvent}  value={groupOfSats.length > 0? satelliteId: ""}
-                    id="satellite-select" label="Satellite" variant={"filled"} size={"small"} onChange={handleUIElementChange}>
+            <Select onClose={handleSelectCloseEvent}
+                    onOpen={handleSelectOpenEvent}
+                    value={groupOfSats.length > 0 && groupOfSats.find(s => s.norad_id === satelliteId) ? satelliteId : ""}
+                    id="satellite-select" label="Satellite" variant={"filled"} size={"small"}
+                    onChange={setTargetSatellite}>
                 {groupOfSats.map((satellite, index) => {
-                    return <MenuItem value={satellite['norad_id']} key={index}>#{satellite['norad_id']} {satellite['name']}</MenuItem>;
+                    return <MenuItem value={satellite['norad_id']}
+                                     key={index}>#{satellite['norad_id']} {satellite['name']}</MenuItem>;
                 })}
             </Select>
         </FormControl>

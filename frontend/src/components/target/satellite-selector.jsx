@@ -1,3 +1,4 @@
+
 /**
  * @license
  * Copyright (c) 2025 Efstratios Goudelis
@@ -18,14 +19,10 @@
  */
 
 
-import { useEffect, useState} from "react";
+import { useEffect, useState, useCallback, Fragment} from "react";
 import {
     Button,
-    FormControl,
-    InputLabel,
-    ListSubheader,
-    MenuItem,
-    Select,
+    TextField,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
@@ -37,18 +34,16 @@ import {
     fetchSatellitesByGroupId,
     setSatGroupId,
     setSatelliteId,
-    setSatelliteGroupSelectOpen,
     setTrackingStateInBackend,
-    setGroupOfSats, setLoading,
-    setStarting,
-    setRadioRig,
-    setRotator, setSelectedTransmitter,
+    setStarting, setAvailableTransmitters,
 } from './target-slice.jsx';
 import SatelliteList from "./satellite-dropdown.jsx";
+import GroupDropdown from "./group-dropdown.jsx";
 import {enqueueSnackbar} from "notistack";
+import Autocomplete from "@mui/material/Autocomplete";
+import CircularProgress from "@mui/material/CircularProgress";
+import SatelliteSearchAutocomplete from "./satellite-search.jsx";
 
-
-const SATELLITE_NUMBER_LIMIT = 500;
 
 const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
     const { socket } = useSocket();
@@ -115,22 +110,6 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
         };
     }, []);
 
-    const handleGroupChange = (e) => {
-        const newGroupId = e.target.value;
-        dispatch(setSatGroupId(newGroupId));
-        dispatch(fetchSatellitesByGroupId({ socket, groupId: newGroupId }));
-        dispatch(setSatelliteId(''));
-        dispatch(setGroupOfSats([]));
-    };
-
-    const handleSelectOpenEvent = (event) => {
-        dispatch(setSatelliteGroupSelectOpen(true));
-    };
-
-    const handleSelectCloseEvent = (event) => {
-        dispatch(setSatelliteGroupSelectOpen(false));
-    };
-
     const handleTrackingStop = () => {
         const newTrackingState = {
             ...trackingState,
@@ -140,67 +119,87 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}));
     };
 
+    function getTransmittersForSatelliteId(satelliteId) {
+        if (satelliteId && groupOfSats.length > 0) {
+            const satellite = groupOfSats.find(s => s.norad_id === satelliteId);
+            if (satellite) {
+                return satellite.transmitters || [];
+            } else {
+                return [];
+            }
+        }
+        return [];
+    }
+
+    const handleSatelliteSelect = useCallback((satellite) => {
+        dispatch(setSatelliteId(satellite.norad_id));
+        dispatch(setAvailableTransmitters(getTransmittersForSatelliteId(satellite.norad_id)));
+
+        // set the tracking state in the backend to the new norad id and leave the state as is
+        const data = {
+            ...trackingState,
+            norad_id: satellite.norad_id,
+            group_id: satellite.groups[0].id,
+            rig_id: selectedRadioRig,
+            rotator_id: selectedRotator,
+            transmitter_id: selectedTransmitter,
+        };
+        dispatch(setTrackingStateInBackend({ socket, data: data}));
+
+    }, [dispatch]);
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Select group and satellite</TitleBar>
-            <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
-                <Grid size={{ xs: 8, sm: 8, md: 8 }}>
-                    <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0rem 0.0rem 0.5rem'}}>
-                        <FormControl disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"} sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                                     size={"small"}>
-                            <InputLabel htmlFor="grouped-select">Group</InputLabel>
-                            <Select onClose={handleSelectCloseEvent}
-                                    onOpen={handleSelectOpenEvent}
-                                    onChange={handleGroupChange}
-                                    value={satGroups.length > 0? groupId: ""}
-                                    id="grouped-select" label="Grouping" variant={"filled"}
-                                    size={"small"}>
-                                <ListSubheader>User defined satellite groups</ListSubheader>
-                                {satGroups.map((group, index) => {
-                                    if (group.type === "user") {
-                                        return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                                    }
-                                })}
-                                <ListSubheader>TLE source groups</ListSubheader>
-                                {satGroups.map((group, index) => {
-                                    if (group.type === "system") {
-                                        return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                                    }
-                                })}
-                            </Select>
-                        </FormControl>
-                    </Grid>
-                    <Grid
-                        size={{ xs: 12, sm: 12, md: 12 }}
-                        style={{ padding: '0rem 0rem 0.5rem 0.5rem' }}
-                    >
-                        <SatelliteList/>
+            <Grid container spacing={{ xs: 2, md: 2 }} columns={{ xs: 12, sm: 12, md: 12 }}>
+                <Grid size={{ xs: 12, sm: 12, md: 6 }}>
+                    <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0rem 0.5rem 0.5rem'}}>
+                        <SatelliteSearchAutocomplete onSatelliteSelect={handleSatelliteSelect} />
                     </Grid>
                 </Grid>
-                <Grid
-                    size={{ xs: 4, sm: 4, md: 4 }}
-                    style={{
-                        padding: '0.5rem 0.5rem 0.5rem 0.5rem',
-                        display: 'flex',
-                        alignItems: 'center',
-                }}
-                >
-                    <Button
-                        variant="contained"
-                        color="error"
-                        disabled={rigData['tracking'] !== true && rotatorData['tracking'] !== true}
-                        size="large"
-                        onClick={handleTrackingStop}
-                        sx={{
-                            width: '100%',
-                            height: '100%',
-                            fontSize: '1rem',
-                            marginTop: 1,
-                            marginBottom: 1,
-                        }}
-                    >
-                        STOP TRACKING
-                    </Button>
+                <Grid size={{ xs: 12, sm: 12, md: 6 }}>
+                    <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
+                        <Grid size={{ xs: 8, sm: 8, md: 8 }}>
+                            <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0rem 0.0rem 0rem'}}>
+                                <GroupDropdown />
+                            </Grid>
+                            <Grid
+                                size={{ xs: 12, sm: 12, md: 12 }}
+                                style={{ padding: '0rem 0rem 0.5rem 0rem' }}
+                            >
+                                <SatelliteList/>
+                            </Grid>
+                        </Grid>
+                        <Grid
+                            size={{ xs: 4, sm: 4, md: 4 }}
+                            style={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                                paddingTop: '0.5rem',
+                                paddingBottom: '0.5rem',
+                                paddingLeft: '0rem',
+                                paddingRight: '0.5rem',
+                            }}
+                        >
+                            <Button
+                                variant="contained"
+                                color="error"
+                                disabled={rigData['tracking'] !== true && rotatorData['tracking'] !== true}
+                                size="large"
+                                onClick={handleTrackingStop}
+                                sx={{
+                                    width: '100%',
+                                    fontSize: '0.9rem',
+                                    minHeight: '60px',
+                                    height: 105,
+                                }}
+                            >
+                                STOP TRACKING
+                            </Button>
+                        </Grid>
+                    </Grid>
                 </Grid>
             </Grid>
         </>
