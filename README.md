@@ -53,9 +53,6 @@
 
 </div>
 
-# Ground Station
-
-
 ## Key Features
 
 *   **Real-time Satellite Tracking:** Track hundreds of satellites with high-precision orbital models. TLE data is automatically updated from CelesTrak and SatNOGS.
