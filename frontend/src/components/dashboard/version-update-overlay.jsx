@@ -31,7 +31,7 @@ const pulseGlow = keyframes`
 function VersionUpdateOverlay() {
     const dispatch = useDispatch();
     const { hasVersionChanged, data } = useSelector((state) => state.version);
-    const [countdown, setCountdown] = useState(3);
+    const [countdown, setCountdown] = useState(5);
     const [timeoutId, setTimeoutId] = useState(null);
     const [intervalId, setIntervalId] = useState(null);
 
