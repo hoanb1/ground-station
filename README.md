@@ -18,9 +18,67 @@
 The Ground Station application is composed of a frontend, a backend, and a set of worker processes.
 
 ```mermaid
-flowchart LR
-  A[Frontend: React + Redux + MUI] -->|socket.io| B[Backend: FastAPI]
-  B --> C[Workers: Satellite tracking & SDR streaming]
+flowchart TB
+    %% Frontend Layer
+    A[Frontend: React + Redux + MUI] 
+    
+    %% Backend Layer
+    B[Backend: FastAPI + Socket.IO]
+    
+    %% Worker Layer
+    subgraph Workers["Worker Processes"]
+        direction TB
+        W1[Satellite Tracker + Hardware Control<br/>- Antenna rotator control<br/>- Rig/radio control<br/>- Real-time tracking calculations<br/>- Hardware state management]
+        W2[SDR Stream Reader<br/>- FFT processing<br/>- Audio streaming<br/>- Waterfall generation<br/>- Signal processing]
+        W3[SDR Local Probe<br/>- Device discovery<br/>- Local SoapySDR enumeration<br/>- Hardware capability detection]
+        W4[SDR Remote Probe<br/>- Remote SoapySDR discovery<br/>- Network device scanning<br/>- Remote capability detection]
+    end
+    
+    %% Hardware Layer
+    subgraph Hardware["Hardware Interfaces"]
+        direction LR
+        H1[Antenna Rotators<br/>- Hamlib compatible<br/>- Az/El control]
+        H2[Radios/Rigs<br/>- CAT control<br/>- Frequency tuning]
+        H3[Local SDR Devices<br/>- RTL-SDR<br/>- SoapySDR devices<br/>- UHD/USRP]
+        H4[Remote SDR Devices<br/>- SoapyRemote<br/>- rtl_tcp servers<br/>- Network receivers]
+    end
+    
+    %% External Services
+    subgraph External["External Data Sources"]
+        E1[TLE Data Sources<br/>- CelesTrak<br/>- SatNOGS DB]
+        E2[Satellite Databases<br/>- Transmitter info<br/>- Orbital data]
+    end
+    
+    %% Connections
+    A ---|Socket.IO<br/>Real-time updates| B
+    B ---|Message Queues<br/>Commands & Status| W1
+    B ---|Message Queues<br/>Stream Control| W2
+    B ---|Message Queues<br/>Discovery Requests| W3
+    B ---|Message Queues<br/>Remote Scanning| W4
+    
+    W1 ---|Control Commands| H1
+    W1 ---|Frequency Control| H2
+    W2 ---|Data Streaming| H3
+    W2 ---|Network Streaming| H4
+    W3 ---|Device Enumeration| H3
+    W4 ---|Remote Discovery| H4
+    
+    B ---|HTTP/API Requests| E1
+    B ---|Database Queries| E2
+
+    %% Dark Mode Styling
+    classDef frontend fill:#1a237e,stroke:#3f51b5,stroke-width:2px,color:#ffffff
+    classDef backend fill:#2e7d32,stroke:#4caf50,stroke-width:2px,color:#ffffff
+    classDef worker fill:#e65100,stroke:#ff9800,stroke-width:2px,color:#ffffff
+    classDef hardware fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
+    classDef external fill:#b71c1c,stroke:#f44336,stroke-width:2px,color:#ffffff
+
+
+    class A frontend
+    class B backend
+    class W1,W2,W3,W4 worker
+    class H1,H2,H3,H4 hardware
+    class E1,E2 external
 ```
 
 *   **Frontend:** The frontend is a single-page application built with React, Redux Toolkit, and Material-UI. It communicates with the backend using a socket.io connection for real-time updates.
