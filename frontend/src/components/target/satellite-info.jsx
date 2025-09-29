@@ -35,7 +35,8 @@ import {
     Divider,
     IconButton,
     Tooltip,
-    Avatar
+    Avatar,
+    Button
 } from '@mui/material';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import CheckCircleIcon from '@mui/icons-material/CheckCircle';
@@ -49,8 +50,10 @@ import RocketLaunchIcon from '@mui/icons-material/RocketLaunch';
 import UpdateIcon from '@mui/icons-material/Update';
 import BusinessIcon from '@mui/icons-material/Business';
 import LaunchIcon from '@mui/icons-material/Launch';
+import OpenInNewIcon from '@mui/icons-material/OpenInNew';
 import Grid from "@mui/material/Grid2";
 import React from "react";
+import { Link } from "react-router-dom";
 
 const TargetSatelliteInfoIsland = () => {
     const { satelliteData, gridEditable } = useSelector((state) => state.targetSatTrack);
@@ -310,6 +313,34 @@ const TargetSatelliteInfoIsland = () => {
                     )}
                 </Section>
             </Box>
+
+            {/* Link to detailed satellite page */}
+            {satelliteData && satelliteData['details'] && (
+                <Box sx={{ 
+                    p: 2, 
+                    borderTop: "1px solid rgba(255, 255, 255, 0.1)",
+                    bgcolor: "rgba(10, 10, 10, 0.5)"
+                }}>
+                    <Button
+                        component={Link}
+                        to={`/satellite/${satelliteData['details']['norad_id']}`}
+                        variant="outlined"
+                        size="small"
+                        fullWidth
+                        startIcon={<OpenInNewIcon />}
+                        sx={{
+                            color: 'secondary.light',
+                            borderColor: 'secondary.main',
+                            '&:hover': {
+                                borderColor: 'secondary.light',
+                                bgcolor: 'rgba(255, 255, 255, 0.05)'
+                            }
+                        }}
+                    >
+                        View Detailed Information
+                    </Button>
+                </Box>
+            )}
         </Box>
     );
 }

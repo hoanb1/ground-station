@@ -23,6 +23,7 @@ import { useEffect, useState, useCallback, Fragment} from "react";
 import {
     Button,
     TextField,
+    Divider,
 } from "@mui/material";
 import Grid from '@mui/material/Grid2';
 import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../common/common.jsx";
@@ -159,6 +160,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
                         <SatelliteSearchAutocomplete onSatelliteSelect={handleSatelliteSelect} />
                     </Grid>
                 </Grid>
+                <Divider orientation="vertical" flexItem sx={{margin: '0.5rem 0'}}/>
                 <Grid size={12}>
                     <Grid container spacing={1} columns={12}>
                         <Grid size={8}>
@@ -172,6 +174,7 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
                                 <SatelliteList/>
                             </Grid>
                         </Grid>
+
                         <Grid
                             size={4}
                             style={{
