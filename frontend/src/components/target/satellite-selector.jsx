@@ -174,7 +174,6 @@ const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
                                 <SatelliteList/>
                             </Grid>
                         </Grid>
-
                         <Grid
                             size={4}
                             style={{
