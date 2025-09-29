@@ -19,10 +19,16 @@ const versionSlice = createSlice({
     name: 'version',
     initialState: {
         data: null,
+        previousVersion: null,
         loading: false,
         error: null,
+        hasVersionChanged: false,
     },
-    reducers: {},
+    reducers: {
+        clearVersionChangeFlag: (state) => {
+            state.hasVersionChanged = false;
+        },
+    },
     extraReducers: (builder) => {
         builder
             .addCase(fetchVersionInfo.pending, (state) => {
@@ -31,6 +37,13 @@ const versionSlice = createSlice({
             })
             .addCase(fetchVersionInfo.fulfilled, (state, action) => {
                 state.loading = false;
+                
+                // Store previous version before updating
+                if (state.data && state.data.version !== action.payload.version) {
+                    state.previousVersion = state.data.version;
+                    state.hasVersionChanged = true;
+                }
+                
                 state.data = action.payload;
             })
             .addCase(fetchVersionInfo.rejected, (state, action) => {
@@ -40,4 +53,5 @@ const versionSlice = createSlice({
     },
 });
 
+export const { clearVersionChangeFlag } = versionSlice.actions;
 export default versionSlice.reducer;

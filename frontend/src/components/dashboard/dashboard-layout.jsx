@@ -64,6 +64,7 @@ import HardwareSettingsPopover from "./hardware-popover.jsx";
 import ConnectionOverlay from "./reconnecting-overlay.jsx";
 import SatelliteInfoPopover from "./target-popover.jsx";
 import VersionInfo from "./version-info.jsx";
+import VersionUpdateOverlay from "./version-update-overlay.jsx";
 
 
 function DashboardEditor() {
@@ -360,6 +361,10 @@ export default function Layout() {
         reConnectAttempt,
         connectionError,
     } = useSelector((state) => state.dashboard);
+    const {
+        hasVersionChanged,
+        data
+    } = useSelector((state) => state.version);
 
     // Use the audio context
     const { initializeAudio, playAudioSamples, getAudioState } = useAudio();
@@ -460,6 +465,7 @@ export default function Layout() {
                 sidebarFooter: () => {}
             }}>
             {connected? <Outlet />: <ConnectionOverlay />}
+            {hasVersionChanged && <VersionUpdateOverlay />}
         </DashboardLayout>
     );
 }
