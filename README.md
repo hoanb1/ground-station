@@ -5,7 +5,10 @@
 # Ground Station
 
 
-**Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication, and data decoding.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving satellite imagery and telemetry.
+**Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication, 
+and data decoding.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides 
+a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving 
+satellite imagery and telemetry.
 
 ## Screenshots
 
@@ -21,7 +24,7 @@
 ### Satellite Tracking Console
 <img src="frontend/public/ground station - tracking console - amateur iss.png" alt="ISS tracking console" width="450"/>
 
-*Dedicated tracking interface for the International Space Station showing orbital parameters, pass predictions, and real-time position data*
+*Dedicated tracking interface for the targeted satellite showing orbital parameters, pass predictions, and real-time position data*
 
 ---
 
