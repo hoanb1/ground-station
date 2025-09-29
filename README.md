@@ -28,13 +28,6 @@ satellite imagery and telemetry.
 
 ---
 
-### SDR Waterfall Display with Doppler Correction
-<img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect 2.png" alt="Waterfall display with doppler correction" width="450"/>
-
-*Advanced waterfall display showing real-time spectrum analysis with automatic Doppler shift correction during satellite passes*
-
----
-
 ### Live Signal Analysis
 <img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect.png" alt="Live waterfall analysis" width="450"/>
 
