@@ -22,7 +22,7 @@
 *   **Automated Antenna Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
 *   **Data Decoding:** Decode and display images from weather satellites (e.g., NOAA APT) and telemetry from various amateur satellites.
-*   **Web-Based UI:** A modern, responsive, and intuitive web interface allows you to control all aspects of the ground station from any device on your network.
+*   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.
 *   **Multi-User Support:**  Create and manage multiple user accounts with different levels of access and permissions.
 
 ## Architecture
