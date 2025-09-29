@@ -15,6 +15,7 @@ export const fetchVersionInfo = createAsyncThunk(
     }
 );
 
+
 const versionSlice = createSlice({
     name: 'version',
     initialState: {
