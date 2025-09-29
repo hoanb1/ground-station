@@ -1,8 +1,20 @@
+<div align="center">
+  <img src="frontend/public/gs-logo-green-blue.png" alt="Ground Station Logo" width="200"/>
+</div>
+
 # Ground Station
 
 **Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication, and data decoding.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving satellite imagery and telemetry.
 
-![Ground Station Screenshot](https://raw.githubusercontent.com/your-username/ground-station/main/screenshot.png)  <!-- Replace with an actual screenshot URL -->
+<div align="center">
+  <img src="frontend/public/ground station - birds eye view - amateur.png" alt="Ground Station - Birds Eye View" width="400"/>
+  <img src="frontend/public/ground station - tracking console - amateur iss.png" alt="Ground Station - Tracking Console" width="400"/>
+  <img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect 2.png" alt="Ground Station - Doppler Effect 2" width="400"/>  
+  <img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect.png" alt="Ground Station - Waterfall" width="400"/>
+  <img src="frontend/public/ground station - tle data sync - with modified sats.png" alt="Ground Station - TLE Sync" width="400"/>
+  <img src="frontend/public/ground station - sdrs view - table list.png" alt="Ground Station - SDRs View" width="400"/>
+  
+</div>
 
 ## Key Features
 
