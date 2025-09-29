@@ -27,10 +27,12 @@ const pulseGlow = keyframes`
     }
 `;
 
+const COUNTDOWN_DURATION = 5; // 5 seconds
+
 function VersionUpdateOverlay() {
     const dispatch = useDispatch();
     const { hasVersionChanged, data } = useSelector((state) => state.version);
-    const [countdown, setCountdown] = useState(5);
+    const [countdown, setCountdown] = useState(COUNTDOWN_DURATION);
     const [timeoutId, setTimeoutId] = useState(null);
     const [intervalId, setIntervalId] = useState(null);
 
@@ -41,13 +43,14 @@ function VersionUpdateOverlay() {
 
     useEffect(() => {
         if (hasVersionChanged) {
-            console.log('Version has changed!', data.version);
+            console.log('Version has changed!', data?.version);
 
-            // Start countdown
+            // Start the auto-refresh timeout
             const timeout = setTimeout(() => {
                 window.location.reload();
-            }, 3000);
+            }, COUNTDOWN_DURATION * 1000);
 
+            // Start the countdown interval
             const interval = setInterval(() => {
                 setCountdown((prev) => {
                     if (prev <= 1) {
@@ -90,7 +93,7 @@ function VersionUpdateOverlay() {
     };
 
     // Calculate progress for circular progress (100% at start, 0% at end)
-    const progress = (countdown / 3) * 100;
+    const progress = (countdown / COUNTDOWN_DURATION) * 100;
 
     return (
         <Backdrop
@@ -166,7 +169,7 @@ function VersionUpdateOverlay() {
                             size={32}
                             thickness={4}
                             sx={{
-                                color: countdown > 1 ? '#4caf50' : '#ff9800',
+                                color: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
                                 '& .MuiCircularProgress-circle': {
                                     strokeLinecap: 'round',
                                 },
@@ -187,7 +190,7 @@ function VersionUpdateOverlay() {
                             <Typography
                                 variant="caption"
                                 sx={{
-                                    color: countdown > 1 ? '#4caf50' : '#ff9800',
+                                    color: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
                                     fontWeight: 'bold',
                                     fontSize: '0.75rem',
                                     fontFamily: 'monospace'
@@ -201,7 +204,7 @@ function VersionUpdateOverlay() {
                         <Typography
                             variant="body2"
                             sx={{
-                                color: countdown > 1 ? '#4caf50' : '#ff9800',
+                                color: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
                                 fontWeight: 500,
                                 fontSize: '0.875rem'
                             }}
@@ -252,17 +255,17 @@ function VersionUpdateOverlay() {
                         onClick={handleRefresh}
                         disabled={countdown === 0}
                         sx={{
-                            backgroundColor: countdown > 1 ? '#4caf50' : '#ff9800',
+                            backgroundColor: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
                             color: '#ffffff',
                             '&:hover': {
-                                backgroundColor: countdown > 1 ? '#45a049' : '#f57c00'
+                                backgroundColor: countdown > 2 ? '#45a049' : countdown > 1 ? '#f57c00' : '#d32f2f'
                             },
                             '&:disabled': {
                                 backgroundColor: '#666666'
                             },
                             textTransform: 'none',
                             fontWeight: 600,
-                            boxShadow: `0 2px 8px rgba(${countdown > 1 ? '76, 175, 80' : '255, 152, 0'}, 0.3)`
+                            boxShadow: `0 2px 8px rgba(${countdown > 2 ? '76, 175, 80' : countdown > 1 ? '255, 152, 0' : '244, 67, 54'}, 0.3)`
                         }}
                     >
                         Refresh Now
