@@ -18,6 +18,7 @@ const fadeIn = keyframes`
     }
 `;
 
+
 const pulseGlow = keyframes`
     0%, 100% {
         box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
