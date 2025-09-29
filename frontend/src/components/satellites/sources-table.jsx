@@ -224,6 +224,15 @@ export default function SourcesTable() {
                     <DialogTitle>{formValues.id ? 'Edit' : 'Add'} TLE Source</DialogTitle>
                     <DialogContent>
                         <Stack spacing={2} sx={{marginTop: 1}}>
+                            <Alert severity="warning" sx={{marginBottom: 2}}>
+                                <AlertTitle>Performance Notice</AlertTitle>
+                                TLE sources with over 100 satellites will cause performance issues.
+                                The application will work (even with thousands of satellites in a TLE) but performance
+                                will <b>suffer significantly</b>.
+                                For optimal performance, select updated sources that contain a small or
+                                specific group of satellites instead of generic TLE sources that contain
+                                vast groups of satellites (such as the Active list from Celestrak).
+                            </Alert>
                             <TextField
                                 label="Name"
                                 name="name"
