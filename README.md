@@ -4,17 +4,57 @@
 
 # Ground Station
 
+
 **Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication, and data decoding.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving satellite imagery and telemetry.
 
+## Screenshots
+
 <div align="center">
-  <img src="frontend/public/ground station - birds eye view - amateur.png" alt="Ground Station - Birds Eye View" width="400"/>
-  <img src="frontend/public/ground station - tracking console - amateur iss.png" alt="Ground Station - Tracking Console" width="400"/>
-  <img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect 2.png" alt="Ground Station - Doppler Effect 2" width="400"/>  
-  <img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect.png" alt="Ground Station - Waterfall" width="400"/>
-  <img src="frontend/public/ground station - tle data sync - with modified sats.png" alt="Ground Station - TLE Sync" width="400"/>
-  <img src="frontend/public/ground station - sdrs view - table list.png" alt="Ground Station - SDRs View" width="400"/>
-  
+
+### Global Satellite Overview
+<img src="frontend/public/ground station - birds eye view - amateur.png" alt="Global satellite tracking view" width="450"/>
+
+*Real-time global satellite tracking with interactive world map showing satellite positions, ground tracks, and coverage areas*
+
+---
+
+### Satellite Tracking Console
+<img src="frontend/public/ground station - tracking console - amateur iss.png" alt="ISS tracking console" width="450"/>
+
+*Dedicated tracking interface for the International Space Station showing orbital parameters, pass predictions, and real-time position data*
+
+---
+
+### SDR Waterfall Display with Doppler Correction
+<img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect 2.png" alt="Waterfall display with doppler correction" width="450"/>
+
+*Advanced waterfall display showing real-time spectrum analysis with automatic Doppler shift correction during satellite passes*
+
+---
+
+### Live Signal Analysis
+<img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect.png" alt="Live waterfall analysis" width="450"/>
+
+*Live RF spectrum waterfall demonstrating Doppler effect visualization during active satellite communication*
+
+---
+
+### TLE Data Synchronization
+<img src="frontend/public/ground station - tle data sync - with modified sats.png" alt="TLE synchronization progress" width="450"/>
+
+*Automated TLE data synchronization from CelesTrak and SatNOGS showing real-time progress and satellite database updates*
+
+---
+
+### ⚙️ SDR Hardware Management
+<img src="frontend/public/ground station - sdrs view - table list.png" alt="SDR device management" width="450"/>
+
+*Comprehensive SDR device management interface supporting RTL-SDR, SoapySDR, and UHD/USRP radios with remote capability*
+
 </div>
+
+# Ground Station
+
 
 ## Key Features
 
