@@ -1,5 +1,4 @@
 
-import SystemUpdateIcon from '@mui/icons-material/SystemUpdate';
 import NewReleasesIcon from '@mui/icons-material/NewReleases';
 import { keyframes } from '@emotion/react';
 import { Backdrop, Box, Typography, Button, CircularProgress } from "@mui/material";
@@ -18,6 +17,7 @@ const fadeIn = keyframes`
         transform: translateY(0);
     }
 `;
+
 
 const COUNTDOWN_DURATION = 5; // 5 seconds
 
