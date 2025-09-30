@@ -1,0 +1,285 @@
+/**
+ * @license
+ * Copyright (c) 2025 Efstratios Goudelis
+ *
+ * This program is free software: you can redistribute it and/or modify
+ * it under the terms of the GNU General Public License as published by
+ * the Free Software Foundation, either version 3 of the License, or
+ * (at your option) any later version.
+ *
+ * This program is distributed in the hope that it will be useful,
+ * but WITHOUT ANY WARRANTY; without even the implied warranty of
+ * MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE. See the
+ * GNU General Public License for more details.
+ *
+ * You should have received a copy of the GNU General Public License
+ * along with this program. If not, see <https://www.gnu.org/licenses/>.
+ *
+ */
+
+import * as React from "react";
+import {
+    Box,
+    IconButton,
+    Popover,
+    Typography,
+    LinearProgress,
+    Stack,
+    Chip,
+    List,
+    ListItem,
+    ListItemText,
+    Divider,
+    CircularProgress,
+} from "@mui/material";
+import { useRef, useState } from "react";
+import { useSelector } from "react-redux";
+import Tooltip from "@mui/material/Tooltip";
+
+// Import overlay icons
+import CloudDoneIcon from '@mui/icons-material/CloudDone';
+import CloudOffIcon from '@mui/icons-material/CloudOff';
+import SyncIcon from '@mui/icons-material/Sync';
+
+const SatelliteSyncPopover = () => {
+    const buttonRef = useRef(null);
+    const [anchorEl, setAnchorEl] = useState(null);
+
+    // Get sync data from the Redux store
+    const { syncState, synchronizing, status, error } = useSelector(
+        (state) => state.syncSatellite
+    );
+
+    const handleClick = (event) => {
+        setAnchorEl(event.currentTarget);
+    };
+
+    const handleClose = () => {
+        setAnchorEl(null);
+    };
+
+    const open = Boolean(anchorEl);
+
+    // Determine colors based on sync status
+    const getProgressColor = () => {
+        if (syncState?.status === 'complete' && syncState?.success === false) return 'error';
+        if (syncState?.errors && syncState.errors.length > 0) return 'error';
+        if (syncState?.status === 'inprogress') return 'primary';
+        if (syncState?.status === 'complete' && syncState?.success === true) return 'success';
+        return 'inherit';
+    };
+
+    const getTooltip = () => {
+        if (syncState?.status === 'inprogress') return `Synchronizing: ${syncState?.progress || 0}%`;
+        if (syncState?.status === 'complete' && syncState?.success === false) return `Sync Failed: ${syncState.errors?.[0] || 'Unknown error'}`;
+        if (syncState?.status === 'complete' && syncState?.success === true) {
+            return `Last sync: ${new Date(syncState.last_update).toLocaleString()}`;
+        }
+        return 'Satellite TLE Data Sync';
+    };
+
+    // Format date nicely
+    const formatDate = (dateString) => {
+        if (!dateString) return 'N/A';
+        const date = new Date(dateString);
+        return date.toLocaleString();
+    };
+
+    // Show icon only when in progress or when complete with success === false
+    const shouldShowIcon = syncState?.status === 'inprogress' || 
+                           (syncState?.status === 'complete' && syncState?.success === false);
+
+    return (
+        <>
+            {shouldShowIcon && (
+                <Tooltip title={getTooltip()}>
+                    <IconButton
+                        ref={buttonRef}
+                        onClick={handleClick}
+                        size="small"
+                        sx={{
+                            width: 40,
+                            height: 40,
+                            '&:hover': {
+                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                            },
+                            position: 'relative',
+                        }}
+                    >
+                        <CircularProgress
+                            variant="determinate"
+                            value={syncState?.status === 'inprogress' ? syncState?.progress || 0 : 100}
+                            size={32}
+                            thickness={5}
+                            color={getProgressColor()}
+                            sx={{
+                                position: 'absolute',
+                            }}
+                        />
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                            }}
+                        >
+                            {syncState?.status === 'inprogress' ? (
+                                <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 'bold' }}>
+                                    {syncState?.progress || 0}
+                                </Typography>
+                            ) : (
+                                <Typography variant="caption" sx={{ fontSize: 10, fontWeight: 'bold' }}>
+                                    TLE
+                                </Typography>
+                            )}
+                        </Box>
+                    </IconButton>
+                </Tooltip>
+            )}
+            <Popover
+                sx={{
+                    '& .MuiPaper-root': {
+                        borderRadius: 0,
+                    },
+                }}
+                open={open}
+                anchorEl={anchorEl}
+                onClose={handleClose}
+                anchorOrigin={{
+                    vertical: 'bottom',
+                    horizontal: 'right',
+                }}
+                transformOrigin={{
+                    vertical: 'top',
+                    horizontal: 'right',
+                }}
+            >
+                <Box
+                    sx={{
+                        borderRadius: 0,
+                        border: '1px solid #424242',
+                        p: 2,
+                        minWidth: 350,
+                        maxWidth: 400,
+                        backgroundColor: '#1e1e1e',
+                    }}
+                >
+                    {/* Header */}
+                    <Typography variant="h6" sx={{ mb: 2, color: '#ffffff' }}>
+                        TLE Synchronization Status
+                    </Typography>
+
+                    {/* Status */}
+                    <Stack spacing={2}>
+                        <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                Status
+                            </Typography>
+                            <Chip
+                                label={syncState?.status || 'idle'}
+                                color={
+                                    syncState?.status === 'complete' && syncState?.success === true
+                                        ? 'success'
+                                        : syncState?.status === 'complete' && syncState?.success === false
+                                        ? 'error'
+                                        : syncState?.status === 'inprogress'
+                                            ? 'info'
+                                            : 'default'
+                                }
+                                size="small"
+                                icon={
+                                    syncState?.status === 'complete' && syncState?.success === true ? (
+                                        <CloudDoneIcon />
+                                    ) : syncState?.status === 'complete' && syncState?.success === false ? (
+                                        <CloudOffIcon />
+                                    ) : syncState?.status === 'inprogress' ? (
+                                        <SyncIcon />
+                                    ) : (
+                                        <CloudOffIcon />
+                                    )
+                                }
+                            />
+                        </Box>
+
+                        {/* Progress */}
+                        {syncState?.status === 'inprogress' && (
+                            <Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                    Progress: {syncState?.progress || 0}%
+                                </Typography>
+                                <LinearProgress
+                                    variant="determinate"
+                                    value={syncState?.progress || 0}
+                                    sx={{ height: 8, borderRadius: 1 }}
+                                />
+                            </Box>
+                        )}
+
+                        {/* Last Update */}
+                        <Box>
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
+                                Last Update
+                            </Typography>
+                            <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                                {formatDate(syncState?.last_update)}
+                            </Typography>
+                        </Box>
+
+                        <Divider sx={{ borderColor: '#424242' }} />
+
+                        {/* Statistics */}
+                        {syncState?.stats && (
+                            <Box>
+                                <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
+                                    Statistics
+                                </Typography>
+                                <Stack direction="row" spacing={1} flexWrap="wrap">
+                                    <Chip
+                                        label={`Satellites: ${syncState.stats.satellites_processed || 0}`}
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                    <Chip
+                                        label={`Transmitters: ${syncState.stats.transmitters_processed || 0}`}
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                    <Chip
+                                        label={`Groups: ${syncState.stats.groups_processed || 0}`}
+                                        size="small"
+                                        variant="outlined"
+                                    />
+                                </Stack>
+                            </Box>
+                        )}
+
+                        {/* Errors */}
+                        {syncState?.errors && syncState.errors.length > 0 && (
+                            <Box>
+                                <Typography variant="body2" color="error" sx={{ mb: 1 }}>
+                                    Errors ({syncState.errors.length})
+                                </Typography>
+                                <List dense sx={{ maxHeight: 120, overflow: 'auto' }}>
+                                    {syncState.errors.map((error, index) => (
+                                        <ListItem key={index} sx={{ px: 0 }}>
+                                            <ListItemText
+                                                primary={error}
+                                                primaryTypographyProps={{
+                                                    variant: 'body2',
+                                                    color: 'error',
+                                                }}
+                                            />
+                                        </ListItem>
+                                    ))}
+                                </List>
+                            </Box>
+                        )}
+                    </Stack>
+                </Box>
+            </Popover>
+        </>
+    );
+};
+
+export default SatelliteSyncPopover;
