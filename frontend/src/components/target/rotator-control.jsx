@@ -178,7 +178,6 @@ const RotatorControl = React.memo(({}) => {
             {/*<TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Rotator control</TitleBar>*/}
             <Grid container spacing={{ xs: 0, md: 0 }} columns={{ xs: 12, sm: 12, md: 12 }}>
 
-
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl disabled={isRotatorSelectionDisabled(trackingState)}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
@@ -203,28 +202,6 @@ const RotatorControl = React.memo(({}) => {
                         </Select>
                     </FormControl>
                 </Grid>
-
-                {/*<Grid container direction="row" sx={{*/}
-                {/*    backgroundColor: theme => rotatorData['connected'] ? theme.palette.success.main : theme.palette.info.main,*/}
-                {/*    padding: '0.1rem',*/}
-                {/*    justifyContent: "space-between",*/}
-                {/*    alignItems: "center",*/}
-                {/*    width: '100%',*/}
-                {/*}}>*/}
-                {/*    <Typography variant="body1" sx={{*/}
-                {/*        color: theme => theme.palette.success.contrastText,*/}
-                {/*        width: '90%',*/}
-                {/*        textAlign: 'center',*/}
-                {/*        display: 'inline-flex',*/}
-                {/*        alignItems: 'center',*/}
-                {/*        justifyContent: 'center',*/}
-                {/*    }}>*/}
-                {/*        {rotatorData['connected']*/}
-                {/*            ? <CheckCircleOutlineIcon sx={{mr: 1}}/>*/}
-                {/*            : <ErrorOutlineIcon sx={{mr: 1}}/>}*/}
-                {/*        {getConnectionStatusofRotator()}*/}
-                {/*    </Typography>*/}
-                {/*</Grid>*/}
 
                 <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
 
