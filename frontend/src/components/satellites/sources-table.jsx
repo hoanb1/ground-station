@@ -226,9 +226,9 @@ export default function SourcesTable() {
                         <Stack spacing={2} sx={{marginTop: 1}}>
                             <Alert severity="warning" sx={{marginBottom: 2}}>
                                 <AlertTitle>Performance Notice</AlertTitle>
-                                TLE sources with over 100 satellites will cause performance issues.
-                                The application will work (even with thousands of satellites in a TLE) but performance
-                                will <b>suffer significantly</b>.
+                                TLE sources with hundreds of satellites will cause performance issues in the UI.
+                                The application will work (even with thousands of satellites in a single TLE) but the UI
+                                performance will <b>suffer</b> especially when the number is high (in the thousands).
                                 For optimal performance, select updated sources that contain a small or
                                 specific group of satellites instead of generic TLE sources that contain
                                 vast groups of satellites (such as the Active list from Celestrak).
