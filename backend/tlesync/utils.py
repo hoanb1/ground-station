@@ -18,7 +18,7 @@ import requests
 import asyncio
 from concurrent.futures import ThreadPoolExecutor
 from sqlalchemy import select, delete
-from db.models import Satellites, Transmitters, SatelliteGroups, SatelliteGroupType
+from db.models import Satellites, Transmitters, Groups, SatelliteGroupType
 from typing import List
 from datetime import datetime, UTC, timezone
 
@@ -671,7 +671,7 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
 
     # Get the existing satellite group for this TLE source
     result = await session.execute(
-        select(SatelliteGroups).filter_by(
+        select(Groups).filter_by(
             identifier=tle_source_identifier,
             type=SatelliteGroupType.SYSTEM
         )
@@ -708,9 +708,9 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
             if satellite:
                 # Check if this satellite exists in other TLE sources
                 other_groups_result = await session.execute(
-                    select(SatelliteGroups).filter(
-                        SatelliteGroups.identifier != tle_source_identifier,
-                        SatelliteGroups.type == SatelliteGroupType.SYSTEM
+                    select(Groups).filter(
+                        Groups.identifier != tle_source_identifier,
+                        Groups.type == SatelliteGroupType.SYSTEM
                     )
                 )
                 other_groups = other_groups_result.scalars().all()
@@ -795,7 +795,7 @@ async def update_satellite_group_with_removal_detection(session, tle_source_iden
 
     # Then update or create the satellite group
     result = await session.execute(
-        select(SatelliteGroups).filter_by(
+        select(Groups).filter_by(
             identifier=tle_source_identifier,
             type=SatelliteGroupType.SYSTEM
         )
@@ -809,7 +809,7 @@ async def update_satellite_group_with_removal_detection(session, tle_source_iden
         logger.info(f"Updated satellite group '{group_name}' with {len(satellite_ids)} satellites")
     else:
         # Create a new group
-        new_group = SatelliteGroups(
+        new_group = Groups(
             name=group_name,
             identifier=tle_source_identifier,
             type=SatelliteGroupType.SYSTEM,

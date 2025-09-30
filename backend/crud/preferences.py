@@ -19,7 +19,7 @@ from typing import Optional, Union
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete
 from datetime import datetime, UTC
-from db.models import Preferences, SatelliteTrackingState
+from db.models import Preferences, TrackingState
 from common.common import logger, serialize_object
 
 async def fetch_preference(session: AsyncSession, preference_id: uuid.UUID) -> dict:
@@ -276,7 +276,7 @@ async def set_map_settings(session: AsyncSession, data: dict ) -> dict:
         data["updated"] = now
 
         existing_record = await session.execute(
-            select(SatelliteTrackingState).where(SatelliteTrackingState.name == data['name'])
+            select(TrackingState).where(TrackingState.name == data['name'])
         )
         existing_record = existing_record.scalar_one_or_none()
 
@@ -285,7 +285,7 @@ async def set_map_settings(session: AsyncSession, data: dict ) -> dict:
                 setattr(existing_record, key, value)
             new_record = existing_record
         else:
-            new_record = SatelliteTrackingState(**data)
+            new_record = TrackingState(**data)
 
         await session.merge(new_record)
         await session.commit()
@@ -318,7 +318,7 @@ async def get_map_settings(session: AsyncSession, name: str) -> dict:
     try:
         # Query map settings from the database using the provided name
         map_settings = await session.execute(
-            select(SatelliteTrackingState).where(SatelliteTrackingState.name == name)
+            select(TrackingState).where(TrackingState.name == name)
         )
         map_settings_row = map_settings.scalars().first()
 

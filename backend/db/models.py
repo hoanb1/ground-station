@@ -229,8 +229,8 @@ class Preferences(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-class SatelliteTLESources(Base):
-    __tablename__ = 'satellite_tle_sources'
+class TLESources(Base):
+    __tablename__ = 'tle_sources'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=False)
@@ -239,8 +239,8 @@ class SatelliteTLESources(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-class SatelliteGroups(Base):
-    __tablename__ = 'satellite_groups'
+class Groups(Base):
+    __tablename__ = 'groups'
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=True)
@@ -250,8 +250,8 @@ class SatelliteGroups(Base):
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
     updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
 
-class SatelliteTrackingState(Base):
-    __tablename__ = "satellite_tracking_state"
+class TrackingState(Base):
+    __tablename__ = "tracking_state"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, index=True, unique=True)
     value = Column(JSON, index=True)

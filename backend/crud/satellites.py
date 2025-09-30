@@ -23,7 +23,7 @@ from pydantic.v1 import UUID4
 from sqlalchemy.ext.asyncio import AsyncSession
 from sqlalchemy import select, insert, update, delete, String
 from datetime import datetime, UTC
-from db.models import SatelliteTrackingState, Satellites, Transmitters, SatelliteTLESources, SatelliteGroups
+from db.models import TrackingState, Satellites, Transmitters, TLESources, Groups
 from common.common import logger, serialize_object
 from common.utils import convert_strings_to_uuids
 
@@ -35,10 +35,10 @@ async def fetch_system_satellite_group_by_identifier(session: AsyncSession, grou
     try:
         # Add a filter for the 'type' column
         stmt = (
-            select(SatelliteGroups)
+            select(Groups)
             .filter(
-                SatelliteGroups.identifier == group_identifier,
-                SatelliteGroups.type == "system",
+                Groups.identifier == group_identifier,
+                Groups.type == "system",
                 )
         )
         result = await session.execute(stmt)
@@ -123,7 +123,7 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
             norad_id = satellite['norad_id']
 
             # Get all groups and filter them in Python since JSON querying can be database-specific
-            all_groups_stmt = select(SatelliteGroups)
+            all_groups_stmt = select(Groups)
             all_groups_result = await session.execute(all_groups_stmt)
             all_groups = all_groups_result.scalars().all()
 
@@ -472,7 +472,7 @@ async def fetch_satellite_tle_source(session: AsyncSession, satellite_tle_source
     """
     try:
         if satellite_tle_source_id is None:
-            result = await session.execute(select(SatelliteTLESources))
+            result = await session.execute(select(TLESources))
             sources = result.scalars().all()
             sources = json.loads(json.dumps(sources, default=serialize_object))
             sources = serialize_object(sources)
@@ -480,7 +480,7 @@ async def fetch_satellite_tle_source(session: AsyncSession, satellite_tle_source
 
         else:
             result = await session.execute(
-                select(SatelliteTLESources).filter(SatelliteTLESources.id == satellite_tle_source_id)
+                select(TLESources).filter(TLESources.id == satellite_tle_source_id)
             )
             source = result.scalars().first()
             if source:
@@ -512,7 +512,7 @@ async def add_satellite_tle_source(session: AsyncSession, payload: dict) -> dict
         if payload.get('updated', None) is not None:
             del payload['updated']
 
-        new_source = SatelliteTLESources(**payload)
+        new_source = TLESources(**payload)
         session.add(new_source)
         await session.commit()
         await session.refresh(new_source)
@@ -538,7 +538,7 @@ async def edit_satellite_tle_source(session: AsyncSession, satellite_tle_source_
         source_id = uuid.UUID(satellite_tle_source_id)
 
         result = await session.execute(
-            select(SatelliteTLESources).filter(SatelliteTLESources.id == source_id)
+            select(TLESources).filter(TLESources.id == source_id)
         )
         source = result.scalars().first()
         if not source:
@@ -575,7 +575,7 @@ async def delete_satellite_tle_sources(session: AsyncSession, satellite_tle_sour
         async with session.begin():
             # Fetch sources that match the provided IDs
             result = await session.execute(
-                select(SatelliteTLESources).filter(SatelliteTLESources.id.in_(satellite_tle_source_ids))
+                select(TLESources).filter(TLESources.id.in_(satellite_tle_source_ids))
             )
             sources = result.scalars().all()
 
@@ -594,7 +594,7 @@ async def delete_satellite_tle_sources(session: AsyncSession, satellite_tle_sour
 
                 # Find the corresponding satellite group by identifier
                 group_result = await session.execute(
-                    select(SatelliteGroups).filter(SatelliteGroups.identifier == source_identifier)
+                    select(Groups).filter(Groups.identifier == source_identifier)
                 )
                 satellite_group = group_result.scalar_one_or_none()
 
@@ -681,9 +681,9 @@ async def fetch_satellite_group(session: AsyncSession, group_id: Optional[Union[
         # if no group_id is given, return all groups (possibly filtered by group_type)
         if group_id is None:
             if group_type is not None:
-                stmt = select(SatelliteGroups).where(SatelliteGroups.type == group_type)
+                stmt = select(Groups).where(Groups.type == group_type)
             else:
-                stmt = select(SatelliteGroups)
+                stmt = select(Groups)
 
             result = await session.execute(stmt)
             groups = result.scalars().all()
@@ -694,9 +694,9 @@ async def fetch_satellite_group(session: AsyncSession, group_id: Optional[Union[
             if isinstance(group_id, str):
                 group_id = uuid.UUID(group_id)
 
-            stmt = select(SatelliteGroups).where(SatelliteGroups.id == group_id)
+            stmt = select(Groups).where(Groups.id == group_id)
             if group_type is not None:
-                stmt = stmt.where(SatelliteGroups.type == group_type)
+                stmt = stmt.where(Groups.type == group_type)
 
             result = await session.execute(stmt)
             group = result.scalars().first()
@@ -717,7 +717,7 @@ async def add_satellite_group(session: AsyncSession, data: dict) -> dict:
     try:
         assert "name" in data, "Name is required."
 
-        group = SatelliteGroups(**data)
+        group = Groups(**data)
         session.add(group)
         await session.commit()
         group = serialize_object(group)
@@ -740,7 +740,7 @@ async def edit_satellite_group(session: AsyncSession, satellite_group_id: str, d
         satellite_group_uuid = uuid.UUID(satellite_group_id)
 
         result = await session.execute(
-            select(SatelliteGroups).filter(SatelliteGroups.id == satellite_group_uuid)
+            select(Groups).filter(Groups.id == satellite_group_uuid)
         )
         group = result.scalars().first()
 
@@ -768,7 +768,7 @@ async def delete_satellite_group(session: AsyncSession, satellite_group_ids: Uni
     try:
         satellite_group_ids = convert_strings_to_uuids(satellite_group_ids)
         result = await session.execute(
-            select(SatelliteGroups).filter(SatelliteGroups.id.in_(satellite_group_ids))
+            select(Groups).filter(Groups.id.in_(satellite_group_ids))
         )
         groups = result.scalars().all()
 
@@ -790,7 +790,7 @@ async def delete_satellite_group(session: AsyncSession, satellite_group_ids: Uni
 
 async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
     """
-    Upserts a record in the satellite_tracking_state table
+    Upserts a record in the tracking_state table
     based on the provided data dictionary via SQLAlchemy's merge operation.
     """
 
@@ -820,7 +820,7 @@ async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
         data["updated"] = now
 
         existing_record = await session.execute(
-            select(SatelliteTrackingState).where(SatelliteTrackingState.name == data['name'])
+            select(TrackingState).where(TrackingState.name == data['name'])
         )
         existing_record = existing_record.scalar_one_or_none()
 
@@ -848,7 +848,7 @@ async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
             assert value.get('rig_id') is not None, "rig_id is required when creating new tracking state"
             assert value.get('rotator_id', None) is not None, "rotator_id is required when creating new tracking state"
 
-            new_record = SatelliteTrackingState(**data)
+            new_record = TrackingState(**data)
 
         await session.merge(new_record)
         await session.commit()
@@ -864,7 +864,7 @@ async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
 
 async def get_tracking_state(session: AsyncSession, name: str) -> dict:
     """
-    Fetches a SatelliteTrackingState row based on the provided key (name).
+    Fetches a TrackingState row based on the provided key (name).
     Returns a dictionary with the data or an error message if not found.
     """
 
@@ -873,7 +873,7 @@ async def get_tracking_state(session: AsyncSession, name: str) -> dict:
     try:
         assert name is not None, "name is required when fetching tracking state"
 
-        stmt = select(SatelliteTrackingState).filter(SatelliteTrackingState.name == name)
+        stmt = select(TrackingState).filter(TrackingState.name == name)
         result = await session.execute(stmt)
         tracking_state = result.scalar_one_or_none()
 
