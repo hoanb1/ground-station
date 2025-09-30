@@ -3,7 +3,7 @@ import threading
 import time
 from typing import Dict
 
-from common.handlers import (
+from handlers import (
     auth_request_routing,
     data_request_routing,
     data_submission_routing,

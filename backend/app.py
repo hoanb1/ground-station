@@ -10,9 +10,8 @@ from common.arguments import arguments
 from common.logger import get_logger_config, logger
 from server.shutdown import cleanup_everything, signal_handler
 from server.startup import app, socket_app, sio, init_db
-from web.sockethandlers import register_socketio_handlers
+from handlers.socket import register_socketio_handlers
 from video.webrtc import register_webrtc_routes
-from fastapi.staticfiles import StaticFiles
 
 
 # Set process and thread names
