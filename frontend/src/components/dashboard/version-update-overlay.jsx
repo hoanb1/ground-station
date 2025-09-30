@@ -1,3 +1,4 @@
+
 import SystemUpdateIcon from '@mui/icons-material/SystemUpdate';
 import NewReleasesIcon from '@mui/icons-material/NewReleases';
 import { keyframes } from '@emotion/react';
@@ -15,15 +16,6 @@ const fadeIn = keyframes`
     to {
         opacity: 1;
         transform: translateY(0);
-    }
-`;
-
-const pulseGlow = keyframes`
-    0%, 100% {
-        box-shadow: 0 0 5px rgba(76, 175, 80, 0.3);
-    }
-    50% {
-        box-shadow: 0 0 20px rgba(76, 175, 80, 0.6);
     }
 `;
 
@@ -76,7 +68,7 @@ function VersionUpdateOverlay() {
         // Clear timers
         if (timeoutId) clearTimeout(timeoutId);
         if (intervalId) clearInterval(intervalId);
-        
+
         // Clear the version change flag
         dispatch(clearVersionChangeFlag());
         // Reload the page to get the new version
@@ -87,13 +79,16 @@ function VersionUpdateOverlay() {
         // Clear timers
         if (timeoutId) clearTimeout(timeoutId);
         if (intervalId) clearInterval(intervalId);
-        
+
         // Just clear the flag without reloading
         dispatch(clearVersionChangeFlag());
     };
 
     // Calculate progress for circular progress (100% at start, 0% at end)
     const progress = (countdown / COUNTDOWN_DURATION) * 100;
+
+    // Determine color based on countdown
+    const statusColor = countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#d32f2f';
 
     return (
         <Backdrop
@@ -106,13 +101,13 @@ function VersionUpdateOverlay() {
         >
             <Box
                 sx={{
-                    animation: `${fadeIn} 0.3s ease-out, ${pulseGlow} 3s infinite`,
+                    animation: `${fadeIn} 0.2s ease-out`,
                     backgroundColor: '#2a2a2a',
-                    border: '1px solid #4caf50',
+                    border: `1px solid ${statusColor}`,
                     borderRadius: 1,
                     padding: 3,
-                    minWidth: 320,
-                    maxWidth: 380,
+                    minWidth: 280,
+                    maxWidth: 320,
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
                 }}
             >
@@ -123,15 +118,15 @@ function VersionUpdateOverlay() {
                     gap: 2,
                     mb: 2,
                 }}>
-                    <NewReleasesIcon sx={{ fontSize: 28, color: '#4caf50' }} />
+                    <NewReleasesIcon sx={{ fontSize: 24, color: statusColor }} />
                     <Box sx={{ flex: 1 }}>
                         <Typography
                             variant="subtitle1"
                             sx={{
                                 color: '#ffffff',
-                                fontWeight: 600,
+                                fontWeight: 500,
                                 mb: 0.5,
-                                fontSize: '1.1rem'
+                                fontSize: '1rem'
                             }}
                         >
                             New Version Available
@@ -143,96 +138,62 @@ function VersionUpdateOverlay() {
                                 fontSize: '0.875rem'
                             }}
                         >
-                            Backend has been updated to version {data?.version}
+                            Version {data?.version}
                         </Typography>
                     </Box>
                 </Box>
 
-                {/* Countdown section */}
+                {/* Progress indicator with countdown */}
                 <Box
                     sx={{
-                        display: 'flex',
-                        alignItems: 'center',
-                        justifyContent: 'center',
-                        gap: 2,
-                        mb: 3,
-                        p: 2,
-                        backgroundColor: '#1a1a1a',
-                        borderRadius: 1,
-                        border: '1px solid #424242'
+                        mb: 2,
                     }}
                 >
-                    <Box sx={{ position: 'relative', display: 'flex', alignItems: 'center' }}>
-                        <CircularProgress
-                            variant="determinate"
-                            value={progress}
-                            size={32}
-                            thickness={4}
-                            sx={{
-                                color: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
-                                '& .MuiCircularProgress-circle': {
-                                    strokeLinecap: 'round',
-                                },
-                            }}
-                        />
+                    <Box
+                        sx={{
+                            width: '100%',
+                            height: 2,
+                            backgroundColor: '#424242',
+                            borderRadius: 1,
+                            overflow: 'hidden',
+                            position: 'relative',
+                            mb: 1.5
+                        }}
+                    >
                         <Box
                             sx={{
-                                position: 'absolute',
-                                top: 0,
-                                left: 0,
-                                bottom: 0,
-                                right: 0,
-                                display: 'flex',
-                                alignItems: 'center',
-                                justifyContent: 'center',
+                                height: '100%',
+                                width: `${progress}%`,
+                                backgroundColor: statusColor,
+                                borderRadius: 1,
+                                transition: 'width 1s linear, background-color 0.3s ease',
                             }}
-                        >
-                            <Typography
-                                variant="caption"
-                                sx={{
-                                    color: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
-                                    fontWeight: 'bold',
-                                    fontSize: '0.75rem',
-                                    fontFamily: 'monospace'
-                                }}
-                            >
-                                {countdown}
-                            </Typography>
-                        </Box>
+                        />
                     </Box>
-                    <Box>
-                        <Typography
-                            variant="body2"
-                            sx={{
-                                color: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
-                                fontWeight: 500,
-                                fontSize: '0.875rem'
-                            }}
-                        >
-                            {countdown > 0 ? `Refreshing in ${countdown}s...` : 'Refreshing now...'}
-                        </Typography>
-                        <Typography
-                            variant="caption"
-                            sx={{
-                                color: '#b0b0b0',
-                                fontSize: '0.75rem'
-                            }}
-                        >
-                            Click "Refresh Now" to skip wait
-                        </Typography>
-                    </Box>
+
+                    <Typography
+                        variant="body2"
+                        sx={{
+                            color: statusColor,
+                            fontSize: '0.875rem',
+                            textAlign: 'center'
+                        }}
+                    >
+                        {countdown > 0 ? `Refreshing in ${countdown}s...` : 'Refreshing now...'}
+                    </Typography>
                 </Box>
 
                 {/* Action buttons */}
                 <Box sx={{
                     display: 'flex',
-                    gap: 2,
-                    justifyContent: 'flex-end'
+                    gap: 1.5,
+                    justifyContent: 'stretch'
                 }}>
                     <Button
                         variant="outlined"
                         onClick={handleDismiss}
                         disabled={countdown === 0}
+                        fullWidth
                         sx={{
                             color: '#b0b0b0',
                             borderColor: '#424242',
@@ -245,7 +206,8 @@ function VersionUpdateOverlay() {
                                 color: '#666666'
                             },
                             textTransform: 'none',
-                            fontWeight: 500
+                            fontWeight: 500,
+                            fontSize: '0.875rem'
                         }}
                     >
                         Cancel
@@ -254,18 +216,20 @@ function VersionUpdateOverlay() {
                         variant="contained"
                         onClick={handleRefresh}
                         disabled={countdown === 0}
+                        fullWidth
                         sx={{
-                            backgroundColor: countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#f44336',
+                            backgroundColor: statusColor,
                             color: '#ffffff',
                             '&:hover': {
-                                backgroundColor: countdown > 2 ? '#45a049' : countdown > 1 ? '#f57c00' : '#d32f2f'
+                                backgroundColor: countdown > 2 ? '#45a049' : countdown > 1 ? '#f57c00' : '#d32f2f',
+                                filter: 'brightness(0.9)'
                             },
                             '&:disabled': {
                                 backgroundColor: '#666666'
                             },
                             textTransform: 'none',
-                            fontWeight: 600,
-                            boxShadow: `0 2px 8px rgba(${countdown > 2 ? '76, 175, 80' : countdown > 1 ? '255, 152, 0' : '244, 67, 54'}, 0.3)`
+                            fontWeight: 500,
+                            fontSize: '0.875rem'
                         }}
                     >
                         Refresh Now
@@ -281,12 +245,12 @@ function VersionUpdateOverlay() {
                         fontSize: '0.75rem',
                         display: 'block',
                         textAlign: 'center',
-                        mt: 2,
+                        mt: 1.5,
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px'
                     }}
                 >
-                    AUTO-REFRESH IN PROGRESS
+                    {/*AUTO-REFRESH*/}
                 </Typography>
             </Box>
         </Backdrop>
