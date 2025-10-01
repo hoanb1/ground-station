@@ -18,7 +18,6 @@ const SynchronizeTLEsCard = function () {
     const { socket } = useSocket();
     const {
         syncState,
-        synchronizing
     } = useSelector((state) => state.syncSatellite);
     const [showErrors, setShowErrors] = useState(false);
 
@@ -106,7 +105,6 @@ const SynchronizeTLEsCard = function () {
 
                 <SyncCardHeader
                     syncState={syncState}
-                    synchronizing={synchronizing}
                     onSynchronize={handleSynchronizeSatellites}
                 />
 

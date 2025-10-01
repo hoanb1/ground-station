@@ -106,6 +106,18 @@ const SatelliteSyncPopover = () => {
                             position: 'relative',
                         }}
                     >
+                        {/* Background circle for incomplete progress */}
+                        <CircularProgress
+                            variant="determinate"
+                            value={100}
+                            size={32}
+                            thickness={5}
+                            sx={{
+                                position: 'absolute',
+                                color: '#424242', // Dark grey background
+                            }}
+                        />
+                        {/* Foreground progress circle */}
                         <CircularProgress
                             variant="determinate"
                             value={syncState?.status === 'inprogress' ? syncState?.progress || 0 : 100}

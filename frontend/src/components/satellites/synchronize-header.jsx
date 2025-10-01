@@ -5,7 +5,9 @@ import SyncIcon from '@mui/icons-material/Sync';
 import { humanizeDate } from '../common/common.jsx';
 import PropTypes from 'prop-types';
 
-const SyncCardHeader = ({ syncState, synchronizing, onSynchronize }) => {
+const SyncCardHeader = ({ syncState, onSynchronize }) => {
+    const isSyncing = syncState['progress'] > 0 && syncState['progress'] < 100;
+
     return (
         <Box sx={{
             display: 'flex',
@@ -63,7 +65,7 @@ const SyncCardHeader = ({ syncState, synchronizing, onSynchronize }) => {
                 alignItems: { xs: 'flex-start', sm: 'center' }
             }}>
                 <Button
-                    disabled={synchronizing || (syncState['progress'] > 0 && syncState['progress'] < 100)}
+                    disabled={isSyncing}
                     variant="contained"
                     color="primary"
                     onClick={onSynchronize}
@@ -102,7 +104,7 @@ const SyncCardHeader = ({ syncState, synchronizing, onSynchronize }) => {
                 >
                     <SyncIcon sx={{
                         mr: 1,
-                        animation: (syncState['progress'] > 0 && syncState['progress'] < 100) ? 'rotate 2s infinite linear' : 'none',
+                        animation: isSyncing ? 'rotate 2s infinite linear' : 'none',
                         '@keyframes rotate': {
                             '0%': { transform: 'rotate(0deg)' },
                             '100%': { transform: 'rotate(360deg)' }
@@ -133,7 +135,6 @@ const SyncCardHeader = ({ syncState, synchronizing, onSynchronize }) => {
 
 SyncCardHeader.propTypes = {
     syncState: PropTypes.object.isRequired,
-    synchronizing: PropTypes.bool.isRequired,
     onSynchronize: PropTypes.func.isRequired,
 };
 
