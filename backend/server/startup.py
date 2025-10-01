@@ -74,7 +74,15 @@ async def lifespan(fastapiapp: FastAPI):
 sio = socketio.AsyncServer(
     async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True
 )
-app = FastAPI(lifespan=lifespan)
+app = FastAPI(
+    lifespan=lifespan,
+    title="Ground Station API",
+    description="API for satellite tracking, SDR control, and radio communication",
+    version="1.0.0",
+    docs_url="/api/docs",
+    redoc_url="/api/redoc",
+    openapi_url="/api/openapi.json"
+)
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
 app.add_middleware(
