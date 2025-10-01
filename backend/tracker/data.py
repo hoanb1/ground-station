@@ -203,7 +203,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         target_map_settings = target_map_settings_reply['data'].get('value', {})
 
         # fetch transmitters
-        transmitters = await crud.satellites.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
+        transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
         satellite_data['transmitters'] = transmitters['data']
 
         location = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
@@ -295,10 +295,10 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
 
     try:
         async with (AsyncSessionLocal() as dbsession):
-            groups = await crud.satellites.fetch_satellite_group(dbsession)
+            groups = await crud.groups.fetch_satellite_group(dbsession)
             satellites = await crud.satellites.fetch_satellites_for_group_id(dbsession, group_id=group_id)
-            tracking_state = await crud.satellites.get_tracking_state(dbsession, name='satellite-tracking')
-            transmitters = await crud.satellites.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
+            tracking_state = await crud.tracking_state.get_tracking_state(dbsession, name='satellite-tracking')
+            transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
             data['groups'] = groups['data']
             data['satellites'] = satellites['data']
             data['group_id'] = group_id

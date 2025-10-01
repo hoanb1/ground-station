@@ -55,7 +55,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         if cmd == "get-tle-sources":
             logger.debug(f'Getting TLE sources')
-            tle_sources = await crud.satellites.fetch_satellite_tle_source(dbsession)
+            tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
 
             reply = {'success': tle_sources['success'], 'data': tle_sources.get('data', [])}
 
@@ -84,7 +84,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             # get transmitters
             if satellites:
                 for satellite in satellites.get('data', []):
-                    transmitters = await crud.satellites.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
+                    transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, satellite['norad_id'])
                     satellite['transmitters'] = transmitters['data']
             else:
                 logger.debug(f'No satellites found for group id: {data}')
@@ -93,7 +93,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "get-satellite-groups-user":
             logger.debug(f'Getting user satellite groups, data: {data}')
-            satellite_groups = await crud.satellites.fetch_satellite_group(dbsession)
+            satellite_groups = await crud.groups.fetch_satellite_group(dbsession)
 
             # only return the user groups
             filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
@@ -103,7 +103,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "get-satellite-groups-system":
             logger.debug(f'Getting system satellite groups, data: {data}')
-            satellite_groups = await crud.satellites.fetch_satellite_group(dbsession)
+            satellite_groups = await crud.groups.fetch_satellite_group(dbsession)
 
             # only return the system groups
             filtered_groups = [satellite_group for satellite_group in satellite_groups['data']
@@ -112,7 +112,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "get-satellite-groups":
             logger.debug(f'Getting satellite groups, data: {data}')
-            satellite_groups = await crud.satellites.fetch_satellite_group(dbsession)
+            satellite_groups = await crud.groups.fetch_satellite_group(dbsession)
             reply = {'success': satellite_groups['success'], 'data': satellite_groups.get('data', [])}
 
         elif cmd == "sync-satellite-data":
@@ -181,7 +181,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "get-tracking-state":
             logger.debug(f'Fetching tracking state, data: {data}')
-            tracking_state = await crud.satellites.get_tracking_state(dbsession, name='satellite-tracking')
+            tracking_state = await crud.tracking_state.get_tracking_state(dbsession, name='satellite-tracking')
             await emit_tracker_data(dbsession, sio, logger)
             await emit_ui_tracker_values(dbsession, sio, logger)
             reply = {'success': tracking_state['success'], 'data': tracking_state.get('data', [])}

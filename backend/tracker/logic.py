@@ -119,7 +119,7 @@ class SatelliteTracker:
 
         # Update rig state in database
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
+            new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
                 DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                 'value': {
                     'transmitter_id': "none",
@@ -172,7 +172,7 @@ class SatelliteTracker:
         })
 
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
+            new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
                 DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                 'value': {'rotator_state': 'disconnected'}
             })
@@ -313,7 +313,7 @@ class SatelliteTracker:
         })
 
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
+            new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
                 DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                 'value': {'rig_state': 'disconnected'}
             })
@@ -457,7 +457,7 @@ class SatelliteTracker:
             logger.warning("Tracking state said rotator must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
+                new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
                     DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                     'value': {'rotator_state': 'disconnected'}
                 })
@@ -479,7 +479,7 @@ class SatelliteTracker:
             logger.warning("Tracking state said rig must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
+                new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
                     DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                     'value': {'rig_state': 'disconnected'}
                 })
@@ -548,7 +548,7 @@ class SatelliteTracker:
         """Handle transmitter selection and doppler calculation."""
         if self.current_transmitter_id != "none":
             async with AsyncSessionLocal() as dbsession:
-                current_transmitter_reply = await crud.satellites.fetch_transmitter(dbsession,
+                current_transmitter_reply = await crud.transmitters.fetch_transmitter(dbsession,
                                                                          transmitter_id=self.current_transmitter_id)
                 current_transmitter = current_transmitter_reply.get('data', {})
 
@@ -666,7 +666,7 @@ class SatelliteTracker:
                 async with AsyncSessionLocal() as dbsession:
 
                     # Get tracking state from the db
-                    tracking_state_reply = await crud.satellites.get_tracking_state(dbsession, name=TrackingStateNames.SATELLITE_TRACKING)
+                    tracking_state_reply = await crud.tracking_state.get_tracking_state(dbsession, name=TrackingStateNames.SATELLITE_TRACKING)
                     assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"

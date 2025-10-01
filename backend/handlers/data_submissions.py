@@ -53,50 +53,50 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
 
         if cmd == "submit-tle-sources":
             logger.debug(f'Adding TLE source, data: {data}')
-            submit_reply = await crud.satellites.add_satellite_tle_source(dbsession, data)
+            submit_reply = await crud.tle_sources.add_satellite_tle_source(dbsession, data)
 
-            tle_sources = await crud.satellites.fetch_satellite_tle_source(dbsession)
+            tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
             reply = {'success': (tle_sources['success'] & submit_reply['success']),
                      'data': tle_sources.get('data', [])}
 
         elif cmd == "delete-tle-sources":
             logger.debug(f'Deleting TLE source, data: {data}')
-            delete_reply = await crud.satellites.delete_satellite_tle_sources(dbsession, data)
+            delete_reply = await crud.tle_sources.delete_satellite_tle_sources(dbsession, data)
 
-            tle_sources = await crud.satellites.fetch_satellite_tle_source(dbsession)
+            tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
             reply = {'success': (tle_sources['success'] & delete_reply['success']),
                      'data': tle_sources.get('data', []), 'summary': delete_reply.get('deletion_summary', None),
                      'message': delete_reply.get('data', None)}
 
         elif cmd == "edit-tle-source":
             logger.debug(f'Editing TLE source, data: {data}')
-            edit_reply = await crud.satellites.edit_satellite_tle_source(dbsession, data['id'], data)
+            edit_reply = await crud.tle_sources.edit_satellite_tle_source(dbsession, data['id'], data)
 
-            tle_sources = await crud.satellites.fetch_satellite_tle_source(dbsession)
+            tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
             reply = {'success': (tle_sources['success'] & edit_reply['success']),
                      'data': tle_sources.get('data', [])}
 
         elif cmd == "submit-satellite-group":
             logger.debug(f'Adding satellite group, data: {data}')
-            submit_reply = await crud.satellites.add_satellite_group(dbsession, data)
+            submit_reply = await crud.groups.add_satellite_group(dbsession, data)
 
-            satellite_groups = await crud.satellites.fetch_satellite_group(dbsession, group_type='user')
+            satellite_groups = await crud.groups.fetch_satellite_group(dbsession, group_type='user')
             reply = {'success': (satellite_groups['success'] & submit_reply['success']),
                      'data': satellite_groups.get('data', [])}
 
         elif cmd == "delete-satellite-group":
             logger.debug(f'Deleting satellite groups, data: {data}')
-            delete_reply = await crud.satellites.delete_satellite_group(dbsession, data)
+            delete_reply = await crud.groups.delete_satellite_group(dbsession, data)
 
-            satellite_groups = await crud.satellites.fetch_satellite_group(dbsession, group_type="user")
+            satellite_groups = await crud.groups.fetch_satellite_group(dbsession, group_type="user")
             reply = {'success': (satellite_groups['success'] & delete_reply['success']),
                      'data': satellite_groups.get('data', [])}
 
         elif cmd == "edit-satellite-group":
             logger.debug(f'Editing satellite group, data: {data}')
-            edit_reply = await crud.satellites.edit_satellite_group(dbsession, data['id'], data)
+            edit_reply = await crud.groups.edit_satellite_group(dbsession, data['id'], data)
 
-            satellite_groups = await crud.satellites.fetch_satellite_group(dbsession, group_type="user")
+            satellite_groups = await crud.groups.fetch_satellite_group(dbsession, group_type="user")
             reply = {'success': (satellite_groups['success'] & edit_reply['success']),
                      'data': satellite_groups.get('data', [])}
 
@@ -265,7 +265,7 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
         elif cmd == "set-tracking-state":
             logger.info(f'Updating satellite tracking state, data: {data}')
             # store the tracking state in the db
-            tracking_state_reply = await crud.satellites.set_tracking_state(dbsession, data)
+            tracking_state_reply = await crud.tracking_state.set_tracking_state(dbsession, data)
 
             # we emit here so that any open browsers are also informed of any change
             await emit_tracker_data(dbsession, sio, logger)
@@ -288,23 +288,23 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
 
         elif cmd == "submit-transmitter":
             logger.debug(f'Adding transmitter, data: {data}')
-            add_reply = await crud.satellites.add_transmitter(dbsession, data)
-            transmitters = await crud.satellites.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
+            add_reply = await crud.transmitters.add_transmitter(dbsession, data)
+            transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
             reply = {'success': (transmitters['success'] & add_reply['success']),
                      'data': transmitters.get('data', [])}
 
         elif cmd == "edit-transmitter":
             logger.debug(f'Editing transmitter, data: {data}')
-            edit_reply = await crud.satellites.edit_transmitter(dbsession, data)
+            edit_reply = await crud.transmitters.edit_transmitter(dbsession, data)
             logger.info(edit_reply)
-            transmitters = await crud.satellites.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
+            transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
             reply = {'success': (transmitters['success'] & edit_reply['success']),
                      'data': transmitters.get('data', [])}
 
         elif cmd == "delete-transmitter":
             logger.debug(f'Deleting transmitter, data: {data}')
-            delete_reply = await crud.satellites.delete_transmitter(dbsession, data.get('transmitter_id'))
-            transmitters = await crud.satellites.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
+            delete_reply = await crud.transmitters.delete_transmitter(dbsession, data.get('transmitter_id'))
+            transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, data.get('norad_cat_id'))
             reply = {'success': (transmitters['success'] & delete_reply['success']),
                      'data': transmitters.get('data', [])}
 

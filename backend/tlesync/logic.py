@@ -15,7 +15,7 @@
 
 import json
 import requests
-from crud import satellites
+from crud import tle_sources
 from tlesync.state import SatelliteSyncState
 from tlesync.utils import (
     update_satellite_group_with_removal_detection, get_norad_id_from_tle,
@@ -70,7 +70,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     celestrak_list = []
     group_assignments = {}
 
-    tle_sources_reply = await satellites.fetch_satellite_tle_source(dbsession)
+    tle_sources_reply = await tle_sources.fetch_satellite_tle_source(dbsession)
     tle_sources = tle_sources_reply.get('data', [])
 
     # Use a single ThreadPoolExecutor for all async_fetch calls

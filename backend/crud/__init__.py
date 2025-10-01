@@ -2,4 +2,8 @@ from .locations import *
 from .users import *
 from .hardware import *
 from .satellites import *
+from .groups import *
+from .transmitters import *
+from .tle_sources import *
+from .tracking_state import *
 from .preferences import *
