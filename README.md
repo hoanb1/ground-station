@@ -2,7 +2,7 @@
   <img src="frontend/public/gs-logo-green-blue.png" alt="Ground Station Logo" width="200"/>
 </div>
 
-# Ground Station
+# Ground Station [![Tests](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml/badge.svg)](https://github.com/sgoudelis/ground-station/actions/workflows/tests.yml)
 
 
 **Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication, 
