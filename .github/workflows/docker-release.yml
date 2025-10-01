@@ -20,6 +20,41 @@ jobs:
     steps:
     - name: Checkout code
       uses: actions/checkout@v4
+      with:
+        fetch-depth: 0  # Full history for git commit info
+
+    - name: Extract version information
+      id: version
+      run: |
+        # Extract version from version.json
+        VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+        echo "VERSION_BASE=$VERSION_BASE"
+        echo "version_base=$VERSION_BASE" >> $GITHUB_OUTPUT
+
+        # Get git hash
+        GIT_SHA=$(git rev-parse --short HEAD)
+        echo "GIT_SHA=$GIT_SHA"
+        echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+
+        # Set environment type based on branch
+        if [ "${{ github.ref_name }}" = "main" ] || [ "${{ github.ref_type }}" = "tag" ]; then
+          ENV_TYPE="production"
+        else
+          ENV_TYPE="development"
+        fi
+        echo "ENV_TYPE=$ENV_TYPE"
+        echo "env_type=$ENV_TYPE" >> $GITHUB_OUTPUT
+
+        # Get build date
+        BUILD_DATE=$(date -u +'%Y%m%d')
+        echo "BUILD_DATE=$BUILD_DATE"
+        echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+
+        # Create full version string
+        BRANCH_NAME=${{ github.ref_name }}
+        FULL_VERSION=$VERSION_BASE-$BRANCH_NAME-$GIT_SHA
+        echo "FULL_VERSION=$FULL_VERSION"
+        echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -42,14 +77,21 @@ jobs:
           type=semver,pattern={{major}}
           type=ref,event=branch
           type=sha
+          type=raw,value=${{ steps.version.outputs.full_version }}
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v5
       with:
         context: .
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
+        build-args: |
+          GS_ENVIRONMENT=${{ steps.version.outputs.env_type }}
+          GIT_COMMIT=${{ steps.version.outputs.git_sha }}
+          BUILD_DATE=${{ steps.version.outputs.build_date }}
+          BUILD_VERSION=${{ steps.version.outputs.full_version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
@@ -61,12 +103,26 @@ jobs:
         body: |
           ## Docker Image
 
-          Pull the Docker image:
+          **Version:** ${{ steps.version.outputs.full_version }}
+          **Environment:** ${{ steps.version.outputs.env_type }}
+          **Git Commit:** ${{ steps.version.outputs.git_sha }}
+          **Build Date:** ${{ steps.version.outputs.build_date }}
+
+          ### Pull the Docker image:
           ```bash
           docker pull ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           ```
 
-          Run the container:
+          ### Run the container:
           ```bash
-          docker run -p 8000:8000 ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
+          docker run -d \
+            -p 7000:7000 \
+            --name ground-station \
+            --restart unless-stopped \
+            -v $(pwd)/data:/app/backend/data \
+            -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+            ${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:${{ github.ref_name }}
           ```
+
+          ### Multi-arch support:
+          This image supports both `linux/amd64` and `linux/arm64` platforms.
