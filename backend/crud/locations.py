@@ -73,6 +73,13 @@ async def add_location(session: AsyncSession, data: dict) -> dict:
         new_id = uuid.uuid4()
         now = datetime.now(UTC)
         data["id"] = new_id
+        data["added"] = now
+        data["updated"] = now
+
+        # Convert userid to UUID if it's a string
+        if "userid" in data and data["userid"] is not None:
+            if isinstance(data["userid"], str):
+                data["userid"] = uuid.UUID(data["userid"])
 
         stmt = (
             insert(Locations)
@@ -108,7 +115,9 @@ async def edit_location(session: AsyncSession, data: dict) -> dict:
         if data.get('updated', None) is not None:
             del data['updated']
 
-        location_id = uuid.UUID(location_id)
+        # Convert to UUID if it's a string
+        if isinstance(location_id, str):
+            location_id = uuid.UUID(location_id)
 
         # Ensure the location exists first
         stmt = select(Locations).filter(Locations.id == location_id)
@@ -136,11 +145,15 @@ async def edit_location(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def delete_location(session: AsyncSession, location_id: uuid.UUID | dict) -> dict:
+async def delete_location(session: AsyncSession, location_id: Union[uuid.UUID, str]) -> dict:
     """
     Delete a location record by its UUID.
     """
     try:
+        # Convert to UUID if it's a string
+        if isinstance(location_id, str):
+            location_id = uuid.UUID(location_id)
+
         stmt = (
             delete(Locations)
             .where(Locations.id == location_id)
@@ -152,7 +165,7 @@ async def delete_location(session: AsyncSession, location_id: uuid.UUID | dict) 
             return {"success": False, "error": f"Location with id {location_id} not found."}
         await session.commit()
         return {"success": True, "data": None, "error": None}
-    
+
     except Exception as e:
         await session.rollback()
         logger.error(f"Error deleting a location: {e}")

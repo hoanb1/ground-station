@@ -38,6 +38,7 @@ async def fetch_users(session: AsyncSession, user_id: Optional[Union[uuid.UUID, 
             user = result.scalar_one_or_none()
             if user and not include_password:
                 user.password = None
+            user = serialize_object(user)
             return {"success": True, "data": user, "error": None}
 
         else:

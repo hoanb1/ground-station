@@ -14,6 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import json
+import crud
 import requests
 from crud import tle_sources
 from tlesync.state import SatelliteSyncState
@@ -70,13 +71,13 @@ async def synchronize_satellite_data(dbsession, logger, sio):
     celestrak_list = []
     group_assignments = {}
 
-    tle_sources_reply = await tle_sources.fetch_satellite_tle_source(dbsession)
-    tle_sources = tle_sources_reply.get('data', [])
+    tle_sources_reply = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
+    sources = tle_sources_reply.get('data', [])
 
     # Use a single ThreadPoolExecutor for all async_fetch calls
     with ThreadPoolExecutor(max_workers=1) as pool:
         # get TLEs from our user-defined TLE sources (probably from celestrak.org)
-        for i, tle_source in enumerate(tle_sources):
+        for i, tle_source in enumerate(sources):
             tle_source_name = tle_source['name']
             tle_source_identifier = tle_source['identifier']
             tle_source_url = tle_source['url']
@@ -87,7 +88,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             progress_state = update_progress(
                 "fetch_tle_sources",
                 i,
-                len(tle_sources),
+                len(sources),
                 f"Fetching {tle_source_url}"
             )
             sync_state["active_sources"] = [tle_source_name]
@@ -138,7 +139,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             progress_state = update_progress(
                 "fetch_tle_sources",
                 i + 1,
-                len(tle_sources),
+                len(sources),
                 f'Fetched {tle_source_url}'
             )
             await sio.emit('sat-sync-events', progress_state)
@@ -182,7 +183,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
             progress_state = update_progress(
                 "fetch_tle_sources",
                 i + 1,
-                len(tle_sources),
+                len(sources),
                 f'Group {tle_source.get("name", None)} created/updated'
             )
             await sio.emit('sat-sync-events', progress_state)

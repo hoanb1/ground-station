@@ -22,11 +22,15 @@ from datetime import datetime, UTC
 from db.models import Preferences, TrackingState
 from common.common import logger, serialize_object
 
-async def fetch_preference(session: AsyncSession, preference_id: uuid.UUID) -> dict:
+async def fetch_preference(session: AsyncSession, preference_id: Union[uuid.UUID, str]) -> dict:
     """
     Fetch a single preference by its UUID.
     """
     try:
+        # Convert to UUID if it's a string
+        if isinstance(preference_id, str):
+            preference_id = uuid.UUID(preference_id)
+
         stmt = select(Preferences).filter(Preferences.id == preference_id)
         result = await session.execute(stmt)
         preference = result.scalar_one_or_none()
@@ -39,7 +43,7 @@ async def fetch_preference(session: AsyncSession, preference_id: uuid.UUID) -> d
         return {"success": False, "error": str(e)}
 
 
-async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[uuid.UUID] = None) -> dict:
+async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
     """
     Fetch all preferences for a given user ID or all preferences if user_id is None.
     If a preference does not exist for a key in the defaults, use the default value.
@@ -54,6 +58,10 @@ async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[u
     }
 
     try:
+        # Convert user_id to UUID if it's a string
+        if user_id is not None and isinstance(user_id, str):
+            user_id = uuid.UUID(user_id)
+
         stmt = select(Preferences)
         if user_id is not None:
             stmt = stmt.filter(Preferences.userid == user_id)
@@ -85,11 +93,17 @@ async def add_preference(session: AsyncSession, data: dict) -> dict:
     try:
         new_id = uuid.uuid4()
         now = datetime.now(UTC)
+
+        # Convert userid to UUID if it's a string
+        userid = data["userid"]
+        if userid is not None and isinstance(userid, str):
+            userid = uuid.UUID(userid)
+
         stmt = (
             insert(Preferences)
             .values(
                 id=new_id,
-                userid=data["userid"],
+                userid=userid,
                 name=data["name"],
                 value=data["value"],
                 added=now,
@@ -161,6 +175,12 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
 
         for data in preferences:
             preference_id = data.pop("id", None)
+
+            # Convert userid to UUID if it's a string
+            if "userid" in data and data["userid"] is not None:
+                if isinstance(data["userid"], str):
+                    data["userid"] = uuid.UUID(data["userid"])
+
             if preference_id:
                 if isinstance(preference_id, str):
                     preference_id = uuid.UUID(preference_id)
@@ -172,7 +192,7 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
 
                 if preference:
                     # Update existing preference
-                    del data['added']
+                    data.pop('added', None)
                     data["updated"] = datetime.now(UTC)
                     upd_stmt = (
                         update(Preferences)
@@ -185,7 +205,6 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
 
                 else:
                     # Insert a new preference (upsert case)
-                    new_id = uuid.uuid4()
                     now = datetime.now(UTC)
                     data["id"] = preference_id
                     data["added"] = now
@@ -229,6 +248,10 @@ async def delete_preference(session: AsyncSession, preference_id: Union[uuid.UUI
     Delete a preference record by its UUID.
     """
     try:
+        # Convert to UUID if it's a string
+        if isinstance(preference_id, str):
+            preference_id = uuid.UUID(preference_id)
+
         stmt = (
             delete(Preferences)
             .where(Preferences.id == preference_id)

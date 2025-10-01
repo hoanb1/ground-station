@@ -26,7 +26,7 @@ from common.common import logger, serialize_object
 from common.utils import convert_strings_to_uuids
 
 
-async def fetch_satellite_tle_source(session: AsyncSession, satellite_tle_source_id: Optional[int] = None) -> dict:
+async def fetch_satellite_tle_source(session: AsyncSession, satellite_tle_source_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
     """
     Retrieve satellite TLE source records.
     If an ID is provided, fetch the specific record; otherwise, return all sources.
@@ -40,6 +40,10 @@ async def fetch_satellite_tle_source(session: AsyncSession, satellite_tle_source
             return {"success": True, "data": sources}
 
         else:
+            # Convert to UUID if it's a string
+            if isinstance(satellite_tle_source_id, str):
+                satellite_tle_source_id = uuid.UUID(satellite_tle_source_id)
+
             result = await session.execute(
                 select(TLESources).filter(TLESources.id == satellite_tle_source_id)
             )
@@ -132,78 +136,79 @@ async def delete_satellite_tle_sources(session: AsyncSession, satellite_tle_sour
 
         satellite_tle_source_ids = convert_strings_to_uuids(satellite_tle_source_ids)
 
-        # Start a transaction
-        async with session.begin():
-            # Fetch sources that match the provided IDs
-            result = await session.execute(
-                select(TLESources).filter(TLESources.id.in_(satellite_tle_source_ids))
+        # Fetch sources that match the provided IDs
+        result = await session.execute(
+            select(TLESources).filter(TLESources.id.in_(satellite_tle_source_ids))
+        )
+        sources = result.scalars().all()
+
+        # Determine which IDs were found
+        found_ids = [source.id for source in sources]
+        not_found_ids = [sat_id for sat_id in satellite_tle_source_ids if sat_id not in found_ids]
+
+        if not sources:
+            return {"success": False, "error": "None of the Satellite TLE sources were found."}
+
+        deletion_summary = []
+
+        for source in sources:
+            source_identifier = source.identifier
+            source_name = source.name
+
+            # Find the corresponding satellite group by identifier
+            group_result = await session.execute(
+                select(Groups).filter(Groups.identifier == source_identifier)
             )
-            sources = result.scalars().all()
+            satellite_group = group_result.scalar_one_or_none()
 
-            # Determine which IDs were found
-            found_ids = [source.id for source in sources]
-            not_found_ids = [sat_id for sat_id in satellite_tle_source_ids if sat_id not in found_ids]
+            satellites_deleted = 0
+            transmitters_deleted = 0
+            group_deleted = False
 
-            if not sources:
-                return {"success": False, "error": "None of the Satellite TLE sources were found."}
+            if satellite_group:
+                # Get the list of satellite NORAD IDs from the group
+                satellite_norad_ids = satellite_group.satellite_ids or []
 
-            deletion_summary = []
+                if satellite_norad_ids:
+                    # First, delete all transmitters associated with these satellites
+                    # to avoid foreign key constraint violations
+                    transmitters_result = await session.execute(
+                        select(Transmitters).filter(Transmitters.norad_cat_id.in_(satellite_norad_ids))
+                    )
+                    transmitters_to_delete = transmitters_result.scalars().all()
 
-            for source in sources:
-                source_identifier = source.identifier
-                source_name = source.name
+                    for transmitter in transmitters_to_delete:
+                        await session.delete(transmitter)
+                        transmitters_deleted += 1
 
-                # Find the corresponding satellite group by identifier
-                group_result = await session.execute(
-                    select(Groups).filter(Groups.identifier == source_identifier)
-                )
-                satellite_group = group_result.scalar_one_or_none()
+                    # Now delete all satellites that came from this TLE source
+                    satellites_result = await session.execute(
+                        select(Satellites).filter(Satellites.norad_id.in_(satellite_norad_ids))
+                    )
+                    satellites_to_delete = satellites_result.scalars().all()
 
-                satellites_deleted = 0
-                transmitters_deleted = 0
-                group_deleted = False
+                    for satellite in satellites_to_delete:
+                        await session.delete(satellite)
+                        satellites_deleted += 1
 
-                if satellite_group:
-                    # Get the list of satellite NORAD IDs from the group
-                    satellite_norad_ids = satellite_group.satellite_ids or []
+                # Delete the satellite group
+                await session.delete(satellite_group)
+                group_deleted = True
 
-                    if satellite_norad_ids:
-                        # First, delete all transmitters associated with these satellites
-                        # to avoid foreign key constraint violations
-                        transmitters_result = await session.execute(
-                            select(Transmitters).filter(Transmitters.norad_cat_id.in_(satellite_norad_ids))
-                        )
-                        transmitters_to_delete = transmitters_result.scalars().all()
+            # Finally, delete the TLE source record
+            await session.delete(source)
 
-                        for transmitter in transmitters_to_delete:
-                            await session.delete(transmitter)
-                            transmitters_deleted += 1
+            deletion_summary.append({
+                "source_id": str(source.id),
+                "source_name": source_name,
+                "source_identifier": source_identifier,
+                "transmitters_deleted": transmitters_deleted,
+                "satellites_deleted": satellites_deleted,
+                "group_deleted": group_deleted
+            })
 
-                        # Now delete all satellites that came from this TLE source
-                        satellites_result = await session.execute(
-                            select(Satellites).filter(Satellites.norad_id.in_(satellite_norad_ids))
-                        )
-                        satellites_to_delete = satellites_result.scalars().all()
-
-                        for satellite in satellites_to_delete:
-                            await session.delete(satellite)
-                            satellites_deleted += 1
-
-                    # Delete the satellite group
-                    await session.delete(satellite_group)
-                    group_deleted = True
-
-                # Finally, delete the TLE source record
-                await session.delete(source)
-
-                deletion_summary.append({
-                    "source_id": str(source.id),
-                    "source_name": source_name,
-                    "source_identifier": source_identifier,
-                    "transmitters_deleted": transmitters_deleted,
-                    "satellites_deleted": satellites_deleted,
-                    "group_deleted": group_deleted
-                })
+        # Commit the changes
+        await session.commit()
 
         # Construct a success message
         total_transmitters_deleted = sum(item["transmitters_deleted"] for item in deletion_summary)
