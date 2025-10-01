@@ -461,10 +461,10 @@ class SDRProcessManager:
                                 # Send FFT data to the client
                                 await self.sio.emit('sdr-fft-data', data['data'], room=sdr_id)
 
-                        if data_type == 'audio_data' and client_id:
+                        if data_type == 'audio-data' and client_id:
                             if client_id in process_info['clients']:
                                 # Send audio data to the client
-                                await self.sio.emit('audio_data', data['data'], room=sdr_id)
+                                await self.sio.emit('audio-data', data['data'], room=sdr_id)
 
                         if data_type == 'streamingstart' and client_id:
                             if client_id in process_info['clients']:
