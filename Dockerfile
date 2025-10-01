@@ -281,4 +281,4 @@ CMD dbus-daemon --system --nofork --nopidfile & \
     sleep 2 && \
     /usr/local/bin/uhd_images_downloader && \
     cp /usr/local/share/uhd/images/libresdr_b210.bin /usr/local/share/uhd/images/usrp_b210_fpga.bin && \
-    python app.py --secret-key=AuZ9theig2geu4wu --log-level=INFO --host=0.0.0.0 --port=7000
+    python app.py --log-level=INFO --host=0.0.0.0 --port=7000
