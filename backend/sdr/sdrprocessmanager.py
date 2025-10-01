@@ -507,7 +507,7 @@ class SDRProcessManager:
                         self.logger.exception(e)
                 else:
                     # Short sleep to avoid CPU hogging
-                    await asyncio.sleep(0.001)
+                    await asyncio.sleep(0.05)
 
         except Exception as e:
             self.logger.error(f"Error monitoring data queue for device {sdr_id}: {str(e)}")

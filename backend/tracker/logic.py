@@ -24,6 +24,7 @@ from controllers.rotator import RotatorController
 from controllers.rig import RigController
 from controllers.sdr import SDRController
 from common.arguments import arguments as args
+from common.constants import TrackingEvents, TrackerCommands, SocketEvents, TrackingStateNames, DictKeys
 from datetime import datetime
 from tracking.doppler import calculate_doppler_shift
 from tracker.utils import pretty_dict
@@ -110,16 +111,16 @@ class SatelliteTracker:
 
         # Notify about change
         self.queue_out.put({
-            'event': 'satellite-tracking',
-            'data': {
-                'events': [{'name': "norad_id_change", 'old': old, 'new': new}]
+            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+            DictKeys.DATA: {
+                DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.NORAD_ID_CHANGE, 'old': old, 'new': new}]
             }
         })
 
         # Update rig state in database
         async with AsyncSessionLocal() as dbsession:
             new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
-                'name': 'satellite-tracking',
+                DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                 'value': {
                     'transmitter_id': "none",
                     'rig_state': "stopped" if self.current_rig_state == "tracking" else self.current_rig_state,
@@ -151,9 +152,9 @@ class SatelliteTracker:
                 })
 
                 self.queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [{'name': "rotator_connected"}],
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {
+                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_CONNECTED}],
                         'rotator_data': self.rotator_data.copy()
                     }
                 })
@@ -172,16 +173,16 @@ class SatelliteTracker:
 
         async with AsyncSessionLocal() as dbsession:
             new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
-                'name': 'satellite-tracking',
+                DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                 'value': {'rotator_state': 'disconnected'}
             })
 
         self.queue_out.put({
-            'event': 'satellite-tracking',
-            'data': {
-                'events': [{'name': "rotator_error", "error": str(error)}],
+            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+            DictKeys.DATA: {
+                DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_ERROR, "error": str(error)}],
                 'rotator_data': self.rotator_data.copy(),
-                'tracking_state': new_tracking_state['data']['value'],
+                'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
             }
         })
 
@@ -222,9 +223,9 @@ class SatelliteTracker:
                 await self.rotator_controller.disconnect()
                 self.rotator_data['connected'] = False
                 self.queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [{'name': "rotator_disconnected"}],
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {
+                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_DISCONNECTED}],
                         'rotator_data': self.rotator_data.copy()
                     }
                 })
@@ -243,9 +244,9 @@ class SatelliteTracker:
             if park_reply:
                 self.rotator_data['parked'] = True
                 self.queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [{'name': "rotator_parked"}],
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {
+                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_PARKED}],
                         'rotator_data': self.rotator_data.copy()
                     }
                 })
@@ -293,9 +294,9 @@ class SatelliteTracker:
                 })
 
                 self.queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [{'name': "rig_connected"}],
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {
+                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_CONNECTED}],
                         'rig_data': self.rig_data.copy()
                     }
                 })
@@ -313,16 +314,16 @@ class SatelliteTracker:
 
         async with AsyncSessionLocal() as dbsession:
             new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
-                'name': 'satellite-tracking',
+                DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                 'value': {'rig_state': 'disconnected'}
             })
 
         self.queue_out.put({
-            'event': 'satellite-tracking',
-            'data': {
-                'events': [{'name': "rig_error", "error": str(error)}],
+            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+            DictKeys.DATA: {
+                DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_ERROR, "error": str(error)}],
                 'rig_data': self.rig_data.copy(),
-                'tracking_state': new_tracking_state['data']['value'],
+                'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
             }
         })
 
@@ -358,9 +359,9 @@ class SatelliteTracker:
                 await self.rig_controller.disconnect()
                 self.rig_data.update({'connected': False, 'tracking': False, 'tuning': False})
                 self.queue_out.put({
-                    'event': 'satellite-tracking',
-                    'data': {
-                        'events': [{'name': "rig_disconnected"}],
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {
+                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_DISCONNECTED}],
                         'rig_data': self.rig_data.copy()
                     }
                 })
@@ -432,16 +433,16 @@ class SatelliteTracker:
                 logger.info(f"Received command: {command}")
 
                 cmd_type = command.get('command')
-                if cmd_type == 'stop':
+                if cmd_type == TrackerCommands.STOP:
                     logger.info("Received stop command, exiting tracking task")
                     return True
-                elif cmd_type == 'nudge_clockwise':
+                elif cmd_type == TrackerCommands.NUDGE_CLOCKWISE:
                     self.nudge_offset['az'] += 2
-                elif cmd_type == 'nudge_counter_clockwise':
+                elif cmd_type == TrackerCommands.NUDGE_COUNTER_CLOCKWISE:
                     self.nudge_offset['az'] -= 2
-                elif cmd_type == 'nudge_up':
+                elif cmd_type == TrackerCommands.NUDGE_UP:
                     self.nudge_offset['el'] += 2
-                elif cmd_type == 'nudge_down':
+                elif cmd_type == TrackerCommands.NUDGE_DOWN:
                     self.nudge_offset['el'] -= 2
 
         except Exception as e:
@@ -457,7 +458,7 @@ class SatelliteTracker:
 
             async with AsyncSessionLocal() as dbsession:
                 new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
-                    'name': 'satellite-tracking',
+                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                     'value': {'rotator_state': 'disconnected'}
                 })
 
@@ -466,10 +467,10 @@ class SatelliteTracker:
             self.rotator_data['stopped'] = True
 
             self.queue_out.put({
-                'event': 'satellite-tracking',
-                'data': {
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {
                     'rotator_data': self.rotator_data.copy(),
-                    'tracking_state': new_tracking_state['data']['value'],
+                    'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
                 }
             })
 
@@ -479,7 +480,7 @@ class SatelliteTracker:
 
             async with AsyncSessionLocal() as dbsession:
                 new_tracking_state = await crud.satellites.set_tracking_state(dbsession, {
-                    'name': 'satellite-tracking',
+                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
                     'value': {'rig_state': 'disconnected'}
                 })
 
@@ -488,10 +489,10 @@ class SatelliteTracker:
             self.rig_data['stopped'] = True
 
             self.queue_out.put({
-                'event': 'satellite-tracking',
-                'data': {
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {
                     'rig_data': self.rig_data.copy(),
-                    'tracking_state': new_tracking_state['data']['value'],
+                    'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
                 }
             })
 
@@ -512,35 +513,35 @@ class SatelliteTracker:
         # Check azimuth limits
         if skypoint[0] > self.azimuth_limits[1] or skypoint[0] < self.azimuth_limits[0]:
             logger.debug(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
-            if self.in_tracking_state() and not self.notified.get('azimuth_out_of_bounds', False):
-                events.append({'name': "azimuth_out_of_bounds"})
-            self.notified['azimuth_out_of_bounds'] = True
+            if self.in_tracking_state() and not self.notified.get(TrackingEvents.AZIMUTH_OUT_OF_BOUNDS, False):
+                events.append({DictKeys.NAME: TrackingEvents.AZIMUTH_OUT_OF_BOUNDS})
+            self.notified[TrackingEvents.AZIMUTH_OUT_OF_BOUNDS] = True
             self.rotator_data['outofbounds'] = True
             self.rotator_data['stopped'] = True
 
         # Check elevation limits
         if skypoint[1] < self.elevation_limits[0] or skypoint[1] > self.elevation_limits[1]:
             logger.debug(f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}")
-            if self.in_tracking_state() and not self.notified.get('elevation_out_of_bounds', False):
-                events.append({'name': "elevation_out_of_bounds"})
-            self.notified['elevation_out_of_bounds'] = True
+            if self.in_tracking_state() and not self.notified.get(TrackingEvents.ELEVATION_OUT_OF_BOUNDS, False):
+                events.append({DictKeys.NAME: TrackingEvents.ELEVATION_OUT_OF_BOUNDS})
+            self.notified[TrackingEvents.ELEVATION_OUT_OF_BOUNDS] = True
             self.rotator_data['outofbounds'] = True
             self.rotator_data['stopped'] = True
 
         # Check minimum elevation
         if skypoint[1] < self.min_elevation:
             logger.debug(f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}")
-            if self.in_tracking_state() and not self.notified.get('minelevation_error', False):
-                events.append({'name': "minelevation_error"})
-            self.notified['minelevation_error'] = True
+            if self.in_tracking_state() and not self.notified.get(TrackingEvents.MIN_ELEVATION_ERROR, False):
+                events.append({DictKeys.NAME: TrackingEvents.MIN_ELEVATION_ERROR})
+            self.notified[TrackingEvents.MIN_ELEVATION_ERROR] = True
             self.rotator_data['minelevation'] = True
             self.rotator_data['stopped'] = True
 
         # Send events if any
         if events:
             self.queue_out.put({
-                'event': 'satellite-tracking',
-                'data': {'events': events}
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {DictKeys.EVENTS: events}
             })
 
     async def _handle_transmitter_tracking(self, satellite_tles, location):
@@ -665,7 +666,7 @@ class SatelliteTracker:
                 async with AsyncSessionLocal() as dbsession:
 
                     # Get tracking state from the db
-                    tracking_state_reply = await crud.satellites.get_tracking_state(dbsession, name='satellite-tracking')
+                    tracking_state_reply = await crud.satellites.get_tracking_state(dbsession, name=TrackingStateNames.SATELLITE_TRACKING)
                     assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
@@ -727,10 +728,10 @@ class SatelliteTracker:
                 # Send updates via the queue
                 try:
                     full_msg = {
-                        'event': 'satellite-tracking',
-                        'data': {
+                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                        DictKeys.DATA: {
                             'satellite_data': satellite_data,
-                            'events': self.events.copy(),
+                            DictKeys.EVENTS: self.events.copy(),
                             'rotator_data': self.rotator_data.copy(),
                             'rig_data': self.rig_data.copy(),
                             'tracking_state': tracker.copy(),
