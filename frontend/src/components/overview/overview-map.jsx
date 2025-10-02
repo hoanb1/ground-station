@@ -25,6 +25,7 @@ import {
     Marker,
     Polyline,
     Polygon,
+    CircleMarker,
     useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
@@ -291,6 +292,50 @@ const SatelliteMapContainer = ({
                 }
 
                 const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);
+
+                // Crosshairs for tracking satellite - always shown when satellite is being tracked
+                if (trackingSatelliteId === noradId) {
+                    currentPos.push(
+                        <React.Fragment key={`crosshair-${noradId}`}>
+                            <CircleMarker
+                                center={[lat, lon]}
+                                radius={15}
+                                pathOptions={{
+                                    color: '#ffffff',
+                                    weight: 1,
+                                    fillOpacity: 0,
+                                    opacity: 1
+                                }}
+                            />
+                            {/* Horizontal line crossing the entire map */}
+                            <Polyline
+                                positions={[
+                                    [lat, -180],
+                                    [lat, 180]
+                                ]}
+                                pathOptions={{
+                                    color: '#ffffff',
+                                    weight: 1,
+                                    opacity: 1,
+                                    //dashArray: "2 2",
+                                }}
+                            />
+                            {/* Vertical line crossing the entire map */}
+                            <Polyline
+                                positions={[
+                                    [-90, lon],
+                                    [90, lon]
+                                ]}
+                                pathOptions={{
+                                    color: '#ffffff',
+                                    weight: 1,
+                                    opacity: 1,
+                                    //dashArray: "2 2",
+                                }}
+                            />
+                        </React.Fragment>
+                    );
+                }
 
                 // If the satellite is visible, draw the coverage circle
                 if (isVisible && showSatelliteCoverage) {
