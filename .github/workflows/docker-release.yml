@@ -92,12 +92,8 @@ jobs:
           GIT_COMMIT=${{ steps.version.outputs.git_sha }}
           BUILD_DATE=${{ steps.version.outputs.build_date }}
           BUILD_VERSION=${{ steps.version.outputs.full_version }}
-        cache-from: |
-          type=gha
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache
-        cache-to: |
-          type=gha,mode=max
-          type=registry,ref=${{ env.REGISTRY }}/${{ env.IMAGE_NAME }}:buildcache,mode=max
+        cache-from: type=gha
+        cache-to: type=gha,mode=max
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
