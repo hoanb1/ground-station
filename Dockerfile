@@ -85,14 +85,14 @@ RUN pip install --break-system-packages --ignore-installed numpy==2.3.1
 
 # Compile UHD from source with Python API
 WORKDIR /src
-RUN git clone https://github.com/EttusResearch/uhd.git
-WORKDIR uhd/host/
-RUN mkdir build
-WORKDIR build/
-RUN cmake -DENABLE_PYTHON_API=ON ..
-RUN make -j`nproc`
-RUN sudo make install
-RUN sudo ldconfig
+RUN git clone https://github.com/EttusResearch/uhd.git && \
+    cd uhd/host && \
+    mkdir build && \
+    cd build && \
+    cmake -DENABLE_PYTHON_API=ON .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
 
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
@@ -108,135 +108,121 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # compile SoapySDR
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapySDR.git
-WORKDIR SoapySDR/
-RUN mkdir build
-WORKDIR build/
-RUN cmake ..
-RUN make -j`nproc`
-RUN sudo make install -j`nproc`
-RUN sudo ldconfig
+RUN git clone https://github.com/pothosware/SoapySDR.git && \
+    cd SoapySDR && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install -j`nproc` && \
+    sudo ldconfig
 
 # compile SoapySDRRemote
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyRemote.git
-WORKDIR SoapyRemote/
-RUN mkdir build
-WORKDIR build/
-RUN cmake ..
-RUN make -j`nproc`
-RUN sudo make install -j`nproc`
-RUN sudo ldconfig
+RUN git clone https://github.com/pothosware/SoapyRemote.git && \
+    cd SoapyRemote && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install -j`nproc` && \
+    sudo ldconfig
 
 # compile SoapySDR-RTLSDR
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyRTLSDR.git
-WORKDIR SoapyRTLSDR/
-RUN mkdir build
-WORKDIR build/
-RUN cmake ..
-RUN make -j`nproc`
-RUN sudo make install
-RUN sudo ldconfig
+RUN git clone https://github.com/pothosware/SoapyRTLSDR.git && \
+    cd SoapyRTLSDR && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
 
 # compile SoapySDR-Airspy
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyAirspy.git
-WORKDIR SoapyAirspy/
-RUN mkdir build
-WORKDIR build/
-RUN cmake ..
-RUN make -j`nproc`
-RUN sudo make install
-RUN sudo ldconfig
+RUN git clone https://github.com/pothosware/SoapyAirspy.git && \
+    cd SoapyAirspy && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
 
 # compile SoapySDR-UHD
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyUHD.git
-WORKDIR SoapyUHD/
-RUN mkdir build
-WORKDIR build/
-RUN cmake ..
-RUN make -j`nproc`
-RUN sudo make install
-RUN sudo ldconfig
+RUN git clone https://github.com/pothosware/SoapyUHD.git && \
+    cd SoapyUHD && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
 
 # compile SoapySDR-hackrf
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapyHackRF.git
-WORKDIR SoapyHackRF/
-RUN mkdir build
-WORKDIR build/
-RUN cmake ..
-RUN make -j`nproc`
-RUN sudo make install
-RUN sudo ldconfig
+RUN git clone https://github.com/pothosware/SoapyHackRF.git && \
+    cd SoapyHackRF && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
 
 # compile LimeSuite
 WORKDIR /src
-RUN git clone https://github.com/myriadrf/LimeSuite.git
-WORKDIR LimeSuite/
-RUN git checkout stable
-# Fix the missing include for uint8_t
-RUN sed -i '1i\#include <cstdint>' src/lms7002m_mcu/MCU_File.cpp
-RUN mkdir builddir
-WORKDIR builddir/
-RUN cmake ../
-RUN make -j4
-RUN sudo make install
-RUN sudo ldconfig
+RUN git clone https://github.com/myriadrf/LimeSuite.git && \
+    cd LimeSuite && \
+    git checkout stable && \
+    sed -i '1i\#include <cstdint>' src/lms7002m_mcu/MCU_File.cpp && \
+    mkdir builddir && \
+    cd builddir && \
+    cmake ../ && \
+    make -j4 && \
+    sudo make install && \
+    sudo ldconfig
 
 # compile Hamlib
 WORKDIR /src
-RUN git clone https://github.com/Hamlib/Hamlib.git
-WORKDIR Hamlib/
-RUN ./bootstrap
-RUN ./configure --with-python-binding
-RUN make
-RUN sudo make install
+RUN git clone https://github.com/Hamlib/Hamlib.git && \
+    cd Hamlib && \
+    ./bootstrap && \
+    ./configure --with-python-binding && \
+    make && \
+    sudo make install
 
 # compile csdr
 WORKDIR /src
-RUN git clone https://github.com/jketterl/csdr.git
-WORKDIR csdr/
-RUN mkdir build
-WORKDIR build/
-RUN cmake ..
-RUN make
-RUN make install
-RUN ldconfig
+RUN git clone https://github.com/jketterl/csdr.git && \
+    cd csdr && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make && \
+    make install && \
+    ldconfig
 
 # compile pycsdr
 WORKDIR /src
-RUN git clone https://github.com/jketterl/pycsdr.git
-WORKDIR pycsdr/
-RUN ./setup.py install install_headers
+RUN git clone https://github.com/jketterl/pycsdr.git && \
+    cd pycsdr && \
+    ./setup.py install install_headers
 
-RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && ldconfig
-
-RUN ldconfig -v | grep "/usr/local/lib"
-
-WORKDIR /app
-
-RUN mkdir "/app/venv/lib/python3.12/site-packages/Hamlib"
-RUN mkdir -p "/app/venv/lib/python3.12/site-packages/Hamlib/"
-
-# After the step you want to inspect
-RUN ls -la /usr/local/lib/python3.12/site-packages/
-RUN find / -name "python*" | grep bin
-RUN echo $PATH
-RUN which python3
-RUN cat /etc/os-release
-
-RUN cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12/site-packages/Hamlib
-RUN cp /usr/local/lib/python3.12/site-packages/*SoapySDR* /app/venv/lib/python3.12/site-packages/
-
-RUN ls -la /app/venv/lib/python3.12/site-packages/Hamlib
+# Configure library paths and copy Python bindings
+RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
+    ldconfig && \
+    mkdir -p "/app/venv/lib/python3.12/site-packages/Hamlib/" && \
+    cp /usr/local/lib/python3.12/site-packages/*Hamlib* /app/venv/lib/python3.12/site-packages/Hamlib && \
+    cp /usr/local/lib/python3.12/site-packages/*SoapySDR* /app/venv/lib/python3.12/site-packages/
 
 # Download and place the USRP B210 FPGA binary for LibreSDR device
-RUN mkdir /usr/local/share/uhd/images
-RUN wget -O /usr/local/share/uhd/images/libresdr_b210.bin \
-    https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin
+RUN mkdir -p /usr/local/share/uhd/images && \
+    wget -O /usr/local/share/uhd/images/libresdr_b210.bin \
+    https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin && \
+    rm -rf /src
 
 WORKDIR /app
 
