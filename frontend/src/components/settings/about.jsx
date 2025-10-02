@@ -18,6 +18,7 @@
  */
 
 import React from "react";
+import { useSelector } from "react-redux";
 import {
     Box,
     Typography,
@@ -40,6 +41,7 @@ import GroupIcon from '@mui/icons-material/Group';
 import CodeIcon from '@mui/icons-material/Code';
 import StorageIcon from '@mui/icons-material/Storage';
 import WebIcon from '@mui/icons-material/Web';
+import InfoIcon from '@mui/icons-material/Info';
 import Grid from "@mui/material/Grid2";
 import {
     Table,
@@ -53,6 +55,7 @@ import {
 
 const AboutPage = () => {
     const theme = useTheme();
+    const versionInfo = useSelector((state) => state.version?.data);
 
     const featureItems = [
         {
@@ -154,6 +157,79 @@ const AboutPage = () => {
                             Ground Station
                         </Typography>
                     </Box>
+
+                    {/* Version Information Section */}
+                    {versionInfo && (
+                        <Box>
+                            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: theme.palette.primary.main, display: 'flex', alignItems: 'center' }}>
+                                <InfoIcon sx={{ mr: 1 }} />
+                                Version Information
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
+                            <Card elevation={2} sx={{ p: 3, backgroundColor: 'rgba(33, 150, 243, 0.05)', border: `1px solid ${theme.palette.primary.main}30` }}>
+                                <Grid container spacing={2}>
+                                    <Grid size={12} md={6}>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                            <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
+                                                Version:
+                                            </Typography>
+                                            <Chip 
+                                                label={versionInfo.version} 
+                                                color="primary" 
+                                                size="small"
+                                                sx={{ fontFamily: 'monospace', fontWeight: 600 }}
+                                            />
+                                        </Box>
+                                    </Grid>
+                                    
+                                    {versionInfo.environment && (
+                                        <Grid size={12} md={6}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
+                                                    Environment:
+                                                </Typography>
+                                                <Chip 
+                                                    label={versionInfo.environment} 
+                                                    color={versionInfo.environment === 'production' ? 'success' : 'warning'}
+                                                    size="small"
+                                                    sx={{ fontFamily: 'monospace', textTransform: 'capitalize' }}
+                                                />
+                                            </Box>
+                                        </Grid>
+                                    )}
+                                    
+                                    {versionInfo.buildDate && (
+                                        <Grid size={12} md={6}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
+                                                    Build Date:
+                                                </Typography>
+                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
+                                                    {versionInfo.buildDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')}
+                                                </Typography>
+                                            </Box>
+                                        </Grid>
+                                    )}
+                                    
+                                    {versionInfo.gitCommit && (
+                                        <Grid size={12} md={6}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
+                                                <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
+                                                    Git Commit:
+                                                </Typography>
+                                                <Chip 
+                                                    label={versionInfo.gitCommit} 
+                                                    size="small"
+                                                    variant="outlined"
+                                                    sx={{ fontFamily: 'monospace' }}
+                                                />
+                                            </Box>
+                                        </Grid>
+                                    )}
+                                </Grid>
+                            </Card>
+                        </Box>
+                    )}
 
                     {/* Introduction */}
                     <Card elevation={1} sx={{ padding: 2, backgroundColor: 'rgba(255,255,255,0.05)' }}>
