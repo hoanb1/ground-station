@@ -57,6 +57,11 @@ jobs:
         FULL_VERSION=$VERSION_BASE-$BRANCH_NAME-$GIT_SHA
         echo "FULL_VERSION=$FULL_VERSION"
         echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
+        
+        # Strip 'v' prefix from tag for Docker image reference
+        TAG_VERSION="${BRANCH_NAME#v}"
+        echo "TAG_VERSION=$TAG_VERSION"
+        echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
 
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
@@ -85,6 +90,7 @@ jobs:
           type=ref,event=branch
           type=sha
           type=raw,value=${{ steps.version.outputs.full_version }}
+          type=raw,value=latest
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
@@ -138,7 +144,7 @@ jobs:
 
           ### Pull the Docker image:
           ```bash
-          docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ github.ref_name }}
+          docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}
           ```
 
           ### Run the container:
@@ -149,7 +155,7 @@ jobs:
             --restart unless-stopped \
             -v $(pwd)/data:/app/backend/data \
             -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
-            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ github.ref_name }}
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}
           ```
 
           ### Multi-arch support:
