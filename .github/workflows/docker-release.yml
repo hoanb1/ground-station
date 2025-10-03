@@ -1,3 +1,4 @@
+
 name: Docker Build and Release
 
 on:
@@ -11,60 +12,56 @@ env:
   IMAGE_NAME: sgoudelis/ground-station
 
 jobs:
-  build-and-push:
+  extract-version:
     runs-on: ubuntu-latest
-    permissions:
-      contents: write
-      packages: write
-      id-token: write
-      attestations: write
-
+    outputs:
+      version_base: ${{ steps.version.outputs.version_base }}
+      git_sha: ${{ steps.version.outputs.git_sha }}
+      env_type: ${{ steps.version.outputs.env_type }}
+      build_date: ${{ steps.version.outputs.build_date }}
+      full_version: ${{ steps.version.outputs.full_version }}
+      tag_version: ${{ steps.version.outputs.tag_version }}
     steps:
       - name: Checkout code
         uses: actions/checkout@v4
         with:
-          fetch-depth: 0  # Full history for git commit info
+          fetch-depth: 0
 
       - name: Extract version information
         id: version
         run: |
-          # Extract version from version.json
           VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
-          echo "VERSION_BASE=$VERSION_BASE"
           echo "version_base=$VERSION_BASE" >> $GITHUB_OUTPUT
           
-          # Get git hash
           GIT_SHA=$(git rev-parse --short HEAD)
-          echo "GIT_SHA=$GIT_SHA"
           echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
           
-          # Set environment type based on branch
           if [ "${{ github.ref_name }}" = "main" ] || [ "${{ github.ref_type }}" = "tag" ]; then
             ENV_TYPE="production"
           else
             ENV_TYPE="development"
           fi
-          echo "ENV_TYPE=$ENV_TYPE"
           echo "env_type=$ENV_TYPE" >> $GITHUB_OUTPUT
           
-          # Get build date
           BUILD_DATE=$(date -u +'%Y%m%d')
-          echo "BUILD_DATE=$BUILD_DATE"
           echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
           
-          # Create full version string
           BRANCH_NAME=${{ github.ref_name }}
           FULL_VERSION=$VERSION_BASE-$BRANCH_NAME-$GIT_SHA
-          echo "FULL_VERSION=$FULL_VERSION"
           echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
           
-          # Strip 'v' prefix from tag for Docker image reference
           TAG_VERSION="${BRANCH_NAME#v}"
-          echo "TAG_VERSION=$TAG_VERSION"
           echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
 
-      - name: Set up QEMU
-        uses: docker/setup-qemu-action@v3
+  build-amd64:
+    needs: extract-version
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -78,59 +75,102 @@ jobs:
 
       - name: Lowercase image name
         id: image
+        run: echo "name=${IMAGE_NAME,,}" >> $GITHUB_OUTPUT
+
+      - name: Build and push AMD64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          provenance: false
+          platforms: linux/amd64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64
+          build-args: |
+            GS_ENVIRONMENT=${{ needs.extract-version.outputs.env_type }}
+            GIT_COMMIT=${{ needs.extract-version.outputs.git_sha }}
+            BUILD_DATE=${{ needs.extract-version.outputs.build_date }}
+            BUILD_VERSION=${{ needs.extract-version.outputs.full_version }}
+          cache-from: type=gha,scope=amd64
+          cache-to: type=gha,mode=max,scope=amd64
+
+  build-arm64:
+    needs: extract-version
+    runs-on: ubuntu-24.04-arm  # Native ARM64 runner for public repos
+    permissions:
+      contents: read
+      packages: write
+    steps:
+      - name: Checkout code
+        uses: actions/checkout@v4
+
+      - name: Set up Docker Buildx
+        uses: docker/setup-buildx-action@v3
+
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Lowercase image name
+        id: image
+        run: echo "name=${IMAGE_NAME,,}" >> $GITHUB_OUTPUT
+
+      - name: Build and push ARM64 image
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          provenance: false
+          platforms: linux/arm64
+          push: true
+          tags: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-arm64
+          build-args: |
+            GS_ENVIRONMENT=${{ needs.extract-version.outputs.env_type }}
+            GIT_COMMIT=${{ needs.extract-version.outputs.git_sha }}
+            BUILD_DATE=${{ needs.extract-version.outputs.build_date }}
+            BUILD_VERSION=${{ needs.extract-version.outputs.full_version }}
+          cache-from: type=gha,scope=arm64
+          cache-to: type=gha,mode=max,scope=arm64
+
+  create-manifest:
+    needs: [extract-version, build-amd64, build-arm64]
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+      packages: write
+    steps:
+      - name: Log in to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ${{ env.REGISTRY }}
+          username: ${{ github.repository_owner }}
+          password: ${{ secrets.GHCR_TOKEN }}
+
+      - name: Lowercase image name
+        id: image
+        run: echo "name=${IMAGE_NAME,,}" >> $GITHUB_OUTPUT
+
+      - name: Create and push multi-arch manifest
         run: |
-          echo "name=${IMAGE_NAME,,}" >> $GITHUB_OUTPUT
+          # Create manifest for versioned tag
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }} \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64 \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-arm64
+          
+          # Create manifest for latest tag
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64 \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-arm64
+          
+          # Create manifest for full version tag
+          docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }} \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64 \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-arm64
 
-      - name: Extract metadata
-        id: meta
-        uses: docker/metadata-action@v5
-        with:
-          images: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}
-          tags: |
-            type=semver,pattern={{version}}
-            type=semver,pattern={{major}}.{{minor}}
-            type=semver,pattern={{major}}
-            type=ref,event=branch
-            type=sha
-            type=raw,value=${{ steps.version.outputs.full_version }}
-            type=raw,value=latest
-
-      - name: Build and push multi-arch Docker image
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          provenance: false
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            GS_ENVIRONMENT=${{ steps.version.outputs.env_type }}
-            GIT_COMMIT=${{ steps.version.outputs.git_sha }}
-            BUILD_DATE=${{ steps.version.outputs.build_date }}
-            BUILD_VERSION=${{ steps.version.outputs.full_version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
-        continue-on-error: true
-        id: build_attempt_1
-
-      - name: Retry build and push on failure
-        if: steps.build_attempt_1.outcome == 'failure'
-        uses: docker/build-push-action@v6
-        with:
-          context: .
-          provenance: false
-          platforms: linux/amd64,linux/arm64
-          push: true
-          tags: ${{ steps.meta.outputs.tags }}
-          labels: ${{ steps.meta.outputs.labels }}
-          build-args: |
-            GS_ENVIRONMENT=${{ steps.version.outputs.env_type }}
-            GIT_COMMIT=${{ steps.version.outputs.git_sha }}
-            BUILD_DATE=${{ steps.version.outputs.build_date }}
-            BUILD_VERSION=${{ steps.version.outputs.full_version }}
-          cache-from: type=gha
-          cache-to: type=gha,mode=max
+      - name: Checkout code for release
+        if: startsWith(github.ref, 'refs/tags/')
+        uses: actions/checkout@v4
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -140,14 +180,14 @@ jobs:
           body: |
             ## Docker Image
             
-            **Version:** ${{ steps.version.outputs.full_version }}
-            **Environment:** ${{ steps.version.outputs.env_type }}
-            **Git Commit:** ${{ steps.version.outputs.git_sha }}
-            **Build Date:** ${{ steps.version.outputs.build_date }}
+            **Version:** ${{ needs.extract-version.outputs.full_version }}
+            **Environment:** ${{ needs.extract-version.outputs.env_type }}
+            **Git Commit:** ${{ needs.extract-version.outputs.git_sha }}
+            **Build Date:** ${{ needs.extract-version.outputs.build_date }}
             
             ### Pull the Docker image:
             ```bash
-            docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}
+            docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }}
             ```
             
             ### Run the container:
@@ -157,8 +197,8 @@ jobs:
               --name ground-station \
               --restart unless-stopped \
               -v $(pwd)/data:/app/backend/data \
-              -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
-              ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}
+              -e GS_ENVIRONMENT=${{ needs.extract-version.outputs.env_type }} \
+              ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }}
             ```
             
             ### Multi-arch support:
