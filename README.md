@@ -29,7 +29,7 @@ satellite imagery and telemetry.
 
 ---
 
-### Live Signal Analysis
+### SDR Waterfall View
 <img src="frontend/public/ground station - waterfall view - amateur iss - doppler effect.png" alt="Live waterfall analysis" width="450"/>
 
 *Live RF spectrum waterfall demonstrating Doppler effect visualization during active satellite communication*
@@ -43,7 +43,7 @@ satellite imagery and telemetry.
 
 ---
 
-### ⚙️ SDR Hardware Management
+### SDR Hardware Management
 <img src="frontend/public/ground station - sdrs view - table list.png" alt="SDR device management" width="450"/>
 
 *Comprehensive SDR device management interface supporting RTL-SDR, SoapySDR, and UHD/USRP radios with remote capability*
