@@ -162,7 +162,6 @@ const AboutPage = () => {
                     {versionInfo && (
                         <Box>
                             <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: theme.palette.primary.main, display: 'flex', alignItems: 'center' }}>
-                                <InfoIcon sx={{ mr: 1 }} />
                                 Version Information
                             </Typography>
                             <Divider sx={{ mb: 2 }} />

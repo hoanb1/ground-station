@@ -123,6 +123,64 @@ async def serve_spa(request: Request, full_path: str):
 async def init_db():
     """Create database tables."""
     logger.info("Initializing database...")
+    
+    # Check if database exists by trying to query metadata
+    database_existed = False
+    try:
+        async with engine.begin() as conn:
+            # Try to get table names - if this succeeds, database exists
+            result = await conn.run_sync(lambda sync_conn: engine.dialect.get_table_names(sync_conn))
+            database_existed = len(result) > 0
+    except Exception:
+        # Database doesn't exist or is empty
+        database_existed = False
+    
+    # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
+    
+    # If database didn't exist before, populate with initial data
+    if not database_existed:
+        logger.info("New database detected. Populating with initial data...")
+        await populate_initial_data()
+    
     logger.info("Database initialized.")
+
+
+async def populate_initial_data():
+    """Populate database with initial data after creation."""
+    import string
+    import random
+    from db import AsyncSessionLocal
+    from db.models import TLESources
+
+    async with AsyncSessionLocal() as session:
+        try:
+            # Generate random identifiers for the TLE sources
+            def generate_identifier(length=16):
+                """Generate a random identifier similar to what the CRUD does."""
+                return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+
+            # Add default TLE sources
+            cubesat_source = TLESources(
+                name="Cubesats",
+                identifier=generate_identifier(),
+                url="http://www.celestrak.com/NORAD/elements/cubesat.txt",
+                format="3le"
+            )
+            session.add(cubesat_source)
+
+            amateur_source = TLESources(
+                name="Amateur",
+                identifier=generate_identifier(),
+                url="http://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle",
+                format="3le"
+            )
+            session.add(amateur_source)
+
+            await session.commit()
+            logger.info("Initial data populated successfully with default TLE sources (Cubesats and Amateur).")
+        except Exception as e:
+            logger.error(f"Error populating initial data: {e}")
+            await session.rollback()
+            raise

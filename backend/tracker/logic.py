@@ -652,6 +652,9 @@ class SatelliteTracker:
         # Validate interval
         assert 0 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
 
+        satellite_data = {}
+        tracker = {}
+
         while True:
             # Process commands first
             should_stop = await self._process_commands()
@@ -667,6 +670,11 @@ class SatelliteTracker:
 
                     # Get tracking state from the db
                     tracking_state_reply = await crud.tracking_state.get_tracking_state(dbsession, name=TrackingStateNames.SATELLITE_TRACKING)
+
+                    if tracking_state_reply['success'] is False:
+                        logger.error(f"Error in satellite tracking task: {tracking_state_reply}")
+                        continue
+
                     assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
                     assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
@@ -725,24 +733,25 @@ class SatelliteTracker:
                 logger.exception(e)
 
             finally:
-                # Send updates via the queue
-                try:
-                    full_msg = {
-                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                        DictKeys.DATA: {
-                            'satellite_data': satellite_data,
-                            DictKeys.EVENTS: self.events.copy(),
-                            'rotator_data': self.rotator_data.copy(),
-                            'rig_data': self.rig_data.copy(),
-                            'tracking_state': tracker.copy(),
+                # Send updates via the queue, but first check if we have satellite data and tracker data
+                if satellite_data and tracker:
+                    try:
+                        full_msg = {
+                            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                            DictKeys.DATA: {
+                                'satellite_data': satellite_data,
+                                DictKeys.EVENTS: self.events.copy(),
+                                'rotator_data': self.rotator_data.copy(),
+                                'rig_data': self.rig_data.copy(),
+                                'tracking_state': tracker.copy(),
+                            }
                         }
-                    }
-                    logger.debug(f"Sending satellite tracking data: \n{pretty_dict(full_msg)}")
-                    self.queue_out.put(full_msg)
+                        logger.debug(f"Sending satellite tracking data: \n{pretty_dict(full_msg)}")
+                        self.queue_out.put(full_msg)
 
-                except Exception as e:
-                    logger.critical(f"Error sending satellite tracking data: {e}")
-                    logger.exception(e)
+                    except Exception as e:
+                        logger.critical(f"Error sending satellite tracking data: {e}")
+                        logger.exception(e)
 
                 # Calculate sleep time
                 loop_duration = round((datetime.now(UTC) - self.start_loop_date).total_seconds(), 2)
@@ -763,6 +772,7 @@ class SatelliteTracker:
 
                 logger.debug(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
                              f"(already spent {round(loop_duration, 2)})...")
+
                 await asyncio.sleep(remaining_time_to_sleep)
 
 
