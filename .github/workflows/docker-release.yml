@@ -12,7 +12,14 @@ env:
 
 jobs:
   build-and-push:
-    runs-on: ubuntu-latest
+    strategy:
+      matrix:
+        include:
+          - platform: linux/amd64
+            runner: ubuntu-latest
+          - platform: linux/arm64
+            runner: ubuntu-24.04-arm
+    runs-on: ${{ matrix.runner }}
     permissions:
       contents: write
       packages: write
@@ -91,13 +98,15 @@ jobs:
           type=sha
           type=raw,value=${{ steps.version.outputs.full_version }}
           type=raw,value=latest
+        flavor: |
+          suffix=-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }},onlatest=false
 
     - name: Build and push Docker image
       uses: docker/build-push-action@v6
       with:
         context: .
         provenance: false
-        platforms: linux/amd64
+        platforms: ${{ matrix.platform }}
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -117,7 +126,7 @@ jobs:
       with:
         context: .
         provenance: false
-        platforms: linux/amd64
+        platforms: ${{ matrix.platform }}
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -128,6 +137,72 @@ jobs:
           BUILD_VERSION=${{ steps.version.outputs.full_version }}
         cache-from: type=gha
         cache-to: type=gha,mode=max
+
+  create-manifest:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    permissions:
+      packages: write
+
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+      with:
+        fetch-depth: 0
+
+    - name: Extract version information
+      id: version
+      run: |
+        VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
+        echo "version_base=$VERSION_BASE" >> $GITHUB_OUTPUT
+        GIT_SHA=$(git rev-parse --short HEAD)
+        echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
+        if [ "${{ github.ref_name }}" = "main" ] || [ "${{ github.ref_type }}" = "tag" ]; then
+          ENV_TYPE="production"
+        else
+          ENV_TYPE="development"
+        fi
+        echo "env_type=$ENV_TYPE" >> $GITHUB_OUTPUT
+        BUILD_DATE=$(date -u +'%Y%m%d')
+        echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
+        BRANCH_NAME=${{ github.ref_name }}
+        FULL_VERSION=$VERSION_BASE-$BRANCH_NAME-$GIT_SHA
+        echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
+        TAG_VERSION="${BRANCH_NAME#v}"
+        echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
+
+    - name: Log in to GitHub Container Registry
+      uses: docker/login-action@v3
+      with:
+        registry: ${{ env.REGISTRY }}
+        username: ${{ github.repository_owner }}
+        password: ${{ secrets.GHCR_TOKEN }}
+
+    - name: Lowercase image name
+      id: image
+      run: |
+        echo "name=${IMAGE_NAME,,}" >> $GITHUB_OUTPUT
+
+    - name: Create and push manifest
+      run: |
+        # Create manifests for all tags
+        docker manifest create ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest \
+          ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest-amd64 \
+          ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest-arm64
+        docker manifest push ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
+
+        docker manifest create ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.full_version }} \
+          ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.full_version }}-amd64 \
+          ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.full_version }}-arm64
+        docker manifest push ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.full_version }}
+
+        # If it's a tag, create version manifests
+        if [[ "${{ github.ref_type }}" == "tag" ]]; then
+          docker manifest create ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }} \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}-amd64 \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}-arm64
+          docker manifest push ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}
+        fi
 
     - name: Create GitHub Release
       uses: softprops/action-gh-release@v1
@@ -159,4 +234,4 @@ jobs:
           ```
 
           ### Multi-arch support:
-          This image supports `linux/amd64` platforms.
+          This image supports `linux/amd64` and `linux/arm64` platforms.
