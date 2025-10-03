@@ -12,14 +12,7 @@ env:
 
 jobs:
   build-and-push:
-    strategy:
-      matrix:
-        include:
-          - platform: linux/amd64
-            runner: ubuntu-latest
-          - platform: linux/arm64
-            runner: ubuntu-24.04-arm
-    runs-on: ${{ matrix.runner }}
+    runs-on: ubuntu-latest
     permissions:
       contents: write
       packages: write
@@ -70,6 +63,9 @@ jobs:
         echo "TAG_VERSION=$TAG_VERSION"
         echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
 
+    - name: Set up QEMU
+      uses: docker/setup-qemu-action@v3
+
     - name: Set up Docker Buildx
       uses: docker/setup-buildx-action@v3
 
@@ -98,15 +94,13 @@ jobs:
           type=sha
           type=raw,value=${{ steps.version.outputs.full_version }}
           type=raw,value=latest
-        flavor: |
-          suffix=-${{ matrix.platform == 'linux/amd64' && 'amd64' || 'arm64' }},onlatest=false
 
-    - name: Build and push Docker image
+    - name: Build and push multi-arch Docker image
       uses: docker/build-push-action@v6
       with:
         context: .
         provenance: false
-        platforms: ${{ matrix.platform }}
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -126,7 +120,7 @@ jobs:
       with:
         context: .
         provenance: false
-        platforms: ${{ matrix.platform }}
+        platforms: linux/amd64,linux/arm64
         push: true
         tags: ${{ steps.meta.outputs.tags }}
         labels: ${{ steps.meta.outputs.labels }}
@@ -138,17 +132,37 @@ jobs:
         cache-from: type=gha
         cache-to: type=gha,mode=max
 
-  create-manifest:
-    needs: build-and-push
-    runs-on: ubuntu-latest
-    permissions:
-      packages: write
-
-    steps:
-    - name: Checkout code
-      uses: actions/checkout@v4
+    - name: Create GitHub Release
+      uses: softprops/action-gh-release@v1
+      if: startsWith(github.ref, 'refs/tags/')
       with:
-        fetch-depth: 0
+        generate_release_notes: true
+        body: |
+          ## Docker Image
+
+          **Version:** ${{ steps.version.outputs.full_version }}
+          **Environment:** ${{ steps.version.outputs.env_type }}
+          **Git Commit:** ${{ steps.version.outputs.git_sha }}
+          **Build Date:** ${{ steps.version.outputs.build_date }}
+
+          ### Pull the Docker image:
+          ```bash
+          docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}
+          ```
+
+          ### Run the container:
+          ```bash
+          docker run -d \
+            -p 7000:7000 \
+            --name ground-station \
+            --restart unless-stopped \
+            -v $(pwd)/data:/app/backend/data \
+            -e GS_ENVIRONMENT=${{ steps.version.outputs.env_type }} \
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ steps.version.outputs.tag_version }}
+          ```
+
+          ### Multi-arch support:
+          This image supports `linux/amd64` and `linux/arm64` platforms.
 
     - name: Extract version information
       id: version
