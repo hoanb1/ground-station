@@ -240,15 +240,6 @@ black .
 isort .
 ```
 
-#### Code Quality
-```bash
-# Run type checking with mypy
-mypy .
-
-# Run linting with flake8
-flake8 .
-```
-
 #### Testing
 ```bash
 # Run tests with coverage
