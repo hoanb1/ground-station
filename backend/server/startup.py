@@ -142,13 +142,13 @@ async def init_db():
     # If database didn't exist before, populate with initial data
     if not database_existed:
         logger.info("New database detected. Populating with initial data...")
-        await populate_initial_data()
+        await first_time_initialization()
     
     logger.info("Database initialized.")
 
 
-async def populate_initial_data():
-    """Populate database with initial data after creation."""
+async def first_time_initialization():
+    """Function called on first server start to populate database with default data."""
     import string
     import random
     from db import AsyncSessionLocal
