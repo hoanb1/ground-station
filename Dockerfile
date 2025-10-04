@@ -221,8 +221,10 @@ RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
 # Download and place the USRP B210 FPGA binary for LibreSDR device
 RUN mkdir -p /usr/local/share/uhd/images && \
     wget -O /usr/local/share/uhd/images/libresdr_b210.bin \
-    https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin && \
-    rm -rf /src
+    https://github.com/Rashed97/docker_open5gs/raw/refs/heads/exp_5g_ims_pyhss/srsran/usrp_b220_fpga.bin
+
+# Remove all that source code
+RUN rm -rf /src
 
 WORKDIR /app
 
