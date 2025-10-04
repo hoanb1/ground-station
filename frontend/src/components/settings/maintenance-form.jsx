@@ -92,7 +92,6 @@ const MaintenanceForm = () => {
 
                     if (countdown <= 0) {
                         clearInterval(countdownInterval);
-                        window.location.reload();
                     }
                 }, 1000);
             } else {
