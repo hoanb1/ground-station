@@ -10,12 +10,12 @@ sleep 2
 # Download official UHD images
 /usr/local/bin/uhd_images_downloader
 
-# Show a list of UHD images
-ls -l /usr/local/share/uhd/images/*.bin
-
 # Use LibreSDR FPGA
 cp /usr/local/share/uhd/images/libresdr_b210.bin /usr/local/share/uhd/images/usrp_b210_fpga.bin
 echo "LibreSDR FPGA image installed"
+
+# Show a list of UHD images
+ls -l /usr/local/share/uhd/images/*.bin
 
 # Start the application
 echo "Starting Ground Station application..."
