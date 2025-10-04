@@ -17,7 +17,6 @@
 import asyncio
 import json
 import logging
-import pprint
 from typing import Any, Dict, Optional, Union
 
 from crud import hardware
@@ -74,7 +73,7 @@ async def cleanup_sdr_session(sid):
     if sid in active_sdr_clients:
 
         client = get_sdr_session(sid)
-        sdr_id = client.get("sdr_id")
+        sdr_id = client.get("sdr_id") if client else None
 
         if sdr_id:
             # Stop or leave the SDR process
@@ -90,7 +89,7 @@ async def cleanup_sdr_session(sid):
 async def get_local_soapy_sdr_devices():
     """Retrieve a list of local SoapySDR devices with frequency range information"""
 
-    reply: dict[str, bool | dict | list | str | None] = {
+    reply: Dict[str, Union[bool, dict, list, str, None]] = {
         "success": None,
         "data": None,
         "error": None,
@@ -102,7 +101,8 @@ async def get_local_soapy_sdr_devices():
         probe_process = await asyncio.create_subprocess_exec(
             "python3",
             "-c",
-            "from workers.soapyenum import probe_available_usb_sdrs; import json; print(probe_available_usb_sdrs())",
+            "from workers.soapyenum import probe_available_usb_sdrs; "
+            "import json; print(probe_available_usb_sdrs())",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
         )
@@ -139,7 +139,7 @@ async def get_local_soapy_sdr_devices():
 async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
     """Retrieve SDR parameters from the SDR process manager with caching"""
 
-    reply: dict[str, Union[bool, None, dict, list, str]] = {
+    reply: Dict[str, Union[bool, None, dict, list, str]] = {
         "success": None,
         "data": None,
         "error": None,
@@ -240,7 +240,8 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
-                    f"from workers.soapysdrremoteprobe import probe_remote_soapy_sdr; print(probe_remote_soapy_sdr({sdr}))",
+                    f"from workers.soapysdrremoteprobe import probe_remote_soapy_sdr; "
+                    f"print(probe_remote_soapy_sdr({sdr}))",
                     stdout=asyncio.subprocess.PIPE,
                 )
 
@@ -258,7 +259,8 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
-                    f"from workers.soapysdrlocalprobe import probe_local_soapy_sdr; print(probe_local_soapy_sdr({sdr}))",
+                    f"from workers.soapysdrlocalprobe import probe_local_soapy_sdr; "
+                    f"print(probe_local_soapy_sdr({sdr}))",
                     stdout=asyncio.subprocess.PIPE,
                 )
 
@@ -321,6 +323,9 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                     probe_process.communicate(), timeout=timeout
                 )
 
+                logger.info(stdout)
+                logger.info(stderr)
+
                 if probe_process.returncode != 0:
                     error_output = stderr.decode().strip()
                     raise Exception(f"UHD probe process failed: {error_output}")
@@ -361,7 +366,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             sdr_parameters_cache[sdr_id] = params
             reply = {"success": True, "data": params}
 
-    except TimeoutError as e:
+    except TimeoutError:
         error_msg = (
             f"Timeout occurred while getting parameters from SDR with id {sdr_id} "
             f"within {timeout} seconds timeout"
