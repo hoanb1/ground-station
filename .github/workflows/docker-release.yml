@@ -184,7 +184,7 @@ jobs:
         id: commits
         run: |
           if [ -n "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
-            COMMIT_LIST=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ github.ref_name }} --pretty=format:"- %h %s (%an)" --no-merges)
+            COMMIT_LIST=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ github.ref_name }} --pretty=format:"- %h %s" --no-merges)
             echo "commit_list<<EOF" >> $GITHUB_OUTPUT
             echo "$COMMIT_LIST" >> $GITHUB_OUTPUT
             echo "EOF" >> $GITHUB_OUTPUT
