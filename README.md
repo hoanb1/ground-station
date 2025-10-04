@@ -55,9 +55,15 @@ satellite imagery and telemetry.
 *   **Real-time Satellite Tracking:** Track hundreds of satellites with high-precision orbital models. TLE data is automatically updated from CelesTrak and SatNOGS.
 *   **Automated Antenna Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
-*   **Data Decoding:** Decode and display images from weather satellites (e.g., NOAA APT) and telemetry from various amateur satellites.
 *   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.
-*   **Multi-User Support:**  Create and manage multiple user accounts with different levels of access and permissions.
+
+## Planned Features & Roadmap
+
+The following features are planned for future releases:
+
+*   **Data Decoding:** Decode and display images from weather satellites (e.g., NOAA APT, METEOR LRPT) and telemetry from various amateur satellites
+*   **Pass Scheduler:** Automated scheduling and recording of satellite passes
+*   **Signal Recording:** Enhanced recording capabilities with metadata tagging
 
 ## Architecture
 
@@ -171,12 +177,46 @@ Dedicated worker processes provide FFT and streaming support for multiple receiv
 
 ### Installation
 
+#### Option 1: Using pyproject.toml (Recommended)
+
+The backend now uses modern Python packaging with `pyproject.toml`, which provides better dependency management and development tooling.
+
+1.  **Backend Setup**
+    ```bash
+    cd backend
+    python -m venv venv
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
+
+    # Install the project in editable mode with all dependencies
+    pip install -e .
+
+    # For development (includes testing and code quality tools)
+    pip install -e ".[dev]"
+
+    # Start the server
+    python app.py --host 0.0.0.0 --port 5000
+    ```
+
+2.  **Frontend Setup**
+    ```bash
+    cd frontend
+    npm install
+    npm run dev
+    ```
+    The development server proxies API and socket traffic to the backend port defined in `.env.development` (defaults to `localhost:5000`).
+
+#### Option 2: Using requirements.txt (Traditional)
+
 1.  **Backend**
     ```bash
     cd backend
     python -m venv venv
-    source venv/bin/activate
+    source venv/bin/activate  # On Windows: venv\Scripts\activate
     pip install -r requirements.txt
+
+    # For development
+    pip install -r requirements-dev.txt
+
     python app.py --host 0.0.0.0 --port 5000
     ```
 
@@ -186,7 +226,66 @@ Dedicated worker processes provide FFT and streaming support for multiple receiv
     npm install
     npm run dev
     ```
-    The development server proxies API and socket traffic to the backend port defined in `.env.development` (defaults to `localhost:5000`).
+
+### Development Workflow with pyproject.toml
+
+The project's `pyproject.toml` provides comprehensive tooling configuration:
+
+#### Code Formatting
+```bash
+# Format code with Black (line length: 100)
+black .
+
+# Sort imports with isort
+isort .
+```
+
+#### Code Quality
+```bash
+# Run type checking with mypy
+mypy .
+
+# Run linting with flake8
+flake8 .
+```
+
+#### Testing
+```bash
+# Run tests with coverage
+pytest
+
+# Run specific test markers
+pytest -m unit          # Run only unit tests
+pytest -m integration   # Run only integration tests
+pytest -m slow          # Run slow tests
+
+# Generate coverage reports
+pytest --cov=crud --cov=server --cov=controllers --cov-report=html
+```
+
+#### Pre-commit Hooks (Recommended)
+```bash
+# Install pre-commit hooks to automatically check code before commits
+pre-commit install
+
+# Run hooks manually on all files
+pre-commit run --all-files
+```
+
+### Package Information
+
+The project is configured as a Python package with the following metadata:
+- **Name:** ground-station
+- **Version:** 0.1.0
+- **Python Support:** 3.8, 3.9, 3.10, 3.11, 3.12
+- **License:** GPL-3.0-only
+- **Entry Point:** `ground-station` command (after installation)
+
+You can install the package and use it as a command-line tool:
+```bash
+pip install -e .
+ground-station  # Starts the application
+```
 
 ## Docker
 
