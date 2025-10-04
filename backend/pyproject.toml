@@ -111,6 +111,9 @@ dev = [
     "flake8>=7.1.1",
     "mypy>=1.14.0",
     "isort>=5.13.2",
+    # Type stubs
+    "types-PyYAML>=6.0.0",
+    "types-requests>=2.31.0",
     # Pre-commit hooks
     "pre-commit>=4.0.1",
 ]
@@ -173,6 +176,22 @@ warn_unused_ignores = true
 warn_no_return = true
 follow_imports = "normal"
 ignore_missing_imports = true
+exclude = [
+    "^venv/",
+    "^\\.venv/",
+    "^build/",
+    "^dist/",
+    "^htmlcov/",
+]
+explicit_package_bases = true
+mypy_path = "."
+
+[[tool.mypy.overrides]]
+module = [
+    "db",
+    "db.*",
+]
+follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = [
