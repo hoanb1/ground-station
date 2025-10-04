@@ -171,6 +171,29 @@ jobs:
       - name: Checkout code for release
         if: startsWith(github.ref, 'refs/tags/')
         uses: actions/checkout@v4
+        with:
+          fetch-depth: 0  # Fetch all history to access previous tags
+
+      - name: Get previous tag
+        if: startsWith(github.ref, 'refs/tags/')
+        id: prev_tag
+        run: |
+          PREV_TAG=$(git tag --sort=-version:refname | grep -A1 "${{ github.ref_name }}" | tail -n1)
+          echo "prev_tag=$PREV_TAG" >> $GITHUB_OUTPUT
+          echo "Previous tag: $PREV_TAG"
+
+      - name: Generate commit list
+        if: startsWith(github.ref, 'refs/tags/')
+        id: commits
+        run: |
+          if [ -n "${{ steps.prev_tag.outputs.prev_tag }}" ]; then
+            COMMIT_LIST=$(git log ${{ steps.prev_tag.outputs.prev_tag }}..${{ github.ref_name }} --pretty=format:"- %h %s (%an)" --no-merges)
+            echo "commit_list<<EOF" >> $GITHUB_OUTPUT
+            echo "$COMMIT_LIST" >> $GITHUB_OUTPUT
+            echo "EOF" >> $GITHUB_OUTPUT
+          else
+            echo "commit_list=No previous tag found" >> $GITHUB_OUTPUT
+          fi
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v1
@@ -184,6 +207,9 @@ jobs:
             **Environment:** ${{ needs.extract-version.outputs.env_type }}
             **Git Commit:** ${{ needs.extract-version.outputs.git_sha }}
             **Build Date:** ${{ needs.extract-version.outputs.build_date }}
+
+            ### Commits in this release:
+            ${{ steps.commits.outputs.commit_list }}
 
             ### Pull the Docker image:
             ```bash
