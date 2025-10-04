@@ -32,24 +32,24 @@ jobs:
         run: |
           VERSION_BASE=$(cat backend/server/version.json | grep -o '"version"[[:space:]]*:[[:space:]]*"[^"]*"' | cut -d'"' -f4)
           echo "version_base=$VERSION_BASE" >> $GITHUB_OUTPUT
-          
+
           GIT_SHA=$(git rev-parse --short HEAD)
           echo "git_sha=$GIT_SHA" >> $GITHUB_OUTPUT
-          
+
           if [ "${{ github.ref_name }}" = "main" ] || [ "${{ github.ref_type }}" = "tag" ]; then
             ENV_TYPE="production"
           else
             ENV_TYPE="development"
           fi
           echo "env_type=$ENV_TYPE" >> $GITHUB_OUTPUT
-          
+
           BUILD_DATE=$(date -u +'%Y%m%d')
           echo "build_date=$BUILD_DATE" >> $GITHUB_OUTPUT
-          
+
           BRANCH_NAME=${{ github.ref_name }}
           FULL_VERSION=$VERSION_BASE-$BRANCH_NAME-$GIT_SHA
           echo "full_version=$FULL_VERSION" >> $GITHUB_OUTPUT
-          
+
           TAG_VERSION="${BRANCH_NAME#v}"
           echo "tag_version=$TAG_VERSION" >> $GITHUB_OUTPUT
 
@@ -157,12 +157,12 @@ jobs:
           docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }} \
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64 \
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-arm64
-          
+
           # Create manifest for latest tag
           docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest \
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64 \
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-arm64
-          
+
           # Create manifest for full version tag
           docker buildx imagetools create -t ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }} \
             ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64 \
@@ -179,27 +179,29 @@ jobs:
           generate_release_notes: true
           body: |
             ## Docker Image
-            
+
             **Version:** ${{ needs.extract-version.outputs.full_version }}
             **Environment:** ${{ needs.extract-version.outputs.env_type }}
             **Git Commit:** ${{ needs.extract-version.outputs.git_sha }}
             **Build Date:** ${{ needs.extract-version.outputs.build_date }}
-            
+
             ### Pull the Docker image:
             ```bash
             docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }}
             ```
-            
+
             ### Run the container:
             ```bash
             docker run -d \
               -p 7000:7000 \
               --name ground-station \
               --restart unless-stopped \
+              --device=/dev/bus/usb \
+              --privileged \
               -v $(pwd)/data:/app/backend/data \
               -e GS_ENVIRONMENT=${{ needs.extract-version.outputs.env_type }} \
               ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }}
             ```
-            
+
             ### Multi-arch support:
             This image supports `linux/amd64` and `linux/arm64` platforms.
