@@ -14,12 +14,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+import logging
 import socket
 import struct
 import time
-import logging
-import numpy as np
 from typing import Optional, Tuple
+
+import numpy as np
 
 
 class RtlSdrTcpClient:

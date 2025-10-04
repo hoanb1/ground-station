@@ -15,7 +15,7 @@
 
 
 import asyncio
-from typing import Callable, Any, List, Union, Coroutine, Optional
+from typing import Any, Callable, Coroutine, List, Optional, Union
 
 
 class StateTracker:

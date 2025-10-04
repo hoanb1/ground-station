@@ -14,8 +14,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from typing import Union
-from db import AsyncSessionLocal
+
 from common.auth import authenticate_user
+from db import AsyncSessionLocal
 
 
 async def auth_request_routing(sio, cmd, data, logger, sid):

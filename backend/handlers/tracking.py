@@ -14,7 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import crud
-from tracker.data import get_ui_tracker_state, compiled_satellite_data
+from tracker.data import compiled_satellite_data, get_ui_tracker_state
 
 
 async def emit_tracker_data(dbsession, sio, logger):

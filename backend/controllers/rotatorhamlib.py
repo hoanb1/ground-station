@@ -15,11 +15,13 @@
 
 
 import asyncio
-from typing import Tuple, AsyncGenerator
 import logging
-from common.arguments import arguments as args
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator, Tuple
+
 from Hamlib import Hamlib
+
+from common.arguments import arguments as args
 
 
 class RotatorController:

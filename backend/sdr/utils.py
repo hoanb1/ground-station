@@ -14,13 +14,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import logging
-import pprint
-
-from crud import hardware
 import asyncio
 import json
-from typing import Dict, Optional, Any, Union
+import logging
+import pprint
+from typing import Any, Dict, Optional, Union
+
+from crud import hardware
 from sdr.sdrprocessmanager import sdr_process_manager
 from workers.common import window_functions
 

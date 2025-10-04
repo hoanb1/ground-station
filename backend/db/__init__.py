@@ -14,8 +14,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_async_engine
+
 from common.arguments import arguments
-from sqlalchemy.ext.asyncio import create_async_engine, AsyncSession, async_sessionmaker
 
 # sql alchemy engine
 DATABASE_URL = f"sqlite+aiosqlite:///./data/{arguments.db}"

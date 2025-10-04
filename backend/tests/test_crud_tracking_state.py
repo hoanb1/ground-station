@@ -17,9 +17,11 @@
 Unit tests for tracking state CRUD operations.
 """
 
-import pytest
 import uuid
-from crud.tracking_state import set_tracking_state, get_tracking_state
+
+import pytest
+
+from crud.tracking_state import get_tracking_state, set_tracking_state
 
 
 @pytest.mark.asyncio

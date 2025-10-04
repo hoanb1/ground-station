@@ -17,16 +17,18 @@
 Unit tests for transmitter CRUD operations.
 """
 
-import pytest
 import uuid
-from crud.transmitters import (
-    fetch_transmitters_for_satellite,
-    fetch_transmitter,
-    add_transmitter,
-    edit_transmitter,
-    delete_transmitter,
-)
+
+import pytest
+
 from crud.satellites import add_satellite
+from crud.transmitters import (
+    add_transmitter,
+    delete_transmitter,
+    edit_transmitter,
+    fetch_transmitter,
+    fetch_transmitters_for_satellite,
+)
 
 # TLE templates for testing
 TLE1_TEMPLATE = "1 {norad:05d}U 00000A   21001.00000000  .00000000  00000-0  00000-0 0  9990"

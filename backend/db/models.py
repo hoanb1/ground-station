@@ -14,18 +14,26 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import uuid
 import json
-from sqlalchemy import MetaData, Float
-from datetime import UTC, timezone
-from sqlalchemy import TypeDecorator
-from datetime import datetime
-from sqlalchemy import String, Boolean, Integer, DateTime, ForeignKey, JSON
+import uuid
+from datetime import UTC, datetime, timezone
+from enum import Enum as PyEnum
+
+from sqlalchemy import (
+    JSON,
+    Boolean,
+    Column,
+    DateTime,
+    Enum,
+    Float,
+    ForeignKey,
+    Integer,
+    MetaData,
+    String,
+    TypeDecorator,
+)
 from sqlalchemy.dialects.postgresql import UUID
 from sqlalchemy.ext.declarative import declarative_base
-from enum import Enum as PyEnum
-from sqlalchemy import Column, Enum
-
 
 # Creates a base class for declarative models using SQLAlchemy.
 Base = declarative_base()

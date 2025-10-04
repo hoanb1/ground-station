@@ -17,14 +17,16 @@
 Unit tests for location CRUD operations.
 """
 
-import pytest
 import uuid
+
+import pytest
+
 from crud.locations import (
+    add_location,
+    delete_location,
+    edit_location,
     fetch_location,
     fetch_location_for_userid,
-    add_location,
-    edit_location,
-    delete_location,
 )
 from crud.users import add_user
 

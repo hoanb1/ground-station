@@ -1,6 +1,6 @@
 import logging
 from dataclasses import dataclass
-from typing import Dict, Optional, List
+from typing import Dict, List, Optional
 
 # Configure logging for the worker process
 logger = logging.getLogger("vfo-state")

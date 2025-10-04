@@ -14,9 +14,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import logging.config
 import logging
+import logging.config
+
 import yaml
+
 from .arguments import arguments
 
 

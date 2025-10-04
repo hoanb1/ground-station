@@ -1,8 +1,9 @@
-import SoapySDR
-from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32, SOAPY_SDR_CS16
-import numpy as np
-import time
 import sys
+import time
+
+import numpy as np
+import SoapySDR
+from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_CS16, SOAPY_SDR_RX
 
 
 def test_connection(device_args):

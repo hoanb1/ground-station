@@ -14,19 +14,19 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import crud
-import logging
 import hashlib
+import logging
+from datetime import UTC, datetime, timedelta
+from typing import Any, Dict, Optional, Union
+
+import crud
 from common.common import is_geostationary, serialize_object
-from datetime import datetime, timedelta
-from datetime import UTC
-from typing import Any, Union, Optional, Dict
 from db import AsyncSessionLocal
 from tracking.footprint import get_satellite_coverage_circle
 from tracking.satellite import (
-    get_satellite_position_from_tle,
     get_satellite_az_el,
     get_satellite_path,
+    get_satellite_position_from_tle,
 )
 
 logger = logging.getLogger("tracker-worker")

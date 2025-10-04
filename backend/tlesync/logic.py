@@ -14,34 +14,36 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import json
-import crud
+from concurrent.futures import ThreadPoolExecutor
+from datetime import datetime, timezone
+
 import requests
+
+import crud
+from common.common import *
+from common.exceptions import SynchronizationErrorMainTLESource
 from crud import tle_sources
 from tlesync.state import SatelliteSyncState
 from tlesync.utils import (
-    update_satellite_group_with_removal_detection,
-    get_norad_id_from_tle,
-    get_transmitter_info_by_norad_id,
-    get_satellite_by_norad_id,
-    parse_date,
-    simple_parse_3le,
-    get_norad_ids,
+    async_fetch,
+    create_final_success_message,
     create_initial_sync_state,
     create_progress_tracker,
-    async_fetch,
-    detect_duplicate_satellites,
-    query_existing_data,
     create_satellite_from_tle_data,
-    update_satellite_with_satnogs_data,
-    detect_satellite_modifications,
     create_transmitter_from_satnogs_data,
+    detect_duplicate_satellites,
+    detect_satellite_modifications,
     detect_transmitter_modifications,
-    create_final_success_message,
+    get_norad_id_from_tle,
+    get_norad_ids,
+    get_satellite_by_norad_id,
+    get_transmitter_info_by_norad_id,
+    parse_date,
+    query_existing_data,
+    simple_parse_3le,
+    update_satellite_group_with_removal_detection,
+    update_satellite_with_satnogs_data,
 )
-from datetime import datetime, timezone
-from concurrent.futures import ThreadPoolExecutor
-from common.common import *
-from common.exceptions import SynchronizationErrorMainTLESource
 
 # Global state to track satellite synchronization progress
 sync_state = create_initial_sync_state()

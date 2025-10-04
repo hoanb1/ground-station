@@ -14,14 +14,15 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
+import json
+import logging
+import os
+import pprint
+from enum import Enum, auto
+
 import numpy as np
 import SoapySDR
 import yaml
-import json
-import os
-import pprint
-import logging
-from enum import Enum, auto
 
 # Configure logging
 logger = logging.getLogger("soapysdr-usbenum")

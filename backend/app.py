@@ -1,17 +1,18 @@
+import asyncio
+import multiprocessing
 import os
 import signal
 import sys
-import asyncio
-import multiprocessing
 import threading
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import uvicorn
+
 from common.arguments import arguments
 from common.logger import get_logger_config, logger
-from server.shutdown import cleanup_everything, signal_handler
-from server.startup import app, socket_app, sio, init_db
 from handlers.socket import register_socketio_handlers
+from server.shutdown import cleanup_everything, signal_handler
+from server.startup import app, init_db, sio, socket_app
 from video.webrtc import register_webrtc_routes
 
 

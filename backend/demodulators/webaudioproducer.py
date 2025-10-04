@@ -1,9 +1,11 @@
-import threading
+import logging
 import queue
+import threading
 import time
+
 import numpy as np
 import socketio
-import logging
+
 from vfos.state import VFOManager
 
 # Configure logging

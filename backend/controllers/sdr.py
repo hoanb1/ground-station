@@ -15,7 +15,8 @@
 
 
 import logging
-from typing import Tuple, AsyncGenerator
+from typing import AsyncGenerator, Tuple
+
 from common.arguments import arguments as args
 
 

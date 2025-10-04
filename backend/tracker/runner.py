@@ -14,11 +14,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import multiprocessing
-import setproctitle
 import asyncio
 import logging
+import multiprocessing
 from typing import Optional
+
+import setproctitle
+
 from tracker.logic import SatelliteTracker
 
 logger = logging.getLogger("tracker-worker")

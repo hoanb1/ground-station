@@ -14,12 +14,14 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import numpy as np
-import time
 import logging
+import time
+
+import numpy as np
 import SoapySDR
-from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
-from workers.common import window_functions, FFTAverager
+from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
+
+from workers.common import FFTAverager, window_functions
 
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-local")

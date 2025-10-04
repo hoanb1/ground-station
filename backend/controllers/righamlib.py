@@ -14,13 +14,15 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import logging
 import asyncio
+import logging
 from concurrent.futures import ProcessPoolExecutor
-from typing import Tuple, AsyncGenerator
-from common.arguments import arguments as args
 from contextlib import asynccontextmanager
+from typing import AsyncGenerator, Tuple
+
 from Hamlib import Hamlib
+
+from common.arguments import arguments as args
 
 
 class RigController:

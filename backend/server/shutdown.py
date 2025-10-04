@@ -1,9 +1,10 @@
 import asyncio
 import os
 from typing import Optional
-from demodulators.webaudioproducer import WebAudioProducer
-from demodulators.webaudioconsumer import WebAudioConsumer
+
 from common.logger import logger
+from demodulators.webaudioconsumer import WebAudioConsumer
+from demodulators.webaudioproducer import WebAudioProducer
 from sdr.utils import cleanup_sdr_session
 
 # Globals used by audio threads

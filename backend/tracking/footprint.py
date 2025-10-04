@@ -14,11 +14,11 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-from datetime import datetime, UTC
 import math
-from skyfield.api import load, wgs84, EarthSatellite
-from datetime import datetime, timedelta
-from typing import List, Dict, Union, Tuple, Optional
+from datetime import UTC, datetime, timedelta
+from typing import Dict, List, Optional, Tuple, Union
+
+from skyfield.api import EarthSatellite, load, wgs84
 
 
 def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):

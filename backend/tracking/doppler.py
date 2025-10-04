@@ -15,8 +15,7 @@
 
 
 import numpy as np
-from skyfield.api import Topos
-from skyfield.api import load, EarthSatellite
+from skyfield.api import EarthSatellite, Topos, load
 
 
 def calculate_doppler_shift(

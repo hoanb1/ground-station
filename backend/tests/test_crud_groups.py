@@ -17,14 +17,16 @@
 Unit tests for satellite group CRUD operations.
 """
 
-import pytest
 import uuid
+
+import pytest
+
 from crud.groups import (
+    add_satellite_group,
+    delete_satellite_group,
+    edit_satellite_group,
     fetch_satellite_group,
     fetch_system_satellite_group_by_identifier,
-    add_satellite_group,
-    edit_satellite_group,
-    delete_satellite_group,
 )
 
 

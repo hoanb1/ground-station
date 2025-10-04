@@ -14,28 +14,27 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import multiprocessing
-import crud
 import asyncio
 import logging
-from datetime import UTC
-from db.__init__ import AsyncSessionLocal
-from controllers.rotator import RotatorController
-from controllers.rig import RigController
-from controllers.sdr import SDRController
+import multiprocessing
+from datetime import UTC, datetime
+
+import crud
 from common.arguments import arguments as args
 from common.constants import (
-    TrackingEvents,
-    TrackerCommands,
-    SocketEvents,
-    TrackingStateNames,
     DictKeys,
+    SocketEvents,
+    TrackerCommands,
+    TrackingEvents,
+    TrackingStateNames,
 )
-from datetime import datetime
-from tracking.doppler import calculate_doppler_shift
-from tracker.utils import pretty_dict
+from controllers.rig import RigController
+from controllers.rotator import RotatorController
+from controllers.sdr import SDRController
+from db.__init__ import AsyncSessionLocal
 from tracker.data import compiled_satellite_data
-
+from tracker.utils import pretty_dict
+from tracking.doppler import calculate_doppler_shift
 
 logger = logging.getLogger("tracker-worker")
 

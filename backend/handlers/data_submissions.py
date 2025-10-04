@@ -13,11 +13,13 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import crud
 from typing import Union
-from tracker.runner import queue_to_tracker
+
+import crud
 from db import AsyncSessionLocal
+from tracker.runner import queue_to_tracker
 from vfos.state import VFOManager
+
 from .tracking import emit_tracker_data, emit_ui_tracker_values
 
 

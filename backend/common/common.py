@@ -14,15 +14,16 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import time
-import json
-import uuid
 import functools
+import json
+import time
+import uuid
+from datetime import date, datetime, timedelta
+
 import numpy
-from datetime import date, timedelta
-from .logger import logger
 from skyfield.api import EarthSatellite, load, wgs84
-from datetime import datetime
+
+from .logger import logger
 
 
 class ModelEncoder(json.JSONEncoder):

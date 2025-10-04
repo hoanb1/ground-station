@@ -14,16 +14,17 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import multiprocessing
 import asyncio
 import logging
+import multiprocessing
 import signal
 import time
 from collections import defaultdict
-from common.constants import SocketEvents, QueueMessageTypes, DictKeys
+
+from common.constants import DictKeys, QueueMessageTypes, SocketEvents
 from workers.rtlsdrworker import rtlsdr_worker_process
-from workers.soapysdrremoteworker import soapysdr_remote_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
+from workers.soapysdrremoteworker import soapysdr_remote_worker_process
 from workers.uhdworker import uhd_worker_process
 
 # Add setproctitle import for process naming

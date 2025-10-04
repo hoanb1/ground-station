@@ -1,9 +1,9 @@
-import os
 import json
+import os
 import subprocess
 from datetime import datetime, timezone
-from common.logger import logger
 
+from common.logger import logger
 
 # Path to the version.json file containing the base version
 VERSION_JSON_PATH = os.path.join(os.path.dirname(__file__), "version.json")

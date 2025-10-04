@@ -13,14 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import json
-import requests
 import asyncio
+import json
 from concurrent.futures import ThreadPoolExecutor
-from sqlalchemy import select, delete
-from db.models import Satellites, Transmitters, Groups, SatelliteGroupType
+from datetime import UTC, datetime, timezone
 from typing import List
-from datetime import datetime, UTC, timezone
+
+import requests
+from sqlalchemy import delete, select
+
+from db.models import Groups, SatelliteGroupType, Satellites, Transmitters
 
 
 def create_initial_sync_state():

@@ -17,13 +17,11 @@
 Tests for tracking/passes.py satellite pass calculation functions.
 """
 
-import pytest
 import numpy as np
-from tracking.passes import (
-    analyze_satellite_orbit,
-    calculate_azimuth_path,
-)
+import pytest
 from skyfield.api import EarthSatellite, load
+
+from tracking.passes import analyze_satellite_orbit, calculate_azimuth_path
 
 
 # Test fixtures with real TLE data

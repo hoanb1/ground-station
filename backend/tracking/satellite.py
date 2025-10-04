@@ -15,11 +15,10 @@
 
 
 import math
-from datetime import UTC, timedelta
-from typing import List, Dict
-from typing import Tuple
+from datetime import UTC, datetime, timedelta
+from typing import Dict, List, Tuple
+
 from skyfield.api import EarthSatellite, load, wgs84
-from datetime import datetime
 
 
 def get_satellite_az_el(

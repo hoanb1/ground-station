@@ -17,21 +17,23 @@
 Tests for tlesync/utils.py utility functions.
 """
 
+from datetime import datetime, timezone
+
 import pytest
 import requests
-from datetime import datetime, timezone
+
 from tlesync.utils import (
-    parse_norad_id_from_line1,
+    create_final_success_message,
+    create_initial_sync_state,
+    create_progress_tracker,
+    detect_duplicate_satellites,
     get_norad_id_from_tle,
-    simple_parse_3le,
-    parse_date,
     get_norad_ids,
     get_satellite_by_norad_id,
     get_transmitter_info_by_norad_id,
-    create_initial_sync_state,
-    create_progress_tracker,
-    create_final_success_message,
-    detect_duplicate_satellites,
+    parse_date,
+    parse_norad_id_from_line1,
+    simple_parse_3le,
     sync_fetch,
 )
 

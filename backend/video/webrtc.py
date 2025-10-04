@@ -4,7 +4,7 @@ import json
 from typing import Dict, Optional
 
 import httpx
-from fastapi import FastAPI, WebSocket, HTTPException
+from fastapi import FastAPI, HTTPException, WebSocket
 from pydantic import BaseModel
 
 from common.logger import logger

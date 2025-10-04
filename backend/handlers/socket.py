@@ -3,13 +3,13 @@ import threading
 import time
 from typing import Dict
 
+from common.logger import logger
 from handlers import (
     auth_request_routing,
     data_request_routing,
     data_submission_routing,
     sdr_data_request_routing,
 )
-from common.logger import logger
 from sdr.utils import cleanup_sdr_session
 from server.shutdown import cleanup_everything
 

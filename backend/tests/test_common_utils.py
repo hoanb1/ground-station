@@ -17,8 +17,10 @@
 Tests for common/utils.py utility functions.
 """
 
-import pytest
 import uuid
+
+import pytest
+
 from common.utils import convert_strings_to_uuids
 
 

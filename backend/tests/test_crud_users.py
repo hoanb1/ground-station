@@ -17,10 +17,12 @@
 Unit tests for user CRUD operations.
 """
 
-import pytest
 import uuid
+
 import bcrypt
-from crud.users import fetch_users, add_user, edit_user, delete_user
+import pytest
+
+from crud.users import add_user, delete_user, edit_user, fetch_users
 
 
 @pytest.mark.asyncio

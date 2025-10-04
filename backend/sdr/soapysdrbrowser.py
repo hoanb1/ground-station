@@ -15,9 +15,10 @@
 
 
 import asyncio
-import socket
-import logging
 import json
+import logging
+import socket
+
 from zeroconf import ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 

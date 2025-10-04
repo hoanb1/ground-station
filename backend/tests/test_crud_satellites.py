@@ -17,18 +17,19 @@
 Unit tests for satellite CRUD operations.
 """
 
-import pytest
 import uuid
-from crud.satellites import (
-    fetch_satellites,
-    add_satellite,
-    edit_satellite,
-    delete_satellite,
-    search_satellites,
-    fetch_satellites_for_group_id,
-)
-from crud.groups import add_satellite_group
 
+import pytest
+
+from crud.groups import add_satellite_group
+from crud.satellites import (
+    add_satellite,
+    delete_satellite,
+    edit_satellite,
+    fetch_satellites,
+    fetch_satellites_for_group_id,
+    search_satellites,
+)
 
 # TLE templates for testing (valid format but dummy data)
 TLE1_TEMPLATE = "1 {norad:05d}U 00000A   21001.00000000  .00000000  00000-0  00000-0 0  9990"

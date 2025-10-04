@@ -15,13 +15,14 @@
 
 
 import json
+import logging
+import time
+
 import numpy as np
 import rtlsdr
-import time
-import logging
-from workers.rtlsdrtcpclient import RtlSdrTcpClient
-from workers.common import window_functions, FFTAverager
 
+from workers.common import FFTAverager, window_functions
+from workers.rtlsdrtcpclient import RtlSdrTcpClient
 
 # Configure logging for the worker process
 logger = logging.getLogger("rtlsdr-worker")

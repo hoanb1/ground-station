@@ -16,9 +16,10 @@
 
 import logging
 import logging.config
-import yaml
 import os
 import sys
+
+import yaml
 
 # Try to import UHD with path handling
 uhd = None

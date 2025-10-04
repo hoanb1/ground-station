@@ -17,17 +17,19 @@
 Unit tests for preference and map settings CRUD operations.
 """
 
-import pytest
 import uuid
+
+import pytest
+
 from crud.preferences import (
+    add_preference,
+    delete_preference,
+    edit_preference,
     fetch_preference,
     fetch_preference_for_userid,
-    add_preference,
-    edit_preference,
-    set_preferences,
-    delete_preference,
-    set_map_settings,
     get_map_settings,
+    set_map_settings,
+    set_preferences,
 )
 from crud.users import add_user
 

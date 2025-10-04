@@ -1,12 +1,13 @@
-import threading
-import queue
-import time
-import logging
 import asyncio
+import logging
+import queue
+import threading
+import time
+
 import numpy as np
 import socketio
-from vfos.state import VFOManager
 
+from vfos.state import VFOManager
 
 # Configure logging
 logger = logging.getLogger("audio-consumer")

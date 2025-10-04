@@ -13,14 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import uuid
 import traceback
+import uuid
 from typing import Optional, Union
-from sqlalchemy.ext.asyncio import AsyncSession
+
 from sqlalchemy import select
-from db.models import Groups
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from common.common import logger, serialize_object
 from common.utils import convert_strings_to_uuids
+from db.models import Groups
 
 
 async def fetch_system_satellite_group_by_identifier(

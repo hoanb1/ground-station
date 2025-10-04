@@ -13,14 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import uuid
 import traceback
+import uuid
+from datetime import UTC, datetime
 from typing import Optional, Union
+
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert, update, delete
-from datetime import datetime, UTC
-from db.models import Preferences, TrackingState
+
 from common.common import logger, serialize_object
+from db.models import Preferences, TrackingState
 
 
 async def fetch_preference(session: AsyncSession, preference_id: Union[uuid.UUID, str]) -> dict:

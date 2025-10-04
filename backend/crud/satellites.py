@@ -13,15 +13,17 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import uuid
 import traceback
+import uuid
+from datetime import UTC, datetime
 from typing import Union
+
 from pydantic.v1 import UUID4
+from sqlalchemy import String, delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert, update, delete, String
-from datetime import datetime, UTC
-from db.models import Satellites, Transmitters, Groups
+
 from common.common import logger, serialize_object
+from db.models import Groups, Satellites, Transmitters
 
 
 async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | UUID4) -> dict:

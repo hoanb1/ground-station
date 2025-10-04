@@ -14,11 +14,13 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import traceback
-from sqlalchemy.ext.asyncio import AsyncSession
+from datetime import UTC, datetime
+
 from sqlalchemy import select
-from datetime import datetime, UTC
-from db.models import TrackingState
+from sqlalchemy.ext.asyncio import AsyncSession
+
 from common.common import logger, serialize_object
+from db.models import TrackingState
 
 
 async def set_tracking_state(session: AsyncSession, data: dict) -> dict:

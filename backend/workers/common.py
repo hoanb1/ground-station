@@ -16,8 +16,7 @@
 
 import numpy as np
 import SoapySDR
-from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
-
+from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
 # Map window function names to numpy functions
 window_functions = {

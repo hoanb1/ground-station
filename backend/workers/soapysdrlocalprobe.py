@@ -15,11 +15,11 @@
 
 
 import logging.config
-import SoapySDR
-from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32, SOAPY_SDR_TX
-import yaml
 import os
 
+import SoapySDR
+import yaml
+from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX, SOAPY_SDR_TX
 
 # Load logger configuration
 with open(os.path.join(os.path.dirname(__file__), "../logconfig.yaml"), "r") as f:

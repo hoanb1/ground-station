@@ -17,11 +17,12 @@
 
 import json
 import logging
-import numpy as np
-from skyfield.api import Loader, Topos
-from common.common import ModelEncoder
-from skyfield.api import EarthSatellite
 from typing import Union
+
+import numpy as np
+from skyfield.api import EarthSatellite, Loader, Topos
+
+from common.common import ModelEncoder
 
 logger = logging.getLogger("passes-worker")
 

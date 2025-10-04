@@ -1,24 +1,26 @@
 import asyncio
 import os
 import queue
-import socketio
-from server import shutdown
 from contextlib import asynccontextmanager
+
+import socketio
 from engineio.payload import Payload
-from fastapi import FastAPI, Request, HTTPException
+from fastapi import FastAPI, HTTPException, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
+
+from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
 from db.models import Base
+from demodulators.webaudioconsumer import WebAudioConsumer
+from demodulators.webaudioproducer import WebAudioProducer
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
-from tracker.runner import start_tracker_process
-from demodulators.webaudioproducer import WebAudioProducer
-from demodulators.webaudioconsumer import WebAudioConsumer
-from common.arguments import arguments
+from server import shutdown
 from server.version import get_full_version_info
+from tracker.runner import start_tracker_process
 
 Payload.max_decode_packets = 50
 
@@ -156,8 +158,9 @@ async def init_db():
 
 async def first_time_initialization():
     """Function called on first server start to populate database with default data."""
-    import string
     import random
+    import string
+
     from db import AsyncSessionLocal
     from db.models import TLESources
 

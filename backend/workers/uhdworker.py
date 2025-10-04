@@ -1,9 +1,11 @@
-import numpy as np
-import time
 import logging
 import math
-from workers.common import window_functions, FFTAverager
+import time
 from collections import deque
+
+import numpy as np
+
+from workers.common import FFTAverager, window_functions
 
 # Configure logging for the worker process
 logger = logging.getLogger("uhd-worker")

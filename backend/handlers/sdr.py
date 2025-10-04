@@ -13,11 +13,12 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import crud
 from typing import Union
+
+import crud
 from db import AsyncSessionLocal
-from sdr.utils import cleanup_sdr_session, add_sdr_session, get_sdr_session, active_sdr_clients
 from sdr.sdrprocessmanager import sdr_process_manager
+from sdr.utils import active_sdr_clients, add_sdr_session, cleanup_sdr_session, get_sdr_session
 
 
 async def sdr_data_request_routing(sio, cmd, data, logger, client_id):

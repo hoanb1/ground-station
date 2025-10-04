@@ -13,16 +13,18 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import crud
 from typing import Union
+
+import crud
 from db import AsyncSessionLocal
 from db.models import SatelliteGroupType
+from sdr.soapysdrbrowser import discovered_servers
+from sdr.utils import get_local_soapy_sdr_devices, get_sdr_parameters
 from tlesync.logic import synchronize_satellite_data
 from tlesync.state import sync_state_manager
-from tracking.events import fetch_next_events_for_satellite, fetch_next_events_for_group
 from tracker.data import compiled_satellite_data
-from sdr.soapysdrbrowser import discovered_servers
-from sdr.utils import get_sdr_parameters, get_local_soapy_sdr_devices
+from tracking.events import fetch_next_events_for_group, fetch_next_events_for_satellite
+
 from .tracking import emit_tracker_data, emit_ui_tracker_values
 
 

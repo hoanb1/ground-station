@@ -13,14 +13,16 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-import uuid
 import traceback
+import uuid
+from datetime import UTC, datetime
 from typing import Optional, Union
+
+from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
-from sqlalchemy import select, insert, update, delete
-from datetime import datetime, UTC
-from db.models import Rotators, Rigs, Cameras, SDRs
+
 from common.common import logger, serialize_object
+from db.models import Cameras, Rigs, Rotators, SDRs
 
 
 async def fetch_rotators(

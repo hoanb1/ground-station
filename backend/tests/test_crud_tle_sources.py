@@ -18,14 +18,15 @@ Unit tests for TLE sources CRUD operations.
 """
 
 import pytest
-from crud.tle_sources import (
-    fetch_satellite_tle_source,
-    add_satellite_tle_source,
-    edit_satellite_tle_source,
-    delete_satellite_tle_sources,
-)
-from crud.satellites import add_satellite
+
 from crud.groups import add_satellite_group
+from crud.satellites import add_satellite
+from crud.tle_sources import (
+    add_satellite_tle_source,
+    delete_satellite_tle_sources,
+    edit_satellite_tle_source,
+    fetch_satellite_tle_source,
+)
 
 
 @pytest.mark.asyncio
