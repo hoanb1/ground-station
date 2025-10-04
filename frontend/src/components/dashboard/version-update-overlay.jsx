@@ -76,7 +76,7 @@ function VersionUpdateOverlay() {
     };
 
     // Calculate progress for circular progress (100% at start, 0% at end)
-    const progress = Math.max(0, (countdown / COUNTDOWN_DURATION) * 100);
+    const progress = countdown <= 0 ? 0 : Math.max(0, (countdown / COUNTDOWN_DURATION) * 100);
 
     // Determine color based on countdown
     const statusColor = countdown > 2 ? '#4caf50' : countdown > 1 ? '#ff9800' : '#d32f2f';
@@ -157,7 +157,7 @@ function VersionUpdateOverlay() {
                                 width: `${progress}%`,
                                 backgroundColor: statusColor,
                                 borderRadius: progress > 0 ? 1 : 0,
-                                transition: 'width 1s linear, background-color 0.3s ease',
+                                transition: 'background-color 0.3s ease',
                             }}
                         />
                     </Box>
