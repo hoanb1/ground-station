@@ -31,7 +31,7 @@ const SyncResultsTable = ({
                     justifyContent: 'flex-start'
                 }}
             >
-                <Grid2 size={{xs: 4, sm: 12, md: 4, lg: 4, xl: 4}}>
+                <Grid2 size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
                     <AddedItemsTable
                         newSatellitesCount={newSatellitesCount}
                         newTransmittersCount={newTransmittersCount}
@@ -39,7 +39,7 @@ const SyncResultsTable = ({
                     />
                 </Grid2>
 
-                <Grid2 size={{xs: 4, sm: 12, md: 4, lg: 4, xl: 4}}>
+                <Grid2 size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
                     <ModifiedItemsTable
                         modifiedSatellitesCount={modifiedSatellitesCount}
                         modifiedTransmittersCount={modifiedTransmittersCount}
@@ -47,7 +47,7 @@ const SyncResultsTable = ({
                     />
                 </Grid2>
 
-                <Grid2 size={{xs: 4, sm: 12, md: 4, lg: 4, xl: 4}}>
+                <Grid2 size={{xs: 12, sm: 12, md: 4, lg: 4, xl: 4}}>
                     <RemovedItemsTable
                         removedSatellitesCount={removedSatellitesCount}
                         removedTransmittersCount={removedTransmittersCount}
