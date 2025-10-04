@@ -17,11 +17,6 @@ ls -l /usr/local/share/uhd/images/*.bin
 cp /usr/local/share/uhd/images/libresdr_b210.bin /usr/local/share/uhd/images/usrp_b210_fpga.bin
 echo "LibreSDR FPGA image installed"
 
-# Verify final device detection
-echo "Final device check:"
-uhd_find_devices
-SoapySDRUtil --find
-
 # Start the application
 echo "Starting Ground Station application..."
 cd /app/backend
