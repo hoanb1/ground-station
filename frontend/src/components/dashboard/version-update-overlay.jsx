@@ -25,7 +25,6 @@ function VersionUpdateOverlay() {
     const dispatch = useDispatch();
     const { hasVersionChanged, data } = useSelector((state) => state.version);
     const [countdown, setCountdown] = useState(COUNTDOWN_DURATION);
-    const [timeoutId, setTimeoutId] = useState(null);
     const [intervalId, setIntervalId] = useState(null);
 
     // Don't show overlay if version hasn't changed
@@ -37,36 +36,29 @@ function VersionUpdateOverlay() {
         if (hasVersionChanged) {
             console.log('Version has changed!', data?.version);
 
-            // Start the auto-refresh timeout
-            const timeout = setTimeout(() => {
-                window.location.reload();
-            }, COUNTDOWN_DURATION * 1000);
-
             // Start the countdown interval
             const interval = setInterval(() => {
                 setCountdown((prev) => {
                     if (prev <= 1) {
                         clearInterval(interval);
+                        window.location.reload();
                         return 0;
                     }
                     return prev - 1;
                 });
             }, 1000);
 
-            setTimeoutId(timeout);
             setIntervalId(interval);
 
             // Cleanup on unmount
             return () => {
-                clearTimeout(timeout);
                 clearInterval(interval);
             };
         }
     }, [hasVersionChanged, data]);
 
     const handleRefresh = () => {
-        // Clear timers
-        if (timeoutId) clearTimeout(timeoutId);
+        // Clear timer
         if (intervalId) clearInterval(intervalId);
 
         // Clear the version change flag
@@ -76,8 +68,7 @@ function VersionUpdateOverlay() {
     };
 
     const handleDismiss = () => {
-        // Clear timers
-        if (timeoutId) clearTimeout(timeoutId);
+        // Clear timer
         if (intervalId) clearInterval(intervalId);
 
         // Just clear the flag without reloading
