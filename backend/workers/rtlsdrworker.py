@@ -24,7 +24,8 @@ from workers.common import window_functions, FFTAverager
 
 
 # Configure logging for the worker process
-logger = logging.getLogger('rtlsdr-worker')
+logger = logging.getLogger("rtlsdr-worker")
+
 
 def rtlsdr_worker_process(config_queue, data_queue, stop_event):
     """
@@ -56,34 +57,36 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         old_config = config
 
         # Configure the SDR device
-        sdr_id = config.get('sdr_id')
-        client_id = config.get('client_id')
-        fft_size = config.get('fft_size', 16384)
-        fft_window = config.get('fft_window', 'hanning')
+        sdr_id = config.get("sdr_id")
+        client_id = config.get("client_id")
+        fft_size = config.get("fft_size", 16384)
+        fft_window = config.get("fft_window", "hanning")
 
         # FFT averaging configuration
-        fft_averaging = config.get('fft_averaging', 6)
+        fft_averaging = config.get("fft_averaging", 6)
 
         # Connect to the RTL-SDR device
-        if config.get('connection_type') == 'tcp':
-            hostname = config.get('hostname', '127.0.0.1')
-            port = config.get('port', 1234)
+        if config.get("connection_type") == "tcp":
+            hostname = config.get("hostname", "127.0.0.1")
+            port = config.get("port", 1234)
             logger.info(f"Connecting to RTL-SDR TCP server at {hostname}:{port}...")
             sdr = RtlSdrTcpClient(hostname=hostname, port=port)
             sdr.connect()
 
         else:
-            serial_number = config.get('serial_number', 0)
+            serial_number = config.get("serial_number", 0)
             logger.info(f"Connecting to RTL-SDR with serial number {serial_number} over USB...")
             sdr = rtlsdr.RtlSdr(serial_number=serial_number)
 
         # Configure the device
-        offset_freq = config.get('offset_freq', 0)
-        sdr.center_freq = config.get('center_freq', 100e6) + offset_freq
-        sdr.sample_rate = config.get('sample_rate', 2.048e6)
-        sdr.gain = config.get('gain', 25.4)
+        offset_freq = config.get("offset_freq", 0)
+        sdr.center_freq = config.get("center_freq", 100e6) + offset_freq
+        sdr.sample_rate = config.get("sample_rate", 2.048e6)
+        sdr.gain = config.get("gain", 25.4)
 
-        logger.info(f"RTL-SDR configured: sample_rate={sdr.sample_rate}, center_freq={sdr.center_freq}, gain={sdr.gain}")
+        logger.info(
+            f"RTL-SDR configured: sample_rate={sdr.sample_rate}, center_freq={sdr.center_freq}, gain={sdr.gain}"
+        )
 
         # Calculate the number of samples based on sample rate
         num_samples = calculate_samples_per_scan(sdr.sample_rate, fft_size)
@@ -92,12 +95,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
 
         # if we reached here, we can set the UI to streaming
-        data_queue.put({
-            'type': 'streamingstart',
-            'client_id': client_id,
-            'message': None,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "streamingstart",
+                "client_id": client_id,
+                "message": None,
+                "timestamp": time.time(),
+            }
+        )
 
         # Main processing loop
         while not stop_event.is_set():
@@ -106,60 +111,60 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 if not config_queue.empty():
                     new_config = config_queue.get_nowait()
 
-                    if 'sample_rate' in new_config:
-                        if sdr.sample_rate != new_config['sample_rate']:
-                            sdr.sample_rate = new_config['sample_rate']
+                    if "sample_rate" in new_config:
+                        if sdr.sample_rate != new_config["sample_rate"]:
+                            sdr.sample_rate = new_config["sample_rate"]
 
                             # Calculate the number of samples based on sample rate
                             num_samples = calculate_samples_per_scan(sdr.sample_rate, fft_size)
 
                             logger.info(f"Updated sample rate: {sdr.sample_rate}")
 
-                    if 'center_freq' in new_config:
-                        if sdr.center_freq != new_config['center_freq']:
-                            sdr.center_freq = new_config['center_freq'] + offset_freq
+                    if "center_freq" in new_config:
+                        if sdr.center_freq != new_config["center_freq"]:
+                            sdr.center_freq = new_config["center_freq"] + offset_freq
                             logger.info(f"Updated center frequency: {sdr.center_freq}")
 
-                    if 'fft_size' in new_config:
-                        if old_config.get('fft_size', 0) != new_config['fft_size']:
-                            fft_size = new_config['fft_size']
+                    if "fft_size" in new_config:
+                        if old_config.get("fft_size", 0) != new_config["fft_size"]:
+                            fft_size = new_config["fft_size"]
                             # Update num_samples when FFT size changes
                             num_samples = calculate_samples_per_scan(sdr.sample_rate, fft_size)
                             logger.info(f"Updated FFT size: {fft_size}, num_samples: {num_samples}")
 
-                    if 'fft_window' in new_config:
-                        if old_config.get('fft_window', None) != new_config['fft_window']:
-                            fft_window = new_config['fft_window']
+                    if "fft_window" in new_config:
+                        if old_config.get("fft_window", None) != new_config["fft_window"]:
+                            fft_window = new_config["fft_window"]
                             logger.info(f"Updated FFT window: {fft_window}")
 
-                    if 'fft_averaging' in new_config:
-                        if old_config.get('fft_averaging', 4) != new_config['fft_averaging']:
-                            fft_averaging = new_config['fft_averaging']
+                    if "fft_averaging" in new_config:
+                        if old_config.get("fft_averaging", 4) != new_config["fft_averaging"]:
+                            fft_averaging = new_config["fft_averaging"]
                             fft_averager.update_averaging_factor(fft_averaging)
                             logger.info(f"Updated FFT averaging: {fft_averaging}")
 
-                    if 'bias_t' in new_config:
-                        if old_config.get('bias_t', None) != new_config['bias_t']:
-                            sdr.set_bias_tee(new_config['bias_t'])
+                    if "bias_t" in new_config:
+                        if old_config.get("bias_t", None) != new_config["bias_t"]:
+                            sdr.set_bias_tee(new_config["bias_t"])
                             logger.info(f"Updated bias-T: {new_config['bias_t']}")
 
-                    if 'rtl_agc' in new_config:
-                        if old_config.get('rtl_agc', None) != new_config['rtl_agc']:
-                            sdr.set_agc_mode(new_config['rtl_agc'])
+                    if "rtl_agc" in new_config:
+                        if old_config.get("rtl_agc", None) != new_config["rtl_agc"]:
+                            sdr.set_agc_mode(new_config["rtl_agc"])
                             logger.info(f"Updated RTL AGC: {new_config['rtl_agc']}")
 
-                    if 'tuner_agc' in new_config:
-                        if old_config.get('tuner_agc', None) != new_config['tuner_agc']:
-                            sdr.set_manual_gain_enabled(not new_config['tuner_agc']) # Tuner AGC
+                    if "tuner_agc" in new_config:
+                        if old_config.get("tuner_agc", None) != new_config["tuner_agc"]:
+                            sdr.set_manual_gain_enabled(not new_config["tuner_agc"])  # Tuner AGC
                             logger.info(f"Updated tuner AGC: {new_config['tuner_agc']}")
 
-                        if not new_config['tuner_agc']:
-                            sdr.gain = new_config['gain']
+                        if not new_config["tuner_agc"]:
+                            sdr.gain = new_config["gain"]
 
-                    if 'offset_freq' in new_config:
-                        if old_config.get('offset_freq', 0) != new_config['offset_freq']:
-                            offset_freq = new_config['offset_freq']
-                            sdr.center_freq = new_config['center_freq'] + offset_freq
+                    if "offset_freq" in new_config:
+                        if old_config.get("offset_freq", 0) != new_config["offset_freq"]:
+                            offset_freq = new_config["offset_freq"]
+                            sdr.center_freq = new_config["center_freq"] + offset_freq
                             logger.info(f"Updated offset frequency: {offset_freq}")
 
                     old_config = new_config
@@ -171,12 +176,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
 
                 # Send error back to the main process
                 if data_queue:
-                    data_queue.put({
-                        'type': 'error',
-                        'client_id': client_id,
-                        'message': error_msg,
-                        'timestamp': time.time()
-                    })
+                    data_queue.put(
+                        {
+                            "type": "error",
+                            "client_id": client_id,
+                            "message": error_msg,
+                            "timestamp": time.time(),
+                        }
+                    )
 
             try:
 
@@ -196,14 +203,16 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 # Calculate FFT with 50% overlap
                 num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
                 if num_segments <= 0:
-                    logger.warning(f"Not enough samples for FFT: {len(samples)} < {actual_fft_size}")
+                    logger.warning(
+                        f"Not enough samples for FFT: {len(samples)} < {actual_fft_size}"
+                    )
                     continue
 
                 fft_result = np.zeros(actual_fft_size)
 
                 for i in range(num_segments):
                     start_idx = i * (actual_fft_size // 2)
-                    segment = samples[start_idx:start_idx + actual_fft_size]
+                    segment = samples[start_idx : start_idx + actual_fft_size]
 
                     windowed_segment = segment * window
 
@@ -216,7 +225,9 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                     # Proper power normalization
                     N = len(fft_segment)
                     window_correction = 1.0
-                    power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
+                    power = 10 * np.log10(
+                        (np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10
+                    )
                     fft_result += power
 
                 # Average the segments
@@ -230,12 +241,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 averaged_fft = fft_averager.add_fft(fft_result)
                 if averaged_fft is not None:
                     # Send the averaged result back to the main process
-                    data_queue.put({
-                        'type': 'fft_data',
-                        'client_id': client_id,
-                        'data': averaged_fft.tobytes(),
-                        'timestamp': time.time()
-                    })
+                    data_queue.put(
+                        {
+                            "type": "fft_data",
+                            "client_id": client_id,
+                            "data": averaged_fft.tobytes(),
+                            "timestamp": time.time(),
+                        }
+                    )
 
                 # Short sleep to prevent CPU hogging
                 time.sleep(0.01)
@@ -245,12 +258,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 logger.exception(e)
 
                 # Send error back to the main process
-                data_queue.put({
-                    'type': 'error',
-                    'client_id': client_id,
-                    'message': str(e),
-                    'timestamp': time.time()
-                })
+                data_queue.put(
+                    {
+                        "type": "error",
+                        "client_id": client_id,
+                        "message": str(e),
+                        "timestamp": time.time(),
+                    }
+                )
 
                 # Pause before retrying
                 time.sleep(1)
@@ -261,12 +276,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.exception(e)
 
         # Send error back to the main process
-        data_queue.put({
-            'type': 'error',
-            'client_id': client_id,
-            'message': error_msg,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "error",
+                "client_id": client_id,
+                "message": error_msg,
+                "timestamp": time.time(),
+            }
+        )
 
     except json.decoder.JSONDecodeError as e:
         error_msg = f"Invalid response from RTL-SDR TCP server at {hostname}:{port}: {str(e)}"
@@ -274,12 +291,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.exception(e)
 
         # Send error back to the main process
-        data_queue.put({
-            'type': 'error',
-            'client_id': client_id,
-            'message': error_msg,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "error",
+                "client_id": client_id,
+                "message": error_msg,
+                "timestamp": time.time(),
+            }
+        )
 
     except Exception as e:
         error_msg = f"Error in RTL-SDR worker process: {str(e)}"
@@ -287,12 +306,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         logger.exception(e)
 
         # Send error back to the main process
-        data_queue.put({
-            'type': 'error',
-            'client_id': client_id,
-            'message': error_msg,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "error",
+                "client_id": client_id,
+                "message": error_msg,
+                "timestamp": time.time(),
+            }
+        )
 
     finally:
         # Sleep for 1 second to allow the main process to read the data queue messages
@@ -308,12 +329,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 logger.error(f"Error closing RTL-SDR device with id {sdr_id}: {str(e)}")
 
         # Send termination signal
-        data_queue.put({
-            'type': 'terminated',
-            'client_id': client_id,
-            'sdr_id': sdr_id,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "terminated",
+                "client_id": client_id,
+                "sdr_id": sdr_id,
+                "timestamp": time.time(),
+            }
+        )
 
         logger.info("RTL-SDR worker process terminated")
 
@@ -334,6 +357,6 @@ def remove_dc_offset(samples):
     mean_q = np.mean(np.imag(samples))
 
     # Subtract the mean
-    samples_no_dc = samples - (mean_i + 1j*mean_q)
+    samples_no_dc = samples - (mean_i + 1j * mean_q)
 
     return samples_no_dc

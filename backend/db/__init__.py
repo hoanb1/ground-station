@@ -27,11 +27,7 @@ engine = create_async_engine(
     pool_recycle=3600,
     connect_args={
         "check_same_thread": False,
-    }
+    },
 )
 
-AsyncSessionLocal = async_sessionmaker(
-    bind=engine,
-    expire_on_commit=False,
-    class_=AsyncSession
-)
+AsyncSessionLocal = async_sessionmaker(bind=engine, expire_on_commit=False, class_=AsyncSession)

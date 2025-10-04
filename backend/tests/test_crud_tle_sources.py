@@ -22,7 +22,7 @@ from crud.tle_sources import (
     fetch_satellite_tle_source,
     add_satellite_tle_source,
     edit_satellite_tle_source,
-    delete_satellite_tle_sources
+    delete_satellite_tle_sources,
 )
 from crud.satellites import add_satellite
 from crud.groups import add_satellite_group
@@ -37,7 +37,7 @@ class TestTLESourcesCRUD:
         tle_source_data = {
             "name": "Amateur Radio Satellites",
             "url": "https://example.com/amateur.txt",
-            "format": "3le"
+            "format": "3le",
         }
 
         result = await add_satellite_tle_source(db_session, tle_source_data)
@@ -52,9 +52,7 @@ class TestTLESourcesCRUD:
 
     async def test_add_tle_source_missing_name(self, db_session):
         """Test TLE source creation fails without name."""
-        tle_source_data = {
-            "url": "https://example.com/test.txt"
-        }
+        tle_source_data = {"url": "https://example.com/test.txt"}
 
         result = await add_satellite_tle_source(db_session, tle_source_data)
 
@@ -62,9 +60,7 @@ class TestTLESourcesCRUD:
 
     async def test_add_tle_source_missing_url(self, db_session):
         """Test TLE source creation fails without URL."""
-        tle_source_data = {
-            "name": "Test Source"
-        }
+        tle_source_data = {"name": "Test Source"}
 
         result = await add_satellite_tle_source(db_session, tle_source_data)
 
@@ -73,14 +69,12 @@ class TestTLESourcesCRUD:
     async def test_fetch_all_tle_sources(self, db_session):
         """Test fetching all TLE sources."""
         # Add multiple sources
-        await add_satellite_tle_source(db_session, {
-            "name": "Source 1",
-            "url": "https://example.com/source1.txt"
-        })
-        await add_satellite_tle_source(db_session, {
-            "name": "Source 2",
-            "url": "https://example.com/source2.txt"
-        })
+        await add_satellite_tle_source(
+            db_session, {"name": "Source 1", "url": "https://example.com/source1.txt"}
+        )
+        await add_satellite_tle_source(
+            db_session, {"name": "Source 2", "url": "https://example.com/source2.txt"}
+        )
 
         result = await fetch_satellite_tle_source(db_session)
 
@@ -89,10 +83,9 @@ class TestTLESourcesCRUD:
 
     async def test_fetch_tle_source_by_id(self, db_session):
         """Test fetching a single TLE source by ID."""
-        add_result = await add_satellite_tle_source(db_session, {
-            "name": "Test Source",
-            "url": "https://example.com/test.txt"
-        })
+        add_result = await add_satellite_tle_source(
+            db_session, {"name": "Test Source", "url": "https://example.com/test.txt"}
+        )
 
         source_id = add_result["data"]["id"]
         result = await fetch_satellite_tle_source(db_session, source_id)
@@ -110,18 +103,14 @@ class TestTLESourcesCRUD:
 
     async def test_edit_tle_source_success(self, db_session):
         """Test successful TLE source editing."""
-        add_result = await add_satellite_tle_source(db_session, {
-            "name": "Old Name",
-            "url": "https://example.com/old.txt"
-        })
+        add_result = await add_satellite_tle_source(
+            db_session, {"name": "Old Name", "url": "https://example.com/old.txt"}
+        )
 
         source_id = str(add_result["data"]["id"])
 
         # Edit the source
-        edit_data = {
-            "name": "New Name",
-            "url": "https://example.com/new.txt"
-        }
+        edit_data = {"name": "New Name", "url": "https://example.com/new.txt"}
 
         result = await edit_satellite_tle_source(db_session, source_id, edit_data)
 
@@ -132,6 +121,7 @@ class TestTLESourcesCRUD:
     async def test_edit_tle_source_not_found(self, db_session):
         """Test editing non-existent TLE source."""
         import uuid
+
         fake_id = str(uuid.uuid4())
 
         result = await edit_satellite_tle_source(db_session, fake_id, {"name": "New Name"})
@@ -141,10 +131,9 @@ class TestTLESourcesCRUD:
 
     async def test_edit_tle_source_removes_metadata(self, db_session):
         """Test that edit removes added/updated/id from data."""
-        add_result = await add_satellite_tle_source(db_session, {
-            "name": "Test Source",
-            "url": "https://example.com/test.txt"
-        })
+        add_result = await add_satellite_tle_source(
+            db_session, {"name": "Test Source", "url": "https://example.com/test.txt"}
+        )
 
         source_id = str(add_result["data"]["id"])
 
@@ -153,7 +142,7 @@ class TestTLESourcesCRUD:
             "id": "fake-id",
             "name": "Updated Name",
             "added": "2020-01-01",
-            "updated": "2020-01-01"
+            "updated": "2020-01-01",
         }
 
         result = await edit_satellite_tle_source(db_session, source_id, edit_data)
@@ -165,10 +154,9 @@ class TestTLESourcesCRUD:
 
     async def test_delete_tle_source_simple(self, db_session):
         """Test deleting TLE source without associated data."""
-        add_result = await add_satellite_tle_source(db_session, {
-            "name": "Test Source",
-            "url": "https://example.com/test.txt"
-        })
+        add_result = await add_satellite_tle_source(
+            db_session, {"name": "Test Source", "url": "https://example.com/test.txt"}
+        )
 
         source_id = str(add_result["data"]["id"])
 
@@ -185,33 +173,47 @@ class TestTLESourcesCRUD:
     async def test_delete_tle_source_with_satellites_and_group(self, db_session):
         """Test deleting TLE source cascades to satellites and groups."""
         # Add TLE source
-        tle_result = await add_satellite_tle_source(db_session, {
-            "name": "Test Source",
-            "url": "https://example.com/test.txt"
-        })
+        tle_result = await add_satellite_tle_source(
+            db_session, {"name": "Test Source", "url": "https://example.com/test.txt"}
+        )
         identifier = tle_result["data"]["identifier"]
 
         # Add satellites
-        await add_satellite(db_session, {
-            "name": "Sat 1", "sat_id": "SAT-001", "norad_id": 11111,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": "1 11111U 00000A   21001.00000000  .00000000  00000-0  00000-0 0  9990",
-            "tle2": "2 11111  51.0000 000.0000 0000000   0.0000   0.0000 15.00000000000000"
-        })
-        await add_satellite(db_session, {
-            "name": "Sat 2", "sat_id": "SAT-002", "norad_id": 22222,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": "1 22222U 00000A   21001.00000000  .00000000  00000-0  00000-0 0  9990",
-            "tle2": "2 22222  51.0000 000.0000 0000000   0.0000   0.0000 15.00000000000000"
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 1",
+                "sat_id": "SAT-001",
+                "norad_id": 11111,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": "1 11111U 00000A   21001.00000000  .00000000  00000-0  00000-0 0  9990",
+                "tle2": "2 11111  51.0000 000.0000 0000000   0.0000   0.0000 15.00000000000000",
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 2",
+                "sat_id": "SAT-002",
+                "norad_id": 22222,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": "1 22222U 00000A   21001.00000000  .00000000  00000-0  00000-0 0  9990",
+                "tle2": "2 22222  51.0000 000.0000 0000000   0.0000   0.0000 15.00000000000000",
+            },
+        )
 
         # Add group with same identifier
-        await add_satellite_group(db_session, {
-            "name": "Test Group",
-            "identifier": identifier,
-            "type": "system",
-            "satellite_ids": [11111, 22222]
-        })
+        await add_satellite_group(
+            db_session,
+            {
+                "name": "Test Group",
+                "identifier": identifier,
+                "type": "system",
+                "satellite_ids": [11111, 22222],
+            },
+        )
 
         # Delete TLE source
         source_id = str(tle_result["data"]["id"])
@@ -224,14 +226,12 @@ class TestTLESourcesCRUD:
 
     async def test_delete_multiple_tle_sources(self, db_session):
         """Test deleting multiple TLE sources at once."""
-        source1 = await add_satellite_tle_source(db_session, {
-            "name": "Source 1",
-            "url": "https://example.com/source1.txt"
-        })
-        source2 = await add_satellite_tle_source(db_session, {
-            "name": "Source 2",
-            "url": "https://example.com/source2.txt"
-        })
+        source1 = await add_satellite_tle_source(
+            db_session, {"name": "Source 1", "url": "https://example.com/source1.txt"}
+        )
+        source2 = await add_satellite_tle_source(
+            db_session, {"name": "Source 2", "url": "https://example.com/source2.txt"}
+        )
 
         source_ids = [str(source1["data"]["id"]), str(source2["data"]["id"])]
 
@@ -244,6 +244,7 @@ class TestTLESourcesCRUD:
     async def test_delete_tle_sources_not_found(self, db_session):
         """Test deleting non-existent TLE sources."""
         import uuid
+
         fake_id = str(uuid.uuid4())
 
         result = await delete_satellite_tle_sources(db_session, [fake_id])
@@ -254,11 +255,11 @@ class TestTLESourcesCRUD:
     async def test_delete_tle_sources_partial_not_found(self, db_session):
         """Test deleting mix of existing and non-existent sources."""
         import uuid
+
         # Add one real source
-        real_source = await add_satellite_tle_source(db_session, {
-            "name": "Real Source",
-            "url": "https://example.com/real.txt"
-        })
+        real_source = await add_satellite_tle_source(
+            db_session, {"name": "Real Source", "url": "https://example.com/real.txt"}
+        )
 
         real_id = str(real_source["data"]["id"])
         fake_id = str(uuid.uuid4())
@@ -272,11 +273,14 @@ class TestTLESourcesCRUD:
 
     async def test_tle_source_default_format(self, db_session):
         """Test TLE source uses default format if not provided."""
-        result = await add_satellite_tle_source(db_session, {
-            "name": "Test Source",
-            "url": "https://example.com/test.txt"
-            # No format specified
-        })
+        result = await add_satellite_tle_source(
+            db_session,
+            {
+                "name": "Test Source",
+                "url": "https://example.com/test.txt",
+                # No format specified
+            },
+        )
 
         assert result["success"] is True
         # Should use default from model

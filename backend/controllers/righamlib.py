@@ -25,12 +25,12 @@ from Hamlib import Hamlib
 
 class RigController:
     def __init__(
-            self,
-            model: int = Hamlib.RIG_MODEL_NETRIGCTL,
-            host: str = "127.0.0.1",
-            port: int = 4532,
-            verbose: bool = False,
-            timeout: float = 5.0,
+        self,
+        model: int = Hamlib.RIG_MODEL_NETRIGCTL,
+        host: str = "127.0.0.1",
+        port: int = 4532,
+        verbose: bool = False,
+        timeout: float = 5.0,
     ):
 
         # Set up logging
@@ -120,8 +120,7 @@ class RigController:
         try:
             # Use asyncio's open_connection with timeout
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port),
-                timeout=self.timeout
+                asyncio.open_connection(self.host, self.port), timeout=self.timeout
             )
             yield reader, writer
 
@@ -146,24 +145,21 @@ class RigController:
                 await writer.drain()
 
                 # Receive response with timeout
-                response_bytes = await asyncio.wait_for(
-                    reader.read(1000),
-                    timeout=self.timeout
-                )
+                response_bytes = await asyncio.wait_for(reader.read(1000), timeout=self.timeout)
 
-                response = response_bytes.decode('utf-8', errors='replace').strip()
+                response = response_bytes.decode("utf-8", errors="replace").strip()
 
                 # Parse the response
                 if not response:
                     return False
 
                 # Handle different response formats
-                if response.startswith('RPRT'):
+                if response.startswith("RPRT"):
                     error_code = int(response.split()[1])
                     return error_code >= 0
 
-                elif response.startswith('get_freq:'):
-                    parts = response.split(':')[1].strip()
+                elif response.startswith("get_freq:"):
+                    parts = response.split(":")[1].strip()
                     try:
                         float(parts)
                         return True
@@ -248,8 +244,10 @@ class RigController:
         if self.connected and self.rig is not None:
             # Direct synchronous disconnection if possible
             try:
-                self.logger.warning("Object RigController being destroyed while still connected to rig")
-                if hasattr(self.rig, 'close'):
+                self.logger.warning(
+                    "Object RigController being destroyed while still connected to rig"
+                )
+                if hasattr(self.rig, "close"):
                     self.rig.close()
                 self.connected = False
                 self.rig = None
@@ -283,14 +281,17 @@ class RigController:
 
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
-    async def set_frequency(self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0) -> AsyncGenerator[
-        Tuple[float, bool], None]:
+    async def set_frequency(
+        self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0
+    ) -> AsyncGenerator[Tuple[float, bool], None]:
 
         # Start the frequency setting operation
         self.logger.info(f"Setting rig frequency to {target_freq} Hz")
 
         try:
-            status = await asyncio.to_thread(self.rig.set_freq, _freq_t=target_freq, vfo=Hamlib.RIG_VFO_A)
+            status = await asyncio.to_thread(
+                self.rig.set_freq, _freq_t=target_freq, vfo=Hamlib.RIG_VFO_A
+            )
             self.logger.debug(f"Set frequency command: status={status}")
 
         except Exception as e:

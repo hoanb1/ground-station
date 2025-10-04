@@ -9,7 +9,7 @@ from vfos.state import VFOManager
 
 
 # Configure logging
-logger = logging.getLogger('audio-consumer')
+logger = logging.getLogger("audio-consumer")
 
 
 class WebAudioConsumer(threading.Thread):
@@ -18,7 +18,7 @@ class WebAudioConsumer(threading.Thread):
         self.audio_queue = audio_queue
         self.sio = sio
         self.loop = loop  # Pass the main event loop
-        self.vfo_manager = VFOManager() # Singleton VFO manager
+        self.vfo_manager = VFOManager()  # Singleton VFO manager
         self.running = True
 
     def run(self):
@@ -51,14 +51,14 @@ class WebAudioConsumer(threading.Thread):
 
                         # Prepare VFO data for transmission
                         vfo_data = {
-                            'center_freq': vfo_state.center_freq,
-                            'bandwidth': vfo_state.bandwidth,
-                            'modulation': vfo_state.modulation,
-                            'active': vfo_state.active,
-                            'selected': vfo_state.selected,
-                            'volume': vfo_state.volume,
-                            'squelch': vfo_state.squelch,
-                            'vfo_number': vfo_state.vfo_number,
+                            "center_freq": vfo_state.center_freq,
+                            "bandwidth": vfo_state.bandwidth,
+                            "modulation": vfo_state.modulation,
+                            "active": vfo_state.active,
+                            "selected": vfo_state.selected,
+                            "volume": vfo_state.volume,
+                            "squelch": vfo_state.squelch,
+                            "vfo_number": vfo_state.vfo_number,
                         }
 
                         # Convert to Web Audio compatible format
@@ -71,26 +71,34 @@ class WebAudioConsumer(threading.Thread):
 
                         # Schedule the emit() in the main event loop for this specific session
                         future = asyncio.run_coroutine_threadsafe(
-                            self.sio.emit('audio-data', {
-                                'samples': audio_data,
-                                'sample_rate': 44100,
-                                'channels': 1,  # Mono audio
-                                'format': 'float32',  # Specify format
-                                'length': len(audio_data),  # Number of samples
-                                'vfo': vfo_data,
-                                'session_id': session_id  # Include session_id in the emitted data
-                            }, room=session_id),  # Emit to specific session room
-                            self.loop
+                            self.sio.emit(
+                                "audio-data",
+                                {
+                                    "samples": audio_data,
+                                    "sample_rate": 44100,
+                                    "channels": 1,  # Mono audio
+                                    "format": "float32",  # Specify format
+                                    "length": len(audio_data),  # Number of samples
+                                    "vfo": vfo_data,
+                                    "session_id": session_id,  # Include session_id in the emitted data
+                                },
+                                room=session_id,
+                            ),  # Emit to specific session room
+                            self.loop,
                         )
 
                         # Wait for completion with timeout
                         try:
                             future.result(timeout=0.1)  # Short timeout to avoid blocking
                         except asyncio.TimeoutError:
-                            logger.warning(f"Socket.IO emit timed out for session {session_id} when sending audio data")
+                            logger.warning(
+                                f"Socket.IO emit timed out for session {session_id} when sending audio data"
+                            )
 
                     except Exception as e:
-                        logger.error(f"Error processing audio for session {session_id} when sending audio data: {e}")
+                        logger.error(
+                            f"Error processing audio for session {session_id} when sending audio data: {e}"
+                        )
                         continue
 
                 # Mark the task as done after processing all sessions

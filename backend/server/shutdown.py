@@ -18,6 +18,7 @@ def cleanup_everything():
     # Terminate tracker process
     try:
         from tracker.runner import tracker_process
+
         if tracker_process and tracker_process.is_alive():
             logger.info(f"Killing tracker process PID: {tracker_process.pid}")
             tracker_process.kill()
@@ -28,6 +29,7 @@ def cleanup_everything():
     # Clean up all SDR sessions
     try:
         from sdr.utils import active_sdr_clients
+
         if active_sdr_clients:
             logger.info(f"Cleaning up {len(active_sdr_clients)} SDR sessions...")
             session_ids = list(active_sdr_clients.keys())
@@ -69,6 +71,7 @@ def stop_tracker():
     """Simple function to kill the tracker process."""
     try:
         from tracker.runner import tracker_process
+
         if tracker_process and tracker_process.is_alive():
             tracker_process.kill()
     except Exception:  # pragma: no cover - best effort cleanup

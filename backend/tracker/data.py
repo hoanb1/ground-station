@@ -1,4 +1,3 @@
-
 # Copyright (c) 2025 Efstratios Goudelis
 #
 # This program is free software: you can redistribute it and/or modify
@@ -24,7 +23,11 @@ from datetime import UTC
 from typing import Any, Union, Optional, Dict
 from db import AsyncSessionLocal
 from tracking.footprint import get_satellite_coverage_circle
-from tracking.satellite import get_satellite_position_from_tle, get_satellite_az_el, get_satellite_path
+from tracking.satellite import (
+    get_satellite_position_from_tle,
+    get_satellite_az_el,
+    get_satellite_path,
+)
 
 logger = logging.getLogger("tracker-worker")
 
@@ -56,21 +59,21 @@ class CacheManager:
         cache_entry = self._cache[cache_key]
 
         # Check if cache has expired
-        if datetime.now(UTC) > cache_entry['expires_at']:
+        if datetime.now(UTC) > cache_entry["expires_at"]:
             del self._cache[cache_key]
             return None
 
         logger.debug(f"Cache hit for key: {cache_key}")
-        return cache_entry['data']
+        return cache_entry["data"]
 
     def set(self, cache_key: str, data: Any, ttl_minutes: int = 30) -> None:
         """Store data in cache with specified time-to-live."""
         expires_at = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
 
         self._cache[cache_key] = {
-            'data': data,
-            'expires_at': expires_at,
-            'created_at': datetime.now(UTC)
+            "data": data,
+            "expires_at": expires_at,
+            "created_at": datetime.now(UTC),
         }
 
         logger.debug(f"Cached data with key: {cache_key}, expires at: {expires_at}")
@@ -78,10 +81,7 @@ class CacheManager:
     def clear_expired(self) -> int:
         """Remove all expired cache entries and return count of removed items."""
         now = datetime.now(UTC)
-        expired_keys = [
-            key for key, entry in self._cache.items()
-            if now > entry['expires_at']
-        ]
+        expired_keys = [key for key, entry in self._cache.items() if now > entry["expires_at"]]
 
         for key in expired_keys:
             del self._cache[key]
@@ -94,15 +94,12 @@ class CacheManager:
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get statistics about the cache."""
         now = datetime.now(UTC)
-        expired_count = sum(
-            1 for entry in self._cache.values()
-            if now > entry['expires_at']
-        )
+        expired_count = sum(1 for entry in self._cache.values() if now > entry["expires_at"])
 
         return {
-            'total_entries': len(self._cache),
-            'expired_entries': expired_count,
-            'active_entries': len(self._cache) - expired_count
+            "total_entries": len(self._cache),
+            "expired_entries": expired_count,
+            "active_entries": len(self._cache) - expired_count,
         }
 
 
@@ -110,10 +107,12 @@ class CacheManager:
 cache_manager = CacheManager()
 
 
-def get_cached_satellite_paths(tle1: str, tle2: str, duration_minutes: int, step_minutes: float) -> Optional[dict]:
+def get_cached_satellite_paths(
+    tle1: str, tle2: str, duration_minutes: int, step_minutes: float
+) -> Optional[dict]:
     """
     Retrieve cached satellite paths if available and not expired.
-    
+
     :param tle1: First line of TLE data
     :param tle2: Second line of TLE data
     :param duration_minutes: Duration for path calculation
@@ -121,20 +120,23 @@ def get_cached_satellite_paths(tle1: str, tle2: str, duration_minutes: int, step
     :return: Cached paths or None if not available
     """
     cache_key = cache_manager._generate_cache_key(
-        "satellite_paths",
-        tle1=tle1,
-        tle2=tle2,
-        duration=duration_minutes,
-        step=step_minutes
+        "satellite_paths", tle1=tle1, tle2=tle2, duration=duration_minutes, step=step_minutes
     )
 
     return cache_manager.get(cache_key)
 
 
-def cache_satellite_paths(tle1: str, tle2: str, duration_minutes: int, step_minutes: float, paths: dict, ttl_minutes: int = 30) -> None:
+def cache_satellite_paths(
+    tle1: str,
+    tle2: str,
+    duration_minutes: int,
+    step_minutes: float,
+    paths: dict,
+    ttl_minutes: int = 30,
+) -> None:
     """
     Cache satellite paths with specified TTL.
-    
+
     :param tle1: First line of TLE data
     :param tle2: Second line of TLE data
     :param duration_minutes: Duration for path calculation
@@ -143,11 +145,7 @@ def cache_satellite_paths(tle1: str, tle2: str, duration_minutes: int, step_minu
     :param ttl_minutes: Time to live in minutes (default: 30)
     """
     cache_key = cache_manager._generate_cache_key(
-        "satellite_paths",
-        tle1=tle1,
-        tle2=tle2,
-        duration=duration_minutes,
-        step=step_minutes
+        "satellite_paths", tle1=tle1, tle2=tle2, duration=duration_minutes, step=step_minutes
     )
 
     cache_manager.set(cache_key, paths, ttl_minutes)
@@ -170,63 +168,72 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     """
 
     satellite_data = {
-        'details': {},
-        'position': {},
-        'paths': {
-            'past': [],
-            'future': []
-        },
-        'coverage': [],
-        'transmitters': [],
-        'error': False,
+        "details": {},
+        "position": {},
+        "paths": {"past": [], "future": []},
+        "coverage": [],
+        "transmitters": [],
+        "error": False,
     }
 
     try:
 
         satellite = await crud.satellites.fetch_satellites(dbsession, norad_id=norad_id)
 
-        if not satellite.get('success', False):
+        if not satellite.get("success", False):
             raise Exception(f"No satellite found in the db for norad id {norad_id}")
 
-        if len(satellite.get('data', [])) != 1:
-            raise Exception(f"Expected exactly one satellite in the result for norad id {norad_id} got"
-                            f" {len(satellite.get('data', []))}")
+        if len(satellite.get("data", [])) != 1:
+            raise Exception(
+                f"Expected exactly one satellite in the result for norad id {norad_id} got"
+                f" {len(satellite.get('data', []))}"
+            )
 
-        satellite_data['details'] = satellite['data'][0]
-        satellite_data['details']['is_geostationary'] = is_geostationary([
-            satellite_data['details']['tle1'],
-            satellite_data['details']['tle2']
-        ])
+        satellite_data["details"] = satellite["data"][0]
+        satellite_data["details"]["is_geostationary"] = is_geostationary(
+            [satellite_data["details"]["tle1"], satellite_data["details"]["tle2"]]
+        )
 
         # get target map settings
-        target_map_settings_reply = await crud.preferences.get_map_settings(dbsession, 'target-map-settings')
-        target_map_settings = target_map_settings_reply['data'].get('value', {})
+        target_map_settings_reply = await crud.preferences.get_map_settings(
+            dbsession, "target-map-settings"
+        )
+        target_map_settings = target_map_settings_reply["data"].get("value", {})
 
         # fetch transmitters
-        transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
-        satellite_data['transmitters'] = transmitters['data']
+        transmitters = await crud.transmitters.fetch_transmitters_for_satellite(
+            dbsession, norad_id=norad_id
+        )
+        satellite_data["transmitters"] = transmitters["data"]
 
         location = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
-        if not location.get('success', False) or location.get('data', None) is None:
+        if not location.get("success", False) or location.get("data", None) is None:
             raise Exception(f"No location found in the db for user id None, please set one")
 
         # get current position
-        position = get_satellite_position_from_tle([
-            satellite_data['details']['name'],
-            satellite_data['details']['tle1'],
-            satellite_data['details']['tle2']
-        ])
+        position = get_satellite_position_from_tle(
+            [
+                satellite_data["details"]["name"],
+                satellite_data["details"]["tle1"],
+                satellite_data["details"]["tle2"],
+            ]
+        )
 
         # get position in the sky
-        home_lat = location['data']['lat']
-        home_lon = location['data']['lon']
-        sky_point = get_satellite_az_el(home_lat, home_lon, satellite['data'][0]['tle1'],
-                                        satellite['data'][0]['tle2'], datetime.now(UTC))
+        home_lat = location["data"]["lat"]
+        home_lon = location["data"]["lon"]
+        sky_point = get_satellite_az_el(
+            home_lat,
+            home_lon,
+            satellite["data"][0]["tle1"],
+            satellite["data"][0]["tle2"],
+            datetime.now(UTC),
+        )
 
         # calculate paths with caching
-        tle1 = satellite_data['details']['tle1']
-        tle2 = satellite_data['details']['tle2']
-        duration_minutes = int(target_map_settings.get('orbitProjectionDuration', 240))
+        tle1 = satellite_data["details"]["tle1"]
+        tle2 = satellite_data["details"]["tle2"]
+        duration_minutes = int(target_map_settings.get("orbitProjectionDuration", 240))
         step_minutes = 0.5
 
         # Try to get cached paths first
@@ -235,35 +242,35 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         # Check for cached items
         if cached_paths is not None:
             logger.debug(f"Using cached satellite paths for NORAD ID: {norad_id}")
-            satellite_data['paths'] = cached_paths
+            satellite_data["paths"] = cached_paths
         else:
             logger.info(f"Computing new satellite paths for NORAD ID: {norad_id}")
-            paths = get_satellite_path([tle1, tle2], duration_minutes=duration_minutes, step_minutes=step_minutes)
+            paths = get_satellite_path(
+                [tle1, tle2], duration_minutes=duration_minutes, step_minutes=step_minutes
+            )
 
             # Cache the computed paths for 30 minutes
             cache_satellite_paths(tle1, tle2, duration_minutes, step_minutes, paths, ttl_minutes=30)
-            satellite_data['paths'] = paths
+            satellite_data["paths"] = paths
 
         # Add the coverage (footprint)
-        satellite_data['coverage'] = get_satellite_coverage_circle(
-            position['lat'],
-            position['lon'],
-            position['alt'] / 1000,
-            num_points=300
+        satellite_data["coverage"] = get_satellite_coverage_circle(
+            position["lat"], position["lon"], position["alt"] / 1000, num_points=300
         )
 
-        position['az'] = sky_point[0]
-        position['el'] = sky_point[1]
-        satellite_data['position'] = position
+        position["az"] = sky_point[0]
+        position["el"] = sky_point[1]
+        satellite_data["position"] = position
 
         satellite_data = serialize_object(satellite_data)
 
     except Exception as e:
         logger.error(f"Failed to compile satellite data for norad id: {norad_id}, error: {e}")
         logger.exception(e)
-        satellite_data['error'] = True
+        satellite_data["error"] = True
 
     return satellite_data
+
 
 async def get_ui_tracker_state(group_id: str, norad_id: int):
     """
@@ -280,38 +287,46 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         if the operation fails.
     :rtype: dict
     """
-    reply: dict[str, Union[bool, None, dict]] = {'success': False, 'data': None}
+    reply: dict[str, Union[bool, None, dict]] = {"success": False, "data": None}
 
     data = {
-        'groups': [],
-        'satellites': [],
-        'transmitters': [],
-        'group_id': None,
-        'norad_id': None,
-        'rotator_id': 'none',
-        'rig_id': 'none',
-        'transmitter_id': 'none'
+        "groups": [],
+        "satellites": [],
+        "transmitters": [],
+        "group_id": None,
+        "norad_id": None,
+        "rotator_id": "none",
+        "rig_id": "none",
+        "transmitter_id": "none",
     }
 
     try:
-        async with (AsyncSessionLocal() as dbsession):
+        async with AsyncSessionLocal() as dbsession:
             groups = await crud.groups.fetch_satellite_group(dbsession)
-            satellites = await crud.satellites.fetch_satellites_for_group_id(dbsession, group_id=group_id)
-            tracking_state = await crud.tracking_state.get_tracking_state(dbsession, name='satellite-tracking')
-            transmitters = await crud.transmitters.fetch_transmitters_for_satellite(dbsession, norad_id=norad_id)
-            data['groups'] = groups['data']
-            data['satellites'] = satellites['data']
-            data['group_id'] = group_id
-            data['norad_id'] = norad_id
-            data['rig_id'] = tracking_state['data']['value'].get('rig_id', "none")
-            data['rotator_id'] = tracking_state['data']['value'].get('rotator_id', "none")
-            data['transmitter_id'] = tracking_state['data']['value'].get('transmitter_id', "none")
-            data['transmitters'] = transmitters['data']
-            reply['success'] = True
-            reply['data'] = data
+            satellites = await crud.satellites.fetch_satellites_for_group_id(
+                dbsession, group_id=group_id
+            )
+            tracking_state = await crud.tracking_state.get_tracking_state(
+                dbsession, name="satellite-tracking"
+            )
+            transmitters = await crud.transmitters.fetch_transmitters_for_satellite(
+                dbsession, norad_id=norad_id
+            )
+            data["groups"] = groups["data"]
+            data["satellites"] = satellites["data"]
+            data["group_id"] = group_id
+            data["norad_id"] = norad_id
+            data["rig_id"] = tracking_state["data"]["value"].get("rig_id", "none")
+            data["rotator_id"] = tracking_state["data"]["value"].get("rotator_id", "none")
+            data["transmitter_id"] = tracking_state["data"]["value"].get("transmitter_id", "none")
+            data["transmitters"] = transmitters["data"]
+            reply["success"] = True
+            reply["data"] = data
 
     except Exception as e:
-        logger.error(f"Failed to get tracker state for group id: {group_id}, satellite id: {norad_id}, error: {e}")
+        logger.error(
+            f"Failed to get tracker state for group id: {group_id}, satellite id: {norad_id}, error: {e}"
+        )
         logger.exception(e)
 
     finally:

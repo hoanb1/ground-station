@@ -23,19 +23,18 @@ from common.common import logger, serialize_object
 from common.utils import convert_strings_to_uuids
 
 
-async def fetch_system_satellite_group_by_identifier(session: AsyncSession, group_identifier: str) -> dict:
+async def fetch_system_satellite_group_by_identifier(
+    session: AsyncSession, group_identifier: str
+) -> dict:
     """
     Fetch a satellite group with type='system' by its 'group_identifier'.
     """
 
     try:
         # Add a filter for the 'type' column
-        stmt = (
-            select(Groups)
-            .filter(
-                Groups.identifier == group_identifier,
-                Groups.type == "system",
-                )
+        stmt = select(Groups).filter(
+            Groups.identifier == group_identifier,
+            Groups.type == "system",
         )
         result = await session.execute(stmt)
         group = result.scalar_one_or_none()
@@ -52,8 +51,11 @@ async def fetch_system_satellite_group_by_identifier(session: AsyncSession, grou
         return {"success": False, "error": str(e)}
 
 
-async def fetch_satellite_group(session: AsyncSession, group_id: Optional[Union[str, uuid.UUID]] = None,
-                                group_type: Optional[str] = None) -> dict:
+async def fetch_satellite_group(
+    session: AsyncSession,
+    group_id: Optional[Union[str, uuid.UUID]] = None,
+    group_type: Optional[str] = None,
+) -> dict:
     """
     Fetch satellite group records.
 
@@ -124,9 +126,7 @@ async def edit_satellite_group(session: AsyncSession, satellite_group_id: str, d
         data.pop("id", None)
         satellite_group_uuid = uuid.UUID(satellite_group_id)
 
-        result = await session.execute(
-            select(Groups).filter(Groups.id == satellite_group_uuid)
-        )
+        result = await session.execute(select(Groups).filter(Groups.id == satellite_group_uuid))
         group = result.scalars().first()
 
         if not group:
@@ -146,15 +146,15 @@ async def edit_satellite_group(session: AsyncSession, satellite_group_id: str, d
         return {"success": False, "data": None, "error": str(e)}
 
 
-async def delete_satellite_group(session: AsyncSession, satellite_group_ids: Union[list[str], dict]) -> dict:
+async def delete_satellite_group(
+    session: AsyncSession, satellite_group_ids: Union[list[str], dict]
+) -> dict:
     """
     Delete satellite group record(s).
     """
     try:
         satellite_group_ids = convert_strings_to_uuids(satellite_group_ids)
-        result = await session.execute(
-            select(Groups).filter(Groups.id.in_(satellite_group_ids))
-        )
+        result = await session.execute(select(Groups).filter(Groups.id.in_(satellite_group_ids)))
         groups = result.scalars().all()
 
         if not groups:

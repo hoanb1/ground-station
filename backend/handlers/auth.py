@@ -39,22 +39,22 @@ async def auth_request_routing(sio, cmd, data, logger, sid):
     :rtype: dict
     """
 
-    reply: dict[str, Union[bool, None, dict, str]] = {'success': None, 'user': None, 'token': None}
+    reply: dict[str, Union[bool, None, dict, str]] = {"success": None, "user": None, "token": None}
 
     async with AsyncSessionLocal() as dbsession:
 
-        logger.debug(f'Auth request, cmd: {cmd}, data: {data}')
-        auth_reply = await authenticate_user(dbsession, data['email'], data['password'])
+        logger.debug(f"Auth request, cmd: {cmd}, data: {data}")
+        auth_reply = await authenticate_user(dbsession, data["email"], data["password"])
 
         if auth_reply is not None:
             # login success
-            reply['success'] = True
-            reply['token'] = auth_reply.get('token', None)
+            reply["success"] = True
+            reply["token"] = auth_reply.get("token", None)
 
             # fetch user data
-            reply['user'] = auth_reply.get('user', None)
+            reply["user"] = auth_reply.get("user", None)
 
         else:
-            reply['success'] = False
+            reply["success"] = False
 
     return reply

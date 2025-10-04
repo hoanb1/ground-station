@@ -1,13 +1,13 @@
-
 import logging
 from dataclasses import dataclass
 from typing import Dict, Optional, List
 
 # Configure logging for the worker process
-logger = logging.getLogger('vfo-state')
+logger = logging.getLogger("vfo-state")
 
 # How many VFOs
 VFO_NUMBER = 4
+
 
 @dataclass
 class VFOState:
@@ -47,10 +47,18 @@ class VFOManager:
         self._ensure_session_vfos(session_id)
         return self._session_vfo_states[session_id].get(vfo_id)
 
-    def update_vfo_state(self, session_id: str, vfo_id: int, center_freq: int = None,
-                         bandwidth: int = None, modulation: str = None,
-                         active: bool = None, selected: bool = None, volume = None,
-                         squelch = None) -> None:
+    def update_vfo_state(
+        self,
+        session_id: str,
+        vfo_id: int,
+        center_freq: int = None,
+        bandwidth: int = None,
+        modulation: str = None,
+        active: bool = None,
+        selected: bool = None,
+        volume=None,
+        squelch=None,
+    ) -> None:
 
         assert session_id is not None, "session_id is required"
 
@@ -105,7 +113,7 @@ class VFOManager:
 
             vfo_state.selected = selected
 
-        #logger.info(f"vfo states for session {session_id}: {session_vfos}")
+        # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 
     def get_all_vfo_states(self, session_id: str) -> Dict[int, VFOState]:
         self._ensure_session_vfos(session_id)

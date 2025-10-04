@@ -19,8 +19,15 @@ from skyfield.api import Topos
 from skyfield.api import load, EarthSatellite
 
 
-def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, observer_elevation,
-                            transmitted_freq_hz, time=None):
+def calculate_doppler_shift(
+    tle_line1,
+    tle_line2,
+    observer_lat,
+    observer_lon,
+    observer_elevation,
+    transmitted_freq_hz,
+    time=None,
+):
     """
     Calculate the Doppler shift for a satellite at a given time.
 
@@ -52,12 +59,14 @@ def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, ob
         time = ts.now()
 
     # Create satellite object from TLEs
-    satellite = EarthSatellite(tle_line1, tle_line2, name='Satellite', ts=ts)
+    satellite = EarthSatellite(tle_line1, tle_line2, name="Satellite", ts=ts)
 
     # Define the ground station
-    topos = Topos(latitude_degrees=observer_lat,
-                  longitude_degrees=observer_lon,
-                  elevation_m=observer_elevation)
+    topos = Topos(
+        latitude_degrees=observer_lat,
+        longitude_degrees=observer_lon,
+        elevation_m=observer_elevation,
+    )
 
     # Get the difference directly using the observation from the topos
     difference = satellite - topos
@@ -72,7 +81,7 @@ def calculate_doppler_shift(tle_line1, tle_line2, observer_lat, observer_lon, ob
 
     # Calculate the radial velocity (component of velocity along the line of sight)
     # This is done by taking the dot product of the unit position vector and velocity vector
-    pos_unit = pos / np.sqrt(np.sum(pos ** 2))  # Normalize position to get unit vector
+    pos_unit = pos / np.sqrt(np.sum(pos**2))  # Normalize position to get unit vector
     range_rate = np.dot(pos_unit, vel)  # Dot product gives radial component
 
     # Speed of light in km/s

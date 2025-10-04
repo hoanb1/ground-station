@@ -71,8 +71,8 @@ class TestConvertStringsToUuids:
         """Test converting a mix of UUID string formats."""
         test_uuids = [
             "550e8400-e29b-41d4-a716-446655440000",  # with hyphens
-            "550e8400e29b41d4a716446655440001",      # without hyphens
-            str(uuid.uuid4())                         # generated
+            "550e8400e29b41d4a716446655440001",  # without hyphens
+            str(uuid.uuid4()),  # generated
         ]
         result = convert_strings_to_uuids(test_uuids)
 
@@ -88,11 +88,7 @@ class TestConvertStringsToUuids:
 
     def test_convert_invalid_uuid_in_list_raises_error(self):
         """Test that one invalid UUID in a list raises ValueError."""
-        test_uuids = [
-            str(uuid.uuid4()),
-            "invalid-uuid",
-            str(uuid.uuid4())
-        ]
+        test_uuids = [str(uuid.uuid4()), "invalid-uuid", str(uuid.uuid4())]
 
         with pytest.raises(ValueError):
             convert_strings_to_uuids(test_uuids)

@@ -24,7 +24,7 @@ from crud.locations import (
     fetch_location_for_userid,
     add_location,
     edit_location,
-    delete_location
+    delete_location,
 )
 from crud.users import add_user
 
@@ -39,7 +39,7 @@ class TestLocationsCRUD:
             "name": "Athens Ground Station",
             "lat": 37.9838,
             "lon": 23.7275,
-            "alt": 170
+            "alt": 170,
         }
 
         result = await add_location(db_session, location_data)
@@ -56,12 +56,15 @@ class TestLocationsCRUD:
     async def test_add_location_with_userid(self, db_session):
         """Test creating location associated with a user."""
         # Create a user first
-        user_result = await add_user(db_session, {
-            "email": "user@example.com",
-            "password": "pass123",
-            "fullname": "Test User",
-            "status": "active"
-        })
+        user_result = await add_user(
+            db_session,
+            {
+                "email": "user@example.com",
+                "password": "pass123",
+                "fullname": "Test User",
+                "status": "active",
+            },
+        )
         user_id = user_result["data"]["id"]
 
         location_data = {
@@ -69,7 +72,7 @@ class TestLocationsCRUD:
             "userid": user_id,
             "lat": 40.7128,
             "lon": -74.0060,
-            "alt": 10
+            "alt": 10,
         }
 
         result = await add_location(db_session, location_data)
@@ -79,12 +82,9 @@ class TestLocationsCRUD:
 
     async def test_fetch_location_by_id(self, db_session):
         """Test fetching a single location by ID."""
-        add_result = await add_location(db_session, {
-            "name": "Test Location",
-            "lat": 51.5074,
-            "lon": -0.1278,
-            "alt": 11
-        })
+        add_result = await add_location(
+            db_session, {"name": "Test Location", "lat": 51.5074, "lon": -0.1278, "alt": 11}
+        )
 
         location_id = add_result["data"]["id"]
         result = await fetch_location(db_session, location_id)
@@ -95,12 +95,9 @@ class TestLocationsCRUD:
 
     async def test_fetch_location_by_string_id(self, db_session):
         """Test fetching location with string UUID."""
-        add_result = await add_location(db_session, {
-            "name": "Test Location",
-            "lat": 48.8566,
-            "lon": 2.3522,
-            "alt": 35
-        })
+        add_result = await add_location(
+            db_session, {"name": "Test Location", "lat": 48.8566, "lon": 2.3522, "alt": 35}
+        )
 
         location_id = str(add_result["data"]["id"])
         result = await fetch_location(db_session, location_id)
@@ -119,29 +116,26 @@ class TestLocationsCRUD:
     async def test_fetch_locations_for_user(self, db_session):
         """Test fetching all locations for a specific user."""
         # Create a user
-        user_result = await add_user(db_session, {
-            "email": "user@example.com",
-            "password": "pass123",
-            "fullname": "Test User",
-            "status": "active"
-        })
+        user_result = await add_user(
+            db_session,
+            {
+                "email": "user@example.com",
+                "password": "pass123",
+                "fullname": "Test User",
+                "status": "active",
+            },
+        )
         user_id = user_result["data"]["id"]
 
         # Add multiple locations for this user
-        await add_location(db_session, {
-            "name": "Location 1",
-            "userid": user_id,
-            "lat": 40.0,
-            "lon": -74.0,
-            "alt": 10
-        })
-        await add_location(db_session, {
-            "name": "Location 2",
-            "userid": user_id,
-            "lat": 41.0,
-            "lon": -75.0,
-            "alt": 20
-        })
+        await add_location(
+            db_session,
+            {"name": "Location 1", "userid": user_id, "lat": 40.0, "lon": -74.0, "alt": 10},
+        )
+        await add_location(
+            db_session,
+            {"name": "Location 2", "userid": user_id, "lat": 41.0, "lon": -75.0, "alt": 20},
+        )
 
         result = await fetch_location_for_userid(db_session, user_id)
 
@@ -152,12 +146,9 @@ class TestLocationsCRUD:
     async def test_fetch_locations_without_userid(self, db_session):
         """Test fetching locations with no user association."""
         # Add location without userid
-        await add_location(db_session, {
-            "name": "Public Location",
-            "lat": 35.0,
-            "lon": -120.0,
-            "alt": 50
-        })
+        await add_location(
+            db_session, {"name": "Public Location", "lat": 35.0, "lon": -120.0, "alt": 50}
+        )
 
         result = await fetch_location_for_userid(db_session, user_id=None)
 
@@ -165,21 +156,13 @@ class TestLocationsCRUD:
 
     async def test_edit_location_success(self, db_session):
         """Test successful location editing."""
-        add_result = await add_location(db_session, {
-            "name": "Old Name",
-            "lat": 40.0,
-            "lon": -74.0,
-            "alt": 10
-        })
+        add_result = await add_location(
+            db_session, {"name": "Old Name", "lat": 40.0, "lon": -74.0, "alt": 10}
+        )
 
         location_id = add_result["data"]["id"]
 
-        edit_data = {
-            "id": location_id,
-            "name": "New Name",
-            "lat": 40.5,
-            "alt": 15
-        }
+        edit_data = {"id": location_id, "name": "New Name", "lat": 40.5, "alt": 15}
 
         result = await edit_location(db_session, edit_data)
 
@@ -191,9 +174,7 @@ class TestLocationsCRUD:
 
     async def test_edit_location_missing_id(self, db_session):
         """Test editing without location ID."""
-        edit_data = {
-            "name": "New Name"
-        }
+        edit_data = {"name": "New Name"}
 
         result = await edit_location(db_session, edit_data)
 
@@ -203,10 +184,7 @@ class TestLocationsCRUD:
     async def test_edit_location_not_found(self, db_session):
         """Test editing non-existent location."""
         fake_id = uuid.uuid4()
-        edit_data = {
-            "id": fake_id,
-            "name": "New Name"
-        }
+        edit_data = {"id": fake_id, "name": "New Name"}
 
         result = await edit_location(db_session, edit_data)
 
@@ -215,12 +193,9 @@ class TestLocationsCRUD:
 
     async def test_edit_location_removes_timestamps(self, db_session):
         """Test that edit removes added/updated from data."""
-        add_result = await add_location(db_session, {
-            "name": "Test Location",
-            "lat": 40.0,
-            "lon": -74.0,
-            "alt": 10
-        })
+        add_result = await add_location(
+            db_session, {"name": "Test Location", "lat": 40.0, "lon": -74.0, "alt": 10}
+        )
 
         location_id = add_result["data"]["id"]
 
@@ -229,7 +204,7 @@ class TestLocationsCRUD:
             "id": location_id,
             "name": "Updated Name",
             "added": "2020-01-01",
-            "updated": "2020-01-01"
+            "updated": "2020-01-01",
         }
 
         result = await edit_location(db_session, edit_data)
@@ -240,12 +215,9 @@ class TestLocationsCRUD:
 
     async def test_delete_location_success(self, db_session):
         """Test successful location deletion."""
-        add_result = await add_location(db_session, {
-            "name": "To Delete",
-            "lat": 40.0,
-            "lon": -74.0,
-            "alt": 10
-        })
+        add_result = await add_location(
+            db_session, {"name": "To Delete", "lat": 40.0, "lon": -74.0, "alt": 10}
+        )
 
         location_id = add_result["data"]["id"]
         result = await delete_location(db_session, location_id)
@@ -270,7 +242,7 @@ class TestLocationsCRUD:
             "name": "Precise Location",
             "lat": 37.98376543,
             "lon": 23.72754321,
-            "alt": 170
+            "alt": 170,
         }
 
         result = await add_location(db_session, location_data)
@@ -285,7 +257,7 @@ class TestLocationsCRUD:
             "name": "Dead Sea Station",
             "lat": 31.5,
             "lon": 35.5,
-            "alt": -430  # Dead Sea is ~430m below sea level
+            "alt": -430,  # Dead Sea is ~430m below sea level
         }
 
         result = await add_location(db_session, location_data)

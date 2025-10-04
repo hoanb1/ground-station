@@ -22,8 +22,13 @@ from skyfield.api import EarthSatellite, load, wgs84
 from datetime import datetime
 
 
-def get_satellite_az_el(home_lat: float, home_lon: float, satellite_tle_line1: str, satellite_tle_line2: str,
-                        observation_time: datetime) -> Tuple[float, float]:
+def get_satellite_az_el(
+    home_lat: float,
+    home_lon: float,
+    satellite_tle_line1: str,
+    satellite_tle_line2: str,
+    observation_time: datetime,
+) -> Tuple[float, float]:
     """
     Given a home location (latitude, longitude), a satellite TLE (two-line element),
     and a specific observation time, this function returns the
@@ -103,12 +108,13 @@ def get_satellite_position_from_tle(tle_lines):
         "lat": float(lat_degrees),
         "lon": float(lon_degrees),
         "alt": float(altitude_m),
-        "vel": float(velocity_km_s)
+        "vel": float(velocity_km_s),
     }
 
 
-def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: float = 1.0) -> Dict[
-    str, List[List[Dict[str, float]]]]:
+def get_satellite_path(
+    tle: List[str], duration_minutes: float, step_minutes: float = 1.0
+) -> Dict[str, List[List[Dict[str, float]]]]:
     """
     Computes the satellite's past and future path coordinates from its TLE.
     The path is computed at a fixed time step and then split into segments so that
@@ -136,12 +142,13 @@ def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: fl
         if len(tle) != 2:
             raise ValueError("TLE must contain exactly two lines")
 
-        satellite = EarthSatellite(tle[0], tle[1], 'Satellite', ts)
+        satellite = EarthSatellite(tle[0], tle[1], "Satellite", ts)
 
         # Get current time
         now = datetime.now(UTC)
-        now_time = ts.utc(now.year, now.month, now.day,
-                          now.hour, now.minute, now.second + now.microsecond / 1e6)
+        now_time = ts.utc(
+            now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond / 1e6
+        )
 
         past_points = []
         future_points = []
@@ -152,8 +159,14 @@ def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: fl
         current = past_start
 
         while current <= now:
-            time = ts.utc(current.year, current.month, current.day,
-                          current.hour, current.minute, current.second + current.microsecond / 1e6)
+            time = ts.utc(
+                current.year,
+                current.month,
+                current.day,
+                current.hour,
+                current.minute,
+                current.second + current.microsecond / 1e6,
+            )
 
             geocentric = satellite.at(time)
             subpoint = wgs84.subpoint(geocentric)
@@ -161,7 +174,7 @@ def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: fl
             lat = float(subpoint.latitude.degrees)
             lon = normalize_longitude(float(subpoint.longitude.degrees))
 
-            past_points.append({'lat': lat, 'lon': lon})
+            past_points.append({"lat": lat, "lon": lon})
             current += step_td
 
         # Compute future points: from now up to (now + durationMinutes) (inclusive)
@@ -169,8 +182,14 @@ def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: fl
         current = now
 
         while current <= future_end:
-            time = ts.utc(current.year, current.month, current.day,
-                          current.hour, current.minute, current.second + current.microsecond / 1e6)
+            time = ts.utc(
+                current.year,
+                current.month,
+                current.day,
+                current.hour,
+                current.minute,
+                current.second + current.microsecond / 1e6,
+            )
 
             geocentric = satellite.at(time)
             subpoint = wgs84.subpoint(geocentric)
@@ -178,18 +197,18 @@ def get_satellite_path(tle: List[str], duration_minutes: float, step_minutes: fl
             lat = float(subpoint.latitude.degrees)
             lon = normalize_longitude(float(subpoint.longitude.degrees))
 
-            future_points.append({'lat': lat, 'lon': lon})
+            future_points.append({"lat": lat, "lon": lon})
             current += step_td
 
         # Split the past and future arrays into segments to avoid drawing lines across the dateline
         past_segments = split_at_dateline(past_points)
         future_segments = split_at_dateline(future_points)
 
-        return {'past': past_segments, 'future': future_segments}
+        return {"past": past_segments, "future": future_segments}
 
     except Exception as e:
         print(f"Error computing satellite paths: {str(e)}")
-        return {'past': [], 'future': []}
+        return {"past": [], "future": []}
 
 
 def normalize_longitude(lon: float) -> float:
@@ -231,7 +250,7 @@ def split_at_dateline(points: List[Dict[str, float]]) -> List[List[Dict[str, flo
         current_point = points[i]
 
         # Check if we cross the dateline (large longitude change)
-        if abs(current_point['lon'] - prev_point['lon']) > 180:
+        if abs(current_point["lon"] - prev_point["lon"]) > 180:
             # End the current segment
             segments.append(current_segment)
             # Start a new segment

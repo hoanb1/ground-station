@@ -25,13 +25,13 @@ uhd = None
 try:
     # Add common UHD installation paths
     uhd_paths = [
-        '/usr/local/lib/python3.12/site-packages',
-        '/usr/lib/python3/dist-packages',
-        '/opt/uhd/lib/python3.12/site-packages'
+        "/usr/local/lib/python3.12/site-packages",
+        "/usr/lib/python3/dist-packages",
+        "/opt/uhd/lib/python3.12/site-packages",
     ]
 
     for path in uhd_paths:
-        if os.path.exists(os.path.join(path, 'uhd')) and path not in sys.path:
+        if os.path.exists(os.path.join(path, "uhd")) and path not in sys.path:
             sys.path.insert(0, path)
             break
 
@@ -41,14 +41,13 @@ except ImportError as e:
 
 # Load logger configuration
 try:
-    with open(os.path.join(os.path.dirname(__file__), '../logconfig.yaml'), 'r') as f:
+    with open(os.path.join(os.path.dirname(__file__), "../logconfig.yaml"), "r") as f:
         config = yaml.safe_load(f)
         logging.config.dictConfig(config)
 except Exception as e:
     logging.basicConfig(level=logging.INFO)
 
-logger = logging.getLogger('uhd-probe')
-
+logger = logging.getLogger("uhd-probe")
 
 
 def probe_local_uhd_usrp(sdr_details):
@@ -71,29 +70,31 @@ def probe_local_uhd_usrp(sdr_details):
             - clock_info: Information about reference clock status and source
     """
 
-    reply: dict = {'success': None, 'data': None, 'error': None, 'log': []}
+    reply: dict = {"success": None, "data": None, "error": None, "log": []}
 
     if uhd is None:
-        reply['success'] = False
-        reply['error'] = "UHD library not available"
-        reply['log'].append("ERROR: UHD library not found. Please ensure UHD Python bindings are installed.")
+        reply["success"] = False
+        reply["error"] = "UHD library not available"
+        reply["log"].append(
+            "ERROR: UHD library not found. Please ensure UHD Python bindings are installed."
+        )
         return reply
 
     rates = []
     gains = []
     has_agc = False
-    antennas = {'rx': [], 'tx': []}
+    antennas = {"rx": [], "tx": []}
     frequency_ranges = {}
     clock_info = {}
 
-    reply['log'].append(f"INFO: Connecting to local UHD/USRP device with details: {sdr_details}")
+    reply["log"].append(f"INFO: Connecting to local UHD/USRP device with details: {sdr_details}")
 
     usrp = None
     try:
         # Get device parameters
-        base_device_args = sdr_details.get('device_args', '')
-        serial_number = sdr_details.get('serial', '')
-        channel = sdr_details.get('channel', 0)
+        base_device_args = sdr_details.get("device_args", "")
+        serial_number = sdr_details.get("serial", "")
+        channel = sdr_details.get("channel", 0)
 
         # Construct device arguments, incorporating serial number
         device_args = base_device_args
@@ -107,15 +108,15 @@ def probe_local_uhd_usrp(sdr_details):
                 # If no existing args, just use serial
                 device_args = f"serial={serial_number}"
 
-        reply['log'].append(f"INFO: Using device args: '{device_args}', channel: {channel}")
+        reply["log"].append(f"INFO: Using device args: '{device_args}', channel: {channel}")
 
         # Create the USRP device instance
         usrp = uhd.usrp.MultiUSRP(device_args)
 
         # Get device information
         device_info = usrp.get_pp_string()
-        reply['log'].append(f"INFO: Connected to device: {usrp.get_mboard_name()}")
-        reply['log'].append(f"INFO: RX Subdevice: {usrp.get_rx_subdev_name(channel)}")
+        reply["log"].append(f"INFO: Connected to device: {usrp.get_mboard_name()}")
+        reply["log"].append(f"INFO: RX Subdevice: {usrp.get_rx_subdev_name(channel)}")
 
         # Verify we connected to the correct device by checking serial if specified
         if serial_number:
@@ -124,22 +125,24 @@ def probe_local_uhd_usrp(sdr_details):
                 try:
                     # Method 1: Try getting from mboard sensor
                     connected_serial = usrp.get_mboard_sensor("serial", 0).value
-                    reply['log'].append(f"INFO: Connected device serial: {connected_serial}")
+                    reply["log"].append(f"INFO: Connected device serial: {connected_serial}")
                 except:
                     # Method 2: Try getting from device args in pp_string
                     pp_string = usrp.get_pp_string()
                     if "serial=" in pp_string:
                         # Extract serial from the pretty print string
-                        lines = pp_string.split('\n')
+                        lines = pp_string.split("\n")
                         for line in lines:
-                            if 'serial' in line.lower():
-                                reply['log'].append(f"INFO: Device info contains: {line.strip()}")
+                            if "serial" in line.lower():
+                                reply["log"].append(f"INFO: Device info contains: {line.strip()}")
                                 break
                     else:
-                        reply['log'].append("INFO: Serial verification skipped - not available in device info")
+                        reply["log"].append(
+                            "INFO: Serial verification skipped - not available in device info"
+                        )
 
             except Exception as e:
-                reply['log'].append(f"INFO: Could not verify device serial number: {e}")
+                reply["log"].append(f"INFO: Could not verify device serial number: {e}")
 
         # Get sample rates - Fix the meta_range_t iteration issue
         try:
@@ -155,19 +158,43 @@ def probe_local_uhd_usrp(sdr_details):
                 # If not iterable, it might be a meta_range_t object
                 # For USRP devices, generate standard decimation-based rates
                 master_clock_rate = usrp.get_master_clock_rate()
-                reply['log'].append(f"INFO: Master clock rate: {master_clock_rate} Hz")
+                reply["log"].append(f"INFO: Master clock rate: {master_clock_rate} Hz")
 
                 # Get min/max from range if available
                 min_rate = None
                 max_rate = None
-                if hasattr(rate_range, 'start') and hasattr(rate_range, 'stop'):
+                if hasattr(rate_range, "start") and hasattr(rate_range, "stop"):
                     min_rate = rate_range.start()
                     max_rate = rate_range.stop()
-                    reply['log'].append(f"INFO: Rate range: {min_rate} to {max_rate} Hz")
+                    reply["log"].append(f"INFO: Rate range: {min_rate} to {max_rate} Hz")
 
                 # Generate standard USRP sample rates based on decimation
                 # Common decimation factors for USRP B210 series
-                decimations = [4, 5, 8, 10, 16, 20, 25, 32, 40, 50, 64, 80, 100, 128, 160, 200, 256, 320, 400, 512, 640, 800, 1024]
+                decimations = [
+                    4,
+                    5,
+                    8,
+                    10,
+                    16,
+                    20,
+                    25,
+                    32,
+                    40,
+                    50,
+                    64,
+                    80,
+                    100,
+                    128,
+                    160,
+                    200,
+                    256,
+                    320,
+                    400,
+                    512,
+                    640,
+                    800,
+                    1024,
+                ]
 
                 for dec in decimations:
                     rate = int(master_clock_rate / dec)
@@ -183,8 +210,19 @@ def probe_local_uhd_usrp(sdr_details):
 
                 # Add some common standard rates that might not be covered by decimation
                 standard_rates = [
-                    20000000, 16000000, 10000000, 8000000, 5000000, 4000000,
-                    2000000, 1000000, 800000, 500000, 400000, 250000, 200000
+                    20000000,
+                    16000000,
+                    10000000,
+                    8000000,
+                    5000000,
+                    4000000,
+                    2000000,
+                    1000000,
+                    800000,
+                    500000,
+                    400000,
+                    250000,
+                    200000,
                 ]
 
                 for rate in standard_rates:
@@ -197,24 +235,56 @@ def probe_local_uhd_usrp(sdr_details):
 
             if not rates:
                 # Final fallback: use common USRP B210 rates
-                reply['log'].append("INFO: Using fallback sample rates")
+                reply["log"].append("INFO: Using fallback sample rates")
                 rates = [
-                    20000000, 16000000, 10000000, 8000000, 5000000, 4000000,
-                    2000000, 1600000, 1000000, 800000, 500000, 400000,
-                    320000, 250000, 200000, 160000, 125000, 100000, 80000
+                    20000000,
+                    16000000,
+                    10000000,
+                    8000000,
+                    5000000,
+                    4000000,
+                    2000000,
+                    1600000,
+                    1000000,
+                    800000,
+                    500000,
+                    400000,
+                    320000,
+                    250000,
+                    200000,
+                    160000,
+                    125000,
+                    100000,
+                    80000,
                 ]
 
             # Remove duplicates and sort
             rates = sorted(list(set(rates)), reverse=True)  # Sort from highest to lowest
-            reply['log'].append(f"INFO: Found {len(rates)} sample rates")
+            reply["log"].append(f"INFO: Found {len(rates)} sample rates")
 
         except Exception as e:
-            reply['log'].append(f"WARNING: Could not get sample rates: {e}")
+            reply["log"].append(f"WARNING: Could not get sample rates: {e}")
             # Fallback to common USRP B210 rates
             rates = [
-                20000000, 16000000, 10000000, 8000000, 5000000, 4000000,
-                2000000, 1600000, 1000000, 800000, 500000, 400000,
-                320000, 250000, 200000, 160000, 125000, 100000, 80000
+                20000000,
+                16000000,
+                10000000,
+                8000000,
+                5000000,
+                4000000,
+                2000000,
+                1600000,
+                1000000,
+                800000,
+                500000,
+                400000,
+                320000,
+                250000,
+                200000,
+                160000,
+                125000,
+                100000,
+                80000,
             ]
 
         # Get gain values
@@ -227,7 +297,7 @@ def probe_local_uhd_usrp(sdr_details):
             if step <= 0:
                 step = 1.0  # Default step if not specified or invalid
 
-            reply['log'].append(f"INFO: Gain range: {min_gain} to {max_gain} dB, step: {step} dB")
+            reply["log"].append(f"INFO: Gain range: {min_gain} to {max_gain} dB, step: {step} dB")
 
             # Generate gain values
             current = min_gain
@@ -244,7 +314,7 @@ def probe_local_uhd_usrp(sdr_details):
                 gains.append(round(float(max_gain), 1))
 
         except Exception as e:
-            reply['log'].append(f"WARNING: Could not get gain range: {e}")
+            reply["log"].append(f"WARNING: Could not get gain range: {e}")
             # Fallback to common USRP gain values
             gains = [0, 5, 10, 15, 20, 25, 30, 35, 40, 45, 50, 55, 60, 65, 70, 75]
 
@@ -253,147 +323,158 @@ def probe_local_uhd_usrp(sdr_details):
         try:
             # Some USRPs might have AGC capability through specific gain elements
             gain_names = usrp.get_rx_gain_names(channel)
-            reply['log'].append(f"INFO: Available gain elements: {list(gain_names)}")
+            reply["log"].append(f"INFO: Available gain elements: {list(gain_names)}")
             # Most USRPs don't have built-in AGC, this is typically handled in software
         except Exception as e:
-            reply['log'].append(f"INFO: Could not get gain element names: {e}")
+            reply["log"].append(f"INFO: Could not get gain element names: {e}")
 
         # Get antenna information
         try:
             # Get RX antennas
             rx_antennas = usrp.get_rx_antennas(channel)
-            antennas['rx'] = list(rx_antennas)
-            reply['log'].append(f"INFO: RX Antennas: {antennas['rx']}")
+            antennas["rx"] = list(rx_antennas)
+            reply["log"].append(f"INFO: RX Antennas: {antennas['rx']}")
 
             # Get TX antennas if available
             try:
                 tx_antennas = usrp.get_tx_antennas(channel)
-                antennas['tx'] = list(tx_antennas)
-                reply['log'].append(f"INFO: TX Antennas: {antennas['tx']}")
+                antennas["tx"] = list(tx_antennas)
+                reply["log"].append(f"INFO: TX Antennas: {antennas['tx']}")
             except Exception as e:
-                reply['log'].append(f"INFO: TX antennas not available or accessible: {e}")
-                antennas['tx'] = []
+                reply["log"].append(f"INFO: TX antennas not available or accessible: {e}")
+                antennas["tx"] = []
 
         except Exception as e:
-            reply['log'].append(f"WARNING: Could not get antenna information: {e}")
+            reply["log"].append(f"WARNING: Could not get antenna information: {e}")
 
         # Get frequency range information
         try:
             # Get RX frequency range
             rx_freq_range = usrp.get_rx_freq_range(channel)
-            frequency_ranges['rx'] = {
-                'min': rx_freq_range.start() / 1e6,  # Convert to MHz
-                'max': rx_freq_range.stop() / 1e6,   # Convert to MHz
-                'step': rx_freq_range.step() / 1e6   # Convert to MHz
+            frequency_ranges["rx"] = {
+                "min": rx_freq_range.start() / 1e6,  # Convert to MHz
+                "max": rx_freq_range.stop() / 1e6,  # Convert to MHz
+                "step": rx_freq_range.step() / 1e6,  # Convert to MHz
             }
-            reply['log'].append(f"INFO: RX frequency range: {frequency_ranges['rx']['min']:.1f} - {frequency_ranges['rx']['max']:.1f} MHz")
+            reply["log"].append(
+                f"INFO: RX frequency range: {frequency_ranges['rx']['min']:.1f} - {frequency_ranges['rx']['max']:.1f} MHz"
+            )
 
             # Try to get TX frequency range if available
             try:
                 tx_freq_range = usrp.get_tx_freq_range(channel)
-                frequency_ranges['tx'] = {
-                    'min': tx_freq_range.start() / 1e6,  # Convert to MHz
-                    'max': tx_freq_range.stop() / 1e6,   # Convert to MHz
-                    'step': tx_freq_range.step() / 1e6   # Convert to MHz
+                frequency_ranges["tx"] = {
+                    "min": tx_freq_range.start() / 1e6,  # Convert to MHz
+                    "max": tx_freq_range.stop() / 1e6,  # Convert to MHz
+                    "step": tx_freq_range.step() / 1e6,  # Convert to MHz
                 }
-                reply['log'].append(f"INFO: TX frequency range: {frequency_ranges['tx']['min']:.1f} - {frequency_ranges['tx']['max']:.1f} MHz")
+                reply["log"].append(
+                    f"INFO: TX frequency range: {frequency_ranges['tx']['min']:.1f} - {frequency_ranges['tx']['max']:.1f} MHz"
+                )
             except Exception as e:
-                reply['log'].append(f"INFO: TX frequency range not available: {e}")
+                reply["log"].append(f"INFO: TX frequency range not available: {e}")
 
         except Exception as e:
-            reply['log'].append(f"WARNING: Could not get frequency range information: {e}")
+            reply["log"].append(f"WARNING: Could not get frequency range information: {e}")
 
         # Get clock and time source information
         try:
             clock_info = {
-                'ref_locked': None,
-                'clock_source': None,
-                'time_source': None,
-                'available_clock_sources': [],
-                'available_time_sources': [],
-                'master_clock_rate': None
+                "ref_locked": None,
+                "clock_source": None,
+                "time_source": None,
+                "available_clock_sources": [],
+                "available_time_sources": [],
+                "master_clock_rate": None,
             }
 
             # Get available clock sources
             try:
                 clock_sources = usrp.get_clock_sources(0)  # mboard 0
-                clock_info['available_clock_sources'] = list(clock_sources)
-                reply['log'].append(f"INFO: Available clock sources: {clock_info['available_clock_sources']}")
+                clock_info["available_clock_sources"] = list(clock_sources)
+                reply["log"].append(
+                    f"INFO: Available clock sources: {clock_info['available_clock_sources']}"
+                )
             except Exception as e:
-                reply['log'].append(f"INFO: Could not get clock sources: {e}")
+                reply["log"].append(f"INFO: Could not get clock sources: {e}")
 
             # Get current clock source
             try:
                 current_clock_source = usrp.get_clock_source(0)  # mboard 0
-                clock_info['clock_source'] = current_clock_source
-                reply['log'].append(f"INFO: Current clock source: {current_clock_source}")
+                clock_info["clock_source"] = current_clock_source
+                reply["log"].append(f"INFO: Current clock source: {current_clock_source}")
             except Exception as e:
-                reply['log'].append(f"INFO: Could not get current clock source: {e}")
+                reply["log"].append(f"INFO: Could not get current clock source: {e}")
 
             # Get available time sources
             try:
                 time_sources = usrp.get_time_sources(0)  # mboard 0
-                clock_info['available_time_sources'] = list(time_sources)
-                reply['log'].append(f"INFO: Available time sources: {clock_info['available_time_sources']}")
+                clock_info["available_time_sources"] = list(time_sources)
+                reply["log"].append(
+                    f"INFO: Available time sources: {clock_info['available_time_sources']}"
+                )
             except Exception as e:
-                reply['log'].append(f"INFO: Could not get time sources: {e}")
+                reply["log"].append(f"INFO: Could not get time sources: {e}")
 
             # Get current time source
             try:
                 current_time_source = usrp.get_time_source(0)  # mboard 0
-                clock_info['time_source'] = current_time_source
-                reply['log'].append(f"INFO: Current time source: {current_time_source}")
+                clock_info["time_source"] = current_time_source
+                reply["log"].append(f"INFO: Current time source: {current_time_source}")
             except Exception as e:
-                reply['log'].append(f"INFO: Could not get current time source: {e}")
+                reply["log"].append(f"INFO: Could not get current time source: {e}")
 
             # Get master clock rate
             try:
                 master_clock_rate = usrp.get_master_clock_rate()
-                clock_info['master_clock_rate'] = master_clock_rate
-                reply['log'].append(f"INFO: Master clock rate: {master_clock_rate} Hz")
+                clock_info["master_clock_rate"] = master_clock_rate
+                reply["log"].append(f"INFO: Master clock rate: {master_clock_rate} Hz")
             except Exception as e:
-                reply['log'].append(f"INFO: Could not get master clock rate: {e}")
+                reply["log"].append(f"INFO: Could not get master clock rate: {e}")
 
             # Check reference lock status (if external reference is used)
             try:
-                if 'external' in clock_info.get('clock_source', '').lower():
+                if "external" in clock_info.get("clock_source", "").lower():
                     # Try to get lock status - this varies by USRP model
                     try:
                         # Some USRPs have a ref_locked sensor
                         sensors = usrp.get_mboard_sensor_names(0)
-                        if 'ref_locked' in sensors:
-                            ref_locked = usrp.get_mboard_sensor('ref_locked', 0)
-                            clock_info['ref_locked'] = ref_locked.to_bool()
-                            reply['log'].append(f"INFO: Reference locked: {clock_info['ref_locked']}")
+                        if "ref_locked" in sensors:
+                            ref_locked = usrp.get_mboard_sensor("ref_locked", 0)
+                            clock_info["ref_locked"] = ref_locked.to_bool()
+                            reply["log"].append(
+                                f"INFO: Reference locked: {clock_info['ref_locked']}"
+                            )
                         else:
-                            reply['log'].append("INFO: Reference lock sensor not available")
+                            reply["log"].append("INFO: Reference lock sensor not available")
                     except Exception as e:
-                        reply['log'].append(f"INFO: Could not check reference lock status: {e}")
+                        reply["log"].append(f"INFO: Could not check reference lock status: {e}")
             except Exception as e:
-                reply['log'].append(f"INFO: Could not check reference configuration: {e}")
+                reply["log"].append(f"INFO: Could not check reference configuration: {e}")
 
         except Exception as e:
-            reply['log'].append(f"WARNING: Could not get clock/time source information: {e}")
+            reply["log"].append(f"WARNING: Could not get clock/time source information: {e}")
 
-        reply['success'] = True
+        reply["success"] = True
 
     except Exception as e:
-        reply['log'].append(f"ERROR: Error connecting to UHD/USRP device: {str(e)}")
-        reply['success'] = False
-        reply['error'] = str(e)
+        reply["log"].append(f"ERROR: Error connecting to UHD/USRP device: {str(e)}")
+        reply["success"] = False
+        reply["error"] = str(e)
 
     finally:
         # Clean up - UHD handles device cleanup automatically
-        reply['data'] = {
-            'rates': sorted(rates, reverse=True),  # Sort from highest to lowest like SoapySDR
-            'gains': gains,
-            'has_uhd_agc': has_agc,
-            'antennas': antennas,
-            'frequency_ranges': frequency_ranges,
-            'clock_info': clock_info
+        reply["data"] = {
+            "rates": sorted(rates, reverse=True),  # Sort from highest to lowest like SoapySDR
+            "gains": gains,
+            "has_uhd_agc": has_agc,
+            "antennas": antennas,
+            "frequency_ranges": frequency_ranges,
+            "clock_info": clock_info,
         }
 
     return reply
+
 
 # For compatibility with the utils.py import structure
 def probe_uhd_usrp(sdr_details):

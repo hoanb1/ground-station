@@ -20,8 +20,12 @@ Unit tests for satellite CRUD operations.
 import pytest
 import uuid
 from crud.satellites import (
-    fetch_satellites, add_satellite, edit_satellite, delete_satellite, search_satellites,
-    fetch_satellites_for_group_id
+    fetch_satellites,
+    add_satellite,
+    edit_satellite,
+    delete_satellite,
+    search_satellites,
+    fetch_satellites_for_group_id,
 )
 from crud.groups import add_satellite_group
 
@@ -46,7 +50,7 @@ class TestSatellitesCRUD:
             "name_other": "International Space Station",
             "alternative_name": "ISS",
             "tle1": "1 25544U 98067A   21001.00000000  .00002182  00000-0  41420-4 0  9990",
-            "tle2": "2 25544  51.6461 339.8014 0002571  34.5857  54.2426 15.48919393261778"
+            "tle2": "2 25544  51.6461 339.8014 0002571  34.5857  54.2426 15.48919393261778",
         }
 
         result = await add_satellite(db_session, satellite_data)
@@ -75,18 +79,30 @@ class TestSatellitesCRUD:
     async def test_fetch_satellites_all(self, db_session):
         """Test fetching all satellites."""
         # Add two satellites
-        await add_satellite(db_session, {
-            "name": "Satellite 1", "sat_id": "SAT-001", "norad_id": 11111,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=11111),
-            "tle2": TLE2_TEMPLATE.format(norad=11111)
-        })
-        await add_satellite(db_session, {
-            "name": "Satellite 2", "sat_id": "SAT-002", "norad_id": 22222,
-            "status": "dead", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=22222),
-            "tle2": TLE2_TEMPLATE.format(norad=22222)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Satellite 1",
+                "sat_id": "SAT-001",
+                "norad_id": 11111,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=11111),
+                "tle2": TLE2_TEMPLATE.format(norad=11111),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Satellite 2",
+                "sat_id": "SAT-002",
+                "norad_id": 22222,
+                "status": "dead",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=22222),
+                "tle2": TLE2_TEMPLATE.format(norad=22222),
+            },
+        )
 
         result = await fetch_satellites(db_session, norad_id=None)
 
@@ -95,12 +111,18 @@ class TestSatellitesCRUD:
 
     async def test_fetch_satellite_by_norad_id(self, db_session):
         """Test fetching a single satellite by NORAD ID."""
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 99999,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=99999),
-            "tle2": TLE2_TEMPLATE.format(norad=99999)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 99999,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=99999),
+                "tle2": TLE2_TEMPLATE.format(norad=99999),
+            },
+        )
 
         result = await fetch_satellites(db_session, norad_id=99999)
 
@@ -110,24 +132,42 @@ class TestSatellitesCRUD:
 
     async def test_fetch_satellites_by_list(self, db_session):
         """Test fetching multiple satellites by NORAD ID list."""
-        await add_satellite(db_session, {
-            "name": "Sat 1", "sat_id": "SAT-001", "norad_id": 11111,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=11111),
-            "tle2": TLE2_TEMPLATE.format(norad=11111)
-        })
-        await add_satellite(db_session, {
-            "name": "Sat 2", "sat_id": "SAT-002", "norad_id": 22222,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=22222),
-            "tle2": TLE2_TEMPLATE.format(norad=22222)
-        })
-        await add_satellite(db_session, {
-            "name": "Sat 3", "sat_id": "SAT-003", "norad_id": 33333,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=33333),
-            "tle2": TLE2_TEMPLATE.format(norad=33333)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 1",
+                "sat_id": "SAT-001",
+                "norad_id": 11111,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=11111),
+                "tle2": TLE2_TEMPLATE.format(norad=11111),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 2",
+                "sat_id": "SAT-002",
+                "norad_id": 22222,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=22222),
+                "tle2": TLE2_TEMPLATE.format(norad=22222),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 3",
+                "sat_id": "SAT-003",
+                "norad_id": 33333,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=33333),
+                "tle2": TLE2_TEMPLATE.format(norad=33333),
+            },
+        )
 
         result = await fetch_satellites(db_session, norad_id=[11111, 33333])
 
@@ -140,18 +180,30 @@ class TestSatellitesCRUD:
 
     async def test_search_satellites_by_name(self, db_session):
         """Test searching satellites by name."""
-        await add_satellite(db_session, {
-            "name": "International Space Station", "sat_id": "ISS-001",
-            "norad_id": 25544, "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
-        await add_satellite(db_session, {
-            "name": "NOAA 19", "sat_id": "NOAA-19", "norad_id": 33591,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=33591),
-            "tle2": TLE2_TEMPLATE.format(norad=33591)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "International Space Station",
+                "sat_id": "ISS-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "NOAA 19",
+                "sat_id": "NOAA-19",
+                "norad_id": 33591,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=33591),
+                "tle2": TLE2_TEMPLATE.format(norad=33591),
+            },
+        )
 
         result = await search_satellites(db_session, keyword="space")
 
@@ -161,24 +213,42 @@ class TestSatellitesCRUD:
 
     async def test_search_satellites_by_norad_id_partial(self, db_session):
         """Test searching satellites by partial NORAD ID."""
-        await add_satellite(db_session, {
-            "name": "Sat 1", "sat_id": "SAT-001", "norad_id": 12345,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=12345),
-            "tle2": TLE2_TEMPLATE.format(norad=12345)
-        })
-        await add_satellite(db_session, {
-            "name": "Sat 2", "sat_id": "SAT-002", "norad_id": 12367,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=12367),
-            "tle2": TLE2_TEMPLATE.format(norad=12367)
-        })
-        await add_satellite(db_session, {
-            "name": "Sat 3", "sat_id": "SAT-003", "norad_id": 99999,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=99999),
-            "tle2": TLE2_TEMPLATE.format(norad=99999)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 1",
+                "sat_id": "SAT-001",
+                "norad_id": 12345,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=12345),
+                "tle2": TLE2_TEMPLATE.format(norad=12345),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 2",
+                "sat_id": "SAT-002",
+                "norad_id": 12367,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=12367),
+                "tle2": TLE2_TEMPLATE.format(norad=12367),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 3",
+                "sat_id": "SAT-003",
+                "norad_id": 99999,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=99999),
+                "tle2": TLE2_TEMPLATE.format(norad=99999),
+            },
+        )
 
         result = await search_satellites(db_session, keyword="123")
 
@@ -187,18 +257,30 @@ class TestSatellitesCRUD:
 
     async def test_search_satellites_all(self, db_session):
         """Test searching all satellites when no keyword provided."""
-        await add_satellite(db_session, {
-            "name": "Sat 1", "sat_id": "SAT-001", "norad_id": 11111,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=11111),
-            "tle2": TLE2_TEMPLATE.format(norad=11111)
-        })
-        await add_satellite(db_session, {
-            "name": "Sat 2", "sat_id": "SAT-002", "norad_id": 22222,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=22222),
-            "tle2": TLE2_TEMPLATE.format(norad=22222)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 1",
+                "sat_id": "SAT-001",
+                "norad_id": 11111,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=11111),
+                "tle2": TLE2_TEMPLATE.format(norad=11111),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 2",
+                "sat_id": "SAT-002",
+                "norad_id": 22222,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=22222),
+                "tle2": TLE2_TEMPLATE.format(norad=22222),
+            },
+        )
 
         result = await search_satellites(db_session, keyword=None)
 
@@ -207,18 +289,21 @@ class TestSatellitesCRUD:
 
     async def test_edit_satellite_success(self, db_session):
         """Test successful satellite editing."""
-        await add_satellite(db_session, {
-            "name": "Old Name", "sat_id": "OLD-001", "norad_id": 12345,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=12345),
-            "tle2": TLE2_TEMPLATE.format(norad=12345)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Old Name",
+                "sat_id": "OLD-001",
+                "norad_id": 12345,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=12345),
+                "tle2": TLE2_TEMPLATE.format(norad=12345),
+            },
+        )
 
         result = await edit_satellite(
-            db_session,
-            satellite_id=12345,
-            name="New Name",
-            status="dead"
+            db_session, satellite_id=12345, name="New Name", status="dead"
         )
 
         assert result["success"] is True
@@ -228,23 +313,25 @@ class TestSatellitesCRUD:
 
     async def test_edit_satellite_not_found(self, db_session):
         """Test editing non-existent satellite."""
-        result = await edit_satellite(
-            db_session,
-            satellite_id=99999,
-            name="New Name"
-        )
+        result = await edit_satellite(db_session, satellite_id=99999, name="New Name")
 
         assert result["success"] is False
         assert "not found" in result["error"]
 
     async def test_delete_satellite_success(self, db_session):
         """Test successful satellite deletion."""
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 12345,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=12345),
-            "tle2": TLE2_TEMPLATE.format(norad=12345)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 12345,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=12345),
+                "tle2": TLE2_TEMPLATE.format(norad=12345),
+            },
+        )
 
         result = await delete_satellite(db_session, satellite_id=12345)
 
@@ -264,19 +351,23 @@ class TestSatellitesCRUD:
     async def test_search_satellites_with_groups(self, db_session):
         """Test that search includes group membership information."""
         # Add satellites
-        await add_satellite(db_session, {
-            "name": "ISS", "sat_id": "ISS-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": "1 25544U 98067A   21001.00000000  .00002182  00000-0  41420-4 0  9990",
-            "tle2": "2 25544  51.6461 339.8014 0002571  34.5857  54.2426 15.48919393261778"
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "ISS",
+                "sat_id": "ISS-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": "1 25544U 98067A   21001.00000000  .00002182  00000-0  41420-4 0  9990",
+                "tle2": "2 25544  51.6461 339.8014 0002571  34.5857  54.2426 15.48919393261778",
+            },
+        )
 
         # Add a group containing the satellite
-        await add_satellite_group(db_session, {
-            "name": "Manned Missions",
-            "type": "user",
-            "satellite_ids": [25544]
-        })
+        await add_satellite_group(
+            db_session, {"name": "Manned Missions", "type": "user", "satellite_ids": [25544]}
+        )
 
         result = await search_satellites(db_session, keyword="ISS")
 
@@ -289,25 +380,35 @@ class TestSatellitesCRUD:
     async def test_fetch_satellites_for_group_id(self, db_session):
         """Test fetching satellites by group ID."""
         # Add satellites
-        await add_satellite(db_session, {
-            "name": "Sat 1", "sat_id": "SAT-001", "norad_id": 11111,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=11111),
-            "tle2": TLE2_TEMPLATE.format(norad=11111)
-        })
-        await add_satellite(db_session, {
-            "name": "Sat 2", "sat_id": "SAT-002", "norad_id": 22222,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=22222),
-            "tle2": TLE2_TEMPLATE.format(norad=22222)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 1",
+                "sat_id": "SAT-001",
+                "norad_id": 11111,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=11111),
+                "tle2": TLE2_TEMPLATE.format(norad=11111),
+            },
+        )
+        await add_satellite(
+            db_session,
+            {
+                "name": "Sat 2",
+                "sat_id": "SAT-002",
+                "norad_id": 22222,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=22222),
+                "tle2": TLE2_TEMPLATE.format(norad=22222),
+            },
+        )
 
         # Add a group with both satellites
-        group_result = await add_satellite_group(db_session, {
-            "name": "Test Group",
-            "type": "user",
-            "satellite_ids": [11111, 22222]
-        })
+        group_result = await add_satellite_group(
+            db_session, {"name": "Test Group", "type": "user", "satellite_ids": [11111, 22222]}
+        )
 
         group_id = group_result["data"]["id"]
 
@@ -334,7 +435,7 @@ class TestSatellitesCRUD:
             "operator": "Test Operator",
             "countries": "USA, EU",
             "citation": "Test Citation",
-            "associated_satellites": "12345, 67890"
+            "associated_satellites": "12345, 67890",
         }
 
         result = await add_satellite(db_session, satellite_data)

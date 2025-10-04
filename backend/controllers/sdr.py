@@ -21,10 +21,10 @@ from common.arguments import arguments as args
 
 class SDRController:
     def __init__(
-            self,
-            sdr_details: None,
-            verbose: bool = False,
-            timeout: float = 3.0,
+        self,
+        sdr_details: None,
+        verbose: bool = False,
+        timeout: float = 3.0,
     ):
 
         assert sdr_details is not None, "SDR details must be provided"
@@ -41,14 +41,17 @@ class SDRController:
 
         # Setup init values from SDR details
         self.sdr_details = sdr_details
-        self.sdr_id = sdr_details['id']
-        self.sdr_name = sdr_details['name']
-        self.sdr_type = sdr_details['type']
-        self.sdr_serial = sdr_details['serial']
-        self.sdr_host = sdr_details['host']
-        self.sdr_port = sdr_details['port']
-        self.sdr_driver = sdr_details['driver']
-        self.frequency_range = {'min': sdr_details['frequency_min'], 'max': sdr_details['frequency_max']}
+        self.sdr_id = sdr_details["id"]
+        self.sdr_name = sdr_details["name"]
+        self.sdr_type = sdr_details["type"]
+        self.sdr_serial = sdr_details["serial"]
+        self.sdr_host = sdr_details["host"]
+        self.sdr_port = sdr_details["port"]
+        self.sdr_driver = sdr_details["driver"]
+        self.frequency_range = {
+            "min": sdr_details["frequency_min"],
+            "max": sdr_details["frequency_max"],
+        }
 
         self.logger.info(f"Initialized SDRController for SDR with id {self.sdr_id}")
 
@@ -148,8 +151,9 @@ class SDRController:
             self.logger.error(f"Error getting frequency: {e}")
             raise RuntimeError(f"Error getting frequency: {e}")
 
-    async def set_frequency(self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0) -> AsyncGenerator[
-        Tuple[float, bool], None]:
+    async def set_frequency(
+        self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0
+    ) -> AsyncGenerator[Tuple[float, bool], None]:
         """Set the SDR frequency and yield updates until it reaches the target.
 
         Args:
@@ -224,13 +228,14 @@ class SDRController:
             self.logger.exception(e)
             raise RuntimeError(f"Error setting SDR mode: {e}")
 
-
     def __del__(self) -> None:
         """Destructor - ensure we disconnect when the object is garbage collected."""
-        if hasattr(self, 'connected') and self.connected:
+        if hasattr(self, "connected") and self.connected:
             # Just log a warning
-            if hasattr(self, 'logger'):
-                self.logger.warning("Object SDRController being destroyed while still connected to SDR")
+            if hasattr(self, "logger"):
+                self.logger.warning(
+                    "Object SDRController being destroyed while still connected to SDR"
+                )
 
     @staticmethod
     def get_error_message(error_code: int) -> str:

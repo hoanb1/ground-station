@@ -36,6 +36,7 @@ def get_logger_config(args):
     :raises FileNotFoundError: If the specified logging configuration file cannot be found.
     :raises yaml.YAMLError: If the YAML configuration file cannot be parsed due to invalid syntax.
     """
+
     def yaml_to_json_config(filepath):
         with open(filepath, "r") as file:
             return yaml.safe_load(file)

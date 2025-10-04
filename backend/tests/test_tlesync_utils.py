@@ -108,9 +108,9 @@ class TestSimpleParse3le:
         result = simple_parse_3le(tle_data)
 
         assert len(result) == 1
-        assert result[0]['name'] == "ISS (ZARYA)"
-        assert result[0]['line1'].startswith("1 25544U")
-        assert result[0]['line2'].startswith("2 25544")
+        assert result[0]["name"] == "ISS (ZARYA)"
+        assert result[0]["line1"].startswith("1 25544U")
+        assert result[0]["line2"].startswith("2 25544")
 
     def test_simple_parse_3le_multiple_satellites(self):
         """Test parsing multiple satellites from 3LE format."""
@@ -124,8 +124,8 @@ NOAA 19
         result = simple_parse_3le(tle_data)
 
         assert len(result) == 2
-        assert result[0]['name'] == "ISS (ZARYA)"
-        assert result[1]['name'] == "NOAA 19"
+        assert result[0]["name"] == "ISS (ZARYA)"
+        assert result[1]["name"] == "NOAA 19"
 
     def test_simple_parse_3le_with_extra_whitespace(self):
         """Test parsing 3LE data with extra whitespace."""
@@ -136,7 +136,7 @@ NOAA 19
         result = simple_parse_3le(tle_data)
 
         assert len(result) == 1
-        assert result[0]['name'] == "ISS (ZARYA)"
+        assert result[0]["name"] == "ISS (ZARYA)"
 
     def test_simple_parse_3le_empty_string(self):
         """Test parsing empty string."""
@@ -200,9 +200,9 @@ class TestGetNoradIds:
         """Test extracting NORAD IDs from single TLE object."""
         tle_objects = [
             {
-                'name': 'ISS (ZARYA)',
-                'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997',
-                'line2': '2 25544  51.6416 247.4627 0006703 130.5360 325.0288 15.72125391563537'
+                "name": "ISS (ZARYA)",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544  51.6416 247.4627 0006703 130.5360 325.0288 15.72125391563537",
             }
         ]
 
@@ -213,9 +213,21 @@ class TestGetNoradIds:
     def test_get_norad_ids_multiple(self):
         """Test extracting NORAD IDs from multiple TLE objects."""
         tle_objects = [
-            {'name': 'ISS', 'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997', 'line2': '2 25544...'},
-            {'name': 'NOAA 19', 'line1': '1 33591U 09005A   23109.12345678  .00000123  00000-0  12345-3 0  9998', 'line2': '2 33591...'},
-            {'name': 'HUBBLE', 'line1': '1 20580U 90037B   23109.12345678  .00000123  00000-0  12345-3 0  9998', 'line2': '2 20580...'}
+            {
+                "name": "ISS",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544...",
+            },
+            {
+                "name": "NOAA 19",
+                "line1": "1 33591U 09005A   23109.12345678  .00000123  00000-0  12345-3 0  9998",
+                "line2": "2 33591...",
+            },
+            {
+                "name": "HUBBLE",
+                "line1": "1 20580U 90037B   23109.12345678  .00000123  00000-0  12345-3 0  9998",
+                "line2": "2 20580...",
+            },
         ]
 
         result = get_norad_ids(tle_objects)
@@ -234,21 +246,21 @@ class TestGetSatelliteByNoradId:
     def test_get_satellite_by_norad_id_found(self):
         """Test finding satellite by NORAD ID."""
         satellites = [
-            {'norad_cat_id': 25544, 'name': 'ISS'},
-            {'norad_cat_id': 33591, 'name': 'NOAA 19'},
-            {'norad_cat_id': 20580, 'name': 'HUBBLE'}
+            {"norad_cat_id": 25544, "name": "ISS"},
+            {"norad_cat_id": 33591, "name": "NOAA 19"},
+            {"norad_cat_id": 20580, "name": "HUBBLE"},
         ]
 
         result = get_satellite_by_norad_id(33591, satellites)
 
         assert result is not None
-        assert result['name'] == 'NOAA 19'
+        assert result["name"] == "NOAA 19"
 
     def test_get_satellite_by_norad_id_not_found(self):
         """Test finding non-existent satellite."""
         satellites = [
-            {'norad_cat_id': 25544, 'name': 'ISS'},
-            {'norad_cat_id': 33591, 'name': 'NOAA 19'}
+            {"norad_cat_id": 25544, "name": "ISS"},
+            {"norad_cat_id": 33591, "name": "NOAA 19"},
         ]
 
         result = get_satellite_by_norad_id(99999, satellites)
@@ -267,34 +279,32 @@ class TestGetTransmitterInfoByNoradId:
     def test_get_transmitter_info_single(self):
         """Test finding single transmitter by NORAD ID."""
         transmitters = [
-            {'norad_cat_id': 25544, 'description': 'VHF', 'downlink_low': 145800000},
-            {'norad_cat_id': 33591, 'description': 'APT', 'downlink_low': 137100000}
+            {"norad_cat_id": 25544, "description": "VHF", "downlink_low": 145800000},
+            {"norad_cat_id": 33591, "description": "APT", "downlink_low": 137100000},
         ]
 
         result = get_transmitter_info_by_norad_id(25544, transmitters)
 
         assert len(result) == 1
-        assert result[0]['description'] == 'VHF'
+        assert result[0]["description"] == "VHF"
 
     def test_get_transmitter_info_multiple(self):
         """Test finding multiple transmitters for same satellite."""
         transmitters = [
-            {'norad_cat_id': 25544, 'description': 'VHF', 'downlink_low': 145800000},
-            {'norad_cat_id': 25544, 'description': 'UHF', 'downlink_low': 437800000},
-            {'norad_cat_id': 33591, 'description': 'APT', 'downlink_low': 137100000}
+            {"norad_cat_id": 25544, "description": "VHF", "downlink_low": 145800000},
+            {"norad_cat_id": 25544, "description": "UHF", "downlink_low": 437800000},
+            {"norad_cat_id": 33591, "description": "APT", "downlink_low": 137100000},
         ]
 
         result = get_transmitter_info_by_norad_id(25544, transmitters)
 
         assert len(result) == 2
-        assert result[0]['description'] == 'VHF'
-        assert result[1]['description'] == 'UHF'
+        assert result[0]["description"] == "VHF"
+        assert result[1]["description"] == "UHF"
 
     def test_get_transmitter_info_not_found(self):
         """Test finding transmitters for non-existent satellite."""
-        transmitters = [
-            {'norad_cat_id': 25544, 'description': 'VHF', 'downlink_low': 145800000}
-        ]
+        transmitters = [{"norad_cat_id": 25544, "description": "VHF", "downlink_low": 145800000}]
 
         result = get_transmitter_info_by_norad_id(99999, transmitters)
 
@@ -308,46 +318,46 @@ class TestCreateInitialSyncState:
         """Test that initial sync state has correct structure."""
         state = create_initial_sync_state()
 
-        assert state['status'] == 'inprogress'
-        assert state['progress'] == 0
-        assert state['message'] == "Starting satellite data synchronization"
-        assert state['success'] is None
-        assert 'last_update' in state
-        assert state['active_sources'] == []
-        assert state['completed_sources'] == []
-        assert state['errors'] == []
+        assert state["status"] == "inprogress"
+        assert state["progress"] == 0
+        assert state["message"] == "Starting satellite data synchronization"
+        assert state["success"] is None
+        assert "last_update" in state
+        assert state["active_sources"] == []
+        assert state["completed_sources"] == []
+        assert state["errors"] == []
 
     def test_create_initial_sync_state_has_stats(self):
         """Test that initial sync state has stats structure."""
         state = create_initial_sync_state()
 
-        assert 'stats' in state
-        assert state['stats']['satellites_processed'] == 0
-        assert state['stats']['transmitters_processed'] == 0
-        assert state['stats']['groups_processed'] == 0
+        assert "stats" in state
+        assert state["stats"]["satellites_processed"] == 0
+        assert state["stats"]["transmitters_processed"] == 0
+        assert state["stats"]["groups_processed"] == 0
 
     def test_create_initial_sync_state_has_tracking(self):
         """Test that initial sync state has tracking structures."""
         state = create_initial_sync_state()
 
-        assert 'newly_added' in state
-        assert state['newly_added']['satellites'] == []
-        assert state['newly_added']['transmitters'] == []
+        assert "newly_added" in state
+        assert state["newly_added"]["satellites"] == []
+        assert state["newly_added"]["transmitters"] == []
 
-        assert 'removed' in state
-        assert state['removed']['satellites'] == []
-        assert state['removed']['transmitters'] == []
+        assert "removed" in state
+        assert state["removed"]["satellites"] == []
+        assert state["removed"]["transmitters"] == []
 
-        assert 'modified' in state
-        assert state['modified']['satellites'] == []
-        assert state['modified']['transmitters'] == []
+        assert "modified" in state
+        assert state["modified"]["satellites"] == []
+        assert state["modified"]["transmitters"] == []
 
     def test_create_initial_sync_state_timestamp_format(self):
         """Test that last_update is in ISO format."""
         state = create_initial_sync_state()
 
         # Should be able to parse the timestamp
-        last_update = datetime.fromisoformat(state['last_update'])
+        last_update = datetime.fromisoformat(state["last_update"])
         assert isinstance(last_update, datetime)
 
 
@@ -356,75 +366,69 @@ class TestCreateProgressTracker:
 
     def test_progress_tracker_basic(self):
         """Test basic progress tracking functionality."""
-        sync_state = {'progress': 0, 'message': '', 'last_update': ''}
+        sync_state = {"progress": 0, "message": "", "last_update": ""}
 
         class MockStateManager:
             def set_state(self, state):
                 pass
 
-        progress_phases = {
-            'phase1': 50,
-            'phase2': 50
-        }
+        progress_phases = {"phase1": 50, "phase2": 50}
 
         update_progress, completed_phases, highest_progress = create_progress_tracker(
             progress_phases, sync_state, MockStateManager()
         )
 
         # Update phase1 to 50% complete
-        update_progress('phase1', 50, 100, "Working on phase 1")
+        update_progress("phase1", 50, 100, "Working on phase 1")
 
-        assert sync_state['progress'] == 25  # 50% of 50 weight
-        assert sync_state['message'] == "Working on phase 1"
+        assert sync_state["progress"] == 25  # 50% of 50 weight
+        assert sync_state["message"] == "Working on phase 1"
 
     def test_progress_tracker_monotonic(self):
         """Test that progress never decreases."""
-        sync_state = {'progress': 0, 'message': '', 'last_update': ''}
+        sync_state = {"progress": 0, "message": "", "last_update": ""}
 
         class MockStateManager:
             def set_state(self, state):
                 pass
 
-        progress_phases = {'phase1': 100}
+        progress_phases = {"phase1": 100}
 
         update_progress, completed_phases, highest_progress = create_progress_tracker(
             progress_phases, sync_state, MockStateManager()
         )
 
         # Set progress to 50
-        update_progress('phase1', 50, 100)
-        assert sync_state['progress'] == 50
+        update_progress("phase1", 50, 100)
+        assert sync_state["progress"] == 50
 
         # Try to set lower progress
-        update_progress('phase1', 30, 100)
-        assert sync_state['progress'] == 50  # Should not decrease
+        update_progress("phase1", 30, 100)
+        assert sync_state["progress"] == 50  # Should not decrease
 
     def test_progress_tracker_phase_completion(self):
         """Test marking phases as completed."""
-        sync_state = {'progress': 0, 'message': '', 'last_update': ''}
+        sync_state = {"progress": 0, "message": "", "last_update": ""}
 
         class MockStateManager:
             def set_state(self, state):
                 pass
 
-        progress_phases = {
-            'phase1': 50,
-            'phase2': 50
-        }
+        progress_phases = {"phase1": 50, "phase2": 50}
 
         update_progress, completed_phases, highest_progress = create_progress_tracker(
             progress_phases, sync_state, MockStateManager()
         )
 
         # Complete phase1
-        update_progress('phase1', 100, 100)
-        completed_phases.add('phase1')
+        update_progress("phase1", 100, 100)
+        completed_phases.add("phase1")
 
         # Start phase2
-        update_progress('phase2', 50, 100)
+        update_progress("phase2", 50, 100)
 
         # Should be 50 (phase1 complete) + 25 (phase2 half done) = 75
-        assert sync_state['progress'] == 75
+        assert sync_state["progress"] == 75
 
 
 class TestCreateFinalSuccessMessage:
@@ -433,59 +437,56 @@ class TestCreateFinalSuccessMessage:
     def test_final_success_message_basic(self):
         """Test basic success message generation."""
         sync_state = {
-            'newly_added': {'satellites': [], 'transmitters': []},
-            'removed': {'satellites': [], 'transmitters': []},
-            'modified': {'satellites': [], 'transmitters': []}
+            "newly_added": {"satellites": [], "transmitters": []},
+            "removed": {"satellites": [], "transmitters": []},
+            "modified": {"satellites": [], "transmitters": []},
         }
 
         message = create_final_success_message(100, 50, sync_state)
 
-        assert 'Successfully synchronized 100 satellites and 50 transmitters' in message
+        assert "Successfully synchronized 100 satellites and 50 transmitters" in message
 
     def test_final_success_message_with_new_items(self):
         """Test success message with newly added items."""
         sync_state = {
-            'newly_added': {
-                'satellites': [{'norad_id': 1}, {'norad_id': 2}],
-                'transmitters': [{'uuid': 'a'}, {'uuid': 'b'}, {'uuid': 'c'}]
+            "newly_added": {
+                "satellites": [{"norad_id": 1}, {"norad_id": 2}],
+                "transmitters": [{"uuid": "a"}, {"uuid": "b"}, {"uuid": "c"}],
             },
-            'removed': {'satellites': [], 'transmitters': []},
-            'modified': {'satellites': [], 'transmitters': []}
+            "removed": {"satellites": [], "transmitters": []},
+            "modified": {"satellites": [], "transmitters": []},
         }
 
         message = create_final_success_message(100, 50, sync_state)
 
-        assert 'New: 2 satellites, 3 transmitters' in message
+        assert "New: 2 satellites, 3 transmitters" in message
 
     def test_final_success_message_with_modifications(self):
         """Test success message with modified items."""
         sync_state = {
-            'newly_added': {'satellites': [], 'transmitters': []},
-            'removed': {'satellites': [], 'transmitters': []},
-            'modified': {
-                'satellites': [{'norad_id': 1}],
-                'transmitters': [{'uuid': 'a'}, {'uuid': 'b'}]
-            }
+            "newly_added": {"satellites": [], "transmitters": []},
+            "removed": {"satellites": [], "transmitters": []},
+            "modified": {
+                "satellites": [{"norad_id": 1}],
+                "transmitters": [{"uuid": "a"}, {"uuid": "b"}],
+            },
         }
 
         message = create_final_success_message(100, 50, sync_state)
 
-        assert 'Modified: 1 satellites, 2 transmitters' in message
+        assert "Modified: 1 satellites, 2 transmitters" in message
 
     def test_final_success_message_with_removals(self):
         """Test success message with removed items."""
         sync_state = {
-            'newly_added': {'satellites': [], 'transmitters': []},
-            'removed': {
-                'satellites': [{'norad_id': 1}, {'norad_id': 2}],
-                'transmitters': []
-            },
-            'modified': {'satellites': [], 'transmitters': []}
+            "newly_added": {"satellites": [], "transmitters": []},
+            "removed": {"satellites": [{"norad_id": 1}, {"norad_id": 2}], "transmitters": []},
+            "modified": {"satellites": [], "transmitters": []},
         }
 
         message = create_final_success_message(100, 50, sync_state)
 
-        assert 'Removed: 2 satellites, 0 transmitters' in message
+        assert "Removed: 2 satellites, 0 transmitters" in message
 
 
 class TestDetectDuplicateSatellites:
@@ -499,15 +500,23 @@ class TestDetectDuplicateSatellites:
                 pass
 
         celestrak_list = [
-            {'name': 'ISS', 'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997', 'line2': '2 25544...'},
-            {'name': 'NOAA 19', 'line1': '1 33591U 09005A   23109.12345678  .00000123  00000-0  12345-3 0  9998', 'line2': '2 33591...'}
+            {
+                "name": "ISS",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544...",
+            },
+            {
+                "name": "NOAA 19",
+                "line1": "1 33591U 09005A   23109.12345678  .00000123  00000-0  12345-3 0  9998",
+                "line2": "2 33591...",
+            },
         ]
 
         result = detect_duplicate_satellites(celestrak_list, MockLogger())
 
-        assert result['duplicate_count'] == 0
-        assert result['total_duplicates'] == 0
-        assert len(result['deduplicated_list']) == 2
+        assert result["duplicate_count"] == 0
+        assert result["total_duplicates"] == 0
+        assert len(result["deduplicated_list"]) == 2
 
     def test_detect_duplicates_with_duplicates(self):
         """Test detection when there are duplicates."""
@@ -517,16 +526,28 @@ class TestDetectDuplicateSatellites:
                 pass
 
         celestrak_list = [
-            {'name': 'ISS (ZARYA)', 'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997', 'line2': '2 25544...'},
-            {'name': 'ISS', 'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997', 'line2': '2 25544...'},
-            {'name': 'NOAA 19', 'line1': '1 33591U 09005A   23109.12345678  .00000123  00000-0  12345-3 0  9998', 'line2': '2 33591...'}
+            {
+                "name": "ISS (ZARYA)",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544...",
+            },
+            {
+                "name": "ISS",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544...",
+            },
+            {
+                "name": "NOAA 19",
+                "line1": "1 33591U 09005A   23109.12345678  .00000123  00000-0  12345-3 0  9998",
+                "line2": "2 33591...",
+            },
         ]
 
         result = detect_duplicate_satellites(celestrak_list, MockLogger())
 
-        assert result['duplicate_count'] == 1  # One unique satellite has duplicates
-        assert result['total_duplicates'] == 1  # One duplicate entry
-        assert len(result['deduplicated_list']) == 2  # Should have 2 unique satellites
+        assert result["duplicate_count"] == 1  # One unique satellite has duplicates
+        assert result["total_duplicates"] == 1  # One duplicate entry
+        assert len(result["deduplicated_list"]) == 2  # Should have 2 unique satellites
 
     def test_detect_duplicates_multiple_names(self):
         """Test that duplicate detection tracks different names."""
@@ -536,17 +557,29 @@ class TestDetectDuplicateSatellites:
                 pass
 
         celestrak_list = [
-            {'name': 'ISS (ZARYA)', 'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997', 'line2': '2 25544...'},
-            {'name': 'ISS', 'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997', 'line2': '2 25544...'},
-            {'name': 'INTERNATIONAL SPACE STATION', 'line1': '1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997', 'line2': '2 25544...'}
+            {
+                "name": "ISS (ZARYA)",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544...",
+            },
+            {
+                "name": "ISS",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544...",
+            },
+            {
+                "name": "INTERNATIONAL SPACE STATION",
+                "line1": "1 25544U 98067A   23109.65481637  .00012345  00000-0  21914-3 0  9997",
+                "line2": "2 25544...",
+            },
         ]
 
         result = detect_duplicate_satellites(celestrak_list, MockLogger())
 
-        assert result['duplicate_count'] == 1
-        assert result['total_duplicates'] == 2
+        assert result["duplicate_count"] == 1
+        assert result["total_duplicates"] == 2
         # Check that all three names are tracked
-        assert len(result['duplicates_info'][25544]['names']) == 3
+        assert len(result["duplicates_info"][25544]["names"]) == 3
 
 
 class TestSyncFetch:
@@ -562,9 +595,9 @@ class TestSyncFetch:
         def mock_get(url, timeout):
             return MockResponse()
 
-        monkeypatch.setattr(requests, 'get', mock_get)
+        monkeypatch.setattr(requests, "get", mock_get)
 
-        result = sync_fetch('http://example.com')
+        result = sync_fetch("http://example.com")
 
         assert result is not None
         assert result.status_code == 200
@@ -575,7 +608,7 @@ class TestSyncFetch:
         def mock_get(url, timeout):
             raise requests.Timeout()
 
-        monkeypatch.setattr(requests, 'get', mock_get)
+        monkeypatch.setattr(requests, "get", mock_get)
 
         with pytest.raises(requests.Timeout):
-            sync_fetch('http://example.com')
+            sync_fetch("http://example.com")

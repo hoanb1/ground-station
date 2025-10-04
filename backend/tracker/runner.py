@@ -68,14 +68,15 @@ def start_tracker_process():
 
     # Create and start the process
     tracker_process = multiprocessing.Process(
-        target=run_tracking_task,
-        name="Ground Station - SatelliteTracker"
+        target=run_tracking_task, name="Ground Station - SatelliteTracker"
     )
 
     # Process will terminate when main process exits
     tracker_process.daemon = True
     tracker_process.start()
 
-    logger.info(f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_process.pid}")
+    logger.info(
+        f"Started satellite tracker process 'SatelliteTracker' with PID {tracker_process.pid}"
+    )
 
     return tracker_process, queue_to_tracker, queue_from_tracker, tracker_stop_event

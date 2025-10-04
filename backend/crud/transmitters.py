@@ -76,30 +76,26 @@ async def add_transmitter(session: AsyncSession, data: dict) -> dict:
         data["norad_cat_id"] = data.pop("satelliteId")
 
         uplink_low_val = data.pop("uplinkLow")
-        data["uplink_low"] = None if uplink_low_val == '-' else uplink_low_val
+        data["uplink_low"] = None if uplink_low_val == "-" else uplink_low_val
 
         uplink_high_val = data.pop("uplinkHigh")
-        data["uplink_high"] = None if uplink_high_val == '-' else uplink_high_val
+        data["uplink_high"] = None if uplink_high_val == "-" else uplink_high_val
 
         downlink_low_val = data.pop("downlinkLow")
-        data["downlink_low"] = None if downlink_low_val == '-' else downlink_low_val
+        data["downlink_low"] = None if downlink_low_val == "-" else downlink_low_val
 
         downlink_high_val = data.pop("downlinkHigh")
-        data["downlink_high"] = None if downlink_high_val == '-' else downlink_high_val
+        data["downlink_high"] = None if downlink_high_val == "-" else downlink_high_val
 
         uplink_drift_val = data.pop("uplinkDrift")
-        data["uplink_drift"] = None if uplink_drift_val == '-' else uplink_drift_val
+        data["uplink_drift"] = None if uplink_drift_val == "-" else uplink_drift_val
 
         downlink_drift_val = data.pop("downlinkDrift")
-        data["downlink_drift"] = None if downlink_drift_val == '-' else downlink_drift_val
+        data["downlink_drift"] = None if downlink_drift_val == "-" else downlink_drift_val
 
         data["uplink_mode"] = data.pop("uplinkMode")
 
-        stmt = (
-            insert(Transmitters)
-            .values(**data)
-            .returning(Transmitters)
-        )
+        stmt = insert(Transmitters).values(**data).returning(Transmitters)
 
         result = await session.execute(stmt)
         await session.commit()
@@ -119,31 +115,31 @@ async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
     Edit an existing transmitter record by updating provided fields.
     """
     try:
-        transmitter_id = data.pop('id')
+        transmitter_id = data.pop("id")
 
-        data.pop('added', None)
-        data.pop('updated', None)
+        data.pop("added", None)
+        data.pop("updated", None)
 
         # rename some fields
         data["norad_cat_id"] = data.pop("satelliteId")
 
         uplink_low_val = data.pop("uplinkLow")
-        data["uplink_low"] = None if uplink_low_val == '-' else uplink_low_val
+        data["uplink_low"] = None if uplink_low_val == "-" else uplink_low_val
 
         uplink_high_val = data.pop("uplinkHigh")
-        data["uplink_high"] = None if uplink_high_val == '-' else uplink_high_val
+        data["uplink_high"] = None if uplink_high_val == "-" else uplink_high_val
 
         downlink_low_val = data.pop("downlinkLow")
-        data["downlink_low"] = None if downlink_low_val == '-' else downlink_low_val
+        data["downlink_low"] = None if downlink_low_val == "-" else downlink_low_val
 
         downlink_high_val = data.pop("downlinkHigh")
-        data["downlink_high"] = None if downlink_high_val == '-' else downlink_high_val
+        data["downlink_high"] = None if downlink_high_val == "-" else downlink_high_val
 
         uplink_drift_val = data.pop("uplinkDrift")
-        data["uplink_drift"] = None if uplink_drift_val == '-' else uplink_drift_val
+        data["uplink_drift"] = None if uplink_drift_val == "-" else uplink_drift_val
 
         downlink_drift_val = data.pop("downlinkDrift")
-        data["downlink_drift"] = None if downlink_drift_val == '-' else downlink_drift_val
+        data["downlink_drift"] = None if downlink_drift_val == "-" else downlink_drift_val
 
         data["uplink_mode"] = data.pop("uplinkMode")
 
@@ -184,9 +180,7 @@ async def delete_transmitter(session: AsyncSession, transmitter_id: Union[uuid.U
         logger.info(transmitter_id)
 
         del_stmt = (
-            delete(Transmitters)
-            .where(Transmitters.id == transmitter_id)
-            .returning(Transmitters)
+            delete(Transmitters).where(Transmitters.id == transmitter_id).returning(Transmitters)
         )
         result = await session.execute(del_stmt)
         deleted = result.scalar_one_or_none()

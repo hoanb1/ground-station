@@ -23,12 +23,12 @@ from contextlib import asynccontextmanager
 
 class RigController:
     def __init__(
-            self,
-            model: int = None,  # Model is no longer used directly
-            host: str = "127.0.0.1",
-            port: int = 4532,
-            verbose: bool = False,
-            timeout: float = 3.0,
+        self,
+        model: int = None,  # Model is no longer used directly
+        host: str = "127.0.0.1",
+        port: int = 4532,
+        verbose: bool = False,
+        timeout: float = 3.0,
     ):
         # Set up logging
         device_path = f"{host}:{port}"
@@ -57,13 +57,12 @@ class RigController:
             assert pingcheck, "Rig did not respond to ping"
 
             self.logger.debug(f"Connecting to rig at {self.device_path}")
-            
+
             # Create a persistent connection
             self.reader, self.writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port),
-                timeout=self.timeout
+                asyncio.open_connection(self.host, self.port), timeout=self.timeout
             )
-            
+
             self.connected = True
             self.logger.info(f"Successfully connected to rig at {self.device_path}")
             return True
@@ -90,7 +89,7 @@ class RigController:
                 await asyncio.wait_for(self.writer.wait_closed(), timeout=1.0)
             except asyncio.TimeoutError:
                 self.logger.warning("Timeout waiting for connection to close")
-            
+
             self.connected = False
             self.reader = None
             self.writer = None
@@ -113,8 +112,7 @@ class RigController:
             try:
                 # Use asyncio's open_connection with timeout
                 reader, writer = await asyncio.wait_for(
-                    asyncio.open_connection(self.host, self.port),
-                    timeout=self.timeout
+                    asyncio.open_connection(self.host, self.port), timeout=self.timeout
                 )
                 yield reader, writer
             finally:
@@ -131,30 +129,29 @@ class RigController:
     async def _send_command(self, command: str, waitforreply=True) -> str:
         """Send a command to the rig and get the response."""
         self.check_connection()
-        
+
         try:
             # Add newline to the command
             full_command = f"{command}\n"
-            
+
             # Send the command
-            self.writer.write(full_command.encode('utf-8'))
+            self.writer.write(full_command.encode("utf-8"))
             await self.writer.drain()
 
             if waitforreply:
                 # Read the response
                 response_bytes = await asyncio.wait_for(
-                    self.reader.read(1000),
-                    timeout=self.timeout
+                    self.reader.read(1000), timeout=self.timeout
                 )
-                response = response_bytes.decode('utf-8', errors='replace').strip()
+                response = response_bytes.decode("utf-8", errors="replace").strip()
             else:
                 response = "(no wait for reply)"
 
             if self.verbose:
                 self.logger.debug(f"Command: {command} -> Response: {response}")
-                
+
             return response
-            
+
         except Exception as e:
             self.logger.error(f"Error sending command '{command}': {e}")
             raise RuntimeError(f"Error communicating with rig: {e}")
@@ -168,24 +165,21 @@ class RigController:
                 await writer.drain()
 
                 # Receive response with timeout
-                response_bytes = await asyncio.wait_for(
-                    reader.read(1000),
-                    timeout=self.timeout
-                )
+                response_bytes = await asyncio.wait_for(reader.read(1000), timeout=self.timeout)
 
-                response = response_bytes.decode('utf-8', errors='replace').strip()
+                response = response_bytes.decode("utf-8", errors="replace").strip()
 
                 # Parse the response
                 if not response:
                     return False
 
                 # Handle different response formats
-                if response.startswith('RPRT'):
+                if response.startswith("RPRT"):
                     error_code = int(response.split()[1])
                     return error_code >= 0
 
-                elif response.startswith('get_freq:'):
-                    parts = response.split(':')[1].strip()
+                elif response.startswith("get_freq:"):
+                    parts = response.split(":")[1].strip()
                     try:
                         float(parts)
                         return True
@@ -213,23 +207,23 @@ class RigController:
         """Get the current frequency."""
         try:
             response = await self._send_command("f")
-            
+
             # Handle various response formats
-            if response.startswith('RPRT'):
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     raise RuntimeError(f"Error getting frequency: {response}")
                 return 0.0  # Default value on success without frequency info
-            
-            elif response.startswith('get_freq:'):
-                parts = response.split(':')[1].strip()
+
+            elif response.startswith("get_freq:"):
+                parts = response.split(":")[1].strip()
                 try:
                     freq = float(parts)
                     self.logger.debug(f"Current frequency: {freq} Hz")
                     return round(freq, 0)
                 except ValueError:
                     raise RuntimeError(f"Invalid frequency format: {response}")
-            
+
             else:
                 # Try to parse as direct value
                 try:
@@ -238,7 +232,7 @@ class RigController:
                     return round(freq, 0)
                 except ValueError:
                     raise RuntimeError(f"Invalid frequency format: {response}")
-                
+
         except Exception as e:
             self.logger.error(f"Error getting frequency: {e}")
             raise RuntimeError(f"Error getting frequency: {e}")
@@ -247,16 +241,16 @@ class RigController:
         """Get the current mode and bandwidth."""
         try:
             response = await self._send_command("m")
-            
+
             # Handle various response formats
-            if response.startswith('RPRT'):
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     raise RuntimeError(f"Error getting mode: {response}")
                 return "UNKNOWN", 0  # Default values on success without mode info
-            
-            elif response.startswith('get_mode:'):
-                parts = response.split(':')[1].strip().split()
+
+            elif response.startswith("get_mode:"):
+                parts = response.split(":")[1].strip().split()
                 if len(parts) >= 2:
                     mode = parts[0]
                     try:
@@ -266,7 +260,7 @@ class RigController:
                     except ValueError:
                         raise RuntimeError(f"Invalid bandwidth value: {parts[1]}")
                 raise RuntimeError(f"Invalid mode format: {response}")
-            
+
             else:
                 # Try to parse direct values
                 parts = response.split()
@@ -279,7 +273,7 @@ class RigController:
                     except ValueError:
                         raise RuntimeError(f"Invalid bandwidth value: {parts[1]}")
                 raise RuntimeError(f"Invalid mode format: {response}")
-                
+
         except Exception as e:
             self.logger.error(f"Error getting mode: {e}")
             raise RuntimeError(f"Error getting mode: {e}")
@@ -288,21 +282,21 @@ class RigController:
         """Set the rig to standby power state."""
         try:
             self.logger.info("Setting rig to standby")
-            
+
             # Format the power status command for standby (0)
             command = f"set_powerstat 0"
             response = await self._send_command(command)
-            
+
             # Check the response
-            if response.startswith('RPRT'):
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     self.logger.error(f"Standby command failed: {response}")
                     return False
-            
+
             self.logger.debug(f"Standby command: response={response}")
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error setting rig to standby: {e}")
             raise RuntimeError(f"Error setting rig to standby: {e}")
@@ -315,8 +309,9 @@ class RigController:
             raise RuntimeError(error_msg)
         return True
 
-    async def set_frequency(self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0) -> AsyncGenerator[
-        Tuple[float, bool], None]:
+    async def set_frequency(
+        self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0
+    ) -> AsyncGenerator[Tuple[float, bool], None]:
         """Set the rig frequency and yield updates until it reaches the target."""
         # Start the frequency setting operation
         self.logger.debug(f"Setting rig frequency to {target_freq} Hz")
@@ -325,15 +320,15 @@ class RigController:
             # Format the set frequency command
             command = f"F {target_freq}"
             response = await self._send_command(command)
-            
+
             # Check the response
-            if response.startswith('RPRT'):
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     error_msg = f"Failed to set frequency: {response}"
                     self.logger.error(error_msg)
                     raise RuntimeError(error_msg)
-            
+
             self.logger.debug(f"Set frequency command: response={response}")
 
         except Exception as e:
@@ -368,19 +363,19 @@ class RigController:
         """Set the rig mode and bandwidth."""
         try:
             self.logger.info(f"Setting rig mode to {mode}, bandwidth={bandwidth} Hz")
-            
+
             # Format the set mode command
             command = f"M {mode} {bandwidth}"
             response = await self._send_command(command)
-            
+
             # Check the response
-            if response.startswith('RPRT'):
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     error_msg = f"Failed to set mode: {response}"
                     self.logger.error(error_msg)
                     return False
-            
+
             self.logger.debug(f"Set mode command: response={response}")
             return True
 
@@ -393,20 +388,20 @@ class RigController:
         """Get the current VFO."""
         try:
             response = await self._send_command("v")
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     raise RuntimeError(f"Error getting VFO: {response}")
                 return "UNKNOWN"
-            
-            elif response.startswith('get_vfo:'):
-                vfo = response.split(':')[1].strip()
+
+            elif response.startswith("get_vfo:"):
+                vfo = response.split(":")[1].strip()
                 return vfo
-            
+
             else:
                 return response.strip()
-                
+
         except Exception as e:
             self.logger.error(f"Error getting VFO: {e}")
             raise RuntimeError(f"Error getting VFO: {e}")
@@ -416,15 +411,15 @@ class RigController:
         try:
             command = f"V {vfo}"
             response = await self._send_command(command)
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     self.logger.error(f"Set VFO command failed: {response}")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error setting VFO: {e}")
             raise RuntimeError(f"Error setting VFO: {e}")
@@ -433,26 +428,26 @@ class RigController:
         """Get RIT (Receiver Incremental Tuning)."""
         try:
             response = await self._send_command("j")
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     raise RuntimeError(f"Error getting RIT: {response}")
                 return 0
-            
-            elif response.startswith('get_rit:'):
-                rit_str = response.split(':')[1].strip()
+
+            elif response.startswith("get_rit:"):
+                rit_str = response.split(":")[1].strip()
                 try:
                     return int(rit_str)
                 except ValueError:
                     raise RuntimeError(f"Invalid RIT value: {rit_str}")
-            
+
             else:
                 try:
                     return int(response.strip())
                 except ValueError:
                     raise RuntimeError(f"Invalid RIT value: {response}")
-                
+
         except Exception as e:
             self.logger.error(f"Error getting RIT: {e}")
             raise RuntimeError(f"Error getting RIT: {e}")
@@ -462,15 +457,15 @@ class RigController:
         try:
             command = f"J {rit}"
             response = await self._send_command(command)
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     self.logger.error(f"Set RIT command failed: {response}")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error setting RIT: {e}")
             raise RuntimeError(f"Error setting RIT: {e}")
@@ -479,26 +474,26 @@ class RigController:
         """Get XIT (Transmitter Incremental Tuning)."""
         try:
             response = await self._send_command("z")
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     raise RuntimeError(f"Error getting XIT: {response}")
                 return 0
-            
-            elif response.startswith('get_xit:'):
-                xit_str = response.split(':')[1].strip()
+
+            elif response.startswith("get_xit:"):
+                xit_str = response.split(":")[1].strip()
                 try:
                     return int(xit_str)
                 except ValueError:
                     raise RuntimeError(f"Invalid XIT value: {xit_str}")
-            
+
             else:
                 try:
                     return int(response.strip())
                 except ValueError:
                     raise RuntimeError(f"Invalid XIT value: {response}")
-                
+
         except Exception as e:
             self.logger.error(f"Error getting XIT: {e}")
             raise RuntimeError(f"Error getting XIT: {e}")
@@ -508,15 +503,15 @@ class RigController:
         try:
             command = f"Z {xit}"
             response = await self._send_command(command)
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     self.logger.error(f"Set XIT command failed: {response}")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error setting XIT: {e}")
             raise RuntimeError(f"Error setting XIT: {e}")
@@ -525,20 +520,20 @@ class RigController:
         """Get PTT (Push To Talk) status."""
         try:
             response = await self._send_command("t")
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     raise RuntimeError(f"Error getting PTT: {response}")
                 return False
-            
-            elif response.startswith('get_ptt:'):
-                ptt_str = response.split(':')[1].strip()
+
+            elif response.startswith("get_ptt:"):
+                ptt_str = response.split(":")[1].strip()
                 return ptt_str == "1"
-            
+
             else:
                 return response.strip() == "1"
-                
+
         except Exception as e:
             self.logger.error(f"Error getting PTT: {e}")
             raise RuntimeError(f"Error getting PTT: {e}")
@@ -549,15 +544,15 @@ class RigController:
             ptt_value = 1 if ptt_on else 0
             command = f"T {ptt_value}"
             response = await self._send_command(command)
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     self.logger.error(f"Set PTT command failed: {response}")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error setting PTT: {e}")
             raise RuntimeError(f"Error setting PTT: {e}")
@@ -566,20 +561,20 @@ class RigController:
         """Get split VFO status."""
         try:
             response = await self._send_command("s")
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     raise RuntimeError(f"Error getting split VFO: {response}")
                 return False
-            
-            elif response.startswith('get_split_vfo:'):
-                split_str = response.split(':')[1].strip()
+
+            elif response.startswith("get_split_vfo:"):
+                split_str = response.split(":")[1].strip()
                 return split_str == "1"
-            
+
             else:
                 return response.strip() == "1"
-                
+
         except Exception as e:
             self.logger.error(f"Error getting split VFO: {e}")
             raise RuntimeError(f"Error getting split VFO: {e}")
@@ -590,15 +585,15 @@ class RigController:
             split_value = 1 if split_on else 0
             command = f"S {split_value}"
             response = await self._send_command(command)
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     self.logger.error(f"Set split VFO command failed: {response}")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error setting split VFO: {e}")
             raise RuntimeError(f"Error setting split VFO: {e}")
@@ -608,7 +603,7 @@ class RigController:
         try:
             response = await self._send_command("_")
             return response
-            
+
         except Exception as e:
             self.logger.error(f"Error getting rig info: {e}")
             raise RuntimeError(f"Error getting rig info: {e}")
@@ -618,15 +613,15 @@ class RigController:
         try:
             command = f"set_conf {parameter} {value}"
             response = await self._send_command(command)
-            
-            if response.startswith('RPRT'):
+
+            if response.startswith("RPRT"):
                 error_code = int(response.split()[1])
                 if error_code < 0:
                     self.logger.error(f"Set configuration failed: {response}")
                     return False
-            
+
             return True
-            
+
         except Exception as e:
             self.logger.error(f"Error setting configuration: {e}")
             raise RuntimeError(f"Error setting configuration: {e}")
@@ -637,18 +632,20 @@ class RigController:
             command = f"get_conf {parameter}"
             response = await self._send_command(command)
             return response
-            
+
         except Exception as e:
             self.logger.error(f"Error getting configuration: {e}")
             raise RuntimeError(f"Error getting configuration: {e}")
 
     def __del__(self) -> None:
         """Destructor - ensure we disconnect when the object is garbage collected."""
-        if hasattr(self, 'connected') and self.connected and self.writer is not None:
+        if hasattr(self, "connected") and self.connected and self.writer is not None:
             # Just log a warning
-            if hasattr(self, 'logger'):
-                self.logger.warning("Object RigController being destroyed while still connected to rig")
-            
+            if hasattr(self, "logger"):
+                self.logger.warning(
+                    "Object RigController being destroyed while still connected to rig"
+                )
+
             # Close the writer (synchronously)
             try:
                 self.writer.close()
@@ -679,5 +676,5 @@ class RigController:
             -16: "Invalid VFO",
             -17: "Argument out of domain",
         }
-        
+
         return error_messages.get(error_code, f"Unknown error code: {error_code}")

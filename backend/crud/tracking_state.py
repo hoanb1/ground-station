@@ -45,27 +45,29 @@ async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
 
     try:
         # Basic validation for all operations
-        assert data.get('name', None) is not None, "name is required when setting tracking state"
-        assert data.get('value', None) is not None, "value is required when setting tracking state"
-        value = data.get('value', {})
+        assert data.get("name", None) is not None, "name is required when setting tracking state"
+        assert data.get("value", None) is not None, "value is required when setting tracking state"
+        value = data.get("value", {})
 
         now = datetime.now(UTC)
         data["updated"] = now
 
         existing_record = await session.execute(
-            select(TrackingState).where(TrackingState.name == data['name'])
+            select(TrackingState).where(TrackingState.name == data["name"])
         )
         existing_record = existing_record.scalar_one_or_none()
 
         if existing_record:
             # Merge the new value JSON with the existing value JSON
-            if hasattr(existing_record, 'value') and existing_record.value:
+            if hasattr(existing_record, "value") and existing_record.value:
                 # Create a copy of the existing value to avoid modifying it directly
-                merged_value = existing_record.value.copy() if isinstance(existing_record.value, dict) else {}
+                merged_value = (
+                    existing_record.value.copy() if isinstance(existing_record.value, dict) else {}
+                )
                 # Update with the new values
-                merged_value.update(data['value'])
+                merged_value.update(data["value"])
                 # Replace the incoming value with the merged one
-                data['value'] = merged_value
+                data["value"] = merged_value
 
             # Update other fields
             for key, value in data.items():
@@ -74,12 +76,24 @@ async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
 
         else:
             # Full validation only for new records
-            assert value.get('norad_id', None), "norad_id is required when creating new tracking state"
-            assert value.get('group_id', None), "group_id is required when creating new tracking state"
-            assert value.get('rotator_state', None) is not None, "rotator_state is required when creating new tracking state"
-            assert value.get('rig_state', None) is not None, "rig_state is required when creating new tracking state"
-            assert value.get('rig_id') is not None, "rig_id is required when creating new tracking state"
-            assert value.get('rotator_id', None) is not None, "rotator_id is required when creating new tracking state"
+            assert value.get(
+                "norad_id", None
+            ), "norad_id is required when creating new tracking state"
+            assert value.get(
+                "group_id", None
+            ), "group_id is required when creating new tracking state"
+            assert (
+                value.get("rotator_state", None) is not None
+            ), "rotator_state is required when creating new tracking state"
+            assert (
+                value.get("rig_state", None) is not None
+            ), "rig_state is required when creating new tracking state"
+            assert (
+                value.get("rig_id") is not None
+            ), "rig_id is required when creating new tracking state"
+            assert (
+                value.get("rotator_id", None) is not None
+            ), "rotator_id is required when creating new tracking state"
 
             new_record = TrackingState(**data)
 
@@ -111,7 +125,11 @@ async def get_tracking_state(session: AsyncSession, name: str) -> dict:
         tracking_state = result.scalar_one_or_none()
 
         if not tracking_state:
-            return {"success": False, "data": None, "error": f"Tracking state with name '{name}' not found."}
+            return {
+                "success": False,
+                "data": None,
+                "error": f"Tracking state with name '{name}' not found.",
+            }
 
         tracking_state = serialize_object(tracking_state)
         reply["success"] = True

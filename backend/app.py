@@ -4,6 +4,7 @@ import sys
 import asyncio
 import multiprocessing
 import threading
+
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 import uvicorn
 from common.arguments import arguments
@@ -18,6 +19,7 @@ from video.webrtc import register_webrtc_routes
 def configure_process_names():
     try:
         import setproctitle
+
         setproctitle.setproctitle("Ground Station - Main Thread")
     except ImportError:  # pragma: no cover - optional dependency
         pass
@@ -41,7 +43,7 @@ def main() -> None:
 
     # Note: Static files and API routes are already configured in startup.py
 
-    logger.info(f'Starting Ground Station server with parameters {arguments}')
+    logger.info(f"Starting Ground Station server with parameters {arguments}")
     try:
         uvicorn.run(
             socket_app,

@@ -6,7 +6,7 @@ from workers.common import window_functions, FFTAverager
 from collections import deque
 
 # Configure logging for the worker process
-logger = logging.getLogger('uhd-worker')
+logger = logging.getLogger("uhd-worker")
 
 try:
     import uhd
@@ -32,18 +32,17 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
     if uhd is None:
         error_msg = "UHD library not available. Cannot start UHD worker."
         logger.error(error_msg)
-        data_queue.put({
-            'type': 'error',
-            'client_id': None,
-            'message': error_msg,
-            'timestamp': time.time()
-        })
-        data_queue.put({
-            'type': 'terminated',
-            'client_id': None,
-            'message': error_msg,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {"type": "error", "client_id": None, "message": error_msg, "timestamp": time.time()}
+        )
+        data_queue.put(
+            {
+                "type": "terminated",
+                "client_id": None,
+                "message": error_msg,
+                "timestamp": time.time(),
+            }
+        )
 
         return
 
@@ -64,20 +63,20 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         old_config = config
 
         # Configure the SDR device
-        sdr_id = config.get('sdr_id')
-        serial_number = config.get('serial_number')
-        client_id = config.get('client_id')
-        fft_size = config.get('fft_size', 16384)
-        fft_window = config.get('fft_window', 'hanning')
+        sdr_id = config.get("sdr_id")
+        serial_number = config.get("serial_number")
+        client_id = config.get("client_id")
+        fft_size = config.get("fft_size", 16384)
+        fft_window = config.get("fft_window", "hanning")
 
         # FFT averaging configuration
-        fft_averaging = config.get('fft_averaging', 8)
+        fft_averaging = config.get("fft_averaging", 8)
 
         # Sample accumulation mode: 'accumulate', 'zero-pad', or 'drop'
-        insufficient_samples_mode = config.get('insufficient_samples_mode', 'drop')
+        insufficient_samples_mode = config.get("insufficient_samples_mode", "drop")
 
         # Connect to the UHD device
-        logger.info(f'Connecting to UHD device with serial: {serial_number}...')
+        logger.info(f"Connecting to UHD device with serial: {serial_number}...")
 
         # Add the serial number to device_args
         device_args = f"serial={serial_number}"
@@ -90,18 +89,18 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         logger.info(f"Connected to UHD: {device_info}")
 
         # Configure the device
-        channel = config.get('channel', 0)
-        antenna = config.get('antenna', 'RX2')
+        channel = config.get("channel", 0)
+        antenna = config.get("antenna", "RX2")
 
         # Set antenna
         UHD.set_rx_antenna(antenna, channel)
 
         # Configure basic parameters
-        center_freq = config.get('center_freq', 100e6)
-        sample_rate = config.get('sample_rate', 2.048e6)
-        gain = config.get('gain', 25.0)
+        center_freq = config.get("center_freq", 100e6)
+        sample_rate = config.get("sample_rate", 2.048e6)
+        gain = config.get("gain", 25.0)
         # Add support for offset frequency (downconverter)
-        offset_freq = config.get('offset_freq', 0.0)
+        offset_freq = config.get("offset_freq", 0.0)
 
         UHD.set_rx_rate(sample_rate, channel)
 
@@ -126,7 +125,9 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         actual_freq = UHD.get_rx_freq(channel)
         actual_gain = UHD.get_rx_gain(channel)
 
-        logger.info(f"UHD configured: sample_rate={actual_rate}, center_freq={actual_freq}, gain={actual_gain}, offset_freq={offset_freq}")
+        logger.info(
+            f"UHD configured: sample_rate={actual_rate}, center_freq={actual_freq}, gain={actual_gain}, offset_freq={offset_freq}"
+        )
 
         # Setup streaming with smaller buffer sizes to prevent overflow
         stream_args = uhd.usrp.StreamArgs("fc32", "sc16")
@@ -154,12 +155,14 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         streamer.issue_stream_cmd(stream_cmd)
 
         # if we reached here, we can set the UI to streaming
-        data_queue.put({
-            'type': 'streamingstart',
-            'client_id': client_id,
-            'message': None,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "streamingstart",
+                "client_id": client_id,
+                "message": None,
+                "timestamp": time.time(),
+            }
+        )
 
         # Main processing loop
         while not stop_event.is_set():
@@ -168,13 +171,13 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                 if not config_queue.empty():
                     new_config = config_queue.get_nowait()
 
-                    if 'sample_rate' in new_config:
-                        if actual_rate != new_config['sample_rate']:
+                    if "sample_rate" in new_config:
+                        if actual_rate != new_config["sample_rate"]:
                             # Stop streaming before changing sample rate - fix stream mode
                             stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
                             streamer.issue_stream_cmd(stream_cmd)
 
-                            UHD.set_rx_rate(new_config['sample_rate'], channel)
+                            UHD.set_rx_rate(new_config["sample_rate"], channel)
                             actual_rate = UHD.get_rx_rate(channel)
 
                             # Calculate a new number of samples
@@ -191,21 +194,23 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
                             logger.info(f"Updated sample rate: {actual_rate}")
 
-                    if 'center_freq' in new_config:
-                        if actual_freq != new_config['center_freq']:
+                    if "center_freq" in new_config:
+                        if actual_freq != new_config["center_freq"]:
                             # Stop streaming to flush buffers
                             stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
                             streamer.issue_stream_cmd(stream_cmd)
 
                             # Update center frequency
-                            center_freq = new_config['center_freq']
+                            center_freq = new_config["center_freq"]
 
                             # Set new frequency with current offset
                             if offset_freq != 0.0:
                                 # Create tune request with offset
                                 tune_request = uhd.types.TuneRequest(center_freq + offset_freq)
                                 tune_request.rf_freq = center_freq + offset_freq
-                                tune_request.dsp_freq = -offset_freq  # Compensate with DSP frequency
+                                tune_request.dsp_freq = (
+                                    -offset_freq
+                                )  # Compensate with DSP frequency
                                 UHD.set_rx_freq(tune_request, channel)
                             else:
                                 UHD.set_rx_freq(uhd.types.TuneRequest(center_freq), channel)
@@ -222,21 +227,23 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
                             logger.info(f"Updated center frequency: {actual_freq}")
 
-                    if 'offset_freq' in new_config:
-                        if offset_freq != new_config['offset_freq']:
+                    if "offset_freq" in new_config:
+                        if offset_freq != new_config["offset_freq"]:
                             # Stop streaming to flush buffers
                             stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.stop_cont)
                             streamer.issue_stream_cmd(stream_cmd)
 
                             # Update offset frequency
-                            offset_freq = new_config['offset_freq']
+                            offset_freq = new_config["offset_freq"]
 
                             # Set frequency with new offset
                             if offset_freq != 0.0:
                                 # Create tune request with offset
                                 tune_request = uhd.types.TuneRequest(center_freq + offset_freq)
                                 tune_request.rf_freq = center_freq + offset_freq
-                                tune_request.dsp_freq = -offset_freq  # Compensate with DSP frequency
+                                tune_request.dsp_freq = (
+                                    -offset_freq
+                                )  # Compensate with DSP frequency
                                 UHD.set_rx_freq(tune_request, channel)
                                 logger.info(f"Updated offset frequency: {offset_freq}")
                             else:
@@ -253,15 +260,15 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                             stream_cmd.stream_now = True
                             streamer.issue_stream_cmd(stream_cmd)
 
-                    if 'gain' in new_config:
-                        if actual_gain != new_config['gain']:
-                            UHD.set_rx_gain(new_config['gain'], channel)
+                    if "gain" in new_config:
+                        if actual_gain != new_config["gain"]:
+                            UHD.set_rx_gain(new_config["gain"], channel)
                             actual_gain = UHD.get_rx_gain(channel)
                             logger.info(f"Updated gain: {actual_gain}")
 
-                    if 'fft_size' in new_config:
-                        if old_config.get('fft_size', 0) != new_config['fft_size']:
-                            fft_size = new_config['fft_size']
+                    if "fft_size" in new_config:
+                        if old_config.get("fft_size", 0) != new_config["fft_size"]:
+                            fft_size = new_config["fft_size"]
                             max_accumulation_size = fft_size * 4
 
                             # Clear accumulated samples when FFT size changes
@@ -275,28 +282,33 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
                             logger.info(f"Updated FFT size: {fft_size}")
 
-                    if 'fft_window' in new_config:
-                        if old_config.get('fft_window', None) != new_config['fft_window']:
-                            fft_window = new_config['fft_window']
+                    if "fft_window" in new_config:
+                        if old_config.get("fft_window", None) != new_config["fft_window"]:
+                            fft_window = new_config["fft_window"]
                             logger.info(f"Updated FFT window: {fft_window}")
 
-                    if 'fft_averaging' in new_config:
-                        if old_config.get('fft_averaging', 4) != new_config['fft_averaging']:
-                            fft_averaging = new_config['fft_averaging']
+                    if "fft_averaging" in new_config:
+                        if old_config.get("fft_averaging", 4) != new_config["fft_averaging"]:
+                            fft_averaging = new_config["fft_averaging"]
                             fft_averager.update_averaging_factor(fft_averaging)
                             logger.info(f"Updated FFT averaging: {fft_averaging}")
 
-                    if 'antenna' in new_config:
-                        if old_config.get('antenna', None) != new_config['antenna']:
-                            UHD.set_rx_antenna(new_config['antenna'], channel)
+                    if "antenna" in new_config:
+                        if old_config.get("antenna", None) != new_config["antenna"]:
+                            UHD.set_rx_antenna(new_config["antenna"], channel)
                             logger.info(f"Updated antenna: {new_config['antenna']}")
 
-                    if 'insufficient_samples_mode' in new_config:
-                        if old_config.get('insufficient_samples_mode', None) != new_config['insufficient_samples_mode']:
-                            insufficient_samples_mode = new_config['insufficient_samples_mode']
+                    if "insufficient_samples_mode" in new_config:
+                        if (
+                            old_config.get("insufficient_samples_mode", None)
+                            != new_config["insufficient_samples_mode"]
+                        ):
+                            insufficient_samples_mode = new_config["insufficient_samples_mode"]
                             # Clear accumulated samples when mode changes to avoid mixed behavior
                             accumulated_samples.clear()
-                            logger.info(f"Updated insufficient samples mode: {insufficient_samples_mode}")
+                            logger.info(
+                                f"Updated insufficient samples mode: {insufficient_samples_mode}"
+                            )
 
                     old_config = new_config
 
@@ -307,12 +319,14 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
                 # Send error back to the main process
                 if data_queue:
-                    data_queue.put({
-                        'type': 'error',
-                        'client_id': client_id,
-                        'message': error_msg,
-                        'timestamp': time.time()
-                    })
+                    data_queue.put(
+                        {
+                            "type": "error",
+                            "client_id": client_id,
+                            "message": error_msg,
+                            "timestamp": time.time(),
+                        }
+                    )
 
             try:
                 # Read samples from UHD with a shorter timeout
@@ -336,7 +350,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                 new_samples = recv_buffer[0][:num_rx_samples].copy()
 
                 # Handle samples based on mode
-                if insufficient_samples_mode == 'accumulate':
+                if insufficient_samples_mode == "accumulate":
                     # Add new samples to the accumulation buffer
                     accumulated_samples.extend(new_samples)
 
@@ -350,7 +364,7 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                         samples_array = np.array(list(accumulated_samples))
 
                         # Use samples for FFT processing
-                        samples = samples_array[:len(samples_array)]
+                        samples = samples_array[: len(samples_array)]
 
                         # Keep overlap for the next iteration (50% overlap)
                         overlap_size = min(fft_size // 2, len(accumulated_samples) // 2)
@@ -361,23 +375,29 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                             if accumulated_samples:
                                 accumulated_samples.popleft()
 
-                        logger.debug(f"Processing {len(samples)} accumulated samples, keeping "
-                                     f"{len(accumulated_samples)} for overlap")
+                        logger.debug(
+                            f"Processing {len(samples)} accumulated samples, keeping "
+                            f"{len(accumulated_samples)} for overlap"
+                        )
                     else:
                         # Not enough samples yet, continue accumulating
                         logger.debug(f"Accumulating samples: {len(accumulated_samples)}/{fft_size}")
                         continue
 
-                elif insufficient_samples_mode == 'drop':
+                elif insufficient_samples_mode == "drop":
                     if num_rx_samples < fft_size:
-                        logger.debug(f"Dropping frame: received {num_rx_samples} samples, need {fft_size}")
+                        logger.debug(
+                            f"Dropping frame: received {num_rx_samples} samples, need {fft_size}"
+                        )
                         continue
                     samples = new_samples
 
-                elif insufficient_samples_mode == 'zero-pad':
+                elif insufficient_samples_mode == "zero-pad":
                     if num_rx_samples < fft_size:
                         # Pad with zeros to reach FFT size
-                        logger.debug(f"Zero-padding frame: received {num_rx_samples} samples, padding to {fft_size}")
+                        logger.debug(
+                            f"Zero-padding frame: received {num_rx_samples} samples, padding to {fft_size}"
+                        )
                         padded_samples = np.zeros(fft_size, dtype=np.complex64)
                         padded_samples[:num_rx_samples] = new_samples
                         samples = padded_samples
@@ -385,7 +405,9 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                         samples = new_samples
 
                 else:
-                    logger.warning(f"Unknown insufficient_samples_mode: {insufficient_samples_mode}, defaulting to 'accumulate'")
+                    logger.warning(
+                        f"Unknown insufficient_samples_mode: {insufficient_samples_mode}, defaulting to 'accumulate'"
+                    )
                     # Fall back to accumulate mode
                     accumulated_samples.extend(new_samples)
                     if len(accumulated_samples) >= fft_size:
@@ -425,7 +447,9 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                     # Proper power normalization
                     N = len(fft_segment)
                     window_correction = 1.0
-                    power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
+                    power = 10 * np.log10(
+                        (np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10
+                    )
                     fft_result += power
 
                 # Average the segments
@@ -440,12 +464,14 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
 
                 if averaged_fft is not None:
                     # Send the averaged result back to the main process
-                    data_queue.put({
-                        'type': 'fft_data',
-                        'client_id': client_id,
-                        'data': averaged_fft.tobytes(),
-                        'timestamp': time.time()
-                    })
+                    data_queue.put(
+                        {
+                            "type": "fft_data",
+                            "client_id": client_id,
+                            "data": averaged_fft.tobytes(),
+                            "timestamp": time.time(),
+                        }
+                    )
 
                 # Minimal sleep to maintain data flow
                 time.sleep(0.001)  # Reduced from 0.01
@@ -455,12 +481,14 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                 logger.exception(e)
 
                 # Send error back to the main process
-                data_queue.put({
-                    'type': 'error',
-                    'client_id': client_id,
-                    'message': str(e),
-                    'timestamp': time.time()
-                })
+                data_queue.put(
+                    {
+                        "type": "error",
+                        "client_id": client_id,
+                        "message": str(e),
+                        "timestamp": time.time(),
+                    }
+                )
 
                 # Short pause before retrying
                 time.sleep(0.1)  # Reduced from 1 second
@@ -471,12 +499,14 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         logger.exception(e)
 
         # Send error back to the main process
-        data_queue.put({
-            'type': 'error',
-            'client_id': client_id,
-            'message': error_msg,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "error",
+                "client_id": client_id,
+                "message": error_msg,
+                "timestamp": time.time(),
+            }
+        )
 
     finally:
         # Sleep for 1 second to allow the main process to read the data queue messages
@@ -494,12 +524,14 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                 logger.error(f"Error stopping UHD streaming: {str(e)}")
 
         # Send termination signal
-        data_queue.put({
-            'type': 'terminated',
-            'client_id': client_id,
-            'sdr_id': sdr_id,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "terminated",
+                "client_id": client_id,
+                "sdr_id": sdr_id,
+                "timestamp": time.time(),
+            }
+        )
 
         logger.info("UHD worker process terminated")
 

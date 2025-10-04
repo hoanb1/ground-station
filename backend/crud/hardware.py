@@ -22,7 +22,10 @@ from datetime import datetime, UTC
 from db.models import Rotators, Rigs, Cameras, SDRs
 from common.common import logger, serialize_object
 
-async def fetch_rotators(session: AsyncSession, rotator_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
+
+async def fetch_rotators(
+    session: AsyncSession, rotator_id: Optional[Union[uuid.UUID, str]] = None
+) -> dict:
     """
     Fetch a single rotator by its UUID or all rotators if UUID is not provided.
     """
@@ -69,7 +72,7 @@ async def add_rotator(session: AsyncSession, data: dict) -> dict:
                 aztype=data["aztype"],
                 azendstop=data["azendstop"],
                 added=now,
-                updated=now
+                updated=now,
             )
             .returning(Rotators)
         )
@@ -92,7 +95,7 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
     """
     try:
         # Extract rotator_id from data
-        rotator_id = data.pop('id', None)
+        rotator_id = data.pop("id", None)
         rotator_id = uuid.UUID(rotator_id)
 
         if not rotator_id:
@@ -112,10 +115,7 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
         data["updated"] = datetime.now(UTC)
 
         upd_stmt = (
-            update(Rotators)
-            .where(Rotators.id == rotator_id)
-            .values(**data)
-            .returning(Rotators)
+            update(Rotators).where(Rotators.id == rotator_id).values(**data).returning(Rotators)
         )
         upd_result = await session.execute(upd_stmt)
         await session.commit()
@@ -130,19 +130,19 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def delete_rotators(session: AsyncSession, rotator_ids: list[Union[str, uuid.UUID]] | dict) -> dict:
+async def delete_rotators(
+    session: AsyncSession, rotator_ids: list[Union[str, uuid.UUID]] | dict
+) -> dict:
     """
     Delete multiple rotator records by their UUIDs or string representations of UUIDs.
     """
     try:
-        rotator_ids = [uuid.UUID(rotator_id) if isinstance(rotator_id, str) else rotator_id for rotator_id in
-                       rotator_ids]
+        rotator_ids = [
+            uuid.UUID(rotator_id) if isinstance(rotator_id, str) else rotator_id
+            for rotator_id in rotator_ids
+        ]
 
-        stmt = (
-            delete(Rotators)
-            .where(Rotators.id.in_(rotator_ids))
-            .returning(Rotators)
-        )
+        stmt = delete(Rotators).where(Rotators.id.in_(rotator_ids)).returning(Rotators)
         result = await session.execute(stmt)
         deleted = result.scalars().all()
         if not deleted:
@@ -157,7 +157,9 @@ async def delete_rotators(session: AsyncSession, rotator_ids: list[Union[str, uu
         return {"success": False, "error": str(e)}
 
 
-async def fetch_rigs(session: AsyncSession, rig_id: Optional[Union[uuid.UUID | str | None]] = None) -> dict:
+async def fetch_rigs(
+    session: AsyncSession, rig_id: Optional[Union[uuid.UUID | str | None]] = None
+) -> dict:
     """
     Fetch a single rig by its UUID or all rigs if UUID is not provided.
     """
@@ -181,6 +183,7 @@ async def fetch_rigs(session: AsyncSession, rig_id: Optional[Union[uuid.UUID | s
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
+
 async def add_rig(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new rig record.
@@ -201,16 +204,16 @@ async def add_rig(session: AsyncSession, data: dict) -> dict:
             insert(Rigs)
             .values(
                 id=new_id,
-                name=data['name'],
-                host=data['host'],
-                port=data['port'],
-                radiotype=data['radiotype'],
-                pttstatus=data['pttstatus'],
-                vfotype=data['vfotype'],
-                lodown=data['lodown'],
-                loup=data['loup'],
+                name=data["name"],
+                host=data["host"],
+                port=data["port"],
+                radiotype=data["radiotype"],
+                pttstatus=data["pttstatus"],
+                vfotype=data["vfotype"],
+                lodown=data["lodown"],
+                loup=data["loup"],
                 added=now,
-                updated=now
+                updated=now,
             )
             .returning(Rigs)
         )
@@ -236,9 +239,9 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
         if isinstance(rig_id, str):
             rig_id = uuid.UUID(rig_id)
 
-        del data['added']
-        del data['updated']
-        del data['id']
+        del data["added"]
+        del data["updated"]
+        del data["id"]
 
         # Optionally check if the record exists
         stmt = select(Rigs).filter(Rigs.id == rig_id)
@@ -251,12 +254,7 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
         # Update the updated timestamp.
         data["updated"] = datetime.now(UTC)
 
-        upd_stmt = (
-            update(Rigs)
-            .where(Rigs.id == rig_id)
-            .values(**data)
-            .returning(Rigs)
-        )
+        upd_stmt = update(Rigs).where(Rigs.id == rig_id).values(**data).returning(Rigs)
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_rig = upd_result.scalar_one_or_none()
@@ -270,7 +268,9 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def delete_rig(session: AsyncSession, rig_ids: Union[list[uuid.UUID], list[str], dict]) -> dict:
+async def delete_rig(
+    session: AsyncSession, rig_ids: Union[list[uuid.UUID], list[str], dict]
+) -> dict:
     """
     Delete multiple rig records by their UUIDs or string representations of UUIDs.
     """
@@ -279,11 +279,7 @@ async def delete_rig(session: AsyncSession, rig_ids: Union[list[uuid.UUID], list
             rig_ids = rig_ids.get("ids", [])
         rig_ids = [uuid.UUID(rig_id) if isinstance(rig_id, str) else rig_id for rig_id in rig_ids]
 
-        stmt = (
-            delete(Rigs)
-            .where(Rigs.id.in_(rig_ids))
-            .returning(Rigs)
-        )
+        stmt = delete(Rigs).where(Rigs.id.in_(rig_ids)).returning(Rigs)
         result = await session.execute(stmt)
         deleted = result.scalars().all()
         if not deleted:
@@ -298,7 +294,9 @@ async def delete_rig(session: AsyncSession, rig_ids: Union[list[uuid.UUID], list
         return {"success": False, "error": str(e)}
 
 
-async def fetch_cameras(session: AsyncSession, camera_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
+async def fetch_cameras(
+    session: AsyncSession, camera_id: Optional[Union[uuid.UUID, str]] = None
+) -> dict:
     """
     Fetch a single camera by its UUID or all cameras if UUID is not provided.
     """
@@ -339,7 +337,7 @@ async def add_camera(session: AsyncSession, data: dict) -> dict:
                 url=data.get("url", ""),
                 type=data.get("type", "webrtc"),
                 added=now,
-                updated=now
+                updated=now,
             )
             .returning(Cameras)
         )
@@ -362,7 +360,7 @@ async def edit_camera(session: AsyncSession, data: dict) -> dict:
     """
     try:
         # Extract camera_id from data
-        camera_id = data.pop('id', None)
+        camera_id = data.pop("id", None)
         camera_id = uuid.UUID(camera_id)
 
         if not camera_id:
@@ -381,12 +379,7 @@ async def edit_camera(session: AsyncSession, data: dict) -> dict:
         # Add updated timestamp
         data["updated"] = datetime.now(UTC)
 
-        upd_stmt = (
-            update(Cameras)
-            .where(Cameras.id == camera_id)
-            .values(**data)
-            .returning(Cameras)
-        )
+        upd_stmt = update(Cameras).where(Cameras.id == camera_id).values(**data).returning(Cameras)
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_camera = upd_result.scalar_one_or_none()
@@ -400,19 +393,19 @@ async def edit_camera(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def delete_cameras(session: AsyncSession, camera_ids: list[Union[str, uuid.UUID]] | dict) -> dict:
+async def delete_cameras(
+    session: AsyncSession, camera_ids: list[Union[str, uuid.UUID]] | dict
+) -> dict:
     """
     Delete multiple camera records by their UUIDs or string representations of UUIDs.
     """
     try:
-        camera_ids = [uuid.UUID(camera_id) if isinstance(camera_id, str) else camera_id for camera_id in
-                      camera_ids]
+        camera_ids = [
+            uuid.UUID(camera_id) if isinstance(camera_id, str) else camera_id
+            for camera_id in camera_ids
+        ]
 
-        stmt = (
-            delete(Cameras)
-            .where(Cameras.id.in_(camera_ids))
-            .returning(Cameras)
-        )
+        stmt = delete(Cameras).where(Cameras.id.in_(camera_ids)).returning(Cameras)
         result = await session.execute(stmt)
         deleted = result.scalars().all()
         if not deleted:
@@ -518,25 +511,23 @@ async def add_sdr(session: AsyncSession, data: dict) -> dict:
     """
     try:
         # Name is always required
-        if 'name' not in data or data['name'] is None:
+        if "name" not in data or data["name"] is None:
             raise AssertionError("Field 'name' is required")
 
         # Check type-specific required fields
-        sdr_type = data.get('type')
+        sdr_type = data.get("type")
         if sdr_type:
-            if sdr_type.lower() in ['rtlsdrusbv3', 'rtlsdrusbv4']:
-                if 'serial' not in data or data['serial'] is None:
+            if sdr_type.lower() in ["rtlsdrusbv3", "rtlsdrusbv4"]:
+                if "serial" not in data or data["serial"] is None:
                     raise AssertionError("Field 'serial' is required for USB type SDRs")
 
-            elif sdr_type.lower() in ['rtlsdrtcpv3', 'rtlsdrtcpv4']:
-                if 'host' not in data or data['host'] is None:
+            elif sdr_type.lower() in ["rtlsdrtcpv3", "rtlsdrtcpv4"]:
+                if "host" not in data or data["host"] is None:
                     raise AssertionError("Field 'host' is required for TCP type SDRs")
-                if 'port' not in data or data['port'] is None:
+                if "port" not in data or data["port"] is None:
                     raise AssertionError("Field 'port' is required for TCP type SDRs")
 
-        new_sdr = SDRs(
-            **{key: value for key, value in data.items() if hasattr(SDRs, key)}
-        )
+        new_sdr = SDRs(**{key: value for key, value in data.items() if hasattr(SDRs, key)})
 
         session.add(new_sdr)
         await session.commit()
@@ -572,7 +563,7 @@ async def edit_sdr(session: AsyncSession, data: dict) -> dict:
     """
     try:
         # Get sdr_id from data and convert to UUID if necessary
-        sdr_id = data.pop('id')
+        sdr_id = data.pop("id")
         if isinstance(sdr_id, str):
             sdr_id = uuid.UUID(sdr_id)
 
@@ -647,4 +638,3 @@ async def delete_sdrs(session: AsyncSession, sdr_ids: list[Union[str, uuid.UUID]
         logger.error(f"Error deleting SDRs {sdr_ids}: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
-

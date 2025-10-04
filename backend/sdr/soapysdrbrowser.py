@@ -22,23 +22,24 @@ from zeroconf import ServiceStateChange
 from zeroconf.asyncio import AsyncServiceBrowser, AsyncZeroconf
 
 # Configure logger
-logger = logging.getLogger('soapysdr-browser')
+logger = logging.getLogger("soapysdr-browser")
 
 # Store discovered servers here with a dictionary for each server containing all properties
 discovered_servers: dict[str, dict[str, str | list | int]] = {}
+
 
 # Custom JSON encoder to handle SoapySDR types
 class SoapySDREncoder(json.JSONEncoder):
     def default(self, obj):
         try:
             # Convert SoapySDRKwargs objects to dictionaries
-            if hasattr(obj, '__dict__'):
+            if hasattr(obj, "__dict__"):
                 return obj.__dict__
             # Handle other special types from SoapySDR
-            if hasattr(obj, 'items') and callable(obj.items):
+            if hasattr(obj, "items") and callable(obj.items):
                 return dict(obj.items())
             # Handle any other iterable types
-            if hasattr(obj, '__iter__') and not isinstance(obj, (str, bytes, dict)):
+            if hasattr(obj, "__iter__") and not isinstance(obj, (str, bytes, dict)):
                 return list(obj)
 
         except Exception as e:
@@ -47,21 +48,24 @@ class SoapySDREncoder(json.JSONEncoder):
         # Let the base class handle everything else
         return super().default(obj)
 
+
 # Helper function to convert SoapySDR objects to serializable dictionaries
 def soapysdr_to_dict(sdr_obj):
     """Convert SoapySDR objects to serializable dictionaries."""
     if isinstance(sdr_obj, dict):
         return {k: soapysdr_to_dict(v) for k, v in sdr_obj.items()}
-    elif hasattr(sdr_obj, 'items') and callable(getattr(sdr_obj, 'items')):
+    elif hasattr(sdr_obj, "items") and callable(getattr(sdr_obj, "items")):
         return {k: soapysdr_to_dict(v) for k, v in sdr_obj.items()}
-    elif hasattr(sdr_obj, '__dict__'):
-        return {k: soapysdr_to_dict(v) for k, v in sdr_obj.__dict__.items()
-                if not k.startswith('_')}
+    elif hasattr(sdr_obj, "__dict__"):
+        return {
+            k: soapysdr_to_dict(v) for k, v in sdr_obj.__dict__.items() if not k.startswith("_")
+        }
     elif isinstance(sdr_obj, (list, tuple)):
         return [soapysdr_to_dict(x) for x in sdr_obj]
     else:
         # Basic types should be serializable
         return sdr_obj
+
 
 async def query_sdrs_with_python_module(ip, port, timeout=5):
     """Query for SDRs using Python SoapySDR module with timeout protection."""
@@ -69,8 +73,7 @@ async def query_sdrs_with_python_module(ip, port, timeout=5):
         # This needs to run in a thread pool to avoid blocking the event loop
         # Wrap with a timeout to prevent hanging on problematic servers
         raw_results = await asyncio.wait_for(
-            asyncio.to_thread(_query_with_soapysdr_module, ip, port),
-            timeout=timeout
+            asyncio.to_thread(_query_with_soapysdr_module, ip, port), timeout=timeout
         )
 
         # Convert the results to serializable dictionaries
@@ -84,6 +87,7 @@ async def query_sdrs_with_python_module(ip, port, timeout=5):
     except Exception as e:
         logger.error(f"Error querying with Python module: {str(e)}")
         return [], f"error: {str(e)}"
+
 
 def _query_with_soapysdr_module(ip, port):
     """Execute the SoapySDR module query in a separate thread."""
@@ -105,6 +109,7 @@ def _query_with_soapysdr_module(ip, port):
         # Re-raise to be handled by the caller
         raise
 
+
 async def try_simple_socket_connection(ip, port, timeout=2):
     """Try a simple socket connection to check if server is reachable."""
     try:
@@ -119,6 +124,7 @@ async def try_simple_socket_connection(ip, port, timeout=2):
     except Exception as e:
         logger.debug(f"Socket connection test to {ip}:{port} failed: {str(e)}")
         return False
+
 
 async def query_server_for_sdrs(ip, port):
     """Query a SoapySDR server for connected devices with fallbacks."""
@@ -139,6 +145,7 @@ async def query_server_for_sdrs(ip, port):
     # If we reach here, add the server but mark it as having connection issues
     return [], "connection_issues"
 
+
 async def on_service_state_change(zeroconf, service_type, name, state_change):
     """Callback for service state changes."""
     global discovered_servers
@@ -151,7 +158,8 @@ async def on_service_state_change(zeroconf, service_type, name, state_change):
             port = info.port
             server_name = info.server.replace(".local.", "")  # Clean up server name
             logger.info(
-                f"Found SoapyRemote Server: {name} | Server: {server_name} | Addresses: {addresses} | Port: {port}")
+                f"Found SoapyRemote Server: {name} | Server: {server_name} | Addresses: {addresses} | Port: {port}"
+            )
 
             # Find a suitable IP address
             server_ip = None
@@ -177,7 +185,7 @@ async def on_service_state_change(zeroconf, service_type, name, state_change):
                     "status": status,
                     "sdrs": connected_sdrs,
                     "addresses": addresses,
-                    "last_updated": asyncio.get_event_loop().time()
+                    "last_updated": asyncio.get_event_loop().time(),
                 }
 
                 # Store in our global dictionary
@@ -200,10 +208,12 @@ async def on_service_state_change(zeroconf, service_type, name, state_change):
         if name in discovered_servers:
             del discovered_servers[name]
 
+
 # This is a wrapper that will handle the async callback properly
 def service_state_change_handler(zeroconf, service_type, name, state_change):
     """Handle the service state change by scheduling the async callback."""
     asyncio.create_task(on_service_state_change(zeroconf, service_type, name, state_change))
+
 
 async def refresh_connected_sdrs():
     """Refresh the list of SDRs connected to each known server."""
@@ -229,6 +239,7 @@ async def refresh_connected_sdrs():
             else:
                 logger.debug(f"Server {name} still has status: {status}")
 
+
 async def discover_soapy_servers():
     """Discover SoapyRemote servers using AsyncZeroconf."""
     logger.info("Starting mDNS discovery for SoapyRemote servers...")
@@ -243,7 +254,7 @@ async def discover_soapy_servers():
     browser = AsyncServiceBrowser(
         azc.zeroconf,
         [service_type],
-        handlers=[service_state_change_handler]  # Use the wrapper instead
+        handlers=[service_state_change_handler],  # Use the wrapper instead
     )
 
     try:
@@ -254,8 +265,10 @@ async def discover_soapy_servers():
         if discovered_servers:
             logger.debug("Found the following potential SoapyRemote servers:")
             for name, server_info in discovered_servers.items():
-                logger.debug(f"  Name: {name}, IP: {server_info['ip']}, Port: {server_info['port']}, "
-                             f"Status: {server_info['status']}, Connected SDRs: {len(server_info['sdrs'])}")
+                logger.debug(
+                    f"  Name: {name}, IP: {server_info['ip']}, Port: {server_info['port']}, "
+                    f"Status: {server_info['status']}, Connected SDRs: {len(server_info['sdrs'])}"
+                )
 
                 if server_info["status"] == "active" and server_info["sdrs"]:
                     # Format SDR information for nice display
@@ -277,6 +290,7 @@ async def discover_soapy_servers():
         await azc.async_close()
         logger.info("Discovery completed.")
 
+
 # Helper function to get a human-readable representation of discovered servers
 def get_server_summary():
     """Return a human-readable summary of discovered servers and their SDRs."""
@@ -288,20 +302,23 @@ def get_server_summary():
 
     for name, server_info in discovered_servers.items():
         summary.append(f"  Server: {name}")
-        summary.append(f"    IP: {server_info['ip']}, Port: {server_info['port']}, Status: {server_info['status']}")
+        summary.append(
+            f"    IP: {server_info['ip']}, Port: {server_info['port']}, Status: {server_info['status']}"
+        )
 
         if server_info["status"] == "active":
             summary.append(f"    Connected SDRs: {len(server_info['sdrs'])}")
 
             for i, sdr in enumerate(server_info["sdrs"]):
                 # Extract key info like driver, label if available
-                driver = sdr.get('driver', 'Unknown')
-                label = sdr.get('label', sdr.get('device', f'SDR #{i+1}'))
+                driver = sdr.get("driver", "Unknown")
+                label = sdr.get("label", sdr.get("device", f"SDR #{i+1}"))
                 summary.append(f"      SDR #{i+1}: {label} ({driver})")
         else:
             summary.append(f"    No SDR information available: {server_info['status']}")
 
     return "\n".join(summary)
+
 
 # Get only active servers with connected SDRs
 def get_active_servers_with_sdrs():
@@ -314,8 +331,10 @@ def get_active_servers_with_sdrs():
 
     return active_servers
 
+
 # When you want to run this function:
 # asyncio.run(discover_soapy_servers())
+
 
 # To periodically refresh the SDR list:
 async def monitor_soapy_servers(refresh_interval=60):

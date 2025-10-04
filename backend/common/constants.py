@@ -27,21 +27,21 @@ class SocketEvents:
     """Socket.IO event names emitted to clients"""
 
     # Satellite Tracking
-    SATELLITE_TRACKING = 'satellite-tracking'
-    UI_TRACKER_STATE = 'ui-tracker-state'
+    SATELLITE_TRACKING = "satellite-tracking"
+    UI_TRACKER_STATE = "ui-tracker-state"
 
     # SDR Events
-    SDR_STATUS = 'sdr-status'
-    SDR_CONFIG = 'sdr-config'
-    SDR_CONFIG_ERROR = 'sdr-config-error'
-    SDR_ERROR = 'sdr-error'
-    SDR_FFT_DATA = 'sdr-fft-data'
+    SDR_STATUS = "sdr-status"
+    SDR_CONFIG = "sdr-config"
+    SDR_CONFIG_ERROR = "sdr-config-error"
+    SDR_ERROR = "sdr-error"
+    SDR_FFT_DATA = "sdr-fft-data"
 
     # Audio
-    AUDIO_DATA = 'audio-data'
+    AUDIO_DATA = "audio-data"
 
     # TLE Sync
-    SAT_SYNC_EVENTS = 'sat-sync-events'
+    SAT_SYNC_EVENTS = "sat-sync-events"
 
 
 # ============================================================================
@@ -51,15 +51,15 @@ class QueueMessageTypes:
     """Message types used in multiprocessing queues between workers and main process"""
 
     # Worker → Main
-    ERROR = 'error'
-    TERMINATED = 'terminated'
-    STREAMING_START = 'streamingstart'
-    FFT_DATA = 'fft_data'
-    AUDIO_DATA = 'audio-data'  # Note: uses hyphen to match Socket.IO event name
-    CONFIG_ERROR = 'config_error'
+    ERROR = "error"
+    TERMINATED = "terminated"
+    STREAMING_START = "streamingstart"
+    FFT_DATA = "fft_data"
+    AUDIO_DATA = "audio-data"  # Note: uses hyphen to match Socket.IO event name
+    CONFIG_ERROR = "config_error"
 
     # Main → Worker
-    GET_CENTER_FREQ = 'get_center_freq'
+    GET_CENTER_FREQ = "get_center_freq"
 
 
 # ============================================================================
@@ -67,7 +67,8 @@ class QueueMessageTypes:
 # ============================================================================
 class TrackingStateNames:
     """Database tracking state names"""
-    SATELLITE_TRACKING = 'satellite-tracking'
+
+    SATELLITE_TRACKING = "satellite-tracking"
 
 
 # ============================================================================
@@ -77,21 +78,21 @@ class TrackingEvents:
     """Event names used in satellite tracking system"""
 
     # Satellite Events
-    NORAD_ID_CHANGE = 'norad_id_change'
+    NORAD_ID_CHANGE = "norad_id_change"
 
     # Rotator Events
-    ROTATOR_CONNECTED = 'rotator_connected'
-    ROTATOR_DISCONNECTED = 'rotator_disconnected'
-    ROTATOR_ERROR = 'rotator_error'
-    ROTATOR_PARKED = 'rotator_parked'
-    AZIMUTH_OUT_OF_BOUNDS = 'azimuth_out_of_bounds'
-    ELEVATION_OUT_OF_BOUNDS = 'elevation_out_of_bounds'
-    MIN_ELEVATION_ERROR = 'minelevation_error'
+    ROTATOR_CONNECTED = "rotator_connected"
+    ROTATOR_DISCONNECTED = "rotator_disconnected"
+    ROTATOR_ERROR = "rotator_error"
+    ROTATOR_PARKED = "rotator_parked"
+    AZIMUTH_OUT_OF_BOUNDS = "azimuth_out_of_bounds"
+    ELEVATION_OUT_OF_BOUNDS = "elevation_out_of_bounds"
+    MIN_ELEVATION_ERROR = "minelevation_error"
 
     # Rig Events
-    RIG_CONNECTED = 'rig_connected'
-    RIG_DISCONNECTED = 'rig_disconnected'
-    RIG_ERROR = 'rig_error'
+    RIG_CONNECTED = "rig_connected"
+    RIG_DISCONNECTED = "rig_disconnected"
+    RIG_ERROR = "rig_error"
 
 
 # ============================================================================
@@ -99,11 +100,12 @@ class TrackingEvents:
 # ============================================================================
 class TrackerCommands:
     """Commands that can be sent to the satellite tracker"""
-    STOP = 'stop'
-    NUDGE_CLOCKWISE = 'nudge_clockwise'
-    NUDGE_COUNTER_CLOCKWISE = 'nudge_counter_clockwise'
-    NUDGE_UP = 'nudge_up'
-    NUDGE_DOWN = 'nudge_down'
+
+    STOP = "stop"
+    NUDGE_CLOCKWISE = "nudge_clockwise"
+    NUDGE_COUNTER_CLOCKWISE = "nudge_counter_clockwise"
+    NUDGE_UP = "nudge_up"
+    NUDGE_DOWN = "nudge_down"
 
 
 # ============================================================================
@@ -111,10 +113,11 @@ class TrackerCommands:
 # ============================================================================
 class DictKeys:
     """Common dictionary keys used throughout the application"""
-    EVENT = 'event'
-    DATA = 'data'
-    EVENTS = 'events'
-    NAME = 'name'
-    TYPE = 'type'
-    CLIENT_ID = 'client_id'
-    MESSAGE = 'message'
+
+    EVENT = "event"
+    DATA = "data"
+    EVENTS = "events"
+    NAME = "name"
+    TYPE = "type"
+    CLIENT_ID = "client_id"
+    MESSAGE = "message"

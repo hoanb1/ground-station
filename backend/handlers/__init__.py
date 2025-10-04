@@ -21,11 +21,11 @@ from .sdr import sdr_data_request_routing
 from .tracking import emit_tracker_data, emit_ui_tracker_values
 
 __all__ = [
-    'run_async_in_thread',
-    'data_request_routing',
-    'data_submission_routing',
-    'auth_request_routing',
-    'sdr_data_request_routing',
-    'emit_tracker_data',
-    'emit_ui_tracker_values',
+    "run_async_in_thread",
+    "data_request_routing",
+    "data_submission_routing",
+    "auth_request_routing",
+    "sdr_data_request_routing",
+    "emit_tracker_data",
+    "emit_ui_tracker_values",
 ]

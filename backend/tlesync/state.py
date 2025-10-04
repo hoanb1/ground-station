@@ -16,6 +16,7 @@
 
 from datetime import datetime, timezone
 
+
 # Create a state manager class for satellite synchronization
 class SatelliteSyncState:
     _instance = None
@@ -29,30 +30,27 @@ class SatelliteSyncState:
     def reset(self):
         self.state = {
             "status": "idle",  # idle, inprogress, complete
-            "progress": 0,      # 0-100 percentage
-            "message": "",      # Current operation message
-            "success": None,    # None, True, False
-            "last_update": None, # Timestamp of last update
-            "active_sources": [], # Currently processing sources
-            "completed_sources": [], # Successfully processed sources
-            "errors": [],      # A list of all error messages if any
-            "stats": {          # Statistics about the sync
+            "progress": 0,  # 0-100 percentage
+            "message": "",  # Current operation message
+            "success": None,  # None, True, False
+            "last_update": None,  # Timestamp of last update
+            "active_sources": [],  # Currently processing sources
+            "completed_sources": [],  # Successfully processed sources
+            "errors": [],  # A list of all error messages if any
+            "stats": {  # Statistics about the sync
                 "satellites_processed": 0,
                 "transmitters_processed": 0,
-                "groups_processed": 0
+                "groups_processed": 0,
             },
-            "newly_added": {    # Track newly added items
-                "satellites": [],   # List of newly added satellites
-                "transmitters": []  # List of newly added transmitters
+            "newly_added": {  # Track newly added items
+                "satellites": [],  # List of newly added satellites
+                "transmitters": [],  # List of newly added transmitters
             },
-            "removed": {        # Track removed items
-                "satellites": [],   # List of removed satellites
-                "transmitters": []  # List of removed transmitters
+            "removed": {  # Track removed items
+                "satellites": [],  # List of removed satellites
+                "transmitters": [],  # List of removed transmitters
             },
-            "modified": {
-                "satellites": [],
-                "transmitters": []
-            }
+            "modified": {"satellites": [], "transmitters": []},
         }
 
     def get_state(self):

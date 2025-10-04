@@ -7,7 +7,7 @@ import logging
 from vfos.state import VFOManager
 
 # Configure logging
-logger = logging.getLogger('audio-producer')
+logger = logging.getLogger("audio-producer")
 
 
 class WebAudioProducer(threading.Thread):
@@ -33,11 +33,11 @@ class WebAudioProducer(threading.Thread):
         """Check if any session has active and selected VFOs."""
         session_ids = self.vfo_manager.get_all_session_ids()
 
-        #logger.info(f"session_ids: {session_ids}")
+        # logger.info(f"session_ids: {session_ids}")
 
         for session_id in session_ids:
             selected_vfo = self.vfo_manager.get_selected_vfo(session_id)
-            #logger.info(f"session: {session_id} with selected vfo: {selected_vfo}")
+            # logger.info(f"session: {session_id} with selected vfo: {selected_vfo}")
             if selected_vfo and selected_vfo.active and selected_vfo.selected:
                 return True
 

@@ -23,11 +23,16 @@ from common.common import ModelEncoder
 from skyfield.api import EarthSatellite
 from typing import Union
 
-logger = logging.getLogger('passes-worker')
+logger = logging.getLogger("passes-worker")
 
 
-def calculate_next_events(satellite_data: Union[dict, list], home_location: dict[str, float], hours: float = 6.0,
-                          above_el=0, step_minutes=1) -> dict:
+def calculate_next_events(
+    satellite_data: Union[dict, list],
+    home_location: dict[str, float],
+    hours: float = 6.0,
+    above_el=0,
+    step_minutes=1,
+) -> dict:
     """
     This function calculates upcoming satellite observation events based on satellite data, observation location,
     duration, and elevation threshold. It primarily uses Skyfield's efficient find_events method.
@@ -47,33 +52,30 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
     :rtype: dict
     """
 
-    reply: dict[str, Union[bool, None, list, None, dict, str]] = {'success': None, 'data': None, 'parameters': None, 'error': None}
+    reply: dict[str, Union[bool, None, list, None, dict, str]] = {
+        "success": None,
+        "data": None,
+        "parameters": None,
+        "error": None,
+    }
     events = []
 
     # Convert satellite_data to tle_groups format for processing
     tle_groups = []
     satellite_info = {}  # Map norad_id to full satellite data
-    
+
     if isinstance(satellite_data, dict):
         # Single satellite case
-        tle_groups = [[
-            satellite_data['norad_id'],
-            satellite_data['tle1'],
-            satellite_data['tle2']
-        ]]
-        satellite_info[satellite_data['norad_id']] = satellite_data
+        tle_groups = [[satellite_data["norad_id"], satellite_data["tle1"], satellite_data["tle2"]]]
+        satellite_info[satellite_data["norad_id"]] = satellite_data
         satellites_count = 1
     elif isinstance(satellite_data, list) and len(satellite_data) > 0:
         # Multiple satellites case
         if isinstance(satellite_data[0], dict):
             # List of satellite dictionaries
             for sat in satellite_data:
-                tle_groups.append([
-                    sat['norad_id'],
-                    sat['tle1'],
-                    sat['tle2']
-                ])
-                satellite_info[sat['norad_id']] = sat
+                tle_groups.append([sat["norad_id"], sat["tle1"], sat["tle2"]])
+                satellite_info[sat["norad_id"]] = sat
             satellites_count = len(satellite_data)
         else:
             # Fallback for old format (list of tle_groups directly)
@@ -81,24 +83,28 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
             satellites_count = len(satellite_data)
     else:
         # Invalid input
-        reply['success'] = False
-        reply['error'] = "Invalid satellite_data format. Expected dict or list of dicts."
+        reply["success"] = False
+        reply["error"] = "Invalid satellite_data format. Expected dict or list of dicts."
         return reply
 
     logger.info(f"Calculating passes for {satellites_count} satellites for the next {hours} hours.")
 
     try:
         assert isinstance(tle_groups, list), "tle_groups must be a list of lists"
-        assert all(len(group) == 3 for group in tle_groups), "Each TLE group must contain norad_id and 2 TLE lines"
+        assert all(
+            len(group) == 3 for group in tle_groups
+        ), "Each TLE group must contain norad_id and 2 TLE lines"
         assert isinstance(home_location, dict), "home_location must be a dictionary"
-        assert 'lat' in home_location and 'lon' in home_location, "home_location must contain 'lat' and 'lon' keys"
+        assert (
+            "lat" in home_location and "lon" in home_location
+        ), "home_location must contain 'lat' and 'lon' keys"
 
         # set a temporary folder for the skyfield library to do its thing
-        skyfieldloader = Loader('/tmp/skyfield-data')  # or any preferred path
+        skyfieldloader = Loader("/tmp/skyfield-data")  # or any preferred path
         ts = skyfieldloader.timescale()
 
-        homelat = float(home_location['lat'])
-        homelon = float(home_location['lon'])
+        homelat = float(home_location["lat"])
+        homelon = float(home_location["lon"])
 
         # Coordinates can be in decimal degrees:
         observer = Topos(latitude_degrees=homelat, longitude_degrees=homelon)
@@ -110,32 +116,27 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
         for tle_group in tle_groups:
             norad_id, line1, line2 = tle_group
 
-            satellite = EarthSatellite(
-                line1,
-                line2,
-                name=f"satellite_{norad_id}"
-            )
+            satellite = EarthSatellite(line1, line2, name=f"satellite_{norad_id}")
 
             # Check if it is geostationary or geosynchronous
             satellite_orbit_info = analyze_satellite_orbit(satellite)
-            is_geostationary = satellite_orbit_info['is_geostationary']
-            is_geosynchronous = satellite_orbit_info['is_geosynchronous']
+            is_geostationary = satellite_orbit_info["is_geostationary"]
+            is_geosynchronous = satellite_orbit_info["is_geosynchronous"]
 
             # Get the status from the satellite info
-            status = satellite_info.get(norad_id, {}).get('status', None)
+            status = satellite_info.get(norad_id, {}).get("status", None)
 
             difference = satellite - observer
             satellite_events = []
 
             # APPROACH 1: Use find_events method as the primary, efficient approach
             times, events_type = satellite.find_events(
-                observer,
-                t0,
-                t_end,
-                altitude_degrees=above_el
+                observer, t0, t_end, altitude_degrees=above_el
             )
 
-            logger.debug(f"find_events method found {len(times)} times and events {events_type} for satellite {norad_id}")
+            logger.debug(
+                f"find_events method found {len(times)} times and events {events_type} for satellite {norad_id}"
+            )
 
             # First, check if the satellite is already visible at the start time
             topocentric = difference.at(t0)
@@ -149,34 +150,28 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
             if already_visible and (len(times) == 0 or events_type[0] != 0):
                 # Find the actual rise time by looking backward
                 actual_rise_time = backtrack_rise_time(satellite, observer, t0, above_el)
-                current_pass = {
-                    'start_time': actual_rise_time,
-                    'norad_id': norad_id
-                }
+                current_pass = {"start_time": actual_rise_time, "norad_id": norad_id}
 
             # Process all the find_events results
             for i, (time, event_type) in enumerate(zip(times, events_type)):
                 if event_type == 0:  # Rise event
                     # Start a new pass
-                    current_pass = {
-                        'start_time': time,
-                        'norad_id': norad_id
-                    }
-                elif event_type == 1 and 'start_time' in current_pass:  # Culmination event
+                    current_pass = {"start_time": time, "norad_id": norad_id}
+                elif event_type == 1 and "start_time" in current_pass:  # Culmination event
                     # This is the peak of the current pass
-                    current_pass['peak_time'] = time
+                    current_pass["peak_time"] = time
 
-                elif event_type == 2 and 'start_time' in current_pass:  # Set event
+                elif event_type == 2 and "start_time" in current_pass:  # Set event
                     # This completes the current pass
-                    current_pass['end_time'] = time
+                    current_pass["end_time"] = time
 
                     # Calculate additional information for this pass
-                    topocentric = difference.at(current_pass['start_time'])
+                    topocentric = difference.at(current_pass["start_time"])
                     alt_start, az_start, dist_start = topocentric.altaz()
                     start_az_value = float(az_start.degrees)
 
-                    if 'peak_time' in current_pass:
-                        topocentric = difference.at(current_pass['peak_time'])
+                    if "peak_time" in current_pass:
+                        topocentric = difference.at(current_pass["peak_time"])
                         alt_peak, az_peak, dist_peak = topocentric.altaz()
                         alt_peak_value = float(alt_peak.degrees)
                         az_peak_value = float(az_peak.degrees)
@@ -185,14 +180,14 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
                         # If we don't have a culmination event, find the peak
                         # Check several points between start and end
                         num_checks = 20
-                        check_times = current_pass['start_time'] + np.linspace(
+                        check_times = current_pass["start_time"] + np.linspace(
                             0,
-                            (current_pass['end_time'].tt - current_pass['start_time'].tt),
-                            num_checks
+                            (current_pass["end_time"].tt - current_pass["start_time"].tt),
+                            num_checks,
                         )
 
                         max_alt = float(alt_start.degrees)
-                        peak_time = current_pass['start_time']
+                        peak_time = current_pass["start_time"]
                         peak_az = float(az_start.degrees)
                         peak_dist = float(dist_start.km)
 
@@ -205,56 +200,59 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
                                 peak_az = float(check_az.degrees)
                                 peak_dist = float(check_dist.km)
 
-                        current_pass['peak_time'] = peak_time
+                        current_pass["peak_time"] = peak_time
                         alt_peak_value = max_alt
                         az_peak_value = peak_az
                         dist_peak_value = peak_dist
 
-                    topocentric = difference.at(current_pass['end_time'])
+                    topocentric = difference.at(current_pass["end_time"])
                     alt_end, az_end, dist_end = topocentric.altaz()
                     end_az_value = float(az_end.degrees)
 
-                    duration = current_pass['end_time'].utc_datetime() - current_pass['start_time'].utc_datetime()
+                    duration = (
+                        current_pass["end_time"].utc_datetime()
+                        - current_pass["start_time"].utc_datetime()
+                    )
 
-                    satellite_events.append({
-                        'norad_id': norad_id,
-                        'status': status,
-                        'is_geostationary': is_geostationary,
-                        'is_geosynchronous': is_geosynchronous,
-                        'event_start': current_pass['start_time'].utc_iso(),
-                        'event_end': current_pass['end_time'].utc_iso(),
-                        'duration': duration,
-                        'distance_at_start': float(dist_start.km),
-                        'distance_at_end': float(dist_end.km),
-                        'distance_at_peak': float(dist_peak_value),
-                        'peak_altitude': float(alt_peak_value),
-                        'start_azimuth': start_az_value,
-                        'end_azimuth': end_az_value,
-                        'peak_azimuth': float(az_peak_value)
-                    })
+                    satellite_events.append(
+                        {
+                            "norad_id": norad_id,
+                            "status": status,
+                            "is_geostationary": is_geostationary,
+                            "is_geosynchronous": is_geosynchronous,
+                            "event_start": current_pass["start_time"].utc_iso(),
+                            "event_end": current_pass["end_time"].utc_iso(),
+                            "duration": duration,
+                            "distance_at_start": float(dist_start.km),
+                            "distance_at_end": float(dist_end.km),
+                            "distance_at_peak": float(dist_peak_value),
+                            "peak_altitude": float(alt_peak_value),
+                            "start_azimuth": start_az_value,
+                            "end_azimuth": end_az_value,
+                            "peak_azimuth": float(az_peak_value),
+                        }
+                    )
 
                     current_pass = {}
 
             # Handle incomplete passes (satellite visible at the end of time window)
-            if current_pass and 'start_time' in current_pass:
+            if current_pass and "start_time" in current_pass:
                 # We have a pass that started but didn't finish in our time window
 
                 # Find the culmination point if we don't have one
-                if 'peak_time' not in current_pass:
+                if "peak_time" not in current_pass:
                     # Sample points to find maximum altitude
                     num_checks = 20
-                    check_times = current_pass['start_time'] + np.linspace(
-                        0,
-                        (t_end.tt - current_pass['start_time'].tt),
-                        num_checks
+                    check_times = current_pass["start_time"] + np.linspace(
+                        0, (t_end.tt - current_pass["start_time"].tt), num_checks
                     )
 
-                    topocentric = difference.at(current_pass['start_time'])
+                    topocentric = difference.at(current_pass["start_time"])
                     alt_start, az_start, dist_start = topocentric.altaz()
                     start_az_value = float(az_start.degrees)
 
                     max_alt = float(alt_start.degrees)
-                    peak_time = current_pass['start_time']
+                    peak_time = current_pass["start_time"]
                     peak_az = float(az_start.degrees)
                     peak_dist = float(dist_start.km)
 
@@ -267,54 +265,63 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
                             peak_az = float(check_az.degrees)
                             peak_dist = float(check_dist.km)
 
-                    current_pass['peak_time'] = peak_time
+                    current_pass["peak_time"] = peak_time
                     alt_peak_value = max_alt
                     az_peak_value = peak_az
                     dist_peak_value = peak_dist
                 else:
-                    topocentric = difference.at(current_pass['peak_time'])
+                    topocentric = difference.at(current_pass["peak_time"])
                     alt_peak, az_peak, dist_peak = topocentric.altaz()
                     alt_peak_value = float(alt_peak.degrees)
                     az_peak_value = float(az_peak.degrees)
                     dist_peak_value = float(dist_peak.km)
 
                 # Use t_end as the end time for now
-                current_pass['end_time'] = t_end
+                current_pass["end_time"] = t_end
 
                 # Calculate metrics
-                topocentric = difference.at(current_pass['start_time'])
+                topocentric = difference.at(current_pass["start_time"])
                 alt_start, az_start, dist_start = topocentric.altaz()
                 start_az_value = float(az_start.degrees)
 
-                topocentric = difference.at(current_pass['end_time'])
+                topocentric = difference.at(current_pass["end_time"])
                 alt_end, az_end, dist_end = topocentric.altaz()
                 end_az_value = float(az_end.degrees)
 
-                duration = current_pass['end_time'].utc_datetime() - current_pass['start_time'].utc_datetime()
+                duration = (
+                    current_pass["end_time"].utc_datetime()
+                    - current_pass["start_time"].utc_datetime()
+                )
 
-                satellite_events.append({
-                    'norad_id': norad_id,
-                    'status': status,
-                    'is_geostationary': is_geostationary,
-                    'is_geosynchronous': is_geosynchronous,
-                    'event_start': current_pass['start_time'].utc_iso(),
-                    'event_end': current_pass['end_time'].utc_iso(),
-                    'duration': duration,
-                    'distance_at_start': float(dist_start.km),
-                    'distance_at_end': float(dist_end.km),
-                    'distance_at_peak': float(dist_peak_value),
-                    'peak_altitude': float(alt_peak_value),
-                    'start_azimuth': start_az_value,
-                    'end_azimuth': end_az_value,
-                    'peak_azimuth': float(az_peak_value),
-                    'estimated_end': True
-                })
+                satellite_events.append(
+                    {
+                        "norad_id": norad_id,
+                        "status": status,
+                        "is_geostationary": is_geostationary,
+                        "is_geosynchronous": is_geosynchronous,
+                        "event_start": current_pass["start_time"].utc_iso(),
+                        "event_end": current_pass["end_time"].utc_iso(),
+                        "duration": duration,
+                        "distance_at_start": float(dist_start.km),
+                        "distance_at_end": float(dist_end.km),
+                        "distance_at_peak": float(dist_peak_value),
+                        "peak_altitude": float(alt_peak_value),
+                        "start_azimuth": start_az_value,
+                        "end_azimuth": end_az_value,
+                        "peak_azimuth": float(az_peak_value),
+                        "estimated_end": True,
+                    }
+                )
 
             if satellite_events:
-                logger.debug(f"find_events method found {len(satellite_events)} passes for satellite {norad_id}")
+                logger.debug(
+                    f"find_events method found {len(satellite_events)} passes for satellite {norad_id}"
+                )
                 events.extend(satellite_events)
             else:
-                logger.debug(f"find_events found no passes for satellite {norad_id}. Falling back to time-step method.")
+                logger.debug(
+                    f"find_events found no passes for satellite {norad_id}. Falling back to time-step method."
+                )
 
                 # APPROACH 2: Fallback to traditional time-step method
                 t_points = t0 + (np.arange(0, int(hours * 60), step_minutes) / (24.0 * 60.0))
@@ -360,9 +367,9 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
                     end_time = t_points[end_i]
 
                     # Extract the slice of data for this pass
-                    pass_altitudes = altitudes[start_i:end_i + 1]
-                    pass_azimuths = azimuths[start_i:end_i + 1]
-                    pass_distances = distances[start_i:end_i + 1]
+                    pass_altitudes = altitudes[start_i : end_i + 1]
+                    pass_azimuths = azimuths[start_i : end_i + 1]
+                    pass_distances = distances[start_i : end_i + 1]
 
                     # Find the index of maximum elevation within this pass
                     peak_i = np.argmax(pass_altitudes)
@@ -370,51 +377,55 @@ def calculate_next_events(satellite_data: Union[dict, list], home_location: dict
 
                     duration = end_time.utc_datetime() - start_time.utc_datetime()
 
-                    timestep_events.append({
-                        'norad_id': norad_id,
-                        'status': status,
-                        'is_geostationary': is_geostationary,
-                        'is_geosynchronous': is_geosynchronous,
-                        'event_start': start_time.utc_iso(),
-                        'event_end': end_time.utc_iso(),
-                        'duration': duration,
-                        'distance_at_start': float(distances[start_i]),
-                        'distance_at_end': float(distances[end_i]),
-                        'distance_at_peak': float(pass_distances[peak_i]),
-                        'peak_altitude': float(pass_altitudes[peak_i]),
-                        'start_azimuth': float(azimuths[start_i]),
-                        'end_azimuth': float(azimuths[end_i]),
-                        'peak_azimuth': float(pass_azimuths[peak_i])
-                    })
+                    timestep_events.append(
+                        {
+                            "norad_id": norad_id,
+                            "status": status,
+                            "is_geostationary": is_geostationary,
+                            "is_geosynchronous": is_geosynchronous,
+                            "event_start": start_time.utc_iso(),
+                            "event_end": end_time.utc_iso(),
+                            "duration": duration,
+                            "distance_at_start": float(distances[start_i]),
+                            "distance_at_end": float(distances[end_i]),
+                            "distance_at_peak": float(pass_distances[peak_i]),
+                            "peak_altitude": float(pass_altitudes[peak_i]),
+                            "start_azimuth": float(azimuths[start_i]),
+                            "end_azimuth": float(azimuths[end_i]),
+                            "peak_azimuth": float(pass_azimuths[peak_i]),
+                        }
+                    )
 
                 if timestep_events:
-                    logger.debug(f"Time-step method found {len(timestep_events)} passes for satellite {norad_id}")
+                    logger.debug(
+                        f"Time-step method found {len(timestep_events)} passes for satellite {norad_id}"
+                    )
                     events.extend(timestep_events)
                 else:
                     logger.debug(f"No passes found for satellite {norad_id} using either method.")
 
         # Apply final sorting and ID renumbering
-        events.sort(key=lambda e: e['event_start'])
+        events.sort(key=lambda e: e["event_start"])
         for i, event in enumerate(events, 1):
-            event['id'] = i
+            event["id"] = i
 
         # Convert to JSON
         events = json.loads(json.dumps(events, cls=ModelEncoder))
 
-        reply['data'] = events
-        reply['parameters'] = {
-            'satellite_count': satellites_count,
-            'hours': hours,
-            'above_el': above_el,
-            'step_minutes': step_minutes
+        reply["data"] = events
+        reply["parameters"] = {
+            "satellite_count": satellites_count,
+            "hours": hours,
+            "above_el": above_el,
+            "step_minutes": step_minutes,
         }
-        reply['success'] = True
+        reply["success"] = True
 
     except Exception as e:
         logger.error(f"Failed to calculate satellite events, error: {e}")
         logger.exception(e)
-        reply['success'] = False
-        reply['error'] = str(e)
+        reply["success"] = False
+        reply["error"] = str(e)
 
     return reply
 
@@ -450,15 +461,12 @@ def analyze_satellite_orbit(satellite):
             "is_geostationary": is_geostationary,
             "orbital_period_minutes": round(period_minutes, 2),
             "inclination": round(inclination, 2),
-            "eccentricity": round(eccentricity, 4)
+            "eccentricity": round(eccentricity, 4),
         }
     except (AttributeError, ValueError, TypeError) as e:
         logger.warning(f"Error analyzing satellite orbit: {e}")
-        return {
-            "is_geosynchronous": False,
-            "is_geostationary": False,
-            "error": str(e)
-        }
+        return {"is_geosynchronous": False, "is_geostationary": False, "error": str(e)}
+
 
 def calculate_azimuth_path(azimuths):
     """
@@ -493,7 +501,7 @@ def calculate_azimuth_path(azimuths):
 
     for i in range(len(normalized) - 1):
         current = normalized[i]
-        next_az = normalized[i+1]
+        next_az = normalized[i + 1]
 
         # Calculate difference, handling north crossing
         diff = next_az - current
@@ -534,7 +542,6 @@ def calculate_azimuth_path(azimuths):
     return display_start, display_end, arc_angle
 
 
-
 def backtrack_rise_time(satellite, observer, t0, above_el, backtrack_hours=6.0):
     """
     Work backward in time to find when a satellite actually rose above the horizon
@@ -545,15 +552,12 @@ def backtrack_rise_time(satellite, observer, t0, above_el, backtrack_hours=6.0):
     t_start = t0 - (backtrack_hours / 24.0)
 
     # Use find_events to find any rise events in the past
-    times, events_type = satellite.find_events(
-        observer,
-        t_start,
-        t0,
-        altitude_degrees=above_el
-    )
+    times, events_type = satellite.find_events(observer, t_start, t0, altitude_degrees=above_el)
 
     # If we found any rise events, the last one is the start of the current pass
-    rise_events = [(time, event_type) for time, event_type in zip(times, events_type) if event_type == 0]
+    rise_events = [
+        (time, event_type) for time, event_type in zip(times, events_type) if event_type == 0
+    ]
     if rise_events:
         # Return the most recent rise event
         return rise_events[-1][0]
@@ -579,7 +583,7 @@ def backtrack_rise_time(satellite, observer, t0, above_el, backtrack_hours=6.0):
             # Return the time just after this point (when it first appeared)
             if i < len(t_points) - 1:
                 # Interpolate to find a more precise time
-                return t_points[i+1]
+                return t_points[i + 1]
             break
 
     # If we get here, we couldn't find a rise time, so return t0

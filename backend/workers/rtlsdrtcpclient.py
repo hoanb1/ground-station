@@ -37,29 +37,22 @@ class RtlSdrTcpClient:
     _CMD_SET_FREQ_CORRECTION: int = 0x05
     # _CMD_SET_IF_GAIN: int = 0x06 # Less common, often handled by set_gain
     # _CMD_SET_TEST_MODE: int = 0x07 # Not typically needed for basic use
-    _CMD_SET_AGC_MODE: int = 0x08 # RTL AGC
+    _CMD_SET_AGC_MODE: int = 0x08  # RTL AGC
     _CMD_SET_DIRECT_SAMPLING: int = 0x09
     _CMD_SET_OFFSET_TUNING: int = 0x0A
     # _CMD_SET_RTL_XTAL: int = 0x0B # Less common modification
     # _CMD_SET_TUNER_XTAL: int = 0x0C # Less common modification
-    _CMD_SET_TUNER_GAIN_BY_INDEX: int = 0x0D # Alternative gain setting
+    _CMD_SET_TUNER_GAIN_BY_INDEX: int = 0x0D  # Alternative gain setting
     _CMD_SET_BIAS_TEE: int = 0x0E
-    _CMD_SET_TUNER_AGC: int = 0x0F # Tuner AGC (requires specific gain modes)
+    _CMD_SET_TUNER_AGC: int = 0x0F  # Tuner AGC (requires specific gain modes)
 
     # Tuner type mapping
-    _TUNER_TYPES = {
-        1: "E4000",
-        2: "FC0012",
-        3: "FC0013",
-        4: "FC2580",
-        5: "R820T",
-        6: "R828D"
-    }
+    _TUNER_TYPES = {1: "E4000", 2: "FC0012", 3: "FC0013", 4: "FC2580", 5: "R820T", 6: "R828D"}
 
     DEFAULT_PORT: int = 1234
-    CONNECT_TIMEOUT: float = 5.0 # Seconds
-    READ_TIMEOUT: float = 10.0 # Seconds for sample reads
-    READ_CHUNK_SIZE: int = 16384 # Bytes to read per recv call
+    CONNECT_TIMEOUT: float = 5.0  # Seconds
+    READ_TIMEOUT: float = 10.0  # Seconds for sample reads
+    READ_CHUNK_SIZE: int = 16384  # Bytes to read per recv call
 
     def __init__(self, hostname: str, port: int = DEFAULT_PORT, verbose: bool = False):
         """
@@ -76,8 +69,8 @@ class RtlSdrTcpClient:
         self._connected: bool = False
         self._tuner_type_id: Optional[int] = None
         self._tuner_type_name: Optional[str] = None
-        self._tuner_gain_count: Optional[int] = None # Info from server
-        self._logger = logging.getLogger(f'rtlsdr-tcp-client')
+        self._tuner_gain_count: Optional[int] = None  # Info from server
+        self._logger = logging.getLogger(f"rtlsdr-tcp-client")
         if verbose:
             self._logger.setLevel(logging.DEBUG)
         else:
@@ -95,7 +88,6 @@ class RtlSdrTcpClient:
         self._direct_sampling_mode: Optional[int] = None
         self._offset_tuning_enabled: Optional[bool] = None
         self._bias_tee_enabled: Optional[bool] = None
-
 
     def connect(self) -> bool:
         """
@@ -119,18 +111,26 @@ class RtlSdrTcpClient:
             # Read the 12-byte dongle information header
             dongle_info = self._sock.recv(12)
             if len(dongle_info) != 12:
-                raise IOError(f"Failed to receive complete dongle info (got {len(dongle_info)} bytes).")
+                raise IOError(
+                    f"Failed to receive complete dongle info (got {len(dongle_info)} bytes)."
+                )
 
             # Unpack: Magic (4s), Tuner Type (I), Gain Count (I) - Network Byte Order (!)
-            magic, self._tuner_type_id, self._tuner_gain_count = struct.unpack('!4sII', dongle_info)
+            magic, self._tuner_type_id, self._tuner_gain_count = struct.unpack("!4sII", dongle_info)
 
-            if magic != b'RTL0':
-                self._logger.warning(f"Received unexpected magic bytes: {magic!r}. Expected b'RTL0'.")
+            if magic != b"RTL0":
+                self._logger.warning(
+                    f"Received unexpected magic bytes: {magic!r}. Expected b'RTL0'."
+                )
                 # Continue anyway, but log the warning
 
-            self._tuner_type_name = self._TUNER_TYPES.get(self._tuner_type_id, f"Unknown ({self._tuner_type_id})")
+            self._tuner_type_name = self._TUNER_TYPES.get(
+                self._tuner_type_id, f"Unknown ({self._tuner_type_id})"
+            )
 
-            self._logger.info(f"Connected successfully. Tuner: {self._tuner_type_name}, Gain Count: {self._tuner_gain_count}")
+            self._logger.info(
+                f"Connected successfully. Tuner: {self._tuner_type_name}, Gain Count: {self._tuner_gain_count}"
+            )
             self._connected = True
 
             # Disable the timeout for normal operation
@@ -216,18 +216,20 @@ class RtlSdrTcpClient:
             IOError: If sending data over the socket fails.
         """
         self._ensure_connected()
-        if self._sock is None: # Should be caught by _ensure_connected, but double-check
+        if self._sock is None:  # Should be caught by _ensure_connected, but double-check
             raise ConnectionError("Socket is unexpectedly None after connection check.")
 
         try:
             # Pack command (Byte) and value (Unsigned Int) in Network Order (> or !)
-            packed_cmd = struct.pack('>BI', command, value)
-            self._logger.debug(f"Sending command 0x{command:02X} with value {value} ({packed_cmd.hex()})")
+            packed_cmd = struct.pack(">BI", command, value)
+            self._logger.debug(
+                f"Sending command 0x{command:02X} with value {value} ({packed_cmd.hex()})"
+            )
             self._sock.sendall(packed_cmd)
 
         except (OSError, IOError) as e:
             self._logger.error(f"Failed to send command 0x{command:02X}: {e}")
-            self.close() # Assume the connection is broken
+            self.close()  # Assume the connection is broken
             raise IOError(f"Socket error while sending command: {e}") from e
 
         except Exception as e:
@@ -251,7 +253,6 @@ class RtlSdrTcpClient:
         # Update internal state *after* successful send
         self._center_freq = float(freq_int)
 
-
     @property
     def sample_rate(self) -> Optional[float]:
         """Gets the last successfully set sample rate."""
@@ -268,7 +269,6 @@ class RtlSdrTcpClient:
         # Update internal state *after* successful send
         self._sample_rate = float(rate_int)
 
-
     @property
     def gain(self) -> Optional[float]:
         """Gets the last successfully set gain in dB."""
@@ -276,7 +276,9 @@ class RtlSdrTcpClient:
         # return None
         # Note: If gain mode is auto, this value might not reflect actual gain.
         if self._gain_mode_manual is False:
-            self._logger.warning("Gain mode is Auto. Returned value is the last *manually set* gain, not the current automatic gain.")
+            self._logger.warning(
+                "Gain mode is Auto. Returned value is the last *manually set* gain, not the current automatic gain."
+            )
         return self._gain
 
     @gain.setter
@@ -285,9 +287,11 @@ class RtlSdrTcpClient:
         gain_tenth_db = int(gain_db * 10)
         # Ensure gain is non-negative before sending
         if gain_tenth_db < 0:
-            self._logger.warning(f"Requested gain {gain_db} dB is negative, setting to 0 dB (0 tenths).")
+            self._logger.warning(
+                f"Requested gain {gain_db} dB is negative, setting to 0 dB (0 tenths)."
+            )
             gain_tenth_db = 0
-            gain_db = 0.0 # Update the value we store as well
+            gain_db = 0.0  # Update the value we store as well
 
         self._logger.info(f"Setting gain to {gain_db} dB ({gain_tenth_db}/10 dB)")
         self._send_command(self._CMD_SET_GAIN, gain_tenth_db)
@@ -298,11 +302,10 @@ class RtlSdrTcpClient:
         # if self._gain_mode_manual is not True:
         #    self.set_gain_mode(manual=True)
 
-
     def set_gain_mode(self, manual: bool = True) -> None:
         """Sets the gain mode (Manual or Auto)."""
         # rtl_tcp: 0 = manual, 1 = auto
-        #mode = 0 if manual else 1
+        # mode = 0 if manual else 1
         mode = 1 if manual else 0
         self._logger.info(f"Setting gain mode to {'Manual' if manual else 'Auto'}")
         self._send_command(self._CMD_SET_GAIN_MODE, mode)
@@ -319,7 +322,6 @@ class RtlSdrTcpClient:
         """Gets the last set gain mode (True for Manual, False for Auto). Returns None if never set."""
         return self._gain_mode_manual
 
-
     @property
     def freq_correction(self) -> Optional[int]:
         """Gets the last successfully set frequency correction in PPM."""
@@ -335,7 +337,6 @@ class RtlSdrTcpClient:
         self._send_command(self._CMD_SET_FREQ_CORRECTION, ppm_int)
         # Update internal state *after* successful send
         self._freq_correction = ppm_int
-
 
     def set_agc_mode(self, enable: bool = True) -> None:
         """Enables or disables the RTL chip's Automatic Gain Control (AGC)."""
@@ -372,14 +373,13 @@ class RtlSdrTcpClient:
         except Exception as e:
             self._logger.error(f"Unexpected error setting Tuner AGC: {e}")
             self._tuner_agc_enabled = None
-            raise 
-    
+            raise
+
     # Expose tuner_agc as a property
     @property
     def tuner_agc(self) -> Optional[bool]:
         """Gets the last successfully set state of the Tuner AGC (True if enabled). Returns None if never set or failed."""
         return self._tuner_agc_enabled
-
 
     def set_direct_sampling(self, mode: int) -> None:
         """
@@ -401,7 +401,6 @@ class RtlSdrTcpClient:
         """Gets the last set direct sampling mode (0=Off, 1=I-ADC, 2=Q-ADC). Returns None if never set."""
         return self._direct_sampling_mode
 
-
     def set_offset_tuning(self, enable: bool = True) -> None:
         """Enables or disables offset tuning (center frequency offset)."""
         value = 1 if enable else 0
@@ -416,7 +415,6 @@ class RtlSdrTcpClient:
         """Gets the last set state of offset tuning (True if enabled). Returns None if never set."""
         return self._offset_tuning_enabled
 
-
     def set_bias_tee(self, enable: bool = True) -> None:
         """Enables or disables the bias tee output."""
         value = 1 if enable else 0
@@ -426,7 +424,9 @@ class RtlSdrTcpClient:
             # Update internal state *only if* command succeeds
             self._bias_tee_enabled = enable
         except (IOError, ConnectionError) as e:
-            self._logger.warning(f"Could not set Bias Tee: {e}. Command may not be supported. State not updated.")
+            self._logger.warning(
+                f"Could not set Bias Tee: {e}. Command may not be supported. State not updated."
+            )
             # Do not update state if command failed
         except Exception as e:
             self._logger.error(f"Unexpected error setting Bias Tee: {e}")
@@ -438,7 +438,6 @@ class RtlSdrTcpClient:
     def bias_tee(self) -> Optional[bool]:
         """Gets the last successfully set state of the bias tee (True if enabled). Returns None if never set or failed."""
         return self._bias_tee_enabled
-
 
     def read_samples(self, num_samples: int = 16384) -> np.ndarray:
         """
@@ -459,7 +458,7 @@ class RtlSdrTcpClient:
         if self._sock is None:
             raise ConnectionError("Socket is unexpectedly None after connection check.")
 
-        bytes_to_read = num_samples * 2 # 2 bytes (I and Q) per complex sample
+        bytes_to_read = num_samples * 2  # 2 bytes (I and Q) per complex sample
         buffer = bytearray()
         start_time = time.monotonic()
         original_timeout = self._sock.gettimeout()
@@ -474,7 +473,9 @@ class RtlSdrTcpClient:
                 # Check overall timeout
                 elapsed_time = time.monotonic() - start_time
                 if elapsed_time > self.READ_TIMEOUT:
-                    raise TimeoutError(f"Read timed out after {elapsed_time:.2f}s waiting for samples ({len(buffer)}/{bytes_to_read} bytes received).")
+                    raise TimeoutError(
+                        f"Read timed out after {elapsed_time:.2f}s waiting for samples ({len(buffer)}/{bytes_to_read} bytes received)."
+                    )
 
                 remaining_bytes = bytes_to_read - len(buffer)
                 chunk_size = min(self.READ_CHUNK_SIZE, remaining_bytes)
@@ -492,18 +493,22 @@ class RtlSdrTcpClient:
                 except socket.timeout:
                     # recv timed out, but overall timeout might not be hit yet.
                     # Log it but continue the loop to check overall timeout.
-                    self._logger.debug(f"Socket recv timed out waiting for chunk, elapsed {elapsed_time:.2f}s.")
-                    continue # Let the outer loop check the main timeout
+                    self._logger.debug(
+                        f"Socket recv timed out waiting for chunk, elapsed {elapsed_time:.2f}s."
+                    )
+                    continue  # Let the outer loop check the main timeout
 
                 except (OSError, IOError) as e:
                     self._logger.error(f"Socket error during sample read: {e}")
-                    self.close() # Assume the connection is broken
+                    self.close()  # Assume the connection is broken
                     raise IOError(f"Socket error while reading samples: {e}") from e
 
             # If we exit the loop, we should have enough bytes
             if len(buffer) < bytes_to_read:
                 # This case should ideally be caught by a timeout or connection errors, but handle defensively.
-                raise IOError(f"Insufficient data received: got {len(buffer)}, expected {bytes_to_read}.")
+                raise IOError(
+                    f"Insufficient data received: got {len(buffer)}, expected {bytes_to_read}."
+                )
 
             self._logger.debug(f"Successfully read {len(buffer)} bytes.")
 
@@ -518,18 +523,17 @@ class RtlSdrTcpClient:
             # De-interleave I and Q samples and combine into complex numbers
             complex_samples = iq_float[0::2] + 1j * iq_float[1::2]
 
-            return complex_samples.astype(np.complex64) # Use standard complex64
+            return complex_samples.astype(np.complex64)  # Use standard complex64
 
         finally:
             # Always restore the original socket timeout
-            if self._sock and self._connected: # Check if socket still exists and connected
+            if self._sock and self._connected:  # Check if socket still exists and connected
                 try:
                     self._sock.settimeout(original_timeout)
                 except OSError as e:
                     # Ignore error if socket was closed during read (e.g., by close() in except block)
                     if e.errno != socket.errno.EBADF:
                         self._logger.warning(f"Could not restore original socket timeout: {e}")
-
 
     def close(self) -> None:
         """Closes the connection to the rtl_tcp server."""
@@ -572,7 +576,7 @@ class RtlSdrTcpClient:
     def __enter__(self):
         """Enter context management."""
         if not self._connected:
-            self.connect() # Attempt connection on entering context
+            self.connect()  # Attempt connection on entering context
         return self
 
     def __exit__(self, exc_type, exc_val, exc_tb):
@@ -590,4 +594,3 @@ class RtlSdrTcpClient:
     def tuner(self) -> Optional[str]:
         """Returns the name of the detected tuner type."""
         return self._tuner_type_name
-

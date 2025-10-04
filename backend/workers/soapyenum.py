@@ -29,20 +29,26 @@ logger = logging.getLogger("soapysdr-usbenum")
 # Check for frequency range or not
 check_freq_range = True
 
+
 class SoapySDRDirection(Enum):
     """Enumeration for SoapySDR direction types"""
+
     RX = SoapySDR.SOAPY_SDR_RX
     TX = SoapySDR.SOAPY_SDR_TX
 
+
 class SoapySDRFormat(Enum):
     """Enumeration for SoapySDR format types"""
+
     CS8 = SoapySDR.SOAPY_SDR_CS8
     CS16 = SoapySDR.SOAPY_SDR_CS16
     CF32 = SoapySDR.SOAPY_SDR_CF32
     CF64 = SoapySDR.SOAPY_SDR_CF64
 
+
 class SoapySDRDriverType(Enum):
     """Known SoapySDR driver types for USB devices"""
+
     RTLSDR = "rtlsdr"
     HACKRF = "hackrf"
     AIRSPY = "airspy"
@@ -51,7 +57,6 @@ class SoapySDRDriverType(Enum):
     LIME = "lime"
     UHD = "uhd"
     UNKNOWN = "unknown"
-
 
 
 def probe_available_usb_sdrs():
@@ -71,16 +76,21 @@ def probe_available_usb_sdrs():
             - other device-specific attributes
     """
 
-    reply: dict[str, bool | dict | list | str | None] = {'success': None, 'data': None, 'error': None, 'log': []}
+    reply: dict[str, bool | dict | list | str | None] = {
+        "success": None,
+        "data": None,
+        "error": None,
+        "log": [],
+    }
 
-    reply['log'].append("Enumerating available USB-connected SoapySDR devices")
+    reply["log"].append("Enumerating available USB-connected SoapySDR devices")
     usb_devices = []
 
     try:
         # Enumerate all available devices
         all_devices = SoapySDR.Device.enumerate()
-        reply['log'].append(f"Found {len(all_devices)} SoapySDR devices in total")
-        reply['log'].append(str(all_devices))
+        reply["log"].append(f"Found {len(all_devices)} SoapySDR devices in total")
+        reply["log"].append(str(all_devices))
 
         for device_info in all_devices:
             device_dict = dict(device_info)
@@ -88,10 +98,14 @@ def probe_available_usb_sdrs():
             # Check if this is a USB device
             # Most USB SDRs will have 'usb' in their driver name, serial, or path
             is_usb_device = False
-            driver = device_dict.get('driver', '')
+            driver = device_dict.get("driver", "")
 
             # Common USB SDR drivers
-            usb_drivers = [driver.value for driver in SoapySDRDriverType if driver != SoapySDRDriverType.UNKNOWN]
+            usb_drivers = [
+                driver.value
+                for driver in SoapySDRDriverType
+                if driver != SoapySDRDriverType.UNKNOWN
+            ]
 
             if any(driver.lower() == d.lower() for d in usb_drivers):
                 is_usb_device = True
@@ -99,34 +113,36 @@ def probe_available_usb_sdrs():
             # Check for USB in other fields if not already identified
             if not is_usb_device:
                 for key, value in device_dict.items():
-                    if isinstance(value, str) and ('usb' in value.lower() or 'bus' in value.lower()):
+                    if isinstance(value, str) and (
+                        "usb" in value.lower() or "bus" in value.lower()
+                    ):
                         is_usb_device = True
                         break
 
             if is_usb_device:
                 # Create a device entry with essential information
                 device_entry = {
-                    'driver': driver,
-                    'label': device_dict.get('label', f"{driver} device"),
-                    'serial': device_dict.get('serial', 'Unknown'),
-                    'is_usb': True,
-                    'frequency_ranges': {},
+                    "driver": driver,
+                    "label": device_dict.get("label", f"{driver} device"),
+                    "serial": device_dict.get("serial", "Unknown"),
+                    "is_usb": True,
+                    "frequency_ranges": {},
                 }
 
                 # Add other useful information if available
-                for key in ['manufacturer', 'product', 'deviceId', 'tuner', 'name']:
+                for key in ["manufacturer", "product", "deviceId", "tuner", "name"]:
                     if key in device_dict:
                         device_entry[key] = device_dict[key]
 
-                reply['log'].append(f"Found USB SDR device: {device_entry['label']}")
+                reply["log"].append(f"Found USB SDR device: {device_entry['label']}")
 
                 if check_freq_range:
                     # Probe device for frequency ranges
                     try:
                         # Make a device instance to query its capabilities
-                        simple_args = {'driver': device_dict['driver']}
-                        if 'serial' in device_dict:
-                            simple_args['serial'] = device_dict['serial']
+                        simple_args = {"driver": device_dict["driver"]}
+                        if "serial" in device_dict:
+                            simple_args["serial"] = device_dict["serial"]
 
                         sdr = SoapySDR.Device(simple_args)
 
@@ -137,64 +153,76 @@ def probe_available_usb_sdrs():
                         try:
                             num_rx_channels = sdr.getNumChannels(SoapySDRDirection.RX.value)
                             if num_rx_channels > 0:
-                                frequency_ranges['rx'] = []
+                                frequency_ranges["rx"] = []
                                 for channel in range(num_rx_channels):
                                     # Get the frequency range for this channel
-                                    ranges = sdr.getFrequencyRange(SoapySDRDirection.RX.value, channel)
+                                    ranges = sdr.getFrequencyRange(
+                                        SoapySDRDirection.RX.value, channel
+                                    )
                                     parsed_ranges = []
                                     for freq_range in ranges:
                                         # Convert range to dict with min, max and step values
-                                        parsed_ranges.append({
-                                            'min': freq_range.minimum(),
-                                            'max': freq_range.maximum(),
-                                            'step': freq_range.step()
-                                        })
-                                    frequency_ranges['rx'].append(parsed_ranges)
+                                        parsed_ranges.append(
+                                            {
+                                                "min": freq_range.minimum(),
+                                                "max": freq_range.maximum(),
+                                                "step": freq_range.step(),
+                                            }
+                                        )
+                                    frequency_ranges["rx"].append(parsed_ranges)
 
                         except Exception as e:
-                            reply['log'].append(f"Warning: Error probing RX frequency range: {str(e)}")
+                            reply["log"].append(
+                                f"Warning: Error probing RX frequency range: {str(e)}"
+                            )
 
                         # Check TX capabilities
                         try:
                             num_tx_channels = sdr.getNumChannels(SoapySDRDirection.TX.value)
                             if num_tx_channels > 0:
-                                frequency_ranges['tx'] = []
+                                frequency_ranges["tx"] = []
                                 for channel in range(num_tx_channels):
                                     # Get the frequency range for this channel
-                                    ranges = sdr.getFrequencyRange(SoapySDRDirection.TX.value, channel)
+                                    ranges = sdr.getFrequencyRange(
+                                        SoapySDRDirection.TX.value, channel
+                                    )
                                     parsed_ranges = []
                                     for freq_range in ranges:
                                         # Convert range to dict with min, max and step values
-                                        parsed_ranges.append({
-                                            'min': freq_range.minimum(),
-                                            'max': freq_range.maximum(),
-                                            'step': freq_range.step()
-                                        })
-                                    frequency_ranges['tx'].append(parsed_ranges)
+                                        parsed_ranges.append(
+                                            {
+                                                "min": freq_range.minimum(),
+                                                "max": freq_range.maximum(),
+                                                "step": freq_range.step(),
+                                            }
+                                        )
+                                    frequency_ranges["tx"].append(parsed_ranges)
 
                         except Exception as e:
-                            reply['log'].append(f"Warning: Error probing TX frequency range: {str(e)}")
+                            reply["log"].append(
+                                f"Warning: Error probing TX frequency range: {str(e)}"
+                            )
 
                         # Add frequency range information to device entry
-                        device_entry['frequency_ranges'] = frequency_ranges
+                        device_entry["frequency_ranges"] = frequency_ranges
 
                         # Close the device
                         sdr.close()
 
                     except Exception as e:
-                        reply['log'].append(f"Warning: Error probing device capabilities: {str(e)}")
-                        device_entry['frequency_ranges'] = {'error': str(e)}
+                        reply["log"].append(f"Warning: Error probing device capabilities: {str(e)}")
+                        device_entry["frequency_ranges"] = {"error": str(e)}
 
                 usb_devices.append(device_entry)
 
-        reply['success'] = True
-        reply['data'] = usb_devices
+        reply["success"] = True
+        reply["data"] = usb_devices
 
     except Exception as e:
-        reply['log'].append(f"Error: Error enumerating SoapySDR devices: {str(e)}")
-        reply['log'].append(f"Exception: {str(e)}")
-        reply['success'] = False
-        reply['error'] = str(e)
+        reply["log"].append(f"Error: Error enumerating SoapySDR devices: {str(e)}")
+        reply["log"].append(f"Exception: {str(e)}")
+        reply["success"] = False
+        reply["error"] = str(e)
 
     finally:
         pass

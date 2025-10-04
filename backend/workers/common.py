@@ -21,11 +21,11 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
 
 # Map window function names to numpy functions
 window_functions = {
-    'hanning': np.hanning,
-    'hamming': np.hamming,
-    'blackman': np.blackman,
-    'kaiser': lambda n: np.kaiser(n, beta=8.6),
-    'bartlett': np.bartlett
+    "hanning": np.hanning,
+    "hamming": np.hamming,
+    "blackman": np.blackman,
+    "kaiser": lambda n: np.kaiser(n, beta=8.6),
+    "bartlett": np.bartlett,
 }
 
 
@@ -44,7 +44,9 @@ class FFTAverager:
             self.current_fft_size = len(fft_data)
         elif self.current_fft_size != len(fft_data):
             # FFT size changed - clear accumulator and update size
-            self.logger.debug(f"FFT size changed from {self.current_fft_size} to {len(fft_data)}, clearing accumulator")
+            self.logger.debug(
+                f"FFT size changed from {self.current_fft_size} to {len(fft_data)}, clearing accumulator"
+            )
             self.accumulated_ffts = []
             self.current_fft_size = len(fft_data)
 
@@ -58,7 +60,9 @@ class FFTAverager:
             # Clear the accumulator
             self.accumulated_ffts = []
 
-            self.logger.debug(f"Averaged {self.averaging_factor} FFTs, total processed: {self.fft_count}")
+            self.logger.debug(
+                f"Averaged {self.averaging_factor} FFTs, total processed: {self.fft_count}"
+            )
             return averaged_fft
         return None
 

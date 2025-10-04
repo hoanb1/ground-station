@@ -4,6 +4,7 @@ import numpy as np
 import time
 import sys
 
+
 def test_connection(device_args):
     """Test basic connection to the device"""
     print(f"Testing connection to: {device_args}")
@@ -17,6 +18,7 @@ def test_connection(device_args):
     except Exception as e:
         print(f"Connection failed: {e}")
         return False
+
 
 def list_all_formats(sdr, direction=SOAPY_SDR_RX, channel=0):
     """Print all supported stream formats"""
@@ -32,6 +34,7 @@ def list_all_formats(sdr, direction=SOAPY_SDR_RX, channel=0):
                 print(f"    Error getting native info: {e}")
     except Exception as e:
         print(f"Error getting formats: {e}")
+
 
 def try_direct_CS16(device_args):
     """Try using CS16 format directly"""
@@ -78,7 +81,9 @@ def try_direct_CS16(device_args):
             if sr.ret > 0:
                 print(f"Success! Read {sr.ret} samples")
                 # Convert to complex values
-                complex_data = buffer[:sr.ret*2].view(np.int16).astype(np.float32).view(np.complex64)
+                complex_data = (
+                    buffer[: sr.ret * 2].view(np.int16).astype(np.float32).view(np.complex64)
+                )
                 print(f"First few samples: {complex_data[:5]}")
                 return True
 
@@ -90,8 +95,10 @@ def try_direct_CS16(device_args):
     except Exception as e:
         print(f"Error in CS16 test: {e}")
         import traceback
+
         traceback.print_exc()
         return False
+
 
 def try_all_args_combinations(device_args):
     """Try different combinations of stream args"""
@@ -117,10 +124,7 @@ def try_all_args_combinations(device_args):
                     sdr.setGain(SOAPY_SDR_RX, channel, 20)
 
                     # Setup stream with current args
-                    stream_args = {
-                        "remote:prot": protocol,
-                        "remote:mtu": mtu
-                    }
+                    stream_args = {"remote:prot": protocol, "remote:mtu": mtu}
 
                     print(f"Setting up stream with args: {stream_args}")
                     rx_stream = sdr.setupStream(SOAPY_SDR_RX, fmt, [channel], stream_args)
@@ -146,7 +150,9 @@ def try_all_args_combinations(device_args):
                     print(f"Result: ret={sr.ret}, flags={sr.flags}")
 
                     if sr.ret > 0:
-                        print(f"SUCCESS! Found working configuration: protocol={protocol}, mtu={mtu}, format={fmt_name}")
+                        print(
+                            f"SUCCESS! Found working configuration: protocol={protocol}, mtu={mtu}, format={fmt_name}"
+                        )
                         print(f"Read {sr.ret} samples")
 
                         # Cleanup
@@ -163,10 +169,11 @@ def try_all_args_combinations(device_args):
 
     return False
 
+
 def main():
     # Use the same device args string
     device_args = "remote=tcp://192.168.60.98:55132,driver=remote,remote:driver=airspy,serial=b58069dc394c1413"
-    #device_args = "remote=tcp://192.168.60.98:55132,driver=remote,remote:driver=uhd"
+    # device_args = "remote=tcp://192.168.60.98:55132,driver=remote,remote:driver=uhd"
 
     # Test basic connection first
     if not test_connection(device_args):
@@ -194,7 +201,10 @@ def main():
     print("2. Check firewall settings on both client and server")
     print("3. Try a direct connection between the machines if possible")
     print("4. Check if another application is using the Airspy device")
-    print("5. Run the server with debug logging: SoapySDRServer --bind=0.0.0.0:55132 --logLevel=trace")
+    print(
+        "5. Run the server with debug logging: SoapySDRServer --bind=0.0.0.0:55132 --logLevel=trace"
+    )
+
 
 if __name__ == "__main__":
     main()

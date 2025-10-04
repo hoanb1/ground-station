@@ -68,12 +68,11 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
 
         # Using spherical trigonometry to compute a point d away from (lat0,lon0)
         lat_i = math.asin(
-            math.sin(lat0) * math.cos(d) +
-            math.cos(lat0) * math.sin(d) * math.cos(theta)
+            math.sin(lat0) * math.cos(d) + math.cos(lat0) * math.sin(d) * math.cos(theta)
         )
         lon_i = lon0 + math.atan2(
             math.sin(d) * math.sin(theta) * math.cos(lat0),
-            math.cos(d) - math.sin(lat0) * math.sin(lat_i)
+            math.cos(d) - math.sin(lat0) * math.sin(lat_i),
         )
 
         # Convert back to degrees
@@ -84,7 +83,7 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
         lat_deg = max(-90.0, min(90.0, lat_deg))
 
         # Normalize longitude to [-180, 180]
-        #lon_deg = ((lon_deg + 180) % 360) - 180
+        # lon_deg = ((lon_deg + 180) % 360) - 180
 
         circle_points.append({"lat": lat_deg, "lon": lon_deg})
 
@@ -94,7 +93,7 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
         circle_points.pop(0)
 
         # manually add some corrective points
-        circle_points.insert(0,{"lat": 90.0, "lon": circle_points[0]["lon"]})
+        circle_points.insert(0, {"lat": 90.0, "lon": circle_points[0]["lon"]})
         circle_points.append({"lat": 90.0, "lon": circle_points[-1]["lon"]})
 
     # If the South Pole is included, do some corrective stuff
@@ -103,7 +102,11 @@ def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):
         min_lat_index = min(range(len(circle_points)), key=lambda idx: circle_points[idx]["lat"])
 
         # manually add correcting points so that the coverage is realistic
-        circle_points.insert(min_lat_index + 1, {"lat": -90.0, "lon": circle_points[min_lat_index]["lon"]})
-        circle_points.insert(min_lat_index + 2, {"lat": -90.0, "lon": circle_points[min_lat_index+2]["lon"]})
+        circle_points.insert(
+            min_lat_index + 1, {"lat": -90.0, "lon": circle_points[min_lat_index]["lon"]}
+        )
+        circle_points.insert(
+            min_lat_index + 2, {"lat": -90.0, "lon": circle_points[min_lat_index + 2]["lon"]}
+        )
 
     return circle_points

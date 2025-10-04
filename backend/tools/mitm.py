@@ -17,6 +17,7 @@
 import socket
 import threading
 
+
 def forward_data(source, destination):
     """Continuously forward data between source and destination."""
     try:
@@ -33,6 +34,7 @@ def forward_data(source, destination):
         source.close()
         destination.close()
 
+
 def handle_client(client_socket, remote_host, remote_port):
     """Handle a new client connection by connecting to the remote host and bridging data."""
     try:
@@ -48,12 +50,13 @@ def handle_client(client_socket, remote_host, remote_port):
     # Set up two threads to forward data in both directions
     client_to_remote = threading.Thread(target=forward_data, args=(client_socket, remote_socket))
     remote_to_client = threading.Thread(target=forward_data, args=(remote_socket, client_socket))
-    
+
     client_to_remote.start()
     remote_to_client.start()
 
     client_to_remote.join()
     remote_to_client.join()
+
 
 def start_proxy(local_host, local_port, remote_host, remote_port):
     """Start the TCP proxy."""
@@ -62,12 +65,15 @@ def start_proxy(local_host, local_port, remote_host, remote_port):
     proxy_socket.bind((local_host, local_port))
     proxy_socket.listen(5)
     print(f"TCP Proxy listening on {local_host}:{local_port}")
-    
+
     while True:
         client_socket, addr = proxy_socket.accept()
         print(f"Accepted connection from {addr[0]}:{addr[1]}")
-        handler = threading.Thread(target=handle_client, args=(client_socket, remote_host, remote_port))
+        handler = threading.Thread(
+            target=handle_client, args=(client_socket, remote_host, remote_port)
+        )
         handler.start()
+
 
 if __name__ == "__main__":
     # Set up your proxy parameters:
@@ -76,7 +82,6 @@ if __name__ == "__main__":
     LOCAL_HOST = "127.0.0.1"
     LOCAL_PORT = 4533
     REMOTE_HOST = "192.168.60.97"  # Replace with the remote server's hostname or IP.
-    REMOTE_PORT = 4533             # Replace with the remote server's port.
+    REMOTE_PORT = 4533  # Replace with the remote server's port.
 
     start_proxy(LOCAL_HOST, LOCAL_PORT, REMOTE_HOST, REMOTE_PORT)
-

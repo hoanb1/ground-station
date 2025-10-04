@@ -56,5 +56,3 @@ class MinimumElevationError(Exception):
     def __str__(self):
         base_str = f"MinimumElevationError: {self.message}"
         return base_str
-
-

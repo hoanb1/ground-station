@@ -24,7 +24,7 @@ from crud.transmitters import (
     fetch_transmitter,
     add_transmitter,
     edit_transmitter,
-    delete_transmitter
+    delete_transmitter,
 )
 from crud.satellites import add_satellite
 
@@ -40,12 +40,18 @@ class TestTransmittersCRUD:
     async def test_add_transmitter_success(self, db_session):
         """Test successful transmitter creation."""
         # Add satellite first (foreign key requirement)
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         transmitter_data = {
             "description": "VHF Downlink",
@@ -62,7 +68,7 @@ class TestTransmittersCRUD:
             "uplinkMode": "FM",
             "invert": False,
             "baud": 9600,
-            "status": "active"
+            "status": "active",
         }
 
         result = await add_transmitter(db_session, transmitter_data)
@@ -79,12 +85,18 @@ class TestTransmittersCRUD:
     async def test_add_transmitter_with_dash_values(self, db_session):
         """Test transmitter creation with '-' values converts to None."""
         # Add satellite first
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         transmitter_data = {
             "description": "Beacon Only",
@@ -99,7 +111,7 @@ class TestTransmittersCRUD:
             "downlinkDrift": "-",
             "mode": "CW",
             "uplinkMode": "-",
-            "status": "active"
+            "status": "active",
         }
 
         result = await add_transmitter(db_session, transmitter_data)
@@ -113,29 +125,38 @@ class TestTransmittersCRUD:
     async def test_fetch_transmitter_by_id(self, db_session):
         """Test fetching a single transmitter by ID."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         # Add transmitter
-        add_result = await add_transmitter(db_session, {
-            "description": "Test Transmitter",
-            "satelliteId": 25544,
-            "alive": True,
-            "type": "transmitter",
-            "uplinkLow": "-",
-            "uplinkHigh": "-",
-            "downlinkLow": 437800000,
-            "downlinkHigh": 437990000,
-            "uplinkDrift": "-",
-            "downlinkDrift": "-",
-            "mode": "FM",
-            "uplinkMode": "-",
-            "status": "active"
-        })
+        add_result = await add_transmitter(
+            db_session,
+            {
+                "description": "Test Transmitter",
+                "satelliteId": 25544,
+                "alive": True,
+                "type": "transmitter",
+                "uplinkLow": "-",
+                "uplinkHigh": "-",
+                "downlinkLow": 437800000,
+                "downlinkHigh": 437990000,
+                "uplinkDrift": "-",
+                "downlinkDrift": "-",
+                "mode": "FM",
+                "uplinkMode": "-",
+                "status": "active",
+            },
+        )
 
         transmitter_id = add_result["data"]["id"]
 
@@ -149,29 +170,38 @@ class TestTransmittersCRUD:
     async def test_fetch_transmitter_with_uuid(self, db_session):
         """Test fetching transmitter with UUID object."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         # Add transmitter
-        add_result = await add_transmitter(db_session, {
-            "description": "Test Transmitter",
-            "satelliteId": 25544,
-            "alive": True,
-            "type": "transmitter",
-            "uplinkLow": "-",
-            "uplinkHigh": "-",
-            "downlinkLow": 437800000,
-            "downlinkHigh": 437990000,
-            "uplinkDrift": "-",
-            "downlinkDrift": "-",
-            "mode": "FM",
-            "uplinkMode": "-",
-            "status": "active"
-        })
+        add_result = await add_transmitter(
+            db_session,
+            {
+                "description": "Test Transmitter",
+                "satelliteId": 25544,
+                "alive": True,
+                "type": "transmitter",
+                "uplinkLow": "-",
+                "uplinkHigh": "-",
+                "downlinkLow": 437800000,
+                "downlinkHigh": 437990000,
+                "uplinkDrift": "-",
+                "downlinkDrift": "-",
+                "mode": "FM",
+                "uplinkMode": "-",
+                "status": "active",
+            },
+        )
 
         transmitter_id_str = add_result["data"]["id"]
         transmitter_id_uuid = uuid.UUID(transmitter_id_str)
@@ -193,12 +223,18 @@ class TestTransmittersCRUD:
     async def test_fetch_transmitters_for_satellite(self, db_session):
         """Test fetching all transmitters for a satellite."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         # Add multiple transmitters
         transmitter_base = {
@@ -213,7 +249,7 @@ class TestTransmittersCRUD:
             "downlinkDrift": "-",
             "mode": "FM",
             "uplinkMode": "-",
-            "status": "active"
+            "status": "active",
         }
 
         await add_transmitter(db_session, {**transmitter_base, "description": "VHF"})
@@ -240,29 +276,38 @@ class TestTransmittersCRUD:
     async def test_edit_transmitter_success(self, db_session):
         """Test successful transmitter editing."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         # Add transmitter
-        add_result = await add_transmitter(db_session, {
-            "description": "Old Description",
-            "satelliteId": 25544,
-            "alive": True,
-            "type": "transmitter",
-            "uplinkLow": 145800000,
-            "uplinkHigh": 145990000,
-            "downlinkLow": 437800000,
-            "downlinkHigh": 437990000,
-            "uplinkDrift": 0,
-            "downlinkDrift": 0,
-            "mode": "FM",
-            "uplinkMode": "FM",
-            "status": "active"
-        })
+        add_result = await add_transmitter(
+            db_session,
+            {
+                "description": "Old Description",
+                "satelliteId": 25544,
+                "alive": True,
+                "type": "transmitter",
+                "uplinkLow": 145800000,
+                "uplinkHigh": 145990000,
+                "downlinkLow": 437800000,
+                "downlinkHigh": 437990000,
+                "uplinkDrift": 0,
+                "downlinkDrift": 0,
+                "mode": "FM",
+                "uplinkMode": "FM",
+                "status": "active",
+            },
+        )
 
         transmitter_id = add_result["data"]["id"]
 
@@ -277,7 +322,7 @@ class TestTransmittersCRUD:
             "downlinkHigh": 437990000,
             "uplinkDrift": 0,
             "downlinkDrift": 0,
-            "uplinkMode": "FM"
+            "uplinkMode": "FM",
         }
 
         result = await edit_transmitter(db_session, edit_data)
@@ -299,7 +344,7 @@ class TestTransmittersCRUD:
             "downlinkHigh": 437990000,
             "uplinkDrift": "-",
             "downlinkDrift": "-",
-            "uplinkMode": "-"
+            "uplinkMode": "-",
         }
 
         result = await edit_transmitter(db_session, edit_data)
@@ -310,29 +355,38 @@ class TestTransmittersCRUD:
     async def test_edit_transmitter_removes_timestamps(self, db_session):
         """Test that edit removes added/updated from data."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         # Add transmitter
-        add_result = await add_transmitter(db_session, {
-            "description": "Test",
-            "satelliteId": 25544,
-            "alive": True,
-            "type": "transmitter",
-            "uplinkLow": "-",
-            "uplinkHigh": "-",
-            "downlinkLow": 437800000,
-            "downlinkHigh": 437990000,
-            "uplinkDrift": "-",
-            "downlinkDrift": "-",
-            "mode": "FM",
-            "uplinkMode": "-",
-            "status": "active"
-        })
+        add_result = await add_transmitter(
+            db_session,
+            {
+                "description": "Test",
+                "satelliteId": 25544,
+                "alive": True,
+                "type": "transmitter",
+                "uplinkLow": "-",
+                "uplinkHigh": "-",
+                "downlinkLow": 437800000,
+                "downlinkHigh": 437990000,
+                "uplinkDrift": "-",
+                "downlinkDrift": "-",
+                "mode": "FM",
+                "uplinkMode": "-",
+                "status": "active",
+            },
+        )
 
         transmitter_id = add_result["data"]["id"]
 
@@ -349,7 +403,7 @@ class TestTransmittersCRUD:
             "downlinkDrift": "-",
             "uplinkMode": "-",
             "added": "2020-01-01",
-            "updated": "2020-01-01"
+            "updated": "2020-01-01",
         }
 
         result = await edit_transmitter(db_session, edit_data)
@@ -360,29 +414,38 @@ class TestTransmittersCRUD:
     async def test_delete_transmitter_success(self, db_session):
         """Test successful transmitter deletion."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         # Add transmitter
-        add_result = await add_transmitter(db_session, {
-            "description": "To Delete",
-            "satelliteId": 25544,
-            "alive": True,
-            "type": "transmitter",
-            "uplinkLow": "-",
-            "uplinkHigh": "-",
-            "downlinkLow": 437800000,
-            "downlinkHigh": 437990000,
-            "uplinkDrift": "-",
-            "downlinkDrift": "-",
-            "mode": "FM",
-            "uplinkMode": "-",
-            "status": "active"
-        })
+        add_result = await add_transmitter(
+            db_session,
+            {
+                "description": "To Delete",
+                "satelliteId": 25544,
+                "alive": True,
+                "type": "transmitter",
+                "uplinkLow": "-",
+                "uplinkHigh": "-",
+                "downlinkLow": 437800000,
+                "downlinkHigh": 437990000,
+                "uplinkDrift": "-",
+                "downlinkDrift": "-",
+                "mode": "FM",
+                "uplinkMode": "-",
+                "status": "active",
+            },
+        )
 
         transmitter_id = add_result["data"]["id"]
 
@@ -406,12 +469,18 @@ class TestTransmittersCRUD:
     async def test_transmitter_field_mapping(self, db_session):
         """Test that camelCase fields are mapped to snake_case."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         # Add transmitter with camelCase
         transmitter_data = {
@@ -427,7 +496,7 @@ class TestTransmittersCRUD:
             "downlinkDrift": 200,  # Maps to downlink_drift
             "mode": "FM",
             "uplinkMode": "FM",  # Maps to uplink_mode
-            "status": "active"
+            "status": "active",
         }
 
         result = await add_transmitter(db_session, transmitter_data)
@@ -446,12 +515,18 @@ class TestTransmittersCRUD:
     async def test_transmitter_with_all_optional_fields(self, db_session):
         """Test transmitter with all optional fields populated."""
         # Add satellite
-        await add_satellite(db_session, {
-            "name": "Test Satellite", "sat_id": "TEST-001", "norad_id": 25544,
-            "status": "alive", "is_frequency_violator": False,
-            "tle1": TLE1_TEMPLATE.format(norad=25544),
-            "tle2": TLE2_TEMPLATE.format(norad=25544)
-        })
+        await add_satellite(
+            db_session,
+            {
+                "name": "Test Satellite",
+                "sat_id": "TEST-001",
+                "norad_id": 25544,
+                "status": "alive",
+                "is_frequency_violator": False,
+                "tle1": TLE1_TEMPLATE.format(norad=25544),
+                "tle2": TLE2_TEMPLATE.format(norad=25544),
+            },
+        )
 
         transmitter_data = {
             "description": "Full Transmitter",
@@ -477,7 +552,7 @@ class TestTransmittersCRUD:
             "iaru_coordination": "Coordinated",
             "iaru_coordination_url": "http://example.com",
             "frequency_violation": False,
-            "unconfirmed": False
+            "unconfirmed": False,
         }
 
         result = await add_transmitter(db_session, transmitter_data)

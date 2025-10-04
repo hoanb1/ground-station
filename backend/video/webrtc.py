@@ -1,4 +1,5 @@
 """WebRTC helper models and routes."""
+
 import json
 from typing import Dict, Optional
 
@@ -43,7 +44,7 @@ def register_webrtc_routes(app: FastAPI) -> None:
     async def create_webrtc_session(request: WebRTCRequest):
         """Relay WebRTC offer to go2rtc and return an answer."""
         try:
-            base_url = request.source_url.split('/stream.html')[0]
+            base_url = request.source_url.split("/stream.html")[0]
             webrtc_url = f"{base_url}/api/webrtc"
             camera_id = request.camera_id
             if not camera_id and "src=" in request.source_url:
@@ -56,17 +57,13 @@ def register_webrtc_routes(app: FastAPI) -> None:
                     params={"src": camera_id} if camera_id else None,
                 )
                 if response.status_code != 200:
-                    logger.error(
-                        f"Error from go2rtc: {response.status_code} - {response.text}"
-                    )
+                    logger.error(f"Error from go2rtc: {response.status_code} - {response.text}")
                     raise HTTPException(
                         status_code=response.status_code,
                         detail="Failed to create WebRTC session",
                     )
                 answer_data = response.json()
-                return RTCSessionDescription(
-                    type=answer_data["type"], sdp=answer_data["sdp"]
-                )
+                return RTCSessionDescription(type=answer_data["type"], sdp=answer_data["sdp"])
         except Exception as e:  # pragma: no cover - network errors
             logger.error(f"Error creating WebRTC session: {str(e)}")
             raise HTTPException(

@@ -35,7 +35,7 @@ def verify_password(password: str, passwordhash: str) -> bool:
     """
     return bcrypt.hashpw(
         password.encode("utf-8"),  # Convert plain password to bytes
-        passwordhash.encode("utf-8")  # Convert stored hash to bytes
+        passwordhash.encode("utf-8"),  # Convert stored hash to bytes
     ) == passwordhash.encode("utf-8")
 
 
@@ -47,7 +47,7 @@ def generate_jwt_token(user: Users) -> str:
         "id": str(user.id),
         "fullname": user.fullname,
         "email": user.email,
-        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1)  # 1 hour expiry
+        "exp": datetime.datetime.now(datetime.UTC) + datetime.timedelta(hours=1),  # 1 hour expiry
     }
     token = jwt.encode(payload, arguments.secret_key, algorithm=JWT_ALGORITHM)
     return token
@@ -66,7 +66,7 @@ async def authenticate_user(dbsession: AsyncSession, email: str, password: str) 
         user = json.loads(json.dumps(user_record, cls=ModelEncoder))
         del user["password"]
 
-        return {'token': generate_jwt_token(user_record), 'user': user}
+        return {"token": generate_jwt_token(user_record), "user": user}
 
     else:
         return None

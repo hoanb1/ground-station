@@ -37,8 +37,8 @@ class TestTrackingStateCRUD:
                 "group_id": str(uuid.uuid4()),
                 "rotator_id": str(uuid.uuid4()),
                 "rig_id": str(uuid.uuid4()),
-                "transmitter_id": "ABC123"
-            }
+                "transmitter_id": "ABC123",
+            },
         }
 
         result = await set_tracking_state(db_session, tracking_data)
@@ -50,9 +50,7 @@ class TestTrackingStateCRUD:
 
     async def test_set_tracking_state_missing_name(self, db_session):
         """Test tracking state creation fails without name."""
-        tracking_data = {
-            "value": {"norad_id": 25544}
-        }
+        tracking_data = {"value": {"norad_id": 25544}}
 
         result = await set_tracking_state(db_session, tracking_data)
 
@@ -61,9 +59,7 @@ class TestTrackingStateCRUD:
 
     async def test_set_tracking_state_missing_value(self, db_session):
         """Test tracking state creation fails without value."""
-        tracking_data = {
-            "name": "satellite-tracking"
-        }
+        tracking_data = {"name": "satellite-tracking"}
 
         result = await set_tracking_state(db_session, tracking_data)
 
@@ -77,7 +73,7 @@ class TestTrackingStateCRUD:
             "value": {
                 "norad_id": 25544
                 # Missing required fields
-            }
+            },
         }
 
         result = await set_tracking_state(db_session, tracking_data)
@@ -97,18 +93,15 @@ class TestTrackingStateCRUD:
                 "group_id": str(uuid.uuid4()),
                 "rotator_id": str(uuid.uuid4()),
                 "rig_id": str(uuid.uuid4()),
-                "transmitter_id": "ABC123"
-            }
+                "transmitter_id": "ABC123",
+            },
         }
         await set_tracking_state(db_session, initial_data)
 
         # Update with partial data (should merge)
         update_data = {
             "name": "satellite-tracking",
-            "value": {
-                "rotator_state": "disconnected",
-                "new_field": "new_value"
-            }
+            "value": {"rotator_state": "disconnected", "new_field": "new_value"},
         }
 
         result = await set_tracking_state(db_session, update_data)
@@ -130,18 +123,13 @@ class TestTrackingStateCRUD:
                 "rig_state": "connected",
                 "group_id": "group-1",
                 "rotator_id": "rotator-1",
-                "rig_id": "rig-1"
-            }
+                "rig_id": "rig-1",
+            },
         }
         await set_tracking_state(db_session, initial_data)
 
         # Update only rig_state
-        update_data = {
-            "name": "test-state",
-            "value": {
-                "rig_state": "disconnected"
-            }
-        }
+        update_data = {"name": "test-state", "value": {"rig_state": "disconnected"}}
 
         result = await set_tracking_state(db_session, update_data)
 
@@ -163,8 +151,8 @@ class TestTrackingStateCRUD:
                 "rig_state": "disconnected",
                 "group_id": str(uuid.uuid4()),
                 "rotator_id": str(uuid.uuid4()),
-                "rig_id": str(uuid.uuid4())
-            }
+                "rig_id": str(uuid.uuid4()),
+            },
         }
         await set_tracking_state(db_session, tracking_data)
 
@@ -200,16 +188,12 @@ class TestTrackingStateCRUD:
                 "group_id": "group-1",
                 "rotator_id": "rotator-1",
                 "rig_id": "rig-1",
-                "settings": {
-                    "auto_track": True,
-                    "doppler_correction": True,
-                    "min_elevation": 10
-                },
+                "settings": {"auto_track": True, "doppler_correction": True, "min_elevation": 10},
                 "history": [
                     {"time": "2025-01-01T00:00:00", "event": "started"},
-                    {"time": "2025-01-01T00:05:00", "event": "aos"}
-                ]
-            }
+                    {"time": "2025-01-01T00:05:00", "event": "aos"},
+                ],
+            },
         }
 
         result = await set_tracking_state(db_session, complex_data)
@@ -229,19 +213,15 @@ class TestTrackingStateCRUD:
                 "rig_state": "connected",
                 "group_id": "g1",
                 "rotator_id": "r1",
-                "rig_id": "rig1"
-            }
+                "rig_id": "rig1",
+            },
         }
         await set_tracking_state(db_session, sat_data)
 
         # Create state for map settings
         map_data = {
             "name": "map-settings",
-            "value": {
-                "zoom": 5,
-                "center": [40, -74],
-                "layer": "satellite"
-            }
+            "value": {"zoom": 5, "center": [40, -74], "layer": "satellite"},
         }
         # Note: map-settings won't have required fields, so this should fail
         # unless we're updating an existing record
@@ -264,18 +244,13 @@ class TestTrackingStateCRUD:
                 "rig_id": "rig-1",
                 "transmitter_id": "trans-1",
                 "custom_field_1": "value1",
-                "custom_field_2": "value2"
-            }
+                "custom_field_2": "value2",
+            },
         }
         await set_tracking_state(db_session, initial_data)
 
         # Update only one field
-        update_data = {
-            "name": "test-tracking",
-            "value": {
-                "custom_field_1": "updated_value1"
-            }
-        }
+        update_data = {"name": "test-tracking", "value": {"custom_field_1": "updated_value1"}}
 
         result = await set_tracking_state(db_session, update_data)
 
@@ -296,8 +271,8 @@ class TestTrackingStateCRUD:
                 "rig_state": "connected",
                 "group_id": "g1",
                 "rotator_id": "r1",
-                "rig_id": "rig1"
-            }
+                "rig_id": "rig1",
+            },
         }
 
         # Set it three times

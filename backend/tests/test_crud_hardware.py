@@ -20,10 +20,23 @@ Unit tests for hardware CRUD operations (rotators, rigs, cameras, SDRs).
 import pytest
 import uuid
 from crud.hardware import (
-    fetch_rotators, add_rotator, edit_rotator, delete_rotators,
-    fetch_rigs, add_rig, edit_rig, delete_rig,
-    fetch_cameras, add_camera, edit_camera, delete_cameras,
-    fetch_sdrs, fetch_sdr, add_sdr, edit_sdr, delete_sdrs
+    fetch_rotators,
+    add_rotator,
+    edit_rotator,
+    delete_rotators,
+    fetch_rigs,
+    add_rig,
+    edit_rig,
+    delete_rig,
+    fetch_cameras,
+    add_camera,
+    edit_camera,
+    delete_cameras,
+    fetch_sdrs,
+    fetch_sdr,
+    add_sdr,
+    edit_sdr,
+    delete_sdrs,
 )
 
 
@@ -42,7 +55,7 @@ class TestRotatorsCRUD:
             "minel": 0,
             "maxel": 90,
             "aztype": "360",
-            "azendstop": 0
+            "azendstop": 0,
         }
 
         result = await add_rotator(db_session, rotator_data)
@@ -57,16 +70,34 @@ class TestRotatorsCRUD:
     async def test_fetch_rotators_all(self, db_session):
         """Test fetching all rotators."""
         # Add two rotators
-        await add_rotator(db_session, {
-            "name": "Rotator 1", "host": "host1", "port": 4533,
-            "minaz": 0, "maxaz": 360, "minel": 0, "maxel": 90,
-            "aztype": "360", "azendstop": 0
-        })
-        await add_rotator(db_session, {
-            "name": "Rotator 2", "host": "host2", "port": 4534,
-            "minaz": 0, "maxaz": 450, "minel": 0, "maxel": 180,
-            "aztype": "450", "azendstop": 180
-        })
+        await add_rotator(
+            db_session,
+            {
+                "name": "Rotator 1",
+                "host": "host1",
+                "port": 4533,
+                "minaz": 0,
+                "maxaz": 360,
+                "minel": 0,
+                "maxel": 90,
+                "aztype": "360",
+                "azendstop": 0,
+            },
+        )
+        await add_rotator(
+            db_session,
+            {
+                "name": "Rotator 2",
+                "host": "host2",
+                "port": 4534,
+                "minaz": 0,
+                "maxaz": 450,
+                "minel": 0,
+                "maxel": 180,
+                "aztype": "450",
+                "azendstop": 180,
+            },
+        )
 
         result = await fetch_rotators(db_session)
 
@@ -75,11 +106,20 @@ class TestRotatorsCRUD:
 
     async def test_fetch_rotator_by_id(self, db_session):
         """Test fetching a single rotator by ID."""
-        add_result = await add_rotator(db_session, {
-            "name": "Test Rotator", "host": "localhost", "port": 4533,
-            "minaz": 0, "maxaz": 360, "minel": 0, "maxel": 90,
-            "aztype": "360", "azendstop": 0
-        })
+        add_result = await add_rotator(
+            db_session,
+            {
+                "name": "Test Rotator",
+                "host": "localhost",
+                "port": 4533,
+                "minaz": 0,
+                "maxaz": 360,
+                "minel": 0,
+                "maxel": 90,
+                "aztype": "360",
+                "azendstop": 0,
+            },
+        )
 
         rotator_id = add_result["data"]["id"]
         result = await fetch_rotators(db_session, rotator_id=rotator_id)
@@ -89,11 +129,20 @@ class TestRotatorsCRUD:
 
     async def test_edit_rotator_success(self, db_session):
         """Test successful rotator editing."""
-        add_result = await add_rotator(db_session, {
-            "name": "Old Name", "host": "localhost", "port": 4533,
-            "minaz": 0, "maxaz": 360, "minel": 0, "maxel": 90,
-            "aztype": "360", "azendstop": 0
-        })
+        add_result = await add_rotator(
+            db_session,
+            {
+                "name": "Old Name",
+                "host": "localhost",
+                "port": 4533,
+                "minaz": 0,
+                "maxaz": 360,
+                "minel": 0,
+                "maxel": 90,
+                "aztype": "360",
+                "azendstop": 0,
+            },
+        )
 
         rotator_id = add_result["data"]["id"]
         edit_data = {
@@ -101,7 +150,7 @@ class TestRotatorsCRUD:
             "name": "New Name",
             "port": 4534,
             "added": "2024-01-01",  # Should be ignored
-            "updated": "2024-01-01"  # Should be ignored
+            "updated": "2024-01-01",  # Should be ignored
         }
 
         result = await edit_rotator(db_session, edit_data)
@@ -112,11 +161,20 @@ class TestRotatorsCRUD:
 
     async def test_delete_rotators_success(self, db_session):
         """Test successful rotator deletion."""
-        add_result = await add_rotator(db_session, {
-            "name": "Test Rotator", "host": "localhost", "port": 4533,
-            "minaz": 0, "maxaz": 360, "minel": 0, "maxel": 90,
-            "aztype": "360", "azendstop": 0
-        })
+        add_result = await add_rotator(
+            db_session,
+            {
+                "name": "Test Rotator",
+                "host": "localhost",
+                "port": 4533,
+                "minaz": 0,
+                "maxaz": 360,
+                "minel": 0,
+                "maxel": 90,
+                "aztype": "360",
+                "azendstop": 0,
+            },
+        )
 
         rotator_id = add_result["data"]["id"]
         result = await delete_rotators(db_session, [rotator_id])
@@ -142,7 +200,7 @@ class TestRigsCRUD:
             "pttstatus": "off",
             "vfotype": "VFOA",
             "lodown": 0,
-            "loup": 0
+            "loup": 0,
         }
 
         result = await add_rig(db_session, rig_data)
@@ -166,16 +224,32 @@ class TestRigsCRUD:
 
     async def test_fetch_rigs_all(self, db_session):
         """Test fetching all rigs."""
-        await add_rig(db_session, {
-            "name": "Rig 1", "host": "host1", "port": 4532,
-            "radiotype": "IC-9700", "pttstatus": "off", "vfotype": "VFOA",
-            "lodown": 0, "loup": 0
-        })
-        await add_rig(db_session, {
-            "name": "Rig 2", "host": "host2", "port": 4533,
-            "radiotype": "FT-991A", "pttstatus": "on", "vfotype": "VFOB",
-            "lodown": 100, "loup": 200
-        })
+        await add_rig(
+            db_session,
+            {
+                "name": "Rig 1",
+                "host": "host1",
+                "port": 4532,
+                "radiotype": "IC-9700",
+                "pttstatus": "off",
+                "vfotype": "VFOA",
+                "lodown": 0,
+                "loup": 0,
+            },
+        )
+        await add_rig(
+            db_session,
+            {
+                "name": "Rig 2",
+                "host": "host2",
+                "port": 4533,
+                "radiotype": "FT-991A",
+                "pttstatus": "on",
+                "vfotype": "VFOB",
+                "lodown": 100,
+                "loup": 200,
+            },
+        )
 
         result = await fetch_rigs(db_session)
 
@@ -191,11 +265,19 @@ class TestRigsCRUD:
 
     async def test_edit_rig_success(self, db_session):
         """Test successful rig editing."""
-        add_result = await add_rig(db_session, {
-            "name": "Old Rig", "host": "localhost", "port": 4532,
-            "radiotype": "IC-9700", "pttstatus": "off", "vfotype": "VFOA",
-            "lodown": 0, "loup": 0
-        })
+        add_result = await add_rig(
+            db_session,
+            {
+                "name": "Old Rig",
+                "host": "localhost",
+                "port": 4532,
+                "radiotype": "IC-9700",
+                "pttstatus": "off",
+                "vfotype": "VFOA",
+                "lodown": 0,
+                "loup": 0,
+            },
+        )
 
         rig_id = add_result["data"]["id"]
         edit_data = {
@@ -203,7 +285,7 @@ class TestRigsCRUD:
             "name": "New Rig",
             "radiotype": "FT-991A",
             "added": "2024-01-01",
-            "updated": "2024-01-01"
+            "updated": "2024-01-01",
         }
 
         result = await edit_rig(db_session, edit_data)
@@ -214,11 +296,19 @@ class TestRigsCRUD:
 
     async def test_delete_rig_success(self, db_session):
         """Test successful rig deletion."""
-        add_result = await add_rig(db_session, {
-            "name": "Test Rig", "host": "localhost", "port": 4532,
-            "radiotype": "IC-9700", "pttstatus": "off", "vfotype": "VFOA",
-            "lodown": 0, "loup": 0
-        })
+        add_result = await add_rig(
+            db_session,
+            {
+                "name": "Test Rig",
+                "host": "localhost",
+                "port": 4532,
+                "radiotype": "IC-9700",
+                "pttstatus": "off",
+                "vfotype": "VFOA",
+                "lodown": 0,
+                "loup": 0,
+            },
+        )
 
         rig_id = add_result["data"]["id"]
         result = await delete_rig(db_session, [rig_id])
@@ -235,7 +325,7 @@ class TestCamerasCRUD:
         camera_data = {
             "name": "Test Camera",
             "url": "http://localhost:1984/stream.html",
-            "type": "webrtc"
+            "type": "webrtc",
         }
 
         result = await add_camera(db_session, camera_data)
@@ -256,10 +346,7 @@ class TestCamerasCRUD:
 
     async def test_edit_camera_success(self, db_session):
         """Test successful camera editing."""
-        add_result = await add_camera(db_session, {
-            "name": "Old Camera",
-            "url": "old_url"
-        })
+        add_result = await add_camera(db_session, {"name": "Old Camera", "url": "old_url"})
 
         camera_id = add_result["data"]["id"]
         edit_data = {
@@ -267,7 +354,7 @@ class TestCamerasCRUD:
             "name": "New Camera",
             "url": "new_url",
             "added": "2024-01-01",
-            "updated": "2024-01-01"
+            "updated": "2024-01-01",
         }
 
         result = await edit_camera(db_session, edit_data)
@@ -291,11 +378,7 @@ class TestSDRsCRUD:
 
     async def test_add_sdr_usb_success(self, db_session):
         """Test successful USB SDR creation."""
-        sdr_data = {
-            "name": "RTL-SDR USB",
-            "type": "rtlsdrusbv3",
-            "serial": "12345678"
-        }
+        sdr_data = {"name": "RTL-SDR USB", "type": "rtlsdrusbv3", "serial": "12345678"}
 
         result = await add_sdr(db_session, sdr_data)
 
@@ -309,7 +392,7 @@ class TestSDRsCRUD:
             "name": "RTL-SDR TCP",
             "type": "rtlsdrtcpv3",
             "host": "192.168.1.100",
-            "port": 1234
+            "port": 1234,
         }
 
         result = await add_sdr(db_session, sdr_data)
@@ -320,10 +403,7 @@ class TestSDRsCRUD:
 
     async def test_add_sdr_missing_name(self, db_session):
         """Test SDR creation fails without name."""
-        sdr_data = {
-            "type": "rtlsdrusbv3",
-            "serial": "12345678"
-        }
+        sdr_data = {"type": "rtlsdrusbv3", "serial": "12345678"}
 
         result = await add_sdr(db_session, sdr_data)
 
@@ -332,10 +412,7 @@ class TestSDRsCRUD:
 
     async def test_add_sdr_usb_missing_serial(self, db_session):
         """Test USB SDR creation fails without serial."""
-        sdr_data = {
-            "name": "RTL-SDR USB",
-            "type": "rtlsdrusbv3"
-        }
+        sdr_data = {"name": "RTL-SDR USB", "type": "rtlsdrusbv3"}
 
         result = await add_sdr(db_session, sdr_data)
 
@@ -344,11 +421,7 @@ class TestSDRsCRUD:
 
     async def test_add_sdr_tcp_missing_host(self, db_session):
         """Test TCP SDR creation fails without host."""
-        sdr_data = {
-            "name": "RTL-SDR TCP",
-            "type": "rtlsdrtcpv3",
-            "port": 1234
-        }
+        sdr_data = {"name": "RTL-SDR TCP", "type": "rtlsdrtcpv3", "port": 1234}
 
         result = await add_sdr(db_session, sdr_data)
 
@@ -357,12 +430,8 @@ class TestSDRsCRUD:
 
     async def test_fetch_sdrs_all(self, db_session):
         """Test fetching all SDRs."""
-        await add_sdr(db_session, {
-            "name": "SDR 1", "type": "rtlsdrusbv3", "serial": "111"
-        })
-        await add_sdr(db_session, {
-            "name": "SDR 2", "type": "rtlsdrusbv4", "serial": "222"
-        })
+        await add_sdr(db_session, {"name": "SDR 1", "type": "rtlsdrusbv3", "serial": "111"})
+        await add_sdr(db_session, {"name": "SDR 2", "type": "rtlsdrusbv4", "serial": "222"})
 
         result = await fetch_sdrs(db_session)
 
@@ -371,9 +440,9 @@ class TestSDRsCRUD:
 
     async def test_fetch_sdr_by_id(self, db_session):
         """Test fetching a single SDR by ID."""
-        add_result = await add_sdr(db_session, {
-            "name": "Test SDR", "type": "rtlsdrusbv3", "serial": "12345"
-        })
+        add_result = await add_sdr(
+            db_session, {"name": "Test SDR", "type": "rtlsdrusbv3", "serial": "12345"}
+        )
 
         sdr_id = add_result["data"]["id"]
         result = await fetch_sdr(db_session, sdr_id=sdr_id)
@@ -390,16 +459,12 @@ class TestSDRsCRUD:
 
     async def test_edit_sdr_success(self, db_session):
         """Test successful SDR editing."""
-        add_result = await add_sdr(db_session, {
-            "name": "Old SDR", "type": "rtlsdrusbv3", "serial": "12345"
-        })
+        add_result = await add_sdr(
+            db_session, {"name": "Old SDR", "type": "rtlsdrusbv3", "serial": "12345"}
+        )
 
         sdr_id = add_result["data"]["id"]
-        edit_data = {
-            "id": sdr_id,
-            "name": "New SDR",
-            "serial": "67890"
-        }
+        edit_data = {"id": sdr_id, "name": "New SDR", "serial": "67890"}
 
         result = await edit_sdr(db_session, edit_data)
 
@@ -409,9 +474,9 @@ class TestSDRsCRUD:
 
     async def test_delete_sdrs_success(self, db_session):
         """Test successful SDR deletion."""
-        add_result = await add_sdr(db_session, {
-            "name": "Test SDR", "type": "rtlsdrusbv3", "serial": "12345"
-        })
+        add_result = await add_sdr(
+            db_session, {"name": "Test SDR", "type": "rtlsdrusbv3", "serial": "12345"}
+        )
 
         sdr_id = add_result["data"]["id"]
         result = await delete_sdrs(db_session, [sdr_id])

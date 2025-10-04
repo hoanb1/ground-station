@@ -39,23 +39,10 @@ def create_initial_sync_state():
         "active_sources": [],
         "completed_sources": [],
         "errors": [],
-        "stats": {
-            "satellites_processed": 0,
-            "transmitters_processed": 0,
-            "groups_processed": 0
-        },
-        "newly_added": {
-            "satellites": [],
-            "transmitters": []
-        },
-        "removed": {
-            "satellites": [],
-            "transmitters": []
-        },
-        "modified": {
-            "satellites": [],
-            "transmitters": []
-        }
+        "stats": {"satellites_processed": 0, "transmitters_processed": 0, "groups_processed": 0},
+        "newly_added": {"satellites": [], "transmitters": []},
+        "removed": {"satellites": [], "transmitters": []},
+        "modified": {"satellites": [], "transmitters": []},
     }
 
 
@@ -173,7 +160,9 @@ def get_norad_id_from_tle(tle: str) -> int:
             break
 
     if tle_line is None:
-        raise ValueError(f"A valid TLE first data line was not found in the provided input (TLE: {tle})")
+        raise ValueError(
+            f"A valid TLE first data line was not found in the provided input (TLE: {tle})"
+        )
 
     # According to the TLE format, NORAD ID is within columns 3 to 7 (1-indexed)
     # For Python (0-indexed), this translates to positions [2:7].
@@ -183,7 +172,6 @@ def get_norad_id_from_tle(tle: str) -> int:
         return int(norad_id_str)
     except ValueError as e:
         raise ValueError("Failed to convert the extracted NORAD ID to an integer.") from e
-
 
 
 def detect_duplicate_satellites(celestrak_list, logger):
@@ -202,48 +190,56 @@ def detect_duplicate_satellites(celestrak_list, logger):
     duplicates_info = {}
 
     for sat in celestrak_list:
-        norad_id = get_norad_id_from_tle(sat['line1'])
+        norad_id = get_norad_id_from_tle(sat["line1"])
 
         if norad_id not in satellites_by_norad:
             # First occurrence of this satellite
             satellites_by_norad[norad_id] = sat
             duplicates_info[norad_id] = {
-                'names': [sat['name']],
-                'occurrences': 1,
-                'is_duplicate': False
+                "names": [sat["name"]],
+                "occurrences": 1,
+                "is_duplicate": False,
             }
         else:
             # Duplicate found
-            duplicates_info[norad_id]['occurrences'] += 1
-            duplicates_info[norad_id]['is_duplicate'] = True
+            duplicates_info[norad_id]["occurrences"] += 1
+            duplicates_info[norad_id]["is_duplicate"] = True
 
             # Add the name if it's different
-            if sat['name'] not in duplicates_info[norad_id]['names']:
-                duplicates_info[norad_id]['names'].append(sat['name'])
+            if sat["name"] not in duplicates_info[norad_id]["names"]:
+                duplicates_info[norad_id]["names"].append(sat["name"])
 
             # Keep the satellite entry with the most recent TLE or prefer certain naming conventions
             # For now, we'll keep the first one found, but you could implement preference logic here
-            logger.info(f"Duplicate satellite detected - NORAD ID: {norad_id}, "
-                        f"Names: {duplicates_info[norad_id]['names']}, "
-                        f"Occurrences: {duplicates_info[norad_id]['occurrences']}")
+            logger.info(
+                f"Duplicate satellite detected - NORAD ID: {norad_id}, "
+                f"Names: {duplicates_info[norad_id]['names']}, "
+                f"Occurrences: {duplicates_info[norad_id]['occurrences']}"
+            )
 
     # Create deduplicated list
     deduplicated_list = list(satellites_by_norad.values())
 
     # Report duplicates
-    duplicate_count = sum(1 for info in duplicates_info.values() if info['is_duplicate'])
-    total_duplicates = sum(info['occurrences'] - 1 for info in duplicates_info.values() if info['is_duplicate'])
+    duplicate_count = sum(1 for info in duplicates_info.values() if info["is_duplicate"])
+    total_duplicates = sum(
+        info["occurrences"] - 1 for info in duplicates_info.values() if info["is_duplicate"]
+    )
 
-    logger.info(f"Duplicate detection complete: {duplicate_count} unique satellites have duplicates, "
-                f"{total_duplicates} total duplicate entries found")
-    logger.info(f"Original list: {len(celestrak_list)} satellites, "
-                f"Deduplicated list: {len(deduplicated_list)} satellites")
+    logger.info(
+        f"Duplicate detection complete: {duplicate_count} unique satellites have duplicates, "
+        f"{total_duplicates} total duplicate entries found"
+    )
+    logger.info(
+        f"Original list: {len(celestrak_list)} satellites, "
+        f"Deduplicated list: {len(deduplicated_list)} satellites"
+    )
 
     return {
-        'duplicates_info': duplicates_info,
-        'deduplicated_list': deduplicated_list,
-        'duplicate_count': duplicate_count,
-        'total_duplicates': total_duplicates
+        "duplicates_info": duplicates_info,
+        "deduplicated_list": deduplicated_list,
+        "duplicate_count": duplicate_count,
+        "total_duplicates": total_duplicates,
     }
 
 
@@ -277,7 +273,7 @@ async def query_existing_data(dbsession, logger):
                 "tle2": row.tle2,
                 "operator": row.operator,
                 "countries": row.countries,
-                "is_frequency_violator": row.is_frequency_violator
+                "is_frequency_violator": row.is_frequency_violator,
             }
 
         # Query existing transmitters
@@ -293,10 +289,12 @@ async def query_existing_data(dbsession, logger):
                 "downlink_high": row.downlink_high,
                 "mode": row.mode,
                 "status": row.status,
-                "frequency_violation": row.frequency_violation
+                "frequency_violation": row.frequency_violation,
             }
 
-        logger.info(f"Found {len(existing_satellite_norad_ids)} existing satellites and {len(existing_transmitter_uuids)} existing transmitters in database")
+        logger.info(
+            f"Found {len(existing_satellite_norad_ids)} existing satellites and {len(existing_transmitter_uuids)} existing transmitters in database"
+        )
 
     except Exception as e:
         logger.error(f"Error querying existing data: {e}")
@@ -306,7 +304,7 @@ async def query_existing_data(dbsession, logger):
         "satellite_norad_ids": existing_satellite_norad_ids,
         "transmitter_uuids": existing_transmitter_uuids,
         "satellites": existing_satellites,
-        "transmitters": existing_transmitters
+        "transmitters": existing_transmitters,
     }
 
 
@@ -323,13 +321,13 @@ def create_satellite_from_tle_data(sat, norad_id):
     """
     return Satellites(
         norad_id=norad_id,
-        name=sat['name'],
+        name=sat["name"],
         name_other=None,
         alternative_name=None,
         image=None,
         sat_id=None,
-        tle1=sat['line1'],
-        tle2=sat['line2'],
+        tle1=sat["line1"],
+        tle2=sat["line2"],
         status=None,
         decayed=None,
         launched=None,
@@ -355,26 +353,34 @@ def update_satellite_with_satnogs_data(satellite, satnogs_sat_info):
         dict: Satellite data for comparison
     """
     if not satnogs_sat_info:
-        return {
-            "name": satellite.name,
-            "tle1": satellite.tle1,
-            "tle2": satellite.tle2
-        }
+        return {"name": satellite.name, "tle1": satellite.tle1, "tle2": satellite.tle2}
 
-    satellite.sat_id = satnogs_sat_info.get('sat_id', None)
-    satellite.name = satnogs_sat_info.get('name', None)
-    satellite.image = satnogs_sat_info.get('image', None)
-    satellite.status = satnogs_sat_info.get('status', None)
-    satellite.decayed = parse_date(satnogs_sat_info.get('decayed')) if satnogs_sat_info.get('decayed', None) else None
-    satellite.launched = parse_date(satnogs_sat_info.get('launched')) if satnogs_sat_info.get('launched', None) else None
-    satellite.deployed = parse_date(satnogs_sat_info.get('deployed')) if satnogs_sat_info.get('deployed', None) else None
-    satellite.website = satnogs_sat_info.get('website', None)
-    satellite.operator = satnogs_sat_info.get('operator', None)
-    satellite.countries = satnogs_sat_info.get('countries', None)
-    satellite.telemetries = satnogs_sat_info.get('telemetries', None)
-    satellite.citation = satnogs_sat_info.get('citation', None)
-    satellite.is_frequency_violator = satnogs_sat_info.get('is_frequency_violator', None)
-    satellite.associated_satellites = json.dumps(satnogs_sat_info.get('associated_satellites', {}))
+    satellite.sat_id = satnogs_sat_info.get("sat_id", None)
+    satellite.name = satnogs_sat_info.get("name", None)
+    satellite.image = satnogs_sat_info.get("image", None)
+    satellite.status = satnogs_sat_info.get("status", None)
+    satellite.decayed = (
+        parse_date(satnogs_sat_info.get("decayed"))
+        if satnogs_sat_info.get("decayed", None)
+        else None
+    )
+    satellite.launched = (
+        parse_date(satnogs_sat_info.get("launched"))
+        if satnogs_sat_info.get("launched", None)
+        else None
+    )
+    satellite.deployed = (
+        parse_date(satnogs_sat_info.get("deployed"))
+        if satnogs_sat_info.get("deployed", None)
+        else None
+    )
+    satellite.website = satnogs_sat_info.get("website", None)
+    satellite.operator = satnogs_sat_info.get("operator", None)
+    satellite.countries = satnogs_sat_info.get("countries", None)
+    satellite.telemetries = satnogs_sat_info.get("telemetries", None)
+    satellite.citation = satnogs_sat_info.get("citation", None)
+    satellite.is_frequency_violator = satnogs_sat_info.get("is_frequency_violator", None)
+    satellite.associated_satellites = json.dumps(satnogs_sat_info.get("associated_satellites", {}))
 
     return {
         "name": satellite.name,
@@ -384,11 +390,13 @@ def update_satellite_with_satnogs_data(satellite, satnogs_sat_info):
         "tle2": satellite.tle2,
         "operator": satellite.operator,
         "countries": satellite.countries,
-        "is_frequency_violator": satellite.is_frequency_violator
+        "is_frequency_violator": satellite.is_frequency_violator,
     }
 
 
-def detect_satellite_modifications(norad_id, satellite_data_for_comparison, existing_satellites, sync_state, logger):
+def detect_satellite_modifications(
+    norad_id, satellite_data_for_comparison, existing_satellites, sync_state, logger
+):
     """
     Detect if a satellite has been modified and update sync state.
 
@@ -410,18 +418,19 @@ def detect_satellite_modifications(norad_id, satellite_data_for_comparison, exis
 
     for key, new_value in satellite_data_for_comparison.items():
         if key in existing_data and existing_data[key] != new_value:
-            changes[key] = {
-                "old": existing_data[key],
-                "new": new_value
-            }
+            changes[key] = {"old": existing_data[key], "new": new_value}
 
     if changes:
-        sync_state["modified"]["satellites"].append({
-            "norad_id": norad_id,
-            "name": satellite_data_for_comparison.get("name", "Unknown"),
-            "changes": changes
-        })
-        logger.debug(f"Satellite modified: {satellite_data_for_comparison.get('name', 'Unknown')} (NORAD ID: {norad_id}), changes: {changes}")
+        sync_state["modified"]["satellites"].append(
+            {
+                "norad_id": norad_id,
+                "name": satellite_data_for_comparison.get("name", "Unknown"),
+                "changes": changes,
+            }
+        )
+        logger.debug(
+            f"Satellite modified: {satellite_data_for_comparison.get('name', 'Unknown')} (NORAD ID: {norad_id}), changes: {changes}"
+        )
         return True
 
     return False
@@ -437,52 +446,60 @@ def create_transmitter_from_satnogs_data(transmitter_info):
     Returns:
         tuple: (Transmitters object, comparison data dict)
     """
-    transmitter_uuid = transmitter_info.get('uuid', None)
+    transmitter_uuid = transmitter_info.get("uuid", None)
 
     transmitter_data_for_comparison = {
-        "description": transmitter_info.get('description', None),
-        "alive": transmitter_info.get('alive', None),
-        "type": transmitter_info.get('type', None),
-        "downlink_low": transmitter_info.get('downlink_low', None),
-        "downlink_high": transmitter_info.get('downlink_high', None),
-        "mode": transmitter_info.get('mode', None),
-        "status": transmitter_info.get('status', None),
-        "frequency_violation": transmitter_info.get('frequency_violation', None)
+        "description": transmitter_info.get("description", None),
+        "alive": transmitter_info.get("alive", None),
+        "type": transmitter_info.get("type", None),
+        "downlink_low": transmitter_info.get("downlink_low", None),
+        "downlink_high": transmitter_info.get("downlink_high", None),
+        "mode": transmitter_info.get("mode", None),
+        "status": transmitter_info.get("status", None),
+        "frequency_violation": transmitter_info.get("frequency_violation", None),
     }
 
     transmitter = Transmitters(
         id=transmitter_uuid,
-        description=transmitter_info.get('description', None),
-        alive=transmitter_info.get('alive', None),
-        type=transmitter_info.get('type', None),
-        uplink_low=transmitter_info.get('uplink_low', None),
-        uplink_high=transmitter_info.get('uplink_high', None),
-        uplink_drift=transmitter_info.get('uplink_drift', None),
-        downlink_low=transmitter_info.get('downlink_low', None),
-        downlink_high=transmitter_info.get('downlink_high', None),
-        downlink_drift=transmitter_info.get('downlink_drift', None),
-        mode=transmitter_info.get('mode', None),
-        mode_id=transmitter_info.get('mode_id', None),
-        uplink_mode=transmitter_info.get('uplink_mode', None),
-        invert=transmitter_info.get('invert', None),
-        baud=transmitter_info.get('baud', None),
-        sat_id=transmitter_info.get('sat_id', None),
-        norad_cat_id=transmitter_info.get('norad_cat_id', None),
-        norad_follow_id=transmitter_info.get('norad_follow_id', None),
-        status=transmitter_info.get('status', None),
-        citation=transmitter_info.get('citation', None),
-        service=transmitter_info.get('service', None),
-        iaru_coordination=transmitter_info.get('iaru_coordination', None),
-        iaru_coordination_url=transmitter_info.get('iaru_coordination_url', None),
-        itu_notification=transmitter_info.get('itu_notification', None),
-        frequency_violation=transmitter_info.get('frequency_violation', None),
-        unconfirmed=transmitter_info.get('unconfirmed', None),
+        description=transmitter_info.get("description", None),
+        alive=transmitter_info.get("alive", None),
+        type=transmitter_info.get("type", None),
+        uplink_low=transmitter_info.get("uplink_low", None),
+        uplink_high=transmitter_info.get("uplink_high", None),
+        uplink_drift=transmitter_info.get("uplink_drift", None),
+        downlink_low=transmitter_info.get("downlink_low", None),
+        downlink_high=transmitter_info.get("downlink_high", None),
+        downlink_drift=transmitter_info.get("downlink_drift", None),
+        mode=transmitter_info.get("mode", None),
+        mode_id=transmitter_info.get("mode_id", None),
+        uplink_mode=transmitter_info.get("uplink_mode", None),
+        invert=transmitter_info.get("invert", None),
+        baud=transmitter_info.get("baud", None),
+        sat_id=transmitter_info.get("sat_id", None),
+        norad_cat_id=transmitter_info.get("norad_cat_id", None),
+        norad_follow_id=transmitter_info.get("norad_follow_id", None),
+        status=transmitter_info.get("status", None),
+        citation=transmitter_info.get("citation", None),
+        service=transmitter_info.get("service", None),
+        iaru_coordination=transmitter_info.get("iaru_coordination", None),
+        iaru_coordination_url=transmitter_info.get("iaru_coordination_url", None),
+        itu_notification=transmitter_info.get("itu_notification", None),
+        frequency_violation=transmitter_info.get("frequency_violation", None),
+        unconfirmed=transmitter_info.get("unconfirmed", None),
     )
 
     return transmitter, transmitter_data_for_comparison
 
 
-def detect_transmitter_modifications(transmitter_uuid, transmitter_data_for_comparison, existing_transmitters, sync_state, satellite_name, norad_id, logger):
+def detect_transmitter_modifications(
+    transmitter_uuid,
+    transmitter_data_for_comparison,
+    existing_transmitters,
+    sync_state,
+    satellite_name,
+    norad_id,
+    logger,
+):
     """
     Detect if a transmitter has been modified and update sync state.
 
@@ -506,20 +523,21 @@ def detect_transmitter_modifications(transmitter_uuid, transmitter_data_for_comp
 
     for key, new_value in transmitter_data_for_comparison.items():
         if key in existing_data and existing_data[key] != new_value:
-            changes[key] = {
-                "old": existing_data[key],
-                "new": new_value
-            }
+            changes[key] = {"old": existing_data[key], "new": new_value}
 
     if changes:
-        sync_state["modified"]["transmitters"].append({
-            "uuid": transmitter_uuid,
-            "description": transmitter_data_for_comparison.get("description", "Unknown"),
-            "satellite_name": satellite_name,
-            "norad_id": norad_id,
-            "changes": changes
-        })
-        logger.info(f"Transmitter modified: {transmitter_data_for_comparison.get('description', 'Unknown')} for satellite {satellite_name} (UUID: {transmitter_uuid}), changes: {changes}")
+        sync_state["modified"]["transmitters"].append(
+            {
+                "uuid": transmitter_uuid,
+                "description": transmitter_data_for_comparison.get("description", "Unknown"),
+                "satellite_name": satellite_name,
+                "norad_id": norad_id,
+                "changes": changes,
+            }
+        )
+        logger.info(
+            f"Transmitter modified: {transmitter_data_for_comparison.get('description', 'Unknown')} for satellite {satellite_name} (UUID: {transmitter_uuid}), changes: {changes}"
+        )
         return True
 
     return False
@@ -544,16 +562,20 @@ def create_final_success_message(count_sats, count_transmitters, sync_state):
     modified_satellites_count = len(sync_state["modified"]["satellites"])
     modified_transmitters_count = len(sync_state["modified"]["transmitters"])
 
-    success_message = f'Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters'
+    success_message = (
+        f"Successfully synchronized {count_sats} satellites and {count_transmitters} transmitters"
+    )
 
     if new_satellites_count > 0 or new_transmitters_count > 0:
-        success_message += f' (New: {new_satellites_count} satellites, {new_transmitters_count} transmitters)'
+        success_message += (
+            f" (New: {new_satellites_count} satellites, {new_transmitters_count} transmitters)"
+        )
 
     if modified_satellites_count > 0 or modified_transmitters_count > 0:
-        success_message += f' (Modified: {modified_satellites_count} satellites, {modified_transmitters_count} transmitters)'
+        success_message += f" (Modified: {modified_satellites_count} satellites, {modified_transmitters_count} transmitters)"
 
     if removed_satellites_count > 0 or removed_transmitters_count > 0:
-        success_message += f' (Removed: {removed_satellites_count} satellites, {removed_transmitters_count} transmitters)'
+        success_message += f" (Removed: {removed_satellites_count} satellites, {removed_transmitters_count} transmitters)"
 
     return success_message
 
@@ -581,7 +603,7 @@ def get_norad_ids(tle_objects: list) -> list:
     :param tle_objects: A list of dictionaries containing {'name', 'line1', 'line2'}.
     :return: A list of integer NORAD IDs.
     """
-    return [parse_norad_id_from_line1(obj['line1']) for obj in tle_objects]
+    return [parse_norad_id_from_line1(obj["line1"]) for obj in tle_objects]
 
 
 def get_satellite_by_norad_id(norad_id: int, satellites: List[dict]) -> dict | None:
@@ -596,7 +618,7 @@ def get_satellite_by_norad_id(norad_id: int, satellites: List[dict]) -> dict | N
         The matching satellite object if found, otherwise None.
     """
     for satellite in satellites:
-        norad_id_from_list = satellite['norad_cat_id']
+        norad_id_from_list = satellite["norad_cat_id"]
         if norad_id_from_list == norad_id:
             return satellite
     return None
@@ -617,7 +639,7 @@ def get_transmitter_info_by_norad_id(norad_id: int, transmitters: list) -> list:
     trxs = []
 
     for transmitter in transmitters:
-        norad_id_from_list = transmitter['norad_cat_id']
+        norad_id_from_list = transmitter["norad_cat_id"]
         if norad_id_from_list == norad_id:
             trxs.append(transmitter)
     return trxs
@@ -646,16 +668,14 @@ def simple_parse_3le(file_contents: str) -> list:
             line1 = lines[i + 1].strip()
             line2 = lines[i + 2].strip()
 
-            satellites.append({
-                "name": name_line,
-                "line1": line1,
-                "line2": line2
-            })
+            satellites.append({"name": name_line, "line1": line1, "line2": line2})
 
     return satellites
 
 
-async def detect_and_remove_satellites(session, tle_source_identifier, current_satellite_ids, logger):
+async def detect_and_remove_satellites(
+    session, tle_source_identifier, current_satellite_ids, logger
+):
     """
     Detect satellites that were removed from a TLE source and handle their removal.
 
@@ -671,10 +691,7 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
 
     # Get the existing satellite group for this TLE source
     result = await session.execute(
-        select(Groups).filter_by(
-            identifier=tle_source_identifier,
-            type=SatelliteGroupType.SYSTEM
-        )
+        select(Groups).filter_by(identifier=tle_source_identifier, type=SatelliteGroupType.SYSTEM)
     )
     existing_group = result.scalar_one_or_none()
 
@@ -689,13 +706,12 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
     # Find satellites that were in the previous list but not in the current list
     removed_satellite_ids = list(previous_ids_set - current_ids_set)
 
-    removed_data = {
-        "satellites": [],
-        "transmitters": []
-    }
+    removed_data = {"satellites": [], "transmitters": []}
 
     if removed_satellite_ids:
-        logger.info(f"Detected {len(removed_satellite_ids)} removed satellites from TLE source '{tle_source_identifier}': {removed_satellite_ids}")
+        logger.info(
+            f"Detected {len(removed_satellite_ids)} removed satellites from TLE source '{tle_source_identifier}': {removed_satellite_ids}"
+        )
 
         # Handle removal of satellites and their transmitters
         for norad_id in removed_satellite_ids:
@@ -710,7 +726,7 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
                 other_groups_result = await session.execute(
                     select(Groups).filter(
                         Groups.identifier != tle_source_identifier,
-                        Groups.type == SatelliteGroupType.SYSTEM
+                        Groups.type == SatelliteGroupType.SYSTEM,
                     )
                 )
                 other_groups = other_groups_result.scalars().all()
@@ -724,7 +740,9 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
 
                 if not satellite_in_other_sources:
                     # Satellite is not in any other TLE source, safe to remove
-                    logger.info(f"Removing satellite {norad_id} ({satellite.name}) and its transmitters (not found in other TLE sources)")
+                    logger.info(
+                        f"Removing satellite {norad_id} ({satellite.name}) and its transmitters (not found in other TLE sources)"
+                    )
 
                     # Get transmitter details before removing
                     transmitters_result = await session.execute(
@@ -734,15 +752,17 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
 
                     # Add transmitter details to removed data
                     for transmitter in transmitters:
-                        removed_data["transmitters"].append({
-                            "uuid": transmitter.id,
-                            "description": transmitter.description,
-                            "satellite_name": satellite.name,
-                            "norad_id": norad_id,
-                            "downlink_low": transmitter.downlink_low,
-                            "downlink_high": transmitter.downlink_high,
-                            "mode": transmitter.mode
-                        })
+                        removed_data["transmitters"].append(
+                            {
+                                "uuid": transmitter.id,
+                                "description": transmitter.description,
+                                "satellite_name": satellite.name,
+                                "norad_id": norad_id,
+                                "downlink_low": transmitter.downlink_low,
+                                "downlink_high": transmitter.downlink_high,
+                                "mode": transmitter.mode,
+                            }
+                        )
 
                     # Remove transmitters first (due to foreign key constraint)
                     transmitters_delete_result = await session.execute(
@@ -750,15 +770,19 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
                     )
                     transmitters_deleted = transmitters_delete_result.rowcount
                     if transmitters_deleted > 0:
-                        logger.info(f"Removed {transmitters_deleted} transmitters for satellite {norad_id}")
+                        logger.info(
+                            f"Removed {transmitters_deleted} transmitters for satellite {norad_id}"
+                        )
 
                     # Add satellite details to removed data
-                    removed_data["satellites"].append({
-                        "norad_id": norad_id,
-                        "name": satellite.name,
-                        "sat_id": satellite.sat_id,
-                        "tle_source": tle_source_identifier
-                    })
+                    removed_data["satellites"].append(
+                        {
+                            "norad_id": norad_id,
+                            "name": satellite.name,
+                            "sat_id": satellite.sat_id,
+                            "tle_source": tle_source_identifier,
+                        }
+                    )
 
                     # Remove the satellite
                     satellite_delete_result = await session.execute(
@@ -768,14 +792,18 @@ async def detect_and_remove_satellites(session, tle_source_identifier, current_s
                     if satellite_deleted > 0:
                         logger.info(f"Removed satellite {norad_id} ({satellite.name})")
                 else:
-                    logger.info(f"Satellite {norad_id} ({satellite.name}) found in other TLE sources, keeping it")
+                    logger.info(
+                        f"Satellite {norad_id} ({satellite.name}) found in other TLE sources, keeping it"
+                    )
             else:
                 logger.info(f"Satellite {norad_id} not found in database, skipping removal")
 
     return removed_data
 
 
-async def update_satellite_group_with_removal_detection(session, tle_source_identifier, satellite_ids, group_name, logger):
+async def update_satellite_group_with_removal_detection(
+    session, tle_source_identifier, satellite_ids, group_name, logger
+):
     """
     Update or create a satellite group and detect removed satellites.
 
@@ -791,14 +819,13 @@ async def update_satellite_group_with_removal_detection(session, tle_source_iden
     """
 
     # First, detect and handle removed satellites
-    removed_data = await detect_and_remove_satellites(session, tle_source_identifier, satellite_ids, logger)
+    removed_data = await detect_and_remove_satellites(
+        session, tle_source_identifier, satellite_ids, logger
+    )
 
     # Then update or create the satellite group
     result = await session.execute(
-        select(Groups).filter_by(
-            identifier=tle_source_identifier,
-            type=SatelliteGroupType.SYSTEM
-        )
+        select(Groups).filter_by(identifier=tle_source_identifier, type=SatelliteGroupType.SYSTEM)
     )
     existing_group = result.scalar_one_or_none()
 
@@ -815,9 +842,11 @@ async def update_satellite_group_with_removal_detection(session, tle_source_iden
             type=SatelliteGroupType.SYSTEM,
             satellite_ids=satellite_ids,
             added=datetime.now(timezone.utc),
-            updated=datetime.now(timezone.utc)
+            updated=datetime.now(timezone.utc),
         )
         session.add(new_group)
-        logger.info(f"Created new satellite group '{group_name}' with {len(satellite_ids)} satellites")
+        logger.info(
+            f"Created new satellite group '{group_name}' with {len(satellite_ids)} satellites"
+        )
 
     return removed_data

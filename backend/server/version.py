@@ -19,7 +19,7 @@ def get_version_base():
     """Get the base version from version.json file."""
     try:
         if os.path.exists(VERSION_JSON_PATH):
-            with open(VERSION_JSON_PATH, 'r') as f:
+            with open(VERSION_JSON_PATH, "r") as f:
                 version_data = json.load(f)
                 return version_data.get("version", "0.0.0")
         else:
@@ -33,7 +33,9 @@ def get_version_base():
 def get_git_revision_short_hash():
     """Get the git revision short hash, if available."""
     try:
-        return subprocess.check_output(['git', 'rev-parse', '--short', 'HEAD']).decode('ascii').strip()
+        return (
+            subprocess.check_output(["git", "rev-parse", "--short", "HEAD"]).decode("ascii").strip()
+        )
     except (subprocess.CalledProcessError, FileNotFoundError):
         # If we're not in a git repository or git isn't installed
         return "unknown"
@@ -49,7 +51,7 @@ def get_version_info():
     # First check if we have a version-info.json file (created during build)
     if os.path.exists(VERSION_FILE_PATH):
         try:
-            with open(VERSION_FILE_PATH, 'r') as f:
+            with open(VERSION_FILE_PATH, "r") as f:
                 return json.load(f)
         except (json.JSONDecodeError, IOError):
             # If file exists but is invalid, continue with normal version generation
@@ -64,7 +66,7 @@ def get_version_info():
             "version": os.environ["BUILD_VERSION"],
             "buildDate": os.environ.get("BUILD_DATE", get_build_date()),
             "gitCommit": os.environ.get("GIT_COMMIT", "unknown"),
-            "environment": environment
+            "environment": environment,
         }
     else:
         # Otherwise generate a version from components
@@ -80,7 +82,7 @@ def get_version_info():
             "version": version,
             "buildDate": build_date,
             "gitCommit": git_hash,
-            "environment": environment
+            "environment": environment,
         }
 
     return version_info
@@ -118,8 +120,10 @@ def write_version_info_during_build(version_info_override=None):
     if version_info_override:
         version_info.update(version_info_override)
 
-    with open(VERSION_FILE_PATH, 'w') as f:
+    with open(VERSION_FILE_PATH, "w") as f:
         json.dump(version_info, f)
-    logger.info(f"Version information written to {VERSION_FILE_PATH}: {version_info} with overrides: "
-                f"{version_info_override}")
+    logger.info(
+        f"Version information written to {VERSION_FILE_PATH}: {version_info} with overrides: "
+        f"{version_info_override}"
+    )
     return version_info

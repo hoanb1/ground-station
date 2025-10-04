@@ -23,8 +23,12 @@ from datetime import datetime, UTC
 from db.models import Users
 from common.common import logger, serialize_object
 
-async def fetch_users(session: AsyncSession, user_id: Optional[Union[uuid.UUID, str]] = None,
-                      include_password: bool = False) -> dict:
+
+async def fetch_users(
+    session: AsyncSession,
+    user_id: Optional[Union[uuid.UUID, str]] = None,
+    include_password: bool = False,
+) -> dict:
     """
     Fetch a single user by their UUID or all users if no UUID is provided.
     Optionally include the password in the returned data.
@@ -57,6 +61,7 @@ async def fetch_users(session: AsyncSession, user_id: Optional[Union[uuid.UUID, 
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
+
 async def add_user(session: AsyncSession, data: dict) -> dict:
     """
     Create and add a new user.
@@ -70,11 +75,11 @@ async def add_user(session: AsyncSession, data: dict) -> dict:
         assert email, "Email cannot be empty."
         assert password, "Password cannot be empty."
         assert fullname, "Fullname cannot be empty."
-        assert status in ['active', 'inactive'], "Status must be active or inactive."
+        assert status in ["active", "inactive"], "Status must be active or inactive."
 
         # Use Python's bcrypt library to hash the password
         salt = bcrypt.gensalt()
-        password_hash = bcrypt.hashpw(password.encode('utf-8'), salt).decode('utf-8')
+        password_hash = bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
         new_id = uuid.uuid4()
         now = datetime.now(UTC)
@@ -117,11 +122,11 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
         if isinstance(user_id, str):
             user_id = uuid.UUID(user_id)
 
-        del data['id']
-        if data.get('updated', None) is not None:
-            del data['updated']
-        if data.get('added', None) is not None:
-            del data['added']
+        del data["id"]
+        if data.get("updated", None) is not None:
+            del data["updated"]
+        if data.get("added", None) is not None:
+            del data["added"]
 
         # hash the password
         if data.get("password", "") != "":
@@ -140,12 +145,7 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
 
         # update provided fields; also update the timestamp
         data["updated"] = datetime.now(UTC)
-        upd_stmt = (
-            update(Users)
-            .where(Users.id == user_id)
-            .values(**data)
-            .returning(Users)
-        )
+        upd_stmt = update(Users).where(Users.id == user_id).values(**data).returning(Users)
         upd_result = await session.execute(upd_stmt)
         await session.commit()
         updated_user = upd_result.scalar_one_or_none()
@@ -159,18 +159,18 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def delete_user(session: AsyncSession, user_ids: Union[list[uuid.UUID], list[str], dict]) -> dict:
+async def delete_user(
+    session: AsyncSession, user_ids: Union[list[uuid.UUID], list[str], dict]
+) -> dict:
     """
     Delete multiple users by their UUIDs.
     """
     try:
         # Convert any string UUIDs in the list to UUID objects
-        user_ids = [uuid.UUID(user_id) if isinstance(user_id, str) else user_id for user_id in user_ids]
-        stmt = (
-            delete(Users)
-            .where(Users.id.in_(user_ids))
-            .returning(Users)
-        )
+        user_ids = [
+            uuid.UUID(user_id) if isinstance(user_id, str) else user_id for user_id in user_ids
+        ]
+        stmt = delete(Users).where(Users.id.in_(user_ids)).returning(Users)
         result = await session.execute(stmt)
         deleted_users = result.scalars().all()
         if not deleted_users:
@@ -183,5 +183,3 @@ async def delete_user(session: AsyncSession, user_ids: Union[list[uuid.UUID], li
         logger.error(f"Error deleting users: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
-
-

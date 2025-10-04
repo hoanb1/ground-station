@@ -39,6 +39,7 @@ class AwareDateTime(TypeDecorator):
     A type that ensures timezone-aware datetimes by
     attaching UTC if the datetime is naive.
     """
+
     impl = DateTime(timezone=False)  # or True, but SQLite doesn't honor tz anyway
     cache_ok = False
 
@@ -65,6 +66,7 @@ class JsonField(TypeDecorator):
     A type for handling JSON data by serializing/deserializing
     it during storage and retrieval.
     """
+
     impl = JSON
 
     def process_result_value(self, value, dialect):
@@ -89,9 +91,11 @@ class CameraType(str, PyEnum):
     HLS = "hls"
     MJPEG = "mjpeg"
 
+
 class SatelliteGroupType(str, PyEnum):
     USER = "user"
     SYSTEM = "system"
+
 
 class SDRType(str, PyEnum):
     RTLSDRUSBV3 = "rtlsdrusbv3"
@@ -102,8 +106,9 @@ class SDRType(str, PyEnum):
     SOAPYSDRREMOTE = "soapysdrremote"
     UHD = "uhd"
 
+
 class Satellites(Base):
-    __tablename__ = 'satellites'
+    __tablename__ = "satellites"
     norad_id = Column(Integer, primary_key=True, nullable=False, unique=True)
     name = Column(String, nullable=False)
     name_other = Column(String, nullable=True)
@@ -122,11 +127,14 @@ class Satellites(Base):
     citation = Column(String, nullable=True)
     is_frequency_violator = Column(Boolean, nullable=True, default=False)
     associated_satellites = Column(String, nullable=True)
-    added = Column(AwareDateTime, nullable=False,  default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Transmitters(Base):
-    __tablename__ = 'transmitters'
+    __tablename__ = "transmitters"
     id = Column(String, nullable=False, primary_key=True, unique=True)
     description = Column(String, nullable=True)
     alive = Column(Boolean, nullable=True)
@@ -143,7 +151,7 @@ class Transmitters(Base):
     invert = Column(Boolean, nullable=True)
     baud = Column(Integer, nullable=True)
     sat_id = Column(String, nullable=True)
-    norad_cat_id = Column(Integer, ForeignKey('satellites.norad_id'), nullable=False)
+    norad_cat_id = Column(Integer, ForeignKey("satellites.norad_id"), nullable=False)
     norad_follow_id = Column(Integer, nullable=True)
     status = Column(String, nullable=False)
     citation = Column(String, nullable=True)
@@ -154,10 +162,13 @@ class Transmitters(Base):
     frequency_violation = Column(Boolean, nullable=True, default=False)
     unconfirmed = Column(Boolean, nullable=True, default=False)
     added = Column(AwareDateTime, nullable=True, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Rigs(Base):
-    __tablename__ = 'rigs'
+    __tablename__ = "rigs"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     host = Column(String, nullable=False)
@@ -168,10 +179,13 @@ class Rigs(Base):
     lodown = Column(Integer, nullable=False)
     loup = Column(Integer, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class SDRs(Base):
-    __tablename__ = 'sdrs'
+    __tablename__ = "sdrs"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     serial = Column(String, nullable=True)
@@ -182,10 +196,13 @@ class SDRs(Base):
     frequency_min = Column(Integer, nullable=True)
     frequency_max = Column(Integer, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Rotators(Base):
-    __tablename__ = 'rotators'
+    __tablename__ = "rotators"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     host = Column(String, nullable=False)
@@ -197,58 +214,78 @@ class Rotators(Base):
     aztype = Column(Integer, nullable=False)
     azendstop = Column(Integer, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Locations(Base):
-    __tablename__ = 'locations'
+    __tablename__ = "locations"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    userid = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     name = Column(String, nullable=False)
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
     alt = Column(Integer, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Users(Base):
-    __tablename__ = 'users'
+    __tablename__ = "users"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     email = Column(String, nullable=False, unique=True)
-    status = Column(Enum('active', 'inactive', name='user_status_enum'), nullable=False, default='active')
+    status = Column(
+        Enum("active", "inactive", name="user_status_enum"), nullable=False, default="active"
+    )
     password = Column(String, nullable=False)
     fullname = Column(String, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Preferences(Base):
-    __tablename__ = 'preferences'
+    __tablename__ = "preferences"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    userid = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     name = Column(String, nullable=False)
     value = Column(String, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class TLESources(Base):
-    __tablename__ = 'tle_sources'
+    __tablename__ = "tle_sources"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=False)
     url = Column(String, nullable=False)
-    format = Column(String, nullable=False, default='3le')
+    format = Column(String, nullable=False, default="3le")
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Groups(Base):
-    __tablename__ = 'groups'
+    __tablename__ = "groups"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=True)
-    userid = Column(UUID(as_uuid=True), ForeignKey('users.id'), nullable=True)
+    userid = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     type = Column(Enum(SatelliteGroupType), nullable=False, default=SatelliteGroupType.USER)
     satellite_ids = Column(JsonField, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class TrackingState(Base):
     __tablename__ = "tracking_state"
@@ -256,16 +293,19 @@ class TrackingState(Base):
     name = Column(String, index=True, unique=True)
     value = Column(JSON, index=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC))
+    updated = Column(
+        AwareDateTime, nullable=True, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )
+
 
 class Cameras(Base):
-    __tablename__ = 'cameras'
+    __tablename__ = "cameras"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     url = Column(String, nullable=True)
     type = Column(Enum(CameraType), nullable=False)
-    status = Column(Enum('active', 'inactive'), nullable=False, default='active')
+    status = Column(Enum("active", "inactive"), nullable=False, default="active")
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC))
-
-
+    updated = Column(
+        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
+    )

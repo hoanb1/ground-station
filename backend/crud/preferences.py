@@ -22,6 +22,7 @@ from datetime import datetime, UTC
 from db.models import Preferences, TrackingState
 from common.common import logger, serialize_object
 
+
 async def fetch_preference(session: AsyncSession, preference_id: Union[uuid.UUID, str]) -> dict:
     """
     Fetch a single preference by its UUID.
@@ -43,18 +44,20 @@ async def fetch_preference(session: AsyncSession, preference_id: Union[uuid.UUID
         return {"success": False, "error": str(e)}
 
 
-async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
+async def fetch_preference_for_userid(
+    session: AsyncSession, user_id: Optional[Union[uuid.UUID, str]] = None
+) -> dict:
     """
     Fetch all preferences for a given user ID or all preferences if user_id is None.
     If a preference does not exist for a key in the defaults, use the default value.
     """
 
     defaults = {
-        'timezone': 'Europe/Athens',
-        'language': 'en_US',
-        'theme': 'dark',
-        'stadia_maps_api_key': "",
-        'openweather_api_key': "",
+        "timezone": "Europe/Athens",
+        "language": "en_US",
+        "theme": "dark",
+        "stadia_maps_api_key": "",
+        "openweather_api_key": "",
     }
 
     try:
@@ -74,7 +77,12 @@ async def fetch_preference_for_userid(session: AsyncSession, user_id: Optional[U
 
         # Combine defaults with existing preferences
         combined_preferences = [
-            {"id": preferences_dict.get("id", None), "name": key, "value": preferences_dict.get(key, value)} for key, value in defaults.items()
+            {
+                "id": preferences_dict.get("id", None),
+                "name": key,
+                "value": preferences_dict.get(key, value),
+            }
+            for key, value in defaults.items()
         ]
 
         combined_preferences = serialize_object(combined_preferences)
@@ -107,7 +115,7 @@ async def add_preference(session: AsyncSession, data: dict) -> dict:
                 name=data["name"],
                 value=data["value"],
                 added=now,
-                updated=now
+                updated=now,
             )
             .returning(Preferences)
         )
@@ -192,7 +200,7 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
 
                 if preference:
                     # Update existing preference
-                    data.pop('added', None)
+                    data.pop("added", None)
                     data["updated"] = datetime.now(UTC)
                     upd_stmt = (
                         update(Preferences)
@@ -209,11 +217,7 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
                     data["id"] = preference_id
                     data["added"] = now
                     data["updated"] = now
-                    stmt = (
-                        insert(Preferences)
-                        .values(**data)
-                        .returning(Preferences)
-                    )
+                    stmt = insert(Preferences).values(**data).returning(Preferences)
                     result = await session.execute(stmt)
                     updated_preferences.append(result.scalar_one())
 
@@ -224,11 +228,7 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
                 data["id"] = new_id
                 data["added"] = now
                 data["updated"] = now
-                stmt = (
-                    insert(Preferences)
-                    .values(**data)
-                    .returning(Preferences)
-                )
+                stmt = insert(Preferences).values(**data).returning(Preferences)
                 result = await session.execute(stmt)
                 updated_preferences.append(result.scalar_one())
 
@@ -252,11 +252,7 @@ async def delete_preference(session: AsyncSession, preference_id: Union[uuid.UUI
         if isinstance(preference_id, str):
             preference_id = uuid.UUID(preference_id)
 
-        stmt = (
-            delete(Preferences)
-            .where(Preferences.id == preference_id)
-            .returning(Preferences)
-        )
+        stmt = delete(Preferences).where(Preferences.id == preference_id).returning(Preferences)
         result = await session.execute(stmt)
         deleted = result.scalar_one_or_none()
         if not deleted:
@@ -271,7 +267,7 @@ async def delete_preference(session: AsyncSession, preference_id: Union[uuid.UUI
         return {"success": False, "error": str(e)}
 
 
-async def set_map_settings(session: AsyncSession, data: dict ) -> dict:
+async def set_map_settings(session: AsyncSession, data: dict) -> dict:
     """
     Updates satellite tracking state or inserts new settings into the database.
 
@@ -292,14 +288,14 @@ async def set_map_settings(session: AsyncSession, data: dict ) -> dict:
         successful, and error information in case of failure.
     """
     try:
-        assert data.get('name', None) is not None, "name is required when setting map settings"
-        assert data.get('value', None) is not None, "value is required when setting map settings"
+        assert data.get("name", None) is not None, "name is required when setting map settings"
+        assert data.get("value", None) is not None, "value is required when setting map settings"
 
         now = datetime.now(UTC)
         data["updated"] = now
 
         existing_record = await session.execute(
-            select(TrackingState).where(TrackingState.name == data['name'])
+            select(TrackingState).where(TrackingState.name == data["name"])
         )
         existing_record = existing_record.scalar_one_or_none()
 
@@ -347,13 +343,11 @@ async def get_map_settings(session: AsyncSession, name: str) -> dict:
 
         if map_settings_row:
             map_settings_row = serialize_object(map_settings_row)
-            return {'success': True, 'data': map_settings_row}
+            return {"success": True, "data": map_settings_row}
         else:
-            return {'success': True, 'data': {}}
+            return {"success": True, "data": {}}
 
     except Exception as e:
         logger.error(f"Error retrieving map settings: {str(e)}")
         logger.exception(e)
-        return {'success': False, 'data': {}, 'error': str(e)}
-
-
+        return {"success": False, "data": {}, "error": str(e)}

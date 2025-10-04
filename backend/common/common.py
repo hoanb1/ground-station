@@ -53,10 +53,7 @@ class ModelEncoder(json.JSONEncoder):
         # Attempt to convert SQLAlchemy model objects
         # by reading their columns
         try:
-            return {
-                column.name: getattr(obj, column.name)
-                for column in obj.__table__.columns
-            }
+            return {column.name: getattr(obj, column.name) for column in obj.__table__.columns}
         except AttributeError:
             # If the object is not an SQLAlchemy model row, fallback
             return super().default(obj)
@@ -95,10 +92,12 @@ def timeit(func):
 
     return wrapper
 
+
 def async_timeit(func):
     """
     Async decorator that reports the execution time of the decorated coroutine.
     """
+
     @functools.wraps(func)
     async def wrapper(*args, **kwargs):
         start_time = time.perf_counter()
@@ -109,6 +108,7 @@ def async_timeit(func):
         return result
 
     return wrapper
+
 
 def is_geostationary(tle):
     """
@@ -150,15 +150,15 @@ def is_geostationary(tle):
     # 3. Eccentricity near 0 (circular orbit)
 
     # Define thresholds (these can be adjusted for stricter or looser checks)
-    MEAN_MOTION_LOWER = 0.995    # Lower bound on mean motion
-    MEAN_MOTION_UPPER = 1.005    # Upper bound on mean motion
-    INCLINATION_MAX    = 3.0     # Degrees
-    ECCENTRICITY_MAX   = 0.01    # Allowed eccentricity
+    MEAN_MOTION_LOWER = 0.995  # Lower bound on mean motion
+    MEAN_MOTION_UPPER = 1.005  # Upper bound on mean motion
+    INCLINATION_MAX = 3.0  # Degrees
+    ECCENTRICITY_MAX = 0.01  # Allowed eccentricity
 
     # Check each parameter
-    is_mean_motion_ok = (MEAN_MOTION_LOWER <= mean_motion <= MEAN_MOTION_UPPER)
-    is_inclination_ok = (inclination_deg <= INCLINATION_MAX)
-    is_eccentricity_ok = (eccentricity <= ECCENTRICITY_MAX)
+    is_mean_motion_ok = MEAN_MOTION_LOWER <= mean_motion <= MEAN_MOTION_UPPER
+    is_inclination_ok = inclination_deg <= INCLINATION_MAX
+    is_eccentricity_ok = eccentricity <= ECCENTRICITY_MAX
 
     return is_mean_motion_ok and is_inclination_ok and is_eccentricity_ok
 
@@ -188,7 +188,7 @@ def is_satellite_over_location(tle, date, target_lat, target_lon, threshold_km=5
     t = ts.from_datetime(date)
 
     # construct the EarthSatellite object from the TLE lines
-    satellite = EarthSatellite(line1, line2, name='Sat', ts=ts)
+    satellite = EarthSatellite(line1, line2, name="Sat", ts=ts)
 
     # compute the satellite's position at the given time
     difference = satellite.at(t)
@@ -205,4 +205,3 @@ def is_satellite_over_location(tle, date, target_lat, target_lon, threshold_km=5
 
     # check if the satellite’s subpoint is within `threshold_km` of target lat/lon
     return distance_km <= threshold_km
-

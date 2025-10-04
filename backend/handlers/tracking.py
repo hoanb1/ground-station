@@ -36,17 +36,19 @@ async def emit_tracker_data(dbsession, sio, logger):
     try:
         logger.debug("Sending tracker data to clients...")
 
-        tracking_state_reply = await crud.tracking_state.get_tracking_state(dbsession, name='satellite-tracking')
-        norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
+        tracking_state_reply = await crud.tracking_state.get_tracking_state(
+            dbsession, name="satellite-tracking"
+        )
+        norad_id = tracking_state_reply["data"]["value"].get("norad_id", None)
         satellite_data = await compiled_satellite_data(dbsession, norad_id)
         data = {
-            'satellite_data': satellite_data,
-            'tracking_state':tracking_state_reply['data']['value'],
+            "satellite_data": satellite_data,
+            "tracking_state": tracking_state_reply["data"]["value"],
         }
-        await sio.emit('satellite-tracking', data)
+        await sio.emit("satellite-tracking", data)
 
     except Exception as e:
-        logger.error(f'Error emitting tracker data: {e}')
+        logger.error(f"Error emitting tracker data: {e}")
         logger.exception(e)
 
 
@@ -63,13 +65,15 @@ async def emit_ui_tracker_values(dbsession, sio, logger):
     try:
         logger.debug("Sending UI tracker value to clients...")
 
-        tracking_state_reply = await crud.tracking_state.get_tracking_state(dbsession, name='satellite-tracking')
-        group_id = tracking_state_reply['data']['value'].get('group_id', None)
-        norad_id = tracking_state_reply['data']['value'].get('norad_id', None)
+        tracking_state_reply = await crud.tracking_state.get_tracking_state(
+            dbsession, name="satellite-tracking"
+        )
+        group_id = tracking_state_reply["data"]["value"].get("group_id", None)
+        norad_id = tracking_state_reply["data"]["value"].get("norad_id", None)
         ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
-        data = ui_tracker_state['data']
-        await sio.emit('ui-tracker-state', data)
+        data = ui_tracker_state["data"]
+        await sio.emit("ui-tracker-state", data)
 
     except Exception as e:
-        logger.error(f'Error emitting UI tracker values: {e}')
+        logger.error(f"Error emitting UI tracker values: {e}")
         logger.exception(e)

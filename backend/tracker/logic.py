@@ -24,7 +24,13 @@ from controllers.rotator import RotatorController
 from controllers.rig import RigController
 from controllers.sdr import SDRController
 from common.arguments import arguments as args
-from common.constants import TrackingEvents, TrackerCommands, SocketEvents, TrackingStateNames, DictKeys
+from common.constants import (
+    TrackingEvents,
+    TrackerCommands,
+    SocketEvents,
+    TrackingStateNames,
+    DictKeys,
+)
 from datetime import datetime
 from tracking.doppler import calculate_doppler_shift
 from tracker.utils import pretty_dict
@@ -40,7 +46,9 @@ class SatelliteTracker:
     for automated satellite tracking in a multiprocessing environment.
     """
 
-    def __init__(self, queue_out: multiprocessing.Queue, queue_in: multiprocessing.Queue, stop_event=None):
+    def __init__(
+        self, queue_out: multiprocessing.Queue, queue_in: multiprocessing.Queue, stop_event=None
+    ):
         """Initialize the satellite tracker with queues and configuration."""
         # Store queue references
         self.queue_out = queue_out
@@ -69,19 +77,32 @@ class SatelliteTracker:
 
         # Data structures
         self.rotator_data = {
-            'az': 0, 'el': 0, 'connected': False, 'tracking': False,
-            'slewing': False, 'outofbounds': False, 'minelevation': False,
-            'stopped': False, 'error': False
+            "az": 0,
+            "el": 0,
+            "connected": False,
+            "tracking": False,
+            "slewing": False,
+            "outofbounds": False,
+            "minelevation": False,
+            "stopped": False,
+            "error": False,
         }
         self.rig_data = {
-            'connected': False, 'tracking': False, 'stopped': False, 'error': False,
-            'frequency': 0, 'observed_freq': 0, 'doppler_shift': 0, 'original_freq': 0,
-            'transmitter_id': 'none', 'device_type': ''
+            "connected": False,
+            "tracking": False,
+            "stopped": False,
+            "error": False,
+            "frequency": 0,
+            "observed_freq": 0,
+            "doppler_shift": 0,
+            "original_freq": 0,
+            "transmitter_id": "none",
+            "device_type": "",
         }
 
         # Operational state
         self.notified = {}
-        self.nudge_offset = {'az': 0, 'el': 0}
+        self.nudge_offset = {"az": 0, "el": 0}
 
         # State change tracking (replacing StateTracker)
         self.prev_norad_id = None
@@ -106,58 +127,77 @@ class SatelliteTracker:
         logger.info(f"Target satellite change detected from '{old}' to '{new}'")
 
         # Reset state
-        self.rotator_data['minelevation'] = False
+        self.rotator_data["minelevation"] = False
         self.notified = {}
 
         # Notify about change
-        self.queue_out.put({
-            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-            DictKeys.DATA: {
-                DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.NORAD_ID_CHANGE, 'old': old, 'new': new}]
+        self.queue_out.put(
+            {
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {
+                    DictKeys.EVENTS: [
+                        {DictKeys.NAME: TrackingEvents.NORAD_ID_CHANGE, "old": old, "new": new}
+                    ]
+                },
             }
-        })
+        )
 
         # Update rig state in database
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
-                DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                'value': {
-                    'transmitter_id': "none",
-                    'rig_state': "stopped" if self.current_rig_state == "tracking" else self.current_rig_state,
-                }
-            })
+            new_tracking_state = await crud.tracking_state.set_tracking_state(
+                dbsession,
+                {
+                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
+                    "value": {
+                        "transmitter_id": "none",
+                        "rig_state": (
+                            "stopped"
+                            if self.current_rig_state == "tracking"
+                            else self.current_rig_state
+                        ),
+                    },
+                },
+            )
 
         # Update local state
-        self.rig_data['tracking'] = False
-        self.rig_data['stopped'] = True
+        self.rig_data["tracking"] = False
+        self.rig_data["stopped"] = True
 
     async def connect_to_rotator(self):
         """Connect to the rotator hardware."""
         if self.current_rotator_id is not None and self.rotator_controller is None:
             try:
                 async with AsyncSessionLocal() as dbsession:
-                    rotator_details_reply = await crud.hardware.fetch_rotators(dbsession, rotator_id=self.current_rotator_id)
-                    rotator_details = rotator_details_reply['data']
+                    rotator_details_reply = await crud.hardware.fetch_rotators(
+                        dbsession, rotator_id=self.current_rotator_id
+                    )
+                    rotator_details = rotator_details_reply["data"]
 
                 self.rotator_controller = RotatorController(
-                    host=rotator_details['host'],
-                    port=rotator_details['port']
+                    host=rotator_details["host"], port=rotator_details["port"]
                 )
                 await self.rotator_controller.connect()
 
                 # Update state
-                self.rotator_data.update({
-                    'connected': True, 'tracking': False, 'slewing': False,
-                    'outofbounds': False, 'stopped': True
-                })
-
-                self.queue_out.put({
-                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                    DictKeys.DATA: {
-                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_CONNECTED}],
-                        'rotator_data': self.rotator_data.copy()
+                self.rotator_data.update(
+                    {
+                        "connected": True,
+                        "tracking": False,
+                        "slewing": False,
+                        "outofbounds": False,
+                        "stopped": True,
                     }
-                })
+                )
+
+                self.queue_out.put(
+                    {
+                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                        DictKeys.DATA: {
+                            DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_CONNECTED}],
+                            "rotator_data": self.rotator_data.copy(),
+                        },
+                    }
+                )
 
             except Exception as e:
                 logger.error(f"Failed to connect to rotator: {e}")
@@ -166,25 +206,37 @@ class SatelliteTracker:
 
     async def _handle_rotator_error(self, error):
         """Handle rotator connection errors."""
-        self.rotator_data.update({
-            'connected': False, 'tracking': False, 'slewing': False,
-            'stopped': False, 'error': True
-        })
+        self.rotator_data.update(
+            {
+                "connected": False,
+                "tracking": False,
+                "slewing": False,
+                "stopped": False,
+                "error": True,
+            }
+        )
 
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
-                DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                'value': {'rotator_state': 'disconnected'}
-            })
+            new_tracking_state = await crud.tracking_state.set_tracking_state(
+                dbsession,
+                {
+                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
+                    "value": {"rotator_state": "disconnected"},
+                },
+            )
 
-        self.queue_out.put({
-            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-            DictKeys.DATA: {
-                DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_ERROR, "error": str(error)}],
-                'rotator_data': self.rotator_data.copy(),
-                'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
+        self.queue_out.put(
+            {
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {
+                    DictKeys.EVENTS: [
+                        {DictKeys.NAME: TrackingEvents.ROTATOR_ERROR, "error": str(error)}
+                    ],
+                    "rotator_data": self.rotator_data.copy(),
+                    "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                },
             }
-        })
+        )
 
         self.rotator_controller = None
 
@@ -192,24 +244,24 @@ class SatelliteTracker:
         """Handle rotator state changes."""
         logger.info(f"Rotator state change detected from '{old}' to '{new}'")
 
-        self.rotator_data['minelevation'] = False
+        self.rotator_data["minelevation"] = False
 
         if new == "connected":
             await self.connect_to_rotator()
-            self.rotator_data['connected'] = True
-            self.rotator_data['stopped'] = True
+            self.rotator_data["connected"] = True
+            self.rotator_data["stopped"] = True
         elif new == "tracking":
             await self.connect_to_rotator()
-            self.rotator_data['tracking'] = True
-            self.rotator_data['stopped'] = False
+            self.rotator_data["tracking"] = True
+            self.rotator_data["stopped"] = False
         elif new == "stopped":
-            self.rotator_data['tracking'] = False
-            self.rotator_data['slewing'] = False
-            self.rotator_data['stopped'] = True
+            self.rotator_data["tracking"] = False
+            self.rotator_data["slewing"] = False
+            self.rotator_data["stopped"] = True
         elif new == "disconnected":
             await self._disconnect_rotator()
-            self.rotator_data['tracking'] = False
-            self.rotator_data['stopped'] = True
+            self.rotator_data["tracking"] = False
+            self.rotator_data["stopped"] = True
         elif new == "parked":
             await self._park_rotator()
         else:
@@ -218,17 +270,21 @@ class SatelliteTracker:
     async def _disconnect_rotator(self):
         """Disconnect from rotator."""
         if self.rotator_controller is not None:
-            logger.info(f"Disconnecting from rotator at {self.rotator_controller.host}:{self.rotator_controller.port}...")
+            logger.info(
+                f"Disconnecting from rotator at {self.rotator_controller.host}:{self.rotator_controller.port}..."
+            )
             try:
                 await self.rotator_controller.disconnect()
-                self.rotator_data['connected'] = False
-                self.queue_out.put({
-                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                    DictKeys.DATA: {
-                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_DISCONNECTED}],
-                        'rotator_data': self.rotator_data.copy()
+                self.rotator_data["connected"] = False
+                self.queue_out.put(
+                    {
+                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                        DictKeys.DATA: {
+                            DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_DISCONNECTED}],
+                            "rotator_data": self.rotator_data.copy(),
+                        },
                     }
-                })
+                )
             except Exception as e:
                 logger.error(f"Error disconnecting from rotator: {e}")
                 logger.exception(e)
@@ -237,19 +293,21 @@ class SatelliteTracker:
 
     async def _park_rotator(self):
         """Park the rotator."""
-        self.rotator_data.update({'tracking': False, 'slewing': False})
+        self.rotator_data.update({"tracking": False, "slewing": False})
 
         try:
             park_reply = await self.rotator_controller.park()
             if park_reply:
-                self.rotator_data['parked'] = True
-                self.queue_out.put({
-                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                    DictKeys.DATA: {
-                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_PARKED}],
-                        'rotator_data': self.rotator_data.copy()
+                self.rotator_data["parked"] = True
+                self.queue_out.put(
+                    {
+                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                        DictKeys.DATA: {
+                            DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_PARKED}],
+                            "rotator_data": self.rotator_data.copy(),
+                        },
                     }
-                })
+                )
             else:
                 raise Exception("Failed to park rotator")
         except Exception as e:
@@ -266,40 +324,52 @@ class SatelliteTracker:
             try:
                 async with AsyncSessionLocal() as dbsession:
                     # Try the hardware rig first
-                    rig_details_reply = await crud.hardware.fetch_rigs(dbsession, rig_id=self.current_rig_id)
+                    rig_details_reply = await crud.hardware.fetch_rigs(
+                        dbsession, rig_id=self.current_rig_id
+                    )
 
-                    if rig_details_reply.get('data') is not None:
-                        rig_type = 'radio'
+                    if rig_details_reply.get("data") is not None:
+                        rig_type = "radio"
                     else:
                         # Try SDR
-                        rig_details_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id=self.current_rig_id)
-                        if not rig_details_reply.get('data', None):
+                        rig_details_reply = await crud.hardware.fetch_sdr(
+                            dbsession, sdr_id=self.current_rig_id
+                        )
+                        if not rig_details_reply.get("data", None):
                             raise Exception(f"No rig or SDR found with ID: {self.current_rig_id}")
-                        rig_type = 'sdr'
+                        rig_type = "sdr"
 
-                    rig_details = rig_details_reply['data']
+                    rig_details = rig_details_reply["data"]
 
                 # Create appropriate controller
-                if rig_type == 'sdr':
+                if rig_type == "sdr":
                     self.rig_controller = SDRController(sdr_details=rig_details)
                 else:
-                    self.rig_controller = RigController(host=rig_details['host'], port=rig_details['port'])
+                    self.rig_controller = RigController(
+                        host=rig_details["host"], port=rig_details["port"]
+                    )
 
                 await self.rig_controller.connect()
 
                 # Update state
-                self.rig_data.update({
-                    'connected': True, 'tracking': False, 'tuning': False,
-                    'device_type': rig_details.get('type', 'hardware')
-                })
-
-                self.queue_out.put({
-                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                    DictKeys.DATA: {
-                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_CONNECTED}],
-                        'rig_data': self.rig_data.copy()
+                self.rig_data.update(
+                    {
+                        "connected": True,
+                        "tracking": False,
+                        "tuning": False,
+                        "device_type": rig_details.get("type", "hardware"),
                     }
-                })
+                )
+
+                self.queue_out.put(
+                    {
+                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                        DictKeys.DATA: {
+                            DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_CONNECTED}],
+                            "rig_data": self.rig_data.copy(),
+                        },
+                    }
+                )
 
             except Exception as e:
                 logger.error(f"Failed to connect to rig: {e}")
@@ -308,24 +378,31 @@ class SatelliteTracker:
 
     async def _handle_rig_error(self, error):
         """Handle rig connection errors."""
-        self.rig_data.update({
-            'connected': False, 'tracking': False, 'tuning': False, 'error': True
-        })
+        self.rig_data.update(
+            {"connected": False, "tracking": False, "tuning": False, "error": True}
+        )
 
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
-                DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                'value': {'rig_state': 'disconnected'}
-            })
+            new_tracking_state = await crud.tracking_state.set_tracking_state(
+                dbsession,
+                {
+                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
+                    "value": {"rig_state": "disconnected"},
+                },
+            )
 
-        self.queue_out.put({
-            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-            DictKeys.DATA: {
-                DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_ERROR, "error": str(error)}],
-                'rig_data': self.rig_data.copy(),
-                'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
+        self.queue_out.put(
+            {
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {
+                    DictKeys.EVENTS: [
+                        {DictKeys.NAME: TrackingEvents.RIG_ERROR, "error": str(error)}
+                    ],
+                    "rig_data": self.rig_data.copy(),
+                    "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                },
             }
-        })
+        )
 
         self.rig_controller = None
 
@@ -335,21 +412,21 @@ class SatelliteTracker:
 
         if new == "connected":
             await self.connect_to_rig()
-            self.rig_data['connected'] = True
+            self.rig_data["connected"] = True
 
         elif new == "disconnected":
             await self._disconnect_rig()
-            self.rig_data['connected'] = False
-            self.rig_data['tracking'] = False
-            self.rig_data['stopped'] = True
+            self.rig_data["connected"] = False
+            self.rig_data["tracking"] = False
+            self.rig_data["stopped"] = True
         elif new == "tracking":
             await self.connect_to_rig()
-            self.rig_data['tracking'] = True
-            self.rig_data['stopped'] = False
+            self.rig_data["tracking"] = True
+            self.rig_data["stopped"] = False
         elif new == "stopped":
-            self.rig_data['tracking'] = False
-            self.rig_data['tuning'] = False
-            self.rig_data['stopped'] = True
+            self.rig_data["tracking"] = False
+            self.rig_data["tuning"] = False
+            self.rig_data["stopped"] = True
 
     async def _disconnect_rig(self):
         """Disconnect from rig."""
@@ -357,14 +434,16 @@ class SatelliteTracker:
             logger.info("Disconnecting from rig...")
             try:
                 await self.rig_controller.disconnect()
-                self.rig_data.update({'connected': False, 'tracking': False, 'tuning': False})
-                self.queue_out.put({
-                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                    DictKeys.DATA: {
-                        DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_DISCONNECTED}],
-                        'rig_data': self.rig_data.copy()
+                self.rig_data.update({"connected": False, "tracking": False, "tuning": False})
+                self.queue_out.put(
+                    {
+                        DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                        DictKeys.DATA: {
+                            DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_DISCONNECTED}],
+                            "rig_data": self.rig_data.copy(),
+                        },
                     }
-                })
+                )
             except Exception as e:
                 logger.error(f"Error disconnecting from rig: {e}")
                 logger.exception(e)
@@ -384,27 +463,29 @@ class SatelliteTracker:
         changes = []
 
         if self.current_norad_id != self.prev_norad_id:
-            changes.append(('satellite', self.prev_norad_id, self.current_norad_id))
+            changes.append(("satellite", self.prev_norad_id, self.current_norad_id))
             self.prev_norad_id = self.current_norad_id
 
         if self.current_rotator_state != self.prev_rotator_state:
-            changes.append(('rotator_state', self.prev_rotator_state, self.current_rotator_state))
+            changes.append(("rotator_state", self.prev_rotator_state, self.current_rotator_state))
             self.prev_rotator_state = self.current_rotator_state
 
         if self.current_rotator_id != self.prev_rotator_id:
-            changes.append(('rotator_id', self.prev_rotator_id, self.current_rotator_id))
+            changes.append(("rotator_id", self.prev_rotator_id, self.current_rotator_id))
             self.prev_rotator_id = self.current_rotator_id
 
         if self.current_rig_state != self.prev_rig_state:
-            changes.append(('rig_state', self.prev_rig_state, self.current_rig_state))
+            changes.append(("rig_state", self.prev_rig_state, self.current_rig_state))
             self.prev_rig_state = self.current_rig_state
 
         if self.current_transmitter_id != self.prev_transmitter_id:
-            changes.append(('transmitter_id', self.prev_transmitter_id, self.current_transmitter_id))
+            changes.append(
+                ("transmitter_id", self.prev_transmitter_id, self.current_transmitter_id)
+            )
             self.prev_transmitter_id = self.current_transmitter_id
 
         if self.current_rig_id != self.prev_rig_id:
-            changes.append(('rig_id', self.prev_rig_id, self.current_rig_id))
+            changes.append(("rig_id", self.prev_rig_id, self.current_rig_id))
             self.prev_rig_id = self.current_rig_id
 
         return changes
@@ -412,17 +493,17 @@ class SatelliteTracker:
     async def _process_state_changes(self, changes):
         """Process all detected state changes."""
         for change_type, old, new in changes:
-            if change_type == 'satellite':
+            if change_type == "satellite":
                 await self.handle_satellite_change(old, new)
-            elif change_type == 'rotator_state':
+            elif change_type == "rotator_state":
                 await self.handle_rotator_state_change(old, new)
-            elif change_type == 'rotator_id':
+            elif change_type == "rotator_id":
                 await self.handle_rotator_id_change(old, new)
-            elif change_type == 'rig_state':
+            elif change_type == "rig_state":
                 await self.handle_rig_state_change(old, new)
-            elif change_type == 'transmitter_id':
+            elif change_type == "transmitter_id":
                 await self.handle_transmitter_id_change(old, new)
-            elif change_type == 'rig_id':
+            elif change_type == "rig_id":
                 await self.handle_rig_id_change(old, new)
 
     async def _process_commands(self):
@@ -432,18 +513,18 @@ class SatelliteTracker:
                 command = self.queue_in.get_nowait()
                 logger.info(f"Received command: {command}")
 
-                cmd_type = command.get('command')
+                cmd_type = command.get("command")
                 if cmd_type == TrackerCommands.STOP:
                     logger.info("Received stop command, exiting tracking task")
                     return True
                 elif cmd_type == TrackerCommands.NUDGE_CLOCKWISE:
-                    self.nudge_offset['az'] += 2
+                    self.nudge_offset["az"] += 2
                 elif cmd_type == TrackerCommands.NUDGE_COUNTER_CLOCKWISE:
-                    self.nudge_offset['az'] -= 2
+                    self.nudge_offset["az"] -= 2
                 elif cmd_type == TrackerCommands.NUDGE_UP:
-                    self.nudge_offset['el'] += 2
+                    self.nudge_offset["el"] += 2
                 elif cmd_type == TrackerCommands.NUDGE_DOWN:
-                    self.nudge_offset['el'] -= 2
+                    self.nudge_offset["el"] -= 2
 
         except Exception as e:
             logger.error(f"Error processing commands: {e}")
@@ -457,54 +538,66 @@ class SatelliteTracker:
             logger.warning("Tracking state said rotator must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
-                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                    'value': {'rotator_state': 'disconnected'}
-                })
+                new_tracking_state = await crud.tracking_state.set_tracking_state(
+                    dbsession,
+                    {
+                        DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
+                        "value": {"rotator_state": "disconnected"},
+                    },
+                )
 
-            self.rotator_data['connected'] = False
-            self.rotator_data['tracking'] = False
-            self.rotator_data['stopped'] = True
+            self.rotator_data["connected"] = False
+            self.rotator_data["tracking"] = False
+            self.rotator_data["stopped"] = True
 
-            self.queue_out.put({
-                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                DictKeys.DATA: {
-                    'rotator_data': self.rotator_data.copy(),
-                    'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
+            self.queue_out.put(
+                {
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {
+                        "rotator_data": self.rotator_data.copy(),
+                        "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                    },
                 }
-            })
+            )
 
         # Check if rig should be connected but isn't
         if self.current_rig_state == "connected" and self.rig_controller is None:
             logger.warning("Tracking state said rig must be connected but it is not")
 
             async with AsyncSessionLocal() as dbsession:
-                new_tracking_state = await crud.tracking_state.set_tracking_state(dbsession, {
-                    DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
-                    'value': {'rig_state': 'disconnected'}
-                })
+                new_tracking_state = await crud.tracking_state.set_tracking_state(
+                    dbsession,
+                    {
+                        DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
+                        "value": {"rig_state": "disconnected"},
+                    },
+                )
 
-            self.rig_data['connected'] = False
-            self.rig_data['tracking'] = False
-            self.rig_data['stopped'] = True
+            self.rig_data["connected"] = False
+            self.rig_data["tracking"] = False
+            self.rig_data["stopped"] = True
 
-            self.queue_out.put({
-                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                DictKeys.DATA: {
-                    'rig_data': self.rig_data.copy(),
-                    'tracking_state': new_tracking_state[DictKeys.DATA]['value'],
+            self.queue_out.put(
+                {
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {
+                        "rig_data": self.rig_data.copy(),
+                        "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                    },
                 }
-            })
+            )
 
     async def _update_hardware_positions(self):
         """Update current hardware positions."""
         # Get rotator position
         if self.rotator_controller:
-            self.rotator_data['az'], self.rotator_data['el'] = await self.rotator_controller.get_position()
+            self.rotator_data["az"], self.rotator_data["el"] = (
+                await self.rotator_controller.get_position()
+            )
 
         # Get rig frequency
         if self.rig_controller:
-            self.rig_data['frequency'] = await self.rig_controller.get_frequency()
+            self.rig_data["frequency"] = await self.rig_controller.get_frequency()
 
     def _check_position_limits(self, skypoint, satellite_name):
         """Check if satellite position is within limits."""
@@ -512,87 +605,104 @@ class SatelliteTracker:
 
         # Check azimuth limits
         if skypoint[0] > self.azimuth_limits[1] or skypoint[0] < self.azimuth_limits[0]:
-            logger.debug(f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}")
-            if self.in_tracking_state() and not self.notified.get(TrackingEvents.AZIMUTH_OUT_OF_BOUNDS, False):
+            logger.debug(
+                f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}"
+            )
+            if self.in_tracking_state() and not self.notified.get(
+                TrackingEvents.AZIMUTH_OUT_OF_BOUNDS, False
+            ):
                 events.append({DictKeys.NAME: TrackingEvents.AZIMUTH_OUT_OF_BOUNDS})
             self.notified[TrackingEvents.AZIMUTH_OUT_OF_BOUNDS] = True
-            self.rotator_data['outofbounds'] = True
-            self.rotator_data['stopped'] = True
+            self.rotator_data["outofbounds"] = True
+            self.rotator_data["stopped"] = True
 
         # Check elevation limits
         if skypoint[1] < self.elevation_limits[0] or skypoint[1] > self.elevation_limits[1]:
-            logger.debug(f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}")
-            if self.in_tracking_state() and not self.notified.get(TrackingEvents.ELEVATION_OUT_OF_BOUNDS, False):
+            logger.debug(
+                f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}"
+            )
+            if self.in_tracking_state() and not self.notified.get(
+                TrackingEvents.ELEVATION_OUT_OF_BOUNDS, False
+            ):
                 events.append({DictKeys.NAME: TrackingEvents.ELEVATION_OUT_OF_BOUNDS})
             self.notified[TrackingEvents.ELEVATION_OUT_OF_BOUNDS] = True
-            self.rotator_data['outofbounds'] = True
-            self.rotator_data['stopped'] = True
+            self.rotator_data["outofbounds"] = True
+            self.rotator_data["stopped"] = True
 
         # Check minimum elevation
         if skypoint[1] < self.min_elevation:
-            logger.debug(f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}")
-            if self.in_tracking_state() and not self.notified.get(TrackingEvents.MIN_ELEVATION_ERROR, False):
+            logger.debug(
+                f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}"
+            )
+            if self.in_tracking_state() and not self.notified.get(
+                TrackingEvents.MIN_ELEVATION_ERROR, False
+            ):
                 events.append({DictKeys.NAME: TrackingEvents.MIN_ELEVATION_ERROR})
             self.notified[TrackingEvents.MIN_ELEVATION_ERROR] = True
-            self.rotator_data['minelevation'] = True
-            self.rotator_data['stopped'] = True
+            self.rotator_data["minelevation"] = True
+            self.rotator_data["stopped"] = True
 
         # Send events if any
         if events:
-            self.queue_out.put({
-                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                DictKeys.DATA: {DictKeys.EVENTS: events}
-            })
+            self.queue_out.put(
+                {
+                    DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                    DictKeys.DATA: {DictKeys.EVENTS: events},
+                }
+            )
 
     async def _handle_transmitter_tracking(self, satellite_tles, location):
         """Handle transmitter selection and doppler calculation."""
         if self.current_transmitter_id != "none":
             async with AsyncSessionLocal() as dbsession:
-                current_transmitter_reply = await crud.transmitters.fetch_transmitter(dbsession,
-                                                                         transmitter_id=self.current_transmitter_id)
-                current_transmitter = current_transmitter_reply.get('data', {})
+                current_transmitter_reply = await crud.transmitters.fetch_transmitter(
+                    dbsession, transmitter_id=self.current_transmitter_id
+                )
+                current_transmitter = current_transmitter_reply.get("data", {})
 
             if current_transmitter:
-                self.rig_data['original_freq'] = current_transmitter.get('downlink_low', 0)
+                self.rig_data["original_freq"] = current_transmitter.get("downlink_low", 0)
 
                 # Calculate doppler shift
-                self.rig_data['observed_freq'], self.rig_data['doppler_shift'] = calculate_doppler_shift(
-                    satellite_tles[0],
-                    satellite_tles[1],
-                    location['lat'],
-                    location['lon'],
-                    0,
-                    current_transmitter.get('downlink_low', 0)
+                self.rig_data["observed_freq"], self.rig_data["doppler_shift"] = (
+                    calculate_doppler_shift(
+                        satellite_tles[0],
+                        satellite_tles[1],
+                        location["lat"],
+                        location["lon"],
+                        0,
+                        current_transmitter.get("downlink_low", 0),
+                    )
                 )
 
                 if self.current_rig_state == "tracking":
-                    self.rig_data['tracking'] = True
-                    self.rig_data['stopped'] = False
+                    self.rig_data["tracking"] = True
+                    self.rig_data["stopped"] = False
 
                 else:
-                    self.rig_data['observed_freq'] = 0
-                    self.rig_data['doppler_shift'] = 0
-                    self.rig_data['tracking'] = False
-                    self.rig_data['stopped'] = True
+                    self.rig_data["observed_freq"] = 0
+                    self.rig_data["doppler_shift"] = 0
+                    self.rig_data["tracking"] = False
+                    self.rig_data["stopped"] = True
 
-            self.rig_data['transmitter_id'] = self.current_transmitter_id
+            self.rig_data["transmitter_id"] = self.current_transmitter_id
 
         else:
             logger.debug("No satellite transmitter selected")
-            self.rig_data['transmitter_id'] = self.current_transmitter_id
-            self.rig_data['observed_freq'] = 0
-            self.rig_data['doppler_shift'] = 0
-            self.rig_data['tracking'] = False
-            self.rig_data['stopped'] = True
+            self.rig_data["transmitter_id"] = self.current_transmitter_id
+            self.rig_data["observed_freq"] = 0
+            self.rig_data["doppler_shift"] = 0
+            self.rig_data["tracking"] = False
+            self.rig_data["stopped"] = True
 
     async def _control_rig_frequency(self):
         """Control rig frequency based on doppler calculations."""
         if self.rig_controller and self.current_rig_state == "tracking":
-            frequency_gen = self.rig_controller.set_frequency(self.rig_data['observed_freq'])
+            frequency_gen = self.rig_controller.set_frequency(self.rig_data["observed_freq"])
 
             try:
                 current_frequency, is_tuning = await anext(frequency_gen)
-                self.rig_data['tuning'] = is_tuning
+                self.rig_data["tuning"] = is_tuning
 
                 logger.debug(f"Current frequency: {current_frequency}, tuning={is_tuning}")
             except StopAsyncIteration:
@@ -600,34 +710,40 @@ class SatelliteTracker:
 
     async def _control_rotator_position(self, skypoint):
         """Control rotator position for tracking or nudging."""
-        if (self.rotator_controller and self.current_rotator_state == "tracking" and
-                not self.rotator_data['outofbounds'] and not self.rotator_data['minelevation']):
+        if (
+            self.rotator_controller
+            and self.current_rotator_state == "tracking"
+            and not self.rotator_data["outofbounds"]
+            and not self.rotator_data["minelevation"]
+        ):
 
             # Check if movement is needed
-            if (abs(skypoint[0] - self.rotator_data['az']) > self.az_tolerance or
-                    abs(skypoint[1] - self.rotator_data['el']) > self.el_tolerance):
+            if (
+                abs(skypoint[0] - self.rotator_data["az"]) > self.az_tolerance
+                or abs(skypoint[1] - self.rotator_data["el"]) > self.el_tolerance
+            ):
 
                 position_gen = self.rotator_controller.set_position(skypoint[0], skypoint[1])
-                self.rotator_data['stopped'] = False
+                self.rotator_data["stopped"] = False
 
                 try:
                     az, el, is_slewing = await anext(position_gen)
-                    self.rotator_data['slewing'] = is_slewing
+                    self.rotator_data["slewing"] = is_slewing
                     logger.debug(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
                 except StopAsyncIteration:
                     logger.info(f"Slewing to AZ={skypoint[0]}° EL={skypoint[1]}° complete")
 
         elif self.rotator_controller and self.current_rotator_state != "tracking":
             # Handle nudge commands when not tracking
-            if self.nudge_offset['az'] != 0 or self.nudge_offset['el'] != 0:
-                new_az = self.rotator_data['az'] + self.nudge_offset['az']
-                new_el = self.rotator_data['el'] + self.nudge_offset['el']
+            if self.nudge_offset["az"] != 0 or self.nudge_offset["el"] != 0:
+                new_az = self.rotator_data["az"] + self.nudge_offset["az"]
+                new_el = self.rotator_data["el"] + self.nudge_offset["el"]
 
                 position_gen = self.rotator_controller.set_position(new_az, new_el)
 
                 try:
                     az, el, is_slewing = await anext(position_gen)
-                    self.rotator_data['slewing'] = is_slewing
+                    self.rotator_data["slewing"] = is_slewing
                     logger.debug(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
                 except StopAsyncIteration:
                     logger.info(f"Slewing to AZ={az}° EL={el}° complete")
@@ -635,22 +751,24 @@ class SatelliteTracker:
     def _cleanup_data_states(self):
         """Clean up temporary state flags."""
         # Clean up rotator_data
-        self.rotator_data['slewing'] = False
-        self.rotator_data['outofbounds'] = False
-        self.rotator_data['minelevation'] = False
-        self.rotator_data['error'] = False
+        self.rotator_data["slewing"] = False
+        self.rotator_data["outofbounds"] = False
+        self.rotator_data["minelevation"] = False
+        self.rotator_data["error"] = False
 
         # Clean up rig_data
-        self.rig_data['tuning'] = False
-        self.rig_data['error'] = False
+        self.rig_data["tuning"] = False
+        self.rig_data["error"] = False
 
         # Reset nudge offset values
-        self.nudge_offset = {'az': 0, 'el': 0}
+        self.nudge_offset = {"az": 0, "el": 0}
 
     async def run(self):
         """Main tracking loop - this replaces the original function."""
         # Validate interval
-        assert 0 < args.track_interval < 6, f"track_interval must be between 2 and 5, got {args.track_interval}"
+        assert (
+            0 < args.track_interval < 6
+        ), f"track_interval must be between 2 and 5, got {args.track_interval}"
 
         satellite_data = {}
         tracker = {}
@@ -669,36 +787,53 @@ class SatelliteTracker:
                 async with AsyncSessionLocal() as dbsession:
 
                     # Get tracking state from the db
-                    tracking_state_reply = await crud.tracking_state.get_tracking_state(dbsession, name=TrackingStateNames.SATELLITE_TRACKING)
+                    tracking_state_reply = await crud.tracking_state.get_tracking_state(
+                        dbsession, name=TrackingStateNames.SATELLITE_TRACKING
+                    )
 
-                    if tracking_state_reply['success'] is False:
+                    if tracking_state_reply["success"] is False:
                         logger.error(f"Error in satellite tracking task: {tracking_state_reply}")
                         continue
 
-                    assert tracking_state_reply.get('success', False) is True, f"Error in satellite tracking task: {tracking_state_reply}"
-                    assert tracking_state_reply['data']['value']['group_id'], f"No group id found in satellite tracking state: {tracking_state_reply}"
-                    assert tracking_state_reply['data']['value']['norad_id'], f"No norad id found in satellite tracking state: {tracking_state_reply}"
+                    assert (
+                        tracking_state_reply.get("success", False) is True
+                    ), f"Error in satellite tracking task: {tracking_state_reply}"
+                    assert tracking_state_reply["data"]["value"][
+                        "group_id"
+                    ], f"No group id found in satellite tracking state: {tracking_state_reply}"
+                    assert tracking_state_reply["data"]["value"][
+                        "norad_id"
+                    ], f"No norad id found in satellite tracking state: {tracking_state_reply}"
 
                     # Fetch the location of the ground station
-                    location_reply = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
-                    location = location_reply['data']
-                    tracker = tracking_state_reply['data']['value']
+                    location_reply = await crud.locations.fetch_location_for_userid(
+                        dbsession, user_id=None
+                    )
+                    location = location_reply["data"]
+                    tracker = tracking_state_reply["data"]["value"]
 
                     # Get a data dict that contains all the information for the target satellite
-                    satellite_data = await compiled_satellite_data(dbsession, tracking_state_reply['data']['value']['norad_id'])
-                    assert not satellite_data['error'], f"Could not compute satellite details for satellite {tracking_state_reply['data']['value']['norad_id']}"
+                    satellite_data = await compiled_satellite_data(
+                        dbsession, tracking_state_reply["data"]["value"]["norad_id"]
+                    )
+                    assert not satellite_data[
+                        "error"
+                    ], f"Could not compute satellite details for satellite {tracking_state_reply['data']['value']['norad_id']}"
 
-                    satellite_tles = [satellite_data['details']['tle1'], satellite_data['details']['tle2']]
-                    satellite_name = satellite_data['details']['name']
+                    satellite_tles = [
+                        satellite_data["details"]["tle1"],
+                        satellite_data["details"]["tle2"],
+                    ]
+                    satellite_name = satellite_data["details"]["name"]
 
                 # Update current state variables
-                self.current_norad_id = tracker.get('norad_id', None)
-                self.current_group_id = tracker.get('group_id', None)
-                self.current_rotator_id = tracker.get('rotator_id', "none")
-                self.current_rig_id = tracker.get('rig_id', "none")
-                self.current_transmitter_id = tracker.get('transmitter_id', "none")
-                self.current_rotator_state = tracker.get('rotator_state', "disconnected")
-                self.current_rig_state = tracker.get('rig_state', "disconnected")
+                self.current_norad_id = tracker.get("norad_id", None)
+                self.current_group_id = tracker.get("group_id", None)
+                self.current_rotator_id = tracker.get("rotator_id", "none")
+                self.current_rig_id = tracker.get("rig_id", "none")
+                self.current_transmitter_id = tracker.get("transmitter_id", "none")
+                self.current_rotator_state = tracker.get("rotator_state", "disconnected")
+                self.current_rig_state = tracker.get("rig_state", "disconnected")
 
                 # Check for state changes and handle them
                 changes = self._check_state_changes()
@@ -711,13 +846,15 @@ class SatelliteTracker:
                 await self._update_hardware_positions()
 
                 # Work on sky coordinates
-                skypoint = (satellite_data['position']['az'], satellite_data['position']['el'])
+                skypoint = (satellite_data["position"]["az"], satellite_data["position"]["el"])
 
                 # Check position limits
                 self._check_position_limits(skypoint, satellite_name)
 
                 # Log valid target
-                logger.debug(f"We have a valid target (#{self.current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°")
+                logger.debug(
+                    f"We have a valid target (#{self.current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°"
+                )
 
                 # Handle transmitter tracking
                 await self._handle_transmitter_tracking(satellite_tles, location)
@@ -739,12 +876,12 @@ class SatelliteTracker:
                         full_msg = {
                             DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                             DictKeys.DATA: {
-                                'satellite_data': satellite_data,
+                                "satellite_data": satellite_data,
                                 DictKeys.EVENTS: self.events.copy(),
-                                'rotator_data': self.rotator_data.copy(),
-                                'rig_data': self.rig_data.copy(),
-                                'tracking_state': tracker.copy(),
-                            }
+                                "rotator_data": self.rotator_data.copy(),
+                                "rig_data": self.rig_data.copy(),
+                                "tracking_state": tracker.copy(),
+                            },
                         }
                         logger.debug(f"Sending satellite tracking data: \n{pretty_dict(full_msg)}")
                         self.queue_out.put(full_msg)
@@ -757,8 +894,10 @@ class SatelliteTracker:
                 loop_duration = round((datetime.now(UTC) - self.start_loop_date).total_seconds(), 2)
 
                 if loop_duration > args.track_interval:
-                    logger.warning(f"Single tracking loop iteration took longer ({loop_duration}) than the configured "
-                                   f"interval ({args.track_interval})")
+                    logger.warning(
+                        f"Single tracking loop iteration took longer ({loop_duration}) than the configured "
+                        f"interval ({args.track_interval})"
+                    )
 
                 remaining_time_to_sleep = max((args.track_interval - loop_duration), 0)
 
@@ -770,13 +909,17 @@ class SatelliteTracker:
                     logger.info("Stop event detected, exiting tracking task")
                     break
 
-                logger.debug(f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
-                             f"(already spent {round(loop_duration, 2)})...")
+                logger.debug(
+                    f"Waiting for {round(remaining_time_to_sleep, 2)} seconds before next update "
+                    f"(already spent {round(loop_duration, 2)})..."
+                )
 
                 await asyncio.sleep(remaining_time_to_sleep)
 
 
-async def satellite_tracking_task(queue_out: multiprocessing.Queue, queue_in: multiprocessing.Queue, stop_event=None):
+async def satellite_tracking_task(
+    queue_out: multiprocessing.Queue, queue_in: multiprocessing.Queue, stop_event=None
+):
     """
     Wrapper function that creates and runs a SatelliteTracker instance.
     This maintains compatibility with existing multiprocessing code.

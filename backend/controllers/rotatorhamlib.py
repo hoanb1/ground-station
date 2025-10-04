@@ -24,12 +24,12 @@ from Hamlib import Hamlib
 
 class RotatorController:
     def __init__(
-            self,
-            model: int = Hamlib.ROT_MODEL_SATROTCTL,
-            host: str = "127.0.0.1",
-            port: int = 4533,
-            verbose: bool = False,
-            timeout: float = 5.0,
+        self,
+        model: int = Hamlib.ROT_MODEL_SATROTCTL,
+        host: str = "127.0.0.1",
+        port: int = 4533,
+        verbose: bool = False,
+        timeout: float = 5.0,
     ):
 
         # Set up logging
@@ -108,8 +108,7 @@ class RotatorController:
         try:
             # Use asyncio's open_connection with timeout
             reader, writer = await asyncio.wait_for(
-                asyncio.open_connection(self.host, self.port),
-                timeout=self.timeout
+                asyncio.open_connection(self.host, self.port), timeout=self.timeout
             )
             yield reader, writer
 
@@ -135,24 +134,21 @@ class RotatorController:
                 await writer.drain()
 
                 # Receive response with timeout
-                response_bytes = await asyncio.wait_for(
-                    reader.read(1000),
-                    timeout=self.timeout
-                )
+                response_bytes = await asyncio.wait_for(reader.read(1000), timeout=self.timeout)
 
-                response = response_bytes.decode('utf-8', errors='replace').strip()
+                response = response_bytes.decode("utf-8", errors="replace").strip()
 
                 # Parse the response (same as before)
                 if not response:
                     return False
 
                 # Handle different response formats
-                if response.startswith('RPRT'):
+                if response.startswith("RPRT"):
                     error_code = int(response.split()[1])
                     return error_code >= 0
 
-                elif response.startswith('get_pos:'):
-                    parts = response.split(':')[1].strip().split()
+                elif response.startswith("get_pos:"):
+                    parts = response.split(":")[1].strip().split()
                     if len(parts) >= 2:
                         try:
                             float(parts[0])
@@ -220,7 +216,9 @@ class RotatorController:
     def check_connection(self) -> bool:
 
         if not self.connected or self.rotator is None:
-            error_msg = f"Not connected to rotator (connected: {self.connected}, rotator: {self.rotator})"
+            error_msg = (
+                f"Not connected to rotator (connected: {self.connected}, rotator: {self.rotator})"
+            )
             self.logger.error(error_msg)
             raise RuntimeError(error_msg)
 
@@ -228,13 +226,19 @@ class RotatorController:
 
     def __del__(self) -> None:
         """Destructor - log a warning if still connected when object is garbage collected."""
-        if self.connected and hasattr(self, 'logger'):
+        if self.connected and hasattr(self, "logger"):
             try:
                 # Just log a warning rather than trying to run async code
-                self.logger.warning("Object RotatorController being garbage collected while still connected")
+                self.logger.warning(
+                    "Object RotatorController being garbage collected while still connected"
+                )
 
                 # If there's a synchronous way to close the underlying connection, use it
-                if self.rotator is not None and hasattr(self.rotator, 'close') and callable(self.rotator.close):
+                if (
+                    self.rotator is not None
+                    and hasattr(self.rotator, "close")
+                    and callable(self.rotator.close)
+                ):
                     try:
                         # Only if close() can be called synchronously
                         self.rotator.close()
@@ -271,9 +275,14 @@ class RotatorController:
 
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
-    async def set_position(self, target_az: float, target_el: float, update_interval: float = 2,
-                           az_tolerance: float = 2.0, el_tolerance: float = 2.0) -> AsyncGenerator[
-        Tuple[float, float, bool], None]:
+    async def set_position(
+        self,
+        target_az: float,
+        target_el: float,
+        update_interval: float = 2,
+        az_tolerance: float = 2.0,
+        el_tolerance: float = 2.0,
+    ) -> AsyncGenerator[Tuple[float, float, bool], None]:
 
         # Start the slew operation
         try:
@@ -298,7 +307,7 @@ class RotatorController:
         # Keep checking position when a consumer requests an update
         while is_slewing:
             # Wait for the update interval
-            #await asyncio.sleep(update_interval)
+            # await asyncio.sleep(update_interval)
 
             # Get the current position
             current_az, current_el = await self.get_position()

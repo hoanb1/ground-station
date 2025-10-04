@@ -39,9 +39,10 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
 
         # Import here to avoid circular dependency
         from crud.groups import fetch_satellite_group
+
         group = await fetch_satellite_group(session, group_id)
 
-        satellite_ids = group['data']['satellite_ids']
+        satellite_ids = group["data"]["satellite_ids"]
 
         # Fetch satellites
         stmt = select(Satellites).filter(Satellites.norad_id.in_(satellite_ids))
@@ -51,10 +52,10 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
 
         # Fetch transmitters for each satellite
         for satellite in satellites:
-            stmt = select(Transmitters).filter(Transmitters.norad_cat_id == satellite['norad_id'])
+            stmt = select(Transmitters).filter(Transmitters.norad_cat_id == satellite["norad_id"])
             result = await session.execute(stmt)
             transmitters = result.scalars().all()
-            satellite['transmitters'] = serialize_object(transmitters)
+            satellite["transmitters"] = serialize_object(transmitters)
 
         return {"success": True, "data": satellites, "error": None}
 
@@ -79,10 +80,10 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
             keyword = str(keyword)
             keyword = f"%{keyword}%"
             stmt = select(Satellites).filter(
-                Satellites.norad_id.cast(String).ilike(keyword) |
-                Satellites.name.ilike(keyword) |
-                Satellites.name_other.ilike(keyword) |
-                Satellites.alternative_name.ilike(keyword)
+                Satellites.norad_id.cast(String).ilike(keyword)
+                | Satellites.name.ilike(keyword)
+                | Satellites.name_other.ilike(keyword)
+                | Satellites.alternative_name.ilike(keyword)
             )
         result = await session.execute(stmt)
         satellites = result.scalars().all()
@@ -90,7 +91,7 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
 
         # For each satellite, find which groups it belongs to
         for satellite in satellites:
-            norad_id = satellite['norad_id']
+            norad_id = satellite["norad_id"]
 
             # Get all groups and filter them in Python since JSON querying can be database-specific
             all_groups_stmt = select(Groups)
@@ -107,7 +108,7 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
             matching_groups.sort(key=lambda g: len(g.satellite_ids) if g.satellite_ids else 0)
 
             # Add group information to the satellite
-            satellite['groups'] = serialize_object(matching_groups) if matching_groups else []
+            satellite["groups"] = serialize_object(matching_groups) if matching_groups else []
 
         return {"success": True, "data": satellites, "error": None}
 
@@ -117,7 +118,9 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
         return {"success": False, "error": str(e)}
 
 
-async def fetch_satellites(session: AsyncSession, norad_id: Union[str, int, list[int], None]) -> dict:
+async def fetch_satellites(
+    session: AsyncSession, norad_id: Union[str, int, list[int], None]
+) -> dict:
     """
     Fetch satellite records.
 
@@ -160,20 +163,16 @@ async def add_satellite(session: AsyncSession, data: dict) -> dict:
     """
     try:
         # Validate required fields
-        required_fields = ['name', 'sat_id', 'norad_id', 'status', 'is_frequency_violator']
+        required_fields = ["name", "sat_id", "norad_id", "status", "is_frequency_violator"]
         for field in required_fields:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
 
         now = datetime.now(UTC)
-        data['added'] = now
-        data['updated'] = now
+        data["added"] = now
+        data["updated"] = now
 
-        stmt = (
-            insert(Satellites)
-            .values(**data)
-            .returning(Satellites)
-        )
+        stmt = insert(Satellites).values(**data).returning(Satellites)
         result = await session.execute(stmt)
         await session.commit()
         new_satellite = result.scalar_one()
@@ -236,9 +235,7 @@ async def delete_satellite(session: AsyncSession, satellite_id: Union[uuid.UUID,
 
         # Then delete the satellite
         satellite_stmt = (
-            delete(Satellites)
-            .where(Satellites.norad_id == satellite_id)
-            .returning(Satellites)
+            delete(Satellites).where(Satellites.norad_id == satellite_id).returning(Satellites)
         )
         result = await session.execute(satellite_stmt)
         deleted = result.scalar_one_or_none()

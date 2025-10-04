@@ -22,6 +22,7 @@ from datetime import datetime, UTC
 from db.models import Locations
 from common.common import logger, serialize_object
 
+
 async def fetch_location(session: AsyncSession, location_id: Union[uuid.UUID, str]) -> dict:
     """
     Fetch a single location by its UUID or its string representation.
@@ -42,7 +43,9 @@ async def fetch_location(session: AsyncSession, location_id: Union[uuid.UUID, st
         return {"success": False, "error": str(e)}
 
 
-async def fetch_location_for_userid(session: AsyncSession, user_id: Optional[uuid.UUID | str | None] = None) -> dict:
+async def fetch_location_for_userid(
+    session: AsyncSession, user_id: Optional[uuid.UUID | str | None] = None
+) -> dict:
     """
     Fetch a single location by its UUID or all locations for a given user_id.
     """
@@ -81,11 +84,7 @@ async def add_location(session: AsyncSession, data: dict) -> dict:
             if isinstance(data["userid"], str):
                 data["userid"] = uuid.UUID(data["userid"])
 
-        stmt = (
-            insert(Locations)
-            .values(**data)
-            .returning(Locations)
-        )
+        stmt = insert(Locations).values(**data).returning(Locations)
 
         result = await session.execute(stmt)
         await session.commit()
@@ -110,10 +109,10 @@ async def edit_location(session: AsyncSession, data: dict) -> dict:
         if not location_id:
             raise Exception("id is required.")
 
-        if data.get('added', None) is not None:
-            del data['added']
-        if data.get('updated', None) is not None:
-            del data['updated']
+        if data.get("added", None) is not None:
+            del data["added"]
+        if data.get("updated", None) is not None:
+            del data["updated"]
 
         # Convert to UUID if it's a string
         if isinstance(location_id, str):
@@ -127,10 +126,7 @@ async def edit_location(session: AsyncSession, data: dict) -> dict:
             return {"success": False, "error": f"Location with id {location_id} not found."}
 
         upd_stmt = (
-            update(Locations)
-            .where(Locations.id == location_id)
-            .values(**data)
-            .returning(Locations)
+            update(Locations).where(Locations.id == location_id).values(**data).returning(Locations)
         )
         upd_result = await session.execute(upd_stmt)
         await session.commit()
@@ -154,11 +150,7 @@ async def delete_location(session: AsyncSession, location_id: Union[uuid.UUID, s
         if isinstance(location_id, str):
             location_id = uuid.UUID(location_id)
 
-        stmt = (
-            delete(Locations)
-            .where(Locations.id == location_id)
-            .returning(Locations)
-        )
+        stmt = delete(Locations).where(Locations.id == location_id).returning(Locations)
         result = await session.execute(stmt)
         deleted = result.scalar_one_or_none()
         if not deleted:
@@ -171,5 +163,3 @@ async def delete_location(session: AsyncSession, location_id: Union[uuid.UUID, s
         logger.error(f"Error deleting a location: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
-
-

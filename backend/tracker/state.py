@@ -28,7 +28,9 @@ class StateTracker:
         """Register a synchronous callback function."""
         self.sync_callbacks.append(callback)
 
-    def register_async_callback(self, callback: Callable[[Any, Any], Coroutine[Any, Any, None]]) -> None:
+    def register_async_callback(
+        self, callback: Callable[[Any, Any], Coroutine[Any, Any, None]]
+    ) -> None:
         """Register an asynchronous callback function."""
         self.async_callbacks.append(callback)
 

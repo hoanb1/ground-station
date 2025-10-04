@@ -37,10 +37,11 @@ async def handle_tracker_messages(sockio):
     while True:
         try:
             from tracker.runner import queue_from_tracker
+
             if queue_from_tracker is not None and not queue_from_tracker.empty():
                 message = queue_from_tracker.get_nowait()
-                event = message.get('event')
-                data = message.get('data', {})
+                event = message.get("event")
+                data = message.get("data", {})
                 if event:
                     await sockio.emit(event, data)
             await asyncio.sleep(0.1)
@@ -72,7 +73,7 @@ async def lifespan(fastapiapp: FastAPI):
 
 
 sio = socketio.AsyncServer(
-    async_mode='asgi', cors_allowed_origins='*', logger=True, engineio_logger=True, binary=True
+    async_mode="asgi", cors_allowed_origins="*", logger=True, engineio_logger=True, binary=True
 )
 app = FastAPI(
     lifespan=lifespan,
@@ -81,7 +82,7 @@ app = FastAPI(
     version="1.0.0",
     docs_url="/api/docs",
     redoc_url="/api/redoc",
-    openapi_url="/api/openapi.json"
+    openapi_url="/api/openapi.json",
 )
 socket_app = socketio.ASGIApp(sio, other_asgi_app=app)
 
@@ -98,6 +99,7 @@ sdr_process_manager.set_sio(sio)
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
+
 # Add the version API endpoint BEFORE the catch-all route
 @app.get("/api/version")
 async def get_version():
@@ -109,7 +111,10 @@ async def get_version():
         return version_info
     except Exception as e:
         logger.error(f"Error retrieving version information: {str(e)}")
-        raise HTTPException(status_code=500, detail=f"Failed to retrieve version information: {str(e)}")
+        raise HTTPException(
+            status_code=500, detail=f"Failed to retrieve version information: {str(e)}"
+        )
+
 
 # This catch-all route comes AFTER specific API routes
 @app.get("/{full_path:path}")
@@ -123,27 +128,29 @@ async def serve_spa(request: Request, full_path: str):
 async def init_db():
     """Create database tables."""
     logger.info("Initializing database...")
-    
+
     # Check if database exists by trying to query metadata
     database_existed = False
     try:
         async with engine.begin() as conn:
             # Try to get table names - if this succeeds, database exists
-            result = await conn.run_sync(lambda sync_conn: engine.dialect.get_table_names(sync_conn))
+            result = await conn.run_sync(
+                lambda sync_conn: engine.dialect.get_table_names(sync_conn)
+            )
             database_existed = len(result) > 0
     except Exception:
         # Database doesn't exist or is empty
         database_existed = False
-    
+
     # Create all tables
     async with engine.begin() as conn:
         await conn.run_sync(Base.metadata.create_all)
-    
+
     # If database didn't exist before, populate with initial data
     if not database_existed:
         logger.info("New database detected. Populating with initial data...")
         await first_time_initialization()
-    
+
     logger.info("Database initialized.")
 
 
@@ -159,14 +166,14 @@ async def first_time_initialization():
             # Generate random identifiers for the TLE sources
             def generate_identifier(length=16):
                 """Generate a random identifier similar to what the CRUD does."""
-                return ''.join(random.choices(string.ascii_lowercase + string.digits, k=length))
+                return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
             # Add default TLE sources
             cubesat_source = TLESources(
                 name="Cubesats",
                 identifier=generate_identifier(),
                 url="http://www.celestrak.com/NORAD/elements/cubesat.txt",
-                format="3le"
+                format="3le",
             )
             session.add(cubesat_source)
 
@@ -174,12 +181,14 @@ async def first_time_initialization():
                 name="Amateur",
                 identifier=generate_identifier(),
                 url="http://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle",
-                format="3le"
+                format="3le",
             )
             session.add(amateur_source)
 
             await session.commit()
-            logger.info("Initial data populated successfully with default TLE sources (Cubesats and Amateur).")
+            logger.info(
+                "Initial data populated successfully with default TLE sources (Cubesats and Amateur)."
+            )
         except Exception as e:
             logger.error(f"Error populating initial data: {e}")
             await session.rollback()

@@ -14,6 +14,7 @@ from multiprocessing import Manager
 # Add setproctitle import for process naming
 try:
     import setproctitle
+
     HAS_SETPROCTITLE = True
 except ImportError:
     HAS_SETPROCTITLE = False
@@ -32,13 +33,16 @@ def _generate_cache_key(tle_groups, homelat, homelon, hours, above_el, step_minu
     """Generate a unique cache key from function parameters, excluding hours"""
     # Create a string representation of the parameters, excluding hours
     # since we'll handle time separately
-    params_str = json.dumps({
-        "tle_groups": tle_groups,
-        "homelat": homelat,
-        "homelon": homelon,
-        "above_el": above_el,
-        "step_minutes": step_minutes
-    }, sort_keys=True)
+    params_str = json.dumps(
+        {
+            "tle_groups": tle_groups,
+            "homelat": homelat,
+            "homelon": homelon,
+            "above_el": above_el,
+            "step_minutes": step_minutes,
+        },
+        sort_keys=True,
+    )
 
     # Hash the parameters string to create a compact key
     return hashlib.md5(params_str.encode()).hexdigest()
@@ -54,10 +58,12 @@ def _named_worker_init():
     multiprocessing.current_process().name = "Ground Station - SatellitePassWorker"
 
 
-def run_events_calculation(satellite_data, homelat, homelon, hours, above_el, step_minutes, use_cache=True):
+def run_events_calculation(
+    satellite_data, homelat, homelon, hours, above_el, step_minutes, use_cache=True
+):
     # Set process name if not already set by pool initializer
     current_proc = multiprocessing.current_process()
-    if current_proc.name.startswith('ForkPoolWorker'):
+    if current_proc.name.startswith("ForkPoolWorker"):
         if HAS_SETPROCTITLE:
             setproctitle.setproctitle("Ground Station - SatellitePassWorker")
         current_proc.name = "Ground Station - SatellitePassWorker"
@@ -67,21 +73,15 @@ def run_events_calculation(satellite_data, homelat, homelon, hours, above_el, st
     # Extract TLE data for cache key generation (maintaining compatibility with existing cache)
     if isinstance(satellite_data, dict):
         # Single satellite case
-        tle_groups_for_cache = [[
-            satellite_data['norad_id'],
-            satellite_data['tle1'],
-            satellite_data['tle2']
-        ]]
+        tle_groups_for_cache = [
+            [satellite_data["norad_id"], satellite_data["tle1"], satellite_data["tle2"]]
+        ]
     elif isinstance(satellite_data, list):
         # Multiple satellites case
         tle_groups_for_cache = []
         for sat in satellite_data:
             if isinstance(sat, dict):
-                tle_groups_for_cache.append([
-                    sat['norad_id'],
-                    sat['tle1'],
-                    sat['tle2']
-                ])
+                tle_groups_for_cache.append([sat["norad_id"], sat["tle1"], sat["tle2"]])
             else:
                 # Fallback for old format
                 tle_groups_for_cache.append(sat)
@@ -91,7 +91,9 @@ def run_events_calculation(satellite_data, homelat, homelon, hours, above_el, st
 
     if use_cache:
         # Generate a unique cache key (without hours) using TLE data for compatibility
-        cache_key = _generate_cache_key(tle_groups_for_cache, homelat, homelon, hours, above_el, step_minutes)
+        cache_key = _generate_cache_key(
+            tle_groups_for_cache, homelat, homelon, hours, above_el, step_minutes
+        )
 
         # Get current time
         current_time = time.time()
@@ -121,10 +123,10 @@ def run_events_calculation(satellite_data, homelat, homelon, hours, above_el, st
         home_location={"lat": homelat, "lon": homelon},
         hours=hours,
         above_el=above_el,
-        step_minutes=step_minutes
+        step_minutes=step_minutes,
     )
 
-    events['cached'] = False
+    events["cached"] = False
 
     # Enrich the events result with the forecast window
     if isinstance(events, dict):
@@ -145,7 +147,10 @@ def run_events_calculation(satellite_data, homelat, homelon, hours, above_el, st
 
     return events
 
-async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_el=0, step_minutes=1):
+
+async def fetch_next_events_for_group(
+    group_id: str, hours: float = 2.0, above_el=0, step_minutes=1
+):
     """
     Fetches the next satellite events for a given group of satellites within a specified
     time frame. This function calculates the satellite events for a group identifier over
@@ -169,26 +174,35 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
 
     assert group_id, f"Group id is required ({group_id}, {type(group_id)})"
 
-    reply: dict[str, Union[bool, None, list, dict]] = {'success': None, 'data': None, 'parameters': None}
+    reply: dict[str, Union[bool, None, list, dict]] = {
+        "success": None,
+        "data": None,
+        "parameters": None,
+    }
     events = []
 
     logger.info(
-        "Calculating satellite events for group id: " + str(group_id) + " for next " + str(hours) + " hours")
+        "Calculating satellite events for group id: "
+        + str(group_id)
+        + " for next "
+        + str(hours)
+        + " hours"
+    )
 
     async with AsyncSessionLocal() as dbsession:
         try:
             # Get home location
             home = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
 
-            if home['data'] is None:
+            if home["data"] is None:
                 raise Exception("No home location found in the database")
 
-            homelat = float(home['data']['lat'])
-            homelon = float(home['data']['lon'])
+            homelat = float(home["data"]["lat"])
+            homelon = float(home["data"]["lon"])
 
             # Fetch satellite data
             satellites = await crud.satellites.fetch_satellites_for_group_id(dbsession, group_id)
-            satellites = json.loads(json.dumps(satellites['data'], cls=ModelEncoder))
+            satellites = json.loads(json.dumps(satellites["data"], cls=ModelEncoder))
 
             # Create pool with named processes
             with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
@@ -197,42 +211,51 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
                     None,
                     pool.apply,
                     run_events_calculation,
-                    (satellites, homelat, homelon, hours, above_el, step_minutes)
+                    (satellites, homelat, homelon, hours, above_el, step_minutes),
                 )
 
-            if result.get('success', False):
-                events_data = result.get('data', [])
+            if result.get("success", False):
+                events_data = result.get("data", [])
 
                 # Create a lookup dict for satellite names, transmitters and counts
-                satellite_info = {sat['norad_id']: {
-                    'name': sat['name'],
-                    'transmitters': sat.get('transmitters', []),
-                    'transmitter_count': len([t for t in sat.get('transmitters', [])])
-                } for sat in satellites}
+                satellite_info = {
+                    sat["norad_id"]: {
+                        "name": sat["name"],
+                        "transmitters": sat.get("transmitters", []),
+                        "transmitter_count": len([t for t in sat.get("transmitters", [])]),
+                    }
+                    for sat in satellites
+                }
 
                 # Add satellite names, transmitters and counts to events
                 for event in events_data:
-                    event['name'] = satellite_info[event['norad_id']]['name']
-                    event['transmitters'] = satellite_info[event['norad_id']]['transmitters']
-                    event['transmitter_count'] = satellite_info[event['norad_id']]['transmitter_count']
-                    event['id'] = f"{event['id']}_{event['norad_id']}_{event['event_start']}"
+                    event["name"] = satellite_info[event["norad_id"]]["name"]
+                    event["transmitters"] = satellite_info[event["norad_id"]]["transmitters"]
+                    event["transmitter_count"] = satellite_info[event["norad_id"]][
+                        "transmitter_count"
+                    ]
+                    event["id"] = f"{event['id']}_{event['norad_id']}_{event['event_start']}"
                     events.append(event)
 
-                reply['success'] = True
-                reply['parameters'] = {'group_id': group_id, 'hours': hours, 'above_el': above_el,
-                                       'step_minutes': step_minutes}
-                reply['data'] = events
-                reply['forecast_hours'] = result.get('forecast_hours', hours)
-                reply['cached'] = result.get('cached', False)
+                reply["success"] = True
+                reply["parameters"] = {
+                    "group_id": group_id,
+                    "hours": hours,
+                    "above_el": above_el,
+                    "step_minutes": step_minutes,
+                }
+                reply["data"] = events
+                reply["forecast_hours"] = result.get("forecast_hours", hours)
+                reply["cached"] = result.get("cached", False)
 
             else:
                 raise Exception(f"Subprocess for calculating next passes failed: {result}")
 
         except Exception as e:
-            logger.error(f'Error fetching next passes for group: {group_id}, error: {e}')
+            logger.error(f"Error fetching next passes for group: {group_id}, error: {e}")
             logger.exception(e)
-            reply['success'] = False
-            reply['data'] = []
+            reply["success"] = False
+            reply["data"] = []
 
         finally:
             pass
@@ -240,7 +263,9 @@ async def fetch_next_events_for_group(group_id: str, hours: float = 2.0, above_e
     return reply
 
 
-async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, above_el=0, step_minutes=1):
+async def fetch_next_events_for_satellite(
+    norad_id: int, hours: float = 2.0, above_el=0, step_minutes=1
+):
     """
     This function fetches the next satellite events for a specified satellite within a specified
     time frame. This function calculates the satellite events over a defined number
@@ -263,7 +288,12 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
 
     assert norad_id, f"NORAD ID is required ({norad_id}, {type(norad_id)})"
 
-    reply: dict[str, Union[bool, None, list, dict]] = {'success': None, 'data': None, 'parameters': None, 'cached': False}
+    reply: dict[str, Union[bool, None, list, dict]] = {
+        "success": None,
+        "data": None,
+        "parameters": None,
+        "cached": False,
+    }
     events = []
 
     logger.info(f"Calculating satellite events for NORAD ID: {norad_id} for next {hours} hours")
@@ -271,12 +301,12 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
         try:
             # Get home location
             home = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
-            homelat = float(home['data']['lat'])
-            homelon = float(home['data']['lon'])
+            homelat = float(home["data"]["lat"])
+            homelon = float(home["data"]["lon"])
 
             # Fetch satellite data
             satellite_reply = await crud.satellites.fetch_satellites(dbsession, norad_id=norad_id)
-            satellite = json.loads(json.dumps(satellite_reply['data'][0], cls=ModelEncoder))
+            satellite = json.loads(json.dumps(satellite_reply["data"][0], cls=ModelEncoder))
 
             # Create a pool with named processes
             with multiprocessing.Pool(processes=1, initializer=_named_worker_init) as pool:
@@ -285,35 +315,35 @@ async def fetch_next_events_for_satellite(norad_id: int, hours: float = 2.0, abo
                     None,
                     pool.apply,
                     run_events_calculation,
-                    (satellite, homelat, homelon, hours, above_el, step_minutes)
+                    (satellite, homelat, homelon, hours, above_el, step_minutes),
                 )
 
-            if result.get('success', False):
-                events_for_satellite = result.get('data', [])
+            if result.get("success", False):
+                events_for_satellite = result.get("data", [])
                 for event in events_for_satellite:
-                    event['name'] = satellite['name']
-                    event['id'] = f"{event['id']}_{satellite['norad_id']}_{event['event_start']}"
+                    event["name"] = satellite["name"]
+                    event["id"] = f"{event['id']}_{satellite['norad_id']}_{event['event_start']}"
                     events.append(event)
 
-                reply['success'] = True
-                reply['parameters'] = {
-                    'norad_id': norad_id,
-                    'hours': hours,
-                    'above_el': above_el,
-                    'step_minutes': step_minutes
+                reply["success"] = True
+                reply["parameters"] = {
+                    "norad_id": norad_id,
+                    "hours": hours,
+                    "above_el": above_el,
+                    "step_minutes": step_minutes,
                 }
-                reply['data'] = events
-                reply['cached'] = result.get('cached', False)
-                reply['forecast_hours'] = result.get('forecast_hours', hours)
+                reply["data"] = events
+                reply["cached"] = result.get("cached", False)
+                reply["forecast_hours"] = result.get("forecast_hours", hours)
 
             else:
                 raise Exception(f"Subprocess for calculating next passes failed: {result}")
 
         except Exception as e:
-            logger.error(f'Error fetching next passes for satellite: {norad_id}, error: {e}')
+            logger.error(f"Error fetching next passes for satellite: {norad_id}, error: {e}")
             logger.exception(e)
-            reply['success'] = False
-            reply['data'] = []
+            reply["success"] = False
+            reply["data"] = []
 
         finally:
             pass

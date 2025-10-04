@@ -22,7 +22,7 @@ from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_CF32
 from workers.common import window_functions, FFTAverager
 
 # Configure logging for the worker process
-logger = logging.getLogger('soapysdr-local')
+logger = logging.getLogger("soapysdr-local")
 
 
 def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
@@ -58,16 +58,16 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
         old_config = config
 
         # Configure the SoapySDR device
-        sdr_id = config.get('sdr_id')
-        client_id = config.get('client_id')
-        fft_size = config.get('fft_size', 16384)
-        fft_window = config.get('fft_window', 'hanning')
+        sdr_id = config.get("sdr_id")
+        client_id = config.get("client_id")
+        fft_size = config.get("fft_size", 16384)
+        fft_window = config.get("fft_window", "hanning")
 
         # FFT averaging configuration
-        fft_averaging = config.get('fft_averaging', 6)
+        fft_averaging = config.get("fft_averaging", 6)
 
-        driver = config.get('driver', '')
-        serial_number = config.get('serial_number', '')
+        driver = config.get("driver", "")
+        serial_number = config.get("serial_number", "")
 
         # Local device - use driver and serial directly
         device_args = f"driver={driver}"
@@ -87,7 +87,7 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
             logger.info(f"Connected to {device_driver} ({hardware})")
 
             # Query supported sample rates
-            channel = config.get('channel', 0)
+            channel = config.get("channel", 0)
             supported_rates = get_supported_sample_rates(sdr, channel)
             logger.debug(f"Supported sample rate ranges: {supported_rates}")
 
@@ -97,20 +97,21 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
 
             for rate in extra_sample_rates:
                 for rate_range in supported_rates:
-                    if 'minimum' in rate_range and 'maximum' in rate_range:
-                        if rate_range['minimum'] <= rate <= rate_range['maximum']:
+                    if "minimum" in rate_range and "maximum" in rate_range:
+                        if rate_range["minimum"] <= rate <= rate_range["maximum"]:
                             usable_rates.append(rate)
                             break
 
             logger.debug(f"Usable sample rates: {[rate / 1e6 for rate in usable_rates]} MHz")
 
             # Now choose a sample rate that is supported
-            sample_rate = config.get('sample_rate', 2.048e6)
+            sample_rate = config.get("sample_rate", 2.048e6)
             if usable_rates and sample_rate not in usable_rates:
                 # Find the closest supported rate
                 closest_rate = min(usable_rates, key=lambda x: abs(x - sample_rate))
                 logger.info(
-                    f"Requested sample rate {sample_rate / 1e6} MHz is not supported. Using closest rate: {closest_rate / 1e6} MHz")
+                    f"Requested sample rate {sample_rate / 1e6} MHz is not supported. Using closest rate: {closest_rate / 1e6} MHz"
+                )
                 sample_rate = closest_rate
 
             # Set sample rate
@@ -128,12 +129,12 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
             raise
 
         # Configure the device
-        center_freq = config.get('center_freq', 100e6)
-        sample_rate = config.get('sample_rate', 2.048e6)
-        gain = config.get('gain', 25.4)
-        antenna = config.get('antenna', '')
-        channel = config.get('channel', 0)
-        offset_freq = int(config.get('offset_freq', 0))
+        center_freq = config.get("center_freq", 100e6)
+        sample_rate = config.get("sample_rate", 2.048e6)
+        gain = config.get("gain", 25.4)
+        antenna = config.get("antenna", "")
+        channel = config.get("channel", 0)
+        offset_freq = int(config.get("offset_freq", 0))
 
         # Set sample rate
         sdr.setSampleRate(SOAPY_SDR_RX, channel, sample_rate)
@@ -146,7 +147,7 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
         logger.info(f"Center frequency set to {actual_freq / 1e6} MHz")
 
         # Set gain
-        if config.get('soapy_agc', False):
+        if config.get("soapy_agc", False):
             sdr.setGainMode(SOAPY_SDR_RX, channel, True)
             logger.info(f"Automatic gain control enabled")
 
@@ -173,12 +174,14 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
         logger.debug("SoapySDR stream activated")
 
         # if we reached here, we can set the UI to streaming
-        data_queue.put({
-            'type': 'streamingstart',
-            'client_id': client_id,
-            'message': None,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "streamingstart",
+                "client_id": client_id,
+                "message": None,
+                "timestamp": time.time(),
+            }
+        )
 
         # Main processing loop
         while not stop_event.is_set():
@@ -186,15 +189,15 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
             try:
                 if not config_queue.empty():
                     new_config = config_queue.get_nowait()
-                    channel = new_config.get('channel', channel)
+                    channel = new_config.get("channel", channel)
 
-                    if 'sample_rate' in new_config:
-                        if actual_sample_rate != new_config['sample_rate']:
+                    if "sample_rate" in new_config:
+                        if actual_sample_rate != new_config["sample_rate"]:
                             # Deactivate stream before changing sample rate
                             sdr.deactivateStream(rx_stream)
                             sdr.closeStream(rx_stream)
 
-                            sdr.setSampleRate(SOAPY_SDR_RX, channel, new_config['sample_rate'])
+                            sdr.setSampleRate(SOAPY_SDR_RX, channel, new_config["sample_rate"])
                             actual_sample_rate = sdr.getSampleRate(SOAPY_SDR_RX, channel)
 
                             # Setup stream again with a new sample rate
@@ -206,14 +209,16 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
 
                             logger.info(f"Updated sample rate: {actual_sample_rate}")
 
-                    if 'center_freq' in new_config:
-                        if actual_freq != new_config['center_freq']:
+                    if "center_freq" in new_config:
+                        if actual_freq != new_config["center_freq"]:
                             # Deactivate stream to flush buffers
                             sdr.deactivateStream(rx_stream)
                             sdr.closeStream(rx_stream)
 
                             # Set new frequency
-                            sdr.setFrequency(SOAPY_SDR_RX, channel, new_config['center_freq'] + offset_freq)
+                            sdr.setFrequency(
+                                SOAPY_SDR_RX, channel, new_config["center_freq"] + offset_freq
+                            )
                             actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
 
                             # Restart stream with new frequency
@@ -222,55 +227,57 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
 
                             logger.info(f"Updated center frequency: {actual_freq}")
 
-                    if 'fft_size' in new_config:
-                        if old_config.get('fft_size', 0) != new_config['fft_size']:
-                            fft_size = new_config['fft_size']
+                    if "fft_size" in new_config:
+                        if old_config.get("fft_size", 0) != new_config["fft_size"]:
+                            fft_size = new_config["fft_size"]
                             # Update num_samples when FFT size changes
                             num_samples = calculate_samples_per_scan(actual_sample_rate, fft_size)
                             logger.info(f"Updated FFT size: {fft_size}, num_samples: {num_samples}")
 
-                    if 'fft_window' in new_config:
-                        if old_config.get('fft_window', None) != new_config['fft_window']:
-                            fft_window = new_config['fft_window']
+                    if "fft_window" in new_config:
+                        if old_config.get("fft_window", None) != new_config["fft_window"]:
+                            fft_window = new_config["fft_window"]
                             logger.info(f"Updated FFT window: {fft_window}")
 
-                    if 'fft_averaging' in new_config:
-                        if old_config.get('fft_averaging', 4) != new_config['fft_averaging']:
-                            fft_averaging = new_config['fft_averaging']
+                    if "fft_averaging" in new_config:
+                        if old_config.get("fft_averaging", 4) != new_config["fft_averaging"]:
+                            fft_averaging = new_config["fft_averaging"]
                             fft_averager.update_averaging_factor(fft_averaging)
                             logger.info(f"Updated FFT averaging: {fft_averaging}")
 
-                    if 'soapy_agc' in new_config:
-                        if old_config.get('soapy_agc', False) != new_config['soapy_agc']:
-                            if new_config['soapy_agc']:
+                    if "soapy_agc" in new_config:
+                        if old_config.get("soapy_agc", False) != new_config["soapy_agc"]:
+                            if new_config["soapy_agc"]:
                                 sdr.setGainMode(SOAPY_SDR_RX, channel, True)
                                 logger.info("Enabled automatic gain control")
                             else:
                                 sdr.setGainMode(SOAPY_SDR_RX, channel, False)
-                                if 'gain' in new_config:
-                                    sdr.setGain(SOAPY_SDR_RX, channel, new_config['gain'])
+                                if "gain" in new_config:
+                                    sdr.setGain(SOAPY_SDR_RX, channel, new_config["gain"])
                                     logger.info(f"Set manual gain to {new_config['gain']} dB")
 
-                    if 'gain' in new_config and new_config.get('soapy_agc', False) is False:
-                        if old_config.get('gain', 0) != new_config['gain']:
-                            sdr.setGain(SOAPY_SDR_RX, channel, new_config['gain'])
+                    if "gain" in new_config and new_config.get("soapy_agc", False) is False:
+                        if old_config.get("gain", 0) != new_config["gain"]:
+                            sdr.setGain(SOAPY_SDR_RX, channel, new_config["gain"])
                             actual_gain = sdr.getGain(SOAPY_SDR_RX, channel)
                             logger.info(f"Updated gain: {actual_gain} dB")
 
-                    if 'antenna' in new_config:
-                        if old_config.get('antenna', '') != new_config['antenna']:
-                            sdr.setAntenna(SOAPY_SDR_RX, channel, new_config['antenna'])
+                    if "antenna" in new_config:
+                        if old_config.get("antenna", "") != new_config["antenna"]:
+                            sdr.setAntenna(SOAPY_SDR_RX, channel, new_config["antenna"])
                             selected_antenna = sdr.getAntenna(SOAPY_SDR_RX, channel)
                             logger.info(f"Updated antenna: {selected_antenna}")
 
-                    if 'offset_freq' in new_config:
-                        if old_config.get('offset_freq', 0) != new_config['offset_freq']:
+                    if "offset_freq" in new_config:
+                        if old_config.get("offset_freq", 0) != new_config["offset_freq"]:
                             # Deactivate stream to flush buffers
                             sdr.deactivateStream(rx_stream)
                             sdr.closeStream(rx_stream)
 
-                            offset_freq = int(new_config['offset_freq'])
-                            sdr.setFrequency(SOAPY_SDR_RX, channel, new_config['center_freq'] + offset_freq)
+                            offset_freq = int(new_config["offset_freq"])
+                            sdr.setFrequency(
+                                SOAPY_SDR_RX, channel, new_config["center_freq"] + offset_freq
+                            )
                             actual_freq = sdr.getFrequency(SOAPY_SDR_RX, channel)
 
                             # Restart stream with new frequency
@@ -288,13 +295,14 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
 
                 # Send error back to the main process
                 if data_queue:
-                    data_queue.put({
-                        'type': 'error',
-                        'client_id': client_id,
-                        'message': error_msg,
-                        'timestamp': time.time()
-                    })
-
+                    data_queue.put(
+                        {
+                            "type": "error",
+                            "client_id": client_id,
+                            "message": error_msg,
+                            "timestamp": time.time(),
+                        }
+                    )
 
             try:
                 # Create a buffer for the samples - read directly the number of samples we need
@@ -306,27 +314,37 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                 attempts = 0
 
                 # Continue reading until we have enough samples or exceed max attempts
-                while buffer_position < num_samples and attempts < max_attempts and not stop_event.is_set():
+                while (
+                    buffer_position < num_samples
+                    and attempts < max_attempts
+                    and not stop_event.is_set()
+                ):
                     # Calculate how many more samples we need
                     samples_remaining = num_samples - buffer_position
 
                     # Read samples into the appropriate part of our buffer
                     # Pass the appropriate view of the buffer starting at current position
                     buffer_view = samples_buffer[buffer_position:]
-                    sr = sdr.readStream(rx_stream, [buffer_view], samples_remaining, timeoutUs=1000000)
+                    sr = sdr.readStream(
+                        rx_stream, [buffer_view], samples_remaining, timeoutUs=1000000
+                    )
 
                     if sr.ret > 0:
                         # We got samples - add to our position
                         samples_read = sr.ret
                         buffer_position += samples_read
-                        logger.debug(f"Read {samples_read} samples, accumulated {buffer_position}/{num_samples}")
+                        logger.debug(
+                            f"Read {samples_read} samples, accumulated {buffer_position}/{num_samples}"
+                        )
 
                     elif sr.ret == -4:  # SOAPY_SDR_OVERFLOW
                         # Overflow error - the internal ring buffer filled up because we didn't read fast enough
-                        logger.warning("Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost")
+                        logger.warning(
+                            "Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost"
+                        )
 
                         # Short sleep to allow the internal buffers to clear
-                        #time.sleep(0.01)
+                        # time.sleep(0.01)
 
                     elif sr.ret == -1:  # SOAPY_SDR_TIMEOUT
                         logger.warning("Stream timeout detected (SOAPY_SDR_TIMEOUT)")
@@ -353,7 +371,9 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
 
                     # Check if we have enough samples for processing
                 if buffer_position < num_samples:
-                    logger.warning(f"Could not get enough samples after {attempts} attempts: {buffer_position}/{num_samples}")
+                    logger.warning(
+                        f"Could not get enough samples after {attempts} attempts: {buffer_position}/{num_samples}"
+                    )
                     time.sleep(0.1)
                     continue
 
@@ -373,14 +393,16 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                 # Calculate FFT with 50% overlap
                 num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
                 if num_segments <= 0:
-                    logger.warning(f"Not enough samples for FFT with overlap: {len(samples)} < {actual_fft_size}")
+                    logger.warning(
+                        f"Not enough samples for FFT with overlap: {len(samples)} < {actual_fft_size}"
+                    )
                     continue
 
                 fft_result = np.zeros(actual_fft_size)
 
                 for i in range(num_segments):
                     start_idx = i * (actual_fft_size // 2)
-                    segment = samples[start_idx:start_idx + actual_fft_size]
+                    segment = samples[start_idx : start_idx + actual_fft_size]
 
                     windowed_segment = segment * window
 
@@ -393,7 +415,9 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                     # Proper power normalization
                     N = len(fft_segment)
                     window_correction = 1.0
-                    power = 10 * np.log10((np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10)
+                    power = 10 * np.log10(
+                        (np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10
+                    )
                     fft_result += power
 
                 # Average the segments
@@ -407,12 +431,14 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                 averaged_fft = fft_averager.add_fft(fft_result)
                 if averaged_fft is not None:
                     # Send the averaged result back to the main process
-                    data_queue.put({
-                        'type': 'fft_data',
-                        'client_id': client_id,
-                        'data': averaged_fft.tobytes(),
-                        'timestamp': time.time()
-                    })
+                    data_queue.put(
+                        {
+                            "type": "fft_data",
+                            "client_id": client_id,
+                            "data": averaged_fft.tobytes(),
+                            "timestamp": time.time(),
+                        }
+                    )
 
                 # Short sleep to prevent CPU hogging
                 time.sleep(0.01)
@@ -422,12 +448,14 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                 logger.exception(e)
 
                 # Send error back to the main process
-                data_queue.put({
-                    'type': 'error',
-                    'client_id': client_id,
-                    'message': str(e),
-                    'timestamp': time.time()
-                })
+                data_queue.put(
+                    {
+                        "type": "error",
+                        "client_id": client_id,
+                        "message": str(e),
+                        "timestamp": time.time(),
+                    }
+                )
 
                 # Pause before retrying
                 time.sleep(1)
@@ -438,12 +466,14 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
         logger.exception(e)
 
         # Send error back to the main process
-        data_queue.put({
-            'type': 'error',
-            'client_id': client_id,
-            'message': error_msg,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "error",
+                "client_id": client_id,
+                "message": error_msg,
+                "timestamp": time.time(),
+            }
+        )
 
     finally:
         # Sleep for 0.5 second to allow the main process to read the data queue messages
@@ -460,12 +490,14 @@ def soapysdr_local_worker_process(config_queue, data_queue, stop_event):
                 logger.error(f"Error closing SoapySDR stream: {str(e)}")
 
         # Send termination signal
-        data_queue.put({
-            'type': 'terminated',
-            'client_id': client_id,
-            'sdr_id': sdr_id,
-            'timestamp': time.time()
-        })
+        data_queue.put(
+            {
+                "type": "terminated",
+                "client_id": client_id,
+                "sdr_id": sdr_id,
+                "timestamp": time.time(),
+            }
+        )
 
         logger.info("SoapySDR worker process terminated")
 
@@ -510,14 +542,10 @@ def get_supported_sample_rates(sdr, channel=0):
             # Call the methods to get the actual values
             min_val = rate_range.minimum()
             max_val = rate_range.maximum()
-            step_val = rate_range.step() if hasattr(rate_range, 'step') else 0
+            step_val = rate_range.step() if hasattr(rate_range, "step") else 0
 
-            supported_rates.append({
-                'minimum': min_val,
-                'maximum': max_val,
-                'step': step_val
-            })
+            supported_rates.append({"minimum": min_val, "maximum": max_val, "step": step_val})
 
         return supported_rates
     except Exception as e:
-        return [{'error': str(e)}]
+        return [{"error": str(e)}]
