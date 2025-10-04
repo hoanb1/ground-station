@@ -27,6 +27,7 @@ const SatelliteMarker = ({
                              selectedSatelliteId,
                              markerEventHandlers,
                              satelliteIcon,
+                             opacity = 1,
                          }) => {
     // Local state for the disabled property
     const [isDisabled, setIsDisabled] = useState(trackingSatelliteId === satellite.norad_id);
@@ -47,6 +48,7 @@ const SatelliteMarker = ({
             position={position}
             icon={satelliteIcon}
             eventHandlers={markerEventHandlers}
+            opacity={opacity}
         >
             <TooltipComponent
                 direction="bottom"

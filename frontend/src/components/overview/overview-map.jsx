@@ -402,6 +402,7 @@ const SatelliteMapContainer = ({ handleSetTrackingOnBackend }) => {
               selectedSatelliteId={selectedSatelliteId}
               markerEventHandlers={markerEventHandlers}
               satelliteIcon={satelliteIcon2}
+              opacity={1}
             />
           );
         } else {
@@ -411,6 +412,7 @@ const SatelliteMapContainer = ({ handleSetTrackingOnBackend }) => {
               position={[lat, lon]}
               icon={satelliteIcon2}
               eventHandlers={markerEventHandlers}
+              opacity={0.6}
             ></Marker>
           );
         }
