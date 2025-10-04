@@ -231,6 +231,10 @@ WORKDIR /app
 # Copy backend code
 COPY backend/ ./backend/
 
+# Copy and set permissions for startup script
+COPY backend/startup.sh /app/startup.sh
+RUN chmod +x /app/startup.sh
+
 # Add build arguments for version information
 ARG GIT_COMMIT
 ARG BUILD_DATE
@@ -262,11 +266,5 @@ EXPOSE 7000
 
 WORKDIR backend/
 
-# Command to run the application with UHD images downloader
-CMD dbus-daemon --system --nofork --nopidfile & \
-    sleep 2 && \
-    avahi-daemon --no-chroot -D & \
-    sleep 2 && \
-    /usr/local/bin/uhd_images_downloader && \
-    cp /usr/local/share/uhd/images/libresdr_b210.bin /usr/local/share/uhd/images/usrp_b210_fpga.bin && \
-    python app.py --log-level=INFO --host=0.0.0.0 --port=7000
+# Command to run the application with UHD images downloader and conditional FPGA loading
+CMD ["/app/startup.sh"]
