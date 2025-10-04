@@ -85,14 +85,14 @@ RUN pip install --break-system-packages --ignore-installed numpy==2.3.1
 
 # Compile UHD from source with Python API
 WORKDIR /src
-RUN git clone https://github.com/EttusResearch/uhd.git && \
-    cd uhd/host && \
-    mkdir build && \
-    cd build && \
-    cmake -DENABLE_PYTHON_API=ON .. && \
-    make -j`nproc` && \
-    sudo make install && \
-    sudo ldconfig
+RUN git clone https://github.com/EttusResearch/uhd.git
+WORKDIR uhd/host/
+RUN mkdir build
+WORKDIR build/
+RUN cmake -DENABLE_PYTHON_API=ON ..
+RUN make -j`nproc`
+RUN sudo make install
+RUN sudo ldconfig
 
 RUN python3 -m venv /app/venv
 ENV PATH="/app/venv/bin:$PATH"
