@@ -134,101 +134,97 @@ const AboutPage = () => {
                         sx={{
                             display: "flex",
                             alignItems: "center",
+                            justifyContent: "space-between",
                             marginBottom: 2,
                             borderBottom: `1px solid ${theme.palette.divider}`,
                             paddingBottom: 2,
+                            flexWrap: "wrap",
+                            gap: 2,
                         }}
                     >
-                        <img
-                            src={GroundStationLogoGreenBlue}
-                            alt="Ground Station Logo"
-                            style={{ height: "70px", marginRight: "20px" }}
-                        />
-                        <Typography
-                            variant="h3"
-                            sx={{
-                                margin: '9px',
-                                fontWeight: 600,
-                                background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
-                                WebkitBackgroundClip: 'text',
-                                WebkitTextFillColor: 'transparent',
-                            }}
-                        >
-                            Ground Station
-                        </Typography>
-                    </Box>
-
-                    {/* Version Information Section */}
-                    {versionInfo && (
-                        <Box>
-                            <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: theme.palette.primary.main, display: 'flex', alignItems: 'center' }}>
-                                Version Information
+                        <Box sx={{ display: "flex", alignItems: "center" }}>
+                            <img
+                                src={GroundStationLogoGreenBlue}
+                                alt="Ground Station Logo"
+                                style={{ height: "70px", marginRight: "20px" }}
+                            />
+                            <Typography
+                                variant="h3"
+                                sx={{
+                                    margin: '9px',
+                                    fontWeight: 600,
+                                    background: `linear-gradient(90deg, ${theme.palette.primary.main}, ${theme.palette.secondary.main})`,
+                                    WebkitBackgroundClip: 'text',
+                                    WebkitTextFillColor: 'transparent',
+                                }}
+                            >
+                                Ground Station
                             </Typography>
-                            <Divider sx={{ mb: 2 }} />
-                            <Card elevation={2} sx={{ p: 3, backgroundColor: 'rgba(33, 150, 243, 0.05)', border: `1px solid ${theme.palette.primary.main}30` }}>
-                                <Grid container spacing={2}>
-                                    <Grid size={12} md={6}>
-                                        <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                            <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
-                                                Version:
-                                            </Typography>
-                                            <Chip 
-                                                label={versionInfo.version} 
-                                                color="primary" 
-                                                size="small"
-                                                sx={{ fontFamily: 'monospace', fontWeight: 600 }}
-                                            />
-                                        </Box>
-                                    </Grid>
+                        </Box>
+                        
+                        {/* Version Information - Compact */}
+                        {versionInfo && (
+                            <Card elevation={2} sx={{ 
+                                p: 1.5, 
+                                backgroundColor: 'rgba(33, 150, 243, 0.05)', 
+                                border: `1px solid ${theme.palette.primary.main}30`,
+                                minWidth: 200,
+                            }}>
+                                <Stack spacing={1}>
+                                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                        <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', minWidth: 60 }}>
+                                            Version:
+                                        </Typography>
+                                        <Chip 
+                                            label={versionInfo.version} 
+                                            color="primary" 
+                                            size="small"
+                                            sx={{ fontFamily: 'monospace', fontWeight: 600, height: 20, fontSize: '0.75rem' }}
+                                        />
+                                    </Box>
                                     
                                     {versionInfo.environment && (
-                                        <Grid size={12} md={6}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
-                                                    Environment:
-                                                </Typography>
-                                                <Chip 
-                                                    label={versionInfo.environment} 
-                                                    color={versionInfo.environment === 'production' ? 'success' : 'warning'}
-                                                    size="small"
-                                                    sx={{ fontFamily: 'monospace', textTransform: 'capitalize' }}
-                                                />
-                                            </Box>
-                                        </Grid>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', minWidth: 60 }}>
+                                                Env:
+                                            </Typography>
+                                            <Chip 
+                                                label={versionInfo.environment} 
+                                                color={versionInfo.environment === 'production' ? 'success' : 'warning'}
+                                                size="small"
+                                                sx={{ fontFamily: 'monospace', textTransform: 'capitalize', height: 20, fontSize: '0.75rem' }}
+                                            />
+                                        </Box>
                                     )}
                                     
                                     {versionInfo.buildDate && (
-                                        <Grid size={12} md={6}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
-                                                    Build Date:
-                                                </Typography>
-                                                <Typography variant="body2" sx={{ fontFamily: 'monospace' }}>
-                                                    {versionInfo.buildDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')}
-                                                </Typography>
-                                            </Box>
-                                        </Grid>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', minWidth: 60 }}>
+                                                Build:
+                                            </Typography>
+                                            <Typography variant="caption" sx={{ fontFamily: 'monospace' }}>
+                                                {versionInfo.buildDate.replace(/(\d{4})(\d{2})(\d{2})/, '$1-$2-$3')}
+                                            </Typography>
+                                        </Box>
                                     )}
                                     
                                     {versionInfo.gitCommit && (
-                                        <Grid size={12} md={6}>
-                                            <Box sx={{ display: 'flex', alignItems: 'center', mb: 2 }}>
-                                                <Typography variant="body2" sx={{ fontWeight: 600, minWidth: 120, color: 'text.secondary' }}>
-                                                    Git Commit:
-                                                </Typography>
-                                                <Chip 
-                                                    label={versionInfo.gitCommit} 
-                                                    size="small"
-                                                    variant="outlined"
-                                                    sx={{ fontFamily: 'monospace' }}
-                                                />
-                                            </Box>
-                                        </Grid>
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                            <Typography variant="caption" sx={{ fontWeight: 600, color: 'text.secondary', minWidth: 60 }}>
+                                                Commit:
+                                            </Typography>
+                                            <Chip 
+                                                label={versionInfo.gitCommit} 
+                                                size="small"
+                                                variant="outlined"
+                                                sx={{ fontFamily: 'monospace', height: 20, fontSize: '0.75rem' }}
+                                            />
+                                        </Box>
                                     )}
-                                </Grid>
+                                </Stack>
                             </Card>
-                        </Box>
-                    )}
+                        )}
+                    </Box>
 
                     {/* Introduction */}
                     <Card elevation={1} sx={{ padding: 2, backgroundColor: 'rgba(255,255,255,0.05)' }}>
