@@ -98,7 +98,7 @@ function VersionUpdateOverlay() {
                     borderRadius: 1,
                     padding: 3,
                     minWidth: 280,
-                    maxWidth: 320,
+                    maxWidth: 350,
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
                 }}
             >
