@@ -2,6 +2,7 @@ import asyncio
 import os
 import queue
 from contextlib import asynccontextmanager
+from typing import Set
 
 import socketio
 from engineio.payload import Payload
@@ -13,6 +14,7 @@ from fastapi.staticfiles import StaticFiles
 from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
+from db import engine  # Explicit import for type checker
 from db.models import Base
 from demodulators.webaudioconsumer import WebAudioConsumer
 from demodulators.webaudioproducer import WebAudioProducer
@@ -24,8 +26,14 @@ from tracker.runner import start_tracker_process
 
 Payload.max_decode_packets = 50
 
+# At the top of the file, add a global to track background tasks
+background_tasks: Set[asyncio.Task] = set()
+
+# Module-level variable to track if initial sync is needed
+_needs_initial_sync: bool = False
+
 # Queues for the sound streams
-audio_queue = queue.Queue(maxsize=2)
+audio_queue: queue.Queue = queue.Queue(maxsize=2)
 
 
 async def run_discover_soapy():
@@ -67,6 +75,11 @@ async def lifespan(fastapiapp: FastAPI):
         await discover_soapy_servers()
     if arguments.enable_soapy_discovery:
         asyncio.create_task(run_discover_soapy())
+
+    # Schedule initial sync if needed
+    if _needs_initial_sync:
+        asyncio.create_task(run_initial_sync())
+
     try:
         yield
     finally:
@@ -129,6 +142,8 @@ async def serve_spa(request: Request, full_path: str):
 
 async def init_db():
     """Create database tables."""
+    global _needs_initial_sync
+
     logger.info("Initializing database...")
 
     # Check if database exists by trying to query metadata
@@ -152,6 +167,7 @@ async def init_db():
     if not database_existed:
         logger.info("New database detected. Populating with initial data...")
         await first_time_initialization()
+        _needs_initial_sync = True
 
     logger.info("Database initialized.")
 
@@ -162,8 +178,9 @@ async def first_time_initialization():
     import string
 
     from db import AsyncSessionLocal
-    from db.models import TLESources
+    from db.models import Locations, TLESources
 
+    logger.info("Filling in initial data like TLE sources and default location...")
     async with AsyncSessionLocal() as session:
         try:
             # Generate random identifiers for the TLE sources
@@ -171,6 +188,7 @@ async def first_time_initialization():
                 """Generate a random identifier similar to what the CRUD does."""
                 return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
 
+            logger.info("FIRSTTIME - Populating database with default data...")
             # Add default TLE sources
             cubesat_source = TLESources(
                 name="Cubesats",
@@ -188,11 +206,40 @@ async def first_time_initialization():
             )
             session.add(amateur_source)
 
+            # Add a default location at coordinates 0,0
+            default_location = Locations(
+                name="Default Location",
+                lat=0.0,
+                lon=0.0,
+                alt=0,
+                userid=None,  # Global location, not tied to a specific user
+            )
+            session.add(default_location)
+
             await session.commit()
             logger.info(
-                "Initial data populated successfully with default TLE sources (Cubesats and Amateur)."
+                "Initial data populated successfully with default TLE sources "
+                "(Cubesats and Amateur) and default location at coordinates (0.0, 0.0)."
             )
+
         except Exception as e:
             logger.error(f"Error populating initial data: {e}")
             await session.rollback()
             raise
+
+
+async def run_initial_sync():
+    """Run the initial satellite data synchronization after delay."""
+    from db import AsyncSessionLocal
+    from tlesync.logic import synchronize_satellite_data  # noqa: F401
+
+    try:
+        logger.info("Waiting 5 seconds before starting initial synchronization...")
+        await asyncio.sleep(5)
+        logger.info("Starting initial satellite data synchronization...")
+        async with AsyncSessionLocal() as sync_session:
+            await synchronize_satellite_data(sync_session, logger, sio)
+        logger.info("Initial satellite data synchronization completed successfully")
+    except Exception as e:
+        logger.error(f"Error during initial satellite synchronization: {e}")
+        logger.exception(e)
