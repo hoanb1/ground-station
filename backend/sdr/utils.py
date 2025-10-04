@@ -323,9 +323,6 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                     probe_process.communicate(), timeout=timeout
                 )
 
-                logger.info(stdout)
-                logger.info(stderr)
-
                 if probe_process.returncode != 0:
                     error_output = stderr.decode().strip()
                     raise Exception(f"UHD probe process failed: {error_output}")
