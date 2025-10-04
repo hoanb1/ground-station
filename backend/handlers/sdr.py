@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Union
+from typing import Dict, Union
 
 import crud
 from db import AsyncSessionLocal
@@ -24,7 +24,7 @@ from sdr.utils import active_sdr_clients, add_sdr_session, cleanup_sdr_session, 
 async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
     async with AsyncSessionLocal() as dbsession:
-        reply: dict[str, Union[bool, None, dict, list, str]] = {"success": False, "data": None}
+        reply: Dict[str, Union[bool, None, dict, list, str]] = {"success": False, "data": None}
 
         if cmd == "configure-sdr":
             try:
@@ -114,9 +114,10 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                 # Create an SDR session entry in memory
                 logger.info(f"Creating an SDR session for client {client_id}")
-                session = add_sdr_session(client_id, sdr_config)
+                add_sdr_session(client_id, sdr_config)
 
-                # Check if other clients are already connected in the same room (SDR), if so then send them an update
+                # Check if other clients are already connected in the same room (SDR),
+                # if so then send them an update
                 if sdr_process_manager.processes.get(sdr_id, None) is not None:
                     other_clients = [
                         client
@@ -198,7 +199,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                 sdr_device = sdr_device_reply["data"]
 
-                client = get_sdr_session(client_id)
+                get_sdr_session(client_id)
 
                 if sdr_id:
                     # Stop or leave the SDR process

@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Union
+from typing import Dict, Union
 
 import crud
 from db import AsyncSessionLocal
@@ -53,10 +53,10 @@ async def data_request_routing(sio, cmd, data, logger, sid):
 
     async with AsyncSessionLocal() as dbsession:
 
-        reply: dict[str, Union[bool, None, dict, list, str]] = {"success": None, "data": None}
+        reply: Dict[str, Union[bool, None, dict, list, str]] = {"success": None, "data": None}
 
         if cmd == "get-tle-sources":
-            logger.debug(f"Getting TLE sources")
+            logger.debug("Getting TLE sources")
             tle_sources = await crud.tle_sources.fetch_satellite_tle_source(dbsession)
 
             reply = {"success": tle_sources["success"], "data": tle_sources.get("data", [])}
@@ -129,7 +129,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             }
 
         elif cmd == "sync-satellite-data":
-            logger.debug(f"Syncing satellite data with known TLE sources")
+            logger.debug("Syncing satellite data with known TLE sources")
             await synchronize_satellite_data(dbsession, logger, sio)
 
         elif cmd == "get-users":
@@ -213,11 +213,11 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             reply = {"success": map_settings["success"], "data": map_settings.get("data", [])}
 
         elif cmd == "get-soapy-servers":
-            logger.debug(f"Getting discovered SoapySDR servers")
+            logger.debug("Getting discovered SoapySDR servers")
             reply = {"success": True, "data": discovered_servers}
 
         elif cmd == "get-sdr-parameters":
-            logger.debug(f"Getting SDR parameters")
+            logger.debug("Getting SDR parameters")
             parameters = await get_sdr_parameters(dbsession, data)
             reply = {
                 "success": parameters["success"],
@@ -226,7 +226,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             }
 
         elif cmd == "get-local-soapy-sdr-devices":
-            logger.debug(f"Getting local SoapySDR devices")
+            logger.debug("Getting local SoapySDR devices")
             devices = await get_local_soapy_sdr_devices()
             reply = {
                 "success": devices["success"],
@@ -235,7 +235,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             }
 
         elif cmd == "fetch-sync-state":
-            logger.debug(f"Getting TLE synchronization state")
+            logger.debug("Getting TLE synchronization state")
             reply = {"success": True, "data": sync_state_manager.get_state()}
 
         else:

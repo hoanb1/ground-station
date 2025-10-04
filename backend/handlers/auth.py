@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Union
+from typing import Dict, Union
 
 from common.auth import authenticate_user
 from db import AsyncSessionLocal
@@ -40,7 +40,7 @@ async def auth_request_routing(sio, cmd, data, logger, sid):
     :rtype: dict
     """
 
-    reply: dict[str, Union[bool, None, dict, str]] = {"success": None, "user": None, "token": None}
+    reply: Dict[str, Union[bool, None, dict, str]] = {"success": None, "user": None, "token": None}
 
     async with AsyncSessionLocal() as dbsession:
 

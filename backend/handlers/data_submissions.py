@@ -13,7 +13,7 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from typing import Union
+from typing import Dict, Union
 
 import crud
 from db import AsyncSessionLocal
@@ -51,7 +51,7 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
 
     async with AsyncSessionLocal() as dbsession:
 
-        reply: dict[str, Union[bool, None, dict, list, str]] = {"success": None, "data": None}
+        reply: Dict[str, Union[bool, None, dict, list, str]] = {"success": None, "data": None}
 
         if cmd == "submit-tle-sources":
             logger.debug(f"Adding TLE source, data: {data}")
