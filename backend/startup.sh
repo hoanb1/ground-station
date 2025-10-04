@@ -1,6 +1,9 @@
 #!/bin/bash
 # Startup script for Ground Station with conditional UHD device support
 
+# Run once here to make sure all new libraries are loaded
+ldconfig
+
 # Start system services
 dbus-daemon --system --nofork --nopidfile &
 sleep 2
