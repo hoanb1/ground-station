@@ -142,12 +142,22 @@ jobs:
         working-directory: ./frontend
         run: npx playwright install --with-deps chromium
 
+      - name: Test backend connectivity
+        run: |
+          echo "Testing HTTP endpoint..."
+          curl -v http://localhost:7000/ || echo "HTTP request failed"
+          echo "Testing WebSocket upgrade capability..."
+          curl -v -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: test" http://localhost:7000/ws || echo "WebSocket test failed"
+          echo "Backend logs:"
+          docker logs ground-station-backend | tail -50
+
       - name: Run E2E tests
         working-directory: ./frontend
-        run: npx playwright test --config=playwright.config.js
+        run: npx playwright test --config=playwright.config.js --reporter=list,html
         env:
           CI: true
           BASE_URL: http://localhost:7000
+          DEBUG: pw:api
 
       - name: Show backend logs
         if: always()

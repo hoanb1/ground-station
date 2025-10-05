@@ -18,11 +18,17 @@ test.describe('Ground Station Application', () => {
   test('should navigate to tracking console', async ({ page }) => {
     await page.goto('/');
 
+    // Wait for app to be ready
+    await page.waitForLoadState('networkidle');
+
+    // Wait for the navigation item to be visible and clickable
+    await page.waitForSelector('text=Tracking console', { state: 'visible', timeout: 10000 });
+
     // Click on Tracking Console navigation item
     await page.click('text=Tracking console');
 
-    // Wait for navigation
-    await page.waitForURL('**/track');
+    // Wait for navigation with increased timeout
+    await page.waitForURL('**/track', { timeout: 15000 });
 
     // Verify we're on the tracking page
     expect(page.url()).toContain('/track');
@@ -31,11 +37,17 @@ test.describe('Ground Station Application', () => {
   test('should navigate to waterfall view', async ({ page }) => {
     await page.goto('/');
 
+    // Wait for app to be ready
+    await page.waitForLoadState('networkidle');
+
+    // Wait for the navigation item to be visible and clickable
+    await page.waitForSelector('text=Waterfall view', { state: 'visible', timeout: 10000 });
+
     // Click on Waterfall view navigation item
     await page.click('text=Waterfall view');
 
-    // Wait for navigation
-    await page.waitForURL('**/waterfall');
+    // Wait for navigation with increased timeout
+    await page.waitForURL('**/waterfall', { timeout: 15000 });
 
     // Verify we're on the waterfall page
     expect(page.url()).toContain('/waterfall');

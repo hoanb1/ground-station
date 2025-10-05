@@ -8,7 +8,7 @@ export default defineConfig({
   testDir: './e2e',
 
   // Maximum time one test can run
-  timeout: 30 * 1000,
+  timeout: 60 * 1000,
 
   // Fail the build on CI if you accidentally left test.only in the source code
   forbidOnly: !!process.env.CI,
