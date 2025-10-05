@@ -52,7 +52,7 @@ import {setCenterFrequency} from "../waterfall/waterfall-slice.jsx";
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 
 
-const RigControl = React.memo(({}) => {
+const RigControl = React.memo(function RigControl() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {

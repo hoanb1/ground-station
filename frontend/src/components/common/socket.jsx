@@ -17,6 +17,8 @@
  *
  */
 
+/* global Buffer */
+
 
 import React, {createContext, useCallback, useContext, useEffect, useState, useRef} from 'react';
 import { useSnackbar } from 'notistack';

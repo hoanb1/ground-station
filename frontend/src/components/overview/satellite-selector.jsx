@@ -44,7 +44,7 @@ import {
 const SATELLITE_NUMBER_LIMIT = 200;
 
 
-const OverviewSatelliteGroupSelector = React.memo(function () {
+const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGroupSelector() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     // const {

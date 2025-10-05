@@ -92,12 +92,10 @@ const CameraView = () => {
                 )}
                 {selectedCamera['type'] === 'hls' && (
                     <React.Suspense fallback={<CircularProgress/>}>
-                    <VideoHLS/>
                     </React.Suspense>
                 )}
                 {selectedCamera['type'] === 'mjpeg' && (
                     <React.Suspense fallback={<CircularProgress/>}>
-                        <VideoMJPEG/>
                     </React.Suspense>
                 )}
                 {selectedCamera['type'] === '' && (

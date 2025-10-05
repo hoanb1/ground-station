@@ -30,7 +30,7 @@ import VFOMarkersContainer from './vfo-container.jsx';
 import FrequencyBandOverlay from './bandplan-overlay.jsx';
 
 
-const WaterfallAndBandscope = forwardRef(({
+const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                                               bandscopeCanvasRef,
                                               waterFallCanvasRef,
                                               centerFrequency,
@@ -39,7 +39,7 @@ const WaterfallAndBandscope = forwardRef(({
                                               frequencyBands = [],
                                               minZoom = 1,
                                               maxZoom = 20,
-                                          }, ref) => {
+                                          }, ref) {
 
 
     const containerRef = useRef(null);

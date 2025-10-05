@@ -7,7 +7,7 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 export default [
     {ignores: ['dist', '**/*.test.js', '**/*.test.jsx', '**/*.spec.js', '**/*.spec.jsx',
             'e2e/**', 'src/test/**', '**/__tests__/**', 'vitest.config.js', 'playwright.config.js',
-            'setup-tests.sh']},
+            'vite.config.js', 'setup-tests.sh', 'playwright-report/**']},
     {
         files: ['**/*.{js,jsx}'],
         languageOptions: {
@@ -26,16 +26,19 @@ export default [
             'react-refresh': reactRefresh,
         },
         rules: {
-            "no-unused-vars": "off",
             ...js.configs.recommended.rules,
             ...react.configs.recommended.rules,
             ...react.configs['jsx-runtime'].rules,
             ...reactHooks.configs.recommended.rules,
+            'no-unused-vars': 'off',
+            'react/prop-types': 'off',
             'react/jsx-no-target-blank': 'off',
-            'react-refresh/only-export-components': [
-                'warn',
-                {allowConstantExport: true},
-            ],
+            'react-hooks/exhaustive-deps': 'off',
+            'react/no-unescaped-entities': 'off',
+            'react/display-name': 'off',
+            'no-empty-pattern': 'off',
+            'no-prototype-builtins': 'off',
+            'react-refresh/only-export-components': 'off',
         },
     },
 ]

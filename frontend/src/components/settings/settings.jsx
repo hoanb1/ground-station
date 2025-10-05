@@ -114,7 +114,7 @@ function getTabCategory(value) {
     return null;
 }
 
-export const SettingsTabs = React.memo(function ({initialMainTab, initialTab}) {
+export const SettingsTabs = React.memo(function SettingsTabs({initialMainTab, initialTab}) {
     const [activeMainTab, setActiveMainTab] = useState(initialMainTab);
     const [activeTab, setActiveTab] = useState(initialTab);
 

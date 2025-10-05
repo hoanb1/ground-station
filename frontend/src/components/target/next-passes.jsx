@@ -34,7 +34,7 @@ import {darken, lighten, styled} from "@mui/material/styles";
 import ProgressFormatter from "../overview/progressbar-widget.jsx";
 
 
-const TimeFormatter = React.memo(({ value }) => {
+const TimeFormatter = React.memo(function TimeFormatter({ value }) {
     const [, setForceUpdate] = useState(0);
 
     // Force component to update regularly
@@ -49,7 +49,7 @@ const TimeFormatter = React.memo(({ value }) => {
 });
 
 
-const DurationFormatter = React.memo(({params, value, event_start, event_end}) => {
+const DurationFormatter = React.memo(function DurationFormatter({params, value, event_start, event_end}) {
     const [, setForceUpdate] = useState(0);
 
     // Force component to update regularly
@@ -95,7 +95,7 @@ const DurationFormatter = React.memo(({params, value, event_start, event_end}) =
 });
 
 
-const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => {
+const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({satellitePasses, passesLoading}) {
     const apiRef = useGridApiRef();
 
     useEffect(() => {
@@ -337,7 +337,7 @@ const MemoizedStyledDataGrid = React.memo(({satellitePasses, passesLoading}) => 
 });
 
 
-const NextPassesIsland = React.memo(() => {
+const NextPassesIsland = React.memo(function NextPassesIsland() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const [containerHeight, setContainerHeight] = useState(0);

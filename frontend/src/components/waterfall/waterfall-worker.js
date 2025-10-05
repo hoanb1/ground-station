@@ -843,10 +843,8 @@ const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
 
     // Apply the selected color map
     switch (mapName) {
-        case 'cosmic':
-            // Custom cosmic colormap with dark purple to yellow gradient based on provided colors
-            // #070208 -> #100b56 -> #170d87 -> #7400cd -> #cb5cff -> #f9f9ae
-            let cosmicRGB;
+        case 'cosmic': {
+            let cosmicRGB;  // ❌ ERROR: Lexical declaration without braces
             if (normalizedValue < 0.2) {
                 // #070208 to #100b56
                 const factor = normalizedValue / 0.2;
@@ -891,24 +889,17 @@ const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
 
             colorCache.set(cacheKey, cosmicRGB);
             return cosmicRGB;
-
-        case 'greyscale':
-            // Modified grayscale with darker low intensity
-            // Apply a power curve to make low intensities darker
-            const curvedValue = Math.pow(normalizedValue, 2.0); // Power > 1 makes darker low values
-            const intensity = Math.floor(curvedValue * 255);
-            const greyRGB = {r: intensity, g: intensity, b: intensity};
+        }
+        case 'greyscale': {
+            const curvedValue = Math.pow(normalizedValue, 2.0);  // ❌ ERROR
+            const intensity = Math.floor(curvedValue * 255);              // ❌ ERROR
+            const greyRGB = {r: intensity, g: intensity, b: intensity};              // ❌ ERROR
             colorCache.set(cacheKey, greyRGB);
             return greyRGB;
-
-        case 'iceberg':
-            // Iceberg palette - Optimized for high contrast with darker low values
-            // Very dark blue -> dark blue -> blue -> cyan -> white
-            let icebergRGB;
-
-            // Apply a curve to make lower values darker
-            // This pushes the very low values closer to black
-            const iceCurvedValue = Math.pow(normalizedValue, 1.5);
+        }
+        case 'iceberg': {
+            let icebergRGB;                     // ❌ ERROR
+            const iceCurvedValue = Math.pow(normalizedValue, 1.5);         // ❌ ERROR
 
             if (iceCurvedValue < 0.25) {
                 // Very dark blue to dark blue
@@ -945,14 +936,10 @@ const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
             }
             colorCache.set(cacheKey, icebergRGB);
             return icebergRGB;
-
-        case 'heat':
-            // Heat palette - Optimized for distinguishing signal levels with darker low end
-            // Black -> deep red -> bright red -> orange -> yellow -> white
-            let heatRGB;
-
-            // Apply a curve to make lower values darker
-            const heatCurvedValue = Math.pow(normalizedValue, 1.5);
+        }
+        case 'heat': {
+            let heatRGB;                        // ❌ ERROR
+            const heatCurvedValue = Math.pow(normalizedValue, 1.5);        // ❌ ERROR
 
             if (heatCurvedValue < 0.15) {
                 // True black to very deep red
@@ -1005,5 +992,6 @@ const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
             }
             colorCache.set(cacheKey, heatRGB);
             return heatRGB;
+        }
     }
 }

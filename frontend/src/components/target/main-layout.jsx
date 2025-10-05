@@ -164,7 +164,7 @@ const MapSlider = function ({handleSliderChange}) {
 }
 
 
-const TargetSatelliteLayout = React.memo(function () {
+const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const {

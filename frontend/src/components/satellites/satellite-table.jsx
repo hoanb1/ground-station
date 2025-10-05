@@ -68,7 +68,7 @@ function CustomPagination(props) {
     return <GridPagination ActionsComponent={Pagination} {...props} />;
 }
 
-const SatelliteTable = React.memo(function () {
+const SatelliteTable = React.memo(function SatelliteTable() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const {socket} = useSocket();

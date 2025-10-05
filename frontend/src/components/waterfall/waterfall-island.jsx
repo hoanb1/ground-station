@@ -96,7 +96,7 @@ export const createExternalWorker = () => {
 };
 
 
-const MainWaterfallDisplay = React.memo(() => {
+const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
     const bandscopeCanvasRef = useRef(null);

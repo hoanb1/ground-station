@@ -58,7 +58,7 @@ function saveLayoutsToLocalStorage(layouts) {
     localStorage.setItem(gridLayoutStoreName, JSON.stringify(layouts));
 }
 
-const MainLayout = React.memo(function () {
+const MainLayout = React.memo(function MainLayout() {
     const waterfallComponentSettingsRef = useRef(null);
     const {socket} = useSocket();
     const dispatch = useDispatch();

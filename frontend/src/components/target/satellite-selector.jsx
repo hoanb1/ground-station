@@ -46,7 +46,7 @@ import CircularProgress from "@mui/material/CircularProgress";
 import SatelliteSearchAutocomplete from "./satellite-search.jsx";
 
 
-const SatSelectorIsland = React.memo(({initialNoradId, initialGroupId}) => {
+const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId, initialGroupId}) {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {

@@ -77,7 +77,7 @@ function getMapZoomFromStorage() {
     return savedZoomLevel ? parseFloat(savedZoomLevel) : 1.4;
 }
 
-const GlobalSatelliteTrackLayout = React.memo(function () {
+const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayout() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const {

@@ -69,7 +69,7 @@ import SdrAccordion from "./settings-sdr.jsx";
 import FftAccordion from "./settings-fft.jsx";
 import VfoAccordion from "./settings-vfo.jsx";
 
-const WaterfallSettings = forwardRef((props, ref) => {
+const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     const dispatch = useDispatch();
 
     const {

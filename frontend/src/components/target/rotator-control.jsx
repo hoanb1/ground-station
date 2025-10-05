@@ -47,7 +47,7 @@ import {
 
 
 
-const RotatorControl = React.memo(({}) => {
+const RotatorControl = React.memo(function RotatorControl() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {

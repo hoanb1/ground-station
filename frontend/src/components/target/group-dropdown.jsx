@@ -37,7 +37,7 @@ import {
 
 const SATELLITE_NUMBER_LIMIT = 50;
 
-const GroupDropdown = React.memo(() => {
+const GroupDropdown = React.memo(function GroupDropdown() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
     const {

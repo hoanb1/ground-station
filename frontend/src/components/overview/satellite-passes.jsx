@@ -48,7 +48,7 @@ import {useStore} from 'react-redux';
 import ProgressFormatter from "./progressbar-widget.jsx";
 
 
-const TimeFormatter = React.memo(({params, value}) => {
+const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
     const [, setForceUpdate] = useState(0);
 
     // Force component to update regularly
@@ -67,7 +67,7 @@ const TimeFormatter = React.memo(({params, value}) => {
 });
 
 
-const DurationFormatter = React.memo(({params, value, event_start, event_end}) => {
+const DurationFormatter = React.memo(function DurationFormatter({params, value, event_start, event_end}) {
     const [, setForceUpdate] = useState(0);
 
     // Force component to update regularly
@@ -112,7 +112,7 @@ const DurationFormatter = React.memo(({params, value, event_start, event_end}) =
     }
 });
 
-const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, passesAreCached = false}) => {
+const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false}) {
     const apiRef = useGridApiRef();
     const store = useStore();
 
@@ -528,7 +528,7 @@ const MemoizedStyledDataGrid = React.memo(({passes, passesLoading, onRowClick, p
 });
 
 
-const NextPassesGroupIsland = React.memo(() => {
+const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const containerRef = useRef(null);

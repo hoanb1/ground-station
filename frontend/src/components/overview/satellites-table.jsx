@@ -35,7 +35,7 @@ import {
 } from './overview-slice.jsx';
 
 // Create a separate component for the elevation cell that uses useStore
-const ElevationCell = React.memo(({ noradId }) => {
+const ElevationCell = React.memo(function ElevationCell({ noradId }) {
     const [elevation, setElevation] = useState(null);
     const store = useStore();
 
@@ -170,8 +170,12 @@ const MemoizedStyledDataGrid = React.memo(({
             flex: 2,
             renderCell: (params) => {
                 if (!params || !params.row) return <Typography>-</Typography>;
+                const tooltipText = [
+                    params.row.alternative_name,
+                    params.row.name_other
+                ].filter(Boolean).join(' / ') || 'No alternative names';
                 return (
-                    <Tooltip title={params.row.name_other || params.row.alternative_name || ''}>
+                    <Tooltip title={tooltipText}>
                         <span>{params.value || '-'}</span>
                     </Tooltip>
                 );
@@ -453,7 +457,7 @@ const MemoizedStyledDataGrid = React.memo(({
     );
 });
 
-const SatelliteDetailsTable = React.memo(() => {
+const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const dispatch = useDispatch();
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
@@ -522,7 +526,7 @@ const SatelliteDetailsTable = React.memo(() => {
                         satellites={satelliteRows}
                         onRowClick={handleOnRowClick}
                         selectedSatelliteId={selectedSatelliteId}
-                        loadingSatellite={loadingSatellites}
+                        loadingSatellites={loadingSatellites}
                     />
                 </div>
             </div>

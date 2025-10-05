@@ -7,7 +7,7 @@ import Autocomplete from "@mui/material/Autocomplete";
 import {CircularProgress, TextField} from "@mui/material";
 
 
-const SatelliteSearchAutocomplete = React.memo(({onSatelliteSelect}) => {
+const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocomplete({onSatelliteSelect}) {
     const {socket} = useSocket();
     const [open, setOpen] = React.useState(false);
     const [options, setOptions] = React.useState([]);

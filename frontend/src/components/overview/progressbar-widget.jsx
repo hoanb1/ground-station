@@ -1,7 +1,7 @@
 import React, {useEffect, useRef, useState} from "react";
 
 
-const ProgressFormatter = React.memo(({params}) => {
+const ProgressFormatter = React.memo(function ProgressFormatter({params}) {
     const [, setForceUpdate] = useState(0);
     const [progressBarHeight, setProgressBarHeight] = useState(14);
 

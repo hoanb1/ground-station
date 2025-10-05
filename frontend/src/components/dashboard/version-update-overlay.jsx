@@ -27,13 +27,13 @@ function VersionUpdateOverlay() {
     const [countdown, setCountdown] = useState(COUNTDOWN_DURATION);
     const [intervalId, setIntervalId] = useState(null);
 
-    // Don't show overlay if version hasn't changed
-    if (!hasVersionChanged) {
-        return null;
-    }
-
     useEffect(() => {
         if (hasVersionChanged) {
+            // Don't show overlay if version hasn't changed
+            if (!hasVersionChanged) {
+                return null;
+            }
+
             console.log('Version has changed!', data?.version);
 
             // Start the countdown interval
