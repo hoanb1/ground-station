@@ -63,6 +63,13 @@ nosetests.xml
 coverage/
 htmlcov/
 
+# Frontend testing
+/frontend/coverage/
+/frontend/test-results/
+/frontend/playwright-report/
+/frontend/.playwright/
+/frontend/playwright/.cache/
+
 # PyInstaller
 *.manifest
 *.spec

@@ -3,12 +3,12 @@
   <img src="frontend/public/gs-logo-green-blue.png" alt="Ground Station Logo" width="200"/>
 </div>
 
-# Ground Station 
+# Ground Station
 
 
-**Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication, 
-and data decoding.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides 
-a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving 
+**Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication,
+and data decoding.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides
+a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving
 satellite imagery and telemetry.
 
 ## Screenshots
@@ -72,11 +72,11 @@ The Ground Station application is composed of a frontend, a backend, and a set o
 ```mermaid
 flowchart TB
     %% Frontend Layer
-    A[Frontend: React + Redux + MUI] 
-    
+    A[Frontend: React + Redux + MUI]
+
     %% Backend Layer
     B[Backend: FastAPI + Socket.IO]
-    
+
     %% Worker Layer
     subgraph Workers["Worker Processes"]
         direction TB
@@ -85,7 +85,7 @@ flowchart TB
         W3[SDR Local Probe<br/>- Device discovery<br/>- Local SoapySDR enumeration<br/>- Hardware capability detection]
         W4[SDR Remote Probe<br/>- Remote SoapySDR discovery<br/>- Network device scanning<br/>- Remote capability detection]
     end
-    
+
     %% Hardware Layer
     subgraph Hardware["Hardware Interfaces"]
         direction LR
@@ -94,27 +94,27 @@ flowchart TB
         H3[Local SDR Devices<br/>- RTL-SDR<br/>- SoapySDR devices<br/>- UHD/USRP]
         H4[Remote SDR Devices<br/>- SoapyRemote<br/>- rtl_tcp servers<br/>- Network receivers]
     end
-    
+
     %% External Services
     subgraph External["External Data Sources"]
         E1[TLE Data Sources<br/>- CelesTrak<br/>- SatNOGS DB]
         E2[Satellite Databases<br/>- Transmitter info<br/>- Orbital data]
     end
-    
+
     %% Connections
     A ---|Socket.IO<br/>Real-time updates| B
     B ---|Message Queues<br/>Commands & Status| W1
     B ---|Message Queues<br/>Stream Control| W2
     B ---|Message Queues<br/>Discovery Requests| W3
     B ---|Message Queues<br/>Remote Scanning| W4
-    
+
     W1 ---|Control Commands| H1
     W1 ---|Frequency Control| H2
     W2 ---|Data Streaming| H3
     W2 ---|Network Streaming| H4
     W3 ---|Device Enumeration| H3
     W4 ---|Remote Discovery| H4
-    
+
     B ---|HTTP/API Requests| E1
     B ---|Database Queries| E2
 
@@ -241,7 +241,11 @@ isort .
 ```
 
 #### Testing
+
+**Backend Tests (Python)**
 ```bash
+cd backend
+
 # Run tests with coverage
 pytest
 
@@ -253,6 +257,25 @@ pytest -m slow          # Run slow tests
 # Generate coverage reports
 pytest --cov=crud --cov=server --cov=controllers --cov-report=html
 ```
+
+**Frontend Tests (JavaScript/React)**
+```bash
+cd frontend
+
+# Run unit/component tests
+npm test
+
+# Run with coverage
+npm run test:coverage
+
+# Run E2E tests (requires dev server running)
+npm run test:e2e
+
+# Run E2E tests with interactive UI
+npm run test:e2e:ui
+```
+
+See [frontend/TESTING.md](frontend/TESTING.md) for comprehensive testing documentation.
 
 #### Pre-commit Hooks (Recommended)
 ```bash

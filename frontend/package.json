@@ -8,7 +8,13 @@
     "dev": "vite",
     "build": "vite build",
     "lint": "eslint .",
-    "preview": "vite preview"
+    "preview": "vite preview",
+    "test": "vitest",
+    "test:ui": "vitest --ui",
+    "test:coverage": "vitest --coverage",
+    "test:e2e": "playwright test",
+    "test:e2e:ui": "playwright test --ui",
+    "test:e2e:debug": "playwright test --debug"
   },
   "dependencies": {
     "@emotion/react": "^11.14.0",
@@ -52,14 +58,22 @@
   },
   "devDependencies": {
     "@eslint/js": "^9.19.0",
+    "@playwright/test": "^1.49.1",
+    "@testing-library/jest-dom": "^6.6.3",
+    "@testing-library/react": "^16.1.0",
+    "@testing-library/user-event": "^14.5.2",
     "@types/react": "^19.0.8",
     "@types/react-dom": "^19.0.3",
     "@vitejs/plugin-react": "^4.3.4",
+    "@vitest/ui": "^2.1.8",
     "eslint": "^9.19.0",
     "eslint-plugin-react": "^7.37.4",
     "eslint-plugin-react-hooks": "^5.0.0",
     "eslint-plugin-react-refresh": "^0.4.18",
     "globals": "^15.14.0",
-    "vite": "^6.1.0"
+    "jsdom": "^25.0.1",
+    "vite": "^6.1.0",
+    "vitest": "^2.1.8",
+    "@vitest/coverage-v8": "^2.1.8"
   }
 }
