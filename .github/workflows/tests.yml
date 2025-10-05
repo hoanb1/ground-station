@@ -83,7 +83,7 @@ jobs:
   frontend-e2e-tests:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 20
+    timeout-minutes: 60
 
     steps:
       - uses: actions/checkout@v4
@@ -92,8 +92,13 @@ jobs:
         uses: docker/setup-buildx-action@v3
 
       - name: Build backend Docker image
-        run: |
-          docker build -t ground-station-backend:test .
+        uses: docker/build-push-action@v6
+        with:
+          context: .
+          load: true
+          tags: ground-station-backend:test
+          cache-from: type=gha,scope=e2e-test
+          cache-to: type=gha,mode=max,scope=e2e-test
 
       - name: Start backend container
         run: |
