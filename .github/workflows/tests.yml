@@ -105,6 +105,7 @@ jobs:
           docker run -d \
             --name ground-station-backend \
             -p 7000:7000 \
+            -v $(pwd)/data:/app/backend/data \
             -e GS_BACKEND_HOST=0.0.0.0 \
             -e GS_BACKEND_PORT=7000 \
             ground-station-backend:test
