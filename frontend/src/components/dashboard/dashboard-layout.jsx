@@ -236,7 +236,7 @@ function TimeDisplay() {
             sx={{
                 cursor: "pointer",
                 p: 1,
-                paddingTop: 0,
+                paddingTop: 0.75,
                 paddingBottom: 0,
                 borderRadius: "4px",
                 textAlign: "center",
@@ -246,7 +246,7 @@ function TimeDisplay() {
                 alignItems: "center"
             }}
         >
-            <Typography variant="body2" sx={{fontWeight: "bold", fontFamily: "monospace"}}>
+            <Typography variant="body2" sx={{fontSize: "0.65rem", fontWeight: "bold", fontFamily: "monospace"}}>
                 {formattedTime}
             </Typography>
             <Typography variant="caption" sx={{fontSize: "0.65rem", fontFamily: "monospace", color: "#aaa"}}>
@@ -462,7 +462,7 @@ export default function Layout() {
                 appTitle: CustomAppTitle,
                 toolbarActions: ToolbarActions,
                 toolbarAccount: () => {},
-                //sidebarFooter: SidebarFooterAccount
+                //sidebarFooter: SidebarFooterAccount,
                 sidebarFooter: () => {}
             }}>
             {connected? <Outlet />: <ConnectionOverlay />}
