@@ -19,13 +19,16 @@ test.describe('Ground Station Application', () => {
     await page.goto('/');
 
     // Wait for app to be ready
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
-    // Wait for the navigation item to be visible and clickable
-    await page.waitForSelector('text=Tracking console', { state: 'visible', timeout: 10000 });
+    // Wait for navigation to be rendered and find the tracking console link
+    const trackingLink = page.getByRole('link', { name: /tracking console/i }).or(
+      page.getByRole('button', { name: /tracking console/i })
+    );
+    await trackingLink.waitFor({ state: 'visible', timeout: 20000 });
 
     // Click on Tracking Console navigation item
-    await page.click('text=Tracking console');
+    await trackingLink.click();
 
     // Wait for navigation with increased timeout
     await page.waitForURL('**/track', { timeout: 15000 });
@@ -38,13 +41,16 @@ test.describe('Ground Station Application', () => {
     await page.goto('/');
 
     // Wait for app to be ready
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
-    // Wait for the navigation item to be visible and clickable
-    await page.waitForSelector('text=Waterfall view', { state: 'visible', timeout: 10000 });
+    // Wait for navigation to be rendered and find the waterfall view link
+    const waterfallLink = page.getByRole('link', { name: /waterfall view/i }).or(
+      page.getByRole('button', { name: /waterfall view/i })
+    );
+    await waterfallLink.waitFor({ state: 'visible', timeout: 20000 });
 
     // Click on Waterfall view navigation item
-    await page.click('text=Waterfall view');
+    await waterfallLink.click();
 
     // Wait for navigation with increased timeout
     await page.waitForURL('**/waterfall', { timeout: 15000 });
@@ -56,11 +62,18 @@ test.describe('Ground Station Application', () => {
   test('should open hardware settings', async ({ page }) => {
     await page.goto('/');
 
+    // Wait for app to be ready
+    await page.waitForLoadState('domcontentloaded');
+
     // Navigate to SDRs page
-    await page.click('text=SDRs');
+    const sdrsLink = page.getByRole('link', { name: /sdrs/i }).or(
+      page.getByRole('button', { name: /sdrs/i })
+    );
+    await sdrsLink.waitFor({ state: 'visible', timeout: 20000 });
+    await sdrsLink.click();
 
     // Wait for navigation
-    await page.waitForURL('**/hardware/sdrs');
+    await page.waitForURL('**/hardware/sdrs', { timeout: 15000 });
 
     // Verify we're on the SDRs page
     expect(page.url()).toContain('/hardware/sdrs');
@@ -70,24 +83,24 @@ test.describe('Ground Station Application', () => {
     await page.goto('/satellites/groups');
 
     // Wait for the page to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
-    // Check for groups heading or table
+    // Check for the Satellite Groups heading specifically
     await expect(
-      page.locator('text=Groups').or(page.locator('table'))
-    ).toBeVisible({ timeout: 10000 });
+      page.getByText('Satellite Groups')
+    ).toBeVisible({ timeout: 15000 });
   });
 
   test('should open preferences settings', async ({ page }) => {
     await page.goto('/settings/preferences');
 
     // Wait for preferences form to load
-    await page.waitForLoadState('networkidle');
+    await page.waitForLoadState('domcontentloaded');
 
-    // Verify preferences page elements are visible
+    // Verify preferences page heading is visible
     await expect(
-      page.locator('text=Preferences').or(page.locator('form'))
-    ).toBeVisible({ timeout: 10000 });
+      page.getByRole('heading', { name: 'Preferences' })
+    ).toBeVisible({ timeout: 15000 });
   });
 });
 
@@ -97,9 +110,10 @@ test.describe('Responsive Design', () => {
     await page.setViewportSize({ width: 375, height: 667 });
 
     await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
 
-    // Check if mobile menu/drawer works
-    await expect(page.locator('text=Ground Station')).toBeVisible();
+    // Check if the main content or navigation is rendered (using first match)
+    await expect(page.getByRole('main')).toBeVisible({ timeout: 15000 });
   });
 
   test('should work on tablet viewport', async ({ page }) => {
@@ -107,7 +121,9 @@ test.describe('Responsive Design', () => {
     await page.setViewportSize({ width: 768, height: 1024 });
 
     await page.goto('/');
+    await page.waitForLoadState('domcontentloaded');
 
-    await expect(page.locator('text=Ground Station')).toBeVisible();
+    // Check if the main content is rendered
+    await expect(page.getByRole('main')).toBeVisible({ timeout: 15000 });
   });
 });

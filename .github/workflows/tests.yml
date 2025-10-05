@@ -157,7 +157,6 @@ jobs:
         env:
           CI: true
           BASE_URL: http://localhost:7000
-          DEBUG: pw:api
 
       - name: Show backend logs
         if: always()
