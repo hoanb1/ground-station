@@ -310,7 +310,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                         <React.Fragment key={`crosshair-${noradId}`}>
                             <CircleMarker
                                 center={[lat, lon]}
-                                radius={15}
+                                radius={25}
                                 pathOptions={{
                                     color: '#ffffff',
                                     weight: 1,
