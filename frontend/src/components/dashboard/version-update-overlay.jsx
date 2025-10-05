@@ -185,6 +185,7 @@ function VersionUpdateOverlay() {
                         onClick={handleDismiss}
                         disabled={countdown === 0}
                         fullWidth
+                        size="small"
                         sx={{
                             color: '#b0b0b0',
                             borderColor: '#424242',
@@ -198,7 +199,8 @@ function VersionUpdateOverlay() {
                             },
                             textTransform: 'none',
                             fontWeight: 500,
-                            fontSize: '0.875rem'
+                            fontSize: '0.8rem',
+                            py: 0.5
                         }}
                     >
                         Cancel
@@ -208,6 +210,7 @@ function VersionUpdateOverlay() {
                         onClick={handleRefresh}
                         disabled={countdown === 0}
                         fullWidth
+                        size="small"
                         sx={{
                             backgroundColor: statusColor,
                             color: '#ffffff',
@@ -220,7 +223,8 @@ function VersionUpdateOverlay() {
                             },
                             textTransform: 'none',
                             fontWeight: 500,
-                            fontSize: '0.875rem'
+                            fontSize: '0.8rem',
+                            py: 0.5
                         }}
                     >
                         Refresh Now
