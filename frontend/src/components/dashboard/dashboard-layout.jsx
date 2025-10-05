@@ -235,7 +235,7 @@ function TimeDisplay() {
             onClick={() => setIsUTC(!isUTC)} // Toggle between UTC and Local Time on click
             sx={{
                 cursor: "pointer",
-                p: 1,
+                p: 0,
                 paddingTop: 0.75,
                 paddingBottom: 0,
                 borderRadius: "4px",
