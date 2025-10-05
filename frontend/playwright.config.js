@@ -29,7 +29,8 @@ export default defineConfig({
   // Shared settings for all projects
   use: {
     // Base URL for page.goto('/')
-    baseURL: 'http://localhost:5173',
+    // Use BASE_URL env var if provided (for CI with Docker), otherwise use dev server
+    baseURL: process.env.BASE_URL || 'http://localhost:5173',
 
     // Collect trace on first retry
     trace: 'on-first-retry',
@@ -69,8 +70,8 @@ export default defineConfig({
     },
   ],
 
-  // Run dev server before tests
-  webServer: {
+  // Run dev server before tests (only for local development, not CI)
+  webServer: process.env.BASE_URL ? undefined : {
     command: 'npm run dev',
     url: 'http://localhost:5173',
     reuseExistingServer: !process.env.CI,
