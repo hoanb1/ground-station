@@ -344,7 +344,7 @@ export const MapArrowControls = function ({mapObject}) {
 
     return (
         <Box sx={{'& > :not(style)': {m: 1}}} style={{
-            right: 10,
+            left: 10,
             bottom: 10,
             position: 'absolute',
             display: 'flex',
