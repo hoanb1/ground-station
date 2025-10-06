@@ -20,7 +20,7 @@
 
 import React, { createContext, useState, useContext } from "react";
 import {useSocket} from "./socket.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from "react-hot-toast";
 
 // Create an AuthContext for managing authentication
 const AuthContext = createContext(null);
@@ -45,9 +45,9 @@ export const AuthProvider = ({ children }) => {
             if (response.success && response.token) {
                 setSession({ user: {...response.user, token: response.token} });
                 handleTokenChange(response.token);
-                enqueueSnackbar('Logged in successfully', {
-                    variant: 'success',
-                    autoHideDuration: 5000,
+                toast.success('Logged in successfully', {
+                    position: 'bottom-center',
+                    duration: 5000,
                 })
                 resolve();
             } else {

@@ -37,7 +37,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { useSocket } from "../common/socket.jsx";
-import { enqueueSnackbar } from "notistack";
+import toast from 'react-hot-toast';
 
 const PreferencesForm = () => {
     const { socket } = useSocket();
@@ -73,10 +73,10 @@ const PreferencesForm = () => {
         dispatch(updatePreferences({ socket }))
             .unwrap()
             .then(() => {
-                enqueueSnackbar('Preferences saved successfully', { variant: 'success' });
+                toast.success('Preferences saved successfully', {position: 'bottom-center'});
             })
             .catch(() => {
-                enqueueSnackbar('Failed to save preferences', { variant: 'error' });
+                toast.error('Failed to save preferences', {position: 'top-right'});
             });
     };
 

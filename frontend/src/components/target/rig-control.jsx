@@ -35,7 +35,7 @@ import {
     setStarting,
     setTrackingStateInBackend
 } from "./target-slice.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from "react-hot-toast";
 import {
     getClassNamesBasedOnGridEditing,
     humanizeFrequency,
@@ -119,8 +119,8 @@ const RigControl = React.memo(function RigControl() {
 
             })
             .catch((error) => {
-                enqueueSnackbar(`Failed to start tracking: ${error.message}`, {
-                    variant: "error"
+                toast.error(`Failed to start tracking: ${error.message}`, {
+                    position: "top-right"
                 });
             });
     };

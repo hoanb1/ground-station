@@ -35,7 +35,7 @@ import {
 } from '@mui/material';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
-import { enqueueSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 
 // Import slice actions and thunks
 import {
@@ -104,13 +104,13 @@ const UsersTable = () => {
         await dispatch(submitOrEditUser({ socket, formValues }))
             .unwrap()
             .then(() => {
-                enqueueSnackbar(
+                toast.success(
                     formValues.id ? 'User edited successfully' : 'User added successfully',
-                    { variant: 'success' }
+                    {position: 'bottom-center'}
                 );
             })
             .catch((err) => {
-                enqueueSnackbar(err.message, { variant: 'error' });
+                toast.error(err.message, {position: 'top-right'});
             });
     }
 
@@ -124,14 +124,14 @@ const UsersTable = () => {
             dispatch(deleteUsers({ socket, selectedIds: selected }))
                 .unwrap()
                 .then(()=>{
-                    enqueueSnackbar('User(s) deleted successfully', { variant: 'success' });
+                    toast.success('User(s) deleted successfully', {position: 'bottom-center'});
                 })
                 .catch((err) => {
-                    enqueueSnackbar('Failed to delete users(s)', { variant: 'error' });
+                    toast.error('Failed to delete users(s)', {position: 'top-right'});
                 });
 
         } catch (err) {
-            enqueueSnackbar('Failed to delete user(s)', { variant: 'error' });
+            toast.error('Failed to delete user(s)', {position: 'top-right'});
         }
     };
 

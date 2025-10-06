@@ -32,7 +32,7 @@ import {
     Stack, DialogContentText,
 } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
-import { enqueueSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 import { useSocket } from '../common/socket.jsx';
 import { betterDateTimes } from '../common/common.jsx';
 import { AddEditDialog } from './groups-dialog.jsx';
@@ -125,10 +125,10 @@ const GroupsTable = () => {
             .unwrap()
             .then(()=>{
                 dispatch(setDeleteConfirmDialogOpen(false));
-                enqueueSnackbar('Group(s) deleted successfully', { variant: 'success' });
+                toast.success('Group(s) deleted successfully', { position: 'bottom-center' });
             })
             .catch((err) => {
-                enqueueSnackbar('Failed to delete group(s)', { variant: 'error' });
+                toast.error('Failed to delete group(s)', { position: 'top-right' });
             });
     };
 

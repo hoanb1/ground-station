@@ -20,7 +20,7 @@
 
 import React, {useEffect, useMemo, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {
     formatWithZeros,
     getClassNamesBasedOnGridEditing,

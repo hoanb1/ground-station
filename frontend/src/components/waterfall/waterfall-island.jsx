@@ -74,7 +74,7 @@ import {
     setVfoActive,
     setFFTdataOverflow,
 } from './waterfall-slice.jsx';
-import {enqueueSnackbar} from "notistack";
+import toast from "react-hot-toast";
 import {frequencyBands} from "./bandplans.jsx";
 import WaterfallStatusBar from "./waterfall-statusbar.jsx";
 import WaterfallToolbar from "./waterfall-toolbar.jsx";
@@ -89,8 +89,8 @@ export const createExternalWorker = () => {
         return new Worker(new URL('./waterfall-worker.js', import.meta.url));
     }
     catch (error) {
-        enqueueSnackbar(`Failed to create waterfall worker: ${error.message}`, {
-            variant: 'error'
+        toast.error(`Failed to create waterfall worker: ${error.message}`, {
+            position: 'top-right'
         });
     }
 };

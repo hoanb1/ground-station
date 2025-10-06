@@ -22,7 +22,7 @@ import * as React from 'react';
 import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {useEffect} from "react";
 import {useDispatch, useSelector} from "react-redux";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {
     DataGrid,
     gridPageCountSelector,
@@ -229,13 +229,13 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             dispatch(fetchSatellites({socket, satGroupId: groupId}))
                 .unwrap()
                 .then((data) => {
-                    enqueueSnackbar(`Successfully loaded ${data.length} satellites`, {
-                        variant: 'success'
+                    toast.success(`Successfully loaded ${data.length} satellites`, {
+                        position: 'bottom-center'
                     });
                 })
                 .catch((err) => {
-                    enqueueSnackbar("Failed to load satellites: " + err.message, {
-                        variant: 'error'
+                    toast.error("Failed to load satellites: " + err.message, {
+                        position: 'top-right'
                     })
                 });
         }

@@ -18,7 +18,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import useWakeLock from './wake-lock-logic.jsx';
-import { enqueueSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 
 // Define the default context value
 const defaultWakeLockContext = {
@@ -60,14 +60,16 @@ export const WakeLockProvider = ({ children }) => {
             // Show notification when first wake lock is requested
             if (prev.size === 0 && newSet.size === 1 && !hasManualRequest) {
                 if (wakeLock.isSupported) {
-                    enqueueSnackbar(`Screen wake lock activated by ${componentName}`, {
-                        variant: 'info',
-                        autoHideDuration: 3000,
+                    toast(`Screen wake lock activated by ${componentName}`, {
+                        position: 'bottom-center',
+                        icon: 'ℹ️',
+                        duration: 3000,
                     });
                 } else {
-                    enqueueSnackbar('Wake lock not supported on this device', {
-                        variant: 'warning',
-                        autoHideDuration: 5000,
+                    toast('Wake lock not supported on this device', {
+                        position: 'top-right',
+                        icon: '⚠️',
+                        duration: 5000,
                     });
                 }
             }
@@ -83,9 +85,10 @@ export const WakeLockProvider = ({ children }) => {
 
             // Show notification when last wake lock is released
             if (prev.size > 0 && newSet.size === 0 && !hasManualRequest) {
-                enqueueSnackbar(`Screen wake lock released by ${componentName}`, {
-                    variant: 'info',
-                    autoHideDuration: 2000,
+                toast(`Screen wake lock released by ${componentName}`, {
+                    position: 'bottom-center',
+                    icon: 'ℹ️',
+                    duration: 2000,
                 });
             }
 
@@ -95,35 +98,38 @@ export const WakeLockProvider = ({ children }) => {
 
     const requestManualWakeLock = useCallback(async () => {
         if (!wakeLock.isSupported) {
-            enqueueSnackbar('Wake lock not supported on this device', {
-                variant: 'warning',
-                autoHideDuration: 5000,
+            toast('Wake lock not supported on this device', {
+                position: 'top-right',
+                icon: '⚠️',
+                duration: 5000,
             });
             return false;
         }
 
         setHasManualRequest(true);
-        enqueueSnackbar('Screen wake lock activated', {
-            variant: 'success',
-            autoHideDuration: 2000,
+        toast.success('Screen wake lock activated', {
+            position: 'bottom-center',
+            duration: 2000,
         });
         return true;
     }, [wakeLock.isSupported]);
 
     const releaseManualWakeLock = useCallback(() => {
         setHasManualRequest(false);
-        enqueueSnackbar('Manual wake lock released', {
-            variant: 'info',
-            autoHideDuration: 2000,
+        toast('Manual wake lock released', {
+            position: 'bottom-center',
+            icon: 'ℹ️',
+            duration: 2000,
         });
     }, []);
 
     const forceRelease = useCallback(() => {
         setWakeLockRequests(new Set());
         setHasManualRequest(false);
-        enqueueSnackbar('Screen wake lock released', {
-            variant: 'info',
-            autoHideDuration: 2000,
+        toast('Screen wake lock released', {
+            position: 'bottom-center',
+            icon: 'ℹ️',
+            duration: 2000,
         });
     }, []);
 

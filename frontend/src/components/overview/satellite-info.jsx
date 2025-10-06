@@ -35,7 +35,7 @@ import {
 import Grid from "@mui/material/Grid2";
 import {useSocket} from "../common/socket.jsx";
 import {setTrackingStateInBackend} from "../target/target-slice.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 
@@ -81,9 +81,7 @@ const OverviewSatelliteInfoCard = () => {
                 // Success handling
             })
             .catch((error) => {
-                enqueueSnackbar(`Failed to start tracking with the rotator: ${error.message}`, {
-                    variant: "error"
-                });
+                toast.error(`Failed to start tracking with the rotator: ${error.message}`, {position: 'top-right'});
             });
     };
 

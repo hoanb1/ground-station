@@ -47,7 +47,7 @@ import {
     setFormValues,
     setOpenAddDialog,
 } from './rig-slice.jsx';
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {humanizeFrequency} from "../common/common.jsx";
 import {useEffect} from "react";
@@ -113,28 +113,19 @@ export default function RigTable() {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    enqueueSnackbar('Rig edited successfully', {
-                        variant: 'success',
-                        autoHideDuration: 5000
-                    });
+                    toast.success('Rig edited successfully', {position: 'bottom-center', duration: 5000});
                 })
                 .catch((error) => {
-                    enqueueSnackbar('Error editing rig', {
-                        variant: 'error',
-                        autoHideDuration: 5000
-                    })
+                    toast.error('Error editing rig', {position: 'top-right', duration: 5000})
                 });
         } else {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    enqueueSnackbar('Rig added successfully', {variant: 'success', autoHideDuration: 5000});
+                    toast.success('Rig added successfully', {position: 'bottom-center', duration: 5000});
                 })
                 .catch((error) => {
-                    enqueueSnackbar(`Error adding rig: ${error}`, {
-                        variant: 'error',
-                        autoHideDuration: 5000
-                    })
+                    toast.error(`Error adding rig: ${error}`, {position: 'top-right', duration: 5000})
                 });
         }
         dispatch(setOpenAddDialog(false));
@@ -146,16 +137,10 @@ export default function RigTable() {
             .then(() => {
                 dispatch(setSelected([]));
                 dispatch(setOpenDeleteConfirm(false));
-                enqueueSnackbar('Rig(s) deleted successfully', {
-                    variant: 'success',
-                    autoHideDuration: 5000
-                });
+                toast.success('Rig(s) deleted successfully', {position: 'bottom-center', duration: 5000});
             })
             .catch((error) => {
-                enqueueSnackbar('Error deleting rig(s)', {
-                    variant: 'error',
-                    autoHideDuration: 5000
-                });
+                toast.error('Error deleting rig(s)', {position: 'top-right', duration: 5000});
             });
     }
 

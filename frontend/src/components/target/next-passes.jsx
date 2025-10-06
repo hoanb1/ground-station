@@ -20,7 +20,6 @@
 
 import React, {useEffect, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
 import {
     getClassNamesBasedOnGridEditing,
     getTimeFromISO,
@@ -29,7 +28,6 @@ import {
 } from "../common/common.jsx";
 import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
-import {fetchNextPasses, setSatellitePasses} from './target-slice.jsx';
 import {darken, lighten, styled} from "@mui/material/styles";
 import ProgressFormatter from "../overview/progressbar-widget.jsx";
 

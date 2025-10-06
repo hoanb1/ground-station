@@ -19,7 +19,7 @@
 
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 
 export const fetchRotators = createAsyncThunk(
     'rotators/fetchAll',

@@ -39,7 +39,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import { useDispatch, useSelector } from 'react-redux';
 import {
     deleteSDRs,
@@ -234,11 +234,11 @@ export default function SDRsPage() {
         dispatch(submitOrEditSDR({socket, formValues}))
             .unwrap()
             .then(() => {
-                enqueueSnackbar('SDR saved successfully', { variant: 'success' });
+                toast.success('SDR saved successfully', {position: 'bottom-center'});
                 dispatch(setOpenAddDialog(false));
             })
             .catch((err) => {
-                enqueueSnackbar(err, { variant: 'error' });
+                toast.error(err, {position: 'top-right'});
             });
     }
 
@@ -246,11 +246,11 @@ export default function SDRsPage() {
         dispatch(deleteSDRs({ socket, selectedIds: selected }))
             .unwrap()
             .then(() => {
-                enqueueSnackbar('SDR(s) deleted successfully', { variant: 'success' });
+                toast.success('SDR(s) deleted successfully', {position: 'bottom-center'});
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
-                enqueueSnackbar(err, { variant: 'error' });
+                toast.error(err, {position: 'top-right'});
             });
     };
 

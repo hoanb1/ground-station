@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import { enqueueSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 
 const AudioContext = createContext({
     audioEnabled: false,
@@ -58,7 +58,7 @@ export const AudioProvider = ({ children }) => {
 
             audioWorkerRef.current.onerror = (error) => {
                 console.error('Audio worker error:', error);
-                enqueueSnackbar('Audio worker failed', { variant: 'error' });
+                toast.error('Audio worker failed', { position: 'top-right' });
             };
 
             console.log('Audio worker initialized from audio-worker.js');
@@ -104,7 +104,7 @@ export const AudioProvider = ({ children }) => {
 
         } catch (error) {
             console.error('Failed to initialize audio:', error);
-            enqueueSnackbar(`Failed to initialize audio: ${error.message}`, { variant: 'error' });
+            toast.error(`Failed to initialize audio: ${error.message}`, { position: 'top-right' });
         }
     }, [volume, initializeWorker]);
 

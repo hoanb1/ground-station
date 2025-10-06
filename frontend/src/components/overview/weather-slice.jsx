@@ -20,7 +20,7 @@
 
 
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
-import {enqueueSnackbar} from 'notistack';
+import toast from 'react-hot-toast';
 
 const fetchWeatherByCoordinates = async (latitude, longitude, apiKey="471aacccad269b47ed7d2aa3369c9f71") => {
     try {
@@ -54,7 +54,7 @@ export const getWeatherData = createAsyncThunk(
         try {
             return await fetchWeatherByCoordinates(latitude, longitude, apiKey);
         } catch (error) {
-            enqueueSnackbar('Failed to fetch weather data', { variant: 'error' });
+            toast.error('Failed to fetch weather data', {position: 'top-right'});
             return rejectWithValue(error.message);
         }
     }

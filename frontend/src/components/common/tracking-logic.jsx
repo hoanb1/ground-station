@@ -19,7 +19,7 @@
 
 
 import * as satellite from 'satellite.js';
-import {enqueueSnackbar} from "notistack";
+import toast from "react-hot-toast";
 
 /**
  * Calculates the latitude, longitude, altitude, and velocity of a satellite based on TLE data and date.
@@ -59,9 +59,9 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
 
     } catch (error) {
         console.error(`Error calculating satellite ${noradId} position and velocity: ${error.message}`);
-        enqueueSnackbar(`Error calculating satellite ${noradId} position and velocity: ${error.message}`, {
-            variant: "error",
-            autoHideDuration: 5000,
+        toast.error(`Error calculating satellite ${noradId} position and velocity: ${error.message}`, {
+            position: "top-right",
+            duration: 5000,
         });
 
         return [0, 0, 0, 0];
@@ -266,9 +266,9 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
         return { past, future };
     } catch (error) {
         console.error("Error computing satellite paths:", error);
-        enqueueSnackbar("Error computing satellite paths: " + error.message, {
-            variant: "error",
-            autoHideDuration: 5000,
+        toast.error("Error computing satellite paths: " + error.message, {
+            position: "top-right",
+            duration: 5000,
         });
         return { past: [], future: [] };
     }
@@ -495,9 +495,9 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
 
     } catch (error) {
         console.error("Error calculating satellite azimuth and elevation:", error);
-        enqueueSnackbar("Error calculating satellite tracking data: " + error.message, {
-            variant: "error",
-            autoHideDuration: 5000,
+        toast.error("Error calculating satellite tracking data: " + error.message, {
+            position: "top-right",
+            duration: 5000,
         });
         return null;
     }

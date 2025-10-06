@@ -29,7 +29,7 @@ import React, {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {useLocalStorageState} from "@toolpad/core";
 import {useDispatch, useSelector} from "react-redux";
 import {
@@ -78,9 +78,7 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
                 }
             })
             .catch((err) => {
-                enqueueSnackbar("Failed to load satellite groups: " + err.message, {
-                    variant: 'error'
-                })
+                toast.error("Failed to load satellite groups: " + err.message, {position: 'top-right'})
             });
 
         return () => {

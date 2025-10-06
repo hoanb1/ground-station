@@ -30,7 +30,7 @@ import {
 } from '@mui/material';
 import {MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMapEvents} from 'react-leaflet';
 import Grid from '@mui/material/Grid2';
-import { enqueueSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 import { useSocket } from '../common/socket.jsx';
 import { getMaidenhead } from '../common/common.jsx';
 import { useDispatch, useSelector } from 'react-redux';
@@ -225,9 +225,7 @@ const LocationPage = () => {
     const getCurrentLocation = async () => {
         dispatch(setLocationLoading(true));
         if (!navigator.geolocation) {
-            enqueueSnackbar('Geolocation is not supported by your browser.', {
-                variant: 'warning',
-            });
+            toast('Geolocation is not supported by your browser.', {position: 'top-right', icon: '⚠️'});
             return;
         }
 
@@ -258,14 +256,10 @@ const LocationPage = () => {
                 reCenterMap(latitude, longitude);
                 dispatch(setLocationLoading(false));
 
-                enqueueSnackbar(`Location retrieved`, {
-                    variant: 'success',
-                });
+                toast.success(`Location retrieved`, {position: 'bottom-center'});
             },
             (error) => {
-                enqueueSnackbar('Failed to get your current location', {
-                    variant: 'error',
-                });
+                toast.error('Failed to get your current location', {position: 'top-right'});
                 dispatch(setLocationLoading(false));
             },
             {
@@ -416,9 +410,7 @@ const LocationPage = () => {
                                             try {
                                                 await getCurrentLocation();
                                             } catch (error) {
-                                                enqueueSnackbar('Failed to get current location', {
-                                                    variant: 'error',
-                                                });
+                                                toast.error('Failed to get current location', {position: 'top-right'});
                                             }
                                         }}
                                     >
@@ -431,7 +423,7 @@ const LocationPage = () => {
                                         onClick={() => {
                                             // Placeholder for export functionality
                                             navigator.clipboard.writeText(`${location.lat?.toFixed(6)}, ${location.lon?.toFixed(6)}`);
-                                            enqueueSnackbar('Coordinates copied to clipboard', { variant: 'success' });
+                                            toast.success('Coordinates copied to clipboard', {position: 'bottom-center'});
                                         }}
                                     >
                                         Copy Coordinates

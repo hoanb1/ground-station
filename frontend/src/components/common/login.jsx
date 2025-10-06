@@ -23,7 +23,7 @@ import { useEffect, useState } from "react";
 import { SignInPage } from "@toolpad/core";
 import { Checkbox, Box, Typography, Paper, Avatar, CircularProgress } from "@mui/material";
 import { useSocket } from './socket.jsx';
-import { useSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 import { useAuth } from "./auth.jsx";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import PersonIcon from '@mui/icons-material/Person';
@@ -31,7 +31,6 @@ import InputAdornment from '@mui/material/InputAdornment';
 
 const LoginForm = ({ handleSignedInCallback }) => {
     const { socket } = useSocket();
-    const { enqueueSnackbar } = useSnackbar();
     const [loading, setLoading] = useState(false);
     const { logIn } = useAuth();
     const [error, setError] = useState(null);
@@ -67,12 +66,12 @@ const LoginForm = ({ handleSignedInCallback }) => {
 
             socket.on("error", (error) => {
                 setLoading(true);
-                enqueueSnackbar('Connection error: ' + error, { variant: 'error' });
+                toast.error('Connection error: ' + error, { position: 'top-right' });
             });
 
             socket.on('disconnect', () => {
                 setLoading(true);
-                enqueueSnackbar('Disconnected from server', { variant: 'warning' });
+                toast('Disconnected from server', { position: 'top-right', icon: '⚠️' });
             });
         }
         return () => {
@@ -82,7 +81,7 @@ const LoginForm = ({ handleSignedInCallback }) => {
                 socket.off('disconnect');
             }
         };
-    }, [socket, enqueueSnackbar]);
+    }, [socket]);
 
     return (
         <Box

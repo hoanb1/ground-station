@@ -20,7 +20,7 @@
 
 
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
-import {enqueueSnackbar} from 'notistack';
+import toast from 'react-hot-toast';
 import {getMaidenhead} from '../common/common.jsx';
 
 
@@ -37,15 +37,11 @@ export const fetchLocationForUserId = createAsyncThunk(
                         if (response.data) {
                             resolve(response.data);
                         } else {
-                            enqueueSnackbar('No location found in the backend, please set one', {
-                                variant: 'info',
-                            });
+                            toast('No location found in the backend, please set one', {position: 'bottom-center', icon: 'ℹ️'});
                             resolve(null); // or resolve({}) if no data
                         }
                     } else {
-                        enqueueSnackbar('Failed to get location from backend', {
-                            variant: 'error',
-                        });
+                        toast.error('Failed to get location from backend', {position: 'top-right'});
                         reject(rejectWithValue('Failed to get location'));
                     }
                 }
@@ -62,14 +58,10 @@ export const storeLocation = createAsyncThunk(
             socket.emit('data_submission', 'submit-location-for-user-id',
                 {...location, alt: altitude, name: "home", userid: null, id: locationId}, (response) => {
                     if (response['success']) {
-                        enqueueSnackbar('Location set successfully', {
-                            variant: 'success',
-                        });
+                        toast.success('Location set successfully', {position: 'bottom-center'});
                         resolve(response.data);
                     } else {
-                        enqueueSnackbar('Failed to set location', {
-                            variant: 'error',
-                        });
+                        toast.error('Failed to set location', {position: 'top-right'});
                         reject(rejectWithValue('Failed to set location'));
                     }
                 });

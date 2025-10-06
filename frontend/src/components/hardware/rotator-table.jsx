@@ -29,7 +29,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {useDispatch, useSelector} from 'react-redux';
 import {
     deleteRotators,
@@ -96,11 +96,11 @@ export default function AntennaRotatorTable() {
         dispatch(submitOrEditRotator({socket, formValues}))
             .unwrap()
             .then(() => {
-                enqueueSnackbar('Rotator saved successfully', {variant: 'success'});
+                toast.success('Rotator saved successfully', {position: 'bottom-center'});
                 setOpenAddDialog(false);
             })
             .catch((err) => {
-                enqueueSnackbar(err.message, {variant: 'error'});
+                toast.error(err.message, {position: 'top-right'});
             });
     }
 
@@ -108,11 +108,11 @@ export default function AntennaRotatorTable() {
         dispatch(deleteRotators({socket, selectedIds: selected}))
             .unwrap()
             .then(() => {
-                enqueueSnackbar('Rotator(s) deleted successfully', {variant: 'success'});
+                toast.success('Rotator(s) deleted successfully', {position: 'bottom-center'});
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
-                enqueueSnackbar(err.message, {variant: 'error'});
+                toast.error(err.message, {position: 'top-right'});
             });
     };
 

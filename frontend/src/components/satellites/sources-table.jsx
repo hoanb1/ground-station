@@ -37,7 +37,7 @@ import {
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchTLESources,  submitOrEditTLESource, deleteTLESources} from './sources-slice.jsx';
 import {betterDateTimes} from "../common/common.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {useSocket} from "../common/socket.jsx";
 import {setFormValues, setOpenAddDialog, setOpenDeleteConfirm, setSelected} from "./sources-slice.jsx"
 import SynchronizeTLEsCard from "./sychronize-card.jsx";
@@ -107,15 +107,15 @@ export default function SourcesTable() {
         dispatch(deleteTLESources({socket, selectedIds: selected}))
             .unwrap()
             .then((data) => {
-                enqueueSnackbar(data.message, {
-                    variant: 'success',
-                    autoHideDuration: 4000,
+                toast.success(data.message, {
+                    position: 'bottom-center',
+                    duration: 4000,
                 })
             })
             .catch((error) => {
-                enqueueSnackbar("Failed to delete TLE sources: " + error, {
-                    variant: 'error',
-                    autoHideDuration: 5000,
+                toast.error("Failed to delete TLE sources: " + error, {
+                    position: 'top-right',
+                    duration: 5000,
                 })
             })
         dispatch(setOpenDeleteConfirm(false));
@@ -126,27 +126,29 @@ export default function SourcesTable() {
             dispatch(submitOrEditTLESource({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    enqueueSnackbar("TLE source added successfully", {
-                        variant: 'success',
-                        autoHideDuration: 4000,
+                    toast.success("TLE source added successfully", {
+                        position: 'bottom-center',
+                        duration: 4000,
                     })
                 })
                 .catch((error) => {
-                    enqueueSnackbar("Failed to add TLE source: " + error, {
-                        variant: 'error',
+                    toast.error("Failed to add TLE source: " + error, {
+                        position: 'top-right',
                     })
                 });
         } else {
             dispatch(submitOrEditTLESource({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    enqueueSnackbar("TLE source updated successfully", {
-                        variant: 'success',
-                        autoHideDuration: 4000,
+                    toast.success("TLE source updated successfully", {
+                        position: 'bottom-center',
+                        duration: 4000,
                     })
                 })
                 .catch((error) => {
-                    enqueueSnackbar("Failed to update TLE source: " + error, {})
+                    toast.error("Failed to update TLE source: " + error, {
+                        position: 'top-right',
+                    })
                 });
         }
         dispatch(setOpenAddDialog(false));

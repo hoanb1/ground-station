@@ -27,7 +27,7 @@ import {
     setRotatorDisconnecting,
     sendNudgeCommand,
 } from "./target-slice.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from "react-hot-toast";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Button, FormControl, InputLabel, MenuItem, Select} from "@mui/material";
@@ -101,8 +101,8 @@ const RotatorControl = React.memo(function RotatorControl() {
 
             })
             .catch((error) => {
-                enqueueSnackbar(`Failed to start tracking with the rotator: ${error.message}`, {
-                    variant: "error"
+                toast.error(`Failed to start tracking with the rotator: ${error.message}`, {
+                    position: "top-right"
                 });
             });
     };

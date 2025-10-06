@@ -44,7 +44,7 @@ import L from 'leaflet';
 import SatelliteMapContainer from "./satellite-map.jsx";
 import { useParams, useNavigate } from 'react-router';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { enqueueSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 
 
 // Fix for default markers in react-leaflet
@@ -137,9 +137,9 @@ const SatelliteInfo = () => {
                     })
                     .catch((error) => {
                         console.error(`Failed to fetch satellite with NORAD ID ${noradId}:`, error);
-                        enqueueSnackbar(`Failed to load satellite data: ${error}`, {
-                            variant: 'error',
-                            autoHideDuration: 5000,
+                        toast.error(`Failed to load satellite data: ${error}`, {
+                            position: 'top-right',
+                            duration: 5000,
                         });
 
                         // Optionally redirect back to satellites list or show error page
@@ -430,13 +430,13 @@ const SatelliteInfo = () => {
                                             noradId: clickedSatellite.norad_id
                                         })).unwrap();
                                         navigate('/satellites/satellites');
-                                        enqueueSnackbar('Satellite deleted successfully', {
-                                            variant: 'success'
+                                        toast.success('Satellite deleted successfully', {
+                                            position: 'bottom-center'
                                         });
                                     } catch (error) {
                                         console.error('Failed to delete satellite:', error);
-                                        enqueueSnackbar(`Failed to delete satellite: ${error}`, {
-                                            variant: 'error'
+                                        toast.error(`Failed to delete satellite: ${error}`, {
+                                            position: 'top-right'
                                         });
                                     }
                                     setDeleteSatelliteConfirmOpen(false);

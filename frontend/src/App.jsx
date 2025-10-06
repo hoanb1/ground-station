@@ -36,7 +36,7 @@ import MicrowaveIcon from '@mui/icons-material/Microwave';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import WavesIcon from '@mui/icons-material/Waves';
 import CameraIcon from '@mui/icons-material/CameraAlt';
-import { closeSnackbar, enqueueSnackbar, SnackbarProvider } from 'notistack';
+import toast, { Toaster, ToastBar } from 'react-hot-toast';
 import PeopleIcon from '@mui/icons-material/People';
 import { useSocket } from "./components/common/socket.jsx";
 import { useAuth } from "./components/common/auth.jsx";
@@ -110,13 +110,15 @@ export default function App(props) {
     const authentication = useMemo(() => {
         return {
             signIn: () => {
-                enqueueSnackbar('user clicked on the sign in button', {
-                    variant: 'info',
+                toast('user clicked on the sign in button', {
+                    position: 'bottom-center',
                 });
             },
             signOut: () => {
                 logOut();
-                enqueueSnackbar('You have been logged out', {variant: 'success'});
+                toast.success('You have been logged out', {
+                    position: 'bottom-center',
+                });
             },
         };
     }, [logOut]);
@@ -130,9 +132,9 @@ export default function App(props) {
                         // Handle success if needed
                     })
                     .catch(error => {
-                        enqueueSnackbar(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
-                            variant: 'error',
-                            autoHideDuration: 5000,
+                        toast.error(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
+                            position: 'top-right',
+                            duration: 5000,
                         })
                     });
             }
@@ -249,20 +251,29 @@ export default function App(props) {
         if (socket) {
             socket.on('connect', async () => {
                 console.log('Socket connected with ID:', socket.id);
-                enqueueSnackbar("Connected to backend!", {variant: 'success'});
+                toast.success("Connected to backend!", {
+                    position: 'bottom-center',
+                });
                 uponConnectionToBackEnd(socket);
             });
 
             socket.on("reconnect_attempt", (attempt) => {
-                enqueueSnackbar(`Not connected! Attempting to reconnect (${attempt})...`, {variant: 'info'});
+                toast(`Not connected! Attempting to reconnect (${attempt})...`, {
+                    position: 'bottom-center',
+                    icon: 'ℹ️',
+                });
             });
 
             socket.on("error", (error) => {
-                enqueueSnackbar(`Error occurred, ${error}`, {variant: 'error'});
+                toast.error(`Error occurred, ${error}`, {
+                    position: 'bottom-center',
+                });
             });
 
             socket.on('disconnect', () => {
-                enqueueSnackbar("Disconnected from backend!", {variant: 'error'});
+                toast.error("Disconnected from backend!", {
+                    position: 'bottom-center',
+                });
             });
 
             socket.on("sat-sync-events", (data) => {
@@ -277,9 +288,9 @@ export default function App(props) {
                 // }
 
                 if (data.status === 'complete') {
-                    enqueueSnackbar("Satellite data synchronization completed successfully", {
-                        variant: 'success',
-                        autoHideDuration: 4000,
+                    toast.success("Satellite data synchronization completed successfully", {
+                        position: 'bottom-center',
+                        duration: 4000,
                     });
                     dispatch(setSynchronizing(false));
                 }
@@ -294,25 +305,25 @@ export default function App(props) {
                 if (data['events']) {
                     data['events'].forEach(event => {
                         if (event.name === 'rotator_connected') {
-                            enqueueSnackbar("Rotator connected!", {variant: 'success'});
+                            toast.success("Rotator connected!", {position: 'bottom-center'});
                         } else if (event.name === 'rotator_disconnected') {
-                            enqueueSnackbar("Rotator disconnected!", {variant: 'info'});
+                            toast("Rotator disconnected!", {position: 'bottom-center', icon: 'ℹ️'});
                         } else if (event.name === 'rig_connected') {
-                            enqueueSnackbar("Rig connected!", {variant: 'success'});
+                            toast.success("Rig connected!", {position: 'bottom-center'});
                         } else if (event.name === 'rig_disconnected') {
-                            enqueueSnackbar("Rig disconnected!", {variant: 'info'});
+                            toast("Rig disconnected!", {position: 'bottom-center', icon: 'ℹ️'});
                         } else if (event.name === 'elevation_out_of_bounds') {
-                            enqueueSnackbar("Elevation of target is not reachable!", {variant: 'warning'});
+                            toast("Elevation of target is not reachable!", {position: 'top-right', icon: '⚠️'});
                         } else if (event.name === 'azimuth_out_of_bounds') {
-                            enqueueSnackbar("Azimuth of target is not reachable", {variant: 'warning'});
+                            toast("Azimuth of target is not reachable", {position: 'top-right', icon: '⚠️'});
                         } else if (event.name === 'minelevation_error') {
-                            enqueueSnackbar("Target is beyond the minimum elevation limit", {variant: 'warning'});
+                            toast("Target is beyond the minimum elevation limit", {position: 'top-right', icon: '⚠️'});
                         } else if (event.name === 'norad_id_change') {
-                            enqueueSnackbar("Target satellite changed!", {variant: 'info'});
+                            toast("Target satellite changed!", {position: 'bottom-center', icon: 'ℹ️'});
                         } else if (event.name === 'rotator_error') {
-                            enqueueSnackbar(event.error, {variant: 'error'});
+                            toast.error(event.error, {position: 'top-right'});
                         } else if (event.name === 'rig_error') {
-                            enqueueSnackbar(event.error, {variant: 'error'});
+                            toast.error(event.error, {position: 'top-right'});
                         }
                     });
                 }
@@ -330,27 +341,101 @@ export default function App(props) {
         }
     }, [socket]);
 
-    const action = snackbarId => (
-        <>
-            <Button size={"small"} variant={"text"} onClick={() => { closeSnackbar(snackbarId) }} style={{color: '#000000'}}>
-                Dismiss
-            </Button>
-        </>
-    );
 
     return (
         <AudioProvider>
-            <SnackbarProvider maxSnack={5} autoHideDuration={4000} anchorOrigin={{vertical: 'bottom', horizontal: 'center'}} action={action}>
-                <ReactRouterAppProvider
-                    navigation={NAVIGATION}
-                    theme={dashboardTheme}
-                    authentication={authentication}
-                    session={session}
-                    branding={BRANDING}
-                >
-                    {loggedIn ? <Outlet/> : <LoginForm/>}
-                </ReactRouterAppProvider>
-            </SnackbarProvider>
+            <Toaster
+                position="bottom-center"
+                toastOptions={{
+                    duration: 4000,
+                    style: {
+                        background: '#363636',
+                        color: '#fff',
+                    },
+                    success: {
+                        iconTheme: {
+                            primary: '#4caf50',
+                            secondary: '#fff',
+                        },
+                    },
+                    error: {
+                        iconTheme: {
+                            primary: '#f44336',
+                            secondary: '#fff',
+                        },
+                    },
+                }}
+            >
+                {(t) => (
+                    <ToastBar
+                        toast={t}
+                        style={{
+                            ...t.style,
+                            animation: t.visible
+                                ? t.position?.includes('right')
+                                    ? 'toast-enter-right 0.3s ease'
+                                    : 'toast-enter 0.3s ease'
+                                : t.position?.includes('right')
+                                    ? 'toast-exit-right 0.3s ease forwards'
+                                    : 'toast-exit 0.3s ease forwards',
+                        }}
+                    />
+                )}
+            </Toaster>
+            <style>{`
+                @keyframes toast-enter {
+                    from {
+                        transform: translateY(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes toast-exit {
+                    from {
+                        transform: translateY(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateY(-100%);
+                        opacity: 0;
+                    }
+                }
+
+                @keyframes toast-enter-right {
+                    from {
+                        transform: translateX(100%);
+                        opacity: 0;
+                    }
+                    to {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                }
+
+                @keyframes toast-exit-right {
+                    from {
+                        transform: translateX(0);
+                        opacity: 1;
+                    }
+                    to {
+                        transform: translateX(120%);
+                        opacity: 0;
+                    }
+                }
+            `}</style>
+            <ReactRouterAppProvider
+                navigation={NAVIGATION}
+                theme={dashboardTheme}
+                authentication={authentication}
+                session={session}
+                branding={BRANDING}
+            >
+                {loggedIn ? <Outlet/> : <LoginForm/>}
+            </ReactRouterAppProvider>
         </AudioProvider>
     );
 }

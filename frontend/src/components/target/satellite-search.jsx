@@ -2,7 +2,7 @@ import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {Fragment, useCallback, useEffect} from "react";
-import {enqueueSnackbar} from "notistack";
+import toast from "react-hot-toast";
 import Autocomplete from "@mui/material/Autocomplete";
 import {CircularProgress, TextField} from "@mui/material";
 
@@ -21,9 +21,9 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
                     setOptions(response.data);
                 } else {
                     console.error(response.error);
-                    enqueueSnackbar(`Error searching for satellites: ${response.error}`, {
-                        variant: 'error',
-                        autoHideDuration: 5000,
+                    toast.error(`Error searching for satellites: ${response.error}`, {
+                        position: 'top-right',
+                        duration: 5000,
                     });
                     setOptions([]);
                 }

@@ -17,7 +17,7 @@ import {
     setStartStreamingLoading,
     setFFTdataOverflow
 } from './waterfall-slice.jsx';
-import { enqueueSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 
 const WaterfallStream = ({ workerRef, targetFPSRef }) => {
     const dispatch = useDispatch();
@@ -75,7 +75,7 @@ const WaterfallStream = ({ workerRef, targetFPSRef }) => {
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
             dispatch(setStartStreamingLoading(false));
-            enqueueSnackbar(`Failed to configure SDR: ${error.message}`, { variant: 'error' });
+            toast.error(`Failed to configure SDR: ${error.message}`, { position: 'top-right' });
         });
 
         socket.on('sdr-error', (error) => {

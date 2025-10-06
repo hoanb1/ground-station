@@ -30,7 +30,7 @@ import {
     StyledIslandParentScrollbar,
     StyledIslandParentNoScrollbar,
 } from "../common/common.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {useSocket} from "../common/socket.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";
@@ -353,9 +353,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
                 // Success handling
             })
             .catch((error) => {
-                enqueueSnackbar(`Failed to start tracking with the rotator: ${error.message}`, {
-                    variant: "error"
-                });
+                toast.error(`Failed to start tracking with the rotator: ${error.message}`, {position: 'top-right'});
             });
     };
 

@@ -31,7 +31,7 @@ import {
     StyledIslandParentNoScrollbar,
     StyledIslandParentScrollbar,
 } from "../common/common.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from "react-hot-toast";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {
@@ -397,8 +397,8 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
                 dispatch(setSatGroupId(groupId))
             })
             .catch((error) => {
-                enqueueSnackbar(`Failed to get tracking state: ${error}`, {
-                    variant: 'error',
+                toast.error(`Failed to get tracking state: ${error}`, {
+                    position: 'top-right',
                 });
             });
 

@@ -21,7 +21,7 @@
 
 
 import React, {createContext, useCallback, useContext, useEffect, useState, useRef} from 'react';
-import { useSnackbar } from 'notistack';
+import toast from 'react-hot-toast';
 import { Manager } from "socket.io-client";
 import {setSocketForMiddleware} from '../waterfall/waterfall-middleware.jsx';
 
@@ -31,7 +31,6 @@ const SocketContext = createContext();
 // Provider component
 export const SocketProvider = ({ children }) => {
     const [socket, setSocket] = useState(null);
-    const { enqueueSnackbar } = useSnackbar();
     //const [collectStats, setCollectStats] = useState(import.meta.env.PROD);
     const [collectStats, setCollectStats] = useState(true);
     const [token, setToken] = useState(null);

@@ -29,7 +29,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import {useSocket} from "../common/socket.jsx";
-import {enqueueSnackbar} from "notistack";
+import toast from 'react-hot-toast';
 import {useDispatch, useSelector} from 'react-redux';
 import {
     deleteCameras,
@@ -71,11 +71,11 @@ export default function CameraTable() {
         dispatch(submitOrEditCamera({socket, formValues}))
             .unwrap()
             .then(() => {
-                enqueueSnackbar('Camera saved successfully', {variant: 'success'});
+                toast.success('Camera saved successfully', {position: 'bottom-center'});
                 setOpenAddDialog(false);
             })
             .catch((err) => {
-                enqueueSnackbar(err.message, {variant: 'error'});
+                toast.error(err.message, {position: 'top-right'});
             });
     }
 
@@ -83,11 +83,11 @@ export default function CameraTable() {
         dispatch(deleteCameras({socket, selectedIds: selected}))
             .unwrap()
             .then(() => {
-                enqueueSnackbar('Camera(s) deleted successfully', {variant: 'success'});
+                toast.success('Camera(s) deleted successfully', {position: 'bottom-center'});
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
-                enqueueSnackbar(err.message, {variant: 'error'});
+                toast.error(err.message, {position: 'top-right'});
             });
     };
 
