@@ -620,12 +620,12 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     />
                 )}
 
-                <SatelliteTrackSuggestion
-                    selectedSatelliteId={selectedSatelliteId}
-                    trackingSatelliteId={trackingSatelliteId}
-                    selectedSatellite={selectedSatellites.find((sat) => sat.norad_id === selectedSatelliteId)}
-                    handleSetTrackingOnBackend={handleSetTrackingOnBackend}
-                />
+                {/*<SatelliteTrackSuggestion*/}
+                {/*    selectedSatelliteId={selectedSatelliteId}*/}
+                {/*    trackingSatelliteId={trackingSatelliteId}*/}
+                {/*    selectedSatellite={selectedSatellites.find((sat) => sat.norad_id === selectedSatelliteId)}*/}
+                {/*    handleSetTrackingOnBackend={handleSetTrackingOnBackend}*/}
+                {/*/>*/}
             </MapContainer>
             <MapStatusBar>
                 <SimpleTruncatedHtml

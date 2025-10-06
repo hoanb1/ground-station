@@ -1,11 +1,13 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Marker } from 'react-leaflet';
-import { Button, Box } from '@mui/material';
+import { Button, Box, IconButton } from '@mui/material';
 import { ThemedLeafletTooltip } from "../common/common.jsx";
 import { styled } from '@mui/material/styles';
 import { Tooltip as LeafletTooltip } from 'react-leaflet';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
+import InfoIcon from '@mui/icons-material/Info';
+import { useNavigate } from 'react-router-dom';
 
 // Styled tooltip specifically for tracked satellites
 const TrackedSatelliteTooltip = styled(LeafletTooltip)(({ theme }) => ({
@@ -31,6 +33,8 @@ const SatelliteMarker = ({
                              opacity = 1,
                              handleSetTrackingOnBackend,
                          }) => {
+    const navigate = useNavigate();
+
     // Local state for the disabled property
     const [isDisabled, setIsDisabled] = useState(trackingSatelliteId === satellite.norad_id);
 
@@ -50,6 +54,11 @@ const SatelliteMarker = ({
         if (handleSetTrackingOnBackend) {
             handleSetTrackingOnBackend(satellite.norad_id);
         }
+    };
+
+    const handleNavigateToSatellite = (e) => {
+        e.stopPropagation();
+        navigate(`/satellite/${satellite.norad_id}`);
     };
 
     return (
@@ -72,22 +81,40 @@ const SatelliteMarker = ({
                         <span style={{}}>{isTracking && '◎ '}</span>
                         {satellite.name} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
                     </strong>
-                    {isSelected && !isTracking && (
-                        <Button
-                            size="small"
-                            variant="contained"
-                            color="primary"
-                            startIcon={<TrackChangesIcon />}
-                            onClick={handleSetTarget}
-                            sx={{
-                                mt: 0.5,
-                                fontSize: '0.7rem',
-                                py: 0.3,
-                                px: 1,
-                            }}
-                        >
-                            SET AS TARGET
-                        </Button>
+                    {isSelected && (
+                        <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
+                            {!isTracking && (
+                                <Button
+                                    size="small"
+                                    variant="contained"
+                                    color="primary"
+                                    startIcon={<TrackChangesIcon />}
+                                    onClick={handleSetTarget}
+                                    sx={{
+                                        fontSize: '0.7rem',
+                                        py: 0.3,
+                                        px: 1,
+                                        flex: 1,
+                                    }}
+                                >
+                                    SET AS TARGET
+                                </Button>
+                            )}
+                            <IconButton
+                                onClick={handleNavigateToSatellite}
+                                sx={{
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                    '&:hover': {
+                                        backgroundColor: 'rgba(255, 255, 255, 0.2)',
+                                    },
+                                    padding: '4px',
+                                }}
+                                size="small"
+                                title="View satellite details"
+                            >
+                                <InfoIcon fontSize="small" />
+                            </IconButton>
+                        </Box>
                     )}
                 </Box>
             </TooltipComponent>
