@@ -147,6 +147,9 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 handleSetMapZoomLevel(mapZoom);
                 localStorage.setItem(storageMapZoomValueKey, mapZoom);
             },
+            click: () => {
+                dispatch(setSelectedSatelliteId(null));
+            },
         });
         return null;
     }
@@ -403,6 +406,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                             markerEventHandlers={markerEventHandlers}
                             satelliteIcon={satelliteIcon2}
                             opacity={1}
+                            handleSetTrackingOnBackend={handleSetTrackingOnBackend}
                         />
                     );
                 } else {

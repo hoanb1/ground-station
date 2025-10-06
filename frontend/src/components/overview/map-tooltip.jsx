@@ -1,10 +1,11 @@
 
 import React, { useState, useEffect, useRef } from 'react';
 import { Marker } from 'react-leaflet';
-import { Button } from '@mui/material';
+import { Button, Box } from '@mui/material';
 import { ThemedLeafletTooltip } from "../common/common.jsx";
 import { styled } from '@mui/material/styles';
 import { Tooltip as LeafletTooltip } from 'react-leaflet';
+import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 
 // Styled tooltip specifically for tracked satellites
 const TrackedSatelliteTooltip = styled(LeafletTooltip)(({ theme }) => ({
@@ -28,6 +29,7 @@ const SatelliteMarker = ({
                              markerEventHandlers,
                              satelliteIcon,
                              opacity = 1,
+                             handleSetTrackingOnBackend,
                          }) => {
     // Local state for the disabled property
     const [isDisabled, setIsDisabled] = useState(trackingSatelliteId === satellite.norad_id);
@@ -38,9 +40,17 @@ const SatelliteMarker = ({
     }, [trackingSatelliteId, satellite.norad_id]);
 
     const isTracking = trackingSatelliteId === satellite.norad_id;
-    
+    const isSelected = selectedSatelliteId === satellite.norad_id;
+
     // Choose which tooltip component to use
     const TooltipComponent = isTracking ? TrackedSatelliteTooltip : ThemedLeafletTooltip;
+
+    const handleSetTarget = (e) => {
+        e.stopPropagation();
+        if (handleSetTrackingOnBackend) {
+            handleSetTrackingOnBackend(satellite.norad_id);
+        }
+    };
 
     return (
         <Marker
@@ -57,10 +67,29 @@ const SatelliteMarker = ({
                 className={"tooltip-satellite"}
                 interactive={true}
             >
-                <strong>
-                    <span style={{}}>{isTracking && '◎ '}</span>
-                    {satellite.name} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
-                </strong>
+                <Box sx={{ display: 'flex', flexDirection: 'column', gap: 0.5 }}>
+                    <strong>
+                        <span style={{}}>{isTracking && '◎ '}</span>
+                        {satellite.name} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
+                    </strong>
+                    {isSelected && !isTracking && (
+                        <Button
+                            size="small"
+                            variant="contained"
+                            color="primary"
+                            startIcon={<TrackChangesIcon />}
+                            onClick={handleSetTarget}
+                            sx={{
+                                mt: 0.5,
+                                fontSize: '0.7rem',
+                                py: 0.3,
+                                px: 1,
+                            }}
+                        >
+                            SET AS TARGET
+                        </Button>
+                    )}
+                </Box>
             </TooltipComponent>
         </Marker>
     );
