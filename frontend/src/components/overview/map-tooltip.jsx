@@ -81,25 +81,23 @@ const SatelliteMarker = ({
                         <span style={{}}>{isTracking && '◎ '}</span>
                         {satellite.name} - {parseInt(altitude) + " km, " + velocity.toFixed(2) + " km/s"}
                     </strong>
-                    {isSelected && (
+                    {isSelected && !isTracking && (
                         <Box sx={{ display: 'flex', gap: 0.5, alignItems: 'center' }}>
-                            {!isTracking && (
-                                <Button
-                                    size="small"
-                                    variant="contained"
-                                    color="primary"
-                                    startIcon={<TrackChangesIcon />}
-                                    onClick={handleSetTarget}
-                                    sx={{
-                                        fontSize: '0.7rem',
-                                        py: 0.3,
-                                        px: 1,
-                                        flex: 1,
-                                    }}
-                                >
-                                    SET AS TARGET
-                                </Button>
-                            )}
+                            <Button
+                                size="small"
+                                variant="contained"
+                                color="primary"
+                                startIcon={<TrackChangesIcon />}
+                                onClick={handleSetTarget}
+                                sx={{
+                                    fontSize: '0.7rem',
+                                    py: 0.3,
+                                    px: 1,
+                                    flex: 1,
+                                }}
+                            >
+                                SET AS TARGET
+                            </Button>
                             <IconButton
                                 onClick={handleNavigateToSatellite}
                                 sx={{

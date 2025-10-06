@@ -25,6 +25,7 @@ import {
     Polyline,
     Polygon,
     CircleMarker,
+    Rectangle,
     useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
@@ -309,17 +310,21 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
                 // Crosshairs for tracking satellite - always shown when satellite is being tracked
                 if (trackingSatelliteId === noradId) {
+                    // Create a custom square icon using DivIcon for pixel-perfect square
+                    const squareIcon = L.divIcon({
+                        className: 'custom-square-marker',
+                        html: '<div style="width: 30px; height: 30px; border: 1px solid rgba(255,255,255,0.69); box-sizing: border-box;">' +
+                            '</div>',
+                        iconSize: [30, 30],
+                        iconAnchor: [15, 15],
+                    });
+
                     currentPos.push(
                         <React.Fragment key={`crosshair-${noradId}`}>
-                            <CircleMarker
-                                center={[lat, lon]}
-                                radius={25}
-                                pathOptions={{
-                                    color: '#ffffff',
-                                    weight: 1,
-                                    fillOpacity: 0,
-                                    opacity: 1,
-                                }}
+                            <Marker
+                                position={[lat, lon]}
+                                icon={squareIcon}
+                                interactive={false}
                             />
                             {/* Horizontal line crossing the entire map */}
                             <Polyline
