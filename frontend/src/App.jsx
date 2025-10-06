@@ -165,7 +165,7 @@ export default function App(props) {
         {
             segment: 'waterfall',
             title: 'Waterfall view',
-            icon: <WavesIcon sx={{transform: 'rotate(90deg)'}}/>,
+            icon: <WavesIcon />,
         },
         {kind: 'divider'},
         {
