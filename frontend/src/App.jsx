@@ -29,9 +29,9 @@ import { AudioProvider } from "./components/dashboard/audio-provider.jsx";
 import { ToastProvider } from "./components/common/toast-provider.jsx";
 import { NAVIGATION } from "./config/navigation.jsx";
 import { BRANDING } from "./config/branding.jsx";
-import { socketEventHandlers } from "./hooks/socket-event-handlers.jsx";
-import { appAuthentication } from "./hooks/app-authentication.jsx";
-import { passFetching } from "./hooks/pass-fetching.jsx";
+import { useSocketEventHandlers } from "./hooks/socket-event-handlers.jsx";
+import { useAppAuthentication } from "./hooks/app-authentication.jsx";
+import { usePassFetching } from "./hooks/pass-fetching.jsx";
 
 export default function App() {
     const { socket } = useSocket();
@@ -39,10 +39,10 @@ export default function App() {
     const [loggedIn, setLoggedIn] = useState(true);
     const dashboardTheme = setupTheme();
 
-    const authentication = appAuthentication();
+    const authentication = useAppAuthentication();
 
-    socketEventHandlers(socket);
-    passFetching(socket);
+    useSocketEventHandlers(socket);
+    usePassFetching(socket);
 
     return (
         <AudioProvider>

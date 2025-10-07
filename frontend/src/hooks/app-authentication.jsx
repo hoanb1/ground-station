@@ -25,7 +25,7 @@ import { useAuth } from '../components/common/auth.jsx';
  * Custom hook to manage application authentication
  * @returns {Object} Authentication object for ReactRouterAppProvider
  */
-export const appAuthentication = () => {
+export const useAppAuthentication = () => {
     const { logOut } = useAuth();
 
     return useMemo(() => {

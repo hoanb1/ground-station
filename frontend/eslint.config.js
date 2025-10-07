@@ -5,7 +5,7 @@ import reactHooks from 'eslint-plugin-react-hooks'
 import reactRefresh from 'eslint-plugin-react-refresh'
 
 export default [
-    {ignores: ['dist', '**/*.test.js', '**/*.test.jsx', '**/*.spec.js', '**/*.spec.jsx',
+    {ignores: ['dist', 'coverage', '**/*.test.js', '**/*.test.jsx', '**/*.spec.js', '**/*.spec.jsx',
             'e2e/**', 'src/test/**', '**/__tests__/**', 'vitest.config.js', 'playwright.config.js',
             'vite.config.js', 'setup-tests.sh', 'playwright-report/**']},
     {

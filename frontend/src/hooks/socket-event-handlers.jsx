@@ -39,7 +39,7 @@ import { initializeAppData } from '../services/data-sync.js';
  * Custom hook to handle all socket event listeners
  * @param {Object} socket - Socket.IO connection instance
  */
-export const socketEventHandlers = (socket) => {
+export const useSocketEventHandlers = (socket) => {
     const dispatch = useDispatch();
 
     useEffect(() => {

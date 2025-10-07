@@ -27,7 +27,7 @@ import { fetchNextPasses } from '../components/target/target-slice.jsx';
  * Fetches satellite passes every hour for the selected satellite
  * @param {Object} socket - Socket.IO connection instance
  */
-export const passFetching = (socket) => {
+export const usePassFetching = (socket) => {
     const dispatch = useDispatch();
     const { satelliteId, nextPassesHours } = useSelector((state) => state.targetSatTrack);
 
