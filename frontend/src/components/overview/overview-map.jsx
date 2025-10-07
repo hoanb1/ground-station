@@ -313,7 +313,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     // Create a custom square icon using DivIcon for pixel-perfect square
                     const squareIcon = L.divIcon({
                         className: 'custom-square-marker',
-                        html: '<div style="width: 30px; height: 30px; border: 1px solid rgba(255,255,255,0.69); box-sizing: border-box;">' +
+                        html: '<div style="width: 30px; height: 30px; border: 2px solid rgba(255,255,255,0.5); box-sizing: border-box;">' +
                             '</div>',
                         iconSize: [30, 30],
                         iconAnchor: [15, 15],
@@ -336,6 +336,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                     color: '#ffffff',
                                     weight: 1,
                                     opacity: 1,
+                                    smoothFactor: 1,
                                     //dashArray: "2 2",
                                 }}
                             />
@@ -349,6 +350,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                     color: '#ffffff',
                                     weight: 1,
                                     opacity: 1,
+                                    smoothFactor: 1,
                                     //dashArray: "2 2",
                                 }}
                             />
@@ -368,7 +370,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                 fillColor: satelliteCoverageColor,
                                 weight: selectedSatelliteId === noradId ? 2 : 1,
                                 fill: true,
-                                opacity: 0.8,
+                                opacity: 1,
                                 fillOpacity: selectedSatelliteId === noradId ? 0.5 : 0.1,
                                 dashArray: '1 2',
                             }}
@@ -388,7 +390,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                     fillColor: satelliteCoverageColor,
                                     weight: 2,
                                     fill: true,
-                                    opacity: 0.9,
+                                    opacity: 1,
                                     fillOpacity: 0.5,
                                     dashArray: '',
                                 }}
