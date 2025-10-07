@@ -303,6 +303,8 @@ ground-station  # Starts the application
 
 ## Docker
 
+### Building from Source
+
 The repository includes a multi-stage `Dockerfile` that builds the React frontend and a Python environment with SDR libraries.
 
 ```bash
@@ -311,6 +313,30 @@ docker run --rm -p 7000:7000 ground-station
 ```
 
 Pass `--device` options (for example `--device /dev/bus/usb`) or `--network host` when hardware access or multicast discovery is required.
+
+### Using Pre-built Docker Images
+
+Pre-built multi-architecture Docker images are available for each release. For detailed instructions on using a specific release, see the [Releases page](https://github.com/sgoudelis/ground-station/releases).
+
+**Quick Start with Docker Image:**
+
+```bash
+# Pull the latest image
+docker pull ghcr.io/sgoudelis/ground-station:latest
+
+# Run the container with persistent data storage
+docker run --rm -p 7000:7000 -v ground-station-data:/app/backend/data ghcr.io/sgoudelis/ground-station:latest
+
+# For hardware access (USB devices, SDRs, etc.)
+docker run --rm -p 7000:7000 -v ground-station-data:/app/backend/data --device /dev/bus/usb ghcr.io/sgoudelis/ground-station:latest
+
+# For network discovery and multicast (recommended for rotator/rig control)
+docker run --rm --network host -v ground-station-data:/app/backend/data ghcr.io/sgoudelis/ground-station:latest
+```
+
+**Important:** The `-v ground-station-data:/app/backend/data` volume mount persists satellite database, TLE data, and configuration between container restarts.
+
+Access the web interface at `http://localhost:7000`.
 
 ## Contributing
 
