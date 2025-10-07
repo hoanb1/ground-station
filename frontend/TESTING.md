@@ -1,6 +1,125 @@
 # Frontend Testing Guide
 
-This document describes the testing infrastructure for the Ground Station frontend application.
+> **Quick Start**: New to testing? Jump to the [5-Minute Quick Start](#quick-start-5-minutes) to get running immediately!
+
+This document describes the complete testing infrastructure for the Ground Station frontend application.
+
+## Table of Contents
+
+- [Quick Start (5 Minutes)](#quick-start-5-minutes)
+- [Testing Stack](#testing-stack)
+- [Project Structure](#project-structure)
+- [Running Tests](#running-tests)
+- [Writing Tests](#writing-tests)
+- [Test Utilities](#test-utilities)
+- [Mocking](#mocking)
+- [Coverage](#coverage)
+- [Best Practices](#best-practices)
+- [Debugging Tests](#debugging-tests)
+- [CI/CD Integration](#cicd-integration)
+- [Troubleshooting](#troubleshooting)
+- [Resources](#resources)
+
+---
+
+## Quick Start (5 Minutes)
+
+Get up and running with tests in 5 minutes! 🚀
+
+### 1. Install Dependencies
+
+```bash
+cd frontend
+npm install
+```
+
+### 2. Install Playwright Browsers (First Time Only)
+
+```bash
+npx playwright install
+```
+
+### 3. Run Your First Tests
+
+**Unit Tests**
+
+```bash
+# Run all tests
+npm test
+
+# Watch mode (auto-rerun on file changes)
+npm test -- --watch
+
+# With UI (recommended for development)
+npm run test:ui
+```
+
+**E2E Tests**
+
+```bash
+# Make sure your dev server is running first
+npm run dev
+
+# In another terminal:
+npm run test:e2e
+
+# Or run with interactive UI
+npm run test:e2e:ui
+```
+
+### 4. Check Coverage
+
+```bash
+npm run test:coverage
+
+# Open the HTML report
+open coverage/index.html  # macOS
+xdg-open coverage/index.html  # Linux
+start coverage/index.html  # Windows
+```
+
+### 5. Writing Your First Test
+
+Create a test file next to your component:
+
+```jsx
+// src/components/MySatellite/__tests__/MySatellite.test.jsx
+import { describe, it, expect } from 'vitest';
+import { screen } from '@testing-library/react';
+import { renderWithProviders } from '../../../test/test-utils';
+import MySatellite from '../MySatellite';
+
+describe('MySatellite', () => {
+  it('displays satellite name', () => {
+    renderWithProviders(
+      <MySatellite name="ISS" />
+    );
+
+    expect(screen.getByText('ISS')).toBeInTheDocument();
+  });
+});
+```
+
+Run it:
+
+```bash
+npm test -- MySatellite.test.jsx
+```
+
+### Quick Reference
+
+| Command | Description |
+|---------|-------------|
+| `npm test` | Run unit tests |
+| `npm run test:ui` | Run tests with UI |
+| `npm run test:coverage` | Run with coverage |
+| `npm run test:e2e` | Run E2E tests |
+| `npm run test:e2e:ui` | Run E2E with UI |
+| `npm run test:e2e:debug` | Debug E2E tests |
+
+**Next**: Read the sections below for comprehensive testing documentation.
+
+---
 
 ## Testing Stack
 
@@ -67,12 +186,9 @@ npm run test:e2e -- e2e/satellite-tracking.spec.js
 npm run test:e2e -- --project=chromium
 npm run test:e2e -- --project=firefox
 npm run test:e2e -- --project=webkit
-```
 
-### Install Playwright Browsers (First Time)
-
-```bash
-npx playwright install
+# Run in headed mode (see the browser)
+npm run test:e2e -- --headed
 ```
 
 ## Writing Tests
@@ -101,6 +217,43 @@ describe('MyComponent', () => {
     await user.click(screen.getByRole('button'));
     expect(screen.getByText('Clicked')).toBeInTheDocument();
   });
+});
+```
+
+### Common Testing Patterns
+
+#### Testing Redux-Connected Components
+
+```jsx
+import { renderWithProviders } from '../../../test/test-utils';
+
+const { store } = renderWithProviders(<MyComponent />, {
+  preloadedState: {
+    satellites: {
+      selected: 'ISS',
+      list: [{ id: 1, name: 'ISS' }]
+    }
+  }
+});
+```
+
+#### Testing User Interactions
+
+```jsx
+import { userEvent } from '../../../test/test-utils';
+
+const user = userEvent.setup();
+await user.click(screen.getByRole('button'));
+await user.type(screen.getByLabelText('Search'), 'satellite');
+```
+
+#### Testing Async Operations
+
+```jsx
+import { waitFor } from '@testing-library/react';
+
+await waitFor(() => {
+  expect(screen.getByText('Loaded')).toBeInTheDocument();
 });
 ```
 
@@ -228,16 +381,21 @@ Current thresholds (configured in `vitest.config.js`):
 ### Vitest
 
 ```bash
+# Run with UI (recommended)
+npm run test:ui
+
 # Run with --inspect-brk flag
 node --inspect-brk ./node_modules/vitest/vitest.mjs run
 
 # Then open chrome://inspect in Chrome
 ```
 
+Then click on any test to see detailed execution.
+
 ### Playwright
 
 ```bash
-# Run in headed mode
+# Run in headed mode (see the browser)
 npm run test:e2e -- --headed
 
 # Run with Playwright Inspector
@@ -253,11 +411,11 @@ Tests run automatically on:
 - Push to `main` or `develop` branches
 - Pull requests to `main` or `develop`
 
-See `.github/workflows/frontend-tests.yml` for CI configuration.
+See `.github/workflows/tests.yml` for CI configuration.
 
 ## Troubleshooting
 
-### Tests Failing Locally
+### Tests Not Running
 
 1. Clear node_modules and reinstall:
    ```bash
@@ -267,7 +425,7 @@ See `.github/workflows/frontend-tests.yml` for CI configuration.
 
 2. Update Playwright browsers:
    ```bash
-   npx playwright install
+   npx playwright install --with-deps
    ```
 
 3. Check for stale mocks or test state
@@ -275,16 +433,18 @@ See `.github/workflows/frontend-tests.yml` for CI configuration.
 ### E2E Tests Timeout
 
 - Increase timeout in `playwright.config.js`
-- Check if backend is running
+- Check if backend is running (`npm run dev` in another terminal)
 - Check network conditions
 - Verify selectors are correct
 
 ### React 19 Compatibility
 
 If you encounter issues with React 19:
+- This is normal during the RC phase
+- Tests should still work correctly
 - Ensure all testing libraries are up to date
 - Check for console warnings about deprecated features
-- Review React Testing Library compatibility
+- Update @testing-library/react when React 19 stable is released
 
 ## Resources
 
@@ -292,3 +452,9 @@ If you encounter issues with React 19:
 - [React Testing Library](https://testing-library.com/react)
 - [Playwright Documentation](https://playwright.dev/)
 - [Testing Best Practices](https://kentcdodds.com/blog/common-mistakes-with-react-testing-library)
+
+---
+
+**Happy Testing!** 🧪✨
+
+For questions or issues with testing setup, check out example tests in `src/components/common/__tests__/` and `e2e/`.
