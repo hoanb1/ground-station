@@ -96,11 +96,11 @@ export default function AntennaRotatorTable() {
         dispatch(submitOrEditRotator({socket, formValues}))
             .unwrap()
             .then(() => {
-                toast.success('Rotator saved successfully', {position: 'bottom-center'});
+                toast.success('Rotator saved successfully');
                 setOpenAddDialog(false);
             })
             .catch((err) => {
-                toast.error(err.message, {position: 'top-right'});
+                toast.error(err.message);
             });
     }
 
@@ -108,11 +108,11 @@ export default function AntennaRotatorTable() {
         dispatch(deleteRotators({socket, selectedIds: selected}))
             .unwrap()
             .then(() => {
-                toast.success('Rotator(s) deleted successfully', {position: 'bottom-center'});
+                toast.success('Rotator(s) deleted successfully');
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
-                toast.error(err.message, {position: 'top-right'});
+                toast.error(err.message);
             });
     };
 

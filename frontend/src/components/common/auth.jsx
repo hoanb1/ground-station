@@ -46,7 +46,6 @@ export const AuthProvider = ({ children }) => {
                 setSession({ user: {...response.user, token: response.token} });
                 handleTokenChange(response.token);
                 toast.success('Logged in successfully', {
-                    position: 'bottom-center',
                     duration: 5000,
                 })
                 resolve();

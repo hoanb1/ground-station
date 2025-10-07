@@ -37,11 +37,11 @@ export const fetchLocationForUserId = createAsyncThunk(
                         if (response.data) {
                             resolve(response.data);
                         } else {
-                            toast('No location found in the backend, please set one', {position: 'bottom-center', icon: 'ℹ️'});
+                            toast('No location found in the backend, please set one', {icon: 'ℹ️'});
                             resolve(null); // or resolve({}) if no data
                         }
                     } else {
-                        toast.error('Failed to get location from backend', {position: 'top-right'});
+                        toast.error('Failed to get location from backend');
                         reject(rejectWithValue('Failed to get location'));
                     }
                 }
@@ -58,10 +58,10 @@ export const storeLocation = createAsyncThunk(
             socket.emit('data_submission', 'submit-location-for-user-id',
                 {...location, alt: altitude, name: "home", userid: null, id: locationId}, (response) => {
                     if (response['success']) {
-                        toast.success('Location set successfully', {position: 'bottom-center'});
+                        toast.success('Location set successfully');
                         resolve(response.data);
                     } else {
-                        toast.error('Failed to set location', {position: 'top-right'});
+                        toast.error('Failed to set location');
                         reject(rejectWithValue('Failed to set location'));
                     }
                 });

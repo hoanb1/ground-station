@@ -138,7 +138,6 @@ const SatelliteInfo = () => {
                     .catch((error) => {
                         console.error(`Failed to fetch satellite with NORAD ID ${noradId}:`, error);
                         toast.error(`Failed to load satellite data: ${error}`, {
-                            position: 'top-right',
                             duration: 5000,
                         });
 
@@ -430,14 +429,10 @@ const SatelliteInfo = () => {
                                             noradId: clickedSatellite.norad_id
                                         })).unwrap();
                                         navigate('/satellites/satellites');
-                                        toast.success('Satellite deleted successfully', {
-                                            position: 'bottom-center'
-                                        });
+                                        toast.success('Satellite deleted successfully');
                                     } catch (error) {
                                         console.error('Failed to delete satellite:', error);
-                                        toast.error(`Failed to delete satellite: ${error}`, {
-                                            position: 'top-right'
-                                        });
+                                        toast.error(`Failed to delete satellite: ${error}`);
                                     }
                                     setDeleteSatelliteConfirmOpen(false);
                                 }}

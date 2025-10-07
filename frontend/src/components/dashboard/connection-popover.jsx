@@ -104,7 +104,7 @@ function ConnectionStatus() {
                         }
                     }}
                 >
-                    <LanIcon fontSize="small" />
+                    <LanIcon />
                 </IconButton>
             </Tooltip>
             <Popover

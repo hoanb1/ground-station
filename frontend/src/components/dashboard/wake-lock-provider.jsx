@@ -61,13 +61,11 @@ export const WakeLockProvider = ({ children }) => {
             if (prev.size === 0 && newSet.size === 1 && !hasManualRequest) {
                 if (wakeLock.isSupported) {
                     toast(`Screen wake lock activated by ${componentName}`, {
-                        position: 'bottom-center',
                         icon: 'ℹ️',
                         duration: 3000,
                     });
                 } else {
                     toast('Wake lock not supported on this device', {
-                        position: 'top-right',
                         icon: '⚠️',
                         duration: 5000,
                     });
@@ -86,7 +84,6 @@ export const WakeLockProvider = ({ children }) => {
             // Show notification when last wake lock is released
             if (prev.size > 0 && newSet.size === 0 && !hasManualRequest) {
                 toast(`Screen wake lock released by ${componentName}`, {
-                    position: 'bottom-center',
                     icon: 'ℹ️',
                     duration: 2000,
                 });
@@ -99,7 +96,6 @@ export const WakeLockProvider = ({ children }) => {
     const requestManualWakeLock = useCallback(async () => {
         if (!wakeLock.isSupported) {
             toast('Wake lock not supported on this device', {
-                position: 'top-right',
                 icon: '⚠️',
                 duration: 5000,
             });
@@ -108,7 +104,6 @@ export const WakeLockProvider = ({ children }) => {
 
         setHasManualRequest(true);
         toast.success('Screen wake lock activated', {
-            position: 'bottom-center',
             duration: 2000,
         });
         return true;
@@ -117,7 +112,6 @@ export const WakeLockProvider = ({ children }) => {
     const releaseManualWakeLock = useCallback(() => {
         setHasManualRequest(false);
         toast('Manual wake lock released', {
-            position: 'bottom-center',
             icon: 'ℹ️',
             duration: 2000,
         });
@@ -127,7 +121,6 @@ export const WakeLockProvider = ({ children }) => {
         setWakeLockRequests(new Set());
         setHasManualRequest(false);
         toast('Screen wake lock released', {
-            position: 'bottom-center',
             icon: 'ℹ️',
             duration: 2000,
         });

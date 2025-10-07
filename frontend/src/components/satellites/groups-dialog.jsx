@@ -44,7 +44,6 @@ export function AutocompleteAsync({setSelectedSatelliteCallback}) {
                 } else {
                     console.error(response.error);
                     toast.error(`Error searching for satellites: ${response.error}`, {
-                        position: 'top-right',
                         duration: 5000,
                     });
                     setOptions([]);
@@ -196,12 +195,10 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
                 handleRowsCallback(response.data)
                 handleDialogOpenCallback(false);
                 toast.success(successMessage, {
-                    position: 'bottom-center',
                     duration: 5000,
                 });
             } else {
                 toast.error("Error adding satellite group", {
-                    position: 'top-right',
                     duration: 5000,
                 });
             }

@@ -54,7 +54,7 @@ export const getWeatherData = createAsyncThunk(
         try {
             return await fetchWeatherByCoordinates(latitude, longitude, apiKey);
         } catch (error) {
-            toast.error('Failed to fetch weather data', {position: 'top-right'});
+            toast.error('Failed to fetch weather data');
             return rejectWithValue(error.message);
         }
     }

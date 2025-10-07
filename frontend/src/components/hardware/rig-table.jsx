@@ -113,19 +113,19 @@ export default function RigTable() {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success('Rig edited successfully', {position: 'bottom-center', duration: 5000});
+                    toast.success('Rig edited successfully', {duration: 5000});
                 })
                 .catch((error) => {
-                    toast.error('Error editing rig', {position: 'top-right', duration: 5000})
+                    toast.error('Error editing rig', {duration: 5000})
                 });
         } else {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success('Rig added successfully', {position: 'bottom-center', duration: 5000});
+                    toast.success('Rig added successfully', {duration: 5000});
                 })
                 .catch((error) => {
-                    toast.error(`Error adding rig: ${error}`, {position: 'top-right', duration: 5000})
+                    toast.error(`Error adding rig: ${error}`, {duration: 5000})
                 });
         }
         dispatch(setOpenAddDialog(false));
@@ -137,10 +137,10 @@ export default function RigTable() {
             .then(() => {
                 dispatch(setSelected([]));
                 dispatch(setOpenDeleteConfirm(false));
-                toast.success('Rig(s) deleted successfully', {position: 'bottom-center', duration: 5000});
+                toast.success('Rig(s) deleted successfully', {duration: 5000});
             })
             .catch((error) => {
-                toast.error('Error deleting rig(s)', {position: 'top-right', duration: 5000});
+                toast.error('Error deleting rig(s)', {duration: 5000});
             });
     }
 

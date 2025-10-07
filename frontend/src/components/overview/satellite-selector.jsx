@@ -78,7 +78,7 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
                 }
             })
             .catch((err) => {
-                toast.error("Failed to load satellite groups: " + err.message, {position: 'top-right'})
+                toast.error("Failed to load satellite groups: " + err.message)
             });
 
         return () => {

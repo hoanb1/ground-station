@@ -101,9 +101,7 @@ const RotatorControl = React.memo(function RotatorControl() {
 
             })
             .catch((error) => {
-                toast.error(`Failed to start tracking with the rotator: ${error.message}`, {
-                    position: "top-right"
-                });
+                toast.error(`Failed to start tracking with the rotator: ${error.message}`);
             });
     };
 

@@ -71,11 +71,11 @@ export default function CameraTable() {
         dispatch(submitOrEditCamera({socket, formValues}))
             .unwrap()
             .then(() => {
-                toast.success('Camera saved successfully', {position: 'bottom-center'});
+                toast.success('Camera saved successfully');
                 setOpenAddDialog(false);
             })
             .catch((err) => {
-                toast.error(err.message, {position: 'top-right'});
+                toast.error(err.message);
             });
     }
 
@@ -83,11 +83,11 @@ export default function CameraTable() {
         dispatch(deleteCameras({socket, selectedIds: selected}))
             .unwrap()
             .then(() => {
-                toast.success('Camera(s) deleted successfully', {position: 'bottom-center'});
+                toast.success('Camera(s) deleted successfully');
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
-                toast.error(err.message, {position: 'top-right'});
+                toast.error(err.message);
             });
     };
 

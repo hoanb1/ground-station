@@ -22,7 +22,6 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
                 } else {
                     console.error(response.error);
                     toast.error(`Error searching for satellites: ${response.error}`, {
-                        position: 'top-right',
                         duration: 5000,
                     });
                     setOptions([]);

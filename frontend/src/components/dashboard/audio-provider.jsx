@@ -58,7 +58,7 @@ export const AudioProvider = ({ children }) => {
 
             audioWorkerRef.current.onerror = (error) => {
                 console.error('Audio worker error:', error);
-                toast.error('Audio worker failed', { position: 'top-right' });
+                toast.error('Audio worker failed');
             };
 
             console.log('Audio worker initialized from audio-worker.js');
@@ -104,7 +104,7 @@ export const AudioProvider = ({ children }) => {
 
         } catch (error) {
             console.error('Failed to initialize audio:', error);
-            toast.error(`Failed to initialize audio: ${error.message}`, { position: 'top-right' });
+            toast.error(`Failed to initialize audio: ${error.message}`);
         }
     }, [volume, initializeWorker]);
 

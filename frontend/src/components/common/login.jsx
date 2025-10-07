@@ -66,12 +66,12 @@ const LoginForm = ({ handleSignedInCallback }) => {
 
             socket.on("error", (error) => {
                 setLoading(true);
-                toast.error('Connection error: ' + error, { position: 'top-right' });
+                toast.error('Connection error: ' + error);
             });
 
             socket.on('disconnect', () => {
                 setLoading(true);
-                toast('Disconnected from server', { position: 'top-right', icon: '⚠️' });
+                toast('Disconnected from server', { icon: '⚠️' });
             });
         }
         return () => {

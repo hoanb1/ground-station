@@ -89,9 +89,7 @@ export const createExternalWorker = () => {
         return new Worker(new URL('./waterfall-worker.js', import.meta.url));
     }
     catch (error) {
-        toast.error(`Failed to create waterfall worker: ${error.message}`, {
-            position: 'top-right'
-        });
+        toast.error(`Failed to create waterfall worker: ${error.message}`);
     }
 };
 

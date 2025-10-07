@@ -108,13 +108,11 @@ export default function SourcesTable() {
             .unwrap()
             .then((data) => {
                 toast.success(data.message, {
-                    position: 'bottom-center',
                     duration: 4000,
                 })
             })
             .catch((error) => {
                 toast.error("Failed to delete TLE sources: " + error, {
-                    position: 'top-right',
                     duration: 5000,
                 })
             })
@@ -127,28 +125,22 @@ export default function SourcesTable() {
                 .unwrap()
                 .then(() => {
                     toast.success("TLE source added successfully", {
-                        position: 'bottom-center',
                         duration: 4000,
                     })
                 })
                 .catch((error) => {
-                    toast.error("Failed to add TLE source: " + error, {
-                        position: 'top-right',
-                    })
+                    toast.error("Failed to add TLE source: " + error)
                 });
         } else {
             dispatch(submitOrEditTLESource({socket, formValues}))
                 .unwrap()
                 .then(() => {
                     toast.success("TLE source updated successfully", {
-                        position: 'bottom-center',
                         duration: 4000,
                     })
                 })
                 .catch((error) => {
-                    toast.error("Failed to update TLE source: " + error, {
-                        position: 'top-right',
-                    })
+                    toast.error("Failed to update TLE source: " + error)
                 });
         }
         dispatch(setOpenAddDialog(false));

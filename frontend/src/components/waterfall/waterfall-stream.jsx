@@ -75,7 +75,7 @@ const WaterfallStream = ({ workerRef, targetFPSRef }) => {
             dispatch(setErrorMessage(error.message));
             dispatch(setErrorDialogOpen(true));
             dispatch(setStartStreamingLoading(false));
-            toast.error(`Failed to configure SDR: ${error.message}`, { position: 'top-right' });
+            toast.error(`Failed to configure SDR: ${error.message}`);
         });
 
         socket.on('sdr-error', (error) => {

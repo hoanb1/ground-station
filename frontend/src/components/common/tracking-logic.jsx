@@ -60,7 +60,6 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
     } catch (error) {
         console.error(`Error calculating satellite ${noradId} position and velocity: ${error.message}`);
         toast.error(`Error calculating satellite ${noradId} position and velocity: ${error.message}`, {
-            position: "top-right",
             duration: 5000,
         });
 
@@ -267,7 +266,6 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
     } catch (error) {
         console.error("Error computing satellite paths:", error);
         toast.error("Error computing satellite paths: " + error.message, {
-            position: "top-right",
             duration: 5000,
         });
         return { past: [], future: [] };
@@ -496,7 +494,6 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
     } catch (error) {
         console.error("Error calculating satellite azimuth and elevation:", error);
         toast.error("Error calculating satellite tracking data: " + error.message, {
-            position: "top-right",
             duration: 5000,
         });
         return null;

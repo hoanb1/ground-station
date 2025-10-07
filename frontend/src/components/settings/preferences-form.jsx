@@ -73,10 +73,10 @@ const PreferencesForm = () => {
         dispatch(updatePreferences({ socket }))
             .unwrap()
             .then(() => {
-                toast.success('Preferences saved successfully', {position: 'bottom-center'});
+                toast.success('Preferences saved successfully');
             })
             .catch(() => {
-                toast.error('Failed to save preferences', {position: 'top-right'});
+                toast.error('Failed to save preferences');
             });
     };
 

@@ -125,10 +125,10 @@ const GroupsTable = () => {
             .unwrap()
             .then(()=>{
                 dispatch(setDeleteConfirmDialogOpen(false));
-                toast.success('Group(s) deleted successfully', { position: 'bottom-center' });
+                toast.success('Group(s) deleted successfully');
             })
             .catch((err) => {
-                toast.error('Failed to delete group(s)', { position: 'top-right' });
+                toast.error('Failed to delete group(s)');
             });
     };
 

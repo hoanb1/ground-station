@@ -234,11 +234,11 @@ export default function SDRsPage() {
         dispatch(submitOrEditSDR({socket, formValues}))
             .unwrap()
             .then(() => {
-                toast.success('SDR saved successfully', {position: 'bottom-center'});
+                toast.success('SDR saved successfully');
                 dispatch(setOpenAddDialog(false));
             })
             .catch((err) => {
-                toast.error(err, {position: 'top-right'});
+                toast.error(err);
             });
     }
 
@@ -246,11 +246,11 @@ export default function SDRsPage() {
         dispatch(deleteSDRs({ socket, selectedIds: selected }))
             .unwrap()
             .then(() => {
-                toast.success('SDR(s) deleted successfully', {position: 'bottom-center'});
+                toast.success('SDR(s) deleted successfully');
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
-                toast.error(err, {position: 'top-right'});
+                toast.error(err);
             });
     };
 

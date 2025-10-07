@@ -119,9 +119,7 @@ const RigControl = React.memo(function RigControl() {
 
             })
             .catch((error) => {
-                toast.error(`Failed to start tracking: ${error.message}`, {
-                    position: "top-right"
-                });
+                toast.error(`Failed to start tracking: ${error.message}`);
             });
     };
 

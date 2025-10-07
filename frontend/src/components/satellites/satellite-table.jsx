@@ -229,14 +229,10 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             dispatch(fetchSatellites({socket, satGroupId: groupId}))
                 .unwrap()
                 .then((data) => {
-                    toast.success(`Successfully loaded ${data.length} satellites`, {
-                        position: 'bottom-center'
-                    });
+                    toast.success(`Successfully loaded ${data.length} satellites`);
                 })
                 .catch((err) => {
-                    toast.error("Failed to load satellites: " + err.message, {
-                        position: 'top-right'
-                    })
+                    toast.error("Failed to load satellites: " + err.message)
                 });
         }
     };

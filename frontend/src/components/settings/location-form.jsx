@@ -225,7 +225,7 @@ const LocationPage = () => {
     const getCurrentLocation = async () => {
         dispatch(setLocationLoading(true));
         if (!navigator.geolocation) {
-            toast('Geolocation is not supported by your browser.', {position: 'top-right', icon: '⚠️'});
+            toast('Geolocation is not supported by your browser.', {icon: '⚠️'});
             return;
         }
 
@@ -256,10 +256,10 @@ const LocationPage = () => {
                 reCenterMap(latitude, longitude);
                 dispatch(setLocationLoading(false));
 
-                toast.success(`Location retrieved`, {position: 'bottom-center'});
+                toast.success(`Location retrieved`);
             },
             (error) => {
-                toast.error('Failed to get your current location', {position: 'top-right'});
+                toast.error('Failed to get your current location');
                 dispatch(setLocationLoading(false));
             },
             {
@@ -410,7 +410,7 @@ const LocationPage = () => {
                                             try {
                                                 await getCurrentLocation();
                                             } catch (error) {
-                                                toast.error('Failed to get current location', {position: 'top-right'});
+                                                toast.error('Failed to get current location');
                                             }
                                         }}
                                     >
@@ -423,7 +423,7 @@ const LocationPage = () => {
                                         onClick={() => {
                                             // Placeholder for export functionality
                                             navigator.clipboard.writeText(`${location.lat?.toFixed(6)}, ${location.lon?.toFixed(6)}`);
-                                            toast.success('Coordinates copied to clipboard', {position: 'bottom-center'});
+                                            toast.success('Coordinates copied to clipboard');
                                         }}
                                     >
                                         Copy Coordinates

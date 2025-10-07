@@ -397,9 +397,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
                 dispatch(setSatGroupId(groupId))
             })
             .catch((error) => {
-                toast.error(`Failed to get tracking state: ${error}`, {
-                    position: 'top-right',
-                });
+                toast.error(`Failed to get tracking state: ${error}`);
             });
 
         return () => {

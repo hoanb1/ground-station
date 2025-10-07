@@ -105,12 +105,11 @@ const UsersTable = () => {
             .unwrap()
             .then(() => {
                 toast.success(
-                    formValues.id ? 'User edited successfully' : 'User added successfully',
-                    {position: 'bottom-center'}
+                    formValues.id ? 'User edited successfully' : 'User added successfully'
                 );
             })
             .catch((err) => {
-                toast.error(err.message, {position: 'top-right'});
+                toast.error(err.message);
             });
     }
 
@@ -124,14 +123,14 @@ const UsersTable = () => {
             dispatch(deleteUsers({ socket, selectedIds: selected }))
                 .unwrap()
                 .then(()=>{
-                    toast.success('User(s) deleted successfully', {position: 'bottom-center'});
+                    toast.success('User(s) deleted successfully');
                 })
                 .catch((err) => {
-                    toast.error('Failed to delete users(s)', {position: 'top-right'});
+                    toast.error('Failed to delete users(s)');
                 });
 
         } catch (err) {
-            toast.error('Failed to delete user(s)', {position: 'top-right'});
+            toast.error('Failed to delete user(s)');
         }
     };
 
