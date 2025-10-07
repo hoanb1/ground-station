@@ -308,12 +308,12 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
                 const isVisible = isSatelliteVisible(satellite['tle1'], satellite['tle2'], now, location);
 
-                // Crosshairs for tracking satellite - always shown when satellite is being tracked
+                // Crosshairs for tracking satellite - always shown when the satellite is being tracked
                 if (trackingSatelliteId === noradId) {
                     // Create a custom square icon using DivIcon for pixel-perfect square
                     const squareIcon = L.divIcon({
                         className: 'custom-square-marker',
-                        html: '<div style="width: 30px; height: 30px; border: 2px solid rgba(255,255,255,0.5); box-sizing: border-box;">' +
+                        html: '<div style="width: 30px; height: 30px; border: 2px solid rgba(255,255,255,0.6); box-sizing: border-box;">' +
                             '</div>',
                         iconSize: [30, 30],
                         iconAnchor: [15, 15],
