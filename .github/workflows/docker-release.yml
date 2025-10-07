@@ -84,14 +84,18 @@ jobs:
           provenance: false
           platforms: linux/amd64
           push: true
-          tags: ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64
+          tags: |
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.full_version }}-amd64
+            ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest-amd64
           build-args: |
             GS_ENVIRONMENT=${{ needs.extract-version.outputs.env_type }}
             GIT_COMMIT=${{ needs.extract-version.outputs.git_sha }}
             BUILD_DATE=${{ needs.extract-version.outputs.build_date }}
             BUILD_VERSION=${{ needs.extract-version.outputs.full_version }}
-          cache-from: type=gha,scope=amd64
-          cache-to: type=gha,mode=max,scope=amd64
+          cache-from: |
+            type=registry,ref=${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest-amd64
+            type=registry,ref=${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:latest
+          cache-to: type=inline
 
   # build-arm64:
   #   needs: extract-version
