@@ -416,6 +416,11 @@ const SatelliteInfo = () => {
                         <DialogTitle>Delete Satellite</DialogTitle>
                         <DialogContent>
                             Are you sure you want to delete this satellite? This action cannot be undone.
+                            {clickedSatellite.transmitters && clickedSatellite.transmitters.length > 0 && (
+                                <Typography sx={{ mt: 2, color: 'warning.main' }}>
+                                    Note: This will also delete {clickedSatellite.transmitters.length} associated transmitter{clickedSatellite.transmitters.length !== 1 ? 's' : ''}.
+                                </Typography>
+                            )}
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>Cancel</Button>
