@@ -25,7 +25,7 @@ export const ToastProvider = ({ children }) => {
             <Toaster
                 position="top-right"
                 toastOptions={{
-                    duration: 4000,
+                    duration: 5000,
                 }}
             >
                 {(t) => (
@@ -38,7 +38,7 @@ export const ToastProvider = ({ children }) => {
                             width: '100%',
                             backgroundColor: t.type === 'success' ? '#1e3a1e' : t.type === 'error' ? '#3a1e1e' : '#2a2a2a',
                             boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
-                            borderRadius: '8px',
+                            borderRadius: '4px',
                             pointerEvents: 'auto',
                             display: 'flex',
                             border: t.type === 'success' ? '1px solid #4caf50' : t.type === 'error' ? '1px solid #f44336' : '1px solid #404040',
@@ -71,7 +71,7 @@ export const ToastProvider = ({ children }) => {
                                     width: '100%',
                                     border: 'none',
                                     background: 'transparent',
-                                    borderRadius: '0 8px 8px 0',
+                                    borderRadius: '0 4px 4px 0',
                                     padding: '16px',
                                     display: 'flex',
                                     alignItems: 'center',

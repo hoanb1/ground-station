@@ -1,5 +1,6 @@
 import React, {useEffect} from 'react';
 import {useDispatch, useSelector} from 'react-redux';
+import {useNavigate} from 'react-router';
 import {
     fetchSatelliteData
 } from './overview-slice.jsx';
@@ -10,13 +11,15 @@ import SpeedIcon from '@mui/icons-material/Speed';
 import UpdateIcon from '@mui/icons-material/Update';
 import SatelliteIcon from '@mui/icons-material/Satellite';
 import MyLocationIcon from '@mui/icons-material/MyLocation';
+import InfoOutlinedIcon from '@mui/icons-material/InfoOutlined';
 import {
     Box,
     Typography,
     Chip,
     Button,
     CircularProgress,
-    Divider
+    Divider,
+    IconButton
 } from '@mui/material';
 import {
     betterDateTimes,
@@ -41,6 +44,7 @@ import PublicIcon from "@mui/icons-material/Public";
 
 const OverviewSatelliteInfoCard = () => {
     const dispatch = useDispatch();
+    const navigate = useNavigate();
     const {socket} = useSocket();
     const {
         satelliteData,
@@ -356,29 +360,48 @@ const OverviewSatelliteInfoCard = () => {
                         background: 'linear-gradient(180deg, rgba(10, 10, 10, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%)',
                         backdropFilter: 'blur(10px)'
                     }}>
-                        <Button
-                            disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
-                            variant="contained"
-                            color="primary"
-                            onClick={handleSetTrackingOnBackend}
-                            fullWidth
-                            sx={{
-                                py: 1.5,
-                                fontWeight: 'bold',
-                                borderRadius: 2,
-                                background: trackingSatelliteId === selectedSatelliteId
-                                    ? 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)'
-                                    : 'linear-gradient(45deg, #2196f3 30%, #21cbf3 90%)',
-                                boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
-                                '&:hover': {
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <Button
+                                disabled={!selectedSatelliteId || trackingSatelliteId === selectedSatelliteId}
+                                variant="contained"
+                                color="primary"
+                                onClick={handleSetTrackingOnBackend}
+                                sx={{
+                                    flex: 1,
+                                    py: 1.5,
+                                    fontWeight: 'bold',
+                                    borderRadius: 2,
                                     background: trackingSatelliteId === selectedSatelliteId
                                         ? 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)'
-                                        : 'linear-gradient(45deg, #1976d2 30%, #1e88e5 90%)',
-                                }
-                            }}
-                        >
-                            {trackingSatelliteId === selectedSatelliteId ? "CURRENTLY TARGETED" : "SET AS TARGET"}
-                        </Button>
+                                        : 'linear-gradient(45deg, #2196f3 30%, #21cbf3 90%)',
+                                    boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
+                                    '&:hover': {
+                                        background: trackingSatelliteId === selectedSatelliteId
+                                            ? 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)'
+                                            : 'linear-gradient(45deg, #1976d2 30%, #1e88e5 90%)',
+                                    }
+                                }}
+                            >
+                                {trackingSatelliteId === selectedSatelliteId ? "CURRENTLY TARGETED" : "SET AS TARGET"}
+                            </Button>
+                            <IconButton
+                                disabled={!selectedSatelliteId}
+                                onClick={() => navigate(`/satellite/${selectedSatelliteId}`)}
+                                sx={{
+                                    borderRadius: 2,
+                                    bgcolor: 'rgba(255, 255, 255, 0.05)',
+                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    '&:hover': {
+                                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                    },
+                                    '&:disabled': {
+                                        opacity: 0.3,
+                                    }
+                                }}
+                            >
+                                <InfoOutlinedIcon />
+                            </IconButton>
+                        </Box>
                     </Box>
                 </>
             )}

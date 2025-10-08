@@ -125,11 +125,11 @@ export const MapStatusBar = styled(Paper)(({ theme }) => ({
     height: '30px',
     padding: '4px 8px',
     ...theme.typography.body2,
-    //position: 'absolute',
+    position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
     borderTop: '1px solid #494949',
     zIndex: 450,
-    //bottom: -1,
+    bottom: -1,
     textAlign: 'left',
     fontWeight: 'normal',
 }));
