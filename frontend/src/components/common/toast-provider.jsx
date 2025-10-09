@@ -27,6 +27,7 @@ export const ToastProvider = ({ children }) => {
                 toastOptions={{
                     duration: 4000,
                 }}
+                pauseWhenPageIsHidden={true}
             >
                 {(t) => (
                     <div
