@@ -95,14 +95,14 @@ RUN pip install --no-cache-dir -r requirements.txt
 
 # compile SoapySDR
 WORKDIR /src
-RUN git clone https://github.com/pothosware/SoapySDR.git && \
-    cd SoapySDR && \
-    mkdir build && \
-    cd build && \
-    cmake .. && \
-    make -j`nproc` && \
-    sudo make install -j`nproc` && \
-    sudo ldconfig
+RUN git clone https://github.com/pothosware/SoapySDR.git
+WORKDIR SoapySDR
+RUN mkdir build
+WORKDIR build
+RUN cmake ..
+RUN make -j`nproc`
+RUN sudo make install -j`nproc`
+RUN sudo ldconfig
 
 # compile SoapySDRRemote
 WORKDIR /src
