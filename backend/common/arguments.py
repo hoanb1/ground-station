@@ -15,7 +15,6 @@
 
 
 import argparse
-import os
 
 parser = argparse.ArgumentParser(description="Start the Ground Station app with custom arguments.")
 parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to run the server on")
@@ -51,19 +50,4 @@ parser.add_argument(
     help="Run the SoapySDR server discovery once on startup",
 )
 
-# Only parse arguments if we're not in an alembic context
-if os.environ.get("ALEMBIC_CONTEXT"):
-    # Create a namespace with default values for alembic context
-    arguments = argparse.Namespace(
-        host="0.0.0.0",
-        port=5000,
-        db="gs.db",
-        log_level="INFO",
-        log_config="logconfig.yaml",
-        secret_key="YOUR_RANDOM_SECRET_KEY",
-        track_interval=2,
-        enable_soapy_discovery=False,
-        runonce_soapy_discovery=True,
-    )
-else:
-    arguments = parser.parse_args()
+arguments = parser.parse_args()

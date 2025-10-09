@@ -15,6 +15,7 @@ from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
 from db import engine  # Explicit import for type checker
+from db.models import Base
 from demodulators.webaudioconsumer import WebAudioConsumer
 from demodulators.webaudioproducer import WebAudioProducer
 from sdr.sdrprocessmanager import sdr_process_manager
@@ -140,7 +141,7 @@ async def serve_spa(request: Request, full_path: str):
 
 
 async def init_db():
-    """Initialize database and run migrations."""
+    """Create database tables."""
     global _needs_initial_sync
 
     logger.info("Initializing database...")
@@ -158,23 +159,9 @@ async def init_db():
         # Database doesn't exist or is empty
         database_existed = False
 
-    # # Run Alembic migrations to ensure schema is up to date
-    # logger.info("Running database migrations...")
-    # try:
-    #     import concurrent.futures
-    #
-    #     from db.migrations import run_migrations
-    #
-    #     # Run migrations in a thread pool to avoid event loop conflicts
-    #     loop = asyncio.get_event_loop()
-    #     with concurrent.futures.ThreadPoolExecutor() as executor:
-    #         await loop.run_in_executor(executor, run_migrations)
-    #
-    #     logger.info("Database migrations completed successfully")
-    # except Exception as e:
-    #     logger.error(f"Error running database migrations: {e}")
-    #     logger.exception(e)
-    #     raise
+    # Create all tables
+    async with engine.begin() as conn:
+        await conn.run_sync(Base.metadata.create_all)
 
     # If database didn't exist before, populate with initial data
     if not database_existed:
