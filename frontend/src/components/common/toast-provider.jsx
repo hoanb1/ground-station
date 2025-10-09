@@ -43,6 +43,11 @@ export const ToastProvider = ({ children }) => {
                             display: 'flex',
                             border: t.type === 'success' ? '1px solid #4caf50' : t.type === 'error' ? '1px solid #f44336' : '1px solid #404040',
                         }}
+                        onAnimationEnd={() => {
+                            if (!t.visible) {
+                                toast.dismiss(t.id);
+                            }
+                        }}
                     >
                         <div style={{ flex: 1, width: 0, padding: '16px' }}>
                             <div style={{ display: 'flex', alignItems: 'start' }}>
