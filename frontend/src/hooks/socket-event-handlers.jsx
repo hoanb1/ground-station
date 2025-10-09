@@ -118,7 +118,6 @@ export const useSocketEventHandlers = (socket) => {
         // Satellite tracking events
         socket.on("satellite-tracking", (message) => {
             store.dispatch(setSatelliteData(message));
-            console.info("Received satellite tracking data:", message);
             if (message['events']) {
                 message['events'].forEach(event => {
                     if (event.name === 'rotator_connected') {
@@ -140,17 +139,44 @@ export const useSocketEventHandlers = (socket) => {
                             type: 'warning',
                         });
                     } else if (event.name === 'elevation_out_of_bounds') {
-                        toast.error("Target elevation out of bounds", {
-                            icon: <ArrowUpwardIcon />,
-                        });
+                        const satelliteData = message['data']?.satellite_data;
+                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const noradId = satelliteData?.details?.norad_id || '';
+                        toast.error(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Target elevation out of bounds</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{satName} (NORAD {noradId})</div>
+                            </div>,
+                            {
+                                icon: <ArrowUpwardIcon />,
+                            }
+                        );
                     } else if (event.name === 'azimuth_out_of_bounds') {
-                        toast.error("Target azimuth out of bounds", {
-                            icon: <ExploreIcon />,
-                        });
+                        const satelliteData = message['data']?.satellite_data;
+                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const noradId = satelliteData?.details?.norad_id || '';
+                        toast.error(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Target azimuth out of bounds</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{satName} (NORAD {noradId})</div>
+                            </div>,
+                            {
+                                icon: <ExploreIcon />,
+                            }
+                        );
                     } else if (event.name === 'minelevation_error') {
-                        toast.error("Target below minimum elevation",   {
-                            icon: <ArrowDownwardIcon />,
-                        });
+                        const satelliteData = message['data']?.satellite_data;
+                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const noradId = satelliteData?.details?.norad_id || '';
+                        toast.error(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Target below minimum elevation</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{satName} (NORAD {noradId})</div>
+                            </div>,
+                            {
+                                icon: <ArrowDownwardIcon />,
+                            }
+                        );
                     } else if (event.name === 'norad_id_change') {
                         const satelliteData = message['data'];
                         const satName = satelliteData?.details?.name || 'Unknown';

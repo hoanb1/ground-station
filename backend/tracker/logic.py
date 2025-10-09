@@ -662,7 +662,12 @@ class SatelliteTracker:
             self.queue_out.put(
                 {
                     DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                    DictKeys.DATA: {DictKeys.EVENTS: events},
+                    DictKeys.DATA: {
+                        DictKeys.EVENTS: events,
+                        DictKeys.DATA: {
+                            "satellite_data": self.satellite_data,
+                        },
+                    },
                 }
             )
 
