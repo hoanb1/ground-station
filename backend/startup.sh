@@ -21,6 +21,7 @@ echo "LibreSDR FPGA image installed"
 ls -l /usr/local/share/uhd/images/*.bin
 
 # Start the application
+# Note: Database migrations will run automatically on startup via init_db()
 echo "Starting Ground Station application..."
 cd /app/backend
 exec python app.py --log-level=INFO --host=0.0.0.0 --port=7000

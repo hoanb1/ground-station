@@ -83,3 +83,8 @@ venv.bak/
 /backend/de421.bsp
 /backend/data/gs.db
 /backend/server/version-info.json
+backend/alembic/__pycache__/
+backend/alembic/versions/__pycache__/
+backend/alembic/README
+backend/migrate_data.py
+backend/verify_data.py
