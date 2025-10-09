@@ -20,7 +20,7 @@ RUN npm run build
 
 # Stage 2: Set up the Python backend
 #FROM python:3.12-slim
-FROM ubuntu:plucky-20250925.1
+FROM ubuntu:noble-20250925
 
 WORKDIR /app
 
