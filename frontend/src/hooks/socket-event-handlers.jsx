@@ -128,6 +128,7 @@ export const useSocketEventHandlers = (socket) => {
                     } else if (event.name === 'rotator_disconnected') {
                         toast("Rotator disconnected", {
                             icon: <SettingsInputAntennaIcon />,
+                            type: 'warning',
                         });
                     } else if (event.name === 'rig_connected') {
                         toast.success("Radio connected", {
@@ -136,6 +137,7 @@ export const useSocketEventHandlers = (socket) => {
                     } else if (event.name === 'rig_disconnected') {
                         toast("Radio disconnected", {
                             icon: <RadioIcon />,
+                            type: 'warning',
                         });
                     } else if (event.name === 'elevation_out_of_bounds') {
                         toast.error("Target elevation out of bounds", {
@@ -160,6 +162,7 @@ export const useSocketEventHandlers = (socket) => {
                             </div>,
                             {
                                 icon: <SatelliteAltIcon />,
+                                type: 'info',
                             }
                         );
                     } else if (event.name === 'rotator_error') {

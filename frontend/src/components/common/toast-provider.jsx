@@ -36,12 +36,12 @@ export const ToastProvider = ({ children }) => {
                                 : 'toast-exit-right 0.4s cubic-bezier(0.06, 0.71, 0.55, 1) forwards',
                             maxWidth: '400px',
                             width: '100%',
-                            backgroundColor: t.type === 'success' ? '#1e3a1e' : t.type === 'error' ? '#3a1e1e' : '#2a2a2a',
+                            backgroundColor: t.type === 'success' ? '#1e3a1e' : t.type === 'error' ? '#3a1e1e' : t.type === 'warning' ? '#3a2e1e' : t.type === 'info' ? '#1e2a3a' : '#2a2a2a',
                             boxShadow: '0 10px 25px rgba(0, 0, 0, 0.3)',
                             borderRadius: '4px',
                             pointerEvents: 'auto',
                             display: 'flex',
-                            border: t.type === 'success' ? '1px solid #4caf50' : t.type === 'error' ? '1px solid #f44336' : '1px solid #404040',
+                            border: t.type === 'success' ? '1px solid #4caf50' : t.type === 'error' ? '1px solid #f44336' : t.type === 'warning' ? '1px solid #ff9800' : t.type === 'info' ? '1px solid #2196f3' : '1px solid #404040',
                         }}
                         onAnimationEnd={() => {
                             if (!t.visible) {
@@ -83,15 +83,15 @@ export const ToastProvider = ({ children }) => {
                                     justifyContent: 'center',
                                     fontSize: '13px',
                                     fontWeight: 500,
-                                    color: t.type === 'success' ? '#66bb6a' : t.type === 'error' ? '#ef5350' : '#90caf9',
+                                    color: t.type === 'success' ? '#66bb6a' : t.type === 'error' ? '#ef5350' : t.type === 'warning' ? '#ffb74d' : t.type === 'info' ? '#64b5f6' : '#90caf9',
                                     cursor: 'pointer',
                                     transition: 'color 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.color = t.type === 'success' ? '#4caf50' : t.type === 'error' ? '#f44336' : '#64b5f6';
+                                    e.currentTarget.style.color = t.type === 'success' ? '#4caf50' : t.type === 'error' ? '#f44336' : t.type === 'warning' ? '#ff9800' : t.type === 'info' ? '#2196f3' : '#64b5f6';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.color = t.type === 'success' ? '#66bb6a' : t.type === 'error' ? '#ef5350' : '#90caf9';
+                                    e.currentTarget.style.color = t.type === 'success' ? '#66bb6a' : t.type === 'error' ? '#ef5350' : t.type === 'warning' ? '#ffb74d' : t.type === 'info' ? '#64b5f6' : '#90caf9';
                                 }}
                             >
                                 Close
