@@ -60,15 +60,6 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     wget \
     && rm -rf /var/lib/apt/lists/*
 
-## Add Ettus Research UHD Repository
-#RUN apt-get update && \
-#    apt-get install -y software-properties-common && \
-#    add-apt-repository ppa:ettusresearch/uhd && \
-#    apt-get update
-#
-## Install UHD packages
-#RUN apt-get install -y libuhd-dev uhd-host python3-uhd
-
 # Create required directories for Avahi and D-Bus
 RUN mkdir -p /var/run/avahi-daemon /var/run/dbus
 
