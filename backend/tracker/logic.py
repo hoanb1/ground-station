@@ -17,9 +17,17 @@
 import asyncio
 import logging
 import multiprocessing
-from datetime import UTC, datetime
+import sys
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional
 
 import crud
+
+# anext is a builtin in Python 3.10+ but mypy may not recognize it
+if sys.version_info >= (3, 10):
+    anext = anext  # type: ignore[name-defined]
+else:
+    anext = __builtins__.anext  # type: ignore[attr-defined,name-defined,unused-ignore]
 from common.arguments import arguments as args
 from common.constants import (
     DictKeys,
@@ -100,22 +108,25 @@ class SatelliteTracker:
         }
 
         # Operational state
-        self.notified = {}
+        self.notified: Dict[str, bool] = {}
         self.nudge_offset = {"az": 0, "el": 0}
 
+        # Satellite data
+        self.satellite_data: Dict[str, Any] = {}
+
         # State change tracking (replacing StateTracker)
-        self.prev_norad_id = None
-        self.prev_rotator_state = None
-        self.prev_rotator_id = None
-        self.prev_rig_state = None
-        self.prev_transmitter_id = None
-        self.prev_rig_id = None
+        self.prev_norad_id: Optional[int] = None
+        self.prev_rotator_state: Optional[str] = None
+        self.prev_rotator_id: Optional[str] = None
+        self.prev_rig_state: Optional[str] = None
+        self.prev_transmitter_id: Optional[str] = None
+        self.prev_rig_id: Optional[str] = None
 
         # Events to send the UI
-        self.events = []
+        self.events: List[Dict[str, Any]] = []
 
         # Performance monitoring
-        self.start_loop_date = None
+        self.start_loop_date: Optional[datetime] = None
 
     def in_tracking_state(self) -> bool:
         """Check if rotator is currently in tracking state."""
@@ -123,7 +134,8 @@ class SatelliteTracker:
 
     async def handle_satellite_change(self, old, new):
         """Handle satellite target change events."""
-        logger.info(f"Target satellite change detected from '{old}' to '{new}'")
+        sat_name = self.satellite_data.get("details", {}).get("name", "Unknown")
+        logger.info(f"Target satellite change detected from '{old}' to '{new}' ({sat_name})")
 
         # Reset state
         self.rotator_data["minelevation"] = False
@@ -136,14 +148,15 @@ class SatelliteTracker:
                 DictKeys.DATA: {
                     DictKeys.EVENTS: [
                         {DictKeys.NAME: TrackingEvents.NORAD_ID_CHANGE, "old": old, "new": new}
-                    ]
+                    ],
+                    DictKeys.DATA: self.satellite_data,
                 },
             }
         )
 
         # Update rig state in database
         async with AsyncSessionLocal() as dbsession:
-            new_tracking_state = await crud.tracking_state.set_tracking_state(
+            await crud.tracking_state.set_tracking_state(
                 dbsession,
                 {
                     DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
@@ -175,7 +188,7 @@ class SatelliteTracker:
                 self.rotator_controller = RotatorController(
                     host=rotator_details["host"], port=rotator_details["port"]
                 )
-                await self.rotator_controller.connect()
+                await self.rotator_controller.connect()  # type: ignore[attr-defined]
 
                 # Update state
                 self.rotator_data.update(
@@ -270,7 +283,8 @@ class SatelliteTracker:
         """Disconnect from rotator."""
         if self.rotator_controller is not None:
             logger.info(
-                f"Disconnecting from rotator at {self.rotator_controller.host}:{self.rotator_controller.port}..."
+                f"Disconnecting from rotator at "
+                f"{self.rotator_controller.host}:{self.rotator_controller.port}..."
             )
             try:
                 await self.rotator_controller.disconnect()
@@ -295,7 +309,7 @@ class SatelliteTracker:
         self.rotator_data.update({"tracking": False, "slewing": False})
 
         try:
-            park_reply = await self.rotator_controller.park()
+            park_reply = await self.rotator_controller.park()  # type: ignore[attr-defined]
             if park_reply:
                 self.rotator_data["parked"] = True
                 self.queue_out.put(
@@ -348,7 +362,7 @@ class SatelliteTracker:
                         host=rig_details["host"], port=rig_details["port"]
                     )
 
-                await self.rig_controller.connect()
+                await self.rig_controller.connect()  # type: ignore[attr-defined]
 
                 # Update state
                 self.rig_data.update(
@@ -459,7 +473,7 @@ class SatelliteTracker:
 
     def _check_state_changes(self):
         """Check for state changes and return list of changes."""
-        changes = []
+        changes: List[tuple] = []
 
         if self.current_norad_id != self.prev_norad_id:
             changes.append(("satellite", self.prev_norad_id, self.current_norad_id))
@@ -618,7 +632,8 @@ class SatelliteTracker:
         # Check elevation limits
         if skypoint[1] < self.elevation_limits[0] or skypoint[1] > self.elevation_limits[1]:
             logger.debug(
-                f"Elevation out of bounds for satellite #{self.current_norad_id} {satellite_name}"
+                f"Elevation out of bounds for satellite "
+                f"#{self.current_norad_id} {satellite_name}"
             )
             if self.in_tracking_state() and not self.notified.get(
                 TrackingEvents.ELEVATION_OUT_OF_BOUNDS, False
@@ -631,7 +646,8 @@ class SatelliteTracker:
         # Check minimum elevation
         if skypoint[1] < self.min_elevation:
             logger.debug(
-                f"Elevation below minimum ({self.min_elevation})° for satellite #{self.current_norad_id} {satellite_name}"
+                f"Elevation below minimum ({self.min_elevation})° for satellite "
+                f"#{self.current_norad_id} {satellite_name}"
             )
             if self.in_tracking_state() and not self.notified.get(
                 TrackingEvents.MIN_ELEVATION_ERROR, False
@@ -769,8 +785,7 @@ class SatelliteTracker:
             0 < args.track_interval < 6
         ), f"track_interval must be between 2 and 5, got {args.track_interval}"
 
-        satellite_data = {}
-        tracker = {}
+        tracker: Dict[str, Any] = {}
 
         while True:
             # Process commands first
@@ -779,7 +794,7 @@ class SatelliteTracker:
                 break
 
             try:
-                self.start_loop_date = datetime.now(UTC)
+                self.start_loop_date = datetime.now(timezone.utc)
                 self.events = []
 
                 # Get tracking data from database
@@ -812,18 +827,19 @@ class SatelliteTracker:
                     tracker = tracking_state_reply["data"]["value"]
 
                     # Get a data dict that contains all the information for the target satellite
-                    satellite_data = await compiled_satellite_data(
+                    self.satellite_data = await compiled_satellite_data(
                         dbsession, tracking_state_reply["data"]["value"]["norad_id"]
                     )
-                    assert not satellite_data[
-                        "error"
-                    ], f"Could not compute satellite details for satellite {tracking_state_reply['data']['value']['norad_id']}"
+                    assert not self.satellite_data["error"], (
+                        f"Could not compute satellite details for satellite "
+                        f"{tracking_state_reply['data']['value']['norad_id']}"
+                    )
 
                     satellite_tles = [
-                        satellite_data["details"]["tle1"],
-                        satellite_data["details"]["tle2"],
+                        self.satellite_data["details"]["tle1"],
+                        self.satellite_data["details"]["tle2"],
                     ]
-                    satellite_name = satellite_data["details"]["name"]
+                    satellite_name = self.satellite_data["details"]["name"]
 
                 # Update current state variables
                 self.current_norad_id = tracker.get("norad_id", None)
@@ -845,14 +861,18 @@ class SatelliteTracker:
                 await self._update_hardware_positions()
 
                 # Work on sky coordinates
-                skypoint = (satellite_data["position"]["az"], satellite_data["position"]["el"])
+                skypoint = (
+                    self.satellite_data["position"]["az"],
+                    self.satellite_data["position"]["el"],
+                )
 
                 # Check position limits
                 self._check_position_limits(skypoint, satellite_name)
 
                 # Log valid target
                 logger.debug(
-                    f"We have a valid target (#{self.current_norad_id} {satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°"
+                    f"We have a valid target (#{self.current_norad_id} "
+                    f"{satellite_name}) at az: {skypoint[0]}° el: {skypoint[1]}°"
                 )
 
                 # Handle transmitter tracking
@@ -869,20 +889,23 @@ class SatelliteTracker:
                 logger.exception(e)
 
             finally:
-                # Send updates via the queue, but first check if we have satellite data and tracker data
-                if satellite_data and tracker:
+                # Send updates via the queue
+                # Check if we have satellite data and tracker data
+                if self.satellite_data and tracker:
                     try:
                         full_msg = {
                             DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                             DictKeys.DATA: {
-                                "satellite_data": satellite_data,
+                                "satellite_data": self.satellite_data,
                                 DictKeys.EVENTS: self.events.copy(),
                                 "rotator_data": self.rotator_data.copy(),
                                 "rig_data": self.rig_data.copy(),
                                 "tracking_state": tracker.copy(),
                             },
                         }
-                        logger.debug(f"Sending satellite tracking data: \n{pretty_dict(full_msg)}")
+                        logger.debug(
+                            f"Sending satellite tracking data: " f"\n{pretty_dict(full_msg)}"
+                        )
                         self.queue_out.put(full_msg)
 
                     except Exception as e:
@@ -890,11 +913,18 @@ class SatelliteTracker:
                         logger.exception(e)
 
                 # Calculate sleep time
-                loop_duration = round((datetime.now(UTC) - self.start_loop_date).total_seconds(), 2)
+                if self.start_loop_date:
+                    loop_duration = round(
+                        (datetime.now(timezone.utc) - self.start_loop_date).total_seconds(),
+                        2,
+                    )
+                else:
+                    loop_duration = 0
 
                 if loop_duration > args.track_interval:
                     logger.warning(
-                        f"Single tracking loop iteration took longer ({loop_duration}) than the configured "
+                        f"Single tracking loop iteration took longer "
+                        f"({loop_duration}) than the configured "
                         f"interval ({args.track_interval})"
                     )
 

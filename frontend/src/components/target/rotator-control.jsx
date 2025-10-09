@@ -45,8 +45,6 @@ import {
 } from './rotator-utils.js';
 
 
-
-
 const RotatorControl = React.memo(function RotatorControl() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
@@ -135,8 +133,7 @@ const RotatorControl = React.memo(function RotatorControl() {
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
             .unwrap()
             .then((response) => {
-                console.info("Response on setTrackingStateInBackend (connect): ", response);
-
+                //console.info("Response on setTrackingStateInBackend (connect): ", response);
             })
         .catch((error) => {
             dispatch(setRotatorConnecting(false));

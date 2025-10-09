@@ -116,10 +116,11 @@ export const useSocketEventHandlers = (socket) => {
         });
 
         // Satellite tracking events
-        socket.on("satellite-tracking", (data) => {
-            store.dispatch(setSatelliteData(data));
-            if (data['events']) {
-                data['events'].forEach(event => {
+        socket.on("satellite-tracking", (message) => {
+            store.dispatch(setSatelliteData(message));
+            console.info("Received satellite tracking data:", message);
+            if (message['events']) {
+                message['events'].forEach(event => {
                     if (event.name === 'rotator_connected') {
                         toast.success("Rotator connected", {
                             icon: <SettingsInputAntennaIcon />,
@@ -145,13 +146,22 @@ export const useSocketEventHandlers = (socket) => {
                             icon: <ExploreIcon />,
                         });
                     } else if (event.name === 'minelevation_error') {
-                        toast.error("Target below minimum elevation", {
+                        toast.error("Target below minimum elevation",   {
                             icon: <ArrowDownwardIcon />,
                         });
                     } else if (event.name === 'norad_id_change') {
-                        toast("Target satellite changed", {
-                            icon: <SatelliteAltIcon />,
-                        });
+                        const satelliteData = message['data'];
+                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const noradId = satelliteData?.details?.norad_id || '';
+                        toast(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Target satellite changed</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{satName} (NORAD {noradId})</div>
+                            </div>,
+                            {
+                                icon: <SatelliteAltIcon />,
+                            }
+                        );
                     } else if (event.name === 'rotator_error') {
                         toast.error(event.error, {
                             icon: <SettingsInputAntennaIcon />,

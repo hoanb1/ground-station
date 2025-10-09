@@ -25,7 +25,7 @@ export const ToastProvider = ({ children }) => {
             <Toaster
                 position="top-right"
                 toastOptions={{
-                    duration: 5000,
+                    duration: 4000,
                 }}
             >
                 {(t) => (
@@ -57,7 +57,7 @@ export const ToastProvider = ({ children }) => {
                                     </div>
                                 )}
                                 <div style={{ marginLeft: t.icon ? '12px' : 0, flex: 1 }}>
-                                    <p style={{
+                                    <div style={{
                                         fontSize: '14px',
                                         fontWeight: 500,
                                         color: '#ffffff',
@@ -65,7 +65,7 @@ export const ToastProvider = ({ children }) => {
                                         lineHeight: 1.5,
                                     }}>
                                         {resolveValue(t.message, t)}
-                                    </p>
+                                    </div>
                                 </div>
                             </div>
                         </div>

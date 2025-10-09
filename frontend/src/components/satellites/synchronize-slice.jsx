@@ -19,11 +19,13 @@
 
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import toast from 'react-hot-toast';
 
 export const startSatelliteSync = createAsyncThunk(
     'syncSatellite/start',
     async ({ socket }, { rejectWithValue }) => {
         try {
+            toast('TLE synchronization started', { icon: '🛰️' });
             return await new Promise((resolve, reject) => {
                 socket.emit('data_request', 'sync-satellite-data', null, (response) => {
                     if (response.success === true) {
@@ -68,7 +70,7 @@ const syncSatelliteSlice = createSlice({
         loading: false,
         synchronizing: false,
         syncState: {
-            progress: 0,
+            progress: -1,
             newly_added: 0,
             modified: 0,
             removed: 0,
