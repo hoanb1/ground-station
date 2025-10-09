@@ -19,7 +19,6 @@ RUN cp .env.production .env
 RUN npm run build
 
 # Stage 2: Set up the Python backend
-#FROM python:3.12-slim
 FROM ubuntu:noble-20250925
 
 WORKDIR /app
@@ -70,9 +69,6 @@ COPY backend/requirements.txt .
 
 # Install numpy 2.3.1 so that UHD picks it up on compile
 RUN pip install --break-system-packages --ignore-installed numpy==2.3.1
-
-## Install python3-mako needed by uhd
-#RUN pip install mako
 
 # Compile UHD from source with Python API
 WORKDIR /src
