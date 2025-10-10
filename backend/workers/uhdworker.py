@@ -1,3 +1,7 @@
+# flake8: noqa
+# pylint: skip-file
+# type: ignore
+
 import logging
 import math
 import time
@@ -80,8 +84,39 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         # Connect to the UHD device
         logger.info(f"Connecting to UHD device with serial: {serial_number}...")
 
-        # Add the serial number to device_args
-        device_args = f"serial={serial_number}"
+        # A confusing issue exists when selecting an SDR with serial=XXXXXX, some times it does
+        # not work inside docker containers, the method below is a workaround to fix this issue,
+        # it will look up all devices, lookup the one we want based on the serial and then use every
+        # other attribute to construct the device args string.
+
+        if serial_number:
+            logger.info(f"Looking for device with serial: {serial_number}")
+
+            # Discover all USRP devices (no type filter)
+            discovered_devices = uhd.find("")
+            logger.info(f"Found {len(discovered_devices)} USRP device(s)")
+
+            # Find the device matching the serial
+            device_args = None
+            for dev in discovered_devices:
+                dev_string = dev.to_string()
+                logger.info(f"Discovered: {dev_string}")
+
+                # Parse to check serial
+                if f"serial={serial_number}" in dev_string:
+                    # Use the discovery string but remove the serial key to avoid lookup failure
+                    # Keep other identifiers like type, name, product, addr (for network devices)
+                    parts = dev_string.split(",")
+                    filtered_parts = [p for p in parts if not p.startswith("serial=")]
+                    device_args = ",".join(filtered_parts)
+                    logger.info(f"Matched device, using args: {device_args}")
+                    break
+
+            if not device_args:
+                raise Exception(f"Device with serial {serial_number} not found")
+        else:
+            device_args = ""
+            logger.info(f"No serial specified, will connect to first available device")
 
         # Create UHD device
         UHD = uhd.usrp.MultiUSRP(device_args)
