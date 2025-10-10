@@ -188,7 +188,7 @@ export const useSocketEventHandlers = (socket) => {
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
                             <div>
-                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Target elevation out of bounds</div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Elevation of target below the horizon</div>
                                 <div style={{ fontSize: '13px', opacity: 0.9 }}>{satName} (NORAD {noradId})</div>
                             </div>,
                             {
