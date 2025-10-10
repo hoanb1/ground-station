@@ -108,7 +108,14 @@ export const useSocketEventHandlers = (socket) => {
                 }
 
                 const message = details.length > 0
-                    ? `TLE sync complete! ${details.join(' • ')}`
+                    ? (
+                        <div>
+                            <div style={{ fontWeight: 600, marginBottom: '4px' }}>TLE sync complete!</div>
+                            {details.map((detail, index) => (
+                                <div key={index} style={{ fontSize: '13px', opacity: 0.9 }}>{detail}</div>
+                            ))}
+                        </div>
+                    )
                     : 'TLE sync complete! No changes detected';
 
                 toast.success(message, {

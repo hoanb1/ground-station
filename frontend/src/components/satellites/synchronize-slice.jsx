@@ -20,12 +20,16 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 import toast from 'react-hot-toast';
+import SatelliteAltIcon from "@mui/icons-material/SatelliteAlt";
 
 export const startSatelliteSync = createAsyncThunk(
     'syncSatellite/start',
     async ({ socket }, { rejectWithValue }) => {
         try {
-            toast('TLE synchronization started', { icon: '🛰️' });
+            toast('TLE synchronization started...', {
+                icon: <SatelliteAltIcon />,
+                type: 'info',
+            });
             return await new Promise((resolve, reject) => {
                 socket.emit('data_request', 'sync-satellite-data', null, (response) => {
                     if (response.success === true) {
