@@ -58,6 +58,8 @@ class SatelliteTracker:
     ):
         """Initialize the satellite tracker with queues and configuration."""
         # Store queue references
+        self.rotator_details: Dict[str, Any] = {}
+        self.rig_details: Dict[str, Any] = {}
         self.queue_out = queue_out
         self.queue_in = queue_in
         self.stop_event = stop_event
@@ -93,6 +95,8 @@ class SatelliteTracker:
             "minelevation": False,
             "stopped": False,
             "error": False,
+            "host": "",
+            "port": 0,
         }
         self.rig_data = {
             "connected": False,
@@ -105,6 +109,8 @@ class SatelliteTracker:
             "original_freq": 0,
             "transmitter_id": "none",
             "device_type": "",
+            "host": "",
+            "port": 0,
         }
 
         # Operational state
@@ -184,10 +190,19 @@ class SatelliteTracker:
                         dbsession, rotator_id=self.current_rotator_id
                     )
                     rotator_details = rotator_details_reply["data"]
+                    self.rotator_details = rotator_details
+
+                self.rotator_data.update(
+                    {
+                        "host": self.rotator_details["host"],
+                        "port": self.rotator_details["port"],
+                    }
+                )
 
                 self.rotator_controller = RotatorController(
                     host=rotator_details["host"], port=rotator_details["port"]
                 )
+
                 await self.rotator_controller.connect()  # type: ignore[attr-defined]
 
                 # Update state
@@ -206,7 +221,7 @@ class SatelliteTracker:
                         DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                         DictKeys.DATA: {
                             DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_CONNECTED}],
-                            "rotator_data": self.rotator_data.copy(),
+                            DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
                         },
                     }
                 )
@@ -225,6 +240,8 @@ class SatelliteTracker:
                 "slewing": False,
                 "stopped": False,
                 "error": True,
+                "host": self.rotator_data.get("host", ""),
+                "port": self.rotator_data.get("port", ""),
             }
         )
 
@@ -244,8 +261,8 @@ class SatelliteTracker:
                     DictKeys.EVENTS: [
                         {DictKeys.NAME: TrackingEvents.ROTATOR_ERROR, "error": str(error)}
                     ],
-                    "rotator_data": self.rotator_data.copy(),
-                    "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                    DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
+                    DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
                 },
             }
         )
@@ -294,7 +311,7 @@ class SatelliteTracker:
                         DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                         DictKeys.DATA: {
                             DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_DISCONNECTED}],
-                            "rotator_data": self.rotator_data.copy(),
+                            DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
                         },
                     }
                 )
@@ -317,7 +334,7 @@ class SatelliteTracker:
                         DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                         DictKeys.DATA: {
                             DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.ROTATOR_PARKED}],
-                            "rotator_data": self.rotator_data.copy(),
+                            DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
                         },
                     }
                 )
@@ -353,6 +370,7 @@ class SatelliteTracker:
                         rig_type = "sdr"
 
                     rig_details = rig_details_reply["data"]
+                    self.rig_details = rig_details
 
                 # Create appropriate controller
                 if rig_type == "sdr":
@@ -361,6 +379,13 @@ class SatelliteTracker:
                     self.rig_controller = RigController(
                         host=rig_details["host"], port=rig_details["port"]
                     )
+
+                self.rig_details.update(
+                    {
+                        "host": self.rig_details["host"],
+                        "port": self.rig_details.get("port"),
+                    },
+                )
 
                 await self.rig_controller.connect()  # type: ignore[attr-defined]
 
@@ -371,6 +396,8 @@ class SatelliteTracker:
                         "tracking": False,
                         "tuning": False,
                         "device_type": rig_details.get("type", "hardware"),
+                        "host": self.rig_details.get("host", ""),
+                        "port": self.rig_details.get("port", ""),
                     }
                 )
 
@@ -379,7 +406,7 @@ class SatelliteTracker:
                         DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                         DictKeys.DATA: {
                             DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_CONNECTED}],
-                            "rig_data": self.rig_data.copy(),
+                            DictKeys.RIG_DATA: self.rig_data.copy(),
                         },
                     }
                 )
@@ -392,7 +419,14 @@ class SatelliteTracker:
     async def _handle_rig_error(self, error):
         """Handle rig connection errors."""
         self.rig_data.update(
-            {"connected": False, "tracking": False, "tuning": False, "error": True}
+            {
+                "connected": False,
+                "tracking": False,
+                "tuning": False,
+                "error": True,
+                "host": self.rig_data.get("host", ""),
+                "port": self.rig_data.get("port", ""),
+            }
         )
 
         async with AsyncSessionLocal() as dbsession:
@@ -411,8 +445,8 @@ class SatelliteTracker:
                     DictKeys.EVENTS: [
                         {DictKeys.NAME: TrackingEvents.RIG_ERROR, "error": str(error)}
                     ],
-                    "rig_data": self.rig_data.copy(),
-                    "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                    DictKeys.RIG_DATA: self.rig_data.copy(),
+                    DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
                 },
             }
         )
@@ -432,10 +466,12 @@ class SatelliteTracker:
             self.rig_data["connected"] = False
             self.rig_data["tracking"] = False
             self.rig_data["stopped"] = True
+
         elif new == "tracking":
             await self.connect_to_rig()
             self.rig_data["tracking"] = True
             self.rig_data["stopped"] = False
+
         elif new == "stopped":
             self.rig_data["tracking"] = False
             self.rig_data["tuning"] = False
@@ -453,7 +489,7 @@ class SatelliteTracker:
                         DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                         DictKeys.DATA: {
                             DictKeys.EVENTS: [{DictKeys.NAME: TrackingEvents.RIG_DISCONNECTED}],
-                            "rig_data": self.rig_data.copy(),
+                            DictKeys.RIG_DATA: self.rig_data.copy(),
                         },
                     }
                 )
@@ -567,8 +603,8 @@ class SatelliteTracker:
                 {
                     DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                     DictKeys.DATA: {
-                        "rotator_data": self.rotator_data.copy(),
-                        "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                        DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
+                        DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
                     },
                 }
             )
@@ -594,8 +630,8 @@ class SatelliteTracker:
                 {
                     DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                     DictKeys.DATA: {
-                        "rig_data": self.rig_data.copy(),
-                        "tracking_state": new_tracking_state[DictKeys.DATA]["value"],
+                        DictKeys.RIG_DATA: self.rig_data.copy(),
+                        DictKeys.TRACKING_STATE: new_tracking_state[DictKeys.DATA]["value"],
                     },
                 }
             )
@@ -901,11 +937,11 @@ class SatelliteTracker:
                         full_msg = {
                             DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
                             DictKeys.DATA: {
-                                "satellite_data": self.satellite_data,
+                                DictKeys.SATELLITE_DATA: self.satellite_data,
                                 DictKeys.EVENTS: self.events.copy(),
-                                "rotator_data": self.rotator_data.copy(),
-                                "rig_data": self.rig_data.copy(),
-                                "tracking_state": tracker.copy(),
+                                DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
+                                DictKeys.RIG_DATA: self.rig_data.copy(),
+                                DictKeys.TRACKING_STATE: tracker.copy(),
                             },
                         }
                         logger.debug(

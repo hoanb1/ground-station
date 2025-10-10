@@ -47,10 +47,19 @@ export const useSocketEventHandlers = (socket) => {
 
         // Connection event
         socket.on('connect', async () => {
-            console.log('Socket connected with ID:', socket.id);
-            toast.success("Connected to backend", {
-                icon: <CableIcon />,
-            });
+            console.log('Socket connected with ID:', socket.id, socket);
+
+            toast.success(
+                <div>
+                    <div style={{fontWeight: 600, marginBottom: '4px'}}>Connected to backend</div>
+                    <div style={{fontSize: '13px', opacity: 0.9}}>
+                        {socket.io.opts.secure ? 'wss://' : 'ws://'}{socket.io.opts.hostname}:{socket.io.opts.port}{socket.io.opts.path}
+                    </div>
+                </div>,
+                {
+                    icon: <CableIcon/>,
+                }
+            );
             initializeAppData(socket);
         });
 
@@ -121,25 +130,53 @@ export const useSocketEventHandlers = (socket) => {
             if (message['events']) {
                 message['events'].forEach(event => {
                     if (event.name === 'rotator_connected') {
-                        toast.success("Rotator connected", {
-                            icon: <SettingsInputAntennaIcon />,
-                        });
+                        const rotatorData = message['rotator_data'];
+                        toast.success(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Rotator connected</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{rotatorData.host}:{rotatorData.port}</div>
+                            </div>,
+                            {
+                                icon: <SettingsInputAntennaIcon />,
+                            }
+                        );
                     } else if (event.name === 'rotator_disconnected') {
-                        toast("Rotator disconnected", {
-                            icon: <SettingsInputAntennaIcon />,
-                            type: 'warning',
-                        });
+                        const rotatorData = message['rotator_data'];
+                        toast(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Rotator disconnected</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{rotatorData.host}:{rotatorData.port}</div>
+                            </div>,
+                            {
+                                icon: <SettingsInputAntennaIcon />,
+                                type: 'warning',
+                            }
+                        );
                     } else if (event.name === 'rig_connected') {
-                        toast.success("Radio connected", {
-                            icon: <RadioIcon />,
-                        });
+                        const rigData = message['rig_data'];
+                        toast.success(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Radio connected</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{rigData.host}:{rigData.port}</div>
+                            </div>,
+                            {
+                                icon: <RadioIcon />,
+                            }
+                        );
                     } else if (event.name === 'rig_disconnected') {
-                        toast("Radio disconnected", {
-                            icon: <RadioIcon />,
-                            type: 'warning',
-                        });
+                        const rigData = message['rig_data'];
+                        toast(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>Radio disconnected</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{rigData.host}:{rigData.port}</div>
+                            </div>,
+                            {
+                                icon: <RadioIcon />,
+                                type: 'warning',
+                            }
+                        );
                     } else if (event.name === 'elevation_out_of_bounds') {
-                        const satelliteData = message['data']?.satellite_data;
+                        const satelliteData = message['data']?.['satellite_data'];
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
@@ -152,7 +189,7 @@ export const useSocketEventHandlers = (socket) => {
                             }
                         );
                     } else if (event.name === 'azimuth_out_of_bounds') {
-                        const satelliteData = message['data']?.satellite_data;
+                        const satelliteData = message['data']?.['satellite_data'];
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
@@ -165,7 +202,7 @@ export const useSocketEventHandlers = (socket) => {
                             }
                         );
                     } else if (event.name === 'minelevation_error') {
-                        const satelliteData = message['data']?.satellite_data;
+                        const satelliteData = message['data']?.['satellite_data'];
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
@@ -192,13 +229,27 @@ export const useSocketEventHandlers = (socket) => {
                             }
                         );
                     } else if (event.name === 'rotator_error') {
-                        toast.error(event.error, {
-                            icon: <SettingsInputAntennaIcon />,
-                        });
+                        const rotatorData = message['rotator_data'];
+                        toast.error(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{event.error}</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{rotatorData.host}:{rotatorData.port}</div>
+                            </div>,
+                            {
+                                icon: <SettingsInputAntennaIcon />,
+                            }
+                        );
                     } else if (event.name === 'rig_error') {
-                        toast.error(event.error, {
-                            icon: <RadioIcon />,
-                        });
+                        const rigData = message['rig_data'];
+                        toast.error(
+                            <div>
+                                <div style={{ fontWeight: 600, marginBottom: '4px' }}>{event.error}</div>
+                                <div style={{ fontSize: '13px', opacity: 0.9 }}>{rigData.host}:{rigData.port}</div>
+                            </div>,
+                            {
+                                icon: <RadioIcon />,
+                            }
+                        );
                     }
                 });
             }

@@ -121,3 +121,7 @@ class DictKeys:
     TYPE = "type"
     CLIENT_ID = "client_id"
     MESSAGE = "message"
+    SATELLITE_DATA = "satellite_data"
+    TRACKING_STATE = "tracking_state"
+    ROTATOR_DATA = "rotator_data"
+    RIG_DATA = "rig_data"
