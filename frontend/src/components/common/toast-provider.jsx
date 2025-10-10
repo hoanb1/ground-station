@@ -70,7 +70,7 @@ export const ToastProvider = ({ children }) => {
                                 </div>
                             </div>
                         </div>
-                        <div style={{ display: 'flex', borderLeft: '1px solid #404040' }}>
+                        <div style={{ display: 'flex', borderLeft: '1px solid rgba(255, 255, 255, 0.08)' }}>
                             <button
                                 onClick={() => toast.dismiss(t.id)}
                                 style={{
@@ -82,17 +82,19 @@ export const ToastProvider = ({ children }) => {
                                     display: 'flex',
                                     alignItems: 'center',
                                     justifyContent: 'center',
-                                    fontSize: '13px',
+                                    fontSize: '12px',
                                     fontWeight: 500,
-                                    color: t.type === 'success' ? '#66bb6a' : t.type === 'error' ? '#ef5350' : t.type === 'warning' ? '#ffb74d' : t.type === 'info' ? '#64b5f6' : '#90caf9',
+                                    color: 'rgba(255, 255, 255, 0.5)',
                                     cursor: 'pointer',
-                                    transition: 'color 0.2s',
+                                    transition: 'all 0.2s',
                                 }}
                                 onMouseEnter={(e) => {
-                                    e.currentTarget.style.color = t.type === 'success' ? '#4caf50' : t.type === 'error' ? '#f44336' : t.type === 'warning' ? '#ff9800' : t.type === 'info' ? '#2196f3' : '#64b5f6';
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.9)';
+                                    e.currentTarget.style.backgroundColor = 'rgba(255, 255, 255, 0.05)';
                                 }}
                                 onMouseLeave={(e) => {
-                                    e.currentTarget.style.color = t.type === 'success' ? '#66bb6a' : t.type === 'error' ? '#ef5350' : t.type === 'warning' ? '#ffb74d' : t.type === 'info' ? '#64b5f6' : '#90caf9';
+                                    e.currentTarget.style.color = 'rgba(255, 255, 255, 0.5)';
+                                    e.currentTarget.style.backgroundColor = 'transparent';
                                 }}
                             >
                                 Close
