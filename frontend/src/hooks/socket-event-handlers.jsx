@@ -230,7 +230,7 @@ export const useSocketEventHandlers = (socket) => {
                         const satelliteData = message['data']?.['satellite_data'];
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
-                        toast.error(
+                        toast.warning(
                             <ToastMessage
                                 title="Target below minimum elevation"
                                 body={`${satName} (NORAD ${noradId})`}
