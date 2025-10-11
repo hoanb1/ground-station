@@ -26,10 +26,18 @@ export const ToastProvider = ({ children }) => {
                 position="top-right"
                 toastOptions={{
                     duration: 4000,
+                    style: {
+                        pointerEvents: 'auto',
+                    },
                 }}
-                pauseWhenPageIsHidden={true}
             >
-                {(t) => (
+                {(t) => {
+                    // Prevent pause on hover by continuously resetting the pause state
+                    if (t.pauseDuration) {
+                        setTimeout(() => toast.dismiss(t.id), t.duration - (Date.now() - t.createdAt));
+                    }
+
+                    return (
                     <div
                         style={{
                             animation: t.visible
@@ -101,7 +109,8 @@ export const ToastProvider = ({ children }) => {
                             </button>
                         </div>
                     </div>
-                )}
+                    );
+                }}
             </Toaster>
             <style>{`
                 @keyframes toast-enter-right {
