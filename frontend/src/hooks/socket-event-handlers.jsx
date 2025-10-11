@@ -21,6 +21,14 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { toast } from 'react-toastify';
 import CableIcon from '@mui/icons-material/Cable';
+
+// Toast message component with title and body
+const ToastMessage = ({ title, body }) => (
+    <div>
+        <div style={{ fontWeight: 600, marginBottom: '4px' }}>{title}</div>
+        {body && <div style={{ fontSize: '13px', opacity: 0.9 }}>{body}</div>}
+    </div>
+);
 import SyncIcon from '@mui/icons-material/Sync';
 import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
@@ -50,7 +58,10 @@ export const useSocketEventHandlers = (socket) => {
             console.log('Socket connected with ID:', socket.id, socket);
 
             toast.success(
-                `Connected to backend: ${socket.io.opts.secure ? 'wss://' : 'ws://'}${socket.io.opts.hostname}:${socket.io.opts.port}${socket.io.opts.path}`,
+                <ToastMessage
+                    title="Connected to backend"
+                    body={`${socket.io.opts.secure ? 'wss://' : 'ws://'}${socket.io.opts.hostname}:${socket.io.opts.port}${socket.io.opts.path}`}
+                />,
                 {
                     icon: () => <CableIcon/>,
                 }
@@ -60,23 +71,40 @@ export const useSocketEventHandlers = (socket) => {
 
         // Reconnection attempt event
         socket.on("reconnect_attempt", (attempt) => {
-            toast.info(`Reconnecting to backend (attempt ${attempt})`, {
-                icon: () => <SyncIcon />,
-            });
+            toast.info(
+                <ToastMessage
+                    title="Reconnecting to backend"
+                    body={`Attempt ${attempt}`}
+                />,
+                {
+                    icon: () => <SyncIcon />,
+                }
+            );
         });
 
         // Error event
         socket.on("error", (error) => {
-            toast.error(`Connection error: ${error}`, {
-                icon: () => <ErrorOutlineIcon />,
-            });
+            toast.error(
+                <ToastMessage
+                    title="Connection error"
+                    body={error}
+                />,
+                {
+                    icon: () => <ErrorOutlineIcon />,
+                }
+            );
         });
 
         // Disconnect event
         socket.on('disconnect', () => {
-            toast.error("Lost connection to backend", {
-                icon: () => <CableIcon />,
-            });
+            toast.error(
+                <ToastMessage
+                    title="Lost connection to backend"
+                />,
+                {
+                    icon: () => <CableIcon />,
+                }
+            );
         });
 
         // Satellite sync events
@@ -102,14 +130,18 @@ export const useSocketEventHandlers = (socket) => {
                     details.push(`Removed: ${removedSats} satellites, ${removedTransmitters} transmitters`);
                 }
 
-                const message = details.length > 0
-                    ? `TLE sync complete!\n${details.join('\n')}`
-                    : 'TLE sync complete! No changes detected';
+                const body = details.length > 0 ? details.join('\n') : 'No changes detected';
 
-                toast.success(message, {
-                    icon: () => <SatelliteAltIcon />,
-                    autoClose: 6000,
-                });
+                toast.success(
+                    <ToastMessage
+                        title="TLE sync complete!"
+                        body={body}
+                    />,
+                    {
+                        icon: () => <SatelliteAltIcon />,
+                        autoClose: 6000,
+                    }
+                );
                 dispatch(setSynchronizing(false));
             }
         });
@@ -127,7 +159,10 @@ export const useSocketEventHandlers = (socket) => {
                     if (event.name === 'rotator_connected') {
                         const rotatorData = message['rotator_data'];
                         toast.success(
-                            `Rotator connected: ${rotatorData.host}:${rotatorData.port}`,
+                            <ToastMessage
+                                title="Rotator connected"
+                                body={`${rotatorData.host}:${rotatorData.port}`}
+                            />,
                             {
                                 icon: () => <SettingsInputAntennaIcon />,
                             }
@@ -135,7 +170,10 @@ export const useSocketEventHandlers = (socket) => {
                     } else if (event.name === 'rotator_disconnected') {
                         const rotatorData = message['rotator_data'];
                         toast.warning(
-                            `Rotator disconnected: ${rotatorData.host}:${rotatorData.port}`,
+                            <ToastMessage
+                                title="Rotator disconnected"
+                                body={`${rotatorData.host}:${rotatorData.port}`}
+                            />,
                             {
                                 icon: () => <SettingsInputAntennaIcon />,
                             }
@@ -143,7 +181,10 @@ export const useSocketEventHandlers = (socket) => {
                     } else if (event.name === 'rig_connected') {
                         const rigData = message['rig_data'];
                         toast.success(
-                            `Radio connected: ${rigData.host}:${rigData.port}`,
+                            <ToastMessage
+                                title="Radio connected"
+                                body={`${rigData.host}:${rigData.port}`}
+                            />,
                             {
                                 icon: () => <RadioIcon />,
                             }
@@ -151,7 +192,10 @@ export const useSocketEventHandlers = (socket) => {
                     } else if (event.name === 'rig_disconnected') {
                         const rigData = message['rig_data'];
                         toast.warning(
-                            `Radio disconnected: ${rigData.host}:${rigData.port}`,
+                            <ToastMessage
+                                title="Radio disconnected"
+                                body={`${rigData.host}:${rigData.port}`}
+                            />,
                             {
                                 icon: () => <RadioIcon />,
                             }
@@ -161,7 +205,10 @@ export const useSocketEventHandlers = (socket) => {
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
-                            `Elevation of target below the horizon: ${satName} (NORAD ${noradId})`,
+                            <ToastMessage
+                                title="Elevation of target below the horizon"
+                                body={`${satName} (NORAD ${noradId})`}
+                            />,
                             {
                                 icon: () => <ArrowUpwardIcon />,
                             }
@@ -171,7 +218,10 @@ export const useSocketEventHandlers = (socket) => {
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
-                            `Target azimuth out of bounds: ${satName} (NORAD ${noradId})`,
+                            <ToastMessage
+                                title="Target azimuth out of bounds"
+                                body={`${satName} (NORAD ${noradId})`}
+                            />,
                             {
                                 icon: () => <ExploreIcon />,
                             }
@@ -181,7 +231,10 @@ export const useSocketEventHandlers = (socket) => {
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
-                            `Target below minimum elevation: ${satName} (NORAD ${noradId})`,
+                            <ToastMessage
+                                title="Target below minimum elevation"
+                                body={`${satName} (NORAD ${noradId})`}
+                            />,
                             {
                                 icon: () => <ArrowDownwardIcon />,
                             }
@@ -191,7 +244,10 @@ export const useSocketEventHandlers = (socket) => {
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.info(
-                            `Target satellite changed: ${satName} (NORAD ${noradId})`,
+                            <ToastMessage
+                                title="Target satellite changed"
+                                body={`${satName} (NORAD ${noradId})`}
+                            />,
                             {
                                 icon: () => <SatelliteAltIcon />,
                             }
@@ -199,7 +255,10 @@ export const useSocketEventHandlers = (socket) => {
                     } else if (event.name === 'rotator_error') {
                         const rotatorData = message['rotator_data'];
                         toast.error(
-                            `${event.error} (${rotatorData.host}:${rotatorData.port})`,
+                            <ToastMessage
+                                title={event.error}
+                                body={`${rotatorData.host}:${rotatorData.port}`}
+                            />,
                             {
                                 icon: () => <SettingsInputAntennaIcon />,
                             }
@@ -207,7 +266,10 @@ export const useSocketEventHandlers = (socket) => {
                     } else if (event.name === 'rig_error') {
                         const rigData = message['rig_data'];
                         toast.error(
-                            `${event.error} (${rigData.host}:${rigData.port})`,
+                            <ToastMessage
+                                title={event.error}
+                                body={`${rigData.host}:${rigData.port}`}
+                            />,
                             {
                                 icon: () => <RadioIcon />,
                             }
