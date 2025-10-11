@@ -19,7 +19,7 @@
 
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { fetchNextPasses } from '../components/target/target-slice.jsx';
 
 /**
@@ -41,7 +41,7 @@ export const usePassFetching = (socket) => {
                     })
                     .catch(error => {
                         toast.error(`Failed fetching next passes for satellite ${satelliteId}: ${error.message}`, {
-                            duration: 5000,
+                            autoClose: 5000,
                         });
                     });
             }

@@ -35,7 +35,7 @@ import {
     setStarting,
     setTrackingStateInBackend
 } from "./target-slice.jsx";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import {
     getClassNamesBasedOnGridEditing,
     humanizeFrequency,

@@ -74,7 +74,7 @@ import {
     setVfoActive,
     setFFTdataOverflow,
 } from './waterfall-slice.jsx';
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import {frequencyBands} from "./bandplans.jsx";
 import WaterfallStatusBar from "./waterfall-statusbar.jsx";
 import WaterfallToolbar from "./waterfall-toolbar.jsx";

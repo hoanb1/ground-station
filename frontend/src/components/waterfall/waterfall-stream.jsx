@@ -17,7 +17,7 @@ import {
     setStartStreamingLoading,
     setFFTdataOverflow
 } from './waterfall-slice.jsx';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 const WaterfallStream = ({ workerRef, targetFPSRef }) => {
     const dispatch = useDispatch();

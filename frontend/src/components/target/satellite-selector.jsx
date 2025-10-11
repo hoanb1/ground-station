@@ -40,7 +40,7 @@ import {
 } from './target-slice.jsx';
 import SatelliteList from "./satellite-dropdown.jsx";
 import GroupDropdown from "./group-dropdown.jsx";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import Autocomplete from "@mui/material/Autocomplete";
 import CircularProgress from "@mui/material/CircularProgress";
 import SatelliteSearchAutocomplete from "./satellite-search.jsx";

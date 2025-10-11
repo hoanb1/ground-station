@@ -467,6 +467,7 @@ export default function Layout() {
             }}>
             {connected? <Outlet />: <ConnectionOverlay />}
             {hasVersionChanged && <VersionUpdateOverlay />}
+
         </DashboardLayout>
     );
 }

@@ -30,7 +30,7 @@ import {
 } from '@mui/material';
 import {MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMapEvents} from 'react-leaflet';
 import Grid from '@mui/material/Grid2';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { useSocket } from '../common/socket.jsx';
 import { getMaidenhead } from '../common/common.jsx';
 import { useDispatch, useSelector } from 'react-redux';
@@ -225,7 +225,7 @@ const LocationPage = () => {
     const getCurrentLocation = async () => {
         dispatch(setLocationLoading(true));
         if (!navigator.geolocation) {
-            toast('Geolocation is not supported by your browser.', {icon: '⚠️'});
+            toast.warning('Geolocation is not supported by your browser.');
             return;
         }
 

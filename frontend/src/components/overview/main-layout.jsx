@@ -30,7 +30,7 @@ import {
     StyledIslandParentScrollbar,
     StyledIslandParentNoScrollbar,
 } from "../common/common.jsx";
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import {useSocket} from "../common/socket.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";

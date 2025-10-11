@@ -37,7 +37,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { useSocket } from "../common/socket.jsx";
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 const PreferencesForm = () => {
     const { socket } = useSocket();

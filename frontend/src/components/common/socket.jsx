@@ -21,7 +21,7 @@
 
 
 import React, {createContext, useCallback, useContext, useEffect, useState, useRef} from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { Manager } from "socket.io-client";
 import {setSocketForMiddleware} from '../waterfall/waterfall-middleware.jsx';
 

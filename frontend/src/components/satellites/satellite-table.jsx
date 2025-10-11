@@ -22,7 +22,7 @@ import * as React from 'react';
 import {Alert, AlertTitle, Box, Chip, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
 import {useEffect} from "react";
 import {useDispatch, useSelector} from "react-redux";
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import {
     DataGrid,
     gridPageCountSelector,

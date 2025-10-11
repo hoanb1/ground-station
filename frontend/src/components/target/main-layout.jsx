@@ -31,7 +31,7 @@ import {
     StyledIslandParentNoScrollbar,
     StyledIslandParentScrollbar,
 } from "../common/common.jsx";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {

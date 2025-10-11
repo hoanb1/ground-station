@@ -27,7 +27,7 @@ import {
     setRotatorDisconnecting,
     sendNudgeCommand,
 } from "./target-slice.jsx";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Button, FormControl, InputLabel, MenuItem, Select} from "@mui/material";

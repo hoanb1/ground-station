@@ -23,7 +23,7 @@ import { useEffect, useState } from "react";
 import { SignInPage } from "@toolpad/core";
 import { Checkbox, Box, Typography, Paper, Avatar, CircularProgress } from "@mui/material";
 import { useSocket } from './socket.jsx';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { useAuth } from "./auth.jsx";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import PersonIcon from '@mui/icons-material/Person';
@@ -71,7 +71,7 @@ const LoginForm = ({ handleSignedInCallback }) => {
 
             socket.on('disconnect', () => {
                 setLoading(true);
-                toast('Disconnected from server', { icon: '⚠️' });
+                toast.warning('Disconnected from server');
             });
         }
         return () => {

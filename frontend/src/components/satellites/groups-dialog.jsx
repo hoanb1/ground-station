@@ -22,7 +22,7 @@
 import {useSocket} from "../common/socket.jsx";
 import {Fragment, useCallback, useEffect, useState} from "react";
 import * as React from "react";
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import {Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField} from "@mui/material";
 import {DataGrid} from "@mui/x-data-grid";
 import Autocomplete from "@mui/material/Autocomplete";
@@ -44,7 +44,7 @@ export function AutocompleteAsync({setSelectedSatelliteCallback}) {
                 } else {
                     console.error(response.error);
                     toast.error(`Error searching for satellites: ${response.error}`, {
-                        duration: 5000,
+                        autoClose: 5000,
                     });
                     setOptions([]);
                 }
@@ -195,11 +195,11 @@ export function AddEditDialog({formDialogOpen, handleRowsCallback, handleDialogO
                 handleRowsCallback(response.data)
                 handleDialogOpenCallback(false);
                 toast.success(successMessage, {
-                    duration: 5000,
+                    autoClose: 5000,
                 });
             } else {
                 toast.error("Error adding satellite group", {
-                    duration: 5000,
+                    autoClose: 5000,
                 });
             }
         });

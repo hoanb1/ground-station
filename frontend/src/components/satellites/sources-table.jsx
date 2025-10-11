@@ -37,7 +37,7 @@ import {
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchTLESources,  submitOrEditTLESource, deleteTLESources} from './sources-slice.jsx';
 import {betterDateTimes} from "../common/common.jsx";
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import {useSocket} from "../common/socket.jsx";
 import {setFormValues, setOpenAddDialog, setOpenDeleteConfirm, setSelected} from "./sources-slice.jsx"
 import SynchronizeTLEsCard from "./sychronize-card.jsx";
@@ -108,12 +108,12 @@ export default function SourcesTable() {
             .unwrap()
             .then((data) => {
                 toast.success(data.message, {
-                    duration: 4000,
+                    autoClose: 4000,
                 })
             })
             .catch((error) => {
                 toast.error("Failed to delete TLE sources: " + error, {
-                    duration: 5000,
+                    autoClose: 5000,
                 })
             })
         dispatch(setOpenDeleteConfirm(false));
@@ -125,7 +125,7 @@ export default function SourcesTable() {
                 .unwrap()
                 .then(() => {
                     toast.success("TLE source added successfully", {
-                        duration: 4000,
+                        autoClose: 4000,
                     })
                 })
                 .catch((error) => {
@@ -136,7 +136,7 @@ export default function SourcesTable() {
                 .unwrap()
                 .then(() => {
                     toast.success("TLE source updated successfully", {
-                        duration: 4000,
+                        autoClose: 4000,
                     })
                 })
                 .catch((error) => {

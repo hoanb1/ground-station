@@ -44,7 +44,7 @@ import L from 'leaflet';
 import SatelliteMapContainer from "./satellite-map.jsx";
 import { useParams, useNavigate } from 'react-router';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 
 // Fix for default markers in react-leaflet
@@ -138,7 +138,7 @@ const SatelliteInfo = () => {
                     .catch((error) => {
                         console.error(`Failed to fetch satellite with NORAD ID ${noradId}:`, error);
                         toast.error(`Failed to load satellite data: ${error}`, {
-                            duration: 5000,
+                            autoClose: 5000,
                         });
 
                         // Optionally redirect back to satellites list or show error page

@@ -2,7 +2,7 @@ import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {Fragment, useCallback, useEffect} from "react";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 import Autocomplete from "@mui/material/Autocomplete";
 import {CircularProgress, TextField} from "@mui/material";
 
@@ -22,7 +22,7 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
                 } else {
                     console.error(response.error);
                     toast.error(`Error searching for satellites: ${response.error}`, {
-                        duration: 5000,
+                        autoClose: 5000,
                     });
                     setOptions([]);
                 }

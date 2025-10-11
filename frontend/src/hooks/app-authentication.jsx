@@ -18,7 +18,7 @@
  */
 
 import { useMemo } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import { useAuth } from '../components/common/auth.jsx';
 
 /**
@@ -31,7 +31,7 @@ export const useAppAuthentication = () => {
     return useMemo(() => {
         return {
             signIn: () => {
-                toast('user clicked on the sign in button');
+                toast.info('user clicked on the sign in button');
             },
             signOut: () => {
                 logOut();

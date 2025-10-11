@@ -29,7 +29,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import {useSocket} from "../common/socket.jsx";
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import {useDispatch, useSelector} from 'react-redux';
 import {
     deleteCameras,

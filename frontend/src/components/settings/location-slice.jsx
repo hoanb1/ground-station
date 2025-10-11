@@ -20,7 +20,7 @@
 
 
 import {createSlice, createAsyncThunk} from '@reduxjs/toolkit';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import {getMaidenhead} from '../common/common.jsx';
 
 
@@ -37,7 +37,7 @@ export const fetchLocationForUserId = createAsyncThunk(
                         if (response.data) {
                             resolve(response.data);
                         } else {
-                            toast('No location found in the backend, please set one', {icon: 'ℹ️'});
+                            toast.info('No location found in the backend, please set one');
                             resolve(null); // or resolve({}) if no data
                         }
                     } else {

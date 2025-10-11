@@ -47,7 +47,7 @@ import {
     setFormValues,
     setOpenAddDialog,
 } from './rig-slice.jsx';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {humanizeFrequency} from "../common/common.jsx";
 import {useEffect} from "react";
@@ -113,19 +113,19 @@ export default function RigTable() {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success('Rig edited successfully', {duration: 5000});
+                    toast.success('Rig edited successfully', {autoClose: 5000});
                 })
                 .catch((error) => {
-                    toast.error('Error editing rig', {duration: 5000})
+                    toast.error('Error editing rig', {autoClose: 5000})
                 });
         } else {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success('Rig added successfully', {duration: 5000});
+                    toast.success('Rig added successfully', {autoClose: 5000});
                 })
                 .catch((error) => {
-                    toast.error(`Error adding rig: ${error}`, {duration: 5000})
+                    toast.error(`Error adding rig: ${error}`, {autoClose: 5000})
                 });
         }
         dispatch(setOpenAddDialog(false));
@@ -137,10 +137,10 @@ export default function RigTable() {
             .then(() => {
                 dispatch(setSelected([]));
                 dispatch(setOpenDeleteConfirm(false));
-                toast.success('Rig(s) deleted successfully', {duration: 5000});
+                toast.success('Rig(s) deleted successfully', {autoClose: 5000});
             })
             .catch((error) => {
-                toast.error('Error deleting rig(s)', {duration: 5000});
+                toast.error('Error deleting rig(s)', {autoClose: 5000});
             });
     }
 

@@ -1,5 +1,5 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 const AudioContext = createContext({
     audioEnabled: false,

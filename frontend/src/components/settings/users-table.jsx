@@ -35,7 +35,7 @@ import {
 } from '@mui/material';
 import {DataGrid, gridClasses} from '@mui/x-data-grid';
 import { useSelector, useDispatch } from 'react-redux';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 // Import slice actions and thunks
 import {

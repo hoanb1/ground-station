@@ -18,7 +18,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import useWakeLock from './wake-lock-logic.jsx';
-import toast from 'react-hot-toast';
+import { toast } from 'react-toastify';
 
 // Define the default context value
 const defaultWakeLockContext = {
@@ -60,14 +60,12 @@ export const WakeLockProvider = ({ children }) => {
             // Show notification when first wake lock is requested
             if (prev.size === 0 && newSet.size === 1 && !hasManualRequest) {
                 if (wakeLock.isSupported) {
-                    toast(`Screen wake lock activated by ${componentName}`, {
-                        icon: 'ℹ️',
-                        duration: 3000,
+                    toast.info(`Screen wake lock activated by ${componentName}`, {
+                        autoClose: 3000,
                     });
                 } else {
-                    toast('Wake lock not supported on this device', {
-                        icon: '⚠️',
-                        duration: 5000,
+                    toast.warning('Wake lock not supported on this device', {
+                        autoClose: 5000,
                     });
                 }
             }
@@ -83,9 +81,8 @@ export const WakeLockProvider = ({ children }) => {
 
             // Show notification when last wake lock is released
             if (prev.size > 0 && newSet.size === 0 && !hasManualRequest) {
-                toast(`Screen wake lock released by ${componentName}`, {
-                    icon: 'ℹ️',
-                    duration: 2000,
+                toast.info(`Screen wake lock released by ${componentName}`, {
+                    autoClose: 2000,
                 });
             }
 
@@ -95,34 +92,31 @@ export const WakeLockProvider = ({ children }) => {
 
     const requestManualWakeLock = useCallback(async () => {
         if (!wakeLock.isSupported) {
-            toast('Wake lock not supported on this device', {
-                icon: '⚠️',
-                duration: 5000,
+            toast.warning('Wake lock not supported on this device', {
+                autoClose: 5000,
             });
             return false;
         }
 
         setHasManualRequest(true);
         toast.success('Screen wake lock activated', {
-            duration: 2000,
+            autoClose: 2000,
         });
         return true;
     }, [wakeLock.isSupported]);
 
     const releaseManualWakeLock = useCallback(() => {
         setHasManualRequest(false);
-        toast('Manual wake lock released', {
-            icon: 'ℹ️',
-            duration: 2000,
+        toast.info('Manual wake lock released', {
+            autoClose: 2000,
         });
     }, []);
 
     const forceRelease = useCallback(() => {
         setWakeLockRequests(new Set());
         setHasManualRequest(false);
-        toast('Screen wake lock released', {
-            icon: 'ℹ️',
-            duration: 2000,
+        toast.info('Screen wake lock released', {
+            autoClose: 2000,
         });
     }, []);
 

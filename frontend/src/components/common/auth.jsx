@@ -20,7 +20,7 @@
 
 import React, { createContext, useState, useContext } from "react";
 import {useSocket} from "./socket.jsx";
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 
 // Create an AuthContext for managing authentication
 const AuthContext = createContext(null);
@@ -46,7 +46,7 @@ export const AuthProvider = ({ children }) => {
                 setSession({ user: {...response.user, token: response.token} });
                 handleTokenChange(response.token);
                 toast.success('Logged in successfully', {
-                    duration: 5000,
+                    autoClose: 5000,
                 })
                 resolve();
             } else {

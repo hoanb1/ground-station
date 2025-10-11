@@ -19,7 +19,7 @@
 
 
 import * as satellite from 'satellite.js';
-import toast from "react-hot-toast";
+import { toast } from "react-toastify";
 
 /**
  * Calculates the latitude, longitude, altitude, and velocity of a satellite based on TLE data and date.
@@ -60,7 +60,7 @@ export function getSatelliteLatLon(noradId, tleLine1, tleLine2, date) {
     } catch (error) {
         console.error(`Error calculating satellite ${noradId} position and velocity: ${error.message}`);
         toast.error(`Error calculating satellite ${noradId} position and velocity: ${error.message}`, {
-            duration: 5000,
+            autoClose: 5000,
         });
 
         return [0, 0, 0, 0];
@@ -266,7 +266,7 @@ export function getSatellitePaths(tle, durationMinutes, stepMinutes = 1) {
     } catch (error) {
         console.error("Error computing satellite paths:", error);
         toast.error("Error computing satellite paths: " + error.message, {
-            duration: 5000,
+            autoClose: 5000,
         });
         return { past: [], future: [] };
     }
@@ -494,7 +494,7 @@ export function calculateSatelliteAzEl(tleLine1, tleLine2, groundStation, date =
     } catch (error) {
         console.error("Error calculating satellite azimuth and elevation:", error);
         toast.error("Error calculating satellite tracking data: " + error.message, {
-            duration: 5000,
+            autoClose: 5000,
         });
         return null;
     }
