@@ -15,8 +15,8 @@
 
 import traceback
 import uuid
-from datetime import UTC, datetime
-from typing import Union
+from datetime import datetime, timezone
+from typing import List, Union
 
 from pydantic.v1 import UUID4
 from sqlalchemy import String, delete, insert, select, update
@@ -26,7 +26,7 @@ from common.common import logger, serialize_object
 from db.models import Groups, Satellites, Transmitters
 
 
-async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | UUID4) -> dict:
+async def fetch_satellites_for_group_id(session: AsyncSession, group_id: Union[str, UUID4]) -> dict:
     """
     Fetch satellite records for the given group id along with their transmitters
 
@@ -67,7 +67,7 @@ async def fetch_satellites_for_group_id(session: AsyncSession, group_id: str | U
         return {"success": False, "error": str(e)}
 
 
-async def search_satellites(session: AsyncSession, keyword: str | int | None) -> dict:
+async def search_satellites(session: AsyncSession, keyword: Union[str, int, None]) -> dict:
     """
     Fetch satellite records.
 
@@ -121,7 +121,7 @@ async def search_satellites(session: AsyncSession, keyword: str | int | None) ->
 
 
 async def fetch_satellites(
-    session: AsyncSession, norad_id: Union[str, int, list[int], None]
+    session: AsyncSession, norad_id: Union[str, int, List[int], None]
 ) -> dict:
     """
     Fetch satellite records.
@@ -170,7 +170,7 @@ async def add_satellite(session: AsyncSession, data: dict) -> dict:
             if field not in data:
                 raise ValueError(f"Missing required field: {field}")
 
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         data["added"] = now
         data["updated"] = now
 
@@ -201,7 +201,7 @@ async def edit_satellite(session: AsyncSession, satellite_id: uuid.UUID, **kwarg
             return {"success": False, "error": f"Satellite with id {satellite_id} not found."}
 
         # Set the updated timestamp
-        kwargs["updated"] = datetime.now(UTC)
+        kwargs["updated"] = datetime.now(timezone.utc)
 
         upd_stmt = (
             update(Satellites)

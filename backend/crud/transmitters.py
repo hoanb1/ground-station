@@ -15,7 +15,7 @@
 
 import traceback
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Union
 
 from sqlalchemy import delete, insert, select, update
@@ -69,7 +69,7 @@ async def add_transmitter(session: AsyncSession, data: dict) -> dict:
     """
     try:
         new_id = uuid.uuid4()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         data["id"] = str(new_id)
         data["added"] = now
         data["updated"] = now
@@ -153,7 +153,7 @@ async def edit_transmitter(session: AsyncSession, data: dict) -> dict:
             return {"success": False, "error": f"Transmitter with id {transmitter_id} not found."}
 
         # Add updated timestamp
-        data["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(timezone.utc)
 
         upd_stmt = (
             update(Transmitters)

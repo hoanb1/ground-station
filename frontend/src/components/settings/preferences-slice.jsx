@@ -82,6 +82,11 @@ const preferencesSlice = createSlice({
                 id: null,
                 name: 'openweather_api_key',
                 value: "",
+            },
+            {
+                id: null,
+                name: 'minimum_elevation',
+                value: "10",
             }
         ],
         status: 'idle',

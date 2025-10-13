@@ -15,7 +15,7 @@
 
 import traceback
 import uuid
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 from typing import Optional, Union
 
 from sqlalchemy import delete, insert, select, update
@@ -46,14 +46,14 @@ async def fetch_location(session: AsyncSession, location_id: Union[uuid.UUID, st
 
 
 async def fetch_location_for_userid(
-    session: AsyncSession, user_id: Optional[uuid.UUID | str | None] = None
+    session: AsyncSession, user_id: Optional[Union[uuid.UUID, str, None]] = None
 ) -> dict:
     """
     Fetch a single location by its UUID or all locations for a given user_id.
     """
     try:
         if user_id is None:
-            stmt = select(Locations).filter(Locations.userid == None)
+            stmt = select(Locations).filter(Locations.userid.is_(None))
         else:
             if isinstance(user_id, str):
                 user_id = uuid.UUID(user_id)
@@ -76,7 +76,7 @@ async def add_location(session: AsyncSession, data: dict) -> dict:
     """
     try:
         new_id = uuid.uuid4()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         data["id"] = new_id
         data["added"] = now
         data["updated"] = now

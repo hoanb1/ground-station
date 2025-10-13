@@ -14,7 +14,8 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 import traceback
-from datetime import UTC, datetime
+from datetime import datetime, timezone
+from typing import Dict
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -51,7 +52,7 @@ async def set_tracking_state(session: AsyncSession, data: dict) -> dict:
         assert data.get("value", None) is not None, "value is required when setting tracking state"
         value = data.get("value", {})
 
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         data["updated"] = now
 
         existing_record = await session.execute(
@@ -117,7 +118,7 @@ async def get_tracking_state(session: AsyncSession, name: str) -> dict:
     Returns a dictionary with the data or an error message if not found.
     """
 
-    reply: dict[str, object] = {"success": None, "data": None, "error": None}
+    reply: Dict[str, object] = {"success": None, "data": None, "error": None}
 
     try:
         assert name is not None, "name is required when fetching tracking state"

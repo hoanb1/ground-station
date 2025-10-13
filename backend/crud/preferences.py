@@ -15,8 +15,8 @@
 
 import traceback
 import uuid
-from datetime import UTC, datetime
-from typing import Optional, Union
+from datetime import datetime, timezone
+from typing import List, Optional, Union
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -60,6 +60,7 @@ async def fetch_preference_for_userid(
         "theme": "dark",
         "stadia_maps_api_key": "",
         "openweather_api_key": "",
+        "minimum_elevation": "10",
     }
 
     try:
@@ -71,7 +72,7 @@ async def fetch_preference_for_userid(
         if user_id is not None:
             stmt = stmt.filter(Preferences.userid == user_id)
         else:
-            stmt = stmt.filter(Preferences.userid == None)
+            stmt = stmt.filter(Preferences.userid.is_(None))
 
         result = await session.execute(stmt)
         preferences = result.scalars().all()
@@ -102,7 +103,7 @@ async def add_preference(session: AsyncSession, data: dict) -> dict:
     """
     try:
         new_id = uuid.uuid4()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         # Convert userid to UUID if it's a string
         userid = data["userid"]
@@ -155,7 +156,7 @@ async def edit_preference(session: AsyncSession, data: dict) -> dict:
             return {"success": False, "error": f"Preference with id {preference_id} not found."}
 
         # Update the timestamp
-        data["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(timezone.utc)
 
         upd_stmt = (
             update(Preferences)
@@ -176,7 +177,7 @@ async def edit_preference(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dict:
+async def set_preferences(session: AsyncSession, preferences: List[dict]) -> dict:
     """
     Edit or upsert preference records for provided fields.
     """
@@ -203,7 +204,7 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
                 if preference:
                     # Update existing preference
                     data.pop("added", None)
-                    data["updated"] = datetime.now(UTC)
+                    data["updated"] = datetime.now(timezone.utc)
                     upd_stmt = (
                         update(Preferences)
                         .where(Preferences.id == preference_id)
@@ -215,7 +216,7 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
 
                 else:
                     # Insert a new preference (upsert case)
-                    now = datetime.now(UTC)
+                    now = datetime.now(timezone.utc)
                     data["id"] = preference_id
                     data["added"] = now
                     data["updated"] = now
@@ -226,7 +227,7 @@ async def set_preferences(session: AsyncSession, preferences: list[dict]) -> dic
             else:
                 # Insert a new preference if no ID is provided
                 new_id = uuid.uuid4()
-                now = datetime.now(UTC)
+                now = datetime.now(timezone.utc)
                 data["id"] = new_id
                 data["added"] = now
                 data["updated"] = now
@@ -293,7 +294,7 @@ async def set_map_settings(session: AsyncSession, data: dict) -> dict:
         assert data.get("name", None) is not None, "name is required when setting map settings"
         assert data.get("value", None) is not None, "value is required when setting map settings"
 
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         data["updated"] = now
 
         existing_record = await session.execute(

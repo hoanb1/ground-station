@@ -15,8 +15,8 @@
 
 import traceback
 import uuid
-from datetime import UTC, datetime
-from typing import Optional, Union
+from datetime import datetime, timezone
+from typing import List, Optional, Union
 
 import bcrypt
 from sqlalchemy import delete, insert, select, update
@@ -84,7 +84,7 @@ async def add_user(session: AsyncSession, data: dict) -> dict:
         password_hash = bcrypt.hashpw(password.encode("utf-8"), salt).decode("utf-8")
 
         new_id = uuid.uuid4()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
 
         stmt = (
             insert(Users)
@@ -146,7 +146,7 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
             return {"success": False, "error": f"User with id {user_id} not found."}
 
         # update provided fields; also update the timestamp
-        data["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(timezone.utc)
         upd_stmt = update(Users).where(Users.id == user_id).values(**data).returning(Users)
         upd_result = await session.execute(upd_stmt)
         await session.commit()
@@ -162,7 +162,7 @@ async def edit_user(session: AsyncSession, data: dict) -> dict:
 
 
 async def delete_user(
-    session: AsyncSession, user_ids: Union[list[uuid.UUID], list[str], dict]
+    session: AsyncSession, user_ids: Union[List[uuid.UUID], List[str], dict]
 ) -> dict:
     """
     Delete multiple users by their UUIDs.

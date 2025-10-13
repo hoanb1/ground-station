@@ -15,7 +15,7 @@
 
 import traceback
 import uuid
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -149,7 +149,7 @@ async def edit_satellite_group(session: AsyncSession, satellite_group_id: str, d
 
 
 async def delete_satellite_group(
-    session: AsyncSession, satellite_group_ids: Union[list[str], dict]
+    session: AsyncSession, satellite_group_ids: Union[List[str], dict]
 ) -> dict:
     """
     Delete satellite group record(s).

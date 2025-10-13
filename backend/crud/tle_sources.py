@@ -18,7 +18,7 @@ import random
 import string
 import traceback
 import uuid
-from typing import Optional, Union
+from typing import List, Optional, Union
 
 from sqlalchemy import select
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -130,7 +130,7 @@ async def edit_satellite_tle_source(
 
 
 async def delete_satellite_tle_sources(
-    session: AsyncSession, satellite_tle_source_ids: Union[list[str], dict]
+    session: AsyncSession, satellite_tle_source_ids: Union[List[str], dict]
 ) -> dict:
     """
     Deletes multiple satellite TLE source records using their IDs.
@@ -225,7 +225,12 @@ async def delete_satellite_tle_sources(
         total_satellites_deleted = sum(item["satellites_deleted"] for item in deletion_summary)
         total_groups_deleted = sum(1 for item in deletion_summary if item["group_deleted"])
 
-        message = f"Successfully deleted {len(found_ids)} TLE source(s), {total_transmitters_deleted} transmitter(s), {total_satellites_deleted} satellite(s), and {total_groups_deleted} satellite group(s)."
+        message = (
+            f"Successfully deleted {len(found_ids)} TLE source(s), "
+            f"{total_transmitters_deleted} transmitter(s), "
+            f"{total_satellites_deleted} satellite(s), and "
+            f"{total_groups_deleted} satellite group(s)."
+        )
 
         if not_found_ids:
             message += f" The following TLE source IDs were not found: {not_found_ids}."

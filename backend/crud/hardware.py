@@ -15,8 +15,8 @@
 
 import traceback
 import uuid
-from datetime import UTC, datetime
-from typing import Optional, Union
+from datetime import datetime, timezone
+from typing import List, Optional, Union
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -59,7 +59,7 @@ async def add_rotator(session: AsyncSession, data: dict) -> dict:
     """
     try:
         new_id = uuid.uuid4()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         stmt = (
             insert(Rotators)
             .values(
@@ -114,7 +114,7 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
             return {"success": False, "error": f"Rotator with id {rotator_id} not found."}
 
         # Add updated timestamp
-        data["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(timezone.utc)
 
         upd_stmt = (
             update(Rotators).where(Rotators.id == rotator_id).values(**data).returning(Rotators)
@@ -133,7 +133,7 @@ async def edit_rotator(session: AsyncSession, data: dict) -> dict:
 
 
 async def delete_rotators(
-    session: AsyncSession, rotator_ids: list[Union[str, uuid.UUID]] | dict
+    session: AsyncSession, rotator_ids: Union[List[Union[str, uuid.UUID]], dict]
 ) -> dict:
     """
     Delete multiple rotator records by their UUIDs or string representations of UUIDs.
@@ -160,7 +160,7 @@ async def delete_rotators(
 
 
 async def fetch_rigs(
-    session: AsyncSession, rig_id: Optional[Union[uuid.UUID | str | None]] = None
+    session: AsyncSession, rig_id: Optional[Union[uuid.UUID, str, None]] = None
 ) -> dict:
     """
     Fetch a single rig by its UUID or all rigs if UUID is not provided.
@@ -201,7 +201,7 @@ async def add_rig(session: AsyncSession, data: dict) -> dict:
         assert data.get("loup", "") != "", "loup is required"
 
         new_id = uuid.uuid4()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         stmt = (
             insert(Rigs)
             .values(
@@ -254,7 +254,7 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
             return {"success": False, "error": f"Rig with id {rig_id} not found."}
 
         # Update the updated timestamp.
-        data["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(timezone.utc)
 
         upd_stmt = update(Rigs).where(Rigs.id == rig_id).values(**data).returning(Rigs)
         upd_result = await session.execute(upd_stmt)
@@ -271,7 +271,7 @@ async def edit_rig(session: AsyncSession, data: dict) -> dict:
 
 
 async def delete_rig(
-    session: AsyncSession, rig_ids: Union[list[uuid.UUID], list[str], dict]
+    session: AsyncSession, rig_ids: Union[List[uuid.UUID], List[str], dict]
 ) -> dict:
     """
     Delete multiple rig records by their UUIDs or string representations of UUIDs.
@@ -330,7 +330,7 @@ async def add_camera(session: AsyncSession, data: dict) -> dict:
     """
     try:
         new_id = uuid.uuid4()
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         stmt = (
             insert(Cameras)
             .values(
@@ -379,7 +379,7 @@ async def edit_camera(session: AsyncSession, data: dict) -> dict:
             return {"success": False, "error": f"Camera with id {camera_id} not found."}
 
         # Add updated timestamp
-        data["updated"] = datetime.now(UTC)
+        data["updated"] = datetime.now(timezone.utc)
 
         upd_stmt = update(Cameras).where(Cameras.id == camera_id).values(**data).returning(Cameras)
         upd_result = await session.execute(upd_stmt)
@@ -396,7 +396,7 @@ async def edit_camera(session: AsyncSession, data: dict) -> dict:
 
 
 async def delete_cameras(
-    session: AsyncSession, camera_ids: list[Union[str, uuid.UUID]] | dict
+    session: AsyncSession, camera_ids: Union[List[Union[str, uuid.UUID]], dict]
 ) -> dict:
     """
     Delete multiple camera records by their UUIDs or string representations of UUIDs.
@@ -453,17 +453,20 @@ async def fetch_sdrs(session: AsyncSession) -> dict:
 async def fetch_sdr(session: AsyncSession, sdr_id: Optional[Union[uuid.UUID, str]] = None) -> dict:
     """
     Fetches an SDR record from the database by its unique identifier
-    and serializes it into a dictionary format. If the `sdr_id` is provided as a string, it is automatically
-    converted into a UUID type. If no sdr_id is provided, returns all SDRs. The method handles potential
-    exceptions by logging detailed error messages and returning an error response.
+    and serializes it into a dictionary format. If the `sdr_id` is provided
+    as a string, it is automatically converted into a UUID type. If no sdr_id
+    is provided, returns all SDRs. The method handles potential exceptions by
+    logging detailed error messages and returning an error response.
 
     :param session: The asynchronous database session used for executing queries.
     :type session: AsyncSession
-    :param sdr_id: The unique identifier of the SDR record, either as a UUID or a string. If None, returns all SDRs.
+    :param sdr_id: The unique identifier of the SDR record, either as a UUID
+        or a string. If None, returns all SDRs.
     :type sdr_id: Optional[Union[uuid.UUID, str]]
-    :return: A dictionary containing the result of the operation. Includes a boolean `success` key,
-             a `data` key with the serialized SDR record(s) if successful, and an `error` key with an error
-             message if any exception occurred.
+    :return: A dictionary containing the result of the operation. Includes a
+        boolean `success` key, a `data` key with the serialized SDR record(s)
+        if successful, and an `error` key with an error message if any
+        exception occurred.
     :rtype: dict
     """
     try:
@@ -585,7 +588,7 @@ async def edit_sdr(session: AsyncSession, data: dict) -> dict:
             if hasattr(sdr, key) and value is not None:
                 setattr(sdr, key, value)
 
-        sdr.updated = datetime.now(UTC)
+        sdr.updated = datetime.now(timezone.utc)
 
         await session.commit()
 
@@ -599,7 +602,7 @@ async def edit_sdr(session: AsyncSession, data: dict) -> dict:
         return {"success": False, "error": str(e)}
 
 
-async def delete_sdrs(session: AsyncSession, sdr_ids: list[Union[str, uuid.UUID]]) -> dict:
+async def delete_sdrs(session: AsyncSession, sdr_ids: List[Union[str, uuid.UUID]]) -> dict:
     """
     Deletes SDRs (Signal Detection Records) from the database based on the provided IDs.
 

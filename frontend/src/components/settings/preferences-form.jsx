@@ -25,6 +25,8 @@ import { updatePreferences, setPreference } from './preferences-slice.jsx';
 import { tz } from 'moment-timezone';
 import Paper from '@mui/material/Paper';
 import {
+    Alert,
+    AlertTitle,
     Box,
     Button,
     Divider,
@@ -81,14 +83,11 @@ const PreferencesForm = () => {
     };
 
     return (
-        <Paper elevation={2} sx={{ padding: 3, marginTop: 0, borderRadius: 1 }}>
-            <Typography variant="h5" component="h1" sx={{ mb: 2, fontWeight: 500 }}>
-                Preferences
-            </Typography>
-
-            <Typography variant="body2" color="text.secondary" sx={{ mb: 3 }}>
-                Customize your application settings
-            </Typography>
+        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
+            <Alert severity="info">
+                <AlertTitle>Application Preferences</AlertTitle>
+                Configure your application settings and API keys
+            </Alert>
 
             <Box component="form" sx={{ mt: 2 }}>
                 <Grid container spacing={3} columns={16}>
@@ -215,21 +214,46 @@ const PreferencesForm = () => {
                             onChange={handleChange('openweather_api_key')}
                         />
                     </Grid>
+
+                    {/* Ground Station Configuration */}
+                    <Grid size={16} sx={{ mt: 2 }}>
+                        <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>
+                            Ground Station Configuration
+                        </Typography>
+                        <Divider sx={{ mb: 2 }} />
+                    </Grid>
+
+                    {/* Minimum Elevation */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>Minimum Elevation (degrees)</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <TextField
+                            fullWidth
+                            id="minimum-elevation"
+                            variant="outlined"
+                            type="number"
+                            size="small"
+                            disabled={isLoading}
+                            value={getPreferenceValue('minimum_elevation')}
+                            onChange={handleChange('minimum_elevation')}
+                            inputProps={{
+                                min: 0,
+                                max: 90,
+                                step: 1
+                            }}
+                        />
+                    </Grid>
                 </Grid>
 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>
                     <Button
                         disabled={isLoading}
                         variant="contained"
+                        color="primary"
                         onClick={handleSavePreferences}
-                        sx={{
-                            minWidth: 100,
-                            borderRadius: 1,
-                            textTransform: 'none',
-                            fontWeight: 500
-                        }}
                     >
-                        SAVE
+                        Save Preferences
                     </Button>
                 </Box>
             </Box>
