@@ -142,61 +142,34 @@ def upgrade() -> None:
         batch_op.create_index(batch_op.f("ix_tracking_state_value"), ["value"], unique=False)
 
     op.create_table(
-        "users",
-        sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("email", sa.String(), nullable=False),
-        sa.Column("status", sa.Enum("active", "inactive", name="user_status_enum"), nullable=False),
-        sa.Column("password", sa.String(), nullable=False),
-        sa.Column("fullname", sa.String(), nullable=False),
-        sa.Column("added", DateTime(timezone=False), nullable=False),
-        sa.Column("updated", DateTime(timezone=False), nullable=False),
-        sa.PrimaryKeyConstraint("id"),
-        sa.UniqueConstraint("email"),
-    )
-    op.create_table(
         "groups",
         sa.Column("id", sa.UUID(), nullable=False),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("identifier", sa.String(), nullable=True),
-        sa.Column("userid", sa.UUID(), nullable=True),
         sa.Column("type", sa.Enum("USER", "SYSTEM", name="satellitegrouptype"), nullable=False),
         sa.Column("satellite_ids", JSON(), nullable=True),
         sa.Column("added", DateTime(timezone=False), nullable=False),
         sa.Column("updated", DateTime(timezone=False), nullable=False),
-        sa.ForeignKeyConstraint(
-            ["userid"],
-            ["users.id"],
-        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "locations",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("userid", sa.UUID(), nullable=True),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("lat", sa.Float(), nullable=False),
         sa.Column("lon", sa.Float(), nullable=False),
         sa.Column("alt", sa.Integer(), nullable=False),
         sa.Column("added", DateTime(timezone=False), nullable=False),
         sa.Column("updated", DateTime(timezone=False), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["userid"],
-            ["users.id"],
-        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
         "preferences",
         sa.Column("id", sa.UUID(), nullable=False),
-        sa.Column("userid", sa.UUID(), nullable=True),
         sa.Column("name", sa.String(), nullable=False),
         sa.Column("value", sa.String(), nullable=False),
         sa.Column("added", DateTime(timezone=False), nullable=False),
         sa.Column("updated", DateTime(timezone=False), nullable=True),
-        sa.ForeignKeyConstraint(
-            ["userid"],
-            ["users.id"],
-        ),
         sa.PrimaryKeyConstraint("id"),
     )
     op.create_table(
@@ -245,7 +218,6 @@ def downgrade() -> None:
     op.drop_table("preferences")
     op.drop_table("locations")
     op.drop_table("groups")
-    op.drop_table("users")
     with op.batch_alter_table("tracking_state", schema=None) as batch_op:
         batch_op.drop_index(batch_op.f("ix_tracking_state_value"))
         batch_op.drop_index(batch_op.f("ix_tracking_state_name"))

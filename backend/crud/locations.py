@@ -45,27 +45,19 @@ async def fetch_location(session: AsyncSession, location_id: Union[uuid.UUID, st
         return {"success": False, "error": str(e)}
 
 
-async def fetch_location_for_userid(
-    session: AsyncSession, user_id: Optional[Union[uuid.UUID, str, None]] = None
-) -> dict:
+async def fetch_all_locations(session: AsyncSession) -> dict:
     """
-    Fetch a single location by its UUID or all locations for a given user_id.
+    Fetch all location records.
     """
     try:
-        if user_id is None:
-            stmt = select(Locations).filter(Locations.userid.is_(None))
-        else:
-            if isinstance(user_id, str):
-                user_id = uuid.UUID(user_id)
-            stmt = select(Locations).filter(Locations.id == user_id)
-
+        stmt = select(Locations)
         result = await session.execute(stmt)
-        locations = result.scalars().all() if user_id else result.scalar_one_or_none()
+        locations = result.scalars().all()
         locations = serialize_object(locations)
         return {"success": True, "data": locations, "error": None}
 
     except Exception as e:
-        logger.error(f"Error fetching a location for user id: {e}")
+        logger.error(f"Error fetching locations: {e}")
         logger.error(traceback.format_exc())
         return {"success": False, "error": str(e)}
 
@@ -80,11 +72,6 @@ async def add_location(session: AsyncSession, data: dict) -> dict:
         data["id"] = new_id
         data["added"] = now
         data["updated"] = now
-
-        # Convert userid to UUID if it's a string
-        if "userid" in data and data["userid"] is not None:
-            if isinstance(data["userid"], str):
-                data["userid"] = uuid.UUID(data["userid"])
 
         stmt = insert(Locations).values(**data).returning(Locations)
 

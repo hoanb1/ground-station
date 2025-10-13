@@ -32,7 +32,7 @@ import {
     SettingsTabTLESources,
     SettingsTabAbout,
     SettingsTabSatelliteGroups,
-    SettingsTabUsers, SettingsTabCamera,
+    SettingsTabCamera,
     SettingsTabSDR
 } from "./components/settings/settings.jsx";
 import GlobalSatelliteTrackLayout from "./components/overview/main-layout.jsx";
@@ -41,7 +41,6 @@ import Layout from "./components/dashboard/dashboard-layout.jsx";
 import TargetSatelliteLayout from "./components/target/main-layout.jsx";
 import MainWaterfallDisplay from "./components/waterfall/waterfall-island.jsx";
 import {SocketProvider, useSocket} from './components/common/socket.jsx';
-import {AuthProvider} from "./components/common/auth.jsx";
 import { Provider as ReduxProvider} from 'react-redux';
 import { PersistGate } from 'redux-persist/integration/react';
 import { store, persistor } from './components/common/store.jsx';
@@ -151,11 +150,9 @@ createRoot(document.getElementById('root')).render(
         <ReduxProvider store={store}>
             <PersistGate loading={null} persistor={persistor}>
                 <SocketProvider>
-                    <AuthProvider>
-                        <WakeLockProvider>
-                            <RouterProvider router={router} />
-                        </WakeLockProvider>
-                    </AuthProvider>
+                    <WakeLockProvider>
+                        <RouterProvider router={router} />
+                    </WakeLockProvider>
                 </SocketProvider>
             </PersistGate>
         </ReduxProvider>

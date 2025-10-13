@@ -42,7 +42,6 @@ import SourcesTable from "../satellites/sources-table.jsx";
 import SatelliteTable from "../satellites/satellite-table.jsx";
 import AboutPage from "./about.jsx";
 import SatelliteGroupsTable from "../satellites/groups-table.jsx";
-import UsersTable from "./users-table.jsx";
 import LocationPage from "./location-form.jsx";
 import PreferencesForm from "./preferences-form.jsx";
 import MaintenanceForm from "./maintenance-form.jsx";
@@ -91,9 +90,6 @@ export function SettingsTabMaintenance () {
     return (<SettingsTabs initialMainTab={"settings"} initialTab={"maintenance"}/>);
 }
 
-export function SettingsTabUsers () {
-    return (<SettingsTabs initialMainTab={"settings"} initialTab={"users"}/>);
-}
 
 export function SettingsTabAbout () {
     return (<SettingsTabs initialMainTab={"settings"} initialTab={"about"}/>);
@@ -214,9 +210,6 @@ export const SettingsTabs = React.memo(function SettingsTabs({initialMainTab, in
         case "maintenance":
             activeTabContent = <MaintenanceForm/>;
             break;
-        case "users":
-            activeTabContent = <UsersForm/>;
-            break;
         case "about":
             activeTabContent = <AboutPage/>;
             break;
@@ -287,18 +280,6 @@ const SatellitesForm = () => {
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant="elevation">
             <SatelliteTable/>
-        </Paper>);
-};
-
-const UsersForm = () => {
-
-    return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0}} variant="elevation">
-            <Alert severity="info">
-                <AlertTitle>Users</AlertTitle>
-                Manage add and remove users here
-            </Alert>
-            <UsersTable/>
         </Paper>);
 };
 

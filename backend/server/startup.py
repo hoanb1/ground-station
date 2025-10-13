@@ -225,7 +225,6 @@ async def first_time_initialization():
                 lat=0.0,
                 lon=0.0,
                 alt=0,
-                userid=None,  # Global location, not tied to a specific user
             )
             session.add(default_location)
 

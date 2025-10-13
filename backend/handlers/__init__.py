@@ -13,7 +13,6 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
-from .auth import auth_request_routing
 from .base import run_async_in_thread
 from .data_requests import data_request_routing
 from .data_submissions import data_submission_routing
@@ -24,7 +23,6 @@ __all__ = [
     "run_async_in_thread",
     "data_request_routing",
     "data_submission_routing",
-    "auth_request_routing",
     "sdr_data_request_routing",
     "emit_tracker_data",
     "emit_ui_tracker_values",

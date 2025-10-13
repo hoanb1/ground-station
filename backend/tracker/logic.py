@@ -861,10 +861,10 @@ class SatelliteTracker:
                     ], f"No norad id found in satellite tracking state: {tracking_state_reply}"
 
                     # Fetch the location of the ground station
-                    location_reply = await crud.locations.fetch_location_for_userid(
-                        dbsession, user_id=None
-                    )
-                    location = location_reply["data"]
+                    location_reply = await crud.locations.fetch_all_locations(dbsession)
+                    if not location_reply["data"] or len(location_reply["data"]) == 0:
+                        raise Exception("No location found in the database")
+                    location = location_reply["data"][0]
                     tracker = tracking_state_reply["data"]["value"]
 
                     # Get a data dict that contains all the information for the target satellite

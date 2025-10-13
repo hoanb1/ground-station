@@ -132,11 +132,6 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             logger.debug("Syncing satellite data with known TLE sources")
             await synchronize_satellite_data(dbsession, logger, sio)
 
-        elif cmd == "get-users":
-            logger.debug(f"Getting users, data: {data}")
-            users = await crud.users.fetch_users(dbsession, user_id=None)
-            reply = {"success": users["success"], "data": users.get("data", [])}
-
         elif cmd == "get-rigs":
             logger.debug(f"Getting radio rigs, data: {data}")
             rigs = await crud.hardware.fetch_rigs(dbsession)
@@ -157,9 +152,9 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             sdrs = await crud.hardware.fetch_sdrs(dbsession)
             reply = {"success": sdrs["success"], "data": sdrs.get("data", [])}
 
-        elif cmd == "get-location-for-user-id":
-            logger.debug(f"Getting location for user id, data: {data}")
-            locations = await crud.locations.fetch_location_for_userid(dbsession, user_id=data)
+        elif cmd == "get-locations":
+            logger.debug(f"Getting all locations")
+            locations = await crud.locations.fetch_all_locations(dbsession)
             reply = {"success": locations["success"], "data": locations.get("data", [])}
 
         elif cmd == "fetch-next-passes":
@@ -192,10 +187,8 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             reply = {"success": satellites["success"], "data": satellites.get("data", [])}
 
         elif cmd == "fetch-preferences":
-            logger.debug(f"Fetching preferences for user id, data: {data}")
-            preferences = await crud.preferences.fetch_preference_for_userid(
-                dbsession, user_id=None
-            )
+            logger.debug(f"Fetching preferences")
+            preferences = await crud.preferences.fetch_all_preferences(dbsession)
             reply = {"success": preferences["success"], "data": preferences.get("data", [])}
 
         elif cmd == "get-tracking-state":

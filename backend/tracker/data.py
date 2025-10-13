@@ -206,9 +206,16 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         )
         satellite_data["transmitters"] = transmitters["data"]
 
-        location = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
-        if not location.get("success", False) or location.get("data", None) is None:
-            raise Exception(f"No location found in the db for user id None, please set one")
+        location = await crud.locations.fetch_all_locations(dbsession)
+        if (
+            not location.get("success", False)
+            or not location.get("data")
+            or len(location["data"]) == 0
+        ):
+            raise Exception(f"No location found in the db, please set one")
+
+        # Use the first location from the list
+        location_data = location["data"][0]
 
         # get current position
         position = get_satellite_position_from_tle(
@@ -220,8 +227,8 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         )
 
         # get position in the sky
-        home_lat = location["data"]["lat"]
-        home_lon = location["data"]["lon"]
+        home_lat = location_data["lat"]
+        home_lon = location_data["lon"]
         sky_point = get_satellite_az_el(
             home_lat,
             home_lon,

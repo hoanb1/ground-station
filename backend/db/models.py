@@ -230,7 +230,6 @@ class Rotators(Base):
 class Locations(Base):
     __tablename__ = "locations"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    userid = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     name = Column(String, nullable=False)
     lat = Column(Float, nullable=False)
     lon = Column(Float, nullable=False)
@@ -241,25 +240,9 @@ class Locations(Base):
     )
 
 
-class Users(Base):
-    __tablename__ = "users"
-    id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    email = Column(String, nullable=False, unique=True)
-    status = Column(
-        Enum("active", "inactive", name="user_status_enum"), nullable=False, default="active"
-    )
-    password = Column(String, nullable=False)
-    fullname = Column(String, nullable=False)
-    added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
-    updated = Column(
-        AwareDateTime, nullable=False, default=datetime.now(UTC), onupdate=datetime.now(UTC)
-    )
-
-
 class Preferences(Base):
     __tablename__ = "preferences"
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
-    userid = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     name = Column(String, nullable=False)
     value = Column(String, nullable=False)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))
@@ -286,7 +269,6 @@ class Groups(Base):
     id = Column(UUID(as_uuid=True), primary_key=True, default=uuid.uuid4, nullable=False)
     name = Column(String, nullable=False)
     identifier = Column(String, nullable=True)
-    userid = Column(UUID(as_uuid=True), ForeignKey("users.id"), nullable=True)
     type = Column(Enum(SatelliteGroupType), nullable=False, default=SatelliteGroupType.USER)
     satellite_ids = Column(JsonField, nullable=True)
     added = Column(AwareDateTime, nullable=False, default=datetime.now(UTC))

@@ -30,12 +30,13 @@ export const fetchLocationForUserId = createAsyncThunk(
         return new Promise((resolve, reject) => {
             socket.emit(
                 'data_request',
-                'get-location-for-user-id',
+                'get-locations',
                 null,
                 (response) => {
                     if (response.success) {
-                        if (response.data) {
-                            resolve(response.data);
+                        if (response.data && response.data.length > 0) {
+                            // Return the first location from the list
+                            resolve(response.data[0]);
                         } else {
                             toast.info('No location found in the backend, please set one');
                             resolve(null); // or resolve({}) if no data
@@ -55,16 +56,21 @@ export const storeLocation = createAsyncThunk(
     'location/handleSetLocation',
     async ({socket, location, altitude, locationId}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
-            socket.emit('data_submission', 'submit-location-for-user-id',
-                {...location, alt: altitude, name: "home", userid: null, id: locationId}, (response) => {
-                    if (response['success']) {
-                        toast.success('Location set successfully');
-                        resolve(response.data);
-                    } else {
-                        toast.error('Failed to set location');
-                        reject(rejectWithValue('Failed to set location'));
-                    }
-                });
+            const command = locationId ? 'edit-location' : 'submit-location';
+            const data = {...location, alt: altitude, name: "home"};
+            if (locationId) {
+                data.id = locationId;
+            }
+
+            socket.emit('data_submission', command, data, (response) => {
+                if (response['success']) {
+                    toast.success('Location set successfully');
+                    resolve(response.data || data);
+                } else {
+                    toast.error('Failed to set location');
+                    reject(rejectWithValue('Failed to set location'));
+                }
+            });
         });
     }
 );
@@ -78,7 +84,6 @@ const locationSlice = createSlice({
         location: {lat: 0, lon: 0},
         altitude: 0,
         locationId: null,
-        locationUserId: null,
         qth: '',
         polylines: [],
         error: null,
@@ -89,9 +94,6 @@ const locationSlice = createSlice({
         },
         setLocationId: (state, action) => {
             state.locationId = action.payload;
-        },
-        setLocationUserId: (state, action) => {
-            state.locationUserId = action.payload;
         },
         setQth: (state, action) => {
             state.qth = action.payload;
@@ -121,7 +123,7 @@ const locationSlice = createSlice({
                     const payload = action.payload;
                     state.location = action.payload;
                     state.locationId = action.payload.id;
-                    state.locationUserId = action.payload.userid;
+                    state.altitude = action.payload.alt || 0;
                     state.qth = getMaidenhead(parseFloat(payload.lat), parseFloat(payload.lon));
                 }
             })
@@ -139,7 +141,7 @@ const locationSlice = createSlice({
                     const payload = action.payload;
                     state.location = action.payload;
                     state.locationId = action.payload.id;
-                    state.locationUserId = action.payload.userid;
+                    state.altitude = action.payload.alt || state.altitude;
                     state.qth = getMaidenhead(parseFloat(payload.lat), parseFloat(payload.lon));
                     state.locationSaving = false;
                 }
@@ -155,7 +157,6 @@ const locationSlice = createSlice({
 export const {
     setLocation,
     setLocationId,
-    setLocationUserId,
     setQth,
     setPolylines,
     setLocationLoading,

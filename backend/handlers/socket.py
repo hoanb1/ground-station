@@ -4,12 +4,7 @@ import time
 from typing import Dict
 
 from common.logger import logger
-from handlers import (
-    auth_request_routing,
-    data_request_routing,
-    data_submission_routing,
-    sdr_data_request_routing,
-)
+from handlers import data_request_routing, data_submission_routing, sdr_data_request_routing
 from sdr.utils import cleanup_sdr_session
 from server.shutdown import cleanup_everything
 
@@ -49,17 +44,6 @@ def register_socketio_handlers(sio):
         logger.info(f"Received event from: {sid}, with cmd: {cmd}, and data: {data}")
         reply = await data_submission_routing(sio, cmd, data, logger, sid)
         return reply
-
-    @sio.on("auth_request")
-    async def handle_frontend_auth_requests(sid, cmd, data):
-        logger.info(
-            f'Received authentication event from client {sid} with IP {SESSIONS[sid]["REMOTE_ADDR"]}: {data}'
-        )
-        reply = await auth_request_routing(sio, cmd, data, logger, sid)
-        logger.info(
-            f'Replying to authentication event from client {sid} with IP {SESSIONS[sid]["REMOTE_ADDR"]}: {reply}'
-        )
-        return {"success": reply["success"], "token": reply["token"], "user": reply["user"]}
 
     @sio.on("service_control")
     async def handle_service_control_requests(sid, cmd, data=None):

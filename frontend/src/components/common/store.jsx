@@ -26,7 +26,6 @@ import rigsReducer from '../hardware/rig-slice.jsx';
 import rotatorsReducer from '../hardware/rotaror-slice.jsx';
 import tleSourcesReducer from '../satellites/sources-slice.jsx';
 import satellitesReducer from '../satellites/satellite-slice.jsx';
-import usersReducer from '../settings/users-slice.jsx';
 import satelliteGroupReducer from '../satellites/groups-slice.jsx';
 import locationReducer from '../settings/location-slice.jsx';
 import synchronizeReducer from '../satellites/synchronize-slice.jsx';
@@ -86,12 +85,6 @@ const satelliteGroupsPersistConfig = {
     whitelist: []
 };
 
-// Persist configuration for the 'users' slice
-const usersPersistConfig = {
-    key: 'users',
-    storage,
-    whitelist: []
-};
 
 // Persist configuration for location slice
 const locationPersistConfig = {
@@ -171,7 +164,6 @@ const persistedRotatorsReducer = persistReducer(rotatorsPersistConfig, rotatorsR
 const persistedTleSourcesReducer = persistReducer(tleSourcesPersistConfig, tleSourcesReducer);
 const persistedSatellitesReducer = persistReducer(satellitesPersistConfig, satellitesReducer);
 const persistedSatelliteGroupsReducer = persistReducer(satelliteGroupsPersistConfig, satelliteGroupReducer);
-const persistedUsersReducer = persistReducer(usersPersistConfig, usersReducer);
 const persistedLocationReducer = persistReducer(locationPersistConfig, locationReducer);
 const persistedSynchronizeReducer = persistReducer(synchronizePersistConfig, synchronizeReducer);
 const persistedPreferencesReducer = persistReducer(preferencesPersistConfig, preferencesReducer);
@@ -192,7 +184,6 @@ export const store = configureStore({
         tleSources: persistedTleSourcesReducer,
         satellites: persistedSatellitesReducer,
         satelliteGroups: persistedSatelliteGroupsReducer,
-        users: persistedUsersReducer,
         location: persistedLocationReducer,
         syncSatellite: persistedSynchronizeReducer,
         preferences: persistedPreferencesReducer,

@@ -117,36 +117,6 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
                 "data": satellite_groups.get("data", []),
             }
 
-        elif cmd == "submit-user":
-            logger.debug(f"Adding user, data: {data}")
-            add_reply = await crud.users.add_user(dbsession, data)
-
-            users = await crud.users.fetch_users(dbsession, user_id=None)
-            reply = {
-                "success": (users["success"] & add_reply["success"]),
-                "data": users.get("data", []),
-            }
-
-        elif cmd == "edit-user":
-            logger.debug(f"Editing user, data: {data}")
-            edit_reply = await crud.users.edit_user(dbsession, data)
-
-            users = await crud.users.fetch_users(dbsession, user_id=None)
-            reply = {
-                "success": (users["success"] & edit_reply["success"]),
-                "data": users.get("data", []),
-            }
-
-        elif cmd == "delete-user":
-            logger.debug(f"Delete user, data: {data}")
-            delete_reply = await crud.users.delete_user(dbsession, data)
-
-            users = await crud.users.fetch_users(dbsession, user_id=None)
-            reply = {
-                "success": (users["success"] & delete_reply["success"]),
-                "data": users.get("data", []),
-            }
-
         elif cmd == "submit-rig":
             logger.debug(f"Adding rig, data: {data}")
             add_reply = await crud.hardware.add_rig(dbsession, data)
@@ -279,30 +249,6 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             logger.debug(f"Adding location, data: {data}")
             add_reply = await crud.locations.add_location(dbsession, data)
             reply = {"success": add_reply["success"], "data": None}
-
-        elif cmd == "submit-location-for-user-id":
-            logger.debug(f"Adding location for user id, data: {data}")
-            locations = await crud.locations.fetch_location_for_userid(
-                dbsession, user_id=data["userid"]
-            )
-
-            # if there is a location for the user id then don't add, update the location,
-            # if there are multiple users at some point then we change this logic again
-            if not locations["data"]:
-                add_reply = await crud.locations.add_location(dbsession, data)
-                reply = {
-                    "success": add_reply["success"],
-                    "data": add_reply["data"],
-                    "error": add_reply.get("error", None),
-                }
-            else:
-                # update the location
-                update_reply = await crud.locations.edit_location(dbsession, data)
-                reply = {
-                    "success": update_reply["success"],
-                    "data": update_reply["data"],
-                    "error": update_reply.get("error", None),
-                }
 
         elif cmd == "edit-location":
             logger.debug(f"Editing location, data: {data}")

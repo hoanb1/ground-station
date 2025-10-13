@@ -193,14 +193,14 @@ async def fetch_next_events_for_group(
 
     async with AsyncSessionLocal() as dbsession:
         try:
-            # Get home location
-            home = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
+            # Get home location (get first location from list)
+            home = await crud.locations.fetch_all_locations(dbsession)
 
-            if home["data"] is None:
+            if not home["data"] or len(home["data"]) == 0:
                 raise Exception("No home location found in the database")
 
-            homelat = float(home["data"]["lat"])
-            homelon = float(home["data"]["lon"])
+            homelat = float(home["data"][0]["lat"])
+            homelon = float(home["data"][0]["lon"])
 
             # Fetch satellite data
             satellites = await crud.satellites.fetch_satellites_for_group_id(dbsession, group_id)
@@ -301,10 +301,14 @@ async def fetch_next_events_for_satellite(
     logger.info(f"Calculating satellite events for NORAD ID: {norad_id} for next {hours} hours")
     async with AsyncSessionLocal() as dbsession:
         try:
-            # Get home location
-            home = await crud.locations.fetch_location_for_userid(dbsession, user_id=None)
-            homelat = float(home["data"]["lat"])
-            homelon = float(home["data"]["lon"])
+            # Get home location (get first location from list)
+            home = await crud.locations.fetch_all_locations(dbsession)
+
+            if not home["data"] or len(home["data"]) == 0:
+                raise Exception("No home location found in the database")
+
+            homelat = float(home["data"][0]["lat"])
+            homelon = float(home["data"][0]["lon"])
 
             # Fetch satellite data
             satellite_reply = await crud.satellites.fetch_satellites(dbsession, norad_id=norad_id)

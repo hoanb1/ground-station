@@ -6,4 +6,3 @@ from .satellites import *
 from .tle_sources import *
 from .tracking_state import *
 from .transmitters import *
-from .users import *

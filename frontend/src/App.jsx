@@ -18,28 +18,20 @@
  */
 
 import * as React from 'react';
-import { useState } from "react";
 import { Outlet } from "react-router";
 import { ReactRouterAppProvider } from "@toolpad/core/react-router";
 import { setupTheme } from './theme.js';
 import { useSocket } from "./components/common/socket.jsx";
-import { useAuth } from "./components/common/auth.jsx";
-import LoginForm from './components/common/login.jsx';
 import { AudioProvider } from "./components/dashboard/audio-provider.jsx";
 import { ToastContainer, Slide } from 'react-toastify';
 import { NAVIGATION } from "./config/navigation.jsx";
 import { BRANDING } from "./config/branding.jsx";
 import { useSocketEventHandlers } from "./hooks/socket-event-handlers.jsx";
-import { useAppAuthentication } from "./hooks/app-authentication.jsx";
 import { usePassFetching } from "./hooks/pass-fetching.jsx";
 
 export default function App() {
     const { socket } = useSocket();
-    const { session } = useAuth();
-    const [loggedIn, setLoggedIn] = useState(true);
     const dashboardTheme = setupTheme();
-
-    const authentication = useAppAuthentication();
 
     useSocketEventHandlers(socket);
     usePassFetching(socket);
@@ -102,11 +94,9 @@ export default function App() {
             <ReactRouterAppProvider
                 navigation={NAVIGATION}
                 theme={dashboardTheme}
-                authentication={authentication}
-                session={session}
                 branding={BRANDING}
             >
-                {loggedIn ? <Outlet/> : <LoginForm/>}
+                <Outlet/>
             </ReactRouterAppProvider>
             <ToastContainer
                 position="top-right"
