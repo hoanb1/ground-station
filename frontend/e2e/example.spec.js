@@ -99,7 +99,7 @@ test.describe('Ground Station Application', () => {
 
     // Verify preferences page heading is visible
     await expect(
-      page.getByRole('heading', { name: 'Preferences' })
+      page.getByRole('heading', { name: 'General' })
     ).toBeVisible({ timeout: 15000 });
   });
 });
