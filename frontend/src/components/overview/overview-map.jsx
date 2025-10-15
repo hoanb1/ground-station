@@ -132,6 +132,8 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     const [moonPos, setMoonPos] = useState(null);
     const {location} = useSelector((state) => state.location);
     const updateTimeRef = useRef(null);
+    const controlsBoxRef = useRef(null);
+    const arrowControlsRef = useRef(null);
 
     const handleSetMapZoomLevel = useCallback(
         (zoomLevel) => {
@@ -148,7 +150,14 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 handleSetMapZoomLevel(mapZoom);
                 localStorage.setItem(storageMapZoomValueKey, mapZoom);
             },
-            click: () => {
+            click: (e) => {
+                const target = e.originalEvent?.target;
+                if (
+                    (controlsBoxRef.current && target && controlsBoxRef.current.contains(target)) ||
+                    (arrowControlsRef.current && target && arrowControlsRef.current.contains(target))
+                ) {
+                    return;
+                }
                 dispatch(setSelectedSatelliteId(null));
             },
         });
@@ -557,6 +566,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 <TileLayer url={getTileLayerById(tileLayerID)['url']}/>
 
                 <Box
+                    ref={controlsBoxRef}
                     sx={{'& > :not(style)': {m: 1}}}
                     style={{right: 5, top: 5, position: 'absolute'}}
                 >
@@ -613,7 +623,10 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 {currentSatellitesPosition}
                 {currentSatellitesCoverage}
 
-                <MapArrowControls mapObject={MapObject}/>
+                {/* Wrap MapArrowControls with a container to detect clicks */}
+                <div ref={arrowControlsRef}>
+                    <MapArrowControls mapObject={MapObject}/>
+                </div>
 
                 {showGrid && (
                     <CoordinateGrid
