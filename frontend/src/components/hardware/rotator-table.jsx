@@ -29,7 +29,7 @@ import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
 import DialogActions from "@mui/material/DialogActions";
 import {useSocket} from "../common/socket.jsx";
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {useDispatch, useSelector} from 'react-redux';
 import {
     deleteRotators,

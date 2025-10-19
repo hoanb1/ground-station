@@ -20,7 +20,7 @@
 
 
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 
 const fetchWeatherByCoordinates = async (latitude, longitude, apiKey="471aacccad269b47ed7d2aa3369c9f71") => {
     try {

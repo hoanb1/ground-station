@@ -18,7 +18,7 @@
 
 import React, { createContext, useContext, useState, useCallback } from 'react';
 import useWakeLock from './wake-lock-logic.jsx';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 
 // Define the default context value
 const defaultWakeLockContext = {

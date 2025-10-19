@@ -23,7 +23,7 @@ import { ReactRouterAppProvider } from "@toolpad/core/react-router";
 import { setupTheme } from './theme.js';
 import { useSocket } from "./components/common/socket.jsx";
 import { AudioProvider } from "./components/dashboard/audio-provider.jsx";
-import { ToastContainer, Slide } from 'react-toastify';
+import { ToastContainerWithStyles } from "./utils/toast-container.jsx";
 import { NAVIGATION } from "./config/navigation.jsx";
 import { BRANDING } from "./config/branding.jsx";
 import { useSocketEventHandlers } from "./hooks/socket-event-handlers.jsx";
@@ -38,59 +38,6 @@ export default function App() {
 
     return (
         <AudioProvider>
-            <style>{`
-                .Toastify__toast-container,
-                .Toastify__toast,
-                .Toastify__toast-body,
-                .Toastify__toast-body > div {
-                    font-family: 'Roboto', sans-serif !important;
-                    font-size: 14px !important;
-                }
-
-                .Toastify__toast {
-                    border-radius: 8px !important;
-                    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.5) !important;
-                    padding: 16px !important;
-                    min-height: 64px !important;
-                    backdrop-filter: blur(10px);
-                }
-
-                .Toastify__toast--success {
-                    background: linear-gradient(135deg, #1e4620 0%, #2d5a2f 100%) !important;
-                    border-left: 4px solid #4caf50 !important;
-                }
-
-                .Toastify__toast--error {
-                    background: linear-gradient(135deg, #4a1e1e 0%, #5a2d2d 100%) !important;
-                    border-left: 4px solid #f44336 !important;
-                }
-
-                .Toastify__toast--warning {
-                    background: linear-gradient(135deg, #4a3a1e 0%, #5a4a2d 100%) !important;
-                    border-left: 4px solid #ff9800 !important;
-                }
-
-                .Toastify__toast--info {
-                    background: linear-gradient(135deg, #1e3a4a 0%, #2d4a5a 100%) !important;
-                    border-left: 4px solid #2196f3 !important;
-                }
-
-                .Toastify__progress-bar {
-                    height: 3px !important;
-                }
-
-                .Toastify__close-button {
-                    opacity: 0.7 !important;
-                }
-
-                .Toastify__close-button:hover {
-                    opacity: 1 !important;
-                }
-
-                .Toastify__toast-body {
-                    white-space: pre-line !important;
-                }
-            `}</style>
             <ReactRouterAppProvider
                 navigation={NAVIGATION}
                 theme={dashboardTheme}
@@ -98,20 +45,7 @@ export default function App() {
             >
                 <Outlet/>
             </ReactRouterAppProvider>
-            <ToastContainer
-                position="top-right"
-                autoClose={4000}
-                hideProgressBar={false}
-                newestOnTop={false}
-                closeOnClick={false}
-                rtl={false}
-                pauseOnFocusLoss={true}
-                draggable={false}
-                pauseOnHover={true}
-                theme="dark"
-                transition={Slide}
-                toastClassName="custom-toast"
-            />
+            <ToastContainerWithStyles />
         </AudioProvider>
     );
 }

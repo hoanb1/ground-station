@@ -19,7 +19,7 @@
 
 
 import * as satellite from 'satellite.js';
-import { toast } from "react-toastify";
+import { toast } from "../../utils/toast-with-timestamp.jsx";
 
 /**
  * Calculates the latitude, longitude, altitude, and velocity of a satellite based on TLE data and date.

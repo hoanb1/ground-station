@@ -38,7 +38,7 @@ import {
 import Grid from "@mui/material/Grid2";
 import {useSocket} from "../common/socket.jsx";
 import {setTrackingStateInBackend} from "../target/target-slice.jsx";
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
 

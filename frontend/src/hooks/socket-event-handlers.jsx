@@ -19,7 +19,7 @@
 
 import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/toast-with-timestamp.jsx';
 import CableIcon from '@mui/icons-material/Cable';
 
 // Toast message component with title and body

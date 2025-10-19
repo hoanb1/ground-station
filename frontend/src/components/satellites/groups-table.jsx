@@ -32,7 +32,7 @@ import {
     Stack, DialogContentText,
 } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { betterDateTimes } from '../common/common.jsx';
 import { AddEditDialog } from './groups-dialog.jsx';

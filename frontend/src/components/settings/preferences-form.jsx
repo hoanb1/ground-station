@@ -39,7 +39,7 @@ import {
 } from '@mui/material';
 import Grid from '@mui/material/Grid2';
 import { useSocket } from "../common/socket.jsx";
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 
 const PreferencesForm = () => {
     const { socket } = useSocket();

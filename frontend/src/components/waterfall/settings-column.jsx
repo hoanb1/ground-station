@@ -62,7 +62,7 @@ import {
 } from './waterfall-slice.jsx';
 
 import {useSocket} from "../common/socket.jsx";
-import { toast } from "react-toastify";
+import { toast } from "../../utils/toast-with-timestamp.jsx";
 import getValue from "lodash/_getValue.js";
 import FrequencyControlAccordion from "./settings-frequency.jsx";
 import SdrAccordion from "./settings-sdr.jsx";

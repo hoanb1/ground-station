@@ -44,7 +44,7 @@ import L from 'leaflet';
 import SatelliteMapContainer from "./satellite-map.jsx";
 import { useParams, useNavigate } from 'react-router';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 
 
 // Fix for default markers in react-leaflet

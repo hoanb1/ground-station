@@ -19,7 +19,7 @@
 
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 
 export const fetchRotators = createAsyncThunk(
     'rotators/fetchAll',

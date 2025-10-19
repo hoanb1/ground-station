@@ -30,7 +30,7 @@ import {
 } from '@mui/material';
 import {MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMapEvents} from 'react-leaflet';
 import Grid from '@mui/material/Grid2';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 import { useSocket } from '../common/socket.jsx';
 import { getMaidenhead } from '../common/common.jsx';
 import { useDispatch, useSelector } from 'react-redux';

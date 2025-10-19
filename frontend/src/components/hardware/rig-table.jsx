@@ -47,7 +47,7 @@ import {
     setFormValues,
     setOpenAddDialog,
 } from './rig-slice.jsx';
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {humanizeFrequency} from "../common/common.jsx";
 import {useEffect} from "react";

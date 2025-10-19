@@ -29,7 +29,7 @@ import React, {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import {useSocket} from "../common/socket.jsx";
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {useLocalStorageState} from "@toolpad/core";
 import {useDispatch, useSelector} from "react-redux";
 import {

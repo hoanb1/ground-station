@@ -2,7 +2,7 @@ import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import {Fragment, useCallback, useEffect} from "react";
-import { toast } from "react-toastify";
+import { toast } from "../../utils/toast-with-timestamp.jsx";
 import Autocomplete from "@mui/material/Autocomplete";
 import {CircularProgress, TextField} from "@mui/material";
 

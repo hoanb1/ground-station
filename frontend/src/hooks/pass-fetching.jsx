@@ -19,7 +19,7 @@
 
 import { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { toast } from 'react-toastify';
+import { toast } from '../utils/toast-with-timestamp.jsx';
 import { fetchNextPasses } from '../components/target/target-slice.jsx';
 
 /**

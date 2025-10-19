@@ -22,7 +22,7 @@
 import {useSocket} from "../common/socket.jsx";
 import {Fragment, useCallback, useEffect, useState} from "react";
 import * as React from "react";
-import { toast } from 'react-toastify';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {Box, Button, Dialog, DialogActions, DialogContent, DialogTitle, TextField} from "@mui/material";
 import {DataGrid} from "@mui/x-data-grid";
 import Autocomplete from "@mui/material/Autocomplete";
