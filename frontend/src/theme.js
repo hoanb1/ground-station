@@ -20,51 +20,18 @@
 
 
 import {createTheme} from "@mui/material";
+import { getThemeConfig } from './themes/theme-configs.js';
 
-export function setupTheme(mode = 'dark') {
-    const isDark = mode === 'dark';
+export function setupTheme(themeName = 'dark') {
+    // Get the theme configuration
+    const config = getThemeConfig(themeName);
+
+    // Determine if theme is dark mode for component overrides
+    const isDark = config.mode === 'dark';
 
     const palette = {
-        mode: mode,
-        primary: {
-            main: isDark ? '#1976d2' : '#1976d2',
-        },
-        secondary: {
-            main: isDark ? '#dc004e' : '#dc004e',
-        },
-        success: {
-            main: '#4caf50',
-        },
-        warning: {
-            main: '#ff9800',
-        },
-        error: {
-            main: '#f44336',
-        },
-        info: {
-            main: '#2196f3',
-        },
-        background: {
-            default: isDark ? '#121212' : '#fafafa',
-            paper: isDark ? '#1e1e1e' : '#ffffff',
-            elevated: isDark ? '#2a2a2a' : '#f5f5f5',
-        },
-        border: {
-            main: isDark ? '#424242' : '#e0e0e0',
-            light: isDark ? '#494949' : '#d0d0d0',
-            dark: isDark ? '#262626' : '#bdbdbd',
-        },
-        overlay: {
-            light: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
-            medium: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
-            dark: isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.3)',
-        },
-        status: {
-            connected: '#4caf50',
-            connecting: '#ff9800',
-            disconnected: '#f44336',
-            polling: '#f57c00',
-        },
+        mode: config.mode,
+        ...config,
     }
 
     return createTheme({

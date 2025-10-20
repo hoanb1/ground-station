@@ -41,6 +41,7 @@ import {
 import Grid from '@mui/material/Grid2';
 import { useSocket } from "../common/socket.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
+import { getAvailableThemes } from '../../themes/theme-configs.js';
 
 const PreferencesForm = () => {
     const { socket } = useSocket();
@@ -68,10 +69,12 @@ const PreferencesForm = () => {
         { name: 'Nederlands', value: 'nl_NL' },
     ];
 
-    const themesOptions = [
-        { name: t('preferences.theme_light'), value: 'light' },
-        { name: t('preferences.theme_dark'), value: 'dark' },
-    ];
+    // Generate theme options from available themes
+    const availableThemes = getAvailableThemes();
+    const themesOptions = availableThemes.map(themeName => ({
+        name: t(`preferences.theme_${themeName}`, themeName), // Fallback to themeName if translation missing
+        value: themeName,
+    }));
 
     const handleChange = (name) => (e) => {
         const value = e.target.value;
