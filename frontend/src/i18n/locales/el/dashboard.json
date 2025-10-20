@@ -16,7 +16,7 @@
     "version": "Εκδοση {{version}}",
     "refreshing_in": "Ανανέωση σε {{seconds}}δ...",
     "refreshing_now": "Ανανέωση τώρα...",
-    "cancel": "Ακύρωση",
+    "cancel": "ΑΚΥΡΩΣΗ",
     "refresh_now": "Ανανέωση Τώρα"
   },
   "target_popover": {

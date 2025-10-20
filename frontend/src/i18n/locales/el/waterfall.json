@@ -82,7 +82,7 @@
   },
   "error_dialog": {
     "title": "Παρουσιάστηκε Σφάλμα",
-    "close": "Κλείσιμο"
+    "close": "ΚΛΕΙΣΙΜΟ"
   },
   "statusbar": {
     "stopped": "σταματημένο"
