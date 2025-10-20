@@ -88,5 +88,28 @@
     "active": "Actief",
     "inactive": "Inactief",
     "invalid": "Ongeldig"
+  },
+  "map_settings": {
+    "orbit_projection_time": "Baanprojectietijd",
+    "tile_layer": "Tegellaag",
+    "time_options": {
+      "1_hour": "1 uur",
+      "2_hours": "2 uur",
+      "4_hours": "4 uur",
+      "8_hours": "8 uur",
+      "12_hours": "12 uur",
+      "24_hours": "24 uur"
+    },
+    "satellite_coverage": "Satellietdekking",
+    "past_orbit_path": "Voorbije baanlijn",
+    "future_orbit_path": "Toekomstige baanlijn",
+    "show_sun": "Toon de zon",
+    "show_moon": "Toon de maan",
+    "day_night_separator": "Dag/nacht scheidingslijn",
+    "satellite_tooltip": "Satelliet tooltip",
+    "coordinate_grid": "Coördinatenraster",
+    "footprint_color": "Footprint kleur",
+    "past_orbit_color": "Kleur van voorbije baanlijn",
+    "future_orbit_color": "Kleur van toekomstige baanlijn"
   }
 }

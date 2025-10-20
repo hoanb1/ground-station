@@ -88,5 +88,28 @@
     "active": "Ενεργός",
     "inactive": "Ανενεργός",
     "invalid": "Μη έγκυρος"
+  },
+  "map_settings": {
+    "orbit_projection_time": "Χρόνος προβολής τροχιάς",
+    "tile_layer": "Επίπεδο χάρτη",
+    "time_options": {
+      "1_hour": "1 Ωρα",
+      "2_hours": "2 Ωρες",
+      "4_hours": "4 Ωρες",
+      "8_hours": "8 Ωρες",
+      "12_hours": "12 Ωρες",
+      "24_hours": "24 Ωρες"
+    },
+    "satellite_coverage": "Κάλυψη δορυφόρου",
+    "past_orbit_path": "Σχεδίαση προηγούμενης τροχιάς",
+    "future_orbit_path": "Σχεδίαση μελλοντικής τροχιάς",
+    "show_sun": "Εμφάνιση ήλιου",
+    "show_moon": "Εμφάνιση σελήνης",
+    "day_night_separator": "Γραμμή διαχωρισμού ημέρας/νύχτας",
+    "satellite_tooltip": "Πληροφορίες δορυφόρου",
+    "coordinate_grid": "Πλέγμα συντεταγμένων",
+    "footprint_color": "Χρώμα κάλυψης",
+    "past_orbit_color": "Χρώμα γραμμής προηγούμενης τροχιάς",
+    "future_orbit_color": "Χρώμα γραμμής μελλοντικής τροχιάς"
   }
 }

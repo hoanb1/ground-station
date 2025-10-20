@@ -88,5 +88,28 @@
     "active": "Aktiv",
     "inactive": "Inaktiv",
     "invalid": "Ungültig"
+  },
+  "map_settings": {
+    "orbit_projection_time": "Umlaufbahn-Projektionszeit",
+    "tile_layer": "Kachelebene",
+    "time_options": {
+      "1_hour": "1 Stunde",
+      "2_hours": "2 Stunden",
+      "4_hours": "4 Stunden",
+      "8_hours": "8 Stunden",
+      "12_hours": "12 Stunden",
+      "24_hours": "24 Stunden"
+    },
+    "satellite_coverage": "Satellitenabdeckung",
+    "past_orbit_path": "Vergangene Umlaufbahnlinie",
+    "future_orbit_path": "Zukünftige Umlaufbahnlinie",
+    "show_sun": "Sonne anzeigen",
+    "show_moon": "Mond anzeigen",
+    "day_night_separator": "Tag/Nacht-Trennlinie",
+    "satellite_tooltip": "Satelliten-Tooltip",
+    "coordinate_grid": "Koordinatengitter",
+    "footprint_color": "Footprint-Farbe",
+    "past_orbit_color": "Farbe der vergangenen Umlaufbahnlinie",
+    "future_orbit_color": "Farbe der zukünftigen Umlaufbahnlinie"
   }
 }

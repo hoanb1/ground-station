@@ -33,6 +33,7 @@ import {
 import {styled} from '@mui/material/styles';
 import {tileLayers, getTileLayerById} from './tile-layers.jsx';
 import {TitleBar, ThemedStackIsland, SettingItem, ThemedSettingsDiv} from './common.jsx';
+import { useTranslation } from 'react-i18next';
 
 
 const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPath, initialShowSatelliteCoverage,
@@ -45,14 +46,16 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                             handleSatelliteCoverageColor, handleOrbitProjectionDuration, handleShowTooltip,
                                handleTileLayerID, handleShowGrid, updateBackend}) => {
 
+    const { t } = useTranslation('common');
+
     // Example options for orbit projection time range
     const timeOptions = [
-        {value: '60',  label: '1 Hour'},
-        {value: '120', label: '2 Hours'},
-        {value: '240', label: '4 Hours'},
-        {value: '480', label: '8 Hours'},
-        {value: '720', label: '12 Hours'},
-        {value: '1440', label: '24 Hours'},
+        {value: '60',  label: t('map_settings.time_options.1_hour')},
+        {value: '120', label: t('map_settings.time_options.2_hours')},
+        {value: '240', label: t('map_settings.time_options.4_hours')},
+        {value: '480', label: t('map_settings.time_options.8_hours')},
+        {value: '720', label: t('map_settings.time_options.12_hours')},
+        {value: '1440', label: t('map_settings.time_options.24_hours')},
     ];
 
     // State for all settings
@@ -74,11 +77,11 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
             <Stack>
                 <SettingItem style={{padding: '0.5rem 0.5rem'}}>
                     <FormControl fullWidth size={"small"} variant={"filled"}>
-                        <InputLabel id="orbit-time-label">Orbit Projection Time</InputLabel>
+                        <InputLabel id="orbit-time-label">{t('map_settings.orbit_projection_time')}</InputLabel>
                         <Select
                             labelId="orbit-time-label"
                             value={orbitProjectionDuration}
-                            label="Orbit Projection Time"
+                            label={t('map_settings.orbit_projection_time')}
                             onChange={(e) => {
                                 handleOrbitProjectionDuration(e.target.value);
                                 setOrbitProjectionDuration(e.target.value);
@@ -96,11 +99,11 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                 </SettingItem>
                 <SettingItem style={{padding: '0rem 0.5rem 0.5rem 0.5rem'}}>
                     <FormControl fullWidth size={"small"} variant={"filled"}>
-                        <InputLabel id="tile-layer-label">Tile Layer</InputLabel>
+                        <InputLabel id="tile-layer-label">{t('map_settings.tile_layer')}</InputLabel>
                         <Select
                             labelId="tile-layer-label"
                             value={tileLayerID}
-                            label="Tile Layer"
+                            label={t('map_settings.tile_layer')}
                             onChange={(e) => {
                                 setTileLayerID(e.target.value);
                                 handleTileLayerID(e.target.value);
@@ -129,7 +132,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Satellite coverage"
+                        label={t('map_settings.satellite_coverage')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -146,7 +149,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Past orbit path plotting"
+                        label={t('map_settings.past_orbit_path')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -163,7 +166,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Future orbit path plotting"
+                        label={t('map_settings.future_orbit_path')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -179,7 +182,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Show the sun"
+                        label={t('map_settings.show_sun')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -195,7 +198,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Show the moon"
+                        label={t('map_settings.show_moon')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -211,7 +214,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Day/night seperator line"
+                        label={t('map_settings.day_night_separator')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -227,7 +230,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Satellite tooltip"
+                        label={t('map_settings.satellite_tooltip')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -243,7 +246,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                   }}
                               />
                           }
-                          label="Coordinate grid"
+                          label={t('map_settings.coordinate_grid')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -266,7 +269,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Footprint color"
+                        label={t('map_settings.footprint_color')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -289,7 +292,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Past orbit line color"
+                        label={t('map_settings.past_orbit_color')}
                     />
                 </SettingItem>
                 <SettingItem>
@@ -312,7 +315,7 @@ const MapSettingsIsland = ({ initialShowPastOrbitPath, initialShowFutureOrbitPat
                                 }}
                             />
                         }
-                        label="Future orbit line color"
+                        label={t('map_settings.future_orbit_color')}
                     />
                 </SettingItem>
             </Stack>

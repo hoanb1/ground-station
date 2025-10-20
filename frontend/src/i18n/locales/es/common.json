@@ -88,5 +88,28 @@
     "active": "Activo",
     "inactive": "Inactivo",
     "invalid": "Inválido"
+  },
+  "map_settings": {
+    "orbit_projection_time": "Tiempo de proyección de órbita",
+    "tile_layer": "Capa de mosaicos",
+    "time_options": {
+      "1_hour": "1 hora",
+      "2_hours": "2 horas",
+      "4_hours": "4 horas",
+      "8_hours": "8 horas",
+      "12_hours": "12 horas",
+      "24_hours": "24 horas"
+    },
+    "satellite_coverage": "Cobertura del satélite",
+    "past_orbit_path": "Trazado de órbita pasada",
+    "future_orbit_path": "Trazado de órbita futura",
+    "show_sun": "Mostrar el sol",
+    "show_moon": "Mostrar la luna",
+    "day_night_separator": "Línea separadora día/noche",
+    "satellite_tooltip": "Información del satélite",
+    "coordinate_grid": "Cuadrícula de coordenadas",
+    "footprint_color": "Color de la huella",
+    "past_orbit_color": "Color de línea de órbita pasada",
+    "future_orbit_color": "Color de línea de órbita futura"
   }
 }
