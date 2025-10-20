@@ -85,6 +85,37 @@ export const themeConfigs = {
         },
     },
 
+    'light-grey': {
+        mode: 'light',
+        primary: { main: '#1976d2' },
+        secondary: { main: '#dc004e' },
+        success: { main: '#4caf50' },
+        warning: { main: '#ff9800' },
+        error: { main: '#f44336' },
+        info: { main: '#2196f3' },
+        background: {
+            default: '#c8c8c8', // Darker grey - comfortable medium tone
+            paper: '#d8d8d8',   // Slightly lighter grey for cards
+            elevated: '#b8b8b8', // Even darker grey for elevation
+        },
+        border: {
+            main: '#989898',    // Darker borders for better visibility
+            light: '#a8a8a8',
+            dark: '#808080',
+        },
+        overlay: {
+            light: 'rgba(0, 0, 0, 0.08)',
+            medium: 'rgba(0, 0, 0, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.45)',
+        },
+        status: {
+            connected: '#4caf50',
+            connecting: '#ff9800',
+            disconnected: '#f44336',
+            polling: '#f57c00',
+        },
+    },
+
     cyberpunk: {
         mode: 'dark',
         primary: { main: '#00ffff' }, // Cyan

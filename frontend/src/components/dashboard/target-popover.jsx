@@ -29,6 +29,7 @@ import {
     Grid2,
     Button,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 import { useState, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
@@ -44,6 +45,7 @@ import TrendingDownIcon from '@mui/icons-material/TrendingDown';
 import { humanizeFrequency, formatLegibleDateTime, betterStatusValue } from "../common/common.jsx";
 
 const SatelliteInfoPopover = () => {
+    const theme = useTheme();
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(null);
     const navigate = useNavigate();
@@ -109,7 +111,7 @@ const SatelliteInfoPopover = () => {
     };
 
     // Get satellite status information
-    const getSatelliteStatus = () => {
+    const getSatelliteStatus = (theme) => {
         if (!satelliteData.details.norad_id) {
             return {
                 status: 'No Satellite',
@@ -126,15 +128,19 @@ const SatelliteInfoPopover = () => {
             return {
                 status: 'Below Horizon',
                 color: 'error.main',
-                backgroundColor: 'error.light',
+                backgroundColor: theme.palette.mode === 'dark'
+                    ? `${theme.palette.error.main}25` // 15% opacity on dark
+                    : 'error.light',
                 icon: <VisibilityOffIcon />,
                 description: 'Satellite is not visible from current location'
             };
         } else if (elevation < 10) {
             return {
                 status: 'Low Elevation',
-                color: 'status.polling',
-                backgroundColor: 'warning.light',
+                color: 'warning.main',
+                backgroundColor: theme.palette.mode === 'dark'
+                    ? `${theme.palette.warning.main}25` // 15% opacity on dark
+                    : 'warning.light',
                 icon: <TrendingDownIcon />,
                 description: 'Satellite is visible but low on the horizon'
             };
@@ -142,7 +148,9 @@ const SatelliteInfoPopover = () => {
             return {
                 status: 'Actively Tracking',
                 color: 'success.main',
-                backgroundColor: 'success.light',
+                backgroundColor: theme.palette.mode === 'dark'
+                    ? `${theme.palette.success.main}25` // 15% opacity on dark
+                    : 'success.light',
                 icon: <SatelliteAltIcon />,
                 description: 'Currently tracking this satellite'
             };
@@ -150,7 +158,9 @@ const SatelliteInfoPopover = () => {
             return {
                 status: 'Visible',
                 color: 'info.main',
-                backgroundColor: 'info.light',
+                backgroundColor: theme.palette.mode === 'dark'
+                    ? `${theme.palette.info.main}25` // 15% opacity on dark
+                    : 'info.light',
                 icon: <VisibilityIcon />,
                 description: 'Satellite is well positioned above horizon'
             };
@@ -176,7 +186,7 @@ const SatelliteInfoPopover = () => {
         </span>
     );
 
-    const statusInfo = getSatelliteStatus();
+    const statusInfo = getSatelliteStatus(theme);
 
     return (
         <>

@@ -166,7 +166,6 @@ const TargetSatelliteTransmittersIsland = () => {
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
-                        <RadioIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             {t('satellite_transmitters.title')}
                         </Typography>

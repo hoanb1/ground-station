@@ -30,7 +30,7 @@
     "openweather_api_key": "Κλειδί API OpenWeatherMap",
     "ground_station_configuration": "Διαμόρφωση Σταθμού Εδάφους",
     "minimum_elevation": "Ελάχιστη Ανύψωση (μοίρες)",
-    "save_preferences": "Αποθήκευση Προτιμήσεων",
+    "save_preferences": "ΑΠΟΘΗΚΕΥΣΗ ΠΡΟΤΙΜΗΣΕΩΝ",
     "save_success": "Οι προτιμήσεις αποθηκεύτηκαν επιτυχώς",
     "save_error": "Αποτυχία αποθήκευσης προτιμήσεων",
     "theme_light": "Ανοιχτό",
