@@ -46,6 +46,8 @@ import {darken, lighten, styled} from '@mui/material/styles';
 import {Chip} from "@mui/material";
 import {useStore} from 'react-redux';
 import ProgressFormatter from "./progressbar-widget.jsx";
+import { useTranslation } from 'react-i18next';
+import { enUS, elGR } from '@mui/x-data-grid/locales';
 
 
 const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
@@ -69,6 +71,7 @@ const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
 
 const DurationFormatter = React.memo(function DurationFormatter({params, value, event_start, event_end}) {
     const [, setForceUpdate] = useState(0);
+    const { t } = useTranslation('overview');
 
     // Force component to update regularly
     useEffect(() => {
@@ -108,13 +111,16 @@ const DurationFormatter = React.memo(function DurationFormatter({params, value, 
         return `${minutes}m ${seconds.toString().padStart(2, '0')}s`;
 
     } else {
-        return `no value`;
+        return t('passes_table.no_value');
     }
 });
 
 const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false}) {
     const apiRef = useGridApiRef();
     const store = useStore();
+    const { t, i18n } = useTranslation('overview');
+    const currentLanguage = i18n.language;
+    const dataGridLocale = currentLanguage === 'el' ? elGR : enUS;
 
     // This method allows us to reference values in redux without a re-render, crucial in the next passes table
     const targetSatTrackRef = useRef(() => {
@@ -225,7 +231,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'name',
             minWidth: 120,
-            headerName: 'Name',
+            headerName: t('passes_table.name'),
             flex: 2,
             renderCell: (params) => {
                 const targetSatTrack = targetSatTrackRef.current();
@@ -243,7 +249,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'peak_altitude',
             minWidth: 80,
-            headerName: 'Peak elevation',
+            headerName: t('passes_table.peak_elevation'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -263,7 +269,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'elevation',
             minWidth: 80,
-            headerName: 'Current Elevation',
+            headerName: t('passes_table.current_elevation'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -304,7 +310,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'progress',
             minWidth: 100,
-            headerName: 'Progress',
+            headerName: t('passes_table.progress'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -313,7 +319,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'duration',
             minWidth: 100,
-            headerName: 'Duration',
+            headerName: t('passes_table.duration'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -329,12 +335,12 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
             minWidth: 120,
             align: 'center',
             headerAlign: 'center',
-            headerName: 'Bands',
+            headerName: t('passes_table.bands'),
             flex: 2,
             renderCell: (params) => {
                 const transmitters = params.value;
                 if (!transmitters) {
-                    return 'No data';
+                    return t('passes_table.no_data');
                 }
 
                 // Count transmitters per band
@@ -375,21 +381,21 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'event_start',
             minWidth: 170,
-            headerName: 'Start',
+            headerName: t('passes_table.start'),
             flex: 2,
             renderCell: (params) => <TimeFormatter params={params} value={params.value}/>
         },
         {
             field: 'event_end',
             minWidth: 170,
-            headerName: 'End',
+            headerName: t('passes_table.end'),
             flex: 2,
             renderCell: (params) => <TimeFormatter params={params} value={params.value}/>
         },
         {
             field: 'distance_at_start',
             minWidth: 100,
-            headerName: 'Distance at AOS',
+            headerName: t('passes_table.distance_aos'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -400,7 +406,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'distance_at_end',
             minWidth: 100,
-            headerName: 'Distance at LOS',
+            headerName: t('passes_table.distance_los'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -411,7 +417,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'distance_at_peak',
             minWidth: 100,
-            headerName: 'Distance at peak',
+            headerName: t('passes_table.distance_peak'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -422,7 +428,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'is_geostationary',
             minWidth: 70,
-            headerName: 'GEO Stat',
+            headerName: t('passes_table.geo_stat'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -434,7 +440,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
         {
             field: 'is_geosynchronous',
             minWidth: 70,
-            headerName: 'GEO Sync',
+            headerName: t('passes_table.geo_sync'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -489,6 +495,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
             getRowId={(params) => {
                 return params.id;
             }}
+            localeText={dataGridLocale.components.MuiDataGrid.defaultProps.localeText}
             sx={{
                 border: 0,
                 marginTop: 0,
@@ -531,6 +538,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
 const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('overview');
     const containerRef = useRef(null);
     const hasFetchedRef = useRef(false);
     const lastFetchParamsRef = useRef(null);
@@ -604,7 +612,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                Passes for the next {nextPassesHours} hours {passesAreCached ? "(cached)" : ""}
+                {t('passes_table.title', { hours: nextPassesHours })} {passesAreCached ? t('passes_table.cached') : ""}
             </TitleBar>
             <div style={{position: 'relative', display: 'block', height: '100%'}} ref={containerRef}>
                 <div style={{

@@ -35,6 +35,7 @@ import {
 import { useRef, useState } from "react";
 import { useSelector } from "react-redux";
 import Tooltip from "@mui/material/Tooltip";
+import { useTranslation } from 'react-i18next';
 
 // Import overlay icons
 import CloudDoneIcon from '@mui/icons-material/CloudDone';
@@ -42,6 +43,7 @@ import CloudOffIcon from '@mui/icons-material/CloudOff';
 import SyncIcon from '@mui/icons-material/Sync';
 
 const SatelliteSyncPopover = () => {
+    const { t } = useTranslation('dashboard');
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(null);
 
@@ -70,17 +72,17 @@ const SatelliteSyncPopover = () => {
     };
 
     const getTooltip = () => {
-        if (syncState?.status === 'inprogress') return `Synchronizing: ${syncState?.progress || 0}%`;
-        if (syncState?.status === 'complete' && syncState?.success === false) return `Sync Failed: ${syncState.errors?.[0] || 'Unknown error'}`;
+        if (syncState?.status === 'inprogress') return t('tlesync_popover.syncing', { progress: syncState?.progress || 0 });
+        if (syncState?.status === 'complete' && syncState?.success === false) return t('tlesync_popover.sync_failed', { error: syncState.errors?.[0] || 'Unknown error' });
         if (syncState?.status === 'complete' && syncState?.success === true) {
-            return `Last sync: ${new Date(syncState.last_update).toLocaleString()}`;
+            return t('tlesync_popover.last_sync', { date: new Date(syncState.last_update).toLocaleString() });
         }
-        return 'Satellite TLE Data Sync';
+        return t('tlesync_popover.satellite_tle_sync');
     };
 
     // Format date nicely
     const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
+        if (!dateString) return t('tlesync_popover.na');
         const date = new Date(dateString);
         return date.toLocaleString();
     };
@@ -179,17 +181,17 @@ const SatelliteSyncPopover = () => {
                 >
                     {/* Header */}
                     <Typography variant="h6" sx={{ mb: 2, color: '#ffffff' }}>
-                        TLE Synchronization Status
+                        {t('tlesync_popover.tle_sync_status')}
                     </Typography>
 
                     {/* Status */}
                     <Stack spacing={2}>
                         <Box>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                Status
+                                {t('tlesync_popover.status')}
                             </Typography>
                             <Chip
-                                label={syncState?.status || 'idle'}
+                                label={syncState?.status || t('tlesync_popover.idle')}
                                 color={
                                     syncState?.status === 'complete' && syncState?.success === true
                                         ? 'success'
@@ -218,7 +220,7 @@ const SatelliteSyncPopover = () => {
                         {syncState?.status === 'inprogress' && (
                             <Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                    Progress: {syncState?.progress || 0}%
+                                    {t('tlesync_popover.progress', { progress: syncState?.progress || 0 })}
                                 </Typography>
                                 <LinearProgress
                                     variant="determinate"
@@ -231,7 +233,7 @@ const SatelliteSyncPopover = () => {
                         {/* Last Update */}
                         <Box>
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
-                                Last Update
+                                {t('tlesync_popover.last_update')}
                             </Typography>
                             <Typography variant="body2" sx={{ color: '#ffffff' }}>
                                 {formatDate(syncState?.last_update)}
@@ -244,21 +246,21 @@ const SatelliteSyncPopover = () => {
                         {syncState?.stats && (
                             <Box>
                                 <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                                    Statistics
+                                    {t('tlesync_popover.statistics')}
                                 </Typography>
                                 <Stack direction="row" spacing={1} flexWrap="wrap">
                                     <Chip
-                                        label={`Satellites: ${syncState.stats.satellites_processed || 0}`}
+                                        label={t('tlesync_popover.satellites', { count: syncState.stats.satellites_processed || 0 })}
                                         size="small"
                                         variant="outlined"
                                     />
                                     <Chip
-                                        label={`Transmitters: ${syncState.stats.transmitters_processed || 0}`}
+                                        label={t('tlesync_popover.transmitters', { count: syncState.stats.transmitters_processed || 0 })}
                                         size="small"
                                         variant="outlined"
                                     />
                                     <Chip
-                                        label={`Groups: ${syncState.stats.groups_processed || 0}`}
+                                        label={t('tlesync_popover.groups', { count: syncState.stats.groups_processed || 0 })}
                                         size="small"
                                         variant="outlined"
                                     />
@@ -270,7 +272,7 @@ const SatelliteSyncPopover = () => {
                         {syncState?.errors && syncState.errors.length > 0 && (
                             <Box>
                                 <Typography variant="body2" color="error" sx={{ mb: 1 }}>
-                                    Errors ({syncState.errors.length})
+                                    {t('tlesync_popover.errors', { count: syncState.errors.length })}
                                 </Typography>
                                 <List dense sx={{ maxHeight: 120, overflow: 'auto' }}>
                                     {syncState.errors.map((error, index) => (

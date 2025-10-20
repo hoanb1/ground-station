@@ -68,8 +68,10 @@ import FrequencyControlAccordion from "./settings-frequency.jsx";
 import SdrAccordion from "./settings-sdr.jsx";
 import FftAccordion from "./settings-fft.jsx";
 import VfoAccordion from "./settings-vfo.jsx";
+import { useTranslation } from 'react-i18next';
 
 const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
+    const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
 
     const {
@@ -363,8 +365,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall
-                settings</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>{t('title')}</TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
                 <FrequencyControlAccordion

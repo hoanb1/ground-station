@@ -1,0 +1,90 @@
+{
+  "title": "Waterfall settings",
+  "main_title": "Waterfall & Spectrum",
+  "toolbar": {
+    "start_streaming": "Start streaming",
+    "stop_streaming": "Stop streaming",
+    "toggle_left_panel": "Toggle left side panel",
+    "toggle_right_panel": "Toggle right side panel",
+    "toggle_auto_db": "Toggle automatic dB range",
+    "auto_scale_once": "Auto scale dB range once",
+    "toggle_fullscreen": "Toggle fullscreen",
+    "zoom_in": "Zoom in",
+    "zoom_out": "Zoom out",
+    "reset_zoom": "Reset zoom",
+    "toggle_rotator_lines": "Toggle rotator event dotted lines",
+    "toggle_vfo": "Toggle VFO {{number}}",
+    "fft_overflow": "FFT update rate overflow — incoming updates are being throttled"
+  },
+  "frequency": {
+    "title": "Frequency control",
+    "go_to_transmitter": "Go to transmitter",
+    "no_frequency_selected": "[no frequency selected]",
+    "select_transmitter": "select a transmitter",
+    "frequency_offset": "Frequency Offset",
+    "no_frequency_offset": "[no frequency offset]",
+    "manual": "Manual",
+    "select_offset": "select an offset",
+    "manual_offset_hz": "Manual Offset (Hz)",
+    "offsets": {
+      "dk5av_x_band": "DK5AV X-Band (-6800MHz)",
+      "ham_it_up": "Ham-it-Up (+125MHz)",
+      "ku_lnb_10700": "Ku LNB (-10700MHz)",
+      "ku_lnb_9750": "Ku LNB (-9750MHz)",
+      "mmds_s_band": "MMDS S-Band (-1998MHz)",
+      "spyverter": "SpyVerter (+120MHz)"
+    }
+  },
+  "sdr": {
+    "title": "SDR",
+    "sdr_label": "SDR",
+    "no_sdr_selected": "[no SDR selected]",
+    "local_sdrs": "Local SDRs",
+    "remote_sdrs": "Remote SDRs",
+    "other_sdrs": "Other SDRs",
+    "gain_db": "Gain (dB)",
+    "no_gain_selected": "[no gain selected]",
+    "sample_rate": "Sample Rate",
+    "no_rate_selected": "[no rate selected]",
+    "antenna": "Antenna",
+    "no_antenna_selected": "[no antenna selected]",
+    "enable_bias_t": "Enable Bias T",
+    "enable_tuner_agc": "Enable tuner AGC",
+    "enable_agc": "Enable AGC",
+    "enable_rtl_agc": "Enable RTL AGC"
+  },
+  "fft": {
+    "title": "FFT",
+    "fft_size": "FFT Size",
+    "fft_window": "FFT Window",
+    "fft_averaging": "FFT Averaging",
+    "averaging_none": "None",
+    "averaging_samples": "{{count}} samples",
+    "color_map": "Color Map"
+  },
+  "vfo": {
+    "title": "VFO Controls",
+    "vfo_number": "VFO {{number}}",
+    "active": "Active",
+    "step_size": "Step Size",
+    "modulation": "Modulation",
+    "bandwidth": "Bandwidth",
+    "custom": "Custom",
+    "squelch": "Squelch",
+    "volume": "Volume",
+    "modes": {
+      "none": "None",
+      "am": "AM",
+      "fm": "FM",
+      "lsb": "LSB",
+      "usb": "USB"
+    }
+  },
+  "error_dialog": {
+    "title": "Error Occurred",
+    "close": "Close"
+  },
+  "statusbar": {
+    "stopped": "stopped"
+  }
+}

@@ -1,0 +1,90 @@
+{
+  "title": "Ρυθμίσεις καταρράκτη",
+  "main_title": "Καταρράκτης & Φάσμα",
+  "toolbar": {
+    "start_streaming": "Εναρξη μετάδοσης",
+    "stop_streaming": "Διακοπή μετάδοσης",
+    "toggle_left_panel": "Εναλλαγή αριστερού πλευρικού πίνακα",
+    "toggle_right_panel": "Εναλλαγή δεξιού πλευρικού πίνακα",
+    "toggle_auto_db": "Εναλλαγή αυτόματου εύρους dB",
+    "auto_scale_once": "Αυτόματη κλιμάκωση εύρους dB μία φορά",
+    "toggle_fullscreen": "Εναλλαγή πλήρους οθόνης",
+    "zoom_in": "Μεγέθυνση",
+    "zoom_out": "Σμίκρυνση",
+    "reset_zoom": "Επαναφορά μεγέθυνσης",
+    "toggle_rotator_lines": "Εναλλαγή διακεκομμένων γραμμών περιστροφέα",
+    "toggle_vfo": "Εναλλαγή VFO {{number}}",
+    "fft_overflow": "Υπερχείλιση ρυθμού ενημέρωσης FFT — οι εισερχόμενες ενημερώσεις περιορίζονται"
+  },
+  "frequency": {
+    "title": "Έλεγχος συχνότητας",
+    "go_to_transmitter": "Μετάβαση σε πομποδέκτη",
+    "no_frequency_selected": "[δεν επιλέχθηκε συχνότητα]",
+    "select_transmitter": "επιλέξτε πομποδέκτη",
+    "frequency_offset": "Μετατόπιση Συχνότητας",
+    "no_frequency_offset": "[χωρίς μετατόπιση συχνότητας]",
+    "manual": "Χειροκίνητη",
+    "select_offset": "επιλέξτε μετατόπιση",
+    "manual_offset_hz": "Χειροκίνητη Μετατόπιση (Hz)",
+    "offsets": {
+      "dk5av_x_band": "DK5AV X-Band (-6800MHz)",
+      "ham_it_up": "Ham-it-Up (+125MHz)",
+      "ku_lnb_10700": "Ku LNB (-10700MHz)",
+      "ku_lnb_9750": "Ku LNB (-9750MHz)",
+      "mmds_s_band": "MMDS S-Band (-1998MHz)",
+      "spyverter": "SpyVerter (+120MHz)"
+    }
+  },
+  "sdr": {
+    "title": "SDR",
+    "sdr_label": "SDR",
+    "no_sdr_selected": "[δεν επιλέχθηκε SDR]",
+    "local_sdrs": "Τοπικά SDR",
+    "remote_sdrs": "Απομακρυσμένα SDR",
+    "other_sdrs": "Αλλα SDR",
+    "gain_db": "Ενίσχυση (dB)",
+    "no_gain_selected": "[δεν επιλέχθηκε ενίσχυση]",
+    "sample_rate": "Ρυθμός Δειγματοληψίας",
+    "no_rate_selected": "[δεν επιλέχθηκε ρυθμός]",
+    "antenna": "Κεραία",
+    "no_antenna_selected": "[δεν επιλέχθηκε κεραία]",
+    "enable_bias_t": "Ενεργοποίηση Bias T",
+    "enable_tuner_agc": "Ενεργοποίηση tuner AGC",
+    "enable_agc": "Ενεργοποίηση AGC",
+    "enable_rtl_agc": "Ενεργοποίηση RTL AGC"
+  },
+  "fft": {
+    "title": "FFT",
+    "fft_size": "Μέγεθος FFT",
+    "fft_window": "Παράθυρο FFT",
+    "fft_averaging": "Μέσος Ορος FFT",
+    "averaging_none": "Κανένας",
+    "averaging_samples": "{{count}} δείγματα",
+    "color_map": "Χάρτης Χρωμάτων"
+  },
+  "vfo": {
+    "title": "Ελεγχοι VFO",
+    "vfo_number": "VFO {{number}}",
+    "active": "Ενεργό",
+    "step_size": "Μέγεθος Βήματος",
+    "modulation": "Διαμόρφωση",
+    "bandwidth": "Εύρος Ζώνης",
+    "custom": "Προσαρμοσμένο",
+    "squelch": "Squelch",
+    "volume": "Ενταση",
+    "modes": {
+      "none": "Κανένας",
+      "am": "AM",
+      "fm": "FM",
+      "lsb": "LSB",
+      "usb": "USB"
+    }
+  },
+  "error_dialog": {
+    "title": "Παρουσιάστηκε Σφάλμα",
+    "close": "Κλείσιμο"
+  },
+  "statusbar": {
+    "stopped": "σταματημένο"
+  }
+}

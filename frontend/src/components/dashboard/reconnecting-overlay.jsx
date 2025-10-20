@@ -5,6 +5,7 @@ import ErrorOutlineIcon from '@mui/icons-material/ErrorOutline';
 import { keyframes } from '@emotion/react';
 import { Backdrop, Box, Typography } from "@mui/material";
 import { useSelector } from "react-redux";
+import { useTranslation } from 'react-i18next';
 
 // Minimal animations
 const fadeIn = keyframes`
@@ -19,6 +20,7 @@ const fadeIn = keyframes`
 `;
 
 function ConnectionOverlay() {
+    const { t } = useTranslation('dashboard');
     const {
         connecting,
         connected,
@@ -37,8 +39,8 @@ function ConnectionOverlay() {
         if (connectionError) {
             return {
                 icon: <ErrorOutlineIcon sx={{ fontSize: 24, color: '#d32f2f' }} />,
-                title: 'Connection Failed',
-                message: 'Network error',
+                title: t('connection.connection_failed'),
+                message: t('connection.network_error'),
                 color: '#d32f2f',
                 bgColor: '#2a2a2a',
                 borderColor: '#d32f2f'
@@ -48,8 +50,8 @@ function ConnectionOverlay() {
         if (reConnectAttempt > 0) {
             return {
                 icon: <SyncProblemIcon sx={{ fontSize: 24, color: '#ff9800' }} />,
-                title: 'Reconnecting',
-                message: `Attempt ${reConnectAttempt}`,
+                title: t('connection.reconnecting'),
+                message: t('connection.attempt', { count: reConnectAttempt }),
                 color: '#ff9800',
                 bgColor: '#2a2a2a',
                 borderColor: '#ff9800'
@@ -59,8 +61,8 @@ function ConnectionOverlay() {
         if (connecting || disconnected) {
             return {
                 icon: <CloudOffIcon sx={{ fontSize: 24, color: '#757575' }} />,
-                title: 'Connecting',
-                message: 'Establishing connection',
+                title: t('connection.connecting'),
+                message: t('connection.establishing_connection'),
                 color: '#757575',
                 bgColor: '#2a2a2a',
                 borderColor: '#757575'

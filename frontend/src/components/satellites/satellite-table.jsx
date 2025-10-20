@@ -46,6 +46,7 @@ import {
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
 import { useNavigate } from 'react-router';
+import { useTranslation } from 'react-i18next';
 
 function Pagination({page, onPageChange, className}) {
     const apiRef = useGridApiContext();
@@ -72,6 +73,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const {socket} = useSocket();
+    const { t } = useTranslation('satellites');
     const {
         satellites,
         satellitesGroups,
@@ -82,17 +84,17 @@ const SatelliteTable = React.memo(function SatelliteTable() {
     const columns = [
         {
             field: 'name',
-            headerName: 'Name',
+            headerName: t('satellite_database.name'),
             width: 200,
         },
         {
             field: 'norad_id',
-            headerName: 'NORAD ID',
+            headerName: t('satellite_database.norad_id'),
             width: 100,
         },
         {
             field: 'status',
-            headerName: 'Status',
+            headerName: t('satellite_database.status'),
             width: 100,
             headerAlign: 'center',
             align: 'center',
@@ -102,7 +104,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         },
         {
             field: 'countries',
-            headerName: 'Countries',
+            headerName: t('satellite_database.countries'),
             width: 100,
             headerAlign: 'center',
             align: 'center',
@@ -112,7 +114,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         },
         {
             field: 'operator',
-            headerName: 'Operator',
+            headerName: t('satellite_database.operator'),
             width: 100,
             headerAlign: 'center',
             align: 'center',
@@ -130,7 +132,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             minWidth: 220,
             align: 'center',
             headerAlign: 'center',
-            headerName: 'Bands',
+            headerName: t('satellite_database.bands'),
             sortComparator: (v1, v2) => {
                 // Get total transmitter count for comparison
                 const count1 = v1 ? v1.length : 0;
@@ -140,7 +142,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             renderCell: (params) => {
                 const transmitters = params.value;
                 if (!transmitters) {
-                    return 'No data';
+                    return t('satellite_database.no_data');
                 }
 
                 // Count transmitters per band
@@ -186,7 +188,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
 
         {
             field: 'decayed',
-            headerName: 'Decayed',
+            headerName: t('satellite_database.decayed'),
             width: 150,
             renderCell: (params) => {
                 return betterDateTimes(params.value);
@@ -194,7 +196,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         },
         {
             field: 'launched',
-            headerName: 'Launched',
+            headerName: t('satellite_database.launched'),
             width: 150,
             renderCell: (params) => {
                 return betterDateTimes(params.value);
@@ -202,7 +204,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         },
         {
             field: 'deployed',
-            headerName: 'Deployed',
+            headerName: t('satellite_database.deployed'),
             width: 150,
             renderCell: (params) => {
                 return betterDateTimes(params.value);
@@ -210,7 +212,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         },
         {
             field: 'updated',
-            headerName: 'Updated',
+            headerName: t('satellite_database.updated'),
             width: 150,
             renderCell: (params) => {
                 return betterDateTimes(params.value);
@@ -229,10 +231,10 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             dispatch(fetchSatellites({socket, satGroupId: groupId}))
                 .unwrap()
                 .then((data) => {
-                    toast.success(`Successfully loaded ${data.length} satellites`);
+                    toast.success(t('satellite_database.loaded_success', { count: data.length }));
                 })
                 .catch((err) => {
-                    toast.error("Failed to load satellites: " + err.message)
+                    toast.error(t('satellite_database.failed_load') + ": " + err.message)
                 });
         }
     };
@@ -247,20 +249,20 @@ const SatelliteTable = React.memo(function SatelliteTable() {
     return (
         <Box elevation={3} sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>Satellite Database</AlertTitle>
-                Browse and manage the satellite database organized by groups. Select a satellite group from the dropdown to view satellites with their operational status, frequency bands, countries, operators, and mission dates. Click on any satellite row to view detailed information including transmitter specifications, orbital parameters, and real-time tracking data. Satellite data is automatically synchronized from TLE sources and enriched with frequency information from the SatNOGS database.
+                <AlertTitle>{t('satellite_database.title')}</AlertTitle>
+                {t('satellite_database.subtitle')}
             </Alert>
             <FormControl sx={{minWidth: 200, marginTop: 2, marginBottom: 1}} fullWidth variant={"filled"}>
-                <InputLabel htmlFor="grouped-select">Select one of the satellite groups</InputLabel>
+                <InputLabel htmlFor="grouped-select">{t('satellite_database.select_group')}</InputLabel>
                 <Select disabled={loading} value={satGroupId} id="grouped-select" label="Grouping" variant={"filled"}
                         onChange={handleOnGroupChange}>
-                    <ListSubheader>User defined satellite groups</ListSubheader>
+                    <ListSubheader>{t('satellite_database.user_groups')}</ListSubheader>
                     {satellitesGroups.map((group, index) => {
                         if (group.type === "user") {
                             return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                         }
                     })}
-                    <ListSubheader>Build-in satellite groups</ListSubheader>
+                    <ListSubheader>{t('satellite_database.builtin_groups')}</ListSubheader>
                     {satellitesGroups.map((group, index) => {
                         if (group.type === "system") {
                             return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;

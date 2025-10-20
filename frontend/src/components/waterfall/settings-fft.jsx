@@ -13,6 +13,7 @@ import {
     MenuItem,
     Select,
 } from "@mui/material";
+import { useTranslation } from 'react-i18next';
 
 const FftAccordion = ({
                           expanded,
@@ -30,6 +31,8 @@ const FftAccordion = ({
                           localColorMap,
                           onColorMapChange,
                       }) => {
+    const { t } = useTranslation('waterfall');
+
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
             <AccordionSummary
@@ -37,7 +40,7 @@ const FftAccordion = ({
                     boxShadow: '-1px 4px 7px #00000059',
                 }}
                 aria-controls="panel2d-content" id="panel2d-header">
-                <Typography component="span">FFT</Typography>
+                <Typography component="span">{t('fft.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
                 backgroundColor: 'rgb(34,34,34)',
@@ -48,7 +51,7 @@ const FftAccordion = ({
                                      margin="normal" sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true} variant="filled"
                                      size="small">
-                            <InputLabel>FFT Size</InputLabel>
+                            <InputLabel>{t('fft.fft_size')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
@@ -64,7 +67,7 @@ const FftAccordion = ({
                         <FormControl disabled={gettingSDRParameters}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                      variant="filled" size="small">
-                            <InputLabel>FFT Window</InputLabel>
+                            <InputLabel>{t('fft.fft_window')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
@@ -82,38 +85,38 @@ const FftAccordion = ({
                         <FormControl disabled={gettingSDRParameters}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                      variant="filled" size="small">
-                            <InputLabel>FFT Averaging</InputLabel>
+                            <InputLabel>{t('fft.fft_averaging')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
                                 value={fftAveraging}
                                 onChange={(e) => onFFTAveragingChange(e.target.value)}
                                 variant={'filled'}>
-                                <MenuItem value={1}>None</MenuItem>
-                                <MenuItem value={2}>2 samples</MenuItem>
-                                <MenuItem value={3}>3 samples</MenuItem>
-                                <MenuItem value={4}>4 samples</MenuItem>
-                                <MenuItem value={6}>6 samples</MenuItem>
-                                <MenuItem value={8}>8 samples</MenuItem>
-                                <MenuItem value={10}>10 samples</MenuItem>
-                                <MenuItem value={12}>12 samples</MenuItem>
-                                <MenuItem value={16}>16 samples</MenuItem>
-                                <MenuItem value={18}>18 samples</MenuItem>
-                                <MenuItem value={20}>20 samples</MenuItem>
-                                <MenuItem value={24}>24 samples</MenuItem>
+                                <MenuItem value={1}>{t('fft.averaging_none')}</MenuItem>
+                                <MenuItem value={2}>{t('fft.averaging_samples', { count: 2 })}</MenuItem>
+                                <MenuItem value={3}>{t('fft.averaging_samples', { count: 3 })}</MenuItem>
+                                <MenuItem value={4}>{t('fft.averaging_samples', { count: 4 })}</MenuItem>
+                                <MenuItem value={6}>{t('fft.averaging_samples', { count: 6 })}</MenuItem>
+                                <MenuItem value={8}>{t('fft.averaging_samples', { count: 8 })}</MenuItem>
+                                <MenuItem value={10}>{t('fft.averaging_samples', { count: 10 })}</MenuItem>
+                                <MenuItem value={12}>{t('fft.averaging_samples', { count: 12 })}</MenuItem>
+                                <MenuItem value={16}>{t('fft.averaging_samples', { count: 16 })}</MenuItem>
+                                <MenuItem value={18}>{t('fft.averaging_samples', { count: 18 })}</MenuItem>
+                                <MenuItem value={20}>{t('fft.averaging_samples', { count: 20 })}</MenuItem>
+                                <MenuItem value={24}>{t('fft.averaging_samples', { count: 24 })}</MenuItem>
                             </Select>
                         </FormControl>
                         <FormControl disabled={gettingSDRParameters}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth={true}
                                      variant="filled"
                                      size="small">
-                            <InputLabel>Color Map</InputLabel>
+                            <InputLabel>{t('fft.color_map')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
                                 value={localColorMap}
                                 onChange={(e) => onColorMapChange(e.target.value)}
-                                label="Color Map"
+                                label={t('fft.color_map')}
                                 variant={'filled'}>
                                 {colorMaps.map(map => (
                                     <MenuItem key={map} value={map}>

@@ -18,6 +18,7 @@
  */
 
 import { useSelector } from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     getClassNamesBasedOnGridEditing,
     TitleBar,
@@ -38,6 +39,7 @@ import Grid from "@mui/material/Grid2";
 import React from "react";
 
 const TargetSatelliteTransmittersIsland = () => {
+    const { t } = useTranslation('target');
     const { satelliteData, gridEditable } = useSelector((state) => state.targetSatTrack);
 
     const TransmitterRow = ({ transmitter, index }) => (
@@ -72,15 +74,15 @@ const TargetSatelliteTransmittersIsland = () => {
             <Grid container spacing={1}>
                 <Grid size={4}>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                        Downlink
+                        {t('satellite_transmitters.labels.downlink')}
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#4fc3f7' }}>
-                        {transmitter.downlink_low ? `${(transmitter.downlink_low / 1e6).toFixed(3)} MHz` : 'N/A'}
+                        {transmitter.downlink_low ? `${(transmitter.downlink_low / 1e6).toFixed(3)} MHz` : t('satellite_info.values.na')}
                     </Typography>
                 </Grid>
                 <Grid size={3}>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                        Mode
+                        {t('satellite_transmitters.labels.mode')}
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#81c784' }}>
                         {transmitter.mode}
@@ -88,18 +90,18 @@ const TargetSatelliteTransmittersIsland = () => {
                 </Grid>
                 <Grid size={3}>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                        Baud
+                        {t('satellite_transmitters.labels.baud')}
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#ffb74d' }}>
-                        {transmitter.baud ? `${transmitter.baud}` : 'N/A'}
+                        {transmitter.baud ? `${transmitter.baud}` : t('satellite_info.values.na')}
                     </Typography>
                 </Grid>
                 <Grid size={2}>
                     <Typography variant="caption" sx={{ color: 'text.secondary', display: 'block' }}>
-                        Band
+                        {t('satellite_transmitters.labels.band')}
                     </Typography>
                     <Typography variant="caption" sx={{ fontWeight: 'bold', color: '#ba68c8' }}>
-                        {transmitter.downlink_low ? getFrequencyBand(transmitter.downlink_low) : 'N/A'}
+                        {transmitter.downlink_low ? getFrequencyBand(transmitter.downlink_low) : t('satellite_info.values.na')}
                     </Typography>
                 </Grid>
             </Grid>
@@ -107,7 +109,7 @@ const TargetSatelliteTransmittersIsland = () => {
             {transmitter.frequency_violation && (
                 <Box sx={{ mt: 0.5, p: 0.5, bgcolor: 'rgba(244, 67, 54, 0.1)', borderRadius: 0.5 }}>
                     <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'bold' }}>
-                        ⚠️ FREQUENCY VIOLATION
+                        {t('satellite_transmitters.messages.frequency_violation')}
                     </Typography>
                 </Box>
             )}
@@ -158,11 +160,11 @@ const TargetSatelliteTransmittersIsland = () => {
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <RadioIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            Transmitters
+                            {t('satellite_transmitters.title')}
                         </Typography>
                     </Box>
                     <Typography variant="caption" sx={{color: 'text.secondary'}}>
-                        Count: {satelliteData && satelliteData['transmitters'] ? satelliteData['transmitters'].length : '0'}
+                        {t('satellite_transmitters.count')}: {satelliteData && satelliteData['transmitters'] ? satelliteData['transmitters'].length : '0'}
                     </Typography>
                 </Box>
             </TitleBar>
@@ -171,18 +173,18 @@ const TargetSatelliteTransmittersIsland = () => {
             <Box sx={{ pr: 2, pl: 2, pt: 1, flex: 1, overflow: 'auto' }}>
 
                 {/* Communication Overview */}
-                <Section title="COMMUNICATION OVERVIEW" icon={SettingsInputAntennaIcon}>
+                <Section title={t('satellite_transmitters.sections.communication_overview')} icon={SettingsInputAntennaIcon}>
                     <Grid container spacing={1}>
                         <Grid size={4}>
                             <Box sx={{ mb: 0 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                                     <SettingsRemoteIcon sx={{ fontSize: 14, mr: 0.5, color: '#ff9800' }} />
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
-                                        TOTAL
+                                        {t('satellite_transmitters.labels.total')}
                                     </Typography>
                                 </Box>
                                 <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
-                                    {satelliteData && satelliteData['transmitters'] ? satelliteData['transmitters'].length : 'N/A'}
+                                    {satelliteData && satelliteData['transmitters'] ? satelliteData['transmitters'].length : t('satellite_info.values.na')}
                                 </Typography>
                             </Box>
                         </Grid>
@@ -191,12 +193,12 @@ const TargetSatelliteTransmittersIsland = () => {
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                                     <SignalCellularAltIcon sx={{ fontSize: 14, mr: 0.5, color: '#4caf50' }} />
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
-                                        ACTIVE
+                                        {t('satellite_transmitters.labels.active')}
                                     </Typography>
                                 </Box>
                                 <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
                                     {satelliteData && satelliteData['transmitters'] ?
-                                        satelliteData['transmitters'].filter(t => t.alive && t.status === 'active').length : 'N/A'}
+                                        satelliteData['transmitters'].filter(t => t.alive && t.status === 'active').length : t('satellite_info.values.na')}
                                 </Typography>
                             </Box>
                         </Grid>
@@ -205,12 +207,12 @@ const TargetSatelliteTransmittersIsland = () => {
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                                     <SignalCellularAltIcon sx={{ fontSize: 14, mr: 0.5, color: '#f44336' }} />
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
-                                        INACTIVE
+                                        {t('satellite_transmitters.labels.inactive')}
                                     </Typography>
                                 </Box>
                                 <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#f44336' }}>
                                     {satelliteData && satelliteData['transmitters'] ?
-                                        satelliteData['transmitters'].filter(t => !t.alive || t.status !== 'active').length : 'N/A'}
+                                        satelliteData['transmitters'].filter(t => !t.alive || t.status !== 'active').length : t('satellite_info.values.na')}
                                 </Typography>
                             </Box>
                         </Grid>
@@ -219,7 +221,7 @@ const TargetSatelliteTransmittersIsland = () => {
                     {bands.length > 0 && (
                         <Box sx={{ mt: 2 }}>
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 1, display: 'block' }}>
-                                FREQUENCY BANDS
+                                {t('satellite_transmitters.labels.frequency_bands')}
                             </Typography>
                             <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                 {bands.map((band, index) => (
@@ -244,7 +246,7 @@ const TargetSatelliteTransmittersIsland = () => {
 
                 {/* Detailed Transmitters */}
                 {satelliteData && satelliteData['transmitters'] && satelliteData['transmitters'].length > 0 ? (
-                    <Section title="TRANSMITTER DETAILS" icon={RadioIcon}>
+                    <Section title={t('satellite_transmitters.sections.transmitter_details')} icon={RadioIcon}>
                         <Box sx={{ maxHeight: '100%', overflowY: 'auto' }}>
                             {satelliteData['transmitters'].map((transmitter, index) => (
                                 <TransmitterRow key={transmitter.id || index} transmitter={transmitter} index={index} />
@@ -255,10 +257,10 @@ const TargetSatelliteTransmittersIsland = () => {
                     <Box sx={{ textAlign: 'center', py: 4 }}>
                         <RadioIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
                         <Typography variant="h6" sx={{ color: 'text.secondary', mb: 1 }}>
-                            No Transmitters Available
+                            {t('satellite_transmitters.messages.no_transmitters')}
                         </Typography>
                         <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            This satellite doesn't have any registered transmitters.
+                            {t('satellite_transmitters.messages.no_transmitters_desc')}
                         </Typography>
                     </Box>
                 )}

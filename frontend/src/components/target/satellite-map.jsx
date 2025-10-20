@@ -33,6 +33,7 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import SettingsIcon from '@mui/icons-material/Settings';
 import {useDispatch, useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     setOpenMapSettingsDialog,
     setSatGroupId,
@@ -160,6 +161,7 @@ const MapSlider = function ({handleSliderChange}) {
 const TargetSatelliteMapContainer = ({}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('target');
     const {
         groupId,
         satelliteId: noradId,
@@ -215,44 +217,48 @@ const TargetSatelliteMapContainer = ({}) => {
     }
 
     function MapSettingsButton() {
+        const { t } = useTranslation('target');
         const handleClick = () => {
             dispatch(setOpenMapSettingsDialog(true));
         };
 
         return (
-            <Fab size="small" color="primary" aria-label="Map settings" onClick={handleClick}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.map_settings')} onClick={handleClick}>
                 <SettingsIcon/>
             </Fab>
         );
     }
 
     function CenterHomeButton() {
+        const { t } = useTranslation('target');
         const targetCoordinates = [location.lat, location.lon];
         const handleClick = () => {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
 
         return (
-            <Fab size="small" color="primary" aria-label="Go home" onClick={handleClick}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.go_home')} onClick={handleClick}>
                 <HomeIcon/>
             </Fab>
         );
     }
 
     function CenterMapButton() {
+        const { t } = useTranslation('target');
         const targetCoordinates = [0, 0];
         const handleClick = () => {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
 
         return (
-            <Fab size="small" color="primary" aria-label="Go to center of map" onClick={handleClick}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.go_to_center')} onClick={handleClick}>
                 <FilterCenterFocusIcon/>
             </Fab>
         );
     }
 
     function FullscreenMapButton() {
+        const { t } = useTranslation('target');
         const handleMapFullscreen = () => {
             const mapContainer = MapObject.getContainer();
             if (!document.fullscreenElement) {
@@ -280,7 +286,7 @@ const TargetSatelliteMapContainer = ({}) => {
         };
 
         return (
-            <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={handleMapFullscreen}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.go_fullscreen')} onClick={handleMapFullscreen}>
                 <FullscreenIcon/>
             </Fab>
         );
@@ -459,7 +465,7 @@ const TargetSatelliteMapContainer = ({}) => {
             <MapTitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
             >
-                Target tracking
+                {t('satellite_map.title')}
             </MapTitleBar>
             <MapContainer
                 center={[0, 0]}

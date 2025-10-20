@@ -28,6 +28,7 @@ import {
     AlertTitle,
     Paper
 } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import {MapContainer, TileLayer, Marker, Popup, Polyline, Circle, useMapEvents} from 'react-leaflet';
 import Grid from '@mui/material/Grid2';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
@@ -117,6 +118,7 @@ const LocationPage = () => {
     const dispatch = useDispatch();
     const [nearestCity, setNearestCity] = React.useState('');
     const mapRef = React.useRef(null);
+    const { t } = useTranslation('settings');
 
     // Grab data from Redux
     const {
@@ -225,7 +227,7 @@ const LocationPage = () => {
     const getCurrentLocation = async () => {
         dispatch(setLocationLoading(true));
         if (!navigator.geolocation) {
-            toast.warning('Geolocation is not supported by your browser.');
+            toast.warning(t('location.geolocation_not_supported'));
             return;
         }
 
@@ -256,10 +258,10 @@ const LocationPage = () => {
                 reCenterMap(latitude, longitude);
                 dispatch(setLocationLoading(false));
 
-                toast.success(`Location retrieved`);
+                toast.success(t('location.location_retrieved'));
             },
             (error) => {
-                toast.error('Failed to get your current location');
+                toast.error(t('location.failed_get_location'));
                 dispatch(setLocationLoading(false));
             },
             {
@@ -277,8 +279,8 @@ const LocationPage = () => {
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
             <Alert severity="info">
-                <AlertTitle>Select location on map</AlertTitle>
-                Use the map below to set the ground station location
+                <AlertTitle>{t('location.title')}</AlertTitle>
+                {t('location.subtitle')}
             </Alert>
             <Grid container spacing={1} columns={{ xs: 1, sm: 1, md: 1, lg: 2 }} sx={{ pt: 2 }}>
                 <Grid size={{ xs: 1, md: 1 }}>
@@ -295,19 +297,19 @@ const LocationPage = () => {
                         }}
                     >
                         <Typography variant="h6" gutterBottom sx={{ mb: 3, color: 'primary.main' }}>
-                            Ground Station Location
+                            {t('location.ground_station_location')}
                         </Typography>
 
                         <Grid container spacing={2}>
                             {/* Coordinates Section */}
                             <Grid size={{ xs: 3 }}>
                                 <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                                    Coordinates
+                                    {t('location.coordinates')}
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Latitude
+                                            {t('location.latitude')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             {location.lat?.toFixed(6)}°
@@ -315,7 +317,7 @@ const LocationPage = () => {
                                     </Box>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Longitude
+                                            {t('location.longitude')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             {location.lon?.toFixed(6)}°
@@ -323,7 +325,7 @@ const LocationPage = () => {
                                     </Box>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            QTH Locator
+                                            {t('location.qth_locator')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             {qth || 'N/A'}
@@ -335,20 +337,20 @@ const LocationPage = () => {
                             {/* Location Details Section */}
                             <Grid size={{ xs: 3 }}>
                                 <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                                    Location Details
+                                    {t('location.location_details')}
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Altitude
+                                            {t('location.altitude')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            {altitude}m ASL
+                                            {t('location.altitude_asl', { altitude })}
                                         </Typography>
                                     </Box>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Time Zone
+                                            {t('location.timezone')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             {/* Placeholder for timezone */}
@@ -361,7 +363,7 @@ const LocationPage = () => {
                                     </Box>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Nearest City
+                                            {t('location.nearest_city')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             {nearestCity}
@@ -373,12 +375,12 @@ const LocationPage = () => {
                             {/* Station Information Section */}
                             <Grid size={{ xs: 3 }}>
                                 <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                                    Station Info
+                                    {t('location.station_info')}
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Station Name
+                                            {t('location.station_name')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             Ground Station 1
@@ -386,7 +388,7 @@ const LocationPage = () => {
                                     </Box>
                                     <Box>
                                         <Typography variant="body2" color="text.secondary">
-                                            Horizon Mask
+                                            {t('location.horizon_mask')}
                                         </Typography>
                                         <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
                                             10 °
@@ -398,7 +400,7 @@ const LocationPage = () => {
                             {/* Action Buttons Section */}
                             <Grid size={{ xs: 2, md: 3 }}>
                                 <Typography variant="h6" gutterBottom sx={{ fontSize: '1rem', fontWeight: 600 }}>
-                                    Actions
+                                    {t('location.actions')}
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
                                     <Button
@@ -410,11 +412,11 @@ const LocationPage = () => {
                                             try {
                                                 await getCurrentLocation();
                                             } catch (error) {
-                                                toast.error('Failed to get current location');
+                                                toast.error(t('location.failed_copy'));
                                             }
                                         }}
                                     >
-                                        Get Current Location
+                                        {t('location.get_current_location')}
                                     </Button>
                                     <Button
                                         variant="outlined"
@@ -423,10 +425,10 @@ const LocationPage = () => {
                                         onClick={() => {
                                             // Placeholder for export functionality
                                             navigator.clipboard.writeText(`${location.lat?.toFixed(6)}, ${location.lon?.toFixed(6)}`);
-                                            toast.success('Coordinates copied to clipboard');
+                                            toast.success(t('location.coordinates_copied'));
                                         }}
                                     >
-                                        Copy Coordinates
+                                        {t('location.copy_coordinates')}
                                     </Button>
                                 </Box>
                             </Grid>
@@ -459,7 +461,7 @@ const LocationPage = () => {
                             />
                             <MapClickHandler onClick={handleMapClick} />
                             <Marker position={location} icon={customIcon}>
-                                <Popup>Your Selected Location</Popup>
+                                <Popup>{t('location.your_selected_location')}</Popup>
                             </Marker>
                             {polylines.map((polyline, index) => (
                                 <Polyline
@@ -494,7 +496,7 @@ const LocationPage = () => {
                 </Grid>
                 <Grid size={{ xs: 6, md: 8 }} sx={{ pt: 2 }}>
                     <Button variant="contained" color="primary" onClick={() => handleSetLocation()}>
-                        Save location
+                        {t('location.save_location')}
                     </Button>
                 </Grid>
             </Grid>

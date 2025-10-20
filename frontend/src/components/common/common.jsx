@@ -67,6 +67,7 @@ export const AntTabs = styled(Tabs)({
 export const AntTab = styled((props) => <Tab disableRipple {...props} />)(({ theme }) => ({
     '&.MuiTab-root': {
         fontSize: theme.typography.pxToRem(16),
+        textTransform: 'uppercase',
     },
     '&.Mui-selected': {
         color: '#fff',

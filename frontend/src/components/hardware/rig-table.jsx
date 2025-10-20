@@ -31,6 +31,7 @@ import {
     Select,
     TextField
 } from "@mui/material";
+import { useTranslation } from 'react-i18next';
 import Stack from "@mui/material/Stack";
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
@@ -58,6 +59,7 @@ export default function RigTable() {
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const {rigs, loading, selected, openDeleteConfirm, formValues, openAddDialog} = useSelector((state) => state.rigs);
+    const { t } = useTranslation('hardware');
 
     const defaultRig = {
         id: null,
@@ -73,11 +75,11 @@ export default function RigTable() {
     const [pageSize, setPageSize] = React.useState(10);
 
     const columns = [
-        {field: 'name', headerName: 'Name', flex: 1, minWidth: 150},
-        {field: 'host', headerName: 'Host', flex: 1, minWidth: 150},
+        {field: 'name', headerName: t('rig.name'), flex: 1, minWidth: 150},
+        {field: 'host', headerName: t('rig.host'), flex: 1, minWidth: 150},
         {
             field: 'port',
-            headerName: 'Port',
+            headerName: t('rig.port'),
             type: 'number',
             flex: 1,
             minWidth: 80,
@@ -87,17 +89,17 @@ export default function RigTable() {
                 return value;
             }
         },
-        {field: 'radiotype', headerName: 'Radio Type', flex: 1, minWidth: 150},
-        {field: 'pttstatus', headerName: 'PTT Status', flex: 1, minWidth: 150},
-        {field: 'vfotype', headerName: 'VFO Type', flex: 1, minWidth: 50},
+        {field: 'radiotype', headerName: t('rig.radio_type'), flex: 1, minWidth: 150},
+        {field: 'pttstatus', headerName: t('rig.ptt_status'), flex: 1, minWidth: 150},
+        {field: 'vfotype', headerName: t('rig.vfo_type'), flex: 1, minWidth: 50},
         {
-            field: 'lodown', headerName: 'LO Down', type: 'string', flex: 1, minWidth: 60,
+            field: 'lodown', headerName: t('rig.lo_down'), type: 'string', flex: 1, minWidth: 60,
             valueFormatter: (value) => {
                 return humanizeFrequency(value);
             }
         },
         {
-            field: 'loup', headerName: 'LO Up', type: 'string', flex: 1, minWidth: 60,
+            field: 'loup', headerName: t('rig.lo_up'), type: 'string', flex: 1, minWidth: 60,
             valueFormatter: (value) => {
                 return humanizeFrequency(value);
             }
@@ -113,19 +115,19 @@ export default function RigTable() {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success('Rig edited successfully', {autoClose: 5000});
+                    toast.success(t('rig.edited_success'), {autoClose: 5000});
                 })
                 .catch((error) => {
-                    toast.error('Error editing rig', {autoClose: 5000})
+                    toast.error(t('rig.error_editing'), {autoClose: 5000})
                 });
         } else {
             dispatch(submitOrEditRig({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success('Rig added successfully', {autoClose: 5000});
+                    toast.success(t('rig.added_success'), {autoClose: 5000});
                 })
                 .catch((error) => {
-                    toast.error(`Error adding rig: ${error}`, {autoClose: 5000})
+                    toast.error(`${t('rig.error_adding')}: ${error}`, {autoClose: 5000})
                 });
         }
         dispatch(setOpenAddDialog(false));
@@ -137,10 +139,10 @@ export default function RigTable() {
             .then(() => {
                 dispatch(setSelected([]));
                 dispatch(setOpenDeleteConfirm(false));
-                toast.success('Rig(s) deleted successfully', {autoClose: 5000});
+                toast.success(t('rig.deleted_success'), {autoClose: 5000});
             })
             .catch((error) => {
-                toast.error('Error deleting rig(s)', {autoClose: 5000});
+                toast.error(t('rig.error_deleting'), {autoClose: 5000});
             });
     }
 
@@ -157,15 +159,8 @@ export default function RigTable() {
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>Radio Rig Control Setup</AlertTitle>
-                Configure and manage radio transceiver connections for automated frequency control during satellite
-                tracking. This system uses Hamlib, the industry-standard library supporting over 200 radio models
-                including popular brands like Yaesu, Icom, Kenwood, Elecraft, FlexRadio, and many others. Radio control
-                is supported exclusively through network connections - direct serial/USB connections are not supported.
-                Rigctld handles client requests via TCP sockets, allowing multiple user programs to share one radio.
-                Set up connection parameters including host address, port, radio type, PTT control, VFO configuration,
-                and local oscillator offsets for uplink/downlink frequency compensation. Rigs integrate seamlessly
-                with satellite tracking to automatically adjust frequencies based on Doppler shift calculations.
+                <AlertTitle>{t('rig.title')}</AlertTitle>
+                {t('rig.subtitle')}
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <Box sx={{width: '100%'}}>
@@ -207,7 +202,7 @@ export default function RigTable() {
                             dispatch(setFormValues(defaultRig));
                             dispatch(setOpenAddDialog(true));
                         }}>
-                            Add
+                            {t('rig.add')}
                         </Button>
                         <Button variant="contained" disabled={selected.length !== 1} onClick={() => {
                             const rigToEdit = rigs.find((rig) => rig.id === selected[0]);
@@ -216,7 +211,7 @@ export default function RigTable() {
                                 dispatch(setOpenAddDialog(true));
                             }
                         }}>
-                            Edit
+                            {t('rig.edit')}
                         </Button>
                         <Button
                             variant="contained"
@@ -224,17 +219,17 @@ export default function RigTable() {
                             color="error"
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}
                         >
-                            Delete
+                            {t('rig.delete')}
                         </Button>
                     </Stack>
                     <Dialog open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                        <DialogTitle>Add Radio Rig</DialogTitle>
+                        <DialogTitle>{t('rig.add_dialog_title')}</DialogTitle>
                         <DialogContent>
                             <TextField
                                 autoFocus
                                 name="name"
                                 margin="dense"
-                                label="Name"
+                                label={t('rig.name')}
                                 type="text"
                                 fullWidth
                                 variant="filled"
@@ -244,7 +239,7 @@ export default function RigTable() {
                             <TextField
                                 name="host"
                                 margin="dense"
-                                label="Host"
+                                label={t('rig.host')}
                                 type="text"
                                 fullWidth
                                 variant="filled"
@@ -254,7 +249,7 @@ export default function RigTable() {
                             <TextField
                                 name="port"
                                 margin="dense"
-                                label="Port"
+                                label={t('rig.port')}
                                 type="number"
                                 fullWidth
                                 variant="filled"
@@ -262,39 +257,39 @@ export default function RigTable() {
                                 onChange={handleChange}
                             />
                             <FormControl margin="dense" fullWidth variant="filled">
-                                <InputLabel>Radio Type</InputLabel>
+                                <InputLabel>{t('rig.radio_type')}</InputLabel>
                                 <Select
                                     name="radiotype"
                                     value={formValues.radiotype}
                                     onChange={handleChange}
                                     variant={'filled'}>
-                                    <MenuItem value="rx">RX</MenuItem>
+                                    <MenuItem value="rx">{t('rig.rx')}</MenuItem>
                                 </Select>
                             </FormControl>
                             <FormControl margin="dense" fullWidth variant="filled">
-                                <InputLabel>PTT Status</InputLabel>
+                                <InputLabel>{t('rig.ptt_status')}</InputLabel>
                                 <Select
                                     name="pttstatus"
                                     value={formValues.pttstatus}
                                     onChange={handleChange}
                                     variant={'filled'}>
-                                    <MenuItem value="normal">Normal</MenuItem>
+                                    <MenuItem value="normal">{t('rig.normal')}</MenuItem>
                                 </Select>
                             </FormControl>
                             <FormControl margin="dense" fullWidth variant="filled">
-                                <InputLabel>VFO Type</InputLabel>
+                                <InputLabel>{t('rig.vfo_type')}</InputLabel>
                                 <Select
                                     name="vfotype"
                                     value={formValues.vfotype}
                                     onChange={handleChange}
                                     variant={'filled'}>
-                                    <MenuItem value="normal">Normal</MenuItem>
+                                    <MenuItem value="normal">{t('rig.normal')}</MenuItem>
                                 </Select>
                             </FormControl>
                             <TextField
                                 margin="dense"
                                 name="lodown"
-                                label="LO Down"
+                                label={t('rig.lo_down')}
                                 type="number"
                                 fullWidth
                                 variant="filled"
@@ -304,7 +299,7 @@ export default function RigTable() {
                             <TextField
                                 margin="dense"
                                 name="loup"
-                                label="LO Up"
+                                label={t('rig.lo_up')}
                                 type="number"
                                 fullWidth
                                 variant="filled"
@@ -314,24 +309,24 @@ export default function RigTable() {
                         </DialogContent>
                         <DialogActions style={{padding: '0px 24px 20px 20px'}}>
                             <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error" variant="outlined">
-                                Cancel
+                                {t('rig.cancel')}
                             </Button>
                             <Button onClick={() => handleFormSubmit()} color="success" variant="contained">
-                                Submit
+                                {t('rig.submit')}
                             </Button>
                         </DialogActions>
                     </Dialog>
                     <Dialog open={openDeleteConfirm} onClose={() => dispatch(setOpenDeleteConfirm(false))}>
-                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogTitle>{t('rig.confirm_deletion')}</DialogTitle>
                         <DialogContent>
                             <DialogContentText>
-                                Are you sure you want to delete the selected rig(s)?
+                                {t('rig.confirm_delete_message')}
                             </DialogContentText>
                         </DialogContent>
                         <DialogActions>
                             <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error"
                                     variant="outlined">
-                                Cancel
+                                {t('rig.cancel')}
                             </Button>
                             <Button
                                 variant="contained"
@@ -340,7 +335,7 @@ export default function RigTable() {
                                 }}
                                 color="error"
                             >
-                                Confirm
+                                {t('rig.confirm')}
                             </Button>
                         </DialogActions>
                     </Dialog>

@@ -33,6 +33,8 @@ import {
 import {
     setSelectedSatelliteId,
 } from './overview-slice.jsx';
+import { useTranslation } from 'react-i18next';
+import { enUS, elGR } from '@mui/x-data-grid/locales';
 
 // Create a separate component for the elevation cell that uses useStore
 const ElevationCell = React.memo(function ElevationCell({ noradId }) {
@@ -75,6 +77,10 @@ const MemoizedStyledDataGrid = React.memo(({
                                                selectedSatelliteId,
                                                loadingSatellites,
                                             }) => {
+    const { t, i18n } = useTranslation('overview');
+    const currentLanguage = i18n.language;
+    const dataGridLocale = currentLanguage === 'el' ? elGR : enUS;
+
     const getBackgroundColor = (color, theme, coefficient) => ({
         backgroundColor: darken(color, coefficient),
         ...theme.applyStyles('light', {
@@ -149,7 +155,7 @@ const MemoizedStyledDataGrid = React.memo(({
     }));
 
     const formatDate = (dateString) => {
-        if (!dateString) return 'N/A';
+        if (!dateString) return t('satellites_table.na');
         try {
             const date = new Date(dateString);
             return date.toLocaleDateString('en-US', {
@@ -158,7 +164,7 @@ const MemoizedStyledDataGrid = React.memo(({
                 day: 'numeric'
             });
         } catch (e) {
-            return 'Invalid date';
+            return t('satellites_table.invalid_date');
         }
     };
 
@@ -166,14 +172,14 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'name',
             minWidth: 100,
-            headerName: 'Satellite Name',
+            headerName: t('satellites_table.satellite_name'),
             flex: 2,
             renderCell: (params) => {
                 if (!params || !params.row) return <Typography>-</Typography>;
                 const tooltipText = [
                     params.row.alternative_name,
                     params.row.name_other
-                ].filter(Boolean).join(' / ') || 'No alternative names';
+                ].filter(Boolean).join(' / ') || t('satellites_table.no_alternative_names');
                 return (
                     <Tooltip title={tooltipText}>
                         <span>{params.value || '-'}</span>
@@ -184,7 +190,7 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'alternative_name',
             minWidth: 100,
-            headerName: 'Alternative Name',
+            headerName: t('satellites_table.alternative_name'),
             flex: 2,
             renderCell: (params) => {
                 if (!params || !params.row) return <Typography>-</Typography>;
@@ -198,7 +204,7 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'norad_id',
             minWidth: 70,
-            headerName: 'NORAD',
+            headerName: t('satellites_table.norad'),
             align: 'center',
             headerAlign: 'center',
             flex: 1
@@ -206,7 +212,7 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'elevation',
             minWidth: 50,
-            headerName: 'Elevation',
+            headerName: t('satellites_table.elevation'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
@@ -235,14 +241,14 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'status',
             minWidth: 90,
-            headerName: 'Status',
+            headerName: t('satellites_table.status'),
             align: 'center',
             headerAlign: 'center',
             flex: 1,
             renderCell: (params) => {
                 if (!params || !params.value) {
                     return <Chip
-                        label="Unknown"
+                        label={t('satellites_table.status_unknown')}
                         color="default"
                         size="small"
                         sx={{
@@ -258,24 +264,24 @@ const MemoizedStyledDataGrid = React.memo(({
 
                 const status = params.value;
                 let color = 'default';
-                let label = 'Unknown';
+                let label = t('satellites_table.status_unknown');
 
                 switch (status) {
                     case 'alive':
                         color = 'success';
-                        label = 'Active';
+                        label = t('satellites_table.status_active');
                         break;
                     case 'dead':
                         color = 'error';
-                        label = 'Inactive';
+                        label = t('satellites_table.status_inactive');
                         break;
                     case 're-entered':
                         color = 'warning';
-                        label = 'Re-entered';
+                        label = t('satellites_table.status_reentered');
                         break;
                     default:
                         color = 'default';
-                        label = 'Unknown';
+                        label = t('satellites_table.status_unknown');
                 }
 
                 return (
@@ -299,7 +305,7 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'transmitters',
             minWidth: 90,
-            headerName: 'Transmitters',
+            headerName: t('satellites_table.transmitters'),
             align: 'center',
             headerAlign: 'center',
             flex: 1.2,
@@ -339,7 +345,7 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'countries',
             minWidth: 120,
-            headerName: 'Countries',
+            headerName: t('satellites_table.countries'),
             align: 'center',
             headerAlign: 'center',
             flex: 1.5,
@@ -353,7 +359,7 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'decayed',
             minWidth: 140,
-            headerName: 'Decayed',
+            headerName: t('satellites_table.decayed'),
             align: 'center',
             headerAlign: 'center',
             flex: 1.5,
@@ -365,29 +371,29 @@ const MemoizedStyledDataGrid = React.memo(({
         {
             field: 'updated',
             minWidth: 140,
-            headerName: 'Updated',
+            headerName: t('satellites_table.updated'),
             align: 'center',
             headerAlign: 'center',
             flex: 1.5,
             renderCell: (params) => {
-                if (!params || !params.value) return <span>N/A</span>;
+                if (!params || !params.value) return <span>{t('satellites_table.na')}</span>;
                 try {
                     const date = new Date(params.value);
                     return <span>{humanizeDate(date)}</span>;
                 } catch (e) {
-                    return <span>Invalid date</span>;
+                    return <span>{t('satellites_table.invalid_date')}</span>;
                 }
             }
         },
         {
             field: 'launched',
             minWidth: 140,
-            headerName: 'Launched',
+            headerName: t('satellites_table.launched'),
             align: 'center',
             headerAlign: 'center',
             flex: 1.5,
             renderCell: (params) => {
-                if (!params || !params.value) return <span>N/A</span>;
+                if (!params || !params.value) return <span>{t('satellites_table.na')}</span>;
                 return <span>{formatDate(params.value)}</span>;
             }
         }
@@ -423,6 +429,7 @@ const MemoizedStyledDataGrid = React.memo(({
             getRowClassName={getSatelliteRowStyles}
             onRowClick={onRowClick}
             getRowId={(params) => params.norad_id}
+            localeText={dataGridLocale.components.MuiDataGrid.defaultProps.localeText}
             sx={{
                 border: 0,
                 marginTop: 0,
@@ -459,6 +466,7 @@ const MemoizedStyledDataGrid = React.memo(({
 
 const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const dispatch = useDispatch();
+    const { t } = useTranslation('overview');
     const containerRef = useRef(null);
     const [containerHeight, setContainerHeight] = useState(0);
     const apiRef = useGridApiRef();
@@ -511,7 +519,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                Satellite Group Details ({selectedSatellites?.length || 0} satellites)
+                {t('satellites_table.title')} ({t('satellites_table.satellites_count', { count: selectedSatellites?.length || 0 })})
             </TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{

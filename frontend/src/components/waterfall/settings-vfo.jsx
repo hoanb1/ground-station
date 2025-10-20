@@ -21,6 +21,7 @@ import VolumeUp from '@mui/icons-material/VolumeUp';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
 import {SquelchIcon} from "../common/icons.jsx";
+import { useTranslation } from 'react-i18next';
 
 const BANDWIDTHS = {
     "3300": "3.3 kHz",
@@ -42,6 +43,8 @@ const VfoAccordion = ({
                           onVFOActiveChange,
                           onVFOPropertyChange,
                       }) => {
+    const { t } = useTranslation('waterfall');
+
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
             <AccordionSummary
@@ -49,7 +52,7 @@ const VfoAccordion = ({
                     boxShadow: '-1px 4px 7px #00000059',
                 }}
                 aria-controls="vfo-content" id="vfo-header">
-                <Typography component="span">VFO Controls</Typography>
+                <Typography component="span">{t('vfo.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
                 backgroundColor: 'rgb(34,34,34)',
@@ -69,7 +72,7 @@ const VfoAccordion = ({
                     }}
                 >
                     {[0, 1, 2, 3].map((index) => (
-                        <Tab key={index} label={`VFO ${index + 1}`} sx={{
+                        <Tab key={index} label={t('vfo.vfo_number', { number: index + 1 })} sx={{
                             minWidth: '25%',
                             backgroundColor: `${vfoColors[index]}40`, // CC = 80% opacity (204/255)
                             '&.Mui-selected': {
@@ -113,13 +116,13 @@ const VfoAccordion = ({
                                     onChange={(e) => onVFOActiveChange(vfoIndex, e.target.checked)}
                                 />
                             }
-                            label="Active"
+                            label={t('vfo.active')}
                             sx={{mt: 0, ml: 0}}
                         />
 
                         <Box sx={{ mt: 1 }}>
                             <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                                Step Size
+                                {t('vfo.step_size')}
                             </Typography>
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.stepSize || 1000}
@@ -172,7 +175,7 @@ const VfoAccordion = ({
 
                         <Box sx={{ mt: 2 }}>
                             <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                                Modulation
+                                {t('vfo.modulation')}
                             </Typography>
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.mode || 'none'}
@@ -211,17 +214,17 @@ const VfoAccordion = ({
                                     }
                                 }}
                             >
-                                <ToggleButton value="none">None</ToggleButton>
-                                <ToggleButton value="am">AM</ToggleButton>
-                                <ToggleButton value="fm">FM</ToggleButton>
-                                <ToggleButton value="lsb">LSB</ToggleButton>
-                                <ToggleButton value="usb">USB</ToggleButton>
+                                <ToggleButton value="none">{t('vfo.modes.none')}</ToggleButton>
+                                <ToggleButton value="am">{t('vfo.modes.am')}</ToggleButton>
+                                <ToggleButton value="fm">{t('vfo.modes.fm')}</ToggleButton>
+                                <ToggleButton value="lsb">{t('vfo.modes.lsb')}</ToggleButton>
+                                <ToggleButton value="usb">{t('vfo.modes.usb')}</ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
 
                         <Box sx={{ mt: 2 }}>
                             <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                                Bandwidth
+                                {t('vfo.bandwidth')}
                             </Typography>
                             <ToggleButtonGroup
                                 value={BANDWIDTHS.hasOwnProperty(vfoMarkers[vfoIndex]?.bandwidth) ? vfoMarkers[vfoIndex]?.bandwidth.toString() : 'custom'}
@@ -265,7 +268,7 @@ const VfoAccordion = ({
                                     }
                                 }}
                             >
-                                <ToggleButton value="custom">Custom</ToggleButton>
+                                <ToggleButton value="custom">{t('vfo.custom')}</ToggleButton>
                                 {Object.entries(BANDWIDTHS).map(([value, label]) => (
                                     <ToggleButton key={value} value={value}>
                                         {label}

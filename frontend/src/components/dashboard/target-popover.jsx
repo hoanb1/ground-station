@@ -33,6 +33,7 @@ import { useState, useRef } from "react";
 import { useSelector } from "react-redux";
 import { useNavigate } from "react-router-dom";
 import Tooltip from "@mui/material/Tooltip";
+import { useTranslation } from 'react-i18next';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import InfoIcon from '@mui/icons-material/Info';
 import OpenInNewIcon from '@mui/icons-material/OpenInNew';
@@ -46,6 +47,7 @@ const SatelliteInfoPopover = () => {
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(null);
     const navigate = useNavigate();
+    const { t } = useTranslation('dashboard');
 
     // Get satellite data from Redux store
     const { satelliteData, trackingState } = useSelector(state => state.targetSatTrack);
@@ -321,17 +323,17 @@ const SatelliteInfoPopover = () => {
                             {/* Basic Information */}
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="subtitle2" sx={{ color: '#81c784', mb: 1, fontWeight: 'bold' }}>
-                                    Basic Information
+                                    {t('target_popover.sections.basic_information')}
                                 </Typography>
                                 <Grid2 container spacing={1}>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>NORAD ID:</strong> <NumericValue color="#ffa726">{satelliteData.details.norad_id}</NumericValue>
+                                            <strong>{t('target_popover.norad_id')}</strong> <NumericValue color="#ffa726">{satelliteData.details.norad_id}</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0', display: 'flex', alignItems: 'center' }}>
-                                            <strong>Status:</strong>
+                                            <strong>{t('target_popover.status')}</strong>
                                             <Box sx={{ ml: 1 }}>
                                                 {betterStatusValue(satelliteData.details.status)}
                                             </Box>
@@ -339,12 +341,12 @@ const SatelliteInfoPopover = () => {
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Operator:</strong> <span style={{ color: '#90caf9' }}>{satelliteData.details.operator || 'N/A'}</span>
+                                            <strong>{t('target_popover.operator')}</strong> <span style={{ color: '#90caf9' }}>{satelliteData.details.operator || t('target_popover.na')}</span>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Countries:</strong> <span style={{ color: '#90caf9' }}>{satelliteData.details.countries || 'N/A'}</span>
+                                            <strong>{t('target_popover.countries')}</strong> <span style={{ color: '#90caf9' }}>{satelliteData.details.countries || t('target_popover.na')}</span>
                                         </Typography>
                                     </Grid2>
                                 </Grid2>
@@ -355,33 +357,33 @@ const SatelliteInfoPopover = () => {
                             {/* Position Information */}
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="subtitle2" sx={{ color: '#64b5f6', mb: 1, fontWeight: 'bold' }}>
-                                    Current Position
+                                    {t('target_popover.sections.current_position')}
                                 </Typography>
                                 <Grid2 container spacing={1}>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Latitude:</strong> <NumericValue>{satelliteData.position.lat?.toFixed(4)}°</NumericValue>
+                                            <strong>{t('target_popover.latitude')}</strong> <NumericValue>{satelliteData.position.lat?.toFixed(4)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Longitude:</strong> <NumericValue>{satelliteData.position.lon?.toFixed(4)}°</NumericValue>
+                                            <strong>{t('target_popover.longitude')}</strong> <NumericValue>{satelliteData.position.lon?.toFixed(4)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{color: '#e0e0e0'}}>
-                                            <strong>Altitude:</strong> <NumericValue
+                                            <strong>{t('target_popover.altitude')}</strong> <NumericValue
                                             color="#a5d6a7">{(satelliteData.position.alt / 1000)?.toFixed(2)} km</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Velocity:</strong> <NumericValue color="#ffcc02">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
+                                            <strong>{t('target_popover.velocity')}</strong> <NumericValue color="#ffcc02">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Azimuth:</strong> <NumericValue color="#ce93d8">{satelliteData.position.az?.toFixed(2)}°</NumericValue>
+                                            <strong>{t('target_popover.azimuth')}</strong> <NumericValue color="#ce93d8">{satelliteData.position.az?.toFixed(2)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
                                 </Grid2>
@@ -392,29 +394,29 @@ const SatelliteInfoPopover = () => {
                             {/* Mission Information */}
                             <Box sx={{ mb: 2 }}>
                                 <Typography variant="subtitle2" sx={{ color: '#ffb74d', mb: 1, fontWeight: 'bold' }}>
-                                    Mission Information
+                                    {t('target_popover.sections.mission_information')}
                                 </Typography>
                                 <Grid2 container spacing={1}>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Launched:</strong> <span style={{ color: '#81c784' }}>{formatDate(satelliteData.details.launched)}</span>
+                                            <strong>{t('target_popover.launched')}</strong> <span style={{ color: '#81c784' }}>{formatDate(satelliteData.details.launched)}</span>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Deployed:</strong> <span style={{ color: '#81c784' }}>{formatDate(satelliteData.details.deployed)}</span>
+                                            <strong>{t('target_popover.deployed')}</strong> <span style={{ color: '#81c784' }}>{formatDate(satelliteData.details.deployed)}</span>
                                         </Typography>
                                     </Grid2>
                                     {satelliteData.details.decayed && (
                                         <Grid2 size={6}>
                                             <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                                <strong>Decayed:</strong> <span style={{ color: '#f48fb1' }}>{formatDate(satelliteData.details.decayed)}</span>
+                                                <strong>{t('target_popover.decayed')}</strong> <span style={{ color: '#f48fb1' }}>{formatDate(satelliteData.details.decayed)}</span>
                                             </Typography>
                                         </Grid2>
                                     )}
                                     <Grid2 size={12}>
                                         <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                            <strong>Geostationary:</strong> <span style={{ color: satelliteData.details.is_geostationary ? '#4caf50' : '#f44336' }}>{satelliteData.details.is_geostationary ? 'Yes' : 'No'}</span>
+                                            <strong>{t('target_popover.geostationary')}</strong> <span style={{ color: satelliteData.details.is_geostationary ? '#4caf50' : '#f44336' }}>{satelliteData.details.is_geostationary ? t('target_popover.yes') : t('target_popover.no')}</span>
                                         </Typography>
                                     </Grid2>
                                 </Grid2>
@@ -424,7 +426,7 @@ const SatelliteInfoPopover = () => {
                             {satelliteData.details.website && (
                                 <Box sx={{ mt: 2, pt: 1, borderTop: '1px solid #424242' }}>
                                     <Typography variant="body2" component="div" sx={{ color: '#e0e0e0' }}>
-                                        <strong>Website:</strong>
+                                        <strong>{t('target_popover.website')}</strong>
                                         <a
                                             href={satelliteData.details.website}
                                             target="_blank"

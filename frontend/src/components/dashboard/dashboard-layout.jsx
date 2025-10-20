@@ -48,6 +48,7 @@ import {handleSetGridEditableWaterfall as WaterfallModeSetEditing} from '../wate
 import CheckIcon from '@mui/icons-material/Check';
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     setIsEditing,
     setConnecting,
@@ -69,6 +70,7 @@ import SatelliteSyncPopover from "./tlesync-popover.jsx";
 
 function DashboardEditor() {
     const dispatch = useDispatch();
+    const { t } = useTranslation('dashboard');
     const {isEditing} = useSelector(state => state.dashboard);
 
     const handleEditClick = () => {
@@ -94,7 +96,7 @@ function DashboardEditor() {
         <>
             {isEditing ? (
                 <Stack direction="row" spacing={2}>
-                    <Tooltip title="Done editing">
+                    <Tooltip title={t('layout.done_editing')}>
                         <IconButton size="small" onClick={handleSaveClick} sx={{
                             width: 40,
                         }}>
@@ -103,7 +105,7 @@ function DashboardEditor() {
                     </Tooltip>
                 </Stack>
             ) : (
-                <Tooltip title="Edit layout">
+                <Tooltip title={t('layout.edit_layout')}>
                     <IconButton size="small" onClick={handleEditClick} sx={{
                         width: 40,
                     }}>

@@ -34,8 +34,6 @@ import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import MainWaterfallDisplay from "./waterfall-island.jsx";
 import WaterfallSettings from "./settings-column.jsx";
-import RigControl from "../target/rig-control.jsx";
-import ControllerTabs from '../common/controller.jsx';
 
 
 // A global callback for dashboard editing here

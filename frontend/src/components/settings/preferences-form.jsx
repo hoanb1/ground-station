@@ -19,11 +19,12 @@
 
 
 
-import React from 'react';
+import React, { useEffect } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { updatePreferences, setPreference } from './preferences-slice.jsx';
 import { tz } from 'moment-timezone';
 import Paper from '@mui/material/Paper';
+import { useTranslation } from 'react-i18next';
 import {
     Alert,
     AlertTitle,
@@ -46,6 +47,7 @@ const PreferencesForm = () => {
     const dispatch = useDispatch();
     const { preferences, status } = useSelector((state) => state.preferences);
     const isLoading = status === 'loading';
+    const { t, i18n } = useTranslation('settings');
 
     const getPreferenceValue = (name) => {
         const preference = preferences.find((pref) => pref.name === name);
@@ -59,34 +61,41 @@ const PreferencesForm = () => {
 
     const languageOptions = [
         { name: 'English', value: 'en_US' },
-        { name: 'Deutsch', value: 'de_DE' },
+        { name: 'Ελληνικά', value: 'el_GR' },
     ];
 
     const themesOptions = [
-        { name: 'Light', value: 'light' },
-        { name: 'Dark', value: 'dark' },
+        { name: t('preferences.theme_light'), value: 'light' },
+        { name: t('preferences.theme_dark'), value: 'dark' },
     ];
 
     const handleChange = (name) => (e) => {
-        dispatch(setPreference({ name, value: e.target.value }));
+        const value = e.target.value;
+        dispatch(setPreference({ name, value }));
+
+        // If language is changed, update i18n immediately
+        if (name === 'language') {
+            const languageCode = value.split('_')[0]; // 'en_US' -> 'en', 'el_GR' -> 'el'
+            i18n.changeLanguage(languageCode);
+        }
     };
 
     const handleSavePreferences = () => {
         dispatch(updatePreferences({ socket }))
             .unwrap()
             .then(() => {
-                toast.success('Preferences saved successfully');
+                toast.success(t('preferences.save_success'));
             })
             .catch(() => {
-                toast.error('Failed to save preferences');
+                toast.error(t('preferences.save_error'));
             });
     };
 
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
             <Alert severity="info">
-                <AlertTitle>Application Preferences</AlertTitle>
-                Configure your application settings and API keys
+                <AlertTitle>{t('preferences.title')}</AlertTitle>
+                {t('preferences.subtitle')}
             </Alert>
 
             <Box component="form" sx={{ mt: 2 }}>
@@ -94,25 +103,25 @@ const PreferencesForm = () => {
                     {/* General Preferences */}
                     <Grid size={16}>
                         <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>
-                            General
+                            {t('general')}
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
                     </Grid>
 
                     {/* Timezone */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>Timezone</Typography>
+                        <Typography>{t('preferences.timezone')}</Typography>
                     </Grid>
                     <Grid size={8}>
                         <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
                             size="small"
                         >
-                            <InputLabel>Timezone</InputLabel>
+                            <InputLabel>{t('preferences.timezone')}</InputLabel>
                             <Select
                                 value={getPreferenceValue('timezone')}
                                 onChange={handleChange('timezone')}
-                                label="Timezone"
+                                label={t('preferences.timezone')}
                              variant={'filled'}>
                                 {timezoneOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
@@ -125,18 +134,18 @@ const PreferencesForm = () => {
 
                     {/* Language */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>Language</Typography>
+                        <Typography>{t('preferences.language')}</Typography>
                     </Grid>
                     <Grid size={8}>
                         <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
                             size="small"
                         >
-                            <InputLabel>Language</InputLabel>
+                            <InputLabel>{t('preferences.language')}</InputLabel>
                             <Select
                                 value={getPreferenceValue('language')}
                                 onChange={handleChange('language')}
-                                label="Language"
+                                label={t('preferences.language')}
                              variant={'filled'}>
                                 {languageOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
@@ -149,19 +158,19 @@ const PreferencesForm = () => {
 
                     {/* Theme */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>Theme</Typography>
+                        <Typography>{t('preferences.theme')}</Typography>
                     </Grid>
                     <Grid size={8}>
                         <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
                             size="small"
                         >
-                            <InputLabel htmlFor={"theme-selector"}>Theme</InputLabel>
+                            <InputLabel htmlFor={"theme-selector"}>{t('preferences.theme')}</InputLabel>
                             <Select
                                 id={'theme-selector'}
                                 value={getPreferenceValue('theme')}
                                 onChange={handleChange('theme')}
-                                label="Theme"
+                                label={t('preferences.theme')}
                              variant={'filled'}>
                                 {themesOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
@@ -175,14 +184,14 @@ const PreferencesForm = () => {
                     {/* API Keys */}
                     <Grid size={16} sx={{ mt: 2 }}>
                         <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>
-                            API Configuration
+                            {t('preferences.api_configuration')}
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
                     </Grid>
 
                     {/* Stadia Maps API Key */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>Stadia Maps API Key</Typography>
+                        <Typography>{t('preferences.stadia_maps_api_key')}</Typography>
                     </Grid>
                     <Grid size={8}>
                         <TextField
@@ -199,7 +208,7 @@ const PreferencesForm = () => {
 
                     {/* OpenWeatherMap API Key */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>OpenWeatherMap API Key</Typography>
+                        <Typography>{t('preferences.openweather_api_key')}</Typography>
                     </Grid>
                     <Grid size={8}>
                         <TextField
@@ -218,14 +227,14 @@ const PreferencesForm = () => {
                     {/* Ground Station Configuration */}
                     <Grid size={16} sx={{ mt: 2 }}>
                         <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>
-                            Ground Station Configuration
+                            {t('preferences.ground_station_configuration')}
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
                     </Grid>
 
                     {/* Minimum Elevation */}
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>Minimum Elevation (degrees)</Typography>
+                        <Typography>{t('preferences.minimum_elevation')}</Typography>
                     </Grid>
                     <Grid size={8}>
                         <TextField
@@ -253,7 +262,7 @@ const PreferencesForm = () => {
                         color="primary"
                         onClick={handleSavePreferences}
                     >
-                        Save Preferences
+                        {t('preferences.save_preferences')}
                     </Button>
                 </Box>
             </Box>

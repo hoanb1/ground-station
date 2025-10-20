@@ -35,6 +35,7 @@ import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import SettingsIcon from '@mui/icons-material/Settings';
 import {useDispatch, useSelector} from 'react-redux';
+import { useTranslation } from 'react-i18next';
 import {
     setOpenMapSettingsDialog,
     setMapZoomLevel,
@@ -90,6 +91,7 @@ const storageMapZoomValueKey = 'overview-map-zoom-level';
 const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('overview');
     const {
         showPastOrbitPath,
         showFutureOrbitPath,
@@ -165,47 +167,51 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     }
 
     function CenterHomeButton() {
+        const { t } = useTranslation('overview');
         const targetCoordinates = [location.lat, location.lon];
         const handleClick = () => {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
         return (
-            <Fab size="small" color="primary" aria-label="Go home" onClick={handleClick}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.go_home')} onClick={handleClick}>
                 <HomeIcon/>
             </Fab>
         );
     }
 
     function CenterMapButton() {
+        const { t } = useTranslation('overview');
         const targetCoordinates = [0, 0];
         const handleClick = () => {
             MapObject.setView(targetCoordinates, MapObject.getZoom());
         };
         return (
-            <Fab size="small" color="primary" aria-label="Go to center of map" onClick={handleClick}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.go_to_center')} onClick={handleClick}>
                 <FilterCenterFocusIcon/>
             </Fab>
         );
     }
 
     function FullscreenMapButton() {
+        const { t } = useTranslation('overview');
         const handleMapFullscreen = () => {
             MapObject.toggleFullscreen();
         };
         return (
-            <Fab size="small" color="primary" aria-label="Go fullscreen" onClick={handleMapFullscreen}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.go_fullscreen')} onClick={handleMapFullscreen}>
                 <FullscreenIcon/>
             </Fab>
         );
     }
 
     function MapSettingsButton() {
+        const { t } = useTranslation('overview');
         const handleClick = () => {
             dispatch(setOpenMapSettingsDialog(true));
         };
 
         return (
-            <Fab size="small" color="primary" aria-label="Map settings" onClick={handleClick}>
+            <Fab size="small" color="primary" aria-label={t('map_controls.map_settings')} onClick={handleClick}>
                 <SettingsIcon/>
             </Fab>
         );
@@ -544,7 +550,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     return (
         <>
             <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ['window-title-bar'])}>
-                Birds eye view
+                {t('title')}
             </MapTitleBar>
             <MapContainer
                 fullscreenControl={true}

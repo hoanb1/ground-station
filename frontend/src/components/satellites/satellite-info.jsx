@@ -45,6 +45,7 @@ import SatelliteMapContainer from "./satellite-map.jsx";
 import { useParams, useNavigate } from 'react-router';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
+import { useTranslation } from 'react-i18next';
 
 
 // Fix for default markers in react-leaflet
@@ -100,6 +101,7 @@ const formatFrequency = (frequency) => {
 const paginationModel = {page: 0, pageSize: 10};
 
 const SatelliteInfo = () => {
+    const { t } = useTranslation('satellites');
     const { noradId } = useParams();
     const navigate = useNavigate();
     const [rows, setRows] = useState([]);
@@ -242,56 +244,56 @@ const SatelliteInfo = () => {
     };
 
     const columns = [
-        {field: "description", headerName: "Description", flex: 1.5, minWidth: 200},
-        {field: "type", headerName: "Type", flex: 1, minWidth: 100},
-        {field: "status", headerName: "Status", flex: 1, minWidth: 100},
-        {field: "alive", headerName: "Alive", flex: 1, minWidth: 100},
+        {field: "description", headerName: t('satellite_info.transmitters.columns.description'), flex: 1.5, minWidth: 200},
+        {field: "type", headerName: t('satellite_info.transmitters.columns.type'), flex: 1, minWidth: 100},
+        {field: "status", headerName: t('satellite_info.transmitters.columns.status'), flex: 1, minWidth: 100},
+        {field: "alive", headerName: t('satellite_info.transmitters.columns.alive'), flex: 1, minWidth: 100},
         {
             field: "uplinkLow",
-            headerName: "Uplink low",
+            headerName: t('satellite_info.transmitters.columns.uplink_low'),
             flex: 1.2,
             minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "uplinkHigh",
-            headerName: "Uplink high",
+            headerName: t('satellite_info.transmitters.columns.uplink_high'),
             flex: 1.2,
             minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "uplinkDrift",
-            headerName: "Uplink drift",
+            headerName: t('satellite_info.transmitters.columns.uplink_drift'),
             flex: 1.2,
             minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "downlinkLow",
-            headerName: "Downlink low",
+            headerName: t('satellite_info.transmitters.columns.downlink_low'),
             flex: 1.2,
             minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "downlinkHigh",
-            headerName: "Downlink high",
+            headerName: t('satellite_info.transmitters.columns.downlink_high'),
             flex: 1.2,
             minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
         {
             field: "downlinkDrift",
-            headerName: "Downlink drift",
+            headerName: t('satellite_info.transmitters.columns.downlink_drift'),
             flex: 1.2,
             minWidth: 150,
             renderCell: (params) => formatFrequency(params.value)
         },
-        {field: "mode", headerName: "Mode", flex: 1, minWidth: 120},
-        {field: "uplinkMode", headerName: "Uplink mode", flex: 1, minWidth: 130},
-        {field: "invert", headerName: "Invert", flex: 0.8, minWidth: 80},
-        {field: "baud", headerName: "Baud", flex: 1, minWidth: 100},
+        {field: "mode", headerName: t('satellite_info.transmitters.columns.mode'), flex: 1, minWidth: 120},
+        {field: "uplinkMode", headerName: t('satellite_info.transmitters.columns.uplink_mode'), flex: 1, minWidth: 130},
+        {field: "invert", headerName: t('satellite_info.transmitters.columns.invert'), flex: 0.8, minWidth: 80},
+        {field: "baud", headerName: t('satellite_info.transmitters.columns.baud'), flex: 1, minWidth: 100},
     ];
 
     function handleImageError() {
@@ -307,7 +309,7 @@ const SatelliteInfo = () => {
                         <ArrowBackIcon />
                     </IconButton>
                     <Typography variant="h6" display="inline">
-                        Loading satellite information...
+                        {t('satellite_info.loading')}
                     </Typography>
                 </Box>
             </Box>
@@ -323,18 +325,18 @@ const SatelliteInfo = () => {
                         <ArrowBackIcon />
                     </IconButton>
                     <Typography variant="h6" display="inline">
-                        Satellite not found
+                        {t('satellite_info.not_found')}
                     </Typography>
                 </Box>
                 <Typography variant="body1" sx={{ mt: 2 }}>
-                    Could not find satellite with NORAD ID: {noradId}
+                    {t('satellite_info.not_found_message', { noradId })}
                 </Typography>
                 <Button
                     variant="contained"
                     onClick={() => navigate('/satellites/satellites')}
                     sx={{ mt: 2 }}
                 >
-                    Go to Satellites List
+                    {t('satellite_info.go_to_list')}
                 </Button>
             </Box>
         );
@@ -349,7 +351,7 @@ const SatelliteInfo = () => {
                         <ArrowBackIcon />
                     </IconButton>
                     <Typography variant="h6" display="inline">
-                        Loading satellite information...
+                        {t('satellite_info.loading')}
                     </Typography>
                 </Box>
             </Box>
@@ -399,7 +401,7 @@ const SatelliteInfo = () => {
                         display: 'inline-flex',
                     }}>
                         <Typography variant="h6" display="inline">
-                            {clickedSatellite.name} - Satellite Information
+                            {clickedSatellite.name} - {t('satellite_info.title')}
                         </Typography>
                     </Box>
                 </Box>
@@ -410,20 +412,23 @@ const SatelliteInfo = () => {
                         color="error"
                         onClick={() => setDeleteSatelliteConfirmOpen(true)}
                     >
-                        Delete Satellite
+                        {t('satellite_info.delete_satellite')}
                     </Button>
                     <Dialog open={deleteSatelliteConfirmOpen} onClose={() => setDeleteSatelliteConfirmOpen(false)}>
-                        <DialogTitle>Delete Satellite</DialogTitle>
+                        <DialogTitle>{t('satellite_info.delete_confirm_title')}</DialogTitle>
                         <DialogContent>
-                            Are you sure you want to delete this satellite? This action cannot be undone.
+                            {t('satellite_info.delete_confirm_message')}
                             {clickedSatellite.transmitters && clickedSatellite.transmitters.length > 0 && (
                                 <Typography sx={{ mt: 2, color: 'warning.main' }}>
-                                    Note: This will also delete {clickedSatellite.transmitters.length} associated transmitter{clickedSatellite.transmitters.length !== 1 ? 's' : ''}.
+                                    {t('satellite_info.delete_confirm_transmitters', {
+                                        count: clickedSatellite.transmitters.length,
+                                        plural: clickedSatellite.transmitters.length !== 1 ? 'ες' : 'η'
+                                    })}
                                 </Typography>
                             )}
                         </DialogContent>
                         <DialogActions>
-                            <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>Cancel</Button>
+                            <Button onClick={() => setDeleteSatelliteConfirmOpen(false)}>{t('satellite_info.transmitters.cancel')}</Button>
                             <Button
                                 variant="contained"
                                 color="error"
@@ -434,15 +439,15 @@ const SatelliteInfo = () => {
                                             noradId: clickedSatellite.norad_id
                                         })).unwrap();
                                         navigate('/satellites/satellites');
-                                        toast.success('Satellite deleted successfully');
+                                        toast.success(t('satellite_info.delete_success'));
                                     } catch (error) {
                                         console.error('Failed to delete satellite:', error);
-                                        toast.error(`Failed to delete satellite: ${error}`);
+                                        toast.error(t('satellite_info.delete_failed', { error }));
                                     }
                                     setDeleteSatelliteConfirmOpen(false);
                                 }}
                             >
-                                Delete
+                                {t('satellite_info.transmitters.delete')}
                             </Button>
                         </DialogActions>
                     </Dialog>
@@ -481,7 +486,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Name:</strong> <span>{clickedSatellite['name']}</span>
+                                    <strong>{t('satellite_info.fields.name')}</strong> <span>{clickedSatellite['name']}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -492,7 +497,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>NORAD ID:</strong> <span>{clickedSatellite['norad_id']}</span>
+                                    <strong>{t('satellite_info.fields.norad_id')}</strong> <span>{clickedSatellite['norad_id']}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -503,7 +508,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Status:</strong>
+                                    <strong>{t('satellite_info.fields.status')}</strong>
                                     <span>{betterStatusValue(clickedSatellite['status'])}</span>
                                 </Box>
                                 <Box
@@ -515,7 +520,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Countries:</strong>
+                                    <strong>{t('satellite_info.fields.countries')}</strong>
                                     <span>{renderCountryFlagsCSV(clickedSatellite['countries'])}</span>
                                 </Box>
                                 <Box
@@ -527,7 +532,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Operator:</strong> <span>{clickedSatellite['operator'] || '-'}</span>
+                                    <strong>{t('satellite_info.fields.operator')}</strong> <span>{clickedSatellite['operator'] || '-'}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -538,7 +543,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Launched:</strong>
+                                    <strong>{t('satellite_info.fields.launched')}</strong>
                                     <span>{betterDateTimes(clickedSatellite['launched'])}</span>
                                 </Box>
                                 <Box
@@ -550,7 +555,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Deployed:</strong>
+                                    <strong>{t('satellite_info.fields.deployed')}</strong>
                                     <span>{betterDateTimes(clickedSatellite['deployed'])}</span>
                                 </Box>
                                 <Box
@@ -562,7 +567,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Decayed:</strong>
+                                    <strong>{t('satellite_info.fields.decayed')}</strong>
                                     <span>{betterDateTimes(clickedSatellite['decayed'])}</span>
                                 </Box>
                                 <Box
@@ -574,7 +579,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Updated:</strong>
+                                    <strong>{t('satellite_info.fields.updated')}</strong>
                                     <span>{betterDateTimes(clickedSatellite['updated'])}</span>
                                 </Box>
                                 <Box
@@ -586,7 +591,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Website:</strong>
+                                    <strong>{t('satellite_info.fields.website')}</strong>
                                     <span>
                                         {renderTextWithClickableLinks(clickedSatellite['website'])}
                                     </span>
@@ -600,7 +605,7 @@ const SatelliteInfo = () => {
                                         borderBottom: '1px solid #444444',
                                     }}
                                 >
-                                    <strong>Citation:</strong>
+                                    <strong>{t('satellite_info.fields.citation')}</strong>
                                     <span>
                                         {renderTextWithClickableLinks(clickedSatellite['citation'])}
                                     </span>
@@ -650,7 +655,7 @@ const SatelliteInfo = () => {
                                         }}
                                     >
                                         <Typography variant="caption" sx={{ color: '#888888', textAlign: 'center' }}>
-                                            No image available
+                                            {t('satellite_info.no_image')}
                                         </Typography>
                                     </Box>
                                 )}
@@ -677,7 +682,7 @@ const SatelliteInfo = () => {
                     {/* Transmitters section with fixed height */}
                     <Box sx={{flexShrink: 0}}>
                         <Typography variant="h6" component="h3" sx={{mb: 2}}>
-                            Transmitters
+                            {t('satellite_info.transmitters.title')}
                         </Typography>
                         {clickedSatellite['transmitters'] ? (
                             <Box sx={{width: '100%'}}>
@@ -737,26 +742,26 @@ const SatelliteInfo = () => {
                                 />
                                 <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
                                     <Button variant="contained" onClick={handleAddClick}>
-                                        Add
+                                        {t('satellite_info.transmitters.add')}
                                     </Button>
                                     <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
-                                        Edit
+                                        {t('satellite_info.transmitters.edit')}
                                     </Button>
                                     <Button variant="contained" color="error" disabled={selected.length < 1}
                                             onClick={handleDeleteClick}>
-                                        Delete
+                                        {t('satellite_info.transmitters.delete')}
                                     </Button>
                                     <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-                                        <DialogTitle>Confirm Deletion</DialogTitle>
-                                        <DialogContent>Are you sure you want to delete the selected transmitter(s)?</DialogContent>
+                                        <DialogTitle>{t('satellite_info.transmitters.delete_confirm_title')}</DialogTitle>
+                                        <DialogContent>{t('satellite_info.transmitters.delete_confirm_message')}</DialogContent>
                                         <DialogActions>
-                                            <Button onClick={() => setDeleteConfirmOpen(false)}>Cancel</Button>
+                                            <Button onClick={() => setDeleteConfirmOpen(false)}>{t('satellite_info.transmitters.cancel')}</Button>
                                             <Button
                                                 variant="contained"
                                                 color="error"
                                                 onClick={handleDeleteConfirm}
                                             >
-                                                Delete
+                                                {t('satellite_info.transmitters.delete')}
                                             </Button>
                                         </DialogActions>
                                     </Dialog>
@@ -764,7 +769,7 @@ const SatelliteInfo = () => {
                             </Box>
                         ) : (
                             <div style={{textAlign: 'center'}}>
-                                <span>No Transmitters Available</span>
+                                <span>{t('satellite_info.transmitters.no_data')}</span>
                             </div>
                         )}
                     </Box>
@@ -779,7 +784,7 @@ const SatelliteInfo = () => {
                     />
                 </Box>
             ) : (
-                <span>No Satellite Data Available</span>
+                <span>{t('satellite_info.transmitters.no_data')}</span>
             )}
         </Box>
     );

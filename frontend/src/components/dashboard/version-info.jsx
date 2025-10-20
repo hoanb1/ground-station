@@ -3,9 +3,11 @@ import React, { useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Typography, Box, Chip, Tooltip } from '@mui/material';
 import { fetchVersionInfo } from './version-slice';
+import { useTranslation } from 'react-i18next';
 
 const VersionInfo = ({ minimal = false }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation('dashboard');
     const { data, loading, error } = useSelector((state) => state.version);
 
     // Determine environment
@@ -22,7 +24,7 @@ const VersionInfo = ({ minimal = false }) => {
     if (minimal) {
         return (
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Tooltip title={`${data?.version || 'Unknown'}`}>
+                <Tooltip title={`${data?.version || t('version_info.unknown')}`}>
                     <Chip
                         label={data?.version?.split('-')[0] || 'v?.?.?'}
                         size="small"
@@ -52,18 +54,18 @@ const VersionInfo = ({ minimal = false }) => {
     }
 
     if (loading) {
-        return <Typography variant="caption">Loading version...</Typography>;
+        return <Typography variant="caption">{t('version_info.loading')}</Typography>;
     }
 
     if (error) {
-        return <Typography variant="caption" color="error">Version unavailable</Typography>;
+        return <Typography variant="caption" color="error">{t('version_info.unavailable')}</Typography>;
     }
 
     return (
         <Box>
             <Box sx={{ display: 'flex', alignItems: 'center', gap: 1, mb: 1 }}>
                 <Typography variant="body2">
-                    <strong>Version:</strong> {data?.version || 'Unknown'}
+                    <strong>{t('version_info.version')}</strong> {data?.version || t('version_info.unknown')}
                 </Typography>
                 <Chip
                     label={environment === 'production' ? 'PRODUCTION' : 'DEVELOPMENT'}
@@ -72,10 +74,10 @@ const VersionInfo = ({ minimal = false }) => {
                 />
             </Box>
             <Typography variant="caption" display="block">
-                <strong>Build Date:</strong> {data?.buildDate || 'Unknown'}
+                <strong>{t('version_info.build_date')}</strong> {data?.buildDate || t('version_info.unknown')}
             </Typography>
             <Typography variant="caption" display="block">
-                <strong>Git Commit:</strong> {data?.gitCommit || 'Unknown'}
+                <strong>{t('version_info.git_commit')}</strong> {data?.gitCommit || t('version_info.unknown')}
             </Typography>
         </Box>
     );

@@ -47,11 +47,13 @@ import {
     setGroups,
     setDeleteConfirmDialogOpen,
 } from './groups-slice.jsx';
+import { useTranslation } from 'react-i18next';
 
 
 const GroupsTable = () => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
+    const { t } = useTranslation('satellites');
 
     // Redux state
     const {
@@ -68,19 +70,19 @@ const GroupsTable = () => {
     const columns = [
         {
             field: 'name',
-            headerName: 'Name',
+            headerName: t('groups.name'),
             width: 150,
             flex: 1,
         },
         {
             field: 'satellite_ids',
-            headerName: 'Satellites',
+            headerName: t('groups.satellites'),
             width: 300,
             flex: 5,
         },
         {
             field: 'added',
-            headerName: 'Added',
+            headerName: t('groups.added'),
             width: 200,
             flex: 1,
             align: 'right',
@@ -89,7 +91,7 @@ const GroupsTable = () => {
         },
         {
             field: 'updated',
-            headerName: 'Updated',
+            headerName: t('groups.updated'),
             width: 200,
             flex: 1,
             align: 'right',
@@ -125,10 +127,10 @@ const GroupsTable = () => {
             .unwrap()
             .then(()=>{
                 dispatch(setDeleteConfirmDialogOpen(false));
-                toast.success('Group(s) deleted successfully');
+                toast.success(t('groups.deleted_success'));
             })
             .catch((err) => {
-                toast.error('Failed to delete group(s)');
+                toast.error(t('groups.failed_delete'));
             });
     };
 
@@ -145,8 +147,8 @@ const GroupsTable = () => {
     return (
         <Box sx={{ width: '100%', marginTop: 0 }}>
             <Alert severity="info">
-                <AlertTitle>Satellite Groups</AlertTitle>
-                Create and manage custom satellite groups to organize satellites by mission type, frequency band, or any criteria that suits your needs. Add, edit, or delete groups and assign satellites to them for easier filtering and tracking. Both system-defined and user-created groups are available for selection when browsing the satellite database. Groups help streamline satellite operations by categorizing satellites into logical collections.
+                <AlertTitle>{t('groups.title')}</AlertTitle>
+                {t('groups.subtitle')}
             </Alert>
 
             <DataGrid
@@ -171,14 +173,14 @@ const GroupsTable = () => {
 
             <Stack spacing={2} direction="row" sx={{ my: 2 }}>
                 <Button variant="contained" onClick={handleAddClick}>
-                    Add
+                    {t('groups.add')}
                 </Button>
                 <Button
                     variant="contained"
                     onClick={handleEditGroup}
                     disabled={selected.length !== 1}
                 >
-                    Edit
+                    {t('groups.edit')}
                 </Button>
                 <Button
                     variant="contained"
@@ -186,7 +188,7 @@ const GroupsTable = () => {
                     onClick={() => dispatch(setDeleteConfirmDialogOpen(true))}
                     disabled={selected.length === 0}
                 >
-                    Delete
+                    {t('groups.delete')}
                 </Button>
             </Stack>
 
@@ -196,7 +198,7 @@ const GroupsTable = () => {
                     open={formDialogOpen}
                     onClose={() => dispatch(setFormDialogOpen(false))}
                 >
-                    <DialogTitle>{satGroup.id ? 'Edit Group' : 'Add Group'}</DialogTitle>
+                    <DialogTitle>{satGroup.id ? t('groups.dialog_title_edit') : t('groups.dialog_title_add')}</DialogTitle>
                     <DialogContent>
                         <AddEditDialog
                             formDialogOpen={formDialogOpen}
@@ -207,22 +209,22 @@ const GroupsTable = () => {
                     </DialogContent>
                     <DialogActions>
                         <Button onClick={() => dispatch(setFormDialogOpen(false))}>
-                            Close
+                            {t('groups.close')}
                         </Button>
                     </DialogActions>
                 </Dialog>
             )}
 
             <Dialog open={deleteConfirmDialogOpen} onClose={() => dispatch(setDeleteConfirmDialogOpen(false))}>
-                <DialogTitle>Confirm Deletion</DialogTitle>
+                <DialogTitle>{t('groups.confirm_deletion')}</DialogTitle>
                 <DialogContent>
                     <DialogContentText>
-                        Are you sure you want to delete the selected group(s)?
+                        {t('groups.confirm_delete_message')}
                     </DialogContentText>
                 </DialogContent>
                 <DialogActions>
                     <Button onClick={() => dispatch(setDeleteConfirmDialogOpen(false))} color="error" variant="outlined">
-                        Cancel
+                        {t('groups.cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -231,7 +233,7 @@ const GroupsTable = () => {
                         }}
                         color="error"
                     >
-                        Confirm
+                        {t('groups.confirm')}
                     </Button>
                 </DialogActions>
             </Dialog>
@@ -244,7 +246,7 @@ const GroupsTable = () => {
             )}
             {formErrorStatus && (
                 <Alert severity="error" sx={{ mt: 2 }}>
-                    Some action failed. Check console or logs.
+                    {t('groups.error_message')}
                 </Alert>
             )}
         </Box>

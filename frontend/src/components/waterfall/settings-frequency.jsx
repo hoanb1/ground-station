@@ -16,6 +16,7 @@ import {
 
 import { humanizeFrequency } from "../common/common.jsx";
 import FrequencyDisplay from "./frequency-dial.jsx";
+import { useTranslation } from 'react-i18next';
 
 const FrequencyControlAccordion = ({
                                        expanded,
@@ -30,6 +31,8 @@ const FrequencyControlAccordion = ({
                                        selectedOffsetValue,
                                        onOffsetValueChange,
                                    }) => {
+    const { t } = useTranslation('waterfall');
+
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
             <AccordionSummary
@@ -37,7 +40,7 @@ const FrequencyControlAccordion = ({
                     boxShadow: '-1px 4px 7px #00000059',
                 }}
                 aria-controls="freq-content" id="freq-header">
-                <Typography component="span">Frequency control</Typography>
+                <Typography component="span">{t('frequency.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
                 backgroundColor: 'rgb(34,34,34)',
@@ -54,17 +57,17 @@ const FrequencyControlAccordion = ({
                 <FormControl disabled={false}
                              sx={{minWidth: 200, marginTop: 1, marginBottom: 0}} fullWidth variant="filled"
                              size="small">
-                    <InputLabel htmlFor="transmitter-select">Go to transmitter</InputLabel>
+                    <InputLabel htmlFor="transmitter-select">{t('frequency.go_to_transmitter')}</InputLabel>
                     <Select
                         id="transmitter-select"
                         value={getProperTransmitterId()}
                         onChange={onTransmitterChange}
                         variant={'filled'}>
                         <MenuItem value="none">
-                            [no frequency selected]
+                            {t('frequency.no_frequency_selected')}
                         </MenuItem>
                         <MenuItem value="" disabled>
-                            <em>select a transmitter</em>
+                            <em>{t('frequency.select_transmitter')}</em>
                         </MenuItem>
                         {availableTransmitters.map((transmitter) => {
                             return <MenuItem value={transmitter.id} key={transmitter.id}>
@@ -95,25 +98,25 @@ const FrequencyControlAccordion = ({
                     fullWidth
                     variant="filled"
                     size="small">
-                    <InputLabel htmlFor="frequency-offset-select">Frequency Offset</InputLabel>
+                    <InputLabel htmlFor="frequency-offset-select">{t('frequency.frequency_offset')}</InputLabel>
                     <Select
                         id="frequency-offset-select"
                         value={selectedOffsetMode || "none"}
                         onChange={onOffsetModeChange}
                         variant={'filled'}>
                         <MenuItem value="none">
-                            [no frequency offset]
+                            {t('frequency.no_frequency_offset')}
                         </MenuItem>
-                        <MenuItem value="manual">Manual</MenuItem>
+                        <MenuItem value="manual">{t('frequency.manual')}</MenuItem>
                         <MenuItem value="" disabled>
-                            <em>select an offset</em>
+                            <em>{t('frequency.select_offset')}</em>
                         </MenuItem>
-                        <MenuItem value="-6800000000">DK5AV X-Band (-6800MHz)</MenuItem>
-                        <MenuItem value="125000000">Ham-it-Up (+125MHz)</MenuItem>
-                        <MenuItem value="-10700000000">Ku LNB (-10700MHz)</MenuItem>
-                        <MenuItem value="-9750000000">Ku LNB (-9750MHz)</MenuItem>
-                        <MenuItem value="-1998000000">MMDS S-Band (-1998MHz)</MenuItem>
-                        <MenuItem value="120000000">SpyVerter (+120MHz)</MenuItem>
+                        <MenuItem value="-6800000000">{t('frequency.offsets.dk5av_x_band')}</MenuItem>
+                        <MenuItem value="125000000">{t('frequency.offsets.ham_it_up')}</MenuItem>
+                        <MenuItem value="-10700000000">{t('frequency.offsets.ku_lnb_10700')}</MenuItem>
+                        <MenuItem value="-9750000000">{t('frequency.offsets.ku_lnb_9750')}</MenuItem>
+                        <MenuItem value="-1998000000">{t('frequency.offsets.mmds_s_band')}</MenuItem>
+                        <MenuItem value="120000000">{t('frequency.offsets.spyverter')}</MenuItem>
                     </Select>
                 </FormControl>
 
@@ -122,7 +125,7 @@ const FrequencyControlAccordion = ({
                              size="small">
                     <TextField
                         disabled={selectedOffsetMode !== "manual"}
-                        label="Manual Offset (Hz)"
+                        label={t('frequency.manual_offset_hz')}
                         value={selectedOffsetValue}
                         variant="filled"
                         size="small"

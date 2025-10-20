@@ -80,6 +80,7 @@ import WaterfallStatusBar from "./waterfall-statusbar.jsx";
 import WaterfallToolbar from "./waterfall-toolbar.jsx";
 import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
 import WaterfallStream from "./waterfall-stream.jsx";
+import { useTranslation } from 'react-i18next';
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -95,6 +96,7 @@ export const createExternalWorker = () => {
 
 
 const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
+    const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
     const bandscopeCanvasRef = useRef(null);
@@ -466,7 +468,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
 
     return (
         <div ref={mainWaterFallContainer}>
-        <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>Waterfall & Spectrum</TitleBar>
+        <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>{t('main_title')}</TitleBar>
             <Box
                 sx={{
                     display: 'flex',

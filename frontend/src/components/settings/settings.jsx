@@ -28,6 +28,7 @@ import {
     AlertTitle, Typography
 } from '@mui/material';
 import { Link } from 'react-router';
+import { useTranslation } from 'react-i18next';
 import Paper from "@mui/material/Paper";
 import Tabs, { tabsClasses } from '@mui/material/Tabs';
 import {gridLayoutStoreName as overviewGridLayoutName} from '../overview/main-layout.jsx';
@@ -111,6 +112,7 @@ function getTabCategory(value) {
 }
 
 export const SettingsTabs = React.memo(function SettingsTabs({initialMainTab, initialTab}) {
+    const { t } = useTranslation('settings');
     const [activeMainTab, setActiveMainTab] = useState(initialMainTab);
     const [activeTab, setActiveTab] = useState(initialTab);
 
@@ -135,26 +137,26 @@ export const SettingsTabs = React.memo(function SettingsTabs({initialMainTab, in
     switch (activeMainTab) {
         case "hardware":
             tabsList = [
-                <AntTab key="rigcontrol" value="rigcontrol" label="Rigs" to="/hardware/rig" component={Link} />,
-                <AntTab key="rotatorcontrol" value="rotatorcontrol" label="Rotators" to="/hardware/rotator" component={Link} />,
-                <AntTab key="camera" value="camera" label="Cameras" to="/hardware/cameras" component={Link} />,
-                <AntTab key="sdrs" value="sdrs" label="SDRs" to="/hardware/sdrs" component={Link}/>,
+                <AntTab key="rigcontrol" value="rigcontrol" label={t('tabs.rigs')} to="/hardware/rig" component={Link} />,
+                <AntTab key="rotatorcontrol" value="rotatorcontrol" label={t('tabs.rotators')} to="/hardware/rotator" component={Link} />,
+                <AntTab key="camera" value="camera" label={t('tabs.cameras')} to="/hardware/cameras" component={Link} />,
+                <AntTab key="sdrs" value="sdrs" label={t('tabs.sdrs')} to="/hardware/sdrs" component={Link}/>,
             ];
             break;
         case "satellites":
             tabsList = [
-                <AntTab key="tlesources" value="tlesources" label="TLE sources" to="/satellites/tlesources" component={Link} />,
-                <AntTab key="satellites" value="satellites" label="Satellites" to="/satellites/satellites" component={Link} />,
-                <AntTab key="groups" value="groups" label="Groups" to="/satellites/groups" component={Link} />,
+                <AntTab key="tlesources" value="tlesources" label={t('tabs.tle_sources')} to="/satellites/tlesources" component={Link} />,
+                <AntTab key="satellites" value="satellites" label={t('tabs.satellite_list')} to="/satellites/satellites" component={Link} />,
+                <AntTab key="groups" value="groups" label={t('tabs.groups')} to="/satellites/groups" component={Link} />,
             ];
             break;
         case "settings":
             tabsList = [
-                <AntTab key="preferences" value="preferences" label="Preferences" to="/settings/preferences" component={Link} />,
-                <AntTab key="location" value="location" label="Location" to="/settings/location" component={Link} />,
+                <AntTab key="preferences" value="preferences" label={t('tabs.preferences')} to="/settings/preferences" component={Link} />,
+                <AntTab key="location" value="location" label={t('tabs.location')} to="/settings/location" component={Link} />,
                 // <AntTab key="users" value="users" label="Users" to="/settings/users" component={Link} />,
-                <AntTab key="maintenance" value="maintenance" label="Maintenance" to="/settings/maintenance" component={Link} />,
-                <AntTab key="about" value="about" label="About" to="/settings/about" component={Link} />,
+                <AntTab key="maintenance" value="maintenance" label={t('tabs.maintenance')} to="/settings/maintenance" component={Link} />,
+                <AntTab key="about" value="about" label={t('tabs.about')} to="/settings/about" component={Link} />,
             ];
             break;
         default:
@@ -169,7 +171,7 @@ export const SettingsTabs = React.memo(function SettingsTabs({initialMainTab, in
         }}
         value={activeTab}
         onChange={handleTabChange}
-        aria-label="configuration tabs"
+        aria-label={t('tabs.configuration_tabs')}
         scrollButtons={true}
         variant="scrollable"
         allowScrollButtonsMobile
@@ -228,14 +230,14 @@ export const SettingsTabs = React.memo(function SettingsTabs({initialMainTab, in
                  }}
                  value={activeMainTab}
                  onChange={handleMainTabChange}
-                 aria-label="main settings tabs"
+                 aria-label={t('tabs.main_settings_tabs')}
                  scrollButtons={true}
                  variant="fullWidth"
                  allowScrollButtonsMobile
              >
-                 <AntTab value={"hardware"} label="Hardware" to="/hardware/rig" component={Link}/>
-                 <AntTab value={"satellites"} label="Satellites" to="/satellites/satellites" component={Link}/>
-                 <AntTab value={"settings"} label="Settings" to="/settings/preferences" component={Link}/>
+                 <AntTab value={"hardware"} label={t('tabs.hardware')} to="/hardware/rig" component={Link}/>
+                 <AntTab value={"satellites"} label={t('tabs.satellites')} to="/satellites/satellites" component={Link}/>
+                 <AntTab value={"settings"} label={t('tabs.settings')} to="/settings/preferences" component={Link}/>
              </AntTabs>
              {tabObject}
              {activeTabContent}

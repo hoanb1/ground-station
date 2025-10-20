@@ -24,6 +24,7 @@ import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import Stack from "@mui/material/Stack";
 import {Alert, AlertTitle, Button, TextField} from "@mui/material";
 import {useEffect, useState} from "react";
+import { useTranslation } from 'react-i18next';
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
@@ -47,6 +48,7 @@ export default function AntennaRotatorTable() {
     const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
+    const { t } = useTranslation('hardware');
     const {
         loading,
         rotators,
@@ -58,11 +60,11 @@ export default function AntennaRotatorTable() {
     } = useSelector((state) => state.rotators);
 
     const columns = [
-        {field: 'name', headerName: 'Name', flex: 1, minWidth: 150},
-        {field: 'host', headerName: 'Host', flex: 1, minWidth: 150},
+        {field: 'name', headerName: t('rotator.name'), flex: 1, minWidth: 150},
+        {field: 'host', headerName: t('rotator.host'), flex: 1, minWidth: 150},
         {
             field: 'port',
-            headerName: 'Port',
+            headerName: t('rotator.port'),
             type: 'number',
             flex: 1,
             minWidth: 80,
@@ -72,12 +74,12 @@ export default function AntennaRotatorTable() {
                 return value;
             }
         },
-        {field: 'minaz', headerName: 'Min AZ', type: 'number', flex: 1, minWidth: 80},
-        {field: 'maxaz', headerName: 'Max AZ', type: 'number', flex: 1, minWidth: 80},
-        {field: 'minel', headerName: 'Min EL', type: 'number', flex: 1, minWidth: 80},
-        {field: 'maxel', headerName: 'Max EL', type: 'number', flex: 1, minWidth: 80},
-        {field: 'aztype', headerName: 'AZ Type', type: 'number', flex: 1, minWidth: 80},
-        {field: 'azendstop', headerName: 'AZ Endstop', type: 'number', flex: 1, minWidth: 80},
+        {field: 'minaz', headerName: t('rotator.min_az'), type: 'number', flex: 1, minWidth: 80},
+        {field: 'maxaz', headerName: t('rotator.max_az'), type: 'number', flex: 1, minWidth: 80},
+        {field: 'minel', headerName: t('rotator.min_el'), type: 'number', flex: 1, minWidth: 80},
+        {field: 'maxel', headerName: t('rotator.max_el'), type: 'number', flex: 1, minWidth: 80},
+        {field: 'aztype', headerName: t('rotator.az_type'), type: 'number', flex: 1, minWidth: 80},
+        {field: 'azendstop', headerName: t('rotator.az_endstop'), type: 'number', flex: 1, minWidth: 80},
     ];
 
     // useEffect(() => {
@@ -96,7 +98,7 @@ export default function AntennaRotatorTable() {
         dispatch(submitOrEditRotator({socket, formValues}))
             .unwrap()
             .then(() => {
-                toast.success('Rotator saved successfully');
+                toast.success(t('rotator.saved_success'));
                 setOpenAddDialog(false);
             })
             .catch((err) => {
@@ -108,7 +110,7 @@ export default function AntennaRotatorTable() {
         dispatch(deleteRotators({socket, selectedIds: selected}))
             .unwrap()
             .then(() => {
-                toast.success('Rotator(s) deleted successfully');
+                toast.success(t('rotator.deleted_success'));
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
@@ -119,14 +121,8 @@ export default function AntennaRotatorTable() {
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>Antenna Rotator Control Setup</AlertTitle>
-                Configure and manage antenna rotator systems for automated satellite tracking. This system uses Hamlib,
-                supporting a wide range of rotator controllers including Yaesu G-5500, Alfa SPID, M2 RC2800,
-                Hy-Gain DCU-1, and many others. Define connection parameters, azimuth and elevation limits,
-                rotation types, and endstop configurations to ensure safe operation within your antenna system's
-                mechanical constraints. Rotators integrate seamlessly with satellite tracking to automatically
-                position antennas for optimal signal reception throughout satellite passes, with real-time status
-                monitoring and safety limit enforcement.
+                <AlertTitle>{t('rotator.title')}</AlertTitle>
+                {t('rotator.subtitle')}
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <Box sx={{width: '100%'}}>
@@ -165,31 +161,31 @@ export default function AntennaRotatorTable() {
                     />
                     <Stack direction="row" spacing={2} style={{marginTop: 15}}>
                         <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
-                            Add
+                            {t('rotator.add')}
                         </Button>
                         <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                            <DialogTitle>Add Antenna Rotator</DialogTitle>
+                            <DialogTitle>{t('rotator.add_dialog_title')}</DialogTitle>
                             <DialogContent>
                                 <Stack spacing={2}>
-                                    <TextField name="name" label="Name" fullWidth variant="filled"
+                                    <TextField name="name" label={t('rotator.name')} fullWidth variant="filled"
                                                onChange={handleChange}
                                                value={formValues.name}/>
-                                    <TextField name="host" label="Host" fullWidth variant="filled"
+                                    <TextField name="host" label={t('rotator.host')} fullWidth variant="filled"
                                                onChange={handleChange}
                                                value={formValues.host}/>
-                                    <TextField name="port" label="Port" type="number" fullWidth variant="filled"
+                                    <TextField name="port" label={t('rotator.port')} type="number" fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.port}/>
-                                    <TextField name="minaz" label="Min Az" type="number" fullWidth variant="filled"
+                                    <TextField name="minaz" label={t('rotator.min_az')} type="number" fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.minaz}/>
-                                    <TextField name="maxaz" label="Max Az" type="number" fullWidth variant="filled"
+                                    <TextField name="maxaz" label={t('rotator.max_az')} type="number" fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.maxaz}/>
-                                    <TextField name="minel" label="Min El" type="number" fullWidth variant="filled"
+                                    <TextField name="minel" label={t('rotator.min_el')} type="number" fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.minel}/>
-                                    <TextField name="maxel" label="Max El" type="number" fullWidth variant="filled"
+                                    <TextField name="maxel" label={t('rotator.max_el')} type="number" fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.maxel}/>
-                                    <TextField name="aztype" label="Az Type" type="number" fullWidth variant="filled"
+                                    <TextField name="aztype" label={t('rotator.az_type')} type="number" fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.aztype}/>
-                                    <TextField name="azendstop" label="Az Endstop" type="number" fullWidth
+                                    <TextField name="azendstop" label={t('rotator.az_endstop')} type="number" fullWidth
                                                variant="filled"
                                                onChange={handleChange} value={formValues.azendstop}/>
                                 </Stack>
@@ -197,14 +193,14 @@ export default function AntennaRotatorTable() {
                             <DialogActions style={{padding: '0px 24px 20px 20px'}}>
                                 <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error"
                                         variant="outlined">
-                                    Cancel
+                                    {t('rotator.cancel')}
                                 </Button>
                                 <Button
                                     color="success"
                                     variant="contained"
                                     onClick={handleSubmit}
                                 >
-                                    Submit
+                                    {t('rotator.submit')}
                                 </Button>
                             </DialogActions>
                         </Dialog>
@@ -219,7 +215,7 @@ export default function AntennaRotatorTable() {
                                 }
                             }}
                         >
-                            Edit
+                            {t('rotator.edit')}
                         </Button>
                         <Button
                             variant="contained"
@@ -227,27 +223,27 @@ export default function AntennaRotatorTable() {
                             color="error"
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}
                         >
-                            Delete
+                            {t('rotator.delete')}
                         </Button>
                         <Dialog
                             open={openDeleteConfirm}
                             onClose={() => dispatch(setOpenDeleteConfirm(false))}
                         >
-                            <DialogTitle>Confirm Deletion</DialogTitle>
+                            <DialogTitle>{t('rotator.confirm_deletion')}</DialogTitle>
                             <DialogContent>
-                                Are you sure you want to delete the selected item(s)?
+                                {t('rotator.confirm_delete_message')}
                             </DialogContent>
                             <DialogActions>
                                 <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error"
                                         variant="outlined">
-                                    Cancel
+                                    {t('rotator.cancel')}
                                 </Button>
                                 <Button
                                     variant="contained"
                                     onClick={handleDelete}
                                     color="error"
                                 >
-                                    Delete
+                                    {t('rotator.delete')}
                                 </Button>
                             </DialogActions>
                         </Dialog>

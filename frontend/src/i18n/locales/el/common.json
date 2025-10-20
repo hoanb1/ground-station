@@ -1,0 +1,56 @@
+{
+  "app_name": "Σταθμός Εδάφους",
+  "loading": "Φόρτωση...",
+  "error": "Σφάλμα",
+  "success": "Επιτυχία",
+  "save": "Αποθήκευση",
+  "cancel": "Ακύρωση",
+  "delete": "Διαγραφή",
+  "edit": "Επεξεργασία",
+  "add": "Προσθήκη",
+  "close": "Κλείσιμο",
+  "confirm": "Επιβεβαίωση",
+  "yes": "Ναι",
+  "no": "Οχι",
+  "search": "Αναζήτηση",
+  "filter": "Φίλτρο",
+  "actions": "Ενέργειες",
+  "name": "Ονομα",
+  "description": "Περιγραφή",
+  "status": "Κατάσταση",
+  "connected": "Συνδεδεμένο",
+  "disconnected": "Αποσυνδεδεμένο",
+  "online": "Σε σύνδεση",
+  "offline": "Εκτός σύνδεσης",
+  "notifications": {
+    "connection": {
+      "connected_to_backend": "Σύνδεση με το backend",
+      "reconnecting_to_backend": "Επανασύνδεση στο backend",
+      "attempt": "Προσπάθεια {{attempt}}",
+      "connection_error": "Σφάλμα σύνδεσης",
+      "lost_connection": "Απώλεια σύνδεσης με το backend"
+    },
+    "sync": {
+      "tle_sync_complete": "Ολοκληρώθηκε ο συγχρονισμός TLE!",
+      "new_items": "Νέα: {{satellites}} δορυφόροι, {{transmitters}} πομποδέκτες",
+      "modified_items": "Τροποποιημένα: {{satellites}} δορυφόροι, {{transmitters}} πομποδέκτες",
+      "removed_items": "Αφαιρέθηκαν: {{satellites}} δορυφόροι, {{transmitters}} πομποδέκτες",
+      "no_changes": "Δεν εντοπίστηκαν αλλαγές"
+    },
+    "rotator": {
+      "connected": "Ο περιστροφέας συνδέθηκε",
+      "disconnected": "Ο περιστροφέας αποσυνδέθηκε"
+    },
+    "radio": {
+      "connected": "Το ραδιόφωνο συνδέθηκε",
+      "disconnected": "Το ραδιόφωνο αποσυνδέθηκε"
+    },
+    "tracking": {
+      "elevation_below_horizon": "Το ύψος του στόχου είναι κάτω από τον ορίζοντα",
+      "azimuth_out_of_bounds": "Το αζιμούθιο του στόχου είναι εκτός ορίων",
+      "below_min_elevation": "Ο στόχος είναι κάτω από το ελάχιστο ύψος",
+      "satellite_changed": "Άλλαξε ο δορυφόρος στόχος",
+      "satellite_info": "{{name}} (NORAD {{noradId}})"
+    }
+  }
+}

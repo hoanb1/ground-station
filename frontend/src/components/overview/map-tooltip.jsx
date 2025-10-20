@@ -8,6 +8,7 @@ import { Tooltip as LeafletTooltip } from 'react-leaflet';
 import TrackChangesIcon from '@mui/icons-material/TrackChanges';
 import InfoIcon from '@mui/icons-material/Info';
 import { useNavigate } from 'react-router-dom';
+import { useTranslation } from 'react-i18next';
 
 // Styled tooltip specifically for tracked satellites
 const TrackedSatelliteTooltip = styled(LeafletTooltip)(({ theme }) => ({
@@ -34,6 +35,7 @@ const SatelliteMarker = ({
                              handleSetTrackingOnBackend,
                          }) => {
     const navigate = useNavigate();
+    const { t } = useTranslation('overview');
 
     // Local state for the disabled property
     const [isDisabled, setIsDisabled] = useState(trackingSatelliteId === satellite.norad_id);
@@ -96,7 +98,7 @@ const SatelliteMarker = ({
                                     flex: 1,
                                 }}
                             >
-                                SET AS TARGET
+                                {t('map_target.set_target')}
                             </Button>
                             <IconButton
                                 onClick={handleNavigateToSatellite}
@@ -108,7 +110,7 @@ const SatelliteMarker = ({
                                     padding: '4px',
                                 }}
                                 size="small"
-                                title="View satellite details"
+                                title={t('map_target.view_details')}
                             >
                                 <InfoIcon fontSize="small" />
                             </IconButton>

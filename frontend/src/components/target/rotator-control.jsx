@@ -29,6 +29,7 @@ import {
 } from "./target-slice.jsx";
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
+import { useTranslation } from 'react-i18next';
 import Grid from "@mui/material/Grid2";
 import {Button, FormControl, InputLabel, MenuItem, Select} from "@mui/material";
 import Paper from "@mui/material/Paper";
@@ -48,6 +49,7 @@ import {
 const RotatorControl = React.memo(function RotatorControl() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('target');
     const {
         satGroups,
         groupId,
@@ -99,7 +101,7 @@ const RotatorControl = React.memo(function RotatorControl() {
 
             })
             .catch((error) => {
-                toast.error(`Failed to start tracking with the rotator: ${error.message}`);
+                toast.error(`${t('rotator_control.failed_start_tracking')}: ${error.message}`);
             });
     };
 
@@ -177,7 +179,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                     <FormControl disabled={isRotatorSelectionDisabled(trackingState)}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
-                        <InputLabel htmlFor="rotator-select">Rotator</InputLabel>
+                        <InputLabel htmlFor="rotator-select">{t('rotator_control_labels.rotator_label')}</InputLabel>
                         <Select
                             id="rotator-select"
                             value={rotators.length > 0? selectedRotator: "none"}
@@ -186,10 +188,10 @@ const RotatorControl = React.memo(function RotatorControl() {
                             }}
                             variant={'filled'}>
                             <MenuItem value="none">
-                                [no rotator control]
+                                {t('rotator_control_labels.no_rotator_control')}
                             </MenuItem>
                             <MenuItem value="" disabled>
-                                <em>select a rotator</em>
+                                <em>{t('rotator_control_labels.select_rotator')}</em>
                             </MenuItem>
                             {rotators.map((rotators, index) => {
                                 return <MenuItem value={rotators.id} key={index}>{rotators.name} ({rotators.host}:{rotators.port})</MenuItem>;
@@ -236,7 +238,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                         alignItems: "stretch",
                     }}>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                            AZ: <Typography
+                            {t('rotator_control.az')} <Typography
                             variant="h5"
                             sx={{
                                 fontFamily: "Monospace, monospace",
@@ -251,7 +253,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                         </Typography>
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
-                             EL: <Typography
+                             {t('rotator_control.el')} <Typography
                             variant="h5"
                             sx={{
                                 fontFamily: "Monospace, monospace",
@@ -285,7 +287,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     onClick={() => {
                                         handleNudgeCommand("nudge_counter_clockwise");
                                     }}>
-                                    ⟲ CCW
+                                    {t('rotator_control.ccw')}
                                 </Button>
                             </Grid>
                             <Grid>
@@ -300,7 +302,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     onClick={() => {
                                         handleNudgeCommand("nudge_clockwise");
                                     }}>
-                                    CW ⟳
+                                    {t('rotator_control.cw')}
                                 </Button>
                             </Grid>
                         </Grid>
@@ -319,7 +321,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     onClick={() => {
                                         handleNudgeCommand("nudge_up");
                                     }}>
-                                    ↑ UP
+                                    {t('rotator_control.up')}
                                 </Button>
                             </Grid>
                             <Grid>
@@ -333,7 +335,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     onClick={() => {
                                         handleNudgeCommand("nudge_down");
                                     }}>
-                                    DOWN ↓
+                                    {t('rotator_control.down')}
                                 </Button>
                             </Grid>
                         </Grid>
@@ -393,7 +395,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     onClick={() => {
                                         connectRotator()
                                     }}>
-                                CONNECT
+                                {t('rotator_control.connect')}
                             </Button>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0.5rem', flex: 1.5}}>
@@ -405,7 +407,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                 onClick={() => {
                                      disconnectRotator()
                                 }}>
-                                DISCONNECT
+                                {t('rotator_control.disconnect')}
                             </Button>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
@@ -414,7 +416,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     onClick={() => {
                                         parkRotator()
                                     }}>
-                                PARK
+                                {t('rotator_control.park')}
                             </Button>
                         </Grid>
                     </Grid>
@@ -431,7 +433,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     variant="contained" color="success" style={{height: '60px'}}
                                     onClick={()=>{handleTrackingStart()}}
                             >
-                                TRACK
+                                {t('rotator_control.track')}
                             </Button>
                         </Grid>
                         <Grid size="grow">
@@ -439,7 +441,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                     disabled={!canStopTracking(trackingState, satelliteId, selectedRotator)}
                                     variant="contained" color="error" style={{height: '60px'}}
                                     onClick={() => {handleTrackingStop()}}>
-                                STOP
+                                {t('rotator_control.stop')}
                             </Button>
                         </Grid>
                     </Grid>

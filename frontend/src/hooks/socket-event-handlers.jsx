@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { toast } from '../utils/toast-with-timestamp.jsx';
 import CableIcon from '@mui/icons-material/Cable';
+import { useTranslation } from 'react-i18next';
 
 // Toast message component with title and body
 const ToastMessage = ({ title, body }) => (
@@ -48,6 +49,7 @@ import { initializeAppData } from '../services/data-sync.js';
  * @param {Object} socket - Socket.IO connection instance
  */
 export const useSocketEventHandlers = (socket) => {
+    const { t } = useTranslation('common');
     const dispatch = useDispatch();
 
     useEffect(() => {
@@ -59,7 +61,7 @@ export const useSocketEventHandlers = (socket) => {
 
             toast.success(
                 <ToastMessage
-                    title="Connected to backend"
+                    title={t('notifications.connection.connected_to_backend')}
                     body={`${socket.io.opts.secure ? 'wss://' : 'ws://'}${socket.io.opts.hostname}:${socket.io.opts.port}${socket.io.opts.path}`}
                 />,
                 {
@@ -73,8 +75,8 @@ export const useSocketEventHandlers = (socket) => {
         socket.on("reconnect_attempt", (attempt) => {
             toast.info(
                 <ToastMessage
-                    title="Reconnecting to backend"
-                    body={`Attempt ${attempt}`}
+                    title={t('notifications.connection.reconnecting_to_backend')}
+                    body={t('notifications.connection.attempt', { attempt })}
                 />,
                 {
                     icon: () => <SyncIcon />,
@@ -86,7 +88,7 @@ export const useSocketEventHandlers = (socket) => {
         socket.on("error", (error) => {
             toast.error(
                 <ToastMessage
-                    title="Connection error"
+                    title={t('notifications.connection.connection_error')}
                     body={error}
                 />,
                 {
@@ -99,7 +101,7 @@ export const useSocketEventHandlers = (socket) => {
         socket.on('disconnect', () => {
             toast.error(
                 <ToastMessage
-                    title="Lost connection to backend"
+                    title={t('notifications.connection.lost_connection')}
                 />,
                 {
                     icon: () => <CableIcon />,
@@ -121,20 +123,20 @@ export const useSocketEventHandlers = (socket) => {
 
                 let details = [];
                 if (newSats > 0 || newTransmitters > 0) {
-                    details.push(`New: ${newSats} satellites, ${newTransmitters} transmitters`);
+                    details.push(t('notifications.sync.new_items', { satellites: newSats, transmitters: newTransmitters }));
                 }
                 if (modifiedSats > 0 || modifiedTransmitters > 0) {
-                    details.push(`Modified: ${modifiedSats} satellites, ${modifiedTransmitters} transmitters`);
+                    details.push(t('notifications.sync.modified_items', { satellites: modifiedSats, transmitters: modifiedTransmitters }));
                 }
                 if (removedSats > 0 || removedTransmitters > 0) {
-                    details.push(`Removed: ${removedSats} satellites, ${removedTransmitters} transmitters`);
+                    details.push(t('notifications.sync.removed_items', { satellites: removedSats, transmitters: removedTransmitters }));
                 }
 
-                const body = details.length > 0 ? details.join('\n') : 'No changes detected';
+                const body = details.length > 0 ? details.join('\n') : t('notifications.sync.no_changes');
 
                 toast.success(
                     <ToastMessage
-                        title="TLE sync complete!"
+                        title={t('notifications.sync.tle_sync_complete')}
                         body={body}
                     />,
                     {
@@ -160,7 +162,7 @@ export const useSocketEventHandlers = (socket) => {
                         const rotatorData = message['rotator_data'];
                         toast.success(
                             <ToastMessage
-                                title="Rotator connected"
+                                title={t('notifications.rotator.connected')}
                                 body={`${rotatorData.host}:${rotatorData.port}`}
                             />,
                             {
@@ -171,7 +173,7 @@ export const useSocketEventHandlers = (socket) => {
                         const rotatorData = message['rotator_data'];
                         toast.warning(
                             <ToastMessage
-                                title="Rotator disconnected"
+                                title={t('notifications.rotator.disconnected')}
                                 body={`${rotatorData.host}:${rotatorData.port}`}
                             />,
                             {
@@ -182,7 +184,7 @@ export const useSocketEventHandlers = (socket) => {
                         const rigData = message['rig_data'];
                         toast.success(
                             <ToastMessage
-                                title="Radio connected"
+                                title={t('notifications.radio.connected')}
                                 body={`${rigData.host}:${rigData.port}`}
                             />,
                             {
@@ -193,7 +195,7 @@ export const useSocketEventHandlers = (socket) => {
                         const rigData = message['rig_data'];
                         toast.warning(
                             <ToastMessage
-                                title="Radio disconnected"
+                                title={t('notifications.radio.disconnected')}
                                 body={`${rigData.host}:${rigData.port}`}
                             />,
                             {
@@ -206,8 +208,8 @@ export const useSocketEventHandlers = (socket) => {
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
                             <ToastMessage
-                                title="Elevation of target below the horizon"
-                                body={`${satName} (NORAD ${noradId})`}
+                                title={t('notifications.tracking.elevation_below_horizon')}
+                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
                             />,
                             {
                                 icon: () => <ArrowUpwardIcon />,
@@ -219,8 +221,8 @@ export const useSocketEventHandlers = (socket) => {
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
                             <ToastMessage
-                                title="Target azimuth out of bounds"
-                                body={`${satName} (NORAD ${noradId})`}
+                                title={t('notifications.tracking.azimuth_out_of_bounds')}
+                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
                             />,
                             {
                                 icon: () => <ExploreIcon />,
@@ -232,8 +234,8 @@ export const useSocketEventHandlers = (socket) => {
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.warning(
                             <ToastMessage
-                                title="Target below minimum elevation"
-                                body={`${satName} (NORAD ${noradId})`}
+                                title={t('notifications.tracking.below_min_elevation')}
+                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
                             />,
                             {
                                 icon: () => <ArrowDownwardIcon />,
@@ -245,8 +247,8 @@ export const useSocketEventHandlers = (socket) => {
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.info(
                             <ToastMessage
-                                title="Target satellite changed"
-                                body={`${satName} (NORAD ${noradId})`}
+                                title={t('notifications.tracking.satellite_changed')}
+                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
                             />,
                             {
                                 icon: () => <SatelliteAltIcon />,

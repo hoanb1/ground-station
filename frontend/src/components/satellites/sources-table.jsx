@@ -34,6 +34,7 @@ import {
     TextField,
     Stack, Select, MenuItem, FormControl, InputLabel,
 } from "@mui/material";
+import { useTranslation } from 'react-i18next';
 import {useDispatch, useSelector} from 'react-redux';
 import {fetchTLESources,  submitOrEditTLESource, deleteTLESources} from './sources-slice.jsx';
 import {betterDateTimes} from "../common/common.jsx";
@@ -42,40 +43,41 @@ import {useSocket} from "../common/socket.jsx";
 import {setFormValues, setOpenAddDialog, setOpenDeleteConfirm, setSelected} from "./sources-slice.jsx"
 import SynchronizeTLEsCard from "./sychronize-card.jsx";
 
-const columns = [
-    {field: 'name', headerName: 'Name', width: 150},
-    {field: 'url', headerName: 'URL', flex: 2},
-    {field: 'format', headerName: 'Format', width: 90},
-    {
-        field: 'added',
-        headerName: 'Added',
-        flex: 1,
-        align: 'right',
-        headerAlign: 'right',
-        width: 100,
-        renderCell: (params) => {
-            return betterDateTimes(params.value);
-        }
-    },
-    {
-        field: 'updated',
-        headerName: 'Updated',
-        flex: 1,
-        width: 100,
-        align: 'right',
-        headerAlign: 'right',
-        renderCell: (params) => {
-            return betterDateTimes(params.value);
-        }
-    },
-];
-
 const paginationModel = {page: 0, pageSize: 10};
 
 export default function SourcesTable() {
     const dispatch = useDispatch();
     const {socket} = useSocket();
+    const { t } = useTranslation('satellites');
     const {tleSources, loading, formValues, openDeleteConfirm, openAddDialog, selected} = useSelector((state) => state.tleSources);
+
+    const columns = [
+        {field: 'name', headerName: t('tle_sources.name'), width: 150},
+        {field: 'url', headerName: t('tle_sources.url'), flex: 2},
+        {field: 'format', headerName: t('tle_sources.format'), width: 90},
+        {
+            field: 'added',
+            headerName: t('tle_sources.added'),
+            flex: 1,
+            align: 'right',
+            headerAlign: 'right',
+            width: 100,
+            renderCell: (params) => {
+                return betterDateTimes(params.value);
+            }
+        },
+        {
+            field: 'updated',
+            headerName: t('tle_sources.updated'),
+            flex: 1,
+            width: 100,
+            align: 'right',
+            headerAlign: 'right',
+            renderCell: (params) => {
+                return betterDateTimes(params.value);
+            }
+        },
+    ];
     const defaultFormValues = {
         id: null,
         name: '',
@@ -112,7 +114,7 @@ export default function SourcesTable() {
                 })
             })
             .catch((error) => {
-                toast.error("Failed to delete TLE sources: " + error, {
+                toast.error(t('tle_sources.failed_delete') + ": " + error, {
                     autoClose: 5000,
                 })
             })
@@ -124,23 +126,23 @@ export default function SourcesTable() {
             dispatch(submitOrEditTLESource({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success("TLE source added successfully", {
+                    toast.success(t('tle_sources.added_success'), {
                         autoClose: 4000,
                     })
                 })
                 .catch((error) => {
-                    toast.error("Failed to add TLE source: " + error)
+                    toast.error(t('tle_sources.failed_add') + ": " + error)
                 });
         } else {
             dispatch(submitOrEditTLESource({socket, formValues}))
                 .unwrap()
                 .then(() => {
-                    toast.success("TLE source updated successfully", {
+                    toast.success(t('tle_sources.updated_success'), {
                         autoClose: 4000,
                     })
                 })
                 .catch((error) => {
-                    toast.error("Failed to update TLE source: " + error)
+                    toast.error(t('tle_sources.failed_update') + ": " + error)
                 });
         }
         dispatch(setOpenAddDialog(false));
@@ -153,8 +155,8 @@ export default function SourcesTable() {
     return (
         <Box sx={{width: '100%', marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>TLE Data Sources</AlertTitle>
-                This page manages TLE (Two-Line Element) data sources for satellite tracking. You can add, edit, and delete custom TLE sources in 3LE format from various providers including Celestrak.org and other TLE data sources. The system automatically fetches orbital data from configured URLs and combines it with frequency information from the SatNOGS API. Use the synchronization controls to update all sources with the latest satellite data. Sources are stored locally and timestamps show when each source was added and last updated.
+                <AlertTitle>{t('tle_sources.title')}</AlertTitle>
+                {t('tle_sources.subtitle')}
             </Alert>
             <SynchronizeTLEsCard/>
             <Box sx={{marginTop: 4}}>
@@ -182,53 +184,48 @@ export default function SourcesTable() {
                 />
                 <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
                     <Button variant="contained" onClick={handleAddClick}>
-                        Add
+                        {t('tle_sources.add')}
                     </Button>
                     <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
-                        Edit
+                        {t('tle_sources.edit')}
                     </Button>
                     <Button variant="contained" color="error" disabled={selected.length < 1}
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}>
-                        Delete
+                        {t('tle_sources.delete')}
                     </Button>
                     <Dialog open={openDeleteConfirm} onClose={() => dispatch(setOpenDeleteConfirm(false))}>
-                        <DialogTitle>Confirm Deletion</DialogTitle>
+                        <DialogTitle>{t('tle_sources.confirm_deletion')}</DialogTitle>
                         <DialogContent>
-                            <p>Are you sure you want to delete the selected TLE sources? This action will permanently delete:</p>
+                            <p>{t('tle_sources.confirm_delete_intro')}</p>
                             <ul>
-                                <li>The TLE source(s)</li>
-                                <li>All satellites sourced from the selected TLE source(s)</li>
-                                <li>The corresponding satellite group</li>
+                                <li>{t('tle_sources.delete_item_1')}</li>
+                                <li>{t('tle_sources.delete_item_2')}</li>
+                                <li>{t('tle_sources.delete_item_3')}</li>
                             </ul>
-                            <p><strong>This action cannot be undone.</strong></p>
+                            <p><strong>{t('tle_sources.cannot_undo')}</strong></p>
                         </DialogContent>
                         <DialogActions>
-                            <Button onClick={() => dispatch(setOpenDeleteConfirm(false))}>Cancel</Button>
+                            <Button onClick={() => dispatch(setOpenDeleteConfirm(false))}>{t('tle_sources.cancel')}</Button>
                             <Button
                                 variant="contained"
                                 color="error"
                                 onClick={handleDeleteClick}
                             >
-                                Delete
+                                {t('tle_sources.delete')}
                             </Button>
                         </DialogActions>
                     </Dialog>
                 </Stack>
                 <Dialog open={openAddDialog} onClose={handleClose} sx={{minWidth: 400}} fullWidth maxWidth="sm">
-                    <DialogTitle>{formValues.id ? 'Edit' : 'Add'} TLE Source</DialogTitle>
+                    <DialogTitle>{formValues.id ? t('tle_sources.dialog_title_edit') : t('tle_sources.dialog_title_add')}</DialogTitle>
                     <DialogContent>
                         <Stack spacing={2} sx={{marginTop: 1}}>
                             <Alert severity="warning" sx={{marginBottom: 2}}>
-                                <AlertTitle>Performance Notice</AlertTitle>
-                                TLE sources with hundreds of satellites will cause performance issues in the UI.
-                                The application will work (even with thousands of satellites in a single TLE) but the UI
-                                performance will <b>suffer</b> especially when the number is high (in the thousands).
-                                For optimal performance, select updated sources that contain a small or
-                                specific group of satellites instead of generic TLE sources that contain
-                                vast groups of satellites (such as the Active list from Celestrak).
+                                <AlertTitle>{t('tle_sources.performance_notice')}</AlertTitle>
+                                {t('tle_sources.performance_warning')}
                             </Alert>
                             <TextField
-                                label="Name"
+                                label={t('tle_sources.name')}
                                 name="name"
                                 variant={"filled"}
                                 value={formValues.name}
@@ -236,7 +233,7 @@ export default function SourcesTable() {
                                 fullWidth
                             />
                             <TextField
-                                label="URL"
+                                label={t('tle_sources.url')}
                                 name="url"
                                 variant={"filled"}
                                 value={formValues.url}
@@ -244,9 +241,9 @@ export default function SourcesTable() {
                                 fullWidth
                             />
                             <FormControl fullWidth variant="filled">
-                                <InputLabel id="format-label">Format</InputLabel>
+                                <InputLabel id="format-label">{t('tle_sources.format')}</InputLabel>
                                 <Select
-                                    label="Format"
+                                    label={t('tle_sources.format')}
                                     name="format"
                                     value={formValues.format || ''}
                                     onChange={handleInputChange}
@@ -257,9 +254,9 @@ export default function SourcesTable() {
                         </Stack>
                     </DialogContent>
                     <DialogActions style={{margin: '0px 20px 20px 20px'}}>
-                        <Button onClick={handleClose} color={"error"} variant={"outlined"}>Cancel</Button>
+                        <Button onClick={handleClose} color={"error"} variant={"outlined"}>{t('tle_sources.cancel')}</Button>
                         <Button variant="contained" onClick={handleSubmit}
-                                color={"success"}>{formValues.id ? 'Edit' : 'Submit'}</Button>
+                                color={"success"}>{formValues.id ? t('tle_sources.edit') : t('tle_sources.submit')}</Button>
                     </DialogActions>
                 </Dialog>
             </Box>

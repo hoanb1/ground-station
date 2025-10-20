@@ -34,6 +34,7 @@ import {
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     setSatGroupId,
     setMapZoomLevel,
@@ -167,6 +168,7 @@ const MapSlider = function ({handleSliderChange}) {
 const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('target');
     const {
         groupId,
         satelliteId: noradId,
@@ -397,7 +399,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
                 dispatch(setSatGroupId(groupId))
             })
             .catch((error) => {
-                toast.error(`Failed to get tracking state: ${error}`);
+                toast.error(`${t('errors.failed_get_tracking_state')}: ${error}`);
             });
 
         return () => {

@@ -26,6 +26,7 @@ import MapSettingsIsland from "../common/map-settings.jsx";
 import DialogActions from "@mui/material/DialogActions";
 import {Button} from "@mui/material";
 import React from "react";
+import { useTranslation } from 'react-i18next';
 import {
     setFutureOrbitLineColor, setOrbitProjectionDuration,
     setPastOrbitLineColor, setSatelliteCoverageColor,
@@ -39,6 +40,7 @@ import {
 
 function MapSettingsIslandDialog({updateBackend}) {
     const dispatch = useDispatch();
+    const { t } = useTranslation('overview');
     const {
         showPastOrbitPath,
         showFutureOrbitPath,
@@ -63,7 +65,7 @@ function MapSettingsIslandDialog({updateBackend}) {
     return (
         <>
             <Dialog open={openMapSettingsDialog} onClose={handleCloseDialog} fullWidth maxWidth="sm">
-                <DialogTitle>Map Settings</DialogTitle>
+                <DialogTitle>{t('map_settings.title')}</DialogTitle>
                 <DialogContent>
                     <MapSettingsIsland
                         initialShowPastOrbitPath={showPastOrbitPath}
@@ -96,7 +98,7 @@ function MapSettingsIslandDialog({updateBackend}) {
                     />
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={handleCloseDialog}>Close</Button>
+                    <Button onClick={handleCloseDialog}>{t('map_settings.close')}</Button>
                 </DialogActions>
             </Dialog>
         </>

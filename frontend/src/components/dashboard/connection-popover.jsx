@@ -20,8 +20,10 @@ import {useAudio} from "./audio-provider.jsx";
 import {useCallback, useEffect, useState} from "react";
 import {setConnected, setConnecting, setConnectionError, setReConnectAttempt} from "./dashboard-slice.jsx";
 import Tooltip from "@mui/material/Tooltip";
+import { useTranslation } from 'react-i18next';
 
 function ConnectionStatus() {
+    const { t } = useTranslation('dashboard');
     const { socket, trafficStatsRef } = useSocket();
     const [anchorEl, setAnchorEl] = useState(null);
 
@@ -53,12 +55,12 @@ function ConnectionStatus() {
 
     // Memoize connection tooltip
     const connectionTooltip = React.useMemo(() => {
-        if (trafficStatsRef.current.transport.name === "websocket") return 'Network: Connected (WebSocket)';
-        if (trafficStatsRef.current.transport.name === "polling") return 'Network: Connected (Polling)';
-        if (trafficStatsRef.current.transport.name === 'connecting...' || trafficStatsRef.current.transport.name === "unknown") return 'Network: Connecting...';
-        if (trafficStatsRef.current.transport.name === "disconnected") return 'Network: Disconnected';
-        return 'Network: Unknown';
-    }, [trafficStatsRef.current.transport.name]);
+        if (trafficStatsRef.current.transport.name === "websocket") return t('connection_popover.network_connected_ws');
+        if (trafficStatsRef.current.transport.name === "polling") return t('connection_popover.network_connected_polling');
+        if (trafficStatsRef.current.transport.name === 'connecting...' || trafficStatsRef.current.transport.name === "unknown") return t('connection_popover.network_connecting');
+        if (trafficStatsRef.current.transport.name === "disconnected") return t('connection_popover.network_disconnected');
+        return t('connection_popover.network_unknown');
+    }, [trafficStatsRef.current.transport.name, t]);
 
     const formatBytes = useCallback((bytes) => {
         if (bytes === 0) return '0 B/s';
@@ -135,12 +137,12 @@ function ConnectionStatus() {
                 }}>
                     <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Connection Status
+                            {t('connection_popover.connection_status')}
                         </Typography>
                         <Grid container spacing={2}>
                             <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Transport:
+                                    {t('connection_popover.transport')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: connectionColor }}>
                                     {trafficStatsRef.current.transport.name.toUpperCase()}
@@ -148,7 +150,7 @@ function ConnectionStatus() {
                             </Grid>
                             <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Duration:
+                                    {t('connection_popover.duration')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#fff' }}>
                                     {formatDuration(trafficStatsRef.current.session.duration)}
@@ -158,7 +160,7 @@ function ConnectionStatus() {
 
                         {trafficStatsRef.current.manager.reconnecting && (
                             <Typography variant="caption" sx={{ color: '#ff9800', fontFamily: 'monospace', mt: 1, display: 'block' }}>
-                                Reconnecting... (Attempt: {trafficStatsRef.current.manager.reconnectAttempts})
+                                {t('connection_popover.reconnecting', { count: trafficStatsRef.current.manager.reconnectAttempts })}
                             </Typography>
                         )}
                     </Box>
@@ -167,29 +169,29 @@ function ConnectionStatus() {
 
                     <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Current Traffic Rate
+                            {t('connection_popover.current_traffic_rate')}
                         </Typography>
                         <Grid container spacing={2}>
                             <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Upload:
+                                    {t('connection_popover.upload')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
                                     {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.sent)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStatsRef.current.rates.packetsPerSecond.sent} msgs/s
+                                    {t('connection_popover.msgs_per_second', { count: trafficStatsRef.current.rates.packetsPerSecond.sent })}
                                 </Typography>
                             </Grid>
                             <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Download:
+                                    {t('connection_popover.download')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
                                     {formatBytes(trafficStatsRef.current.rates.bytesPerSecond.received)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStatsRef.current.rates.packetsPerSecond.received} msgs/s
+                                    {t('connection_popover.msgs_per_second', { count: trafficStatsRef.current.rates.packetsPerSecond.received })}
                                 </Typography>
                             </Grid>
                         </Grid>
@@ -199,29 +201,29 @@ function ConnectionStatus() {
 
                     <Box>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
-                            Application Level (Session Total)
+                            {t('connection_popover.application_level')}
                         </Typography>
                         <Grid container spacing={2}>
                             <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Sent:
+                                    {t('connection_popover.sent')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#4caf50' }}>
                                     {formatTotalBytes(trafficStatsRef.current.engine.bytesSent)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStatsRef.current.engine.packetsSent} messages
+                                    {t('connection_popover.messages', { count: trafficStatsRef.current.engine.packetsSent })}
                                 </Typography>
                             </Grid>
                             <Grid size={6}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Received:
+                                    {t('connection_popover.received')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#2196f3' }}>
                                     {formatTotalBytes(trafficStatsRef.current.engine.bytesReceived)}
                                 </Typography>
                                 <Typography variant="caption" color="text.secondary" sx={{ display: 'block' }}>
-                                    {trafficStatsRef.current.engine.packetsReceived} messages
+                                    {t('connection_popover.messages', { count: trafficStatsRef.current.engine.packetsReceived })}
                                 </Typography>
                             </Grid>
                         </Grid>
@@ -229,7 +231,7 @@ function ConnectionStatus() {
                         {trafficStatsRef.current.engine.upgradeAttempts > 0 && (
                             <Box sx={{ mt: 1 }}>
                                 <Typography variant="caption" color="text.secondary">
-                                    Transport Upgrades:
+                                    {t('connection_popover.transport_upgrades')}
                                 </Typography>
                                 <Typography variant="caption" sx={{ color: '#fff', fontFamily: 'monospace', ml: 1 }}>
                                     {trafficStatsRef.current.engine.upgradeAttempts}

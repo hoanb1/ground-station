@@ -16,6 +16,7 @@ import {
     Select,
     Switch,
 } from "@mui/material";
+import { useTranslation } from 'react-i18next';
 
 const SdrAccordion = ({
                           expanded,
@@ -47,6 +48,8 @@ const SdrAccordion = ({
                           rtlAgc,
                           onRtlAgcChange,
                       }) => {
+    const { t } = useTranslation('waterfall');
+
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
             <AccordionSummary
@@ -54,7 +57,7 @@ const SdrAccordion = ({
                     boxShadow: '-1px 4px 7px #00000059',
                 }}
                 aria-controls="panel3d-content" id="panel3d-header">
-                <Typography component="span">SDR</Typography>
+                <Typography component="span">{t('sdr.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
                 backgroundColor: 'rgb(34,34,34)',
@@ -66,18 +69,18 @@ const SdrAccordion = ({
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth
                                      variant="filled"
                                      size="small">
-                            <InputLabel htmlFor="sdr-select">SDR</InputLabel>
+                            <InputLabel htmlFor="sdr-select">{t('sdr.sdr_label')}</InputLabel>
                             <Select
                                 id="sdr-select"
                                 value={sdrs.length > 0 ? selectedSDRId : "none"}
                                 onChange={onSDRChange}
                                 variant={'filled'}>
                                 <MenuItem value="none">
-                                    [no SDR selected]
+                                    {t('sdr.no_sdr_selected')}
                                 </MenuItem>
                                 {/* Local SDRs */}
                                 {sdrs.filter(sdr => sdr.type.toLowerCase().includes('local')).length > 0 && (
-                                    <ListSubheader>Local SDRs</ListSubheader>
+                                    <ListSubheader>{t('sdr.local_sdrs')}</ListSubheader>
                                 )}
                                 {sdrs
                                     .filter(sdr => sdr.type.toLowerCase().includes('local'))
@@ -90,7 +93,7 @@ const SdrAccordion = ({
 
                                 {/* Remote SDRs */}
                                 {sdrs.filter(sdr => sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                    <ListSubheader>Remote SDRs</ListSubheader>
+                                    <ListSubheader>{t('sdr.remote_sdrs')}</ListSubheader>
                                 )}
                                 {sdrs
                                     .filter(sdr => sdr.type.toLowerCase().includes('remote'))
@@ -103,7 +106,7 @@ const SdrAccordion = ({
 
                                 {/* Other SDRs (neither local nor remote) */}
                                 {sdrs.filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote')).length > 0 && (
-                                    <ListSubheader>Other SDRs</ListSubheader>
+                                    <ListSubheader>{t('sdr.other_sdrs')}</ListSubheader>
                                 )}
                                 {sdrs
                                     .filter(sdr => !sdr.type.toLowerCase().includes('local') && !sdr.type.toLowerCase().includes('remote'))
@@ -120,7 +123,7 @@ const SdrAccordion = ({
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
-                            <InputLabel>Gain (dB)</InputLabel>
+                            <InputLabel>{t('sdr.gain_db')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
@@ -128,7 +131,7 @@ const SdrAccordion = ({
                                 onChange={(e) => onGainChange(e.target.value)}
                                 variant={'filled'}>
                                 <MenuItem value="none">
-                                    [no gain selected]
+                                    {t('sdr.no_gain_selected')}
                                 </MenuItem>
                                 {gainValues.map(gain => (
                                     <MenuItem key={gain} value={gain}>
@@ -141,7 +144,7 @@ const SdrAccordion = ({
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
-                            <InputLabel>Sample Rate</InputLabel>
+                            <InputLabel>{t('sdr.sample_rate')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
@@ -149,7 +152,7 @@ const SdrAccordion = ({
                                 onChange={(e) => onSampleRateChange(e.target.value)}
                                 variant={'filled'}>
                                 <MenuItem value="none">
-                                    [no rate selected]
+                                    {t('sdr.no_rate_selected')}
                                 </MenuItem>
                                 {sampleRateValues.map(rate => {
                                     // Format the sample rate for display
@@ -171,7 +174,7 @@ const SdrAccordion = ({
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
-                            <InputLabel>Antenna</InputLabel>
+                            <InputLabel>{t('sdr.antenna')}</InputLabel>
                             <Select
                                 disabled={gettingSDRParameters}
                                 size={'small'}
@@ -179,7 +182,7 @@ const SdrAccordion = ({
                                 onChange={(e) => onAntennaChange(e.target.value)}
                                 variant={'filled'}>
                                 <MenuItem value="none">
-                                    [no antenna selected]
+                                    {t('sdr.no_antenna_selected')}
                                 </MenuItem>
                                 {antennasList.rx && antennasList.rx.map(antenna => (
                                     <MenuItem key={antenna} value={antenna}>
@@ -201,7 +204,7 @@ const SdrAccordion = ({
                                         onChange={(e) => onBiasTChange(e.target.checked)}
                                     />
                                 }
-                                label="Enable Bias T"
+                                label={t('sdr.enable_bias_t')}
                             />
                         )}
                         {hasTunerAgc && (
@@ -214,7 +217,7 @@ const SdrAccordion = ({
                                         onChange={(e) => onTunerAgcChange(e.target.checked)}
                                     />
                                 }
-                                label="Enable tuner AGC"
+                                label={t('sdr.enable_tuner_agc')}
                             />
                         )}
                         {hasSoapyAgc && (
@@ -227,7 +230,7 @@ const SdrAccordion = ({
                                         onChange={(e) => onSoapyAgcChange(e.target.checked)}
                                     />
                                 }
-                                label="Enable AGC"
+                                label={t('sdr.enable_agc')}
                             />
                         )}
                         {hasRtlAgc && (
@@ -240,7 +243,7 @@ const SdrAccordion = ({
                                         onChange={(e) => onRtlAgcChange(e.target.checked)}
                                     />
                                 }
-                                label="Enable RTL AGC"
+                                label={t('sdr.enable_rtl_agc')}
                             />
                         )}
                     </Box>

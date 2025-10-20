@@ -40,6 +40,7 @@ import {
     setSelectedSatellites,
     fetchSatellitesByGroupId,
 } from "./overview-slice.jsx";
+import { useTranslation } from 'react-i18next';
 
 const SATELLITE_NUMBER_LIMIT = 200;
 
@@ -47,6 +48,7 @@ const SATELLITE_NUMBER_LIMIT = 200;
 const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGroupSelector() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('overview');
     // const {
     //     satelliteGroupId,
     //     satGroups,
@@ -78,7 +80,7 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
                 }
             })
             .catch((err) => {
-                toast.error("Failed to load satellite groups: " + err.message)
+                toast.error(t('satellite_selector.failed_load_groups') + ": " + err.message)
             });
 
         return () => {
@@ -95,12 +97,12 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
 
     return (
         <ThemedSettingsDiv>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>Select group of satellites</TitleBar>
+            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>{t('satellite_selector.title')}</TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} disabled={passesLoading}
                                  fullWidth variant={"filled"} size={"small"}>
-                        <InputLabel htmlFor="grouped-select">Group</InputLabel>
+                        <InputLabel htmlFor="grouped-select">{t('satellite_selector.group_label')}</InputLabel>
                         <Select
                             disabled={passesLoading}
                             error={formGroupSelectError}
@@ -111,13 +113,13 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
                             size={"small"}
                             onChange={handleOnGroupChange}
                         >
-                            <ListSubheader>User defined satellite groups</ListSubheader>
+                            <ListSubheader>{t('satellite_selector.user_groups')}</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "user") {
                                     return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
                                 }
                             })}
-                            <ListSubheader>TLE sourced satellite groups</ListSubheader>
+                            <ListSubheader>{t('satellite_selector.tle_groups')}</ListSubheader>
                             {satGroups.map((group, index) => {
                                 if (group.type === "system") {
                                     return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;

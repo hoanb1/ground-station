@@ -24,6 +24,7 @@ import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import Stack from "@mui/material/Stack";
 import {Alert, AlertTitle, Button, FormControl, InputLabel, MenuItem, Select, TextField} from "@mui/material";
 import {useEffect, useState} from "react";
+import { useTranslation } from 'react-i18next';
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
@@ -46,6 +47,7 @@ export default function CameraTable() {
     const dispatch = useDispatch();
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
+    const { t } = useTranslation('hardware');
     const {
         loading,
         cameras,
@@ -57,9 +59,9 @@ export default function CameraTable() {
     } = useSelector((state) => state.cameras);
 
     const columns = [
-        {field: 'name', headerName: 'Name', flex: 1, minWidth: 150},
-        {field: 'url', headerName: 'URL', flex: 1, minWidth: 200},
-        {field: 'type', headerName: 'Type', flex: 1, minWidth: 100},
+        {field: 'name', headerName: t('camera.name'), flex: 1, minWidth: 150},
+        {field: 'url', headerName: t('camera.url'), flex: 1, minWidth: 200},
+        {field: 'type', headerName: t('camera.type'), flex: 1, minWidth: 100},
     ];
 
     const handleChange = (e) => {
@@ -71,7 +73,7 @@ export default function CameraTable() {
         dispatch(submitOrEditCamera({socket, formValues}))
             .unwrap()
             .then(() => {
-                toast.success('Camera saved successfully');
+                toast.success(t('camera.saved_success'));
                 setOpenAddDialog(false);
             })
             .catch((err) => {
@@ -83,7 +85,7 @@ export default function CameraTable() {
         dispatch(deleteCameras({socket, selectedIds: selected}))
             .unwrap()
             .then(() => {
-                toast.success('Camera(s) deleted successfully');
+                toast.success(t('camera.deleted_success'));
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
@@ -94,14 +96,8 @@ export default function CameraTable() {
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info">
-                <AlertTitle>Camera Integration Setup</AlertTitle>
-                Configure camera streams for visual monitoring during satellite tracking operations. Currently,
-                only WebRTC is fully supported for real-time, low-latency streaming. For RTSP camera sources,
-                consider using go2rtc, which is now built
-                into Home Assistant 2024.11 and later.
-                Go2rtc provides a comprehensive streaming solution supporting RTSP, WebRTC, HomeKit, FFmpeg,
-                and RTMP formats. Add, edit, and manage camera connections with custom names and stream URLs
-                for integration with your ground station setup.
+                <AlertTitle>{t('camera.title')}</AlertTitle>
+                {t('camera.subtitle')}
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <Box sx={{width: '100%'}}>
@@ -140,19 +136,19 @@ export default function CameraTable() {
                     />
                     <Stack direction="row" spacing={2} style={{marginTop: 15}}>
                         <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
-                            Add
+                            {t('camera.add')}
                         </Button>
                         <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                            <DialogTitle>Add Camera</DialogTitle>
+                            <DialogTitle>{t('camera.add_dialog_title')}</DialogTitle>
                             <DialogContent>
                                 <Stack spacing={2}>
-                                    <TextField name="name" label="Name" fullWidth variant="filled"
+                                    <TextField name="name" label={t('camera.name')} fullWidth variant="filled"
                                                onChange={handleChange}
                                                value={formValues.name}/>
-                                    <TextField name="url" label="URL" fullWidth variant="filled"
+                                    <TextField name="url" label={t('camera.url')} fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.url}/>
                                     <FormControl fullWidth variant="filled">
-                                        <InputLabel id="camera-type-label">Camera Type</InputLabel>
+                                        <InputLabel id="camera-type-label">{t('camera.camera_type')}</InputLabel>
                                         <Select
                                             name="type"
                                             labelId="camera-type-label"
@@ -164,9 +160,9 @@ export default function CameraTable() {
                                                 }
                                             })}
                                             variant={'filled'}>
-                                            <MenuItem value="webrtc">WebRTC</MenuItem>
-                                            <MenuItem value="hls">HLS</MenuItem>
-                                            <MenuItem value="mjpeg">MJPEG</MenuItem>
+                                            <MenuItem value="webrtc">{t('camera.webrtc')}</MenuItem>
+                                            <MenuItem value="hls">{t('camera.hls')}</MenuItem>
+                                            <MenuItem value="mjpeg">{t('camera.mjpeg')}</MenuItem>
                                         </Select>
                                     </FormControl>
                                 </Stack>
@@ -174,14 +170,14 @@ export default function CameraTable() {
                             <DialogActions style={{padding: '0px 24px 20px 20px'}}>
                                 <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error"
                                         variant="outlined">
-                                    Cancel
+                                    {t('camera.cancel')}
                                 </Button>
                                 <Button
                                     color="success"
                                     variant="contained"
                                     onClick={handleSubmit}
                                 >
-                                    Submit
+                                    {t('camera.submit')}
                                 </Button>
                             </DialogActions>
                         </Dialog>
@@ -196,7 +192,7 @@ export default function CameraTable() {
                                 }
                             }}
                         >
-                            Edit
+                            {t('camera.edit')}
                         </Button>
                         <Button
                             variant="contained"
@@ -204,27 +200,27 @@ export default function CameraTable() {
                             color="error"
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}
                         >
-                            Delete
+                            {t('camera.delete')}
                         </Button>
                         <Dialog
                             open={openDeleteConfirm}
                             onClose={() => dispatch(setOpenDeleteConfirm(false))}
                         >
-                            <DialogTitle>Confirm Deletion</DialogTitle>
+                            <DialogTitle>{t('camera.confirm_deletion')}</DialogTitle>
                             <DialogContent>
-                                Are you sure you want to delete the selected item(s)?
+                                {t('camera.confirm_delete_message')}
                             </DialogContent>
                             <DialogActions>
                                 <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error"
                                         variant="outlined">
-                                    Cancel
+                                    {t('camera.cancel')}
                                 </Button>
                                 <Button
                                     variant="contained"
                                     onClick={handleDelete}
                                     color="error"
                                 >
-                                    Delete
+                                    {t('camera.delete')}
                                 </Button>
                             </DialogActions>
                         </Dialog>

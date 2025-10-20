@@ -24,14 +24,45 @@ import { setupTheme } from './theme.js';
 import { useSocket } from "./components/common/socket.jsx";
 import { AudioProvider } from "./components/dashboard/audio-provider.jsx";
 import { ToastContainerWithStyles } from "./utils/toast-container.jsx";
-import { NAVIGATION } from "./config/navigation.jsx";
+import { getNavigation } from "./config/navigation.jsx";
 import { BRANDING } from "./config/branding.jsx";
 import { useSocketEventHandlers } from "./hooks/socket-event-handlers.jsx";
 import { usePassFetching } from "./hooks/pass-fetching.jsx";
+import { useSelector } from 'react-redux';
+import { useTranslation } from 'react-i18next';
 
 export default function App() {
     const { socket } = useSocket();
     const dashboardTheme = setupTheme();
+    const { i18n } = useTranslation();
+    const preferences = useSelector((state) => state.preferences.preferences);
+    const [navigation, setNavigation] = React.useState(getNavigation());
+
+    // Sync language from Redux to i18n on mount and when it changes
+    React.useEffect(() => {
+        const languagePref = preferences.find(pref => pref.name === 'language');
+        if (languagePref && languagePref.value) {
+            const languageCode = languagePref.value.split('_')[0]; // 'en_US' -> 'en', 'el_GR' -> 'el'
+            if (i18n.language !== languageCode) {
+                i18n.changeLanguage(languageCode);
+            }
+        }
+        // Regenerate navigation after language is set
+        setNavigation(getNavigation());
+    }, [preferences, i18n]);
+
+    // Update navigation when language changes
+    React.useEffect(() => {
+        const handleLanguageChange = () => {
+            setNavigation(getNavigation());
+        };
+
+        i18n.on('languageChanged', handleLanguageChange);
+
+        return () => {
+            i18n.off('languageChanged', handleLanguageChange);
+        };
+    }, [i18n]);
 
     useSocketEventHandlers(socket);
     usePassFetching(socket);
@@ -39,7 +70,7 @@ export default function App() {
     return (
         <AudioProvider>
             <ReactRouterAppProvider
-                navigation={NAVIGATION}
+                navigation={navigation}
                 theme={dashboardTheme}
                 branding={BRANDING}
             >

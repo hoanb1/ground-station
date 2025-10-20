@@ -22,6 +22,7 @@ import {useEffect, useState} from "react";
 import {FormControl, InputLabel, MenuItem, Select} from "@mui/material";
 import * as React from "react";
 import {useDispatch, useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     setSatelliteGroupSelectOpen,
     setSatelliteSelectOpen,
@@ -35,6 +36,7 @@ import {useSocket} from "../common/socket.jsx";
 function SatelliteList() {
     const dispatch = useDispatch();
     const {socket} = useSocket();
+    const { t } = useTranslation('target');
     const {
         satelliteData,
         groupOfSats,
@@ -97,11 +99,11 @@ function SatelliteList() {
         <FormControl
             disabled={trackingState['rotator_state'] === "tracking" || trackingState['rig_state'] === "tracking"}
             fullWidth={true} variant={"filled"} size={"small"}>
-            <InputLabel htmlFor="satellite-select">Satellite</InputLabel>
+            <InputLabel htmlFor="satellite-select">{t('satellite_dropdown.label')}</InputLabel>
             <Select onClose={handleSelectCloseEvent}
                     onOpen={handleSelectOpenEvent}
                     value={groupOfSats.length > 0 && groupOfSats.find(s => s.norad_id === satelliteId) ? satelliteId : ""}
-                    id="satellite-select" label="Satellite" variant={"filled"} size={"small"}
+                    id="satellite-select" label={t('satellite_dropdown.label')} variant={"filled"} size={"small"}
                     onChange={setTargetSatellite}>
                 {groupOfSats.map((satellite, index) => {
                     return <MenuItem value={satellite['norad_id']}

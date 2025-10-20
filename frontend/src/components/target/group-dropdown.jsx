@@ -34,12 +34,14 @@ import {
     setSatelliteGroupSelectOpen,
     setGroupOfSats,
 } from './target-slice.jsx';
+import { useTranslation } from 'react-i18next';
 
 const SATELLITE_NUMBER_LIMIT = 50;
 
 const GroupDropdown = React.memo(function GroupDropdown() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('target');
     const {
         satGroups,
         groupId,
@@ -70,18 +72,18 @@ const GroupDropdown = React.memo(function GroupDropdown() {
             variant={"filled"}
             size={"small"}
         >
-            <InputLabel htmlFor="grouped-select">Group</InputLabel>
+            <InputLabel htmlFor="grouped-select">{t('group_dropdown.label')}</InputLabel>
             <Select
                 onClose={handleSelectCloseEvent}
                 onOpen={handleSelectOpenEvent}
                 onChange={handleGroupChange}
                 value={satGroups.length > 0 ? groupId : ""}
                 id="grouped-select"
-                label="Grouping"
+                label={t('group_dropdown.label')}
                 variant={"filled"}
                 size={"small"}
             >
-                <ListSubheader>User defined satellite groups</ListSubheader>
+                <ListSubheader>{t('group_dropdown.user_groups')}</ListSubheader>
                 {satGroups.map((group, index) => {
                     if (group.type === "user") {
                         return (
@@ -95,7 +97,7 @@ const GroupDropdown = React.memo(function GroupDropdown() {
                         );
                     }
                 })}
-                <ListSubheader>TLE source groups</ListSubheader>
+                <ListSubheader>{t('group_dropdown.tle_groups')}</ListSubheader>
                 {satGroups.map((group, index) => {
                     if (group.type === "system") {
                         return (

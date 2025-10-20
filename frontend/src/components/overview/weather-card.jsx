@@ -33,9 +33,11 @@ import {
     Thermostat as ThermostatIcon, Opacity as OpacityIcon, Air as AirIcon,
     CompareArrows as CompareArrowsIcon
 } from '@mui/icons-material';
+import { useTranslation } from 'react-i18next';
 
 const WeatherDisplay = ({ latitude, longitude }) => {
     const dispatch = useDispatch();
+    const { t } = useTranslation('overview');
     const { data, loading, error } = useSelector((state) => state.weather);
     const { gridEditable } = useSelector(state => state.overviewSatTrack);
     const { preferences } = useSelector(state => state.preferences);
@@ -68,7 +70,7 @@ const WeatherDisplay = ({ latitude, longitude }) => {
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
                 <Box sx={{ display: 'flex', alignItems: 'center' }}>
                     <CloudIcon fontSize="small" sx={{ mr: 1 }} />
-                    <Typography variant="h7" component="div" fontWeight="bold">Weather</Typography>
+                    <Typography variant="h7" component="div" fontWeight="bold">{t('weather.title')}</Typography>
                 </Box>
             </TitleBar>
 
@@ -104,7 +106,7 @@ const WeatherDisplay = ({ latitude, longitude }) => {
                                 }}>
                                     <CloudOffIcon sx={{ fontSize: 40, mb: 1, color: 'text.secondary', opacity: 0.7 }} />
                                     <Typography variant="body2" color="text.secondary">
-                                        No weather data available
+                                        {t('weather.no_data')}
                                     </Typography>
                                 </Paper>
                             ) : (
@@ -152,25 +154,25 @@ const WeatherDisplay = ({ latitude, longitude }) => {
                                     }}>
                                         <DetailItem
                                             icon={<ThermostatIcon/>}
-                                            label="Feels"
+                                            label={t('weather.feels')}
                                             value={`${Math.round(data.feels_like)}°C`}
                                             color="warning.main"
                                         />
                                         <DetailItem
                                             icon={<OpacityIcon/>}
-                                            label="Humidity"
+                                            label={t('weather.humidity')}
                                             value={`${data.humidity}%`}
                                             color="info.main"
                                         />
                                         <DetailItem
                                             icon={<AirIcon/>}
-                                            label="Wind"
+                                            label={t('weather.wind')}
                                             value={`${data.windSpeed} m/s`}
                                             color="success.main"
                                         />
                                         <DetailItem
                                             icon={<CompareArrowsIcon/>}
-                                            label="Pressure"
+                                            label={t('weather.pressure')}
                                             value={`${data.pressure} hPa`}
                                             color="secondary.main"
                                         />

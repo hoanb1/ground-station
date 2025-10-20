@@ -26,6 +26,7 @@ import {useCallback, useEffect, useRef, useState} from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import Tooltip from "@mui/material/Tooltip";
+import { useTranslation } from 'react-i18next';
 import RadioIcon from '@mui/icons-material/Radio';
 import {
     Popover,
@@ -48,6 +49,7 @@ import PauseIcon from '@mui/icons-material/Pause';
 import PlayArrowIcon from "@mui/icons-material/PlayArrow";
 
 const HardwareSettingsPopover = () => {
+    const { t } = useTranslation('dashboard');
     const {socket} = useSocket();
     const buttonRef = useRef(null);
     const [anchorEl, setAnchorEl] = useState(buttonRef.current);
@@ -114,20 +116,20 @@ const HardwareSettingsPopover = () => {
     };
 
     const getRigTooltip = () => {
-        if (!connected) return 'Socket: Disconnected';
-        if (!rigData.connected) return 'Rig: Disconnected';
-        if (rigData.tracking) return `Rig: Tracking (${rigData.frequency} Hz)`;
-        if (rigData.stopped) return 'Rig: Stopped';
-        return 'Rig: Connected';
+        if (!connected) return t('hardware_popover.socket_disconnected');
+        if (!rigData.connected) return t('hardware_popover.rig_disconnected');
+        if (rigData.tracking) return t('hardware_popover.rig_tracking', { frequency: rigData.frequency });
+        if (rigData.stopped) return t('hardware_popover.rig_stopped');
+        return t('hardware_popover.rig_connected');
     };
 
     const getRotatorTooltip = () => {
-        if (!connected) return 'Socket: Disconnected';
-        if (!rotatorData.connected) return 'Rotator: Disconnected';
-        if (rotatorData.tracking) return `Rotator: Tracking (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
-        if (rotatorData.slewing) return `Rotator: Slewing (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
-        if (rotatorData.stopped) return `Rotator: Stopped (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
-        return `Rotator: Connected (Az: ${rotatorData.az}°, El: ${rotatorData.el}°)`;
+        if (!connected) return t('hardware_popover.socket_disconnected');
+        if (!rotatorData.connected) return t('hardware_popover.rotator_disconnected');
+        if (rotatorData.tracking) return t('hardware_popover.rotator_tracking', { az: rotatorData.az, el: rotatorData.el });
+        if (rotatorData.slewing) return t('hardware_popover.rotator_slewing', { az: rotatorData.az, el: rotatorData.el });
+        if (rotatorData.stopped) return t('hardware_popover.rotator_stopped', { az: rotatorData.az, el: rotatorData.el });
+        return t('hardware_popover.rotator_connected', { az: rotatorData.az, el: rotatorData.el });
     };
 
     // Get overlay icon and color for rotator

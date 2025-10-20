@@ -30,9 +30,11 @@ import InfoIcon from '@mui/icons-material/Info';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import PowerSettingsNewIcon from '@mui/icons-material/PowerSettingsNew';
 import { useSocket } from "../common/socket.jsx";
+import { useTranslation } from 'react-i18next';
 
 const MaintenanceForm = () => {
     const { socket } = useSocket();
+    const { t } = useTranslation('settings');
 
     // Feature detection states
     const [workersSupported, setWorkersSupported] = useState(null);
@@ -402,34 +404,34 @@ const MaintenanceForm = () => {
     return (
         <Paper elevation={3} sx={{ padding: 2, marginTop: 0  }}>
             <Alert severity="info">
-                <AlertTitle>Maintenance</AlertTitle>
-                Maintenance related functions
+                <AlertTitle>{t('maintenance.title')}</AlertTitle>
+                {t('maintenance.subtitle')}
             </Alert>
             <Box component="form" sx={{mt: 2}}>
                 <Grid container spacing={2} columns={16}>
                     <Grid size={8}>
-                        Clear local browser layout data
+                        {t('maintenance.clear_layout')}
                     </Grid>
                     <Grid size={8}>
                         <Button variant="contained" color="warning" onClick={clearLayoutLocalStorage}>
-                            Clear layout
+                            {t('maintenance.clear_layout_button')}
                         </Button>
                     </Grid>
                     <Grid size={8}>
-                        Clear local browser satellite data
+                        {t('maintenance.clear_satellite_data')}
                     </Grid>
                     <Grid size={8}>
                         <Button variant="contained" color="warning" onClick={clearSatelliteDataLocalStorage}>
-                            Clear satellite data
+                            {t('maintenance.clear_satellite_data_button')}
                         </Button>
                     </Grid>
 
                     <Grid size={8}>
-                        Clear Redux persistent state
+                        {t('maintenance.clear_redux')}
                     </Grid>
                     <Grid size={8}>
                         <Button variant="contained" color="warning" onClick={clearReduxPersistentState}>
-                            Clear Redux persistent state
+                            {t('maintenance.clear_redux_button')}
                         </Button>
                     </Grid>
                 </Grid>
@@ -437,15 +439,15 @@ const MaintenanceForm = () => {
                 <Divider sx={{ my: 3 }} />
 
                 <Alert severity="warning">
-                    <AlertTitle>Service Control</AlertTitle>
-                    Restart or shutdown the entire Ground Station service
+                    <AlertTitle>{t('maintenance.service_control_title')}</AlertTitle>
+                    {t('maintenance.service_control_subtitle')}
                 </Alert>
 
                 <Grid container spacing={2} columns={16} sx={{ mt: 1 }}>
                     <Grid size={8}>
-                        Restart Ground Station Service
+                        {t('maintenance.restart_service')}
                         <Typography variant="body2" color="text.secondary">
-                            Restarts all processes including SDR, tracker, and web server. All connections will be dropped.
+                            {t('maintenance.restart_service_description')}
                         </Typography>
                     </Grid>
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
@@ -456,14 +458,14 @@ const MaintenanceForm = () => {
                             onClick={() => setConfirmRestartOpen(true)}
                             disabled={isRestarting}
                         >
-                            {isRestarting ? 'Restarting...' : 'Restart Service'}
+                            {isRestarting ? t('maintenance.restarting') : t('maintenance.restart_service_button')}
                         </Button>
                     </Grid>
 
                     {restartMessage && (
                         <>
                             <Grid size={8}>
-                                Restart Status
+                                {t('maintenance.restart_status')}
                             </Grid>
                             <Grid size={8}>
                                 <Alert
@@ -480,22 +482,22 @@ const MaintenanceForm = () => {
                 <Divider sx={{ my: 3 }} />
 
                 <Alert severity="info">
-                    <AlertTitle>Browser Feature Compatibility</AlertTitle>
-                    Test browser compatibility for advanced features used in the waterfall display
+                    <AlertTitle>{t('maintenance.browser_features_title')}</AlertTitle>
+                    {t('maintenance.browser_features_subtitle')}
                 </Alert>
 
                 <Grid container spacing={2} columns={16} sx={{ mt: 1 }}>
                     <Grid size={8}>
-                        Web Workers Support
+                        {t('maintenance.web_workers')}
                         <Typography variant="body2" color="text.secondary">
-                            Required for offloading waterfall processing
+                            {t('maintenance.web_workers_description')}
                         </Typography>
                     </Grid>
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
                         {getSupportIcon(workersSupported)}
                         <Typography sx={{ ml: 1 }}>
-                            {workersSupported === null ? 'Not Tested' :
-                                workersSupported ? 'Supported' : 'Not Supported'}
+                            {workersSupported === null ? t('maintenance.not_tested') :
+                                workersSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
                         </Typography>
                         <Button
                             variant="contained"
@@ -504,14 +506,14 @@ const MaintenanceForm = () => {
                             disabled={isTestingWorkers}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingWorkers ? <CircularProgress size={24} /> : 'Test now'}
+                            {isTestingWorkers ? <CircularProgress size={24} /> : t('maintenance.test_now')}
                         </Button>
                     </Grid>
 
                     {workerTestResult && (
                         <>
                             <Grid size={8}>
-                                Worker Test Result
+                                {t('maintenance.worker_test_result')}
                             </Grid>
                             <Grid size={8}>
                                 <Typography
@@ -524,16 +526,16 @@ const MaintenanceForm = () => {
                     )}
 
                     <Grid size={8}>
-                        OffscreenCanvas Support
+                        {t('maintenance.offscreen_canvas')}
                         <Typography variant="body2" color="text.secondary">
-                            Required for high-performance waterfall rendering
+                            {t('maintenance.offscreen_canvas_description')}
                         </Typography>
                     </Grid>
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
                         {getSupportIcon(offscreenCanvasSupported)}
                         <Typography sx={{ ml: 1 }}>
-                            {offscreenCanvasSupported === null ? 'Not Tested' :
-                                offscreenCanvasSupported ? 'Supported' : 'Not Supported'}
+                            {offscreenCanvasSupported === null ? t('maintenance.not_tested') :
+                                offscreenCanvasSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
                         </Typography>
                         <Button
                             variant="contained"
@@ -542,14 +544,14 @@ const MaintenanceForm = () => {
                             disabled={isTestingOffscreen}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingOffscreen ? <CircularProgress size={24} /> : 'Test now'}
+                            {isTestingOffscreen ? <CircularProgress size={24} /> : t('maintenance.test_now')}
                         </Button>
                     </Grid>
 
                     {offscreenTestResult && (
                         <>
                             <Grid size={8}>
-                                OffscreenCanvas Test Result
+                                {t('maintenance.offscreen_test_result')}
                             </Grid>
                             <Grid size={8}>
                                 <Typography
@@ -562,30 +564,30 @@ const MaintenanceForm = () => {
                     )}
 
                     <Grid size={8}>
-                        Canvas Transfer Control Support
+                        {t('maintenance.canvas_transfer')}
                         <Typography variant="body2" color="text.secondary">
-                            Required for transferring canvas to workers
+                            {t('maintenance.canvas_transfer_description')}
                         </Typography>
                     </Grid>
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
                         {getSupportIcon(offscreenTransferSupported)}
                         <Typography sx={{ ml: 1 }}>
-                            {offscreenTransferSupported === null ? 'Not Tested' :
-                                offscreenTransferSupported ? 'Supported' : 'Not Supported'}
+                            {offscreenTransferSupported === null ? t('maintenance.not_tested') :
+                                offscreenTransferSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
                         </Typography>
                     </Grid>
 
                     <Grid size={8}>
-                        OffscreenCanvas in Worker
+                        {t('maintenance.offscreen_in_worker')}
                         <Typography variant="body2" color="text.secondary">
-                            Tests creating OffscreenCanvas inside a worker
+                            {t('maintenance.offscreen_in_worker_description')}
                         </Typography>
                     </Grid>
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
                         {getSupportIcon(offscreenInWorkerSupported)}
                         <Typography sx={{ ml: 1 }}>
-                            {offscreenInWorkerSupported === null ? 'Not Tested' :
-                                offscreenInWorkerSupported ? 'Supported' : 'Not Supported'}
+                            {offscreenInWorkerSupported === null ? t('maintenance.not_tested') :
+                                offscreenInWorkerSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
                         </Typography>
                         <Button
                             variant="contained"
@@ -594,14 +596,14 @@ const MaintenanceForm = () => {
                             disabled={isTestingOffscreenInWorker}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingOffscreenInWorker ? <CircularProgress size={24} /> : 'Test now'}
+                            {isTestingOffscreenInWorker ? <CircularProgress size={24} /> : t('maintenance.test_now')}
                         </Button>
                     </Grid>
 
                     {offscreenInWorkerResult && (
                         <>
                             <Grid size={8}>
-                                Worker OffscreenCanvas Test Result
+                                {t('maintenance.worker_offscreen_test_result')}
                             </Grid>
                             <Grid size={8}>
                                 <Typography
@@ -614,16 +616,16 @@ const MaintenanceForm = () => {
                     )}
 
                     <Grid size={8}>
-                        Canvas Transfer to Worker
+                        {t('maintenance.canvas_transfer_worker')}
                         <Typography variant="body2" color="text.secondary">
-                            Tests transferring canvas control to a worker
+                            {t('maintenance.canvas_transfer_worker_description')}
                         </Typography>
                     </Grid>
                     <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
                         {getSupportIcon(canvasTransferToWorkerSupported)}
                         <Typography sx={{ ml: 1 }}>
-                            {canvasTransferToWorkerSupported === null ? 'Not Tested' :
-                                canvasTransferToWorkerSupported ? 'Supported' : 'Not Supported'}
+                            {canvasTransferToWorkerSupported === null ? t('maintenance.not_tested') :
+                                canvasTransferToWorkerSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
                         </Typography>
                         <Button
                             variant="contained"
@@ -632,14 +634,14 @@ const MaintenanceForm = () => {
                             disabled={isTestingCanvasTransfer}
                             sx={{ ml: 2 }}
                         >
-                            {isTestingCanvasTransfer ? <CircularProgress size={24} /> : 'Test now'}
+                            {isTestingCanvasTransfer ? <CircularProgress size={24} /> : t('maintenance.test_now')}
                         </Button>
                     </Grid>
 
                     {canvasTransferResult && (
                         <>
                             <Grid size={8}>
-                                Canvas Transfer Test Result
+                                {t('maintenance.canvas_transfer_test_result')}
                             </Grid>
                             <Grid size={8}>
                                 <Typography
@@ -664,13 +666,13 @@ const MaintenanceForm = () => {
                                 <AlertTitle>
                                     {(workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
                                         offscreenInWorkerSupported && canvasTransferToWorkerSupported)
-                                        ? 'All features supported!'
-                                        : 'Missing feature support'}
+                                        ? t('maintenance.all_features_supported')
+                                        : t('maintenance.missing_feature_support')}
                                 </AlertTitle>
                                 {(workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
                                     offscreenInWorkerSupported && canvasTransferToWorkerSupported)
-                                    ? 'Your browser supports all the features needed for optimal waterfall display performance.'
-                                    : 'Your browser does not support all features needed for optimal waterfall display performance. The waterfall may still work but with reduced performance or functionality.'}
+                                    ? t('maintenance.all_features_message')
+                                    : t('maintenance.missing_features_message')}
                             </Alert>
                         </Grid>
                     )}
@@ -679,37 +681,37 @@ const MaintenanceForm = () => {
 
                 {/* Confirmation Dialog */}
                 <Dialog open={confirmRestartOpen} onClose={() => setConfirmRestartOpen(false)}>
-                    <DialogTitle>Confirm Service Restart</DialogTitle>
+                    <DialogTitle>{t('maintenance.confirm_restart_title')}</DialogTitle>
                     <DialogContent>
                         <Typography paragraph>
-                            This will restart the entire Ground Station service, including:
+                            {t('maintenance.confirm_restart_message')}
                         </Typography>
                         <ul>
-                            <li>All SDR sessions will be terminated</li>
-                            <li>Audio streams will be stopped</li>
-                            <li>Tracker processes will be restarted</li>
-                            <li>All WebSocket connections will be dropped</li>
-                            <li>Hardware will be reinitialized</li>
-                            <li>System daemons (dbus, avahi) will restart</li>
+                            <li>{t('maintenance.restart_item_1')}</li>
+                            <li>{t('maintenance.restart_item_2')}</li>
+                            <li>{t('maintenance.restart_item_3')}</li>
+                            <li>{t('maintenance.restart_item_4')}</li>
+                            <li>{t('maintenance.restart_item_5')}</li>
+                            <li>{t('maintenance.restart_item_6')}</li>
                         </ul>
                         <Typography paragraph>
-                            Are you sure you want to proceed?
+                            {t('maintenance.confirm_restart_question')}
                         </Typography>
 
                         <Alert severity="info" sx={{ mt: 2 }}>
-                            <AlertTitle>Deployment Note</AlertTitle>
+                            <AlertTitle>{t('maintenance.deployment_note')}</AlertTitle>
                             <Typography variant="body2">
-                                <strong>Docker deployment:</strong> The service will automatically restart after shutdown.
+                                <strong>Docker deployment:</strong> {t('maintenance.deployment_docker')}
                             </Typography>
                             <Typography variant="body2">
-                                <strong>Standalone/Development deployment:</strong> The service will only shutdown and must be manually restarted.
+                                <strong>Standalone/Development deployment:</strong> {t('maintenance.deployment_standalone')}
                             </Typography>
                         </Alert>
                     </DialogContent>
                     <DialogActions>
-                        <Button onClick={() => setConfirmRestartOpen(false)}>Cancel</Button>
+                        <Button onClick={() => setConfirmRestartOpen(false)}>{t('maintenance.cancel')}</Button>
                         <Button onClick={handleServiceRestart} color="error" variant="contained">
-                            Yes, Restart Service
+                            {t('maintenance.yes_restart')}
                         </Button>
                     </DialogActions>
                 </Dialog>

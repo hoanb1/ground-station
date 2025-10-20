@@ -18,6 +18,7 @@
  */
 
 import {useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     betterStatusValue,
     getClassNamesBasedOnGridEditing,
@@ -56,6 +57,7 @@ import React from "react";
 import { Link } from "react-router-dom";
 
 const TargetSatelliteInfoIsland = () => {
+    const { t } = useTranslation('target');
     const { satelliteData, gridEditable } = useSelector((state) => state.targetSatTrack);
 
     const DataPoint = ({ icon: Icon, label, value, color = '#ffffff', unit = '' }) => (
@@ -110,7 +112,7 @@ const TargetSatelliteInfoIsland = () => {
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <SatelliteAltIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            {"Satellite Info"}
+                            {t('satellite_info.title')}
                         </Typography>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
@@ -165,37 +167,37 @@ const TargetSatelliteInfoIsland = () => {
             <Box sx={{ pr: 2, pl: 2, pt: 1, flex: 1, overflow: 'auto' }}>
 
                 {/* Position Data */}
-                <Section title="POSITION DATA" icon={ExploreIcon}>
+                <Section title={t('satellite_info.sections.position_data')} icon={ExploreIcon}>
                     <Grid container spacing={1}>
                         <Grid size={6}>
                             <DataPoint
                                 icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#4fc3f7' }} />}
-                                label="LATITUDE"
-                                value={satelliteData && satelliteData['position'] ? humanizeLatitude(satelliteData['position']['lat']) : 'N/A'}
+                                label={t('satellite_info.labels.latitude')}
+                                value={satelliteData && satelliteData['position'] ? humanizeLatitude(satelliteData['position']['lat']) : t('satellite_info.values.na')}
                                 color="#4fc3f7"
                             />
                         </Grid>
                         <Grid size={6}>
                             <DataPoint
                                 icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#81c784' }} />}
-                                label="LONGITUDE"
-                                value={satelliteData && satelliteData['position'] ? humanizeLongitude(satelliteData['position']['lon']) : 'N/A'}
+                                label={t('satellite_info.labels.longitude')}
+                                value={satelliteData && satelliteData['position'] ? humanizeLongitude(satelliteData['position']['lon']) : t('satellite_info.values.na')}
                                 color="#81c784"
                             />
                         </Grid>
                         <Grid size={6}>
                             <DataPoint
                                 icon={MyLocationIcon}
-                                label="AZIMUTH"
-                                value={satelliteData && satelliteData['position'] && satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
+                                label={t('satellite_info.labels.azimuth')}
+                                value={satelliteData && satelliteData['position'] && satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : t('satellite_info.values.na')}
                                 color="#ffb74d"
                             />
                         </Grid>
                         <Grid size={6}>
                             <DataPoint
                                 icon={HeightIcon}
-                                label="ELEVATION"
-                                value={satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
+                                label={t('satellite_info.labels.elevation')}
+                                value={satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : t('satellite_info.values.na')}
                                 color="#e57373"
                             />
                         </Grid>
@@ -205,13 +207,13 @@ const TargetSatelliteInfoIsland = () => {
                 <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
 
                 {/* Orbital Data */}
-                <Section title="ORBITAL DATA" icon={SpeedIcon}>
+                <Section title={t('satellite_info.sections.orbital_data')} icon={SpeedIcon}>
                     <Grid container spacing={1}>
                         <Grid size={6}>
                             <DataPoint
                                 icon={HeightIcon}
-                                label="ALTITUDE"
-                                value={satelliteData && satelliteData['position'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : 'N/A'}
+                                label={t('satellite_info.labels.altitude')}
+                                value={satelliteData && satelliteData['position'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : t('satellite_info.values.na')}
                                 color="#ba68c8"
                                 unit="km"
                             />
@@ -219,8 +221,8 @@ const TargetSatelliteInfoIsland = () => {
                         <Grid size={6}>
                             <DataPoint
                                 icon={SpeedIcon}
-                                label="VELOCITY"
-                                value={satelliteData && satelliteData['position'] ? humanizeVelocity(satelliteData['position']['vel']) : 'N/A'}
+                                label={t('satellite_info.labels.velocity')}
+                                value={satelliteData && satelliteData['position'] ? humanizeVelocity(satelliteData['position']['vel']) : t('satellite_info.values.na')}
                                 color="#4db6ac"
                                 unit="km/s"
                             />
@@ -233,14 +235,14 @@ const TargetSatelliteInfoIsland = () => {
                                         <CancelIcon sx={{ fontSize: 14, mr: 0.5, color: 'error.main' }} />
                                     }
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
-                                        GEOSTATIONARY
+                                        {t('satellite_info.labels.geostationary')}
                                     </Typography>
                                 </Box>
                                 <Typography variant="body1" sx={{
                                     fontWeight: 'bold',
                                     color: satelliteData && satelliteData['details'] && satelliteData['details']['is_geostationary'] ? 'success.main' : 'error.main'
                                 }}>
-                                    {satelliteData && satelliteData['details'] && satelliteData['details']['is_geostationary'] ? 'YES' : 'NO'}
+                                    {satelliteData && satelliteData['details'] && satelliteData['details']['is_geostationary'] ? t('satellite_info.values.yes') : t('satellite_info.values.no')}
                                 </Typography>
                             </Box>
                         </Grid>
@@ -250,27 +252,27 @@ const TargetSatelliteInfoIsland = () => {
                 <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
 
                 {/* Metadata */}
-                <Section title="METADATA" icon={PublicIcon}>
+                <Section title={t('satellite_info.sections.metadata')} icon={PublicIcon}>
                     <Grid container spacing={1}>
                         <Grid size={6}>
                             <Box sx={{ mb: 0 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                    LAUNCH DATE
+                                    {t('satellite_info.labels.launch_date')}
                                 </Typography>
                                 <Typography variant="body2" sx={{ color: '#ffcc02', fontWeight: 'bold' }}>
-                                    {satelliteData && satelliteData['details'] && satelliteData['details']['launched'] ? humanizeDate(satelliteData['details']['launched']) : 'N/A'}
+                                    {satelliteData && satelliteData['details'] && satelliteData['details']['launched'] ? humanizeDate(satelliteData['details']['launched']) : t('satellite_info.values.na')}
                                 </Typography>
                             </Box>
                         </Grid>
                         <Grid size={6}>
                             <Box sx={{ mb: 0 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                    COUNTRIES
+                                    {t('satellite_info.labels.countries')}
                                 </Typography>
                                 <Box>
                                     {satelliteData && satelliteData['details'] && satelliteData['details']['countries'] ?
                                         renderCountryFlagsCSV(satelliteData['details']['countries']) :
-                                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>N/A</Typography>
+                                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>{t('satellite_info.values.na')}</Typography>
                                     }
                                 </Box>
                             </Box>
@@ -283,18 +285,18 @@ const TargetSatelliteInfoIsland = () => {
                             <Grid container spacing={1}>
                                 <Grid size={6}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                        SATELLITE ID
+                                        {t('satellite_info.labels.satellite_id')}
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 'bold', fontSize: '0.8rem' }}>
-                                        {satelliteData['details']['sat_id'] || 'N/A'}
+                                        {satelliteData['details']['sat_id'] || t('satellite_info.values.na')}
                                     </Typography>
                                 </Grid>
                                 <Grid size={6}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                        ADDED TO DB
+                                        {t('satellite_info.labels.added_to_db')}
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
-                                        {satelliteData['details']['added'] ? humanizeDate(satelliteData['details']['added']) : 'N/A'}
+                                        {satelliteData['details']['added'] ? humanizeDate(satelliteData['details']['added']) : t('satellite_info.values.na')}
                                     </Typography>
                                 </Grid>
                             </Grid>
@@ -302,7 +304,7 @@ const TargetSatelliteInfoIsland = () => {
                             {satelliteData['details']['alternative_name'] && (
                                 <Box sx={{ mt: 1 }}>
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                        ALTERNATIVE NAME
+                                        {t('satellite_info.labels.alternative_name')}
                                     </Typography>
                                     <Typography variant="body2" sx={{ color: 'text.primary', fontWeight: 'bold' }}>
                                         {satelliteData['details']['alternative_name']}

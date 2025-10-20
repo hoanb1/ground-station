@@ -41,11 +41,13 @@ import {setTrackingStateInBackend} from "../target/target-slice.jsx";
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 import SettingsInputAntennaIcon from "@mui/icons-material/SettingsInputAntenna";
 import PublicIcon from "@mui/icons-material/Public";
+import { useTranslation } from 'react-i18next';
 
 const OverviewSatelliteInfoCard = () => {
     const dispatch = useDispatch();
     const navigate = useNavigate();
     const {socket} = useSocket();
+    const { t } = useTranslation('overview');
     const {
         satelliteData,
         selectedSatelliteId,
@@ -85,7 +87,7 @@ const OverviewSatelliteInfoCard = () => {
                 // Success handling
             })
             .catch((error) => {
-                toast.error(`Failed to start tracking with the rotator: ${error.message}`);
+                toast.error(t('satellite_info.failed_tracking') + `: ${error.message}`);
             });
     };
 
@@ -147,7 +149,7 @@ const OverviewSatelliteInfoCard = () => {
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
                         <SatelliteIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
-                            Satellite Monitor
+                            {t('satellite_info.title')}
                         </Typography>
                     </Box>
                     <Typography variant="caption" sx={{color: 'text.secondary'}}>
@@ -166,7 +168,7 @@ const OverviewSatelliteInfoCard = () => {
                 }}>
                     <CircularProgress color="secondary" />
                     <Typography variant="body2" sx={{ mt: 2, color: 'text.secondary' }}>
-                        Loading satellite data...
+                        {t('satellite_info.loading')}
                     </Typography>
                 </Box>
             ) : (
@@ -235,12 +237,12 @@ const OverviewSatelliteInfoCard = () => {
                     <Box sx={{ pr: 2, pl: 2, pt: 1, flex: 1, overflow: 'auto' }}>
 
                         {/* Position Data */}
-                        <Section title="POSITION DATA" icon={ExploreIcon}>
+                        <Section title={t('satellite_info.position_data')} icon={ExploreIcon}>
                             <Grid container spacing={1}>
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#4fc3f7' }} />}
-                                        label="LATITUDE"
+                                        label={t('satellite_info.latitude')}
                                         value={satelliteData && satelliteData['position'] ? humanizeLatitude(satelliteData['position']['lat']) : 'N/A'}
                                         color="#4fc3f7"
                                     />
@@ -248,7 +250,7 @@ const OverviewSatelliteInfoCard = () => {
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#81c784' }} />}
-                                        label="LONGITUDE"
+                                        label={t('satellite_info.longitude')}
                                         value={satelliteData && satelliteData['position'] ? humanizeLongitude(satelliteData['position']['lon']) : 'N/A'}
                                         color="#81c784"
                                     />
@@ -256,7 +258,7 @@ const OverviewSatelliteInfoCard = () => {
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={MyLocationIcon}
-                                        label="AZIMUTH"
+                                        label={t('satellite_info.azimuth')}
                                         value={satelliteData && satelliteData['position'] && satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
                                         color="#ffb74d"
                                     />
@@ -264,7 +266,7 @@ const OverviewSatelliteInfoCard = () => {
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={HeightIcon}
-                                        label="ELEVATION"
+                                        label={t('satellite_info.elevation')}
                                         value={satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
                                         color="#e57373"
                                     />
@@ -275,12 +277,12 @@ const OverviewSatelliteInfoCard = () => {
                         <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
 
                         {/* Orbital Data */}
-                        <Section title="ORBITAL DATA" icon={SpeedIcon}>
+                        <Section title={t('satellite_info.orbital_data')} icon={SpeedIcon}>
                             <Grid container spacing={1}>
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={HeightIcon}
-                                        label="ALTITUDE"
+                                        label={t('satellite_info.altitude')}
                                         value={satelliteData && satelliteData['position'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : 'N/A'}
                                         color="#ba68c8"
                                         unit="km"
@@ -289,7 +291,7 @@ const OverviewSatelliteInfoCard = () => {
                                 <Grid size={6}>
                                     <DataPoint
                                         icon={SpeedIcon}
-                                        label="VELOCITY"
+                                        label={t('satellite_info.velocity')}
                                         value={satelliteData && satelliteData['position'] ? humanizeVelocity(satelliteData['position']['vel']) : 'N/A'}
                                         color="#4db6ac"
                                         unit="km/s"
@@ -301,10 +303,10 @@ const OverviewSatelliteInfoCard = () => {
                         <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
 
                         {/* Communication Data */}
-                        <Section title="COMMUNICATION" icon={SettingsInputAntennaIcon}>
+                        <Section title={t('satellite_info.communication')} icon={SettingsInputAntennaIcon}>
                             <Box sx={{ mb: 0 }}>
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 1, display: 'block' }}>
-                                    FREQUENCY BANDS
+                                    {t('satellite_info.frequency_bands')}
                                 </Typography>
                                 <Box sx={{ display: 'flex', flexWrap: 'wrap', gap: 0.5 }}>
                                     {bands.map((band, index) => (
@@ -327,22 +329,22 @@ const OverviewSatelliteInfoCard = () => {
                         <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
 
                         {/* Metadata */}
-                        <Section title="METADATA" icon={PublicIcon}>
+                        <Section title={t('satellite_info.metadata')} icon={PublicIcon}>
                             <Grid container spacing={2}>
                                 <Grid size={6}>
                                     <Box sx={{ mb: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                            COUNTRIES
+                                            {t('satellite_info.countries')}
                                         </Typography>
                                         <Box>
-                                            {satelliteData && satelliteData['details'] ? (renderCountryFlagsCSV(satelliteData['details']['countries']) || 'Unknown') : 'Unknown'}
+                                            {satelliteData && satelliteData['details'] ? (renderCountryFlagsCSV(satelliteData['details']['countries']) || t('satellite_info.unknown')) : t('satellite_info.unknown')}
                                         </Box>
                                     </Box>
                                 </Grid>
                                 <Grid size={6}>
                                     <Box sx={{ mb: 0 }}>
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
-                                            LAST UPDATE
+                                            {t('satellite_info.last_update')}
                                         </Typography>
                                         <Typography variant="body2" sx={{ color: '#ffcc02' }}>
                                             {satelliteData && satelliteData['details'] ? betterDateTimes(satelliteData['details']['updated']) : 'N/A'}
@@ -382,7 +384,7 @@ const OverviewSatelliteInfoCard = () => {
                                     }
                                 }}
                             >
-                                {trackingSatelliteId === selectedSatelliteId ? "CURRENTLY TARGETED" : "SET AS TARGET"}
+                                {trackingSatelliteId === selectedSatelliteId ? t('satellite_info.currently_targeted') : t('satellite_info.set_as_target')}
                             </Button>
                             <IconButton
                                 disabled={!selectedSatelliteId}

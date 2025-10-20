@@ -34,6 +34,7 @@ import { toast } from '../../utils/toast-with-timestamp.jsx';
 import {useSocket} from "../common/socket.jsx";
 import {DataGrid, gridClasses} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     setGridEditable,
     setMapZoomLevel,
@@ -80,6 +81,7 @@ function getMapZoomFromStorage() {
 const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayout() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('overview');
     const {
         showPastOrbitPath,
         showFutureOrbitPath,
@@ -353,7 +355,7 @@ const GlobalSatelliteTrackLayout = React.memo(function GlobalSatelliteTrackLayou
                 // Success handling
             })
             .catch((error) => {
-                toast.error(`Failed to start tracking with the rotator: ${error.message}`);
+                toast.error(`${t('satellite_info.failed_tracking')}: ${error.message}`);
             });
     };
 

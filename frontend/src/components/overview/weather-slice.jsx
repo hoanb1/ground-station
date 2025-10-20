@@ -21,6 +21,7 @@
 
 import {createAsyncThunk, createSlice} from '@reduxjs/toolkit';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
+import i18n from '../../i18n/config.js';
 
 const fetchWeatherByCoordinates = async (latitude, longitude, apiKey="471aacccad269b47ed7d2aa3369c9f71") => {
     try {
@@ -28,7 +29,7 @@ const fetchWeatherByCoordinates = async (latitude, longitude, apiKey="471aacccad
             `https://api.openweathermap.org/data/2.5/weather?lat=${latitude}&lon=${longitude}&units=metric&appid=${apiKey}`
         );
         if (!response.ok) {
-            throw new Error('Weather data could not be fetched');
+            throw new Error(i18n.t('overview:weather_errors.fetch_failed'));
         }
         const data = await response.json();
         return {
@@ -54,7 +55,7 @@ export const getWeatherData = createAsyncThunk(
         try {
             return await fetchWeatherByCoordinates(latitude, longitude, apiKey);
         } catch (error) {
-            toast.error('Failed to fetch weather data');
+            toast.error(i18n.t('overview:weather_errors.failed_to_fetch'));
             return rejectWithValue(error.message);
         }
     }

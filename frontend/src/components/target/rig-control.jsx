@@ -36,6 +36,7 @@ import {
     setTrackingStateInBackend
 } from "./target-slice.jsx";
 import { toast } from "../../utils/toast-with-timestamp.jsx";
+import { useTranslation } from 'react-i18next';
 import {
     getClassNamesBasedOnGridEditing,
     humanizeFrequency,
@@ -55,6 +56,7 @@ import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 const RigControl = React.memo(function RigControl() {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('target');
     const {
         satGroups,
         groupId,
@@ -94,11 +96,11 @@ const RigControl = React.memo(function RigControl() {
 
     function getConnectionStatusofRig() {
         if (rigData['connected'] === true) {
-            return "Connected";
+            return t('rig_control.connected');
         } else  if (rigData['connected'] === false) {
-            return "Not connected";
+            return t('rig_control.not_connected');
         } else {
-            return "unknown";
+            return t('rig_control.unknown');
         }
     }
 
@@ -119,7 +121,7 @@ const RigControl = React.memo(function RigControl() {
 
             })
             .catch((error) => {
-                toast.error(`Failed to start tracking: ${error.message}`);
+                toast.error(`${t('rig_control.failed_start_tracking')}: ${error.message}`);
             });
     };
 
@@ -202,7 +204,7 @@ const RigControl = React.memo(function RigControl() {
                     <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
                                  size="small">
-                        <InputLabel htmlFor="radiorig-select">Radio rig</InputLabel>
+                        <InputLabel htmlFor="radiorig-select">{t('rig_control_labels.rig_label')}</InputLabel>
                         <Select
                             id="radiorig-select"
                             value={rigs.length > 0? selectedRadioRig: "none"}
@@ -211,16 +213,16 @@ const RigControl = React.memo(function RigControl() {
                             }}
                             variant={'filled'}>
                             <MenuItem value="none">
-                                [no radio rig control]
+                                {t('rig_control_labels.no_rig_control')}
                             </MenuItem>
                             <MenuItem value="" disabled>
-                                <em>select a rig</em>
+                                <em>{t('rig_control_labels.select_rig')}</em>
                             </MenuItem>
                             {rigs.map((rig, index) => {
                                 return <MenuItem type={"rig"} value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
                             })}
                             <MenuItem value="" disabled>
-                                <em>select a SDR</em>
+                                <em>{t('rig_control_labels.select_sdr')}</em>
                             </MenuItem>
                             {sdrs.map((sdr, index) => {
                                 return <MenuItem type={"sdr"} value={sdr.id} key={index}>{sdr.name}</MenuItem>;
@@ -233,7 +235,7 @@ const RigControl = React.memo(function RigControl() {
                     <FormControl disabled={["tracking"].includes(trackingState['rig_state'])}
                                  sx={{minWidth: 200, marginTop: 0, marginBottom: 0}} fullWidth variant="filled"
                                  size="small">
-                        <InputLabel htmlFor="transmitter-select">Transmitter</InputLabel>
+                        <InputLabel htmlFor="transmitter-select">{t('rig_control_labels.transmitter_label')}</InputLabel>
                         <Select
                             id="transmitter-select"
                             value={availableTransmitters.length > 0 && availableTransmitters.some(t => t.id === selectedTransmitter) ? selectedTransmitter : "none"}
@@ -242,15 +244,15 @@ const RigControl = React.memo(function RigControl() {
                             }}
                             variant={'filled'}>
                             <MenuItem value="none">
-                                [no frequency control]
+                                {t('rig_control_labels.no_frequency_control')}
                             </MenuItem>
                             {availableTransmitters.length === 0 ? (
                                 <MenuItem value="" disabled>
-                                    <em>No transmitters available for this satellite</em>
+                                    <em>{t('rig_control_labels.no_transmitters')}</em>
                                 </MenuItem>
                             ) : (
                                 <MenuItem value="" disabled>
-                                    <em>select a transmitter</em>
+                                    <em>{t('rig_control_labels.select_transmitter')}</em>
                                 </MenuItem>
                             )}
                             {availableTransmitters.map((transmitter, index) => {
@@ -288,7 +290,7 @@ const RigControl = React.memo(function RigControl() {
                                 }}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            On Rig:
+                                            {t('rig_control.on_rig')}
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow">
@@ -306,7 +308,7 @@ const RigControl = React.memo(function RigControl() {
                                 }}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            Doppler shift:
+                                            {t('rig_control.doppler_shift')}
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow">
@@ -324,7 +326,7 @@ const RigControl = React.memo(function RigControl() {
                                 }}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            Transmitted:
+                                            {t('rig_control.transmitted')}
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow">
@@ -342,7 +344,7 @@ const RigControl = React.memo(function RigControl() {
                                 }}>
                                     <Grid size="auto" style={{minWidth: '100px'}}>
                                         <Typography variant="body2" sx={{color: 'text.secondary'}}>
-                                            Observed:
+                                            {t('rig_control.observed')}
                                         </Typography>
                                     </Grid>
                                     <Grid size="grow">
@@ -370,7 +372,7 @@ const RigControl = React.memo(function RigControl() {
                                     onClick={() => {
                                         connectRig()
                                     }}>
-                                CONNECT
+                                {t('rig_control.connect')}
                             </Button>
                         </Grid>
                         <Grid size="grow" style={{paddingRight: '0rem', flex: 1}}>
@@ -380,7 +382,7 @@ const RigControl = React.memo(function RigControl() {
                                     onClick={() => {
                                         disconnectRig()
                                     }}>
-                                DISCONNECT
+                                {t('rig_control.disconnect')}
                             </Button>
                         </Grid>
                     </Grid>
@@ -401,7 +403,7 @@ const RigControl = React.memo(function RigControl() {
                                     variant="contained" color="success" style={{height: '60px'}}
                                     onClick={()=>{handleTrackingStart()}}
                             >
-                                TRACK RADIO
+                                {t('rig_control.track_radio')}
                             </Button>
                         </Grid>
                         <Grid size="grow">
@@ -411,7 +413,7 @@ const RigControl = React.memo(function RigControl() {
                                         satelliteId === "" || ["none", ""].includes(selectedRadioRig)}
                                     variant="contained" color="error" style={{height: '60px'}}
                                     onClick={() => {handleTrackingStop()}}>
-                                STOP
+                                {t('rig_control.stop')}
                             </Button>
                         </Grid>
                     </Grid>

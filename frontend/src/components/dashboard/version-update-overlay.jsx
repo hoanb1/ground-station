@@ -5,6 +5,7 @@ import { Backdrop, Box, Typography, Button, CircularProgress } from "@mui/materi
 import { useSelector, useDispatch } from "react-redux";
 import { clearVersionChangeFlag } from './version-slice.jsx';
 import { useEffect, useState } from "react";
+import { useTranslation } from 'react-i18next';
 
 // Minimal animations
 const fadeIn = keyframes`
@@ -23,6 +24,7 @@ const COUNTDOWN_DURATION = 5; // 5 seconds
 
 function VersionUpdateOverlay() {
     const dispatch = useDispatch();
+    const { t } = useTranslation('dashboard');
     const { hasVersionChanged, data } = useSelector((state) => state.version);
     const [countdown, setCountdown] = useState(COUNTDOWN_DURATION);
     const [intervalId, setIntervalId] = useState(null);
@@ -120,7 +122,7 @@ function VersionUpdateOverlay() {
                                 fontSize: '1rem'
                             }}
                         >
-                            New Version Available
+                            {t('version_update.new_version_available')}
                         </Typography>
                         <Typography
                             variant="body2"
@@ -129,7 +131,7 @@ function VersionUpdateOverlay() {
                                 fontSize: '0.875rem'
                             }}
                         >
-                            Version {data?.version}
+                            {t('version_update.version', { version: data?.version })}
                         </Typography>
                     </Box>
                 </Box>
@@ -170,7 +172,7 @@ function VersionUpdateOverlay() {
                             textAlign: 'center'
                         }}
                     >
-                        {countdown > 0 ? `Refreshing in ${countdown}s...` : 'Refreshing now...'}
+                        {countdown > 0 ? t('version_update.refreshing_in', { seconds: countdown }) : t('version_update.refreshing_now')}
                     </Typography>
                 </Box>
 
@@ -203,7 +205,7 @@ function VersionUpdateOverlay() {
                             py: 0.5
                         }}
                     >
-                        Cancel
+                        {t('version_update.cancel')}
                     </Button>
                     <Button
                         variant="contained"
@@ -227,7 +229,7 @@ function VersionUpdateOverlay() {
                             py: 0.5
                         }}
                     >
-                        Refresh Now
+                        {t('version_update.refresh_now')}
                     </Button>
                 </Box>
 

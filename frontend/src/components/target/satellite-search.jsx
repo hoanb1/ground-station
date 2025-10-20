@@ -5,10 +5,12 @@ import {Fragment, useCallback, useEffect} from "react";
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import Autocomplete from "@mui/material/Autocomplete";
 import {CircularProgress, TextField} from "@mui/material";
+import { useTranslation } from 'react-i18next';
 
 
 const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocomplete({onSatelliteSelect}) {
     const {socket} = useSocket();
+    const { t } = useTranslation('target');
     const [open, setOpen] = React.useState(false);
     const [options, setOptions] = React.useState([]);
     const [loading, setLoading] = React.useState(false);
@@ -75,7 +77,7 @@ const SatelliteSearchAutocomplete = React.memo(function SatelliteSearchAutocompl
                     variant={"filled"}
                     fullWidth={true}
                     {...params}
-                    label="Search satellites (by name or NORAD ID)"
+                    label={t('satellite_search.search_label')}
                     slotProps={{
                         input: {
                             ...params.InputProps,

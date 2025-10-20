@@ -34,6 +34,7 @@ import {
     Typography
 } from "@mui/material";
 import {useEffect, useRef, useState} from "react";
+import { useTranslation } from 'react-i18next';
 import DialogTitle from "@mui/material/DialogTitle";
 import Dialog from "@mui/material/Dialog";
 import DialogContent from "@mui/material/DialogContent";
@@ -143,6 +144,7 @@ export default function SDRsPage() {
     const [selected, setSelected] = useState([]);
     const [pageSize, setPageSize] = useState(10);
     const hasInitialized = useRef(false);
+    const { t } = useTranslation('hardware');
 
     const {
         loading,
@@ -169,20 +171,20 @@ export default function SDRsPage() {
 
     const columns = [
         {
-            field: 'name', headerName: 'Name', flex: 1, minWidth: 150
+            field: 'name', headerName: t('sdr.name'), flex: 1, minWidth: 150
         },
         {
-            field: 'type', headerName: 'Type', flex: 1, minWidth: 100
+            field: 'type', headerName: t('sdr.type'), flex: 1, minWidth: 100
         },
         {
-            field: 'host', headerName: 'Host', flex: 1, minWidth: 150
+            field: 'host', headerName: t('sdr.host'), flex: 1, minWidth: 150
         },
         {
-            field: 'port', headerName: 'Port', flex: 1, minWidth: 100
+            field: 'port', headerName: t('sdr.port'), flex: 1, minWidth: 100
         },
         {
             field: 'frequency_min',
-            headerName: 'Frequency Range (MHz)',
+            headerName: t('sdr.frequency_range'),
             flex: 1,
             minWidth: 200,
             renderCell: (params) => {
@@ -193,10 +195,10 @@ export default function SDRsPage() {
             }
         },
         {
-            field: 'driver', headerName: 'Driver', flex: 1, minWidth: 100
+            field: 'driver', headerName: t('sdr.driver'), flex: 1, minWidth: 100
         },
         {
-            field: 'serial', headerName: 'Serial', flex: 1, minWidth: 150
+            field: 'serial', headerName: t('sdr.serial'), flex: 1, minWidth: 150
         },
     ];
 
@@ -234,7 +236,7 @@ export default function SDRsPage() {
         dispatch(submitOrEditSDR({socket, formValues}))
             .unwrap()
             .then(() => {
-                toast.success('SDR saved successfully');
+                toast.success(t('sdr.saved_success'));
                 dispatch(setOpenAddDialog(false));
             })
             .catch((err) => {
@@ -246,7 +248,7 @@ export default function SDRsPage() {
         dispatch(deleteSDRs({ socket, selectedIds: selected }))
             .unwrap()
             .then(() => {
-                toast.success('SDR(s) deleted successfully');
+                toast.success(t('sdr.deleted_success'));
                 dispatch(setOpenDeleteConfirm(false));
             })
             .catch((err) => {
@@ -281,7 +283,7 @@ export default function SDRsPage() {
         // Define common fields that all SDR types have
         const fields = [
             <FormControl key="type-select" fullWidth variant="filled">
-                <InputLabel id="sdr-type-label">SDR Type</InputLabel>
+                <InputLabel id="sdr-type-label">{t('sdr.sdr_type')}</InputLabel>
                 <Select
                     name="type"
                     labelId="sdr-type-label"
@@ -291,13 +293,13 @@ export default function SDRsPage() {
                         dispatch(setSelectedSdrDevice('')); // Reset selected SDR when type changes
                     }}
                     variant={'filled'}>
-                    <MenuItem value="rtlsdrusbv3">RTL-SDR USB v3</MenuItem>
-                    <MenuItem value="rtlsdrtcpv3">RTL-SDR TCP v3</MenuItem>
-                    <MenuItem value="rtlsdrusbv4">RTL-SDR USB v4</MenuItem>
-                    <MenuItem value="rtlsdrtcpv4">RTL-SDR TCP v4</MenuItem>
-                    <MenuItem value="soapysdrremote">SoapySDR Remote</MenuItem>
-                    <MenuItem value="soapysdrlocal">SoapySDR USB</MenuItem>
-                    <MenuItem value="uhd">UHD</MenuItem>
+                    <MenuItem value="rtlsdrusbv3">{t('sdr.rtlsdr_usb_v3')}</MenuItem>
+                    <MenuItem value="rtlsdrtcpv3">{t('sdr.rtlsdr_tcp_v3')}</MenuItem>
+                    <MenuItem value="rtlsdrusbv4">{t('sdr.rtlsdr_usb_v4')}</MenuItem>
+                    <MenuItem value="rtlsdrtcpv4">{t('sdr.rtlsdr_tcp_v4')}</MenuItem>
+                    <MenuItem value="soapysdrremote">{t('sdr.soapysdr_remote')}</MenuItem>
+                    <MenuItem value="soapysdrlocal">{t('sdr.soapysdr_usb')}</MenuItem>
+                    <MenuItem value="uhd">{t('sdr.uhd')}</MenuItem>
                 </Select>
             </FormControl>
         ];
@@ -340,7 +342,7 @@ export default function SDRsPage() {
                                 }}
                             />
                             <Typography variant="body2" component="span">
-                                Probing for local SoapySDR devices...
+                                {t('sdr.probing_local')}
                             </Typography>
                         </Alert>
                     );
@@ -574,13 +576,8 @@ export default function SDRsPage() {
     return (
         <Paper elevation={3} sx={{padding: 2, marginTop: 0}}>
             <Alert severity="info" sx={{mb: 2}}>
-                <AlertTitle>Software Defined Radio (SDR) Configuration</AlertTitle>
-                Configure and manage SDR devices for satellite signal reception and spectrum analysis. This system
-                supports multiple SDR platforms through SoapySDR for universal hardware compatibility, native
-                RTL-SDR drivers for cost-effective USB dongles, and native UHD support for professional USRP devices.
-                SoapySDR provides a hardware-independent API supporting RTL-SDR, AirSpy, BladeRF, HackRF, LimeSDR,
-                and many other devices. Configure connection parameters, frequency ranges, and device-specific
-                settings for local USB devices, network-attached SDRs, or remote SoapySDR servers.
+                <AlertTitle>{t('sdr.title')}</AlertTitle>
+                {t('sdr.subtitle')}
                 <Box sx={{pl: 2, mt: 1}}>
                     For RTL-SDR
                     devices specifically, use these terminal commands to manage serial numbers:
@@ -595,7 +592,7 @@ export default function SDRsPage() {
             </Alert>
             {soapyServers && Object.keys(soapyServers).length > 0 ? (
                 <Alert severity="success" sx={{mb: 2}}>
-                    <AlertTitle>Discovered SoapySDR Servers</AlertTitle>
+                    <AlertTitle>{t('sdr.discovered_servers')}</AlertTitle>
                     {Object.entries(soapyServers).map(([key, server], index) => (
                         <Box key={key} sx={{pl: 2, mt: 1}}>
                             <Typography component="div" variant="body2" color="text.secondary"
@@ -648,10 +645,10 @@ export default function SDRsPage() {
                     />
                     <Stack direction="row" spacing={2} style={{marginTop: 15}}>
                         <Button variant="contained" onClick={() => dispatch(setOpenAddDialog(true))}>
-                            Add
+                            {t('sdr.add')}
                         </Button>
                         <Dialog fullWidth={true} open={openAddDialog} onClose={() => dispatch(setOpenAddDialog(false))}>
-                            <DialogTitle>Add SDR</DialogTitle>
+                            <DialogTitle>{t('sdr.add_dialog_title')}</DialogTitle>
                             <DialogContent>
                                 <Stack spacing={2}>
                                     {renderFormFields()}
@@ -659,14 +656,14 @@ export default function SDRsPage() {
                             </DialogContent>
                             <DialogActions style={{padding: '0px 24px 20px 20px'}}>
                                 <Button onClick={() => dispatch(setOpenAddDialog(false))} color="error" variant="outlined">
-                                    Cancel
+                                    {t('sdr.cancel')}
                                 </Button>
                                 <Button
                                     color="success"
                                     variant="contained"
                                     onClick={handleSubmit}
                                 >
-                                    Submit
+                                    {t('sdr.submit')}
                                 </Button>
                             </DialogActions>
                         </Dialog>
@@ -681,7 +678,7 @@ export default function SDRsPage() {
                                 }
                             }}
                         >
-                            Edit
+                            {t('sdr.edit')}
                         </Button>
                         <Button
                             variant="contained"
@@ -689,26 +686,26 @@ export default function SDRsPage() {
                             color="error"
                             onClick={() => dispatch(setOpenDeleteConfirm(true))}
                         >
-                            Delete
+                            {t('sdr.delete')}
                         </Button>
                         <Dialog
                             open={openDeleteConfirm}
                             onClose={() => dispatch(setOpenDeleteConfirm(false))}
                         >
-                            <DialogTitle>Confirm Deletion</DialogTitle>
+                            <DialogTitle>{t('sdr.confirm_deletion')}</DialogTitle>
                             <DialogContent>
-                                Are you sure you want to delete the selected item(s)?
+                                {t('sdr.confirm_delete_message')}
                             </DialogContent>
                             <DialogActions>
                                 <Button onClick={() => dispatch(setOpenDeleteConfirm(false))} color="error" variant="outlined">
-                                    Cancel
+                                    {t('sdr.cancel')}
                                 </Button>
                                 <Button
                                     variant="contained"
                                     onClick={handleDelete}
                                     color="error"
                                 >
-                                    Delete
+                                    {t('sdr.delete')}
                                 </Button>
                             </DialogActions>
                         </Dialog>

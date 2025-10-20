@@ -1,0 +1,56 @@
+{
+  "app_name": "Ground Station",
+  "loading": "Loading...",
+  "error": "Error",
+  "success": "Success",
+  "save": "Save",
+  "cancel": "Cancel",
+  "delete": "Delete",
+  "edit": "Edit",
+  "add": "Add",
+  "close": "Close",
+  "confirm": "Confirm",
+  "yes": "Yes",
+  "no": "No",
+  "search": "Search",
+  "filter": "Filter",
+  "actions": "Actions",
+  "name": "Name",
+  "description": "Description",
+  "status": "Status",
+  "connected": "Connected",
+  "disconnected": "Disconnected",
+  "online": "Online",
+  "offline": "Offline",
+  "notifications": {
+    "connection": {
+      "connected_to_backend": "Connected to backend",
+      "reconnecting_to_backend": "Reconnecting to backend",
+      "attempt": "Attempt {{attempt}}",
+      "connection_error": "Connection error",
+      "lost_connection": "Lost connection to backend"
+    },
+    "sync": {
+      "tle_sync_complete": "TLE sync complete!",
+      "new_items": "New: {{satellites}} satellites, {{transmitters}} transmitters",
+      "modified_items": "Modified: {{satellites}} satellites, {{transmitters}} transmitters",
+      "removed_items": "Removed: {{satellites}} satellites, {{transmitters}} transmitters",
+      "no_changes": "No changes detected"
+    },
+    "rotator": {
+      "connected": "Rotator connected",
+      "disconnected": "Rotator disconnected"
+    },
+    "radio": {
+      "connected": "Radio connected",
+      "disconnected": "Radio disconnected"
+    },
+    "tracking": {
+      "elevation_below_horizon": "Elevation of target below the horizon",
+      "azimuth_out_of_bounds": "Target azimuth out of bounds",
+      "below_min_elevation": "Target below minimum elevation",
+      "satellite_changed": "Target satellite changed",
+      "satellite_info": "{{name}} (NORAD {{noradId}})"
+    }
+  }
+}

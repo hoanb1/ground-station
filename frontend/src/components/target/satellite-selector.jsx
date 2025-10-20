@@ -30,6 +30,7 @@ import {getClassNamesBasedOnGridEditing, humanizeFrequency, TitleBar} from "../c
 import * as React from "react";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
+import { useTranslation } from 'react-i18next';
 import {
     fetchSatelliteGroups,
     fetchSatellitesByGroupId,
@@ -49,6 +50,7 @@ import SatelliteSearchAutocomplete from "./satellite-search.jsx";
 const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId, initialGroupId}) {
     const { socket } = useSocket();
     const dispatch = useDispatch();
+    const { t } = useTranslation('target');
     const {
         satGroups,
         groupId,
@@ -152,7 +154,7 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                Select a satellite
+                {t('satellite_selector.title')}
             </TitleBar>
             <Grid container spacing={0} columns={12}>
                 <Grid size={12}>
@@ -201,7 +203,7 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
                                     height: 105,
                                 }}
                             >
-                                STOP TRACKING
+                                {t('satellite_selector.stop_tracking')}
                             </Button>
                         </Grid>
                     </Grid>

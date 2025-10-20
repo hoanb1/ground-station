@@ -29,85 +29,86 @@ import MicrowaveIcon from '@mui/icons-material/Microwave';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import WavesIcon from '@mui/icons-material/Waves';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import i18n from '../i18n/config.js';
 
-export const NAVIGATION = [
+export const getNavigation = () => [
     {
         kind: 'header',
-        title: 'Tracking',
+        title: i18n.t('tracking', { ns: 'navigation' }),
     },
     {
         segment: '',
-        title: 'Birds eye view',
+        title: i18n.t('birds_eye_view', { ns: 'navigation' }),
         icon: <PublicIcon/>,
     },
     {
         segment: 'track',
-        title: 'Tracking console',
+        title: i18n.t('tracking_console', { ns: 'navigation' }),
         icon: <GpsFixedIcon/>,
     },
     {
         segment: 'waterfall',
-        title: 'Waterfall view',
+        title: i18n.t('waterfall_view', { ns: 'navigation' }),
         icon: <WavesIcon />,
     },
     {kind: 'divider'},
     {
         kind: 'header',
-        title: 'Hardware',
+        title: i18n.t('hardware', { ns: 'navigation' }),
     },
     {
         segment: 'hardware/rig',
-        title: 'Rigs',
+        title: i18n.t('rigs', { ns: 'navigation' }),
         icon: <RadioIcon/>,
     },
     {
         segment: 'hardware/rotator',
-        title: 'Rotators',
+        title: i18n.t('rotators', { ns: 'navigation' }),
         icon: <SatelliteIcon/>,
     },
     {
         segment: 'hardware/cameras',
-        title: 'Cameras',
+        title: i18n.t('cameras', { ns: 'navigation' }),
         icon: <VideocamIcon/>,
     },
     {
         segment: 'hardware/sdrs',
-        title: 'SDRs',
+        title: i18n.t('sdrs', { ns: 'navigation' }),
         icon: <MicrowaveIcon/>,
     },
     {kind: 'divider'},
     {
         kind: 'header',
-        title: 'Satellites',
+        title: i18n.t('satellites', { ns: 'navigation' }),
     },
     {
         segment: 'satellites/tlesources',
-        title: 'TLE sources',
+        title: i18n.t('tle_sources', { ns: 'navigation' }),
         icon: <TLEIcon/>,
     },
     {
         segment: 'satellites/satellites',
-        title: 'Satellites',
+        title: i18n.t('satellites', { ns: 'navigation' }),
         icon: <Satellite03Icon/>,
     },
     {
         segment: 'satellites/groups',
-        title: 'Groups',
+        title: i18n.t('groups', { ns: 'navigation' }),
         icon: <GroupWorkIcon/>,
     },
     {kind: 'divider'},
     {
         kind: 'header',
-        title: 'Settings',
+        title: i18n.t('settings', { ns: 'navigation' }),
     },
     {
         segment: 'settings/preferences',
-        title: 'Preferences',
+        title: i18n.t('preferences', { ns: 'navigation' }),
         icon: <PreferenceVerticalIcon/>,
     },
     {
         segment: 'settings/location',
-        title: 'Location',
+        title: i18n.t('location', { ns: 'navigation' }),
         icon: <AddHomeIcon/>,
     },
     // {
@@ -117,12 +118,15 @@ export const NAVIGATION = [
     // },
     {
         segment: 'settings/maintenance',
-        title: 'Maintenance',
+        title: i18n.t('maintenance', { ns: 'navigation' }),
         icon: <EngineeringIcon/>,
     },
     {
         segment: 'settings/about',
-        title: 'About',
+        title: i18n.t('about', { ns: 'navigation' }),
         icon: <InfoIcon/>,
     },
 ];
+
+// Keep NAVIGATION for backward compatibility but make it dynamic
+export const NAVIGATION = getNavigation();
