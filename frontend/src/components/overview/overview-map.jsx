@@ -328,7 +328,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     // Create a custom square icon using DivIcon for pixel-perfect square
                     const squareIcon = L.divIcon({
                         className: 'custom-square-marker',
-                        html: '<div style="width: 30px; height: 30px; border: 2px solid rgba(255,255,255,0.6); box-sizing: border-box;">' +
+                        html: '<div style="width: 30px; height: 30px; border: 2px solid white; opacity: 0.6; box-sizing: border-box;">' +
                             '</div>',
                         iconSize: [30, 30],
                         iconAnchor: [15, 15],
@@ -348,7 +348,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                     [lat, 180],
                                 ]}
                                 pathOptions={{
-                                    color: '#ffffff',
+                                    color: 'white',
                                     weight: 1,
                                     opacity: 1,
                                     smoothFactor: 1,
@@ -362,7 +362,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                     [90, lon],
                                 ]}
                                 pathOptions={{
-                                    color: '#ffffff',
+                                    color: 'white',
                                     weight: 1,
                                     opacity: 1,
                                     smoothFactor: 1,
@@ -381,7 +381,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                             noClip={true}
                             key={'coverage-' + satellite['name']}
                             pathOptions={{
-                                color: selectedSatelliteId === noradId ? '#ffffff' : satelliteCoverageColor,
+                                color: selectedSatelliteId === noradId ? 'white' : satelliteCoverageColor,
                                 fillColor: satelliteCoverageColor,
                                 weight: selectedSatelliteId === noradId ? 2 : 1,
                                 fill: true,
@@ -401,7 +401,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                 noClip={true}
                                 key={'coverage-' + satellite['name']}
                                 pathOptions={{
-                                    color: '#ffffff',
+                                    color: 'white',
                                     fillColor: satelliteCoverageColor,
                                     weight: 2,
                                     fill: true,
@@ -638,8 +638,8 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                     <CoordinateGrid
                         latInterval={15}
                         lngInterval={15}
-                        latColor="#FFFFFF"
-                        lngColor="#FFFFFF"
+                        latColor="white"
+                        lngColor="white"
                         weight={1}
                         opacity={0.5}
                         showLabels={false}

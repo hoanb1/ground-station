@@ -97,22 +97,22 @@ const HardwareSettingsPopover = () => {
 
     // Determine colors based on connection and tracking status
     const getRigColor = () => {
-        if (!connected) return '#666666'; // Grey when socket disconnected
-        if (!rigData.connected) return '#c33124'; // Red for disconnected
-        if (rigData.tracking) return '#62ec43'; // Blue for tracking
-        if (rigData.stopped) return '#6f883b'; // Orange for stopped
-        return '#245326'; // Green for connected but not tracking
+        if (!connected) return 'text.disabled'; // Grey when socket disconnected
+        if (!rigData.connected) return 'status.disconnected'; // Red for disconnected
+        if (rigData.tracking) return 'success.light'; // Green for tracking
+        if (rigData.stopped) return 'warning.dark'; // Orange for stopped
+        return 'success.dark'; // Green for connected but not tracking
     };
 
     const getRotatorColor = () => {
-        if (!connected) return '#666666'; // Grey when socket disconnected
-        if (!rotatorData.connected) return '#c33124'; // Red for disconnected
-        if (rotatorData.outofbounds) return "#853eda"; //
-        if (rotatorData.minelevation) return "#e67a7a"; //
-        if (rotatorData.slewing) return '#ff9800'; // Orange for slewing
-        if (rotatorData.tracking) return '#62ec43'; // Light green for tracking
-        if (rotatorData.stopped) return '#6f883b'; // Orange for stopped
-        return '#245326'; // Green for connected but not tracking
+        if (!connected) return 'text.disabled'; // Grey when socket disconnected
+        if (!rotatorData.connected) return 'status.disconnected'; // Red for disconnected
+        if (rotatorData.outofbounds) return 'secondary.main'; // Purple for out of bounds
+        if (rotatorData.minelevation) return 'error.light'; // Light red for min elevation
+        if (rotatorData.slewing) return 'warning.main'; // Orange for slewing
+        if (rotatorData.tracking) return 'success.light'; // Light green for tracking
+        if (rotatorData.stopped) return 'warning.dark'; // Orange for stopped
+        return 'success.dark'; // Green for connected but not tracking
     };
 
     const getRigTooltip = () => {
@@ -137,39 +137,39 @@ const HardwareSettingsPopover = () => {
         if (!connected) return null; // No overlay when socket disconnected
         if (!rotatorData.connected) return {
             icon: CloseIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#af2424',
-            badgeBorderColor: "#ffffff"
+            color: 'text.primary',
+            badgeBackgroundColor: 'status.disconnected',
+            badgeBorderColor: "text.primary"
         };
         if (rotatorData.outofbounds) return {
             icon: WarningIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#da3e3e',
-            badgeBorderColor: "#ffffff"
+            color: 'text.primary',
+            badgeBackgroundColor: 'error.main',
+            badgeBorderColor: "text.primary"
         };
         if (rotatorData.minelevation) return {
             icon: ArrowDownwardIcon,
-            color: '#e81c2d',
-            badgeBackgroundColor: '#ffffff',
-            badgeBorderColor: "#e81c2d"
+            color: 'error.main',
+            badgeBackgroundColor: 'text.primary',
+            badgeBorderColor: "error.main"
         };
         if (rotatorData.slewing) return {
             icon: PlayArrowIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#237716',
-            badgeBorderColor: "#ffffff"
+            color: 'text.primary',
+            badgeBackgroundColor: 'success.main',
+            badgeBorderColor: "text.primary"
         };
         if (rotatorData.tracking) return {
             icon: LocationSearchingIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#184068',
-            badgeBorderColor: "#184068"
+            color: 'text.primary',
+            badgeBackgroundColor: 'info.main',
+            badgeBorderColor: "info.main"
         };
         if (rotatorData.stopped) return {
             icon: PauseIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#ff9800',
-            badgeBorderColor: "#ffffff"
+            color: 'text.primary',
+            badgeBackgroundColor: 'warning.main',
+            badgeBorderColor: "text.primary"
         };
 
         // No overlay for "connected" states
@@ -181,21 +181,21 @@ const HardwareSettingsPopover = () => {
         if (!connected) return null; // No overlay when socket disconnected
         if (!rigData.connected) return {
             icon: CloseIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#af2424',
-            badgeBorderColor: "#ffffff"
+            color: 'text.primary',
+            badgeBackgroundColor: 'status.disconnected',
+            badgeBorderColor: "text.primary"
         };
         if (rigData.tracking) return {
             icon: LocationSearchingIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#184068',
-            badgeBorderColor: "#184068"
+            color: 'text.primary',
+            badgeBackgroundColor: 'info.main',
+            badgeBorderColor: "info.main"
         };
         if (rigData.stopped) return {
             icon: PauseIcon,
-            color: '#ffffff',
-            badgeBackgroundColor: '#ff9800',
-            badgeBorderColor: "#ffffff"
+            color: 'text.primary',
+            badgeBackgroundColor: 'warning.main',
+            badgeBorderColor: "text.primary"
         };
 
         // No overlay for "connected" state
@@ -223,7 +223,7 @@ const HardwareSettingsPopover = () => {
                     size="small"
                     sx={{
                         width: 40, color: getRotatorColor(), '&:hover': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            backgroundColor: 'overlay.light'
                         }, '& svg': {
                             height: '100%',
                         }
@@ -248,7 +248,7 @@ const HardwareSettingsPopover = () => {
                     size="small"
                     sx={{
                         width: 40, color: getRigColor(), '&:hover': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            backgroundColor: 'overlay.light'
                         }, '& svg': {
                             height: '100%',
                             width: '80%',
@@ -286,11 +286,12 @@ const HardwareSettingsPopover = () => {
         >
             <Box sx={{
                 borderRadius: 0,
-                border: '1px solid #424242',
+                border: '1px solid',
+                borderColor: 'border.main',
                 p: 0,
                 minWidth: 330,
                 width: 330,
-                backgroundColor: '#1e1e1e',
+                backgroundColor: 'background.paper',
             }}>
                 {renderActiveComponent()}
             </Box>

@@ -67,7 +67,7 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
     const passesLoading = useSelector(state => state.overviewSatTrack.passesLoading);
 
     const ThemedSettingsDiv = styled('div')(({theme}) => ({
-        backgroundColor: "#1e1e1e",
+        backgroundColor: theme.palette.background.paper,
         fontsize: '0.9rem !important',
     }));
 

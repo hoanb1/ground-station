@@ -24,7 +24,7 @@ const SyncTerminal = ({ syncState }) => {
                     variant="body2"
                     sx={{
                         fontFamily: 'monospace',
-                        color: '#bbbbbb',
+                        color: 'text.secondary',
                         position: 'relative',
                         zIndex: 1,
                         fontSize: { xs: '0.8rem', sm: '0.875rem' },

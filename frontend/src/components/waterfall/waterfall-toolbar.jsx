@@ -50,7 +50,7 @@ const WaterfallToolbar = ({
         display: 'inline-block',
         width: '100%',
         borderBottom: '1px solid',
-        borderColor: '#434343',
+        borderColor: 'border.main',
         paddingBottom: '0px',
         borderRadius: 0,
     }}>
@@ -97,9 +97,11 @@ const WaterfallToolbar = ({
                     title={t('toolbar.toggle_left_panel')}
                     sx={{
                         borderRadius: 0,
-                        backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                        backgroundColor: showLeftSideWaterFallAccessories ? 'primary.main' : 'transparent',
+                        opacity: showLeftSideWaterFallAccessories ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: showLeftSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                            backgroundColor: showLeftSideWaterFallAccessories ? 'primary.main' : 'action.hover',
+                            opacity: showLeftSideWaterFallAccessories ? 0.2 : 1,
                         }
                     }}
                 >
@@ -113,9 +115,11 @@ const WaterfallToolbar = ({
                     title={t('toolbar.toggle_right_panel')}
                     sx={{
                         borderRadius: 0,
-                        backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.1)' : 'transparent',
+                        backgroundColor: showRightSideWaterFallAccessories ? 'primary.main' : 'transparent',
+                        opacity: showRightSideWaterFallAccessories ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: showRightSideWaterFallAccessories ? 'rgba(25, 118, 210, 0.2)' : 'rgba(0, 0, 0, 0.1)'
+                            backgroundColor: showRightSideWaterFallAccessories ? 'primary.main' : 'action.hover',
+                            opacity: showRightSideWaterFallAccessories ? 0.2 : 1,
                         }
                     }}
                 >
@@ -128,9 +132,11 @@ const WaterfallToolbar = ({
                     title={t('toolbar.toggle_auto_db')}
                     sx={{
                         borderRadius: 0,
-                        backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                        backgroundColor: autoDBRange ? 'success.main' : 'transparent',
+                        opacity: autoDBRange ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: autoDBRange ? 'rgba(46, 125, 50, 0.2)' : 'rgba(25, 118, 210, 0.1)'
+                            backgroundColor: autoDBRange ? 'success.main' : 'primary.main',
+                            opacity: autoDBRange ? 0.2 : 0.1,
                         }
                     }}
                 >
@@ -193,9 +199,11 @@ const WaterfallToolbar = ({
                     title={t('toolbar.toggle_rotator_lines')}
                     sx={{
                         borderRadius: 0,
-                        backgroundColor: showRotatorDottedLines ? 'rgba(46, 125, 50, 0.1)' : 'transparent',
+                        backgroundColor: showRotatorDottedLines ? 'success.main' : 'transparent',
+                        opacity: showRotatorDottedLines ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: showRotatorDottedLines ? 'rgba(46, 125, 50, 0.2)' : 'rgba(25, 118, 210, 0.1)'
+                            backgroundColor: showRotatorDottedLines ? 'success.main' : 'primary.main',
+                            opacity: showRotatorDottedLines ? 0.2 : 0.1,
                         }
                     }}
                 >
@@ -210,13 +218,15 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[0],
-                        backgroundColor: vfoActive[1] ? 'rgba(255, 0, 0, 0.1)' : 'transparent',
+                        backgroundColor: vfoActive[1] ? vfoColors[0] : 'transparent',
+                        opacity: vfoActive[1] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[1] ? 'rgba(255, 0, 0, 0.2)' : 'rgba(0,0,0,0.1)'
+                            backgroundColor: vfoActive[1] ? vfoColors[0] : 'action.hover',
+                            opacity: vfoActive[1] ? 0.2 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[1] ? '1px solid' : 'none',
-                            borderColor: '#ff0000',
+                            borderColor: vfoColors[0],
                         },
                     }}
                     onClick={() => toggleVfo(1)}
@@ -234,13 +244,15 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[1],
-                        backgroundColor: vfoActive[2] ? 'rgba(0,255,0,0.1)' : 'transparent',
+                        backgroundColor: vfoActive[2] ? vfoColors[1] : 'transparent',
+                        opacity: vfoActive[2] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[2] ? 'rgba(0,255,0,0.2)' : 'rgba(0,0,0,0.1)'
+                            backgroundColor: vfoActive[2] ? vfoColors[1] : 'action.hover',
+                            opacity: vfoActive[2] ? 0.2 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[2] ? '1px solid' : 'none',
-                            borderColor: 'rgba(0,255,0,0.7)',
+                            borderColor: vfoColors[1],
                         },
                     }}
                     onClick={() => toggleVfo(2)}
@@ -258,13 +270,15 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[2],
-                        backgroundColor: vfoActive[3] ? 'rgba(0,0,255,0.1)' : 'transparent',
+                        backgroundColor: vfoActive[3] ? vfoColors[2] : 'transparent',
+                        opacity: vfoActive[3] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[3] ? 'rgba(18,49,255,0.78)' : 'rgba(0,0,0,0.1)'
+                            backgroundColor: vfoActive[3] ? vfoColors[2] : 'action.hover',
+                            opacity: vfoActive[3] ? 0.78 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[3] ? '1px solid' : 'none',
-                            borderColor: 'rgba(18,49,255,0.8)',
+                            borderColor: vfoColors[2],
                         },
                     }}
                     onClick={() => toggleVfo(3)}
@@ -282,13 +296,15 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[3],
-                        backgroundColor: vfoActive[4] ? 'rgba(255,0,255,0.1)' : 'transparent',
+                        backgroundColor: vfoActive[4] ? vfoColors[3] : 'transparent',
+                        opacity: vfoActive[4] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[4] ? 'rgba(255,0,255,0.2)' : 'rgba(0,0,0,0.1)'
+                            backgroundColor: vfoActive[4] ? vfoColors[3] : 'action.hover',
+                            opacity: vfoActive[4] ? 0.2 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[4] ? '1px solid' : 'none',
-                            borderColor: 'rgba(163,0,218,0.77)',
+                            borderColor: vfoColors[3],
                         },
                     }}
                     onClick={() => toggleVfo(4)}
@@ -303,8 +319,12 @@ const WaterfallToolbar = ({
                         sx={{
                             borderRadius: 0,
                             ml: 1,
-                            backgroundColor: 'rgba(211, 47, 47, 0.15)',
-                            '&:hover': { backgroundColor: 'rgba(211, 47, 47, 0.25)' }
+                            backgroundColor: 'error.main',
+                            opacity: 0.15,
+                            '&:hover': {
+                                backgroundColor: 'error.main',
+                                opacity: 0.25,
+                            }
                         }}
                         color="error"
                         title={t('toolbar.fft_overflow')}

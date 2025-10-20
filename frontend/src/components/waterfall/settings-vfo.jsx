@@ -55,7 +55,7 @@ const VfoAccordion = ({
                 <Typography component="span">{t('vfo.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
-                backgroundColor: 'rgb(34,34,34)',
+                backgroundColor: 'background.elevated',
             }}>
                 <Tabs
                     value={selectedVFOTab}
@@ -74,11 +74,11 @@ const VfoAccordion = ({
                     {[0, 1, 2, 3].map((index) => (
                         <Tab key={index} label={t('vfo.vfo_number', { number: index + 1 })} sx={{
                             minWidth: '25%',
-                            backgroundColor: `${vfoColors[index]}40`, // CC = 80% opacity (204/255)
+                            backgroundColor: `${vfoColors[index]}40`, // 40 = ~25% opacity in hex
                             '&.Mui-selected': {
                                 fontWeight: 'bold',
                                 borderBottom: 'none',
-                                color: '#ffffff',
+                                color: 'text.primary',
                             },
                         }}/>
                     ))}
@@ -143,7 +143,8 @@ const VfoAccordion = ({
                                         maxWidth: '60px',
                                         padding: '4px 6px',
                                         fontSize: '0.8rem',
-                                        border: '1px solid rgba(255, 255, 255, 0.23)',
+                                        border: '1px solid',
+                                        borderColor: 'overlay.light',
                                         borderRadius: '4px',
                                         color: 'text.secondary',
                                         textAlign: 'center',
@@ -156,7 +157,7 @@ const VfoAccordion = ({
                                             }
                                         },
                                         '&:hover': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                            backgroundColor: 'overlay.light',
                                         }
                                     }
                                 }}
@@ -196,7 +197,8 @@ const VfoAccordion = ({
                                         maxWidth: '50px',
                                         padding: '4px 6px',
                                         fontSize: '0.8rem',
-                                        border: '1px solid rgba(255, 255, 255, 0.23)',
+                                        border: '1px solid',
+                                        borderColor: 'overlay.light',
                                         borderRadius: '4px',
                                         color: 'text.secondary',
                                         textAlign: 'center',
@@ -209,7 +211,7 @@ const VfoAccordion = ({
                                             }
                                         },
                                         '&:hover': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                            backgroundColor: 'overlay.light',
                                         }
                                     }
                                 }}
@@ -250,7 +252,8 @@ const VfoAccordion = ({
                                         maxWidth: '65px',
                                         padding: '4px 6px',
                                         fontSize: '0.8rem',
-                                        border: '1px solid rgba(255, 255, 255, 0.23)',
+                                        border: '1px solid',
+                                        borderColor: 'overlay.light',
                                         borderRadius: '4px',
                                         color: 'text.secondary',
                                         textAlign: 'center',
@@ -263,7 +266,7 @@ const VfoAccordion = ({
                                             }
                                         },
                                         '&:hover': {
-                                            backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                            backgroundColor: 'overlay.light',
                                         }
                                     }
                                 }}

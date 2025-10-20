@@ -21,8 +21,8 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
             <Box sx={{ display: 'flex', alignItems: 'center', mb: { xs: 1.5, sm: 0 } }}>
                 <SatelliteAltIcon sx={{
                     mr: 1,
-                    color: '#40c0ff',
-                    filter: 'drop-shadow(0 0 3px rgba(64,192,255,0.6))',
+                    color: 'primary.light',
+                    filter: (theme) => `drop-shadow(0 0 3px ${theme.palette.primary.light}99)`,
                     animation: 'pulse 3s infinite ease-in-out',
                     '@keyframes pulse': {
                         '0%': { opacity: 0.8 },
@@ -36,7 +36,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                         variant="h6"
                         sx={{
                             fontWeight: 700,
-                            color: '#ffffff',
+                            color: 'text.primary',
                             textShadow: '0 0 10px rgba(0,0,0,0.5)',
                             letterSpacing: '0.5px',
                             textTransform: 'uppercase',
@@ -49,7 +49,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                         variant="subtitle2"
                         component="div"
                         sx={{
-                            color: '#aaaaaa',
+                            color: 'text.secondary',
                             fontSize: '0.8rem',
                             fontWeight: 300,
                             letterSpacing: '0.3px',
@@ -72,9 +72,9 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                     color="primary"
                     onClick={onSynchronize}
                     size="small"
-                    sx={{
-                        background: 'linear-gradient(135deg, #0288d1 0%, #0277bd 100%)',
-                        boxShadow: '0 5px 15px rgba(2,136,209,0.3)',
+                    sx={(theme) => ({
+                        background: `linear-gradient(135deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.dark} 100%)`,
+                        boxShadow: `0 5px 15px ${theme.palette.primary.main}4D`,
                         textTransform: 'uppercase',
                         fontWeight: 600,
                         letterSpacing: '1px',
@@ -85,8 +85,8 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                         overflow: 'hidden',
                         transition: 'all 0.3s ease',
                         '&:hover': {
-                            background: 'linear-gradient(135deg, #039be5 0%, #0288d1 100%)',
-                            boxShadow: '0 5px 20px rgba(2,136,209,0.5)',
+                            background: `linear-gradient(135deg, ${theme.palette.primary.light} 0%, ${theme.palette.primary.main} 100%)`,
+                            boxShadow: `0 5px 20px ${theme.palette.primary.main}80`,
                             transform: 'translateY(-2px)',
                         },
                         '&::before': {
@@ -102,7 +102,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                         '&:hover::before': {
                             left: '100%',
                         },
-                    }}
+                    })}
                 >
                     <SyncIcon sx={{
                         mr: 1,
@@ -121,7 +121,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                         variant="caption"
                         sx={{
                             fontFamily: 'monospace',
-                            color: '#888888',
+                            color: 'text.disabled',
                             fontSize: '0.65rem',
                             mt: 0.5,
                             textAlign: { xs: 'left', sm: 'center' },

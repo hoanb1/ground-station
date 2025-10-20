@@ -54,16 +54,16 @@ const SynchronizeTLEsCard = function () {
     const errorsCount = syncState?.errors?.length || 0;
 
     return (
-        <Card sx={{
+        <Card sx={(theme) => ({
             position: 'relative',
             marginTop: 2,
             marginBottom: 0,
-            background: 'linear-gradient(135deg, #071318 0%, #1e2a38 100%)',
+            background: `linear-gradient(135deg, ${theme.palette.background.default} 0%, ${theme.palette.background.paper} 100%)`,
             borderRadius: 3,
-            border: '1px solid #2d4856',
+            border: `1px solid ${theme.palette.divider}`,
             boxShadow: '0 10px 20px rgba(0,0,0,0.3)',
             overflow: 'hidden',
-        }}>
+        })}>
             {/* Background Effects */}
             <Box sx={{
                 position: 'absolute',
@@ -76,32 +76,32 @@ const SynchronizeTLEsCard = function () {
                 background: 'url("data:image/svg+xml,%3Csvg width=\'100%25\' height=\'100%25\' xmlns=\'http://www.w3.org/2000/svg\'%3E%3Cdefs%3E%3Cpattern id=\'smallGrid\' width=\'8\' height=\'8\' patternUnits=\'userSpaceOnUse\'%3E%3Cpath d=\'M 8 0 L 0 0 0 8\' fill=\'none\' stroke=\'%233d5866\' stroke-width=\'0.5\'/%3E%3C/pattern%3E%3Cpattern id=\'grid\' width=\'80\' height=\'80\' patternUnits=\'userSpaceOnUse\'%3E%3Crect width=\'80\' height=\'80\' fill=\'url(%23smallGrid)\'/%3E%3Cpath d=\'M 80 0 L 0 0 0 80\' fill=\'none\' stroke=\'%232d4856\' stroke-width=\'1\'/%3E%3C/pattern%3E%3C/defs%3E%3Crect width=\'100%25\' height=\'100%25\' fill=\'url(%23grid)\' /%3E%3C/svg%3E")',
             }}/>
 
-            <Box sx={{
+            <Box sx={(theme) => ({
                 position: 'absolute',
                 top: -60,
                 right: -60,
                 width: 150,
                 height: 150,
                 borderRadius: '50%',
-                background: 'radial-gradient(circle at center, rgba(64,192,255,0.15) 0%, rgba(64,192,255,0) 70%)',
+                background: `radial-gradient(circle at center, ${theme.palette.primary.light}26 0%, ${theme.palette.primary.light}00 70%)`,
                 filter: 'blur(20px)',
                 zIndex: 0
-            }}/>
+            })}/>
 
             <Box sx={{
                 position: 'relative',
                 zIndex: 1,
                 p: { xs: 2, sm: 3 },
             }}>
-                <Box sx={{
+                <Box sx={(theme) => ({
                     position: 'absolute',
                     top: 0,
                     left: 0,
                     width: '100%',
                     height: '3px',
-                    background: 'linear-gradient(90deg, #00b0ff 0%, rgba(0,176,255,0) 100%)',
-                    boxShadow: '0 0 10px rgba(0,176,255,0.5)',
-                }}/>
+                    background: `linear-gradient(90deg, ${theme.palette.primary.main} 0%, ${theme.palette.primary.main}00 100%)`,
+                    boxShadow: `0 0 10px ${theme.palette.primary.main}80`,
+                })}/>
 
                 <SyncCardHeader
                     syncState={syncState}

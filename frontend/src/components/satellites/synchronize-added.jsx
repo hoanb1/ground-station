@@ -11,29 +11,29 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
     return (
         <Paper
             elevation={3}
-            sx={{
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
-                border: '1px solid rgba(76, 175, 80, 0.3)',
+            sx={(theme) => ({
+                backgroundColor: `${theme.palette.success.main}1A`,
+                border: `1px solid ${theme.palette.success.main}4D`,
                 borderRadius: 1,
                 overflow: 'hidden',
                 display: 'flex',
                 flexDirection: 'column',
                 height: { xs: 350, sm: 380, md: 400 },
                 minHeight: 300,
-            }}
+            })}
         >
-            <Box sx={{
-                backgroundColor: 'rgba(76, 175, 80, 0.2)',
+            <Box sx={(theme) => ({
+                backgroundColor: `${theme.palette.success.main}33`,
                 p: { xs: 1, sm: 1.5 },
                 display: 'flex',
                 alignItems: 'center',
                 justifyContent: 'center',
                 flexShrink: 0,
-            }}>
+            })}>
                 <Typography
                     variant="subtitle1"
                     sx={{
-                        color: '#4caf50',
+                        color: 'success.main',
                         fontWeight: 700,
                         textTransform: 'uppercase',
                         letterSpacing: '0.5px',
@@ -45,11 +45,11 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
             </Box>
 
             {/* Fixed Table Header */}
-            <Box sx={{
-                backgroundColor: 'rgba(76, 175, 80, 0.15)',
-                borderBottom: '1px solid rgba(76, 175, 80, 0.3)',
+            <Box sx={(theme) => ({
+                backgroundColor: `${theme.palette.success.main}26`,
+                borderBottom: `1px solid ${theme.palette.success.main}4D`,
                 flexShrink: 0,
-            }}>
+            })}>
                 <Box sx={{
                     display: 'grid',
                     gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
@@ -57,7 +57,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     p: { xs: 0.75, sm: 1 },
                 }}>
                     <Typography sx={{
-                        color: '#4caf50',
+                        color: 'success.main',
                         fontWeight: 600,
                         fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
@@ -66,7 +66,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         {t('synchronize.results.type')}
                     </Typography>
                     <Typography sx={{
-                        color: '#4caf50',
+                        color: 'success.main',
                         fontWeight: 600,
                         fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
@@ -76,7 +76,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         {t('synchronize.results.name')}
                     </Typography>
                     <Typography sx={{
-                        color: '#4caf50',
+                        color: 'success.main',
                         fontWeight: 600,
                         fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         textTransform: 'uppercase',
@@ -88,40 +88,40 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
             </Box>
 
             {/* Scrollable Content Area */}
-            <Box sx={{
+            <Box sx={(theme) => ({
                 flex: 1,
                 overflow: 'auto',
                 '&::-webkit-scrollbar': {
                     width: { xs: '4px', sm: '6px', md: '8px' },
                 },
                 '&::-webkit-scrollbar-track': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                    backgroundColor: `${theme.palette.success.main}1A`,
                 },
                 '&::-webkit-scrollbar-thumb': {
-                    backgroundColor: 'rgba(76, 175, 80, 0.4)',
+                    backgroundColor: `${theme.palette.success.main}66`,
                     borderRadius: '4px',
                     '&:hover': {
-                        backgroundColor: 'rgba(76, 175, 80, 0.6)',
+                        backgroundColor: `${theme.palette.success.main}99`,
                     },
                 },
-            }}>
+            })}>
                 {/* Satellites */}
                 {syncState.newly_added.satellites?.slice(0, 50).map((sat, index) => (
                     <Box
                         key={`sat-${index}`}
-                        sx={{
+                        sx={(theme) => ({
                             display: 'grid',
                             gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
                             gap: { xs: 0.5, sm: 0.75, md: 1 },
                             p: { xs: 0.75, sm: 1 },
-                            borderBottom: '1px solid rgba(76, 175, 80, 0.1)',
-                            '&:nth-of-type(even)': { backgroundColor: 'rgba(76, 175, 80, 0.05)' },
-                            '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
+                            borderBottom: `1px solid ${theme.palette.success.main}1A`,
+                            '&:nth-of-type(even)': { backgroundColor: `${theme.palette.success.main}0D` },
+                            '&:hover': { backgroundColor: `${theme.palette.success.main}1A` },
                             alignItems: 'center',
-                        }}
+                        })}
                     >
                         <Box sx={{
-                            color: '#40c0ff',
+                            color: 'primary.light',
                             fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
@@ -135,7 +135,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{t('synchronize.results.sat')}</Box>
                         </Box>
                         <Box sx={{
-                            color: '#ffffff',
+                            color: 'text.primary',
                             fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
@@ -149,7 +149,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                             </Tooltip>
                         </Box>
                         <Box sx={{
-                            color: '#aaaaaa',
+                            color: 'text.secondary',
                             fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             textAlign: 'center',
@@ -165,19 +165,19 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 {syncState.newly_added.transmitters?.slice(0, 50).map((trx, index) => (
                     <Box
                         key={`trx-${index}`}
-                        sx={{
+                        sx={(theme) => ({
                             display: 'grid',
                             gridTemplateColumns: { xs: '60px 1fr 60px', sm: '70px 1fr 70px', md: '80px 1fr 80px' },
                             gap: { xs: 0.5, sm: 0.75, md: 1 },
                             p: { xs: 0.75, sm: 1 },
-                            borderBottom: '1px solid rgba(76, 175, 80, 0.1)',
-                            '&:nth-of-type(even)': { backgroundColor: 'rgba(76, 175, 80, 0.05)' },
-                            '&:hover': { backgroundColor: 'rgba(76, 175, 80, 0.1)' },
+                            borderBottom: `1px solid ${theme.palette.success.main}1A`,
+                            '&:nth-of-type(even)': { backgroundColor: `${theme.palette.success.main}0D` },
+                            '&:hover': { backgroundColor: `${theme.palette.success.main}1A` },
                             alignItems: 'center',
-                        }}
+                        })}
                     >
                         <Box sx={{
-                            color: '#ff9800',
+                            color: 'warning.main',
                             fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             display: 'flex',
@@ -191,7 +191,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                             <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{t('synchronize.results.trx')}</Box>
                         </Box>
                         <Box sx={{
-                            color: '#ffffff',
+                            color: 'text.primary',
                             fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             overflow: 'hidden',
@@ -205,7 +205,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                             </Tooltip>
                         </Box>
                         <Box sx={{
-                            color: '#aaaaaa',
+                            color: 'text.secondary',
                             fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                             fontFamily: 'monospace',
                             textAlign: 'center',
@@ -221,7 +221,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 {(newSatellitesCount + newTransmittersCount > 100) && (
                     <Box sx={{
                         textAlign: 'center',
-                        color: '#4caf50',
+                        color: 'success.main',
                         fontSize: { xs: '0.6rem', sm: '0.65rem', md: '0.7rem' },
                         fontStyle: 'italic',
                         p: { xs: 1.5, sm: 2 },
@@ -231,36 +231,36 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 )}
             </Box>
 
-            <Box sx={{
+            <Box sx={(theme) => ({
                 p: { xs: 0.75, sm: 1 },
-                backgroundColor: 'rgba(76, 175, 80, 0.1)',
+                backgroundColor: `${theme.palette.success.main}1A`,
                 display: 'flex',
                 justifyContent: 'center',
                 gap: { xs: 0.5, sm: 1 },
                 flexShrink: 0,
                 flexWrap: 'wrap',
-            }}>
+            })}>
                 <Chip
                     label={t('synchronize.results.satellites_count', { count: newSatellitesCount })}
                     size="small"
-                    sx={{
-                        backgroundColor: 'rgba(64, 192, 255, 0.2)',
-                        color: '#40c0ff',
+                    sx={(theme) => ({
+                        backgroundColor: `${theme.palette.primary.light}33`,
+                        color: 'primary.light',
                         fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
                         height: { xs: 16, sm: 18 },
-                    }}
+                    })}
                 />
                 <Chip
                     label={t('synchronize.results.transmitters_count', { count: newTransmittersCount })}
                     size="small"
-                    sx={{
-                        backgroundColor: 'rgba(255, 152, 0, 0.2)',
-                        color: '#ff9800',
+                    sx={(theme) => ({
+                        backgroundColor: `${theme.palette.warning.main}33`,
+                        color: 'warning.main',
                         fontSize: { xs: '0.55rem', sm: '0.6rem', md: '0.65rem' },
                         fontWeight: 600,
                         height: { xs: 16, sm: 18 },
-                    }}
+                    })}
                 />
             </Box>
         </Paper>

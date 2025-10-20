@@ -43,7 +43,7 @@ const FrequencyControlAccordion = ({
                 <Typography component="span">{t('frequency.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
-                backgroundColor: 'rgb(34,34,34)',
+                backgroundColor: 'background.elevated',
             }}>
                 <Box sx={{mb: 0, width: '100%'}}>
                     <FrequencyDisplay

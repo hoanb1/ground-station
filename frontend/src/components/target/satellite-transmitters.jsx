@@ -47,9 +47,10 @@ const TargetSatelliteTransmittersIsland = () => {
             py: 1,
             px: 1.5,
             mb: 1,
-            bgcolor: 'rgba(255, 255, 255, 0.03)',
+            bgcolor: 'overlay.light',
             borderRadius: 1,
-            border: '1px solid rgba(255, 255, 255, 0.08)'
+            border: '1px solid',
+            borderColor: 'border.main'
         }}>
             <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0.5 }}>
                 <Typography variant="body2" sx={{ fontWeight: 'bold', color: 'primary.main', flex: 1 }}>
@@ -107,7 +108,12 @@ const TargetSatelliteTransmittersIsland = () => {
             </Grid>
 
             {transmitter.frequency_violation && (
-                <Box sx={{ mt: 0.5, p: 0.5, bgcolor: 'rgba(244, 67, 54, 0.1)', borderRadius: 0.5 }}>
+                <Box sx={{
+                    mt: 0.5,
+                    p: 0.5,
+                    bgcolor: (theme) => `${theme.palette.error.main}1A`,
+                    borderRadius: 0.5
+                }}>
                     <Typography variant="caption" sx={{ color: 'error.main', fontWeight: 'bold' }}>
                         {t('satellite_transmitters.messages.frequency_violation')}
                     </Typography>
@@ -144,15 +150,17 @@ const TargetSatelliteTransmittersIsland = () => {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: "rgba(26, 26, 26, 0.95)",
-            backdropFilter: 'blur(10px)'
+            bgcolor: 'background.paper',
+            backdropFilter: 'blur(10px)',
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))'
         }}>
             {/* Header */}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
                 sx={{
-                    bgcolor: "rgba(10, 10, 10, 0.8)",
-                    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
                     backdropFilter: 'blur(10px)'
                 }}
             >
@@ -178,12 +186,12 @@ const TargetSatelliteTransmittersIsland = () => {
                         <Grid size={4}>
                             <Box sx={{ mb: 0 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                    <SettingsRemoteIcon sx={{ fontSize: 14, mr: 0.5, color: '#ff9800' }} />
+                                    <SettingsRemoteIcon sx={{ fontSize: 14, mr: 0.5, color: 'warning.main' }} />
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
                                         {t('satellite_transmitters.labels.total')}
                                     </Typography>
                                 </Box>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#ff9800' }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'warning.main' }}>
                                     {satelliteData && satelliteData['transmitters'] ? satelliteData['transmitters'].length : t('satellite_info.values.na')}
                                 </Typography>
                             </Box>
@@ -191,12 +199,12 @@ const TargetSatelliteTransmittersIsland = () => {
                         <Grid size={4}>
                             <Box sx={{ mb: 0 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                    <SignalCellularAltIcon sx={{ fontSize: 14, mr: 0.5, color: '#4caf50' }} />
+                                    <SignalCellularAltIcon sx={{ fontSize: 14, mr: 0.5, color: 'success.main' }} />
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
                                         {t('satellite_transmitters.labels.active')}
                                     </Typography>
                                 </Box>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#4caf50' }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'success.main' }}>
                                     {satelliteData && satelliteData['transmitters'] ?
                                         satelliteData['transmitters'].filter(t => t.alive && t.status === 'active').length : t('satellite_info.values.na')}
                                 </Typography>
@@ -205,12 +213,12 @@ const TargetSatelliteTransmittersIsland = () => {
                         <Grid size={4}>
                             <Box sx={{ mb: 0 }}>
                                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
-                                    <SignalCellularAltIcon sx={{ fontSize: 14, mr: 0.5, color: '#f44336' }} />
+                                    <SignalCellularAltIcon sx={{ fontSize: 14, mr: 0.5, color: 'error.main' }} />
                                     <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium' }}>
                                         {t('satellite_transmitters.labels.inactive')}
                                     </Typography>
                                 </Box>
-                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: '#f44336' }}>
+                                <Typography variant="body1" sx={{ fontWeight: 'bold', color: 'error.main' }}>
                                     {satelliteData && satelliteData['transmitters'] ?
                                         satelliteData['transmitters'].filter(t => !t.alive || t.status !== 'active').length : t('satellite_info.values.na')}
                                 </Typography>
@@ -242,7 +250,7 @@ const TargetSatelliteTransmittersIsland = () => {
                     )}
                 </Section>
 
-                <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                <Divider sx={{ my: 0, mb: 1, borderColor: 'border.main' }} />
 
                 {/* Detailed Transmitters */}
                 {satelliteData && satelliteData['transmitters'] && satelliteData['transmitters'].length > 0 ? (

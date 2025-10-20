@@ -24,7 +24,7 @@ export const AccordionSummary = styled((props) => (
         {...props}
     />
 ))(({theme}) => ({
-    backgroundColor: 'rgba(0, 0, 0, .03)',
+    backgroundColor: theme.palette.mode === 'dark' ? theme.palette.overlay.light : theme.palette.overlay.light,
     flexDirection: 'row-reverse',
     minHeight: 34,
     height: 34,
@@ -36,14 +36,11 @@ export const AccordionSummary = styled((props) => (
     [`& .${accordionSummaryClasses.content}`]: {
         marginLeft: theme.spacing(1),
     },
-    ...theme.applyStyles('dark', {
-        backgroundColor: 'rgba(255, 255, 255, .05)',
-    }),
 }));
 
 export const AccordionDetails = styled(MuiAccordionDetails)(({theme}) => ({
     padding: theme.spacing(2),
-    borderTop: '1px solid rgba(0, 0, 0, .125)',
+    borderTop: `1px solid ${theme.palette.border.dark}`,
 }));
 
 export const LoadingOverlay = ({loading, children}) => {

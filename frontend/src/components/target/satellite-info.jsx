@@ -96,15 +96,17 @@ const TargetSatelliteInfoIsland = () => {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: "rgba(26, 26, 26, 0.95)",
-            backdropFilter: 'blur(10px)'
+            bgcolor: 'background.paper',
+            backdropFilter: 'blur(10px)',
+            backgroundImage: 'linear-gradient(rgba(255, 255, 255, 0.05), rgba(255, 255, 255, 0.05))'
         }}>
             {/* Header */}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
                 sx={{
-                    bgcolor: "rgba(10, 10, 10, 0.8)",
-                    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
                     backdropFilter: 'blur(10px)'
                 }}
             >
@@ -126,8 +128,9 @@ const TargetSatelliteInfoIsland = () => {
             {/* Satellite Status Header */}
             <Box sx={{
                 p: 1,
-                background: 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
+                background: (theme) => `linear-gradient(135deg, ${theme.palette.overlay.light} 0%, ${theme.palette.overlay.light} 100%)`,
+                borderBottom: '1px solid',
+                borderColor: 'border.main'
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                     <Avatar
@@ -136,7 +139,7 @@ const TargetSatelliteInfoIsland = () => {
                             height: 12,
                             mr: 1.5,
                             bgcolor: satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'alive' ? 'success.main' : 'warning.main',
-                            boxShadow: `0 0 8px ${satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'alive' ? '#4caf50' : '#ff9800'}40`
+                            boxShadow: (theme) => `0 0 8px ${satelliteData && satelliteData['details'] && satelliteData['details']['status'] === 'alive' ? theme.palette.success.main : theme.palette.warning.main}40`
                         }}
                     />
                     <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
@@ -204,7 +207,7 @@ const TargetSatelliteInfoIsland = () => {
                     </Grid>
                 </Section>
 
-                <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                <Divider sx={{ my: 0, mb: 1, borderColor: 'border.main' }} />
 
                 {/* Orbital Data */}
                 <Section title={t('satellite_info.sections.orbital_data')} icon={SpeedIcon}>
@@ -249,7 +252,7 @@ const TargetSatelliteInfoIsland = () => {
                     </Grid>
                 </Section>
 
-                <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                <Divider sx={{ my: 0, mb: 1, borderColor: 'border.main' }} />
 
                 {/* Metadata */}
                 <Section title={t('satellite_info.sections.metadata')} icon={PublicIcon}>
@@ -259,7 +262,7 @@ const TargetSatelliteInfoIsland = () => {
                                 <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
                                     {t('satellite_info.labels.launch_date')}
                                 </Typography>
-                                <Typography variant="body2" sx={{ color: '#ffcc02', fontWeight: 'bold' }}>
+                                <Typography variant="body2" sx={{ color: 'warning.main', fontWeight: 'bold' }}>
                                     {satelliteData && satelliteData['details'] && satelliteData['details']['launched'] ? humanizeDate(satelliteData['details']['launched']) : t('satellite_info.values.na')}
                                 </Typography>
                             </Box>
@@ -318,10 +321,11 @@ const TargetSatelliteInfoIsland = () => {
 
             {/* Link to detailed satellite page */}
             {satelliteData && satelliteData['details'] && (
-                <Box sx={{ 
-                    p: 2, 
-                    borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                    bgcolor: "rgba(10, 10, 10, 0.5)"
+                <Box sx={{
+                    p: 2,
+                    borderTop: '1px solid',
+                    borderColor: 'border.main',
+                    bgcolor: 'background.default'
                 }}>
                     <Button
                         component={Link}
@@ -335,7 +339,7 @@ const TargetSatelliteInfoIsland = () => {
                             borderColor: 'secondary.main',
                             '&:hover': {
                                 borderColor: 'secondary.light',
-                                bgcolor: 'rgba(255, 255, 255, 0.05)'
+                                bgcolor: 'overlay.light'
                             }
                         }}
                     >

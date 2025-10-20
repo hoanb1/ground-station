@@ -54,7 +54,7 @@ const WeatherDisplay = ({ latitude, longitude }) => {
         <Grid style={{marginRight: '4px'}}>
             <Paper elevation={0} sx={{
                 margin: '0px',
-                p: 1, borderRadius: 2, backgroundColor: 'rgba(255, 255, 255, 0.09)',
+                p: 1, borderRadius: 2, backgroundColor: 'action.hover',
                 backdropFilter: 'blur(10px)', display: 'flex',
                 flexDirection: 'column', alignItems: 'center', height: '100%'
             }}>

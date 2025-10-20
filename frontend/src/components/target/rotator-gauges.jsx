@@ -54,12 +54,12 @@ function GaugePointer() {
                 cx={cx}
                 cy={cy}
                 r={5}
-                fill="red"
+                fill="#f44336"
                 filter="url(#gauge-pointer-shadow)"
             />
             <path
                 d={`M ${cx} ${cy} L ${target.x} ${target.y}`}
-                stroke="red"
+                stroke="#f44336"
                 strokeWidth={3}
                 filter="url(#gauge-pointer-shadow)"
             />
@@ -67,7 +67,7 @@ function GaugePointer() {
     );
 }
 
-const EdgeArrow = ({angle, stroke = "#ffffff", strokeWidth = 1, opacity = 1, forElevation = false, arrowLength: lineLength = 0}) => {
+const EdgeArrow = ({angle, stroke = "currentColor", strokeWidth = 1, opacity = 1, forElevation = false, arrowLength: lineLength = 0}) => {
     const {outerRadius, cx, cy} = useGaugeState();
 
     if (angle === null) {
@@ -129,7 +129,7 @@ const EdgeArrow = ({angle, stroke = "#ffffff", strokeWidth = 1, opacity = 1, for
     );
 };
 
-const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forElevation = false, dotted = false}) => {
+const Pointer = ({angle, stroke = "currentColor", strokeWidth = 1, opacity = 0.3, forElevation = false, dotted = false}) => {
     const {outerRadius, cx, cy} = useGaugeState();
     const angleInRad = forElevation ?
         ((90 - angle) * Math.PI) / 180 :
@@ -154,10 +154,10 @@ const Pointer = ({angle, stroke = "#393939", strokeWidth = 1, opacity = 1, forEl
 const CircleSlice = ({
                          startAngle,
                          endAngle,
-                         stroke = "#393939",
-                         fill = "#393939",
+                         stroke = "currentColor",
+                         fill = "currentColor",
                          strokeWidth = 1,
-                         opacity = 1,
+                         opacity = 0.2,
                          forElevation = false,
                          peakAz = null
                      }) => {
@@ -338,19 +338,19 @@ function GaugeAz({az, limits = [null, null],
             }}
         >
             <GaugeReferenceArc/>
-            <Pointer angle={270} dotted={true}/>
-            <Pointer angle={180} dotted={true}/>
-            <Pointer angle={90} dotted={true}/>
-            <Pointer angle={0} dotted={true}/>
+            <Pointer angle={270} dotted={true} stroke="#666" opacity={0.3}/>
+            <Pointer angle={180} dotted={true} stroke="#666" opacity={0.3}/>
+            <Pointer angle={90} dotted={true} stroke="#666" opacity={0.3}/>
+            <Pointer angle={0} dotted={true} stroke="#666" opacity={0.3}/>
             {minAz !== null && maxAz !== null && (!isGeoStationary && !isGeoSynchronous) && <>
-                <Pointer angle={maxAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
-                <Pointer angle={minAz} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
+                <Pointer angle={maxAz} stroke="#888" strokeWidth={1} opacity={0.3}/>
+                <Pointer angle={minAz} stroke="#888" strokeWidth={1} opacity={0.3}/>
                 <CircleSlice
                     startAngle={minAz}
                     endAngle={maxAz}
                     peakAz={peakAz}
-                    stroke={'#abff45'}
-                    fill={'#abff45'}
+                    stroke='#4caf50'
+                    fill='#4caf50'
                     opacity={0.2}
                 />
             </>}
@@ -395,15 +395,15 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
             }}
         >
             <GaugeReferenceArc/>
-            <Pointer angle={80} stroke={"#ff0101"} strokeWidth={0.8} opacity={0.2} dotted={true}/>
-            <Pointer angle={0} dotted={true}/>
+            <Pointer angle={80} stroke="#f44336" strokeWidth={0.8} opacity={0.2} dotted={true}/>
+            <Pointer angle={0} dotted={true} stroke="#666" opacity={0.3}/>
             {maxElevation !== null && <>
-                <Pointer angle={angle} stroke={"#676767"} strokeWidth={1} opacity={0.3}/>
+                <Pointer angle={angle} stroke="#888" strokeWidth={1} opacity={0.3}/>
                 <CircleSlice
                     startAngle={80}
                     endAngle={angle}
-                    stroke={'#abff45'}
-                    fill={'#abff45'}
+                    stroke='#4caf50'
+                    fill='#4caf50'
                     opacity={0.2}
                     forElevation={true}
                     spansNorth={false}
@@ -412,8 +412,8 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
             <CircleSlice
                 startAngle={90}
                 endAngle={80}
-                stroke={'#ff4545'}
-                fill={'#ff4545'}
+                stroke='#f44336'
+                fill='#f44336'
                 forElevation={true}
                 opacity={0.2}
             />

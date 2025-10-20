@@ -293,11 +293,11 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
 
                 let color;
                 if (elevation < 10) {
-                    color = '#f44336';
+                    color = 'error.main';
                 } else if (elevation >= 10 && elevation < 45) {
-                    color = '#ff9800';
+                    color = 'warning.main';
                 } else {
-                    color = '#4caf50';
+                    color = 'success.main';
                 }
 
                 return (
@@ -365,7 +365,7 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                                     fontSize: '0.65rem',
                                     fontWeight: 'bold',
                                     backgroundColor: getBandColor(band),
-                                    color: '#ffffff',
+                                    color: 'common.white',
                                     '&:hover': {
                                         filter: 'brightness(90%)',
                                     }

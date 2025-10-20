@@ -35,15 +35,15 @@ export const SATELLITE_NUMBER_LIMIT = 50;
 
 export const StyledIslandParent = styled("div")(({ theme }) => ({
     padding: '0rem',
-    border: '1px solid #424242',
-    backgroundColor: "#1e1e1e",
+    border: `1px solid ${theme.palette.border.main}`,
+    backgroundColor: theme.palette.background.paper,
     overflow: 'hidden',
 }));
 
 export const StyledIslandParentScrollbar = styled("div")(({ theme }) => ({
     padding: '0rem',
-    border: '1px solid #424242',
-    backgroundColor: "#1e1e1e",
+    border: `1px solid ${theme.palette.border.main}`,
+    backgroundColor: theme.palette.background.paper,
     overflow: 'hidden',
     overflowY: 'hidden',
     overflowX: 'hidden',
@@ -51,19 +51,19 @@ export const StyledIslandParentScrollbar = styled("div")(({ theme }) => ({
 
 export const StyledIslandParentNoScrollbar = styled("div")(({ theme }) => ({
     padding: '0rem',
-    border: '1px solid #424242',
-    backgroundColor: "#1e1e1e",
+    border: `1px solid ${theme.palette.border.main}`,
+    backgroundColor: theme.palette.background.paper,
     overflow: 'hidden',
     overflowY: 'hidden',
     overflowX: 'hidden',
 }));
 
-export const AntTabs = styled(Tabs)({
-    borderBottom: '1px #4c4c4c solid',
+export const AntTabs = styled(Tabs)(({ theme }) => ({
+    borderBottom: `1px solid ${theme.palette.border.light}`,
     '& .MuiTabs-indicator': {
-        backgroundColor: '#262626',
+        backgroundColor: theme.palette.border.dark,
     },
-});
+}));
 
 export const AntTab = styled((props) => <Tab disableRipple {...props} />)(({ theme }) => ({
     '&.MuiTab-root': {
@@ -71,14 +71,13 @@ export const AntTab = styled((props) => <Tab disableRipple {...props} />)(({ the
         textTransform: 'uppercase',
     },
     '&.Mui-selected': {
-        color: '#fff',
+        color: theme.palette.text.primary,
         fontWeight: theme.typography.fontWeightMedium,
-        backgroundColor: '#262626',
+        backgroundColor: theme.palette.border.dark,
         marginTop: '0px',
-        //borderTop: '1px #071318 solid',
     },
     '&.Mui-focusVisible': {
-        backgroundColor: '#d1eaff',
+        backgroundColor: theme.palette.action.hover,
     },
 }));
 
@@ -114,12 +113,12 @@ export const MapTitleBar = styled(Paper)(({ theme }) => ({
     ...theme.typography.body2,
     //position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
-    borderBottom: '1px solid #494949',
+    borderBottom: `1px solid ${theme.palette.border.light}`,
     zIndex: 400,
     //top: 0,
     fontWeight: 'bold',
     textAlign: 'left',
-    backgroundColor: "#1e261c",
+    backgroundColor: theme.palette.background.elevated,
 }));
 
 export const MapStatusBar = styled(Paper)(({ theme }) => ({
@@ -129,7 +128,7 @@ export const MapStatusBar = styled(Paper)(({ theme }) => ({
     ...theme.typography.body2,
     position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
-    borderTop: '1px solid #494949',
+    borderTop: `1px solid ${theme.palette.border.light}`,
     zIndex: 450,
     bottom: -1,
     textAlign: 'left',
@@ -143,7 +142,7 @@ export const WaterfallStatusBarPaper = styled(Paper)(({ theme }) => ({
     ...theme.typography.body2,
     position: 'absolute',
     borderRadius: '0px 0px 0px 0px',
-    borderTop: '1px solid #494949',
+    borderTop: `1px solid ${theme.palette.border.light}`,
     zIndex: 450,
     bottom: -2,
     textAlign: 'left',
@@ -157,10 +156,10 @@ export const TitleBar = styled(Paper)(({ theme }) => ({
     ...theme.typography.body2,
     position: 'relative',
     borderRadius: '0px 0px 0px 0px',
-    borderBottom: '1px solid #494949',
+    borderBottom: `1px solid ${theme.palette.border.light}`,
     textAlign: 'left',
     fontWeight: 'bold',
-    backgroundColor: "#1f131f",
+    backgroundColor: theme.palette.background.elevated,
 }));
 
 export const ThemedLeafletTooltip = styled(LeafletTooltip)(({ theme }) => ({
@@ -173,7 +172,7 @@ export const ThemedLeafletTooltip = styled(LeafletTooltip)(({ theme }) => ({
 
 export const ThemedStackIsland = styled(Stack)(({theme}) => ({
     color: theme.palette.text.secondary,
-    backgroundColor: "#1e1e1e",
+    backgroundColor: theme.palette.background.paper,
     borderRadius: theme.shape.borderRadius,
     borderColor: theme.palette.background.paper,
     padding: theme.spacing(0),
@@ -182,7 +181,7 @@ export const ThemedStackIsland = styled(Stack)(({theme}) => ({
 }));
 
 export const ThemedSettingsDiv = styled('div')(({theme}) => ({
-    backgroundColor: "#1e1e1e",
+    backgroundColor: theme.palette.background.paper,
     fontsize: '0.9rem !important',
     height: "100%",
 }));

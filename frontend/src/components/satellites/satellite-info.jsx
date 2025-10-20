@@ -373,7 +373,7 @@ const SatelliteInfo = () => {
                         href={part}
                         target="_blank"
                         rel="noopener noreferrer"
-                        style={{color: '#fff', textDecoration: 'underline'}}
+                        style={{textDecoration: 'underline'}}
                     >
                         {part}
                     </a>
@@ -390,7 +390,7 @@ const SatelliteInfo = () => {
                 display: 'flex',
                 flexDirection: 'column',
                 p: 3,
-                backgroundColor: '#262626',
+                backgroundColor: 'background.default',
             }}>
             <Box sx={{display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2}}>
                 <Box>
@@ -468,11 +468,11 @@ const SatelliteInfo = () => {
                         <Grid
                             size={{xs: 12, lg: 4}}
                             sx={{
-                                backgroundColor: '#1e1e1e',
+                                backgroundColor: 'background.paper',
                                 borderRadius: '8px',
                                 padding: 3,
                                 minHeight: '300px',
-                                color: '#ffffff',
+                                color: 'text.primary',
                                 boxSizing: 'border-box'
                             }}
                         >
@@ -483,7 +483,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.name')}</strong> <span>{clickedSatellite['name']}</span>
@@ -494,7 +495,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.norad_id')}</strong> <span>{clickedSatellite['norad_id']}</span>
@@ -505,7 +507,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.status')}</strong>
@@ -517,7 +520,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.countries')}</strong>
@@ -529,7 +533,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.operator')}</strong> <span>{clickedSatellite['operator'] || '-'}</span>
@@ -540,7 +545,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.launched')}</strong>
@@ -552,7 +558,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.deployed')}</strong>
@@ -564,7 +571,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.decayed')}</strong>
@@ -576,7 +584,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.updated')}</strong>
@@ -588,7 +597,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.website')}</strong>
@@ -602,7 +612,8 @@ const SatelliteInfo = () => {
                                         justifyContent: 'space-between',
                                         width: '100%',
                                         padding: '8px 0',
-                                        borderBottom: '1px solid #444444',
+                                        borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.citation')}</strong>
@@ -620,7 +631,7 @@ const SatelliteInfo = () => {
                                 display: 'flex',
                                 justifyContent: 'center',
                                 alignItems: 'center',
-                                backgroundColor: '#1e1e1e',
+                                backgroundColor: 'background.paper',
                                 borderRadius: '8px',
                                 boxSizing: 'border-box'
                             }}
@@ -634,7 +645,6 @@ const SatelliteInfo = () => {
                                         style={{
                                             maxWidth: '100%',
                                             height: 'auto',
-                                            border: '1px solid #444444',
                                             borderRadius: '4px',
                                         }}
                                     />
@@ -643,18 +653,19 @@ const SatelliteInfo = () => {
                                         sx={{
                                             width: '200px',
                                             height: '150px',
-                                            border: '1px solid #444444',
+                                            border: '1px solid',
+                                            borderColor: 'border.main',
                                             borderRadius: '4px',
                                             display: 'flex',
                                             flexDirection: 'column',
                                             justifyContent: 'center',
                                             alignItems: 'center',
-                                            backgroundColor: '#2a2a2a',
-                                            color: '#888888',
+                                            backgroundColor: 'background.elevated',
+                                            color: 'text.disabled',
                                             gap: 1
                                         }}
                                     >
-                                        <Typography variant="caption" sx={{ color: '#888888', textAlign: 'center' }}>
+                                        <Typography variant="caption" sx={{ color: 'text.disabled', textAlign: 'center' }}>
                                             {t('satellite_info.no_image')}
                                         </Typography>
                                     </Box>
@@ -664,7 +675,7 @@ const SatelliteInfo = () => {
                         <Grid
                             size={{ xs: 12, lg: 4 }}
                             sx={{
-                                backgroundColor: '#1e1e1e',
+                                backgroundColor: 'background.paper',
                                 borderRadius: '8px',
                                 minHeight: '300px',
                                 boxSizing: 'border-box',
@@ -697,8 +708,8 @@ const SatelliteInfo = () => {
                                     }}
                                     sx={{
                                         border: 'none',
-                                        backgroundColor: '#1e1e1e',
-                                        color: '#ffffff',
+                                        backgroundColor: 'background.paper',
+                                        color: 'text.primary',
                                         height: '100%',
                                         [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                                             outline: 'none',
@@ -708,35 +719,37 @@ const SatelliteInfo = () => {
                                                 outline: 'none',
                                             },
                                         '& .MuiDataGrid-columnHeaders': {
-                                            backgroundColor: '#333333',
-                                            color: '#ffffff',
+                                            backgroundColor: 'background.elevated',
+                                            color: 'text.primary',
                                             fontSize: '14px',
                                             fontWeight: 'bold',
-                                            borderBottom: '1px solid #444444',
+                                            borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                         },
                                         '& .MuiDataGrid-cell': {
                                             whiteSpace: 'nowrap',
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
-                                            borderBottom: '1px solid #444444',
+                                            borderBottom: '1px solid',
+                                        borderColor: 'border.main',
                                         },
                                         '& .MuiDataGrid-row': {
                                             '&:nth-of-type(odd)': {
-                                                backgroundColor: '#292929',
+                                                backgroundColor: 'overlay.light',
                                             },
                                             '&:hover': {
-                                                backgroundColor: '#3a3a3a',
+                                                backgroundColor: 'overlay.medium',
                                             },
                                         },
                                         '& .MuiDataGrid-footerContainer': {
-                                            backgroundColor: '#121212',
-                                            color: '#ffffff',
+                                            backgroundColor: 'background.default',
+                                            color: 'text.primary',
                                         },
                                         '& .MuiDataGrid-selectedRowCount': {
-                                            color: '#ffffff',
+                                            color: 'text.primary',
                                         },
                                         '& .MuiDataGrid-cellContent': {
-                                            color: '#ffffff',
+                                            color: 'text.primary',
                                         },
                                     }}
                                 />

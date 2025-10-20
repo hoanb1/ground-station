@@ -263,10 +263,10 @@ const RigControl = React.memo(function RigControl() {
                                                 width: 8,
                                                 height: 8,
                                                 borderRadius: '50%',
-                                                backgroundColor: transmitter.alive ? '#4caf50' : '#f44336',
-                                                boxShadow: transmitter.alive
-                                                    ? '0 0 6px rgba(76, 175, 80, 0.6)'
-                                                    : '0 0 6px rgba(244, 67, 54, 0.6)',
+                                                backgroundColor: transmitter.alive ? 'success.main' : 'error.main',
+                                                boxShadow: (theme) => transmitter.alive
+                                                    ? `0 0 6px ${theme.palette.success.main}99`
+                                                    : `0 0 6px ${theme.palette.error.main}99`,
                                             }}
                                         />
                                         <span>

@@ -224,11 +224,11 @@ const MemoizedStyledDataGrid = React.memo(({
 
                 let color;
                 if (elevation < 10) {
-                    color = '#f44336';
+                    color = 'error.main';
                 } else if (elevation >= 10 && elevation < 45) {
-                    color = '#ff9800';
+                    color = 'warning.main';
                 } else {
-                    color = '#4caf50';
+                    color = 'success.main';
                 }
 
                 return (
@@ -319,23 +319,23 @@ const MemoizedStyledDataGrid = React.memo(({
                 return (
                     <div style={{ display: 'flex', gap: '8px', justifyContent: 'center' }}>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{
+                    <Box sx={{
                         width: '8px',
                         height: '8px',
-                        backgroundColor: '#4caf50',
+                        bgcolor: 'success.main',
                         borderRadius: '50%',
                         display: 'inline-block'
-                    }}></span>
+                    }}></Box>
                             <span style={{ fontSize: '1rem' }}>{aliveCount}</span>
                         </div>
                         <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
-                    <span style={{
+                    <Box sx={{
                         width: '8px',
                         height: '8px',
-                        backgroundColor: '#f44336',
+                        bgcolor: 'error.main',
                         borderRadius: '50%',
                         display: 'inline-block'
-                    }}></span>
+                    }}></Box>
                             <span style={{ fontSize: '1rem' }}>{deadCount}</span>
                         </div>
                     </div>

@@ -33,10 +33,14 @@ import { useTranslation } from 'react-i18next';
 
 export default function App() {
     const { socket } = useSocket();
-    const dashboardTheme = setupTheme();
     const { i18n } = useTranslation();
     const preferences = useSelector((state) => state.preferences.preferences);
     const [navigation, setNavigation] = React.useState(getNavigation());
+
+    // Get theme preference and create theme
+    const themePreference = preferences.find(pref => pref.name === 'theme');
+    const themeMode = themePreference ? themePreference.value : 'dark';
+    const dashboardTheme = React.useMemo(() => setupTheme(themeMode), [themeMode]);
 
     // Sync language from Redux to i18n on mount and when it changes
     React.useEffect(() => {

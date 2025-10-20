@@ -324,7 +324,7 @@ const BookmarkCanvas = ({
                         textHeight + padding * 2,
                         radius
                     );
-                    ctx.fillStyle = 'rgba(51,51,51,0.7)';
+                    ctx.fillStyle = 'rgba(30, 30, 30, 0.7)'; // background.paper with opacity
                     ctx.fill();
 
                     // Draw the text
@@ -360,7 +360,7 @@ const BookmarkCanvas = ({
                         textHeight + padding * 2,
                         radius
                     );
-                    ctx.fillStyle = 'rgba(51,51,51,0.7)';
+                    ctx.fillStyle = 'rgba(30, 30, 30, 0.7)'; // background.paper with opacity
                     ctx.fill();
 
                     // Draw the text

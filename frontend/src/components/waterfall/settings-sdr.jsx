@@ -60,7 +60,7 @@ const SdrAccordion = ({
                 <Typography component="span">{t('sdr.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
-                backgroundColor: 'rgb(34,34,34)',
+                backgroundColor: 'background.elevated',
             }}>
                 <LoadingOverlay loading={gettingSDRParameters}>
                     <Box sx={{mb: 2}}>

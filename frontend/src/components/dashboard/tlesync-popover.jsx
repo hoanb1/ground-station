@@ -103,7 +103,7 @@ const SatelliteSyncPopover = () => {
                             width: 40,
                             height: 40,
                             '&:hover': {
-                                backgroundColor: 'rgba(255, 255, 255, 0.08)',
+                                backgroundColor: 'overlay.light',
                             },
                             position: 'relative',
                         }}
@@ -116,7 +116,7 @@ const SatelliteSyncPopover = () => {
                             thickness={5}
                             sx={{
                                 position: 'absolute',
-                                color: '#424242', // Dark grey background
+                                color: 'border.main', // Dark grey background
                             }}
                         />
                         {/* Foreground progress circle */}
@@ -172,15 +172,16 @@ const SatelliteSyncPopover = () => {
                 <Box
                     sx={{
                         borderRadius: 0,
-                        border: '1px solid #424242',
+                        border: '1px solid',
+                        borderColor: 'border.main',
                         p: 2,
                         minWidth: 350,
                         maxWidth: 400,
-                        backgroundColor: '#1e1e1e',
+                        backgroundColor: 'background.paper',
                     }}
                 >
                     {/* Header */}
-                    <Typography variant="h6" sx={{ mb: 2, color: '#ffffff' }}>
+                    <Typography variant="h6" sx={{ mb: 2, color: 'text.primary' }}>
                         {t('tlesync_popover.tle_sync_status')}
                     </Typography>
 
@@ -235,12 +236,12 @@ const SatelliteSyncPopover = () => {
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 0.5 }}>
                                 {t('tlesync_popover.last_update')}
                             </Typography>
-                            <Typography variant="body2" sx={{ color: '#ffffff' }}>
+                            <Typography variant="body2" sx={{ color: 'text.primary' }}>
                                 {formatDate(syncState?.last_update)}
                             </Typography>
                         </Box>
 
-                        <Divider sx={{ borderColor: '#424242' }} />
+                        <Divider sx={{ borderColor: 'border.main' }} />
 
                         {/* Statistics */}
                         {syncState?.stats && (

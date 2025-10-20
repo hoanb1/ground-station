@@ -43,7 +43,7 @@ const FftAccordion = ({
                 <Typography component="span">{t('fft.title')}</Typography>
             </AccordionSummary>
             <AccordionDetails sx={{
-                backgroundColor: 'rgb(34,34,34)',
+                backgroundColor: 'background.elevated',
             }}>
                 <LoadingOverlay loading={gettingSDRParameters}>
                     <Box sx={{mb: 2}}>

@@ -21,16 +21,54 @@
 
 import {createTheme} from "@mui/material";
 
-export function setupTheme() {
+export function setupTheme(mode = 'dark') {
+    const isDark = mode === 'dark';
+
     const palette = {
-        mode: 'dark',
+        mode: mode,
+        primary: {
+            main: isDark ? '#1976d2' : '#1976d2',
+        },
+        secondary: {
+            main: isDark ? '#dc004e' : '#dc004e',
+        },
+        success: {
+            main: '#4caf50',
+        },
+        warning: {
+            main: '#ff9800',
+        },
+        error: {
+            main: '#f44336',
+        },
+        info: {
+            main: '#2196f3',
+        },
+        background: {
+            default: isDark ? '#121212' : '#fafafa',
+            paper: isDark ? '#1e1e1e' : '#ffffff',
+            elevated: isDark ? '#2a2a2a' : '#f5f5f5',
+        },
+        border: {
+            main: isDark ? '#424242' : '#e0e0e0',
+            light: isDark ? '#494949' : '#d0d0d0',
+            dark: isDark ? '#262626' : '#bdbdbd',
+        },
+        overlay: {
+            light: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(0, 0, 0, 0.04)',
+            medium: isDark ? 'rgba(255, 255, 255, 0.12)' : 'rgba(0, 0, 0, 0.08)',
+            dark: isDark ? 'rgba(0, 0, 0, 0.5)' : 'rgba(0, 0, 0, 0.3)',
+        },
+        status: {
+            connected: '#4caf50',
+            connecting: '#ff9800',
+            disconnected: '#f44336',
+            polling: '#f57c00',
+        },
     }
 
     return createTheme({
         palette,
-        background: {
-            paper: "#1e1e1e",
-        },
         cssVariables: {
             colorSchemeSelector: 'data-toolpad-color-scheme',
         },
@@ -61,47 +99,96 @@ export function setupTheme() {
         },
         components: {
             MuiCssBaseline: {
-                styleOverrides: ({palette}) => {
-                    return `
-                   // html {
-                   //    font-size: 62.5%;
-                   // }
-                   // *::-webkit-scrollbar {
-                   //    height: 8px;
-                   //    width: 8px;
-                   // }
-                   // *::-webkit-scrollbar-track {
-                   //    border-radius: 4px;
-                   //    background-color: ${palette.secondary.main};
-                   // }
-                   //  *::-webkit-scrollbar-track:hover {
-                   //    background-color: ${palette.secondary.dark};
-                   //  }
-                   //  *::-webkit-scrollbar-track:active {
-                   //    background-color: ${palette.secondary.dark};
-                   //  }
-                `;
-                }
+                styleOverrides: (theme) => `
+                    /* React Grid Layout styles */
+                    .react-resizable-handle {
+                        z-index: 1000;
+                    }
+                    .react-grid-draggable {
+                        border-radius: 0;
+                        cursor: move;
+                    }
+
+                    /* Leaflet map styles */
+                    .leaflet-tooltip-bottom::before {
+                        border-bottom-color: ${theme.palette.background.default} !important;
+                    }
+                    .leaflet-tooltip {
+                        opacity: 0.9 !important;
+                    }
+                    .leaflet-control-attribution {
+                        display: none;
+                        background-color: ${theme.palette.background.paper};
+                        color: ${theme.palette.text.secondary};
+                        z-index: 3001;
+                    }
+                    .leaflet-container {
+                        background-color: ${theme.palette.background.default} !important;
+                    }
+                    .leaflet-control-fullscreen {
+                        display: none;
+                    }
+                    .leaflet-link {
+                        right: 8px;
+                        position: absolute;
+                    }
+
+                    /* Custom application styles */
+                    .window-title-bar {
+                        background-color: ${theme.palette.background.paper};
+                    }
+                    .attribution {
+                        color: ${theme.palette.text.secondary};
+                        font-size: 12px;
+                        line-height: 20px;
+                    }
+                    .truncate {
+                        white-space: nowrap;
+                        overflow: hidden;
+                        text-overflow: ellipsis;
+                        max-width: 1000px;
+                        display: block;
+                    }
+                    .pointer-cursor {
+                        cursor: pointer;
+                    }
+
+                    /* VSCode controller */
+                    .vsc-controller {
+                        display: none !important;
+                    }
+
+                    /* Tooltip satellite - interactive tooltips */
+                    .tooltip-satellite {
+                        pointer-events: auto !important;
+                    }
+                    .tooltip-satellite button {
+                        pointer-events: auto !important;
+                    }
+                    .tooltip-satellite button.Mui-disabled {
+                        pointer-events: none !important;
+                    }
+                `,
             },
             MuiDrawer: {
                 styleOverrides: {
                     paper: {
-                        backgroundColor: "#1e1e1e",
-                        borderRight: "1px solid #4b4b4b",
+                        backgroundColor: isDark ? "#1e1e1e" : "#f5f5f5",
+                        borderRight: isDark ? "1px solid #4b4b4b" : "1px solid #e0e0e0",
                     },
                 },
             },
             MuiAppBar: {
                 styleOverrides: {
                     root: {
-                        backgroundColor: "#071318",
+                        backgroundColor: isDark ? "#071318" : "#1976d2",
                     },
                 },
             },
             MuiSelect: {
                 styleOverrides: {
                     root: {
-                        backgroundColor: "#121212",
+                        backgroundColor: isDark ? "#121212" : "#ffffff",
                         //fontFamily: "Monospace, monospace",
                         //fontSize: "0.8rem",
                         //fontSpacing: "0.05rem",
@@ -120,28 +207,28 @@ export function setupTheme() {
             MuiAutocomplete: {
                 styleOverrides: {
                     root: {
-                        backgroundColor: "#121212",
+                        backgroundColor: isDark ? "#121212" : "#ffffff",
                     }
                 },
             },
             MuiListSubheader: {
                 styleOverrides: {
                     root: {
-                        backgroundColor: "#1e1e1e",
+                        backgroundColor: isDark ? "#1e1e1e" : "#f5f5f5",
                     }
                 },
             },
             MuiFilledInput: {
                 styleOverrides: {
                     root: {
-                        backgroundColor: "#121212",
+                        backgroundColor: isDark ? "#121212" : "#f5f5f5",
                     }
                 },
             },
             MuiTextField: {
                 styleOverrides: {
                     root: {
-                        backgroundColor: "#121212",
+                        backgroundColor: isDark ? "#121212" : "#ffffff",
                     }
                 },
             }

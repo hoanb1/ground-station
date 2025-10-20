@@ -46,11 +46,12 @@ function ConnectionStatus() {
 
     // Memoize connection color based on transport name
     const connectionColor = React.useMemo(() => {
-        if (trafficStatsRef.current.transport.name === "websocket") return '#4caf50';
-        if (trafficStatsRef.current.transport.name === "polling") return '#f57c00';
-        if (trafficStatsRef.current.transport.name === "connecting..." || trafficStatsRef.current.transport.name === "unknown") return '#ff9800';
-        if (trafficStatsRef.current.transport.name === "disconnected") return '#f44336';
-        return '#f44336';
+        const transport = trafficStatsRef.current.transport.name;
+        if (transport === "websocket") return 'status.connected';
+        if (transport === "polling") return 'status.polling';
+        if (transport === "connecting..." || transport === "unknown") return 'status.connecting';
+        if (transport === "disconnected") return 'status.disconnected';
+        return 'status.disconnected';
     }, [trafficStatsRef.current.transport.name]);
 
     // Memoize connection tooltip
@@ -102,7 +103,7 @@ function ConnectionStatus() {
                         width: 40,
                         color: connectionColor,
                         '&:hover': {
-                            backgroundColor: 'rgba(255, 255, 255, 0.08)'
+                            backgroundColor: 'overlay.light'
                         }
                     }}
                 >
@@ -129,11 +130,12 @@ function ConnectionStatus() {
             >
                 <Box sx={{
                     borderRadius: 0,
-                    border: '1px solid #424242',
+                    border: '1px solid',
+                    borderColor: 'border.main',
                     p: 1,
                     minWidth: 250,
                     width: 250,
-                    backgroundColor: '#1e1e1e',
+                    backgroundColor: 'background.paper',
                 }}>
                     <Box sx={{ mb: 2 }}>
                         <Typography variant="body2" color="text.secondary" sx={{ mb: 1 }}>
@@ -152,14 +154,14 @@ function ConnectionStatus() {
                                 <Typography variant="caption" color="text.secondary">
                                     {t('connection_popover.duration')}
                                 </Typography>
-                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: '#fff' }}>
+                                <Typography variant="body2" sx={{ fontFamily: 'monospace', color: 'text.primary' }}>
                                     {formatDuration(trafficStatsRef.current.session.duration)}
                                 </Typography>
                             </Grid>
                         </Grid>
 
                         {trafficStatsRef.current.manager.reconnecting && (
-                            <Typography variant="caption" sx={{ color: '#ff9800', fontFamily: 'monospace', mt: 1, display: 'block' }}>
+                            <Typography variant="caption" sx={{ color: 'status.connecting', fontFamily: 'monospace', mt: 1, display: 'block' }}>
                                 {t('connection_popover.reconnecting', { count: trafficStatsRef.current.manager.reconnectAttempts })}
                             </Typography>
                         )}

@@ -97,7 +97,7 @@ const OverviewSatelliteInfoCard = () => {
             .filter((v, i, a) => a.indexOf(v) === i)
         : [];
 
-    const DataPoint = ({ icon: Icon, label, value, color = '#ffffff', unit = '' }) => (
+    const DataPoint = ({ icon: Icon, label, value, color = 'text.primary', unit = '' }) => (
         <Box sx={{ mb: 0 }}>
             <Box sx={{ display: 'flex', alignItems: 'center', mb: 0.5 }}>
                 <Icon sx={{ fontSize: 14, mr: 0.5, color: color }} />
@@ -133,21 +133,21 @@ const OverviewSatelliteInfoCard = () => {
             height: '100%',
             display: 'flex',
             flexDirection: 'column',
-            bgcolor: "rgba(26, 26, 26, 0.95)",
+            bgcolor: "background.paper",
             backdropFilter: 'blur(10px)'
         }}>
             {/* Header */}
             <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
                 sx={{
-                    bgcolor: "rgba(10, 10, 10, 0.8)",
-                    borderBottom: "1px solid rgba(255, 255, 255, 0.1)",
+                    bgcolor: "background.default",
+                    borderBottom: "1px solid",
+                    borderColor: "divider",
                     backdropFilter: 'blur(10px)'
                 }}
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
-                        <SatelliteIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             {t('satellite_info.title')}
                         </Typography>
@@ -176,17 +176,18 @@ const OverviewSatelliteInfoCard = () => {
                     {/* Satellite Name & Status */}
                     <Box sx={{
                         p: 1,
-                        background: satelliteData && satelliteData['details'] ? 
+                        background: satelliteData && satelliteData['details'] ?
                             (() => {
                                 const status = satelliteData['details']['status'];
                                 switch(status) {
-                                    case 'alive': return 'linear-gradient(135deg, rgba(76,175,80,0.15) 0%, rgba(76,175,80,0.05) 100%)';
-                                    case 'dead': return 'linear-gradient(135deg, rgba(244,67,54,0.15) 0%, rgba(244,67,54,0.05) 100%)';
-                                    case 're-entered': return 'linear-gradient(135deg, rgba(255,152,0,0.15) 0%, rgba(255,152,0,0.05) 100%)';
-                                    default: return 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)';
+                                    case 'alive': return (theme) => `linear-gradient(135deg, ${theme.palette.success.main}26 0%, ${theme.palette.success.main}0D 100%)`;
+                                    case 'dead': return (theme) => `linear-gradient(135deg, ${theme.palette.error.main}26 0%, ${theme.palette.error.main}0D 100%)`;
+                                    case 're-entered': return (theme) => `linear-gradient(135deg, ${theme.palette.warning.main}26 0%, ${theme.palette.warning.main}0D 100%)`;
+                                    default: return 'overlay.light';
                                 }
-                            })() : 'linear-gradient(135deg, rgba(255,255,255,0.05) 0%, rgba(255,255,255,0.02) 100%)',
-                        borderBottom: "1px solid rgba(255, 255, 255, 0.1)"
+                            })() : 'overlay.light',
+                        borderBottom: "1px solid",
+                        borderColor: "divider"
                     }}>
                         <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
                             <Box sx={{
@@ -204,16 +205,16 @@ const OverviewSatelliteInfoCard = () => {
                                             default: return 'info.main';
                                         }
                                     })() : 'info.main',
-                                boxShadow: satelliteData && satelliteData['details'] ? 
+                                boxShadow: satelliteData && satelliteData['details'] ?
                                     (() => {
                                         const status = satelliteData['details']['status'];
                                         switch(status) {
-                                            case 'alive': return '0 0 8px #4caf5040';
-                                            case 'dead': return '0 0 8px #f4433440';
-                                            case 're-entered': return '0 0 8px #ff980040';
-                                            default: return '0 0 8px #2196f340';
+                                            case 'alive': return (theme) => `0 0 8px ${theme.palette.success.main}40`;
+                                            case 'dead': return (theme) => `0 0 8px ${theme.palette.error.main}40`;
+                                            case 're-entered': return (theme) => `0 0 8px ${theme.palette.warning.main}40`;
+                                            default: return (theme) => `0 0 8px ${theme.palette.info.main}40`;
                                         }
-                                    })() : '0 0 8px #2196f340'
+                                    })() : (theme) => `0 0 8px ${theme.palette.info.main}40`
                             }}/>
                             <Typography variant="h6" sx={{ fontWeight: 'bold', flex: 1 }}>
                                 {satelliteData && satelliteData['details'] ? satelliteData['details']['name'] : "- - - - - - - - - - -"}
@@ -241,18 +242,18 @@ const OverviewSatelliteInfoCard = () => {
                             <Grid container spacing={1}>
                                 <Grid size={6}>
                                     <DataPoint
-                                        icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#4fc3f7' }} />}
+                                        icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: 'info.light' }} />}
                                         label={t('satellite_info.latitude')}
                                         value={satelliteData && satelliteData['position'] ? humanizeLatitude(satelliteData['position']['lat']) : 'N/A'}
-                                        color="#4fc3f7"
+                                        color="info.light"
                                     />
                                 </Grid>
                                 <Grid size={6}>
                                     <DataPoint
-                                        icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: '#81c784' }} />}
+                                        icon={({ sx }) => <Box sx={{ ...sx, width: 6, height: 6, borderRadius: '50%', bgcolor: 'success.light' }} />}
                                         label={t('satellite_info.longitude')}
                                         value={satelliteData && satelliteData['position'] ? humanizeLongitude(satelliteData['position']['lon']) : 'N/A'}
-                                        color="#81c784"
+                                        color="success.light"
                                     />
                                 </Grid>
                                 <Grid size={6}>
@@ -260,7 +261,7 @@ const OverviewSatelliteInfoCard = () => {
                                         icon={MyLocationIcon}
                                         label={t('satellite_info.azimuth')}
                                         value={satelliteData && satelliteData['position'] && satelliteData['position']['az'] ? `${satelliteData['position']['az'].toFixed(1)}°` : 'N/A'}
-                                        color="#ffb74d"
+                                        color="warning.light"
                                     />
                                 </Grid>
                                 <Grid size={6}>
@@ -268,13 +269,13 @@ const OverviewSatelliteInfoCard = () => {
                                         icon={HeightIcon}
                                         label={t('satellite_info.elevation')}
                                         value={satelliteData && satelliteData['position'] && satelliteData['position']['el'] ? `${satelliteData['position']['el'].toFixed(1)}°` : 'N/A'}
-                                        color="#e57373"
+                                        color="error.light"
                                     />
                                 </Grid>
                             </Grid>
                         </Section>
 
-                        <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                        <Divider sx={{ my: 0, mb: 1 }} />
 
                         {/* Orbital Data */}
                         <Section title={t('satellite_info.orbital_data')} icon={SpeedIcon}>
@@ -284,7 +285,7 @@ const OverviewSatelliteInfoCard = () => {
                                         icon={HeightIcon}
                                         label={t('satellite_info.altitude')}
                                         value={satelliteData && satelliteData['position'] ? humanizeAltitude(satelliteData['position']['alt'], 0) : 'N/A'}
-                                        color="#ba68c8"
+                                        color="secondary.light"
                                         unit="km"
                                     />
                                 </Grid>
@@ -293,14 +294,14 @@ const OverviewSatelliteInfoCard = () => {
                                         icon={SpeedIcon}
                                         label={t('satellite_info.velocity')}
                                         value={satelliteData && satelliteData['position'] ? humanizeVelocity(satelliteData['position']['vel']) : 'N/A'}
-                                        color="#4db6ac"
+                                        color="primary.light"
                                         unit="km/s"
                                     />
                                 </Grid>
                             </Grid>
                         </Section>
 
-                        <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                        <Divider sx={{ my: 0, mb: 1 }} />
 
                         {/* Communication Data */}
                         <Section title={t('satellite_info.communication')} icon={SettingsInputAntennaIcon}>
@@ -316,7 +317,7 @@ const OverviewSatelliteInfoCard = () => {
                                             size="small"
                                             sx={{
                                                 backgroundColor: getBandColor(band),
-                                                color: '#ffffff',
+                                                color: 'common.white',
                                                 fontSize: '0.7rem',
                                                 height: 24
                                             }}
@@ -326,7 +327,7 @@ const OverviewSatelliteInfoCard = () => {
                             </Box>
                         </Section>
 
-                        <Divider sx={{ my: 0, mb: 1, borderColor: 'rgba(255, 255, 255, 0.1)' }} />
+                        <Divider sx={{ my: 0, mb: 1 }} />
 
                         {/* Metadata */}
                         <Section title={t('satellite_info.metadata')} icon={PublicIcon}>
@@ -346,7 +347,7 @@ const OverviewSatelliteInfoCard = () => {
                                         <Typography variant="caption" sx={{ color: 'text.secondary', fontWeight: 'medium', mb: 0.5, display: 'block' }}>
                                             {t('satellite_info.last_update')}
                                         </Typography>
-                                        <Typography variant="body2" sx={{ color: '#ffcc02' }}>
+                                        <Typography variant="body2" sx={{ color: 'warning.light' }}>
                                             {satelliteData && satelliteData['details'] ? betterDateTimes(satelliteData['details']['updated']) : 'N/A'}
                                         </Typography>
                                     </Box>
@@ -358,9 +359,9 @@ const OverviewSatelliteInfoCard = () => {
                     {/* Footer */}
                     <Box sx={{
                         p: 2,
-                        borderTop: "1px solid rgba(255, 255, 255, 0.1)",
-                        background: 'linear-gradient(180deg, rgba(10, 10, 10, 0.8) 0%, rgba(10, 10, 10, 0.9) 100%)',
-                        backdropFilter: 'blur(10px)'
+                        borderTop: "1px solid",
+                        borderColor: "divider",
+                        bgcolor: 'background.default'
                     }}>
                         <Box sx={{ display: 'flex', gap: 1 }}>
                             <Button
@@ -372,16 +373,7 @@ const OverviewSatelliteInfoCard = () => {
                                     flex: 1,
                                     py: 1.5,
                                     fontWeight: 'bold',
-                                    borderRadius: 2,
-                                    background: trackingSatelliteId === selectedSatelliteId
-                                        ? 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)'
-                                        : 'linear-gradient(45deg, #2196f3 30%, #21cbf3 90%)',
-                                    boxShadow: '0 3px 5px 2px rgba(33, 203, 243, .3)',
-                                    '&:hover': {
-                                        background: trackingSatelliteId === selectedSatelliteId
-                                            ? 'linear-gradient(45deg, #4caf50 30%, #66bb6a 90%)'
-                                            : 'linear-gradient(45deg, #1976d2 30%, #1e88e5 90%)',
-                                    }
+                                    borderRadius: 2
                                 }}
                             >
                                 {trackingSatelliteId === selectedSatelliteId ? t('satellite_info.currently_targeted') : t('satellite_info.set_as_target')}
@@ -391,10 +383,11 @@ const OverviewSatelliteInfoCard = () => {
                                 onClick={() => navigate(`/satellite/${selectedSatelliteId}`)}
                                 sx={{
                                     borderRadius: 2,
-                                    bgcolor: 'rgba(255, 255, 255, 0.05)',
-                                    border: '1px solid rgba(255, 255, 255, 0.1)',
+                                    bgcolor: 'action.hover',
+                                    border: '1px solid',
+                                    borderColor: 'divider',
                                     '&:hover': {
-                                        bgcolor: 'rgba(255, 255, 255, 0.1)',
+                                        bgcolor: 'action.selected',
                                     },
                                     '&:disabled': {
                                         opacity: 0.3,
