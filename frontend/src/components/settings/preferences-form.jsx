@@ -62,6 +62,10 @@ const PreferencesForm = () => {
     const languageOptions = [
         { name: 'English', value: 'en_US' },
         { name: 'Ελληνικά', value: 'el_GR' },
+        { name: 'Français', value: 'fr_FR' },
+        { name: 'Español', value: 'es_ES' },
+        { name: 'Deutsch', value: 'de_DE' },
+        { name: 'Nederlands', value: 'nl_NL' },
     ];
 
     const themesOptions = [

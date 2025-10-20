@@ -43,6 +43,50 @@ import targetEL from './locales/el/target.json';
 import dashboardEL from './locales/el/dashboard.json';
 import waterfallEL from './locales/el/waterfall.json';
 
+import commonFR from './locales/fr/common.json';
+import navigationFR from './locales/fr/navigation.json';
+import hardwareFR from './locales/fr/hardware.json';
+import settingsFR from './locales/fr/settings.json';
+import satellitesFR from './locales/fr/satellites.json';
+import trackingFR from './locales/fr/tracking.json';
+import overviewFR from './locales/fr/overview.json';
+import targetFR from './locales/fr/target.json';
+import dashboardFR from './locales/fr/dashboard.json';
+import waterfallFR from './locales/fr/waterfall.json';
+
+import commonES from './locales/es/common.json';
+import navigationES from './locales/es/navigation.json';
+import hardwareES from './locales/es/hardware.json';
+import settingsES from './locales/es/settings.json';
+import satellitesES from './locales/es/satellites.json';
+import trackingES from './locales/es/tracking.json';
+import overviewES from './locales/es/overview.json';
+import targetES from './locales/es/target.json';
+import dashboardES from './locales/es/dashboard.json';
+import waterfallES from './locales/es/waterfall.json';
+
+import commonDE from './locales/de/common.json';
+import navigationDE from './locales/de/navigation.json';
+import hardwareDE from './locales/de/hardware.json';
+import settingsDE from './locales/de/settings.json';
+import satellitesDE from './locales/de/satellites.json';
+import trackingDE from './locales/de/tracking.json';
+import overviewDE from './locales/de/overview.json';
+import targetDE from './locales/de/target.json';
+import dashboardDE from './locales/de/dashboard.json';
+import waterfallDE from './locales/de/waterfall.json';
+
+import commonNL from './locales/nl/common.json';
+import navigationNL from './locales/nl/navigation.json';
+import hardwareNL from './locales/nl/hardware.json';
+import settingsNL from './locales/nl/settings.json';
+import satellitesNL from './locales/nl/satellites.json';
+import trackingNL from './locales/nl/tracking.json';
+import overviewNL from './locales/nl/overview.json';
+import targetNL from './locales/nl/target.json';
+import dashboardNL from './locales/nl/dashboard.json';
+import waterfallNL from './locales/nl/waterfall.json';
+
 const resources = {
     en: {
         common: commonEN,
@@ -67,6 +111,54 @@ const resources = {
         target: targetEL,
         dashboard: dashboardEL,
         waterfall: waterfallEL,
+    },
+    fr: {
+        common: commonFR,
+        navigation: navigationFR,
+        hardware: hardwareFR,
+        settings: settingsFR,
+        satellites: satellitesFR,
+        tracking: trackingFR,
+        overview: overviewFR,
+        target: targetFR,
+        dashboard: dashboardFR,
+        waterfall: waterfallFR,
+    },
+    es: {
+        common: commonES,
+        navigation: navigationES,
+        hardware: hardwareES,
+        settings: settingsES,
+        satellites: satellitesES,
+        tracking: trackingES,
+        overview: overviewES,
+        target: targetES,
+        dashboard: dashboardES,
+        waterfall: waterfallES,
+    },
+    de: {
+        common: commonDE,
+        navigation: navigationDE,
+        hardware: hardwareDE,
+        settings: settingsDE,
+        satellites: satellitesDE,
+        tracking: trackingDE,
+        overview: overviewDE,
+        target: targetDE,
+        dashboard: dashboardDE,
+        waterfall: waterfallDE,
+    },
+    nl: {
+        common: commonNL,
+        navigation: navigationNL,
+        hardware: hardwareNL,
+        settings: settingsNL,
+        satellites: satellitesNL,
+        tracking: trackingNL,
+        overview: overviewNL,
+        target: targetNL,
+        dashboard: dashboardNL,
+        waterfall: waterfallNL,
     },
 };
 
