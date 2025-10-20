@@ -52,5 +52,41 @@
       "satellite_changed": "Άλλαξε ο δορυφόρος στόχος",
       "satellite_info": "{{name}} (NORAD {{noradId}})"
     }
+  },
+  "humanize": {
+    "bytes": {
+      "bytes": "Bytes",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB",
+      "tb": "TB"
+    },
+    "date": {
+      "just_now": "Μόλις τώρα",
+      "minute_ago": "πριν από {{count}} λεπτό",
+      "minutes_ago": "πριν από {{count}} λεπτά",
+      "hour_ago": "πριν από {{count}} ώρα",
+      "hours_ago": "πριν από {{count}} ώρες",
+      "day_ago": "πριν από {{count}} ημέρα",
+      "days_ago": "πριν από {{count}} ημέρες",
+      "week_ago": "πριν από {{count}} εβδομάδα",
+      "weeks_ago": "πριν από {{count}} εβδομάδες",
+      "month_ago": "πριν από {{count}} μήνα",
+      "months_ago": "πριν από {{count}} μήνες",
+      "year_ago": "πριν από {{count}} έτος",
+      "years_ago": "πριν από {{count}} έτη"
+    }
+  },
+  "satellite_status": {
+    "alive": "Ενεργός",
+    "dead": "Ανενεργός",
+    "re_entered": "Επανεισήλθε",
+    "future": "Μελλοντικός",
+    "not_available": "μ/δ"
+  },
+  "transmitter_status": {
+    "active": "Ενεργός",
+    "inactive": "Ανενεργός",
+    "invalid": "Μη έγκυρος"
   }
 }

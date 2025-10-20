@@ -52,5 +52,41 @@
       "satellite_changed": "Target satellite changed",
       "satellite_info": "{{name}} (NORAD {{noradId}})"
     }
+  },
+  "humanize": {
+    "bytes": {
+      "bytes": "Bytes",
+      "kb": "KB",
+      "mb": "MB",
+      "gb": "GB",
+      "tb": "TB"
+    },
+    "date": {
+      "just_now": "Just now",
+      "minute_ago": "{{count}} minute ago",
+      "minutes_ago": "{{count}} minutes ago",
+      "hour_ago": "{{count}} hour ago",
+      "hours_ago": "{{count}} hours ago",
+      "day_ago": "{{count}} day ago",
+      "days_ago": "{{count}} days ago",
+      "week_ago": "{{count}} week ago",
+      "weeks_ago": "{{count}} weeks ago",
+      "month_ago": "{{count}} month ago",
+      "months_ago": "{{count}} months ago",
+      "year_ago": "{{count}} year ago",
+      "years_ago": "{{count}} years ago"
+    }
+  },
+  "satellite_status": {
+    "alive": "Alive",
+    "dead": "Dead",
+    "re_entered": "Re-entered",
+    "future": "Future",
+    "not_available": "n/a"
+  },
+  "transmitter_status": {
+    "active": "Active",
+    "inactive": "Inactive",
+    "invalid": "Invalid"
   }
 }

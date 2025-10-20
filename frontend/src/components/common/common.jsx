@@ -29,6 +29,7 @@ import ArrowBackIcon from "@mui/icons-material/ArrowBack";
 import ArrowForwardIcon from "@mui/icons-material/ArrowForward";
 import ArrowDownwardIcon from "@mui/icons-material/ArrowDownward";
 import Tabs from "@mui/material/Tabs";
+import i18n from '../../i18n/config';
 
 export const SATELLITE_NUMBER_LIMIT = 50;
 
@@ -257,22 +258,31 @@ export const humanizeDate = (isoString) => {
     const pastDate = new Date(isoString);
     const diffInSeconds = Math.floor((now - pastDate) / 1000);
 
-    const units = [
-        {label: "year", seconds: 365 * 24 * 60 * 60},
-        {label: "month", seconds: 30 * 24 * 60 * 60},
-        {label: "day", seconds: 24 * 60 * 60},
-        {label: "hour", seconds: 60 * 60},
-        {label: "minute", seconds: 60},
-        {label: "second", seconds: 1}
-    ];
+    const years = Math.floor(diffInSeconds / (365 * 24 * 60 * 60));
+    if (years >= 2) return i18n.t('common:humanize.date.years_ago', { count: years });
+    if (years >= 1) return i18n.t('common:humanize.date.year_ago', { count: years });
 
-    for (let unit of units) {
-        const count = Math.floor(diffInSeconds / unit.seconds);
-        if (count >= 1) {
-            return `${count} ${unit.label}${count > 1 ? "s" : ""} ago`;
-        }
-    }
-    return "Just now";
+    const months = Math.floor(diffInSeconds / (30 * 24 * 60 * 60));
+    if (months >= 2) return i18n.t('common:humanize.date.months_ago', { count: months });
+    if (months >= 1) return i18n.t('common:humanize.date.month_ago', { count: months });
+
+    const weeks = Math.floor(diffInSeconds / (7 * 24 * 60 * 60));
+    if (weeks >= 2) return i18n.t('common:humanize.date.weeks_ago', { count: weeks });
+    if (weeks >= 1) return i18n.t('common:humanize.date.week_ago', { count: weeks });
+
+    const days = Math.floor(diffInSeconds / (24 * 60 * 60));
+    if (days >= 2) return i18n.t('common:humanize.date.days_ago', { count: days });
+    if (days >= 1) return i18n.t('common:humanize.date.day_ago', { count: days });
+
+    const hours = Math.floor(diffInSeconds / (60 * 60));
+    if (hours >= 2) return i18n.t('common:humanize.date.hours_ago', { count: hours });
+    if (hours >= 1) return i18n.t('common:humanize.date.hour_ago', { count: hours });
+
+    const minutes = Math.floor(diffInSeconds / 60);
+    if (minutes >= 2) return i18n.t('common:humanize.date.minutes_ago', { count: minutes });
+    if (minutes >= 1) return i18n.t('common:humanize.date.minute_ago', { count: minutes });
+
+    return i18n.t('common:humanize.date.just_now');
 };
 
 
@@ -386,17 +396,17 @@ export const betterStatusValue = (status) => {
     if (status) {
         if (status === "alive") {
             return (
-                <Chip sx={{ height: '18px' }} label="Alive" size="small" color="success" variant="outlined" />
+                <Chip sx={{ height: '18px' }} label={i18n.t('common:satellite_status.alive')} size="small" color="success" variant="outlined" />
             );
         } else if (status === "dead") {
             return (
-                <Chip sx={{ height: '18px' }} label="Dead" size="small" color="error" variant="outlined" />
+                <Chip sx={{ height: '18px' }} label={i18n.t('common:satellite_status.dead')} size="small" color="error" variant="outlined" />
             );
         } else {
             return (<Chip sx={{ height: '18px' }} label={status} size="small" color="info" variant="outlined" />);
         }
     } else {
-        return <Chip sx={{ height: '18px' }} label={"n/a"} size="small" color="info" variant="outlined" />;
+        return <Chip sx={{ height: '18px' }} label={i18n.t('common:satellite_status.not_available')} size="small" color="info" variant="outlined" />;
     }
 };
 
