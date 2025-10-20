@@ -127,5 +127,40 @@
       "delete_confirm_message": "Are you sure you want to delete the selected transmitter(s)?",
       "cancel": "Cancel"
     }
+  },
+  "synchronize": {
+    "header": {
+      "title": "TLE Data Sync",
+      "subtitle": "Fetch orbital data from satellite sources",
+      "button": "Synchronize",
+      "last_update": "Last update: {{date}}"
+    },
+    "progress": {
+      "title": "Synchronization Progress"
+    },
+    "terminal": {
+      "ready": "Ready to synchronize. Click the button to start.",
+      "complete": "Synchronization complete!",
+      "syncing": "Synchronizing satellite data..."
+    },
+    "errors": {
+      "title_singular": "{{count}} Error Occurred",
+      "title_plural": "{{count}} Errors Occurred"
+    },
+    "results": {
+      "added": "Added Items",
+      "modified": "Modified Items",
+      "removed": "Removed Items",
+      "type": "Type",
+      "name": "Name",
+      "id": "ID",
+      "changes": "Changes",
+      "sat": "SAT",
+      "trx": "TRX",
+      "unknown": "Unknown",
+      "more_items": "+{{count}} more items...",
+      "satellites_count": "{{count}} Satellites",
+      "transmitters_count": "{{count}} Transmitters"
+    }
   }
 }

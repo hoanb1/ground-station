@@ -1,8 +1,10 @@
 import React from 'react';
 import { Box, Typography } from '@mui/material';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const SyncTerminal = ({ syncState }) => {
+    const { t } = useTranslation('satellites');
     return (
         <>
             <Box sx={{
@@ -39,10 +41,10 @@ const SyncTerminal = ({ syncState }) => {
                 >
                     {syncState['message'] || (
                         syncState['progress'] === 0
-                            ? 'Ready to synchronize. Click the button to start.'
+                            ? t('synchronize.terminal.ready')
                             : syncState['progress'] === 100
-                                ? 'Synchronization complete!'
-                                : 'Synchronizing satellite data...'
+                                ? t('synchronize.terminal.complete')
+                                : t('synchronize.terminal.syncing')
                     )}
                 </Typography>
             </Box>

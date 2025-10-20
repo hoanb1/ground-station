@@ -2,8 +2,10 @@ import React from 'react';
 import { Box, Typography } from '@mui/material';
 import LinearProgress from '@mui/material/LinearProgress';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const SyncProgressBar = ({ syncState }) => {
+    const { t } = useTranslation('satellites');
     return (
         <>
             <Box sx={{
@@ -22,7 +24,7 @@ const SyncProgressBar = ({ syncState }) => {
                         fontSize: '0.7rem',
                     }}
                 >
-                    Synchronization Progress
+                    {t('synchronize.progress.title')}
                 </Typography>
                 <Typography
                     variant="h6"

@@ -4,8 +4,10 @@ import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import SyncIcon from '@mui/icons-material/Sync';
 import { humanizeDate } from '../common/common.jsx';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const SyncCardHeader = ({ syncState, onSynchronize }) => {
+    const { t } = useTranslation('satellites');
     const isSyncing = syncState['progress'] > 0 && syncState['progress'] < 100;
 
     return (
@@ -41,7 +43,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                             fontSize: { xs: '1rem', sm: '1.25rem' },
                         }}
                     >
-                        TLE Data Sync
+                        {t('synchronize.header.title')}
                     </Typography>
                     <Typography
                         variant="subtitle2"
@@ -54,7 +56,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                             display: { xs: 'none', sm: 'block' },
                         }}
                     >
-                        Fetch orbital data from satellite sources
+                        {t('synchronize.header.subtitle')}
                     </Typography>
                 </Box>
             </Box>
@@ -111,7 +113,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                         },
                         fontSize: { xs: '1rem', sm: '1.25rem' }
                     }}/>
-                    Synchronize
+                    {t('synchronize.header.button')}
                 </Button>
 
                 {syncState?.last_update && (
@@ -125,7 +127,7 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                             textAlign: { xs: 'left', sm: 'center' },
                         }}
                     >
-                        Last update: {humanizeDate(syncState.last_update)}
+                        {t('synchronize.header.last_update', { date: humanizeDate(syncState.last_update) })}
                     </Typography>
                 )}
             </Box>

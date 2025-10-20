@@ -4,8 +4,10 @@ import ExpandMoreIcon from '@mui/icons-material/ExpandMore';
 import ExpandLessIcon from '@mui/icons-material/ExpandLess';
 import ErrorIcon from '@mui/icons-material/Error';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const ErrorSection = ({ hasErrors, errorsCount, showErrors, setShowErrors, syncState }) => {
+    const { t } = useTranslation('satellites');
     if (!hasErrors) return null;
 
     return (
@@ -48,7 +50,7 @@ const ErrorSection = ({ hasErrors, errorsCount, showErrors, setShowErrors, syncS
                             fontSize: '0.75rem',
                         }}
                     >
-                        {errorsCount} {errorsCount > 1 ? 'Errors' : 'Error'} Occurred
+                        {errorsCount > 1 ? t('synchronize.errors.title_plural', { count: errorsCount }) : t('synchronize.errors.title_singular', { count: errorsCount })}
                     </Typography>
                 </Box>
                 <IconButton

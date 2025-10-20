@@ -4,8 +4,10 @@ import FiberNewIcon from '@mui/icons-material/FiberNew';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import RadioIcon from '@mui/icons-material/Radio';
 import PropTypes from 'prop-types';
+import { useTranslation } from 'react-i18next';
 
 const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }) => {
+    const { t } = useTranslation('satellites');
     return (
         <Paper
             elevation={3}
@@ -38,7 +40,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         fontSize: { xs: '0.75rem', sm: '0.85rem' },
                     }}
                 >
-                    Added Items
+                    {t('synchronize.results.added')}
                 </Typography>
             </Box>
 
@@ -61,7 +63,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
-                        Type
+                        {t('synchronize.results.type')}
                     </Typography>
                     <Typography sx={{
                         color: '#4caf50',
@@ -71,7 +73,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         textAlign: 'left',
                         pl: { xs: 0.5, sm: 0.75, md: 1 },
                     }}>
-                        Name
+                        {t('synchronize.results.name')}
                     </Typography>
                     <Typography sx={{
                         color: '#4caf50',
@@ -80,7 +82,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         textTransform: 'uppercase',
                         textAlign: 'center',
                     }}>
-                        ID
+                        {t('synchronize.results.id')}
                     </Typography>
                 </Box>
             </Box>
@@ -130,7 +132,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                                 fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
                                 mr: { xs: 0.25, sm: 0.5 }
                             }} />
-                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>SAT</Box>
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{t('synchronize.results.sat')}</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
@@ -186,7 +188,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                                 fontSize: { xs: '0.7rem', sm: '0.75rem', md: '0.8rem' },
                                 mr: { xs: 0.25, sm: 0.5 }
                             }} />
-                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>TRX</Box>
+                            <Box sx={{ display: { xs: 'none', sm: 'block' } }}>{t('synchronize.results.trx')}</Box>
                         </Box>
                         <Box sx={{
                             color: '#ffffff',
@@ -198,8 +200,8 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                             textAlign: 'left',
                             pl: { xs: 0.5, sm: 0.75, md: 1 },
                         }}>
-                            <Tooltip title={`${trx.description || 'Unknown'} (${trx.satellite_name})`} placement="top">
-                                <span>{trx.description || 'Unknown'}</span>
+                            <Tooltip title={`${trx.description || t('synchronize.results.unknown')} (${trx.satellite_name})`} placement="top">
+                                <span>{trx.description || t('synchronize.results.unknown')}</span>
                             </Tooltip>
                         </Box>
                         <Box sx={{
@@ -224,7 +226,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                         fontStyle: 'italic',
                         p: { xs: 1.5, sm: 2 },
                     }}>
-                        +{(newSatellitesCount + newTransmittersCount) - 100} more items...
+                        {t('synchronize.results.more_items', { count: (newSatellitesCount + newTransmittersCount) - 100 })}
                     </Box>
                 )}
             </Box>
@@ -239,7 +241,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                 flexWrap: 'wrap',
             }}>
                 <Chip
-                    label={`${newSatellitesCount} Satellites`}
+                    label={t('synchronize.results.satellites_count', { count: newSatellitesCount })}
                     size="small"
                     sx={{
                         backgroundColor: 'rgba(64, 192, 255, 0.2)',
@@ -250,7 +252,7 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     }}
                 />
                 <Chip
-                    label={`${newTransmittersCount} Transmitters`}
+                    label={t('synchronize.results.transmitters_count', { count: newTransmittersCount })}
                     size="small"
                     sx={{
                         backgroundColor: 'rgba(255, 152, 0, 0.2)',
