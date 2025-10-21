@@ -20,7 +20,7 @@
 
 import React, {useCallback, useEffect, useRef, useState, useImperativeHandle, forwardRef} from "react";
 import {useDispatch, useSelector} from "react-redux";
-import {Box, IconButton} from "@mui/material";
+import {Box, IconButton, useTheme} from "@mui/material";
 import FrequencyScale from "./frequency-scale.jsx";
 import BookmarkCanvas from "./bookmarks-overlay.jsx";
 import {
@@ -41,7 +41,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                                               maxZoom = 20,
                                           }, ref) {
 
-
+    const theme = useTheme();
     const containerRef = useRef(null);
     const containerWidthRef = useRef(0);
     const [isMobile, setIsMobile] = useState(false);
@@ -433,7 +433,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                             imageRendering: 'auto',
                             width: '100%',
                             height: `${bandScopeHeight}px`,
-                            borderBottom: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderBottom: `1px solid ${theme.palette.border.main}`,
                             display: 'block',
                             touchAction: 'pan-y',
                             transform: 'translateZ(0)',

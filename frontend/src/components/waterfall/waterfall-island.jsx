@@ -25,6 +25,7 @@ import {
     Button,
     Stack,
     Slider,
+    useTheme,
 } from '@mui/material';
 import HeightIcon from '@mui/icons-material/Height';
 import {useDispatch, useSelector} from "react-redux";
@@ -97,6 +98,7 @@ export const createExternalWorker = () => {
 
 const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const { t } = useTranslation('waterfall');
+    const theme = useTheme();
     const dispatch = useDispatch();
     const waterFallCanvasRef = useRef(null);
     const bandscopeCanvasRef = useRef(null);
@@ -510,7 +512,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                 sx={{
                     width: '100%',
                     height: '100%',
-                    bgcolor: 'black',
+                    bgcolor: theme.palette.background.default,
                     position: 'relative',
                     borderRadius: 1,
 
@@ -543,12 +545,12 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                             style={{
                                 width: '100%',
                                 height: `${bandScopeHeight}px`,
-                                backgroundColor: 'rgba(40, 40, 40, 0.7)',
+                                backgroundColor: theme.palette.background.elevated,
                                 display: 'block',
                                 transform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 perspective: '1000px',
-                                borderRight: '1px solid #535353',
+                                borderRight: `1px solid ${theme.palette.border.light}`,
                             }}
                         />
                         <canvas
@@ -557,9 +559,9 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                             style={{
                                 width: '100%',
                                 height: '21px',
-                                backgroundColor: 'rgba(28, 28, 28, 1)',
-                                borderTop: '1px solid rgba(255, 255, 255, 0.2)',
-                                borderRight: '1px solid #535353',
+                                backgroundColor: theme.palette.background.paper,
+                                borderTop: `1px solid ${theme.palette.border.main}`,
+                                borderRight: `1px solid ${theme.palette.border.light}`,
                                 display: 'block',
                                 transform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
@@ -576,8 +578,8 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                                 //height: `${dimensions['height'] - 230}px`,
                                 height: `${waterFallCanvasHeight}px`,
                                 display: 'block',
-                                backgroundColor: 'rgba(28, 28, 28, 1)',
-                                borderRight: '1px solid #535353',
+                                backgroundColor: theme.palette.background.paper,
+                                borderRight: `1px solid ${theme.palette.border.light}`,
                                 transform: 'translateZ(0)',
                                 backfaceVisibility: 'hidden',
                                 perspective: '1000px',
@@ -604,8 +606,8 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                             maxWidth: '50px',
                             height: `calc(${dimensions['height']}px - 98px)`,
                             position: 'relative',
-                            borderLeft: '1px solid rgba(255, 255, 255, 0.2)',
-                            backgroundColor: 'rgba(28, 28, 28, 1)',
+                            borderLeft: `1px solid ${theme.palette.border.main}`,
+                            backgroundColor: theme.palette.background.paper,
                             display: showRightSideWaterFallAccessories ? 'flex' : 'none',
                             flexDirection: 'column',
                             flexShrink: 0,
@@ -642,7 +644,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                             </Button>
                         </Stack>
                         <Box sx={{
-                            borderTop: '1px solid rgba(255, 255, 255, 0.2)',
+                            borderTop: `1px solid ${theme.palette.border.main}`,
                             p: 0,
                             m: 0
                         }}>
