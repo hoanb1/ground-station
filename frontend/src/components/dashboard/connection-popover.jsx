@@ -26,10 +26,12 @@ function ConnectionStatus() {
     const { t } = useTranslation('dashboard');
     const { socket, trafficStatsRef } = useSocket();
     const [anchorEl, setAnchorEl] = useState(null);
+    const [, forceUpdate] = useState(0);
 
     // Force update stats every second to get fresh data
     useEffect(() => {
         const interval = setInterval(()=>{
+            forceUpdate(prev => prev + 1);
         }, 1000);
         return () => clearInterval(interval);
     }, []);

@@ -81,7 +81,7 @@
     "not_found": "Ο δορυφόρος δεν βρέθηκε",
     "not_found_message": "Δεν ήταν δυνατή η εύρεση δορυφόρου με NORAD ID: {{noradId}}",
     "go_to_list": "Μετάβαση στη Λίστα Δορυφόρων",
-    "delete_satellite": "Διαγραφή Δορυφόρου",
+    "delete_satellite": "ΔΙΑΓΡΑΦΗ ΔΟΡΥΦΟΡΟΥ",
     "delete_confirm_title": "Διαγραφή Δορυφόρου",
     "delete_confirm_message": "Είστε σίγουροι ότι θέλετε να διαγράψετε αυτόν τον δορυφόρο; Αυτή η ενέργεια δεν μπορεί να αναιρεθεί.",
     "delete_confirm_transmitters": "Σημείωση: Αυτό θα διαγράψει επίσης {{count}} συσχετισμένο{{plural}} πομποδέκτ{{plural}}.",
