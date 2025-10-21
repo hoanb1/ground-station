@@ -72,7 +72,7 @@ const WaterfallToolbar = ({
                 <IconButton
                     loading={startStreamingLoading}
                     disabled={playButtonDisabled}
-                    color="secondary"
+                    color="primary"
                     onClick={startStreaming}
                     title={t('toolbar.start_streaming')}
                     sx={{ borderRadius: 0 }}
@@ -91,7 +91,7 @@ const WaterfallToolbar = ({
                 </IconButton>
 
                 <IconButton
-                    color={showLeftSideWaterFallAccessories ? 'warning' : 'secondary'}
+                    color={showLeftSideWaterFallAccessories ? 'warning' : 'primary'}
                     onClick={toggleLeftSideWaterFallAccessories}
                     size="small"
                     title={t('toolbar.toggle_left_panel')}
@@ -105,7 +105,7 @@ const WaterfallToolbar = ({
                 </IconButton>
 
                 <IconButton
-                    color={showRightSideWaterFallAccessories ? 'warning' : 'secondary'}
+                    color={showRightSideWaterFallAccessories ? 'warning' : 'primary'}
                     onClick={toggleRightSideWaterFallAccessories}
                     size="small"
                     title={t('toolbar.toggle_right_panel')}
@@ -120,15 +120,11 @@ const WaterfallToolbar = ({
                 <IconButton
                     onClick={toggleAutoDBRange}
                     size="small"
-                    color={autoDBRange ? 'warning' : 'secondary'}
+                    color={autoDBRange ? 'warning' : 'primary'}
                     title={t('toolbar.toggle_auto_db')}
                     sx={{
                         borderRadius: 0,
-                        backgroundColor: autoDBRange ? 'success.main' : 'transparent',
-                        opacity: autoDBRange ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: autoDBRange ? 'success.main' : 'primary.main',
-                            opacity: autoDBRange ? 0.2 : 0.1,
                         }
                     }}
                 >
@@ -139,7 +135,7 @@ const WaterfallToolbar = ({
                     sx={{ borderRadius: 0 }}
                     onClick={autoScale}
                     size="small"
-                    color="secondary"
+                    color="primary"
                     title={t('toolbar.auto_scale_once')}
                 >
                     <HeightIcon/>
@@ -148,7 +144,7 @@ const WaterfallToolbar = ({
                 <IconButton
                     sx={{ borderRadius: 0 }}
                     onClick={toggleFullscreen}
-                    color="secondary"
+                    color="primary"
                     title={t('toolbar.toggle_fullscreen')}
                 >
                     {isFullscreen ? <FullscreenExitIcon/> : <FullscreenIcon/>}
@@ -156,7 +152,7 @@ const WaterfallToolbar = ({
                 <IconButton
                     sx={{ borderRadius: 0 }}
                     onClick={handleZoomIn}
-                    color="secondary"
+                    color="primary"
                     title={t('toolbar.zoom_in')}
                 >
                     <ZoomInIcon/>
@@ -165,7 +161,7 @@ const WaterfallToolbar = ({
                 <IconButton
                     sx={{ borderRadius: 0 }}
                     onClick={handleZoomOut}
-                    color="secondary"
+                    color="primary"
                     title={t('toolbar.zoom_out')}
                 >
                     <ZoomOutIcon/>
@@ -174,7 +170,7 @@ const WaterfallToolbar = ({
                 <IconButton
                     sx={{ borderRadius: 0 }}
                     onClick={handleZoomReset}
-                    color="secondary"
+                    color="primary"
                     title={t('toolbar.reset_zoom')}
                 >
                     <RestartAltIcon/>
@@ -187,15 +183,11 @@ const WaterfallToolbar = ({
                         toggleRotatorDottedLines(!showRotatorDottedLines);
                     }}
                     size="small"
-                    color={showRotatorDottedLines ? 'warning' : 'secondary'}
+                    color={showRotatorDottedLines ? 'warning' : 'primary'}
                     title={t('toolbar.toggle_rotator_lines')}
                     sx={{
                         borderRadius: 0,
-                        backgroundColor: showRotatorDottedLines ? 'success.main' : 'transparent',
-                        opacity: showRotatorDottedLines ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: showRotatorDottedLines ? 'success.main' : 'primary.main',
-                            opacity: showRotatorDottedLines ? 0.2 : 0.1,
                         }
                     }}
                 >
@@ -222,7 +214,7 @@ const WaterfallToolbar = ({
                         },
                     }}
                     onClick={() => toggleVfo(1)}
-                    color={vfoActive[1] ? 'warning' : 'secondary'}
+                    color={vfoActive[1] ? 'warning' : 'primary'}
                     title={t('toolbar.toggle_vfo', { number: 1 })}
                 >
                     <VFO1Icon/>
@@ -248,7 +240,7 @@ const WaterfallToolbar = ({
                         },
                     }}
                     onClick={() => toggleVfo(2)}
-                    color={vfoActive[2] ? 'warning' : 'secondary'}
+                    color={vfoActive[2] ? 'warning' : 'primary'}
                     title={t('toolbar.toggle_vfo', { number: 2 })}
                 >
                     <VFO2Icon/>
@@ -274,7 +266,7 @@ const WaterfallToolbar = ({
                         },
                     }}
                     onClick={() => toggleVfo(3)}
-                    color={vfoActive[3] ? 'warning' : 'secondary'}
+                    color={vfoActive[3] ? 'warning' : 'primary'}
                     title={t('toolbar.toggle_vfo', { number: 3 })}
                 >
                     <VFO3Icon/>
@@ -300,7 +292,7 @@ const WaterfallToolbar = ({
                         },
                     }}
                     onClick={() => toggleVfo(4)}
-                    color={vfoActive[4] ? 'warning' : 'secondary'}
+                    color={vfoActive[4] ? 'warning' : 'primary'}
                     title={t('toolbar.toggle_vfo', { number: 4 })}
                 >
                     <VFO4Icon/>
