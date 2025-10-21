@@ -431,6 +431,16 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                             handleSetTrackingOnBackend={handleSetTrackingOnBackend}
                         />
                     );
+                } else if (isVisible) {
+                    currentPos.push(
+                        <Marker
+                            key={'marker-' + satellite['norad_id']}
+                            position={[lat, lon]}
+                            icon={satelliteIcon2}
+                            eventHandlers={markerEventHandlers}
+                            opacity={1}
+                        ></Marker>
+                    );
                 } else {
                     currentPos.push(
                         <Marker
