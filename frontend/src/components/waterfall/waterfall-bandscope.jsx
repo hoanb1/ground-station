@@ -476,6 +476,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                         imageRendering: 'auto',
                         width: '100%',
                         height: `${waterFallCanvasHeight}px`,
+                        backgroundColor: theme.palette.background.default,
                         display: 'block',
                         touchAction: 'pan-y',
                         transform: 'translateZ(0)', // this it breaks box-shadow CSS
