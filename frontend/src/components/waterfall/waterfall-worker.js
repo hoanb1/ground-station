@@ -67,6 +67,10 @@ let theme = {
             light: 'rgba(255, 255, 255, 0.08)',
             medium: 'rgba(255, 255, 255, 0.12)',
             dark: 'rgba(0, 0, 0, 0.5)',
+        },
+        text: {
+            primary: '#ffffff',
+            secondary: 'rgba(255, 255, 255, 0.7)',
         }
     }
 };
@@ -658,7 +662,7 @@ function drawDbAxis(ctx, width, height, [minDb, maxDb]) {
     ctx.fillRect(0, 0, dBAxisCanvas.width, height);
 
     // Draw dB marks and labels
-    ctx.fillStyle = 'white';
+    ctx.fillStyle = theme.palette.text.primary;
     ctx.font = '12px Monospace';
     ctx.textAlign = 'right';
 
@@ -671,7 +675,7 @@ function drawDbAxis(ctx, width, height, [minDb, maxDb]) {
         const y = height - ((db - minDb) / (maxDb - minDb)) * height;
 
         // Draw a horizontal dotted grid line
-        ctx.strokeStyle = 'rgba(150, 150, 150, 0.4)';
+        ctx.strokeStyle = theme.palette.overlay.light;
         ctx.setLineDash([2, 2]);
         ctx.beginPath();
         ctx.moveTo(dBAxisCanvas.width, y);
@@ -770,7 +774,7 @@ function updateWaterfallLeftMargin() {
 
         // Draw the time text
         waterFallLeftMarginCtx.font = '12px monospace';
-        waterFallLeftMarginCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
         waterFallLeftMarginCtx.textAlign = 'center';
         waterFallLeftMarginCtx.textBaseline = 'top';
         waterFallLeftMarginCtx.fillText(newRotatorEvent, dBAxisCanvas.width / 2, 2);
@@ -831,7 +835,7 @@ function updateWaterfallLeftMargin() {
 
         // Draw the time text
         waterFallLeftMarginCtx.font = '12px monospace';
-        waterFallLeftMarginCtx.fillStyle = 'rgba(255, 255, 255, 1)';
+        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
         waterFallLeftMarginCtx.textAlign = 'center';
         waterFallLeftMarginCtx.textBaseline = 'top';
         waterFallLeftMarginCtx.fillText(timeString, dBAxisCanvas.width / 2, 2);

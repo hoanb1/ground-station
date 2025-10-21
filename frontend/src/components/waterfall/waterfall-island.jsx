@@ -335,6 +335,10 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                                     light: theme.palette.overlay.light,
                                     medium: theme.palette.overlay.medium,
                                     dark: theme.palette.overlay.dark,
+                                },
+                                text: {
+                                    primary: theme.palette.text.primary,
+                                    secondary: theme.palette.text.secondary,
                                 }
                             }
                         }
@@ -455,11 +459,15 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                         light: theme.palette.overlay.light,
                         medium: theme.palette.overlay.medium,
                         dark: theme.palette.overlay.dark,
+                    },
+                    text: {
+                        primary: theme.palette.text.primary,
+                        secondary: theme.palette.text.secondary,
                     }
                 }
             }
         });
-    }, [colorMap, dbRange, fftSize, theme.palette.background, theme.palette.border, theme.palette.overlay]);
+    }, [colorMap, dbRange, fftSize, theme.palette.background, theme.palette.border, theme.palette.overlay, theme.palette.text]);
 
     // Update the worker when FPS changes
     useEffect(() => {
