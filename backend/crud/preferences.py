@@ -16,7 +16,7 @@
 import traceback
 import uuid
 from datetime import datetime, timezone
-from typing import List, Optional, Union
+from typing import List, Union
 
 from sqlalchemy import delete, insert, select, update
 from sqlalchemy.ext.asyncio import AsyncSession
@@ -65,14 +65,16 @@ async def fetch_all_preferences(session: AsyncSession) -> dict:
         stmt = select(Preferences)
         result = await session.execute(stmt)
         preferences = result.scalars().all()
-        preferences_dict = {pref.name: pref.value for pref in preferences}
+
+        # Create a dictionary mapping name to the full preference object
+        preferences_map = {pref.name: pref for pref in preferences}
 
         # Combine defaults with existing preferences
         combined_preferences = [
             {
-                "id": preferences_dict.get("id", None),
+                "id": preferences_map[key].id if key in preferences_map else None,
                 "name": key,
-                "value": preferences_dict.get(key, value),
+                "value": preferences_map[key].value if key in preferences_map else value,
             }
             for key, value in defaults.items()
         ]
@@ -169,12 +171,16 @@ async def set_preferences(session: AsyncSession, preferences: List[dict]) -> dic
 
         for data in preferences:
             preference_id = data.pop("id", None)
+            preference_name = data.get("name")
+
+            if not preference_name:
+                raise ValueError("Preference name is required")
 
             if preference_id:
                 if isinstance(preference_id, str):
                     preference_id = uuid.UUID(preference_id)
 
-                # Confirm the preference exists
+                # Confirm the preference exists by ID
                 stmt = select(Preferences).filter(Preferences.id == preference_id)
                 result = await session.execute(stmt)
                 preference = result.scalar_one_or_none()
@@ -193,25 +199,61 @@ async def set_preferences(session: AsyncSession, preferences: List[dict]) -> dic
                     updated_preferences.append(upd_result.scalar_one_or_none())
 
                 else:
-                    # Insert a new preference (upsert case)
+                    # Check if a preference with this name already exists
+                    stmt = select(Preferences).filter(Preferences.name == preference_name)
+                    result = await session.execute(stmt)
+                    existing_by_name = result.scalar_one_or_none()
+
+                    if existing_by_name:
+                        # Update the existing preference by name
+                        data.pop("added", None)
+                        data["updated"] = datetime.now(timezone.utc)
+                        upd_stmt = (
+                            update(Preferences)
+                            .where(Preferences.name == preference_name)
+                            .values(**data)
+                            .returning(Preferences)
+                        )
+                        upd_result = await session.execute(upd_stmt)
+                        updated_preferences.append(upd_result.scalar_one_or_none())
+                    else:
+                        # Insert a new preference (upsert case)
+                        now = datetime.now(timezone.utc)
+                        data["id"] = preference_id
+                        data["added"] = now
+                        data["updated"] = now
+                        stmt = insert(Preferences).values(**data).returning(Preferences)
+                        result = await session.execute(stmt)
+                        updated_preferences.append(result.scalar_one())
+
+            else:
+                # No ID provided - check if preference exists by name
+                stmt = select(Preferences).filter(Preferences.name == preference_name)
+                result = await session.execute(stmt)
+                existing_by_name = result.scalar_one_or_none()
+
+                if existing_by_name:
+                    # Update the existing preference
+                    data.pop("added", None)
+                    data["updated"] = datetime.now(timezone.utc)
+                    upd_stmt = (
+                        update(Preferences)
+                        .where(Preferences.name == preference_name)
+                        .values(**data)
+                        .returning(Preferences)
+                    )
+                    upd_result = await session.execute(upd_stmt)
+                    updated_preferences.append(upd_result.scalar_one_or_none())
+                else:
+                    # Insert a new preference
+                    new_id = uuid.uuid4()
                     now = datetime.now(timezone.utc)
-                    data["id"] = preference_id
+                    data["id"] = new_id
                     data["added"] = now
                     data["updated"] = now
                     stmt = insert(Preferences).values(**data).returning(Preferences)
                     result = await session.execute(stmt)
                     updated_preferences.append(result.scalar_one())
-
-            else:
-                # Insert a new preference if no ID is provided
-                new_id = uuid.uuid4()
-                now = datetime.now(timezone.utc)
-                data["id"] = new_id
-                data["added"] = now
-                data["updated"] = now
-                stmt = insert(Preferences).values(**data).returning(Preferences)
-                result = await session.execute(stmt)
-                updated_preferences.append(result.scalar_one())
 
         await session.commit()
         updated_preferences = serialize_object(updated_preferences)
