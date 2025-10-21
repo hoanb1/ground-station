@@ -248,7 +248,7 @@ export const themeConfigs = {
 
     night: {
         mode: 'dark',
-        primary: { main: '#bb86fc' }, // Soft purple
+        primary: { main: '#7f77c3' }, // Soft purple
         secondary: { main: '#03dac6' }, // Teal
         success: { main: '#4caf50' },
         warning: { main: '#fb8c00' },
