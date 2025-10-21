@@ -50,6 +50,27 @@ let renderWaterfallCount = 0;
 let vfoMarkers = [];
 let showRotatorDottedLines = true;
 
+// Store theme object
+let theme = {
+    palette: {
+        background: {
+            default: '#121212',
+            paper: '#1e1e1e',
+            elevated: '#2a2a2a',
+        },
+        border: {
+            main: '#424242',
+            light: '#494949',
+            dark: '#262626',
+        },
+        overlay: {
+            light: 'rgba(255, 255, 255, 0.08)',
+            medium: 'rgba(255, 255, 255, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.5)',
+        }
+    }
+};
+
 // Store waterfall history for auto-scaling
 let waterfallHistory = [];
 
@@ -212,6 +233,9 @@ self.onmessage = function(eventMessage) {
             }
             if (eventMessage.data.dbRange) {
                 dbRange = eventMessage.data.dbRange;
+            }
+            if (eventMessage.data.theme) {
+                theme = eventMessage.data.theme;
             }
             break;
 
@@ -466,12 +490,17 @@ function setupCanvas(config) {
     fftSize = config.fftSize;
     showRotatorDottedLines = config.showRotatorDottedLines;
 
+    // Update theme if provided
+    if (config.theme) {
+        theme = config.theme;
+    }
+
     // IMPORTANT: Reset smoothing arrays when FFT size changes
     fftHistory = [];
     smoothedFftData = new Array(fftSize).fill(-120);
 
     // Clear the canvas
-    waterfallCtx.fillStyle = 'black';
+    waterfallCtx.fillStyle = theme.palette.background.default;
     waterfallCtx.fillRect(0, 0, waterfallCanvas.width, waterfallCanvas.height);
 }
 
@@ -587,7 +616,7 @@ function drawBandscope() {
     const height = bandscopeCanvas.height;
 
     // Clear the canvas
-    bandscopeCtx.fillStyle = 'black';
+    bandscopeCtx.fillStyle = theme.palette.background.default;
     bandscopeCtx.fillRect(0, 0, width, height);
 
     const [minDb, maxDb] = dbRange;
@@ -625,7 +654,7 @@ function drawBandscope() {
 function drawDbAxis(ctx, width, height, [minDb, maxDb]) {
 
     // Draw background for the axis area
-    ctx.fillStyle = 'rgba(40, 40, 40, 0.7)';
+    ctx.fillStyle = theme.palette.background.elevated;
     ctx.fillRect(0, 0, dBAxisCanvas.width, height);
 
     // Draw dB marks and labels
@@ -729,14 +758,14 @@ function updateWaterfallLeftMargin() {
     );
 
     // Fill the top row with the background color
-    waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
+    waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
     waterFallLeftMarginCtx.fillRect(0, 0, waterfallLeftMarginCanvas.width, 1);
 
     // Process last rotator events, if there are any then print a line
     const newRotatorEvent = rotatorEventQueue.pop();
     if (newRotatorEvent) {
         // Draw a more visible background for the timestamp
-        waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
+        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
         waterFallLeftMarginCtx.fillRect(0, 0, dBAxisCanvas.width, 14);
 
         // Draw the time text
@@ -797,7 +826,7 @@ function updateWaterfallLeftMargin() {
         const timeString = `${hours}:${minutes}:${seconds}`;
 
         // Draw a more visible background for the timestamp
-        waterFallLeftMarginCtx.fillStyle = 'rgba(28, 28, 28, 1)';
+        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
         waterFallLeftMarginCtx.fillRect(0, 0, dBAxisCanvas.width, 14);
 
         // Draw the time text

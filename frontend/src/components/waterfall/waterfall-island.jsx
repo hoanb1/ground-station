@@ -319,6 +319,25 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                         dbRange: dbRange,
                         fftSize: fftSize,
                         showRotatorDottedLines: showRotatorDottedLines,
+                        theme: {
+                            palette: {
+                                background: {
+                                    default: theme.palette.background.default,
+                                    paper: theme.palette.background.paper,
+                                    elevated: theme.palette.background.elevated,
+                                },
+                                border: {
+                                    main: theme.palette.border.main,
+                                    light: theme.palette.border.light,
+                                    dark: theme.palette.border.dark,
+                                },
+                                overlay: {
+                                    light: theme.palette.overlay.light,
+                                    medium: theme.palette.overlay.medium,
+                                    dark: theme.palette.overlay.dark,
+                                }
+                            }
+                        }
                     }
                 }, [waterfallOffscreenCanvas, bandscopeOffscreenCanvas, dBAxisOffScreenCanvas, waterfallLeftMarginCanvas]);
 
@@ -419,9 +438,28 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
             cmd: 'updateConfig',
             colorMap,
             dbRange,
-            fftSize
+            fftSize,
+            theme: {
+                palette: {
+                    background: {
+                        default: theme.palette.background.default,
+                        paper: theme.palette.background.paper,
+                        elevated: theme.palette.background.elevated,
+                    },
+                    border: {
+                        main: theme.palette.border.main,
+                        light: theme.palette.border.light,
+                        dark: theme.palette.border.dark,
+                    },
+                    overlay: {
+                        light: theme.palette.overlay.light,
+                        medium: theme.palette.overlay.medium,
+                        dark: theme.palette.overlay.dark,
+                    }
+                }
+            }
         });
-    }, [colorMap, dbRange, fftSize]);
+    }, [colorMap, dbRange, fftSize, theme.palette.background, theme.palette.border, theme.palette.overlay]);
 
     // Update the worker when FPS changes
     useEffect(() => {

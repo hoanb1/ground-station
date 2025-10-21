@@ -19,6 +19,7 @@
 
 
 import React, { useRef, useEffect, useState } from 'react';
+import { useTheme } from '@mui/material';
 import {humanizeFrequency, preciseHumanizeFrequency} from "../common/common.jsx";
 
 const getFrequencyScaleWidth = (element) => {
@@ -28,6 +29,7 @@ const getFrequencyScaleWidth = (element) => {
 
 
 const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHeight = 20 }) => {
+    const theme = useTheme();
     const canvasRef = useRef(null);
     const frequencyScaleContainerRef = useRef(null);
     const [actualWidth, setActualWidth] = useState(2048);
@@ -77,7 +79,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
         canvas.height = height;
 
         // Clear the canvas
-        ctx.fillStyle = 'rgba(36, 36, 36, 1)';
+        ctx.fillStyle = theme.palette.background.paper;
         ctx.fillRect(0, 0, canvas.width, height);
 
         // Calculate frequency range and tick spacing
@@ -173,7 +175,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                 if (isBigTick) {
                     // Draw a big tick
                     ctx.beginPath();
-                    ctx.strokeStyle = 'white';
+                    ctx.strokeStyle = theme.palette.text.primary;
                     ctx.lineWidth = 1;
                     ctx.moveTo(x, height - 8);
                     ctx.lineTo(x, height);
@@ -181,7 +183,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
 
                     // Draw frequency label
                     const freqText = preciseHumanizeFrequency(freq);
-                    ctx.fillStyle = 'white';
+                    ctx.fillStyle = theme.palette.text.primary;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'top';
                     ctx.fillText(freqText, x, 2);
@@ -193,8 +195,8 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
 
                     ctx.beginPath();
                     ctx.strokeStyle = isLabeledMinor
-                        ? 'rgba(255, 255, 255, 0.7)'
-                        : 'rgba(255, 255, 255, 0.4)';
+                        ? theme.palette.text.secondary
+                        : theme.palette.overlay.light;
                     ctx.lineWidth = 1;
                     ctx.moveTo(x, isLabeledMinor ? height - 6 : height - 4);
                     ctx.lineTo(x, height);
@@ -206,7 +208,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                         const minorTextWidth = ctx.measureText(minorFreqText).width;
 
                         if (actualPixelsPerTick / (minorTicksPerMajor / 7) >= (minorTextWidth)) {
-                            ctx.fillStyle = 'rgba(255, 255, 255, 0.7)';
+                            ctx.fillStyle = theme.palette.text.secondary;
                             ctx.textAlign = 'center';
                             ctx.textBaseline = 'top';
                             ctx.font = `${fontSizeBase}px Monospace`;
@@ -217,7 +219,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
             }
         }
 
-    }, [centerFrequency, sampleRate, actualWidth]);
+    }, [centerFrequency, sampleRate, actualWidth, theme.palette]);
 
     return (
         <div
@@ -238,7 +240,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                     display: 'block',
                     width: '100%',
                     height: '100%',
-                    backgroundColor: 'rgba(36, 36, 36, 1)',
+                    backgroundColor: theme.palette.background.paper,
                     touchAction: 'pan-y',
                 }}
             />
