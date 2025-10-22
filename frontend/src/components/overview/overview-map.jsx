@@ -328,7 +328,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
                 // Crosshairs for tracking satellite - always shown when the satellite is being tracked
                 if (trackingSatelliteId === noradId) {
-                    const crosshairColor = theme.palette.primary.main;
+                    const crosshairColor = theme.palette.secondary.main;
 
                     // Create a custom square icon using DivIcon for pixel-perfect square
                     const squareIcon = L.divIcon({
