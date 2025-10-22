@@ -22,7 +22,6 @@ import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 import EngineeringIcon from '@mui/icons-material/Engineering';
 import AddHomeIcon from '@mui/icons-material/AddHome';
 import {SatelliteIcon, Satellite03Icon, PreferenceVerticalIcon} from "hugeicons-react";
-import {TLEIcon} from "../components/common/icons.jsx";
 import RadioIcon from '@mui/icons-material/Radio';
 import InfoIcon from '@mui/icons-material/Info';
 import MicrowaveIcon from '@mui/icons-material/Microwave';
@@ -30,6 +29,7 @@ import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import WavesIcon from '@mui/icons-material/Waves';
 import VideocamIcon from '@mui/icons-material/Videocam';
 import i18n from '../i18n/config.js';
+import { TleIcon } from '../components/common/custom-icons.jsx';
 
 export const getNavigation = () => [
     {
@@ -84,7 +84,7 @@ export const getNavigation = () => [
     {
         segment: 'satellites/tlesources',
         title: i18n.t('tle_sources', { ns: 'navigation' }),
-        icon: <TLEIcon/>,
+        icon: <TleIcon/>,
     },
     {
         segment: 'satellites/satellites',

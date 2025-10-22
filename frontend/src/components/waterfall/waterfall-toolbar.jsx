@@ -14,7 +14,7 @@ import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import ErrorIcon from '@mui/icons-material/Error';
 import TimelineIcon from '@mui/icons-material/Timeline';
 import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
-import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from '../common/icons.jsx';
+import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from '../common/custom-icons.jsx';
 import { useTranslation } from 'react-i18next';
 
 const WaterfallToolbar = ({
