@@ -201,16 +201,22 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.stadia_maps_api_key')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <TextField
-                            fullWidth
-                            id="stadia-api-key"
-                            variant="outlined"
-                            type="text"
-                            size="small"
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"outlined"}
                             disabled={isLoading}
-                            value={getPreferenceValue('stadia_maps_api_key')}
-                            onChange={handleChange('stadia_maps_api_key')}
-                        />
+                            size="small"
+                        >
+                            <TextField
+                                fullWidth
+                                id="stadia-api-key"
+                                variant="filled"
+                                type="text"
+                                size="small"
+                                disabled={isLoading}
+                                label={t('preferences.stadia_maps_api_key')}
+                                value={getPreferenceValue('stadia_maps_api_key')}
+                                onChange={handleChange('stadia_maps_api_key')}
+                            />
+                        </FormControl>
                     </Grid>
 
                     {/* OpenWeatherMap API Key */}
@@ -218,17 +224,23 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.openweather_api_key')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <TextField
-                            style={{fontFamily: 'monospace'}}
-                            fullWidth
-                            id="openweather-api-key"
-                            variant="outlined"
-                            type="text"
-                            size="small"
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
-                            value={getPreferenceValue('openweather_api_key')}
-                            onChange={handleChange('openweather_api_key')}
-                        />
+                            size="small"
+                        >
+                            <TextField
+                                style={{fontFamily: 'monospace'}}
+                                fullWidth
+                                id="openweather-api-key"
+                                variant="filled"
+                                type="text"
+                                size="small"
+                                disabled={isLoading}
+                                label={t('preferences.openweather_api_key')}
+                                value={getPreferenceValue('openweather_api_key')}
+                                onChange={handleChange('openweather_api_key')}
+                            />
+                        </FormControl>
                     </Grid>
 
                     {/* Ground Station Configuration */}
@@ -244,21 +256,27 @@ const PreferencesForm = () => {
                         <Typography>{t('preferences.minimum_elevation')}</Typography>
                     </Grid>
                     <Grid size={8}>
-                        <TextField
-                            fullWidth
-                            id="minimum-elevation"
-                            variant="outlined"
-                            type="number"
-                            size="small"
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
                             disabled={isLoading}
-                            value={getPreferenceValue('minimum_elevation')}
-                            onChange={handleChange('minimum_elevation')}
-                            inputProps={{
-                                min: 0,
-                                max: 90,
-                                step: 1
-                            }}
-                        />
+                            size="small"
+                        >
+                            <TextField
+                                fullWidth
+                                id="minimum-elevation"
+                                variant="filled"
+                                type="number"
+                                size="small"
+                                disabled={isLoading}
+                                label={t('preferences.minimum_elevation')}
+                                value={getPreferenceValue('minimum_elevation')}
+                                onChange={handleChange('minimum_elevation')}
+                                inputProps={{
+                                    min: 0,
+                                    max: 90,
+                                    step: 1
+                                }}
+                            />
+                        </FormControl>
                     </Grid>
                 </Grid>
 
