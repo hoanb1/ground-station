@@ -129,6 +129,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
     const [currentSatellitesCoverage, setCurrentSatellitesCoverage] = useState([]);
+    const [currentCrosshairs, setCurrentCrosshairs] = useState([]);
     const [terminatorLine, setTerminatorLine] = useState([]);
     const [daySidePolygon, setDaySidePolygon] = useState([]);
     const [sunPos, setSunPos] = useState(null);
@@ -221,6 +222,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     function satelliteUpdate(now) {
         let currentPos = [];
         let currentCoverage = [];
+        let currentCrosshair = [];
         let currentFuturePaths = [];
         let currentPastPaths = [];
         let satIndex = 0;
@@ -326,7 +328,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
                 // Crosshairs for tracking satellite - always shown when the satellite is being tracked
                 if (trackingSatelliteId === noradId) {
-                    const crosshairColor = theme.palette.secondary.main;
+                    const crosshairColor = theme.palette.primary.main;
 
                     // Create a custom square icon using DivIcon for pixel-perfect square
                     const squareIcon = L.divIcon({
@@ -337,7 +339,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                         iconAnchor: [15, 15],
                     });
 
-                    currentPos.push(
+                    currentCrosshair.push(
                         <React.Fragment key={`crosshair-${noradId}`}>
                             <Marker
                                 position={[lat, lon]}
@@ -464,6 +466,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
         setCurrentFutureSatellitesPaths(currentFuturePaths);
         setCurrentSatellitesPosition(currentPos);
         setCurrentSatellitesCoverage(currentCoverage);
+        setCurrentCrosshairs(currentCrosshair);
 
         // Day/night boundary
         const terminatorLine = createTerminatorLine().reverse();
@@ -639,6 +642,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                 {showFutureOrbitPath ? currentFutureSatellitesPaths : null}
                 {currentSatellitesPosition}
                 {currentSatellitesCoverage}
+                {currentCrosshairs}
 
                 {/* Wrap MapArrowControls with a container to detect clicks */}
                 <div ref={arrowControlsRef}>
