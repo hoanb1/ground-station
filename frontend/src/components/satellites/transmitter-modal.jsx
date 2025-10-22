@@ -34,7 +34,8 @@ const STATUS_OPTIONS = [
 const TYPE_OPTIONS = [
     {name: "Telemetry", value: "Telemetry"},
     {name: "Transmitter", value: "Transmitter"},
-    {name: "Beacon", value: "Beacon"}
+    {name: "Beacon", value: "Beacon"},
+    {name: "Transponder", value: "Transponder"}
 ];
 const ALIVE_OPTIONS = [
     {name: "true", value: true},
