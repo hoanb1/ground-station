@@ -289,8 +289,8 @@ const HardwareSettingsPopover = () => {
                 border: '1px solid',
                 borderColor: 'border.main',
                 p: 0,
-                minWidth: 330,
-                width: 330,
+                minWidth: 340,
+                width: 340,
                 backgroundColor: 'background.paper',
             }}>
                 {renderActiveComponent()}

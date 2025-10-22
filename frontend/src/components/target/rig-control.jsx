@@ -293,7 +293,7 @@ const RigControl = React.memo(function RigControl() {
                                             {t('rig_control.on_rig')}
                                         </Typography>
                                     </Grid>
-                                    <Grid size="grow">
+                                    <Grid size="grow" style={{textAlign: 'right'}}>
                                         <Typography variant="h7"
                                                     style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
                                             <LCDFrequencyDisplay frequency={rigData['frequency']} size="medium" />
@@ -311,7 +311,7 @@ const RigControl = React.memo(function RigControl() {
                                             {t('rig_control.doppler_shift')}
                                         </Typography>
                                     </Grid>
-                                    <Grid size="grow">
+                                    <Grid size="grow" style={{textAlign: 'right'}}>
                                         <Typography variant="h7"
                                                     style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
                                             <LCDFrequencyDisplay frequency={rigData['doppler_shift']} size="medium" frequencyIsOffset={true}/>
@@ -329,7 +329,7 @@ const RigControl = React.memo(function RigControl() {
                                             {t('rig_control.transmitted')}
                                         </Typography>
                                     </Grid>
-                                    <Grid size="grow">
+                                    <Grid size="grow" style={{textAlign: 'right'}}>
                                         <Typography variant="h7"
                                                     style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
                                             <LCDFrequencyDisplay frequency={rigData['original_freq']} size="medium" />
@@ -347,7 +347,7 @@ const RigControl = React.memo(function RigControl() {
                                             {t('rig_control.observed')}
                                         </Typography>
                                     </Grid>
-                                    <Grid size="grow">
+                                    <Grid size="grow" style={{textAlign: 'right'}}>
                                         <Typography variant="h7"
                                                     style={{fontFamily: "Monospace, monospace", fontWeight: "bold"}}>
                                             <LCDFrequencyDisplay frequency={rigData['observed_freq']} size="medium" />
