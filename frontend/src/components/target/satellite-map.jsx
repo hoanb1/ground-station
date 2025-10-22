@@ -468,7 +468,7 @@ const TargetSatelliteMapContainer = ({}) => {
                 {t('satellite_map.title')}
             </MapTitleBar>
             <MapContainer
-                center={[0, 0]}
+                center={satellitePosition?.lat && satellitePosition?.lon ? [satellitePosition.lat, satellitePosition.lon] : [0, 0]}
                 zoom={mapZoomLevel}
                 style={{width: '100%', height: 'calc(100% - 60px)'}}
                 dragging={false}

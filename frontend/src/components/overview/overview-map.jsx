@@ -29,7 +29,7 @@ import {
     useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
-import {Box, Fab} from '@mui/material';
+import {Box, Fab, useTheme} from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
@@ -92,6 +92,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
     const {socket} = useSocket();
     const dispatch = useDispatch();
     const { t } = useTranslation('overview');
+    const theme = useTheme();
     const {
         showPastOrbitPath,
         showFutureOrbitPath,
@@ -325,10 +326,12 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
                 // Crosshairs for tracking satellite - always shown when the satellite is being tracked
                 if (trackingSatelliteId === noradId) {
+                    const crosshairColor = theme.palette.secondary.main;
+
                     // Create a custom square icon using DivIcon for pixel-perfect square
                     const squareIcon = L.divIcon({
                         className: 'custom-square-marker',
-                        html: '<div style="width: 30px; height: 30px; border: 2px solid white; opacity: 0.6; box-sizing: border-box;">' +
+                        html: `<div style="width: 30px; height: 30px; border: 2px solid ${crosshairColor}; opacity: 0.8; box-sizing: border-box;">` +
                             '</div>',
                         iconSize: [30, 30],
                         iconAnchor: [15, 15],
@@ -348,11 +351,10 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                     [lat, 180],
                                 ]}
                                 pathOptions={{
-                                    color: 'white',
+                                    color: crosshairColor,
                                     weight: 1,
                                     opacity: 1,
                                     smoothFactor: 1,
-                                    //dashArray: "2 2",
                                 }}
                             />
                             {/* Vertical line crossing the entire map */}
@@ -362,11 +364,10 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
                                     [90, lon],
                                 ]}
                                 pathOptions={{
-                                    color: 'white',
+                                    color: crosshairColor,
                                     weight: 1,
                                     opacity: 1,
                                     smoothFactor: 1,
-                                    //dashArray: "2 2",
                                 }}
                             />
                         </React.Fragment>
