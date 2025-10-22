@@ -19,8 +19,11 @@
 
 import React from 'react';
 import { ToastContainer, Slide } from 'react-toastify';
+import { useTheme } from '@mui/material/styles';
 
 export const ToastContainerWithStyles = () => {
+    const theme = useTheme();
+
     return (
         <>
             <style>{`
@@ -41,31 +44,53 @@ export const ToastContainerWithStyles = () => {
                 }
 
                 .Toastify__toast--success {
-                    background: linear-gradient(135deg, #1e4620 0%, #2d5a2f 100%) !important;
-                    border-left: 4px solid #4caf50 !important;
+                    background: ${theme.palette.success.main} !important;
+                    border-left: 4px solid ${theme.palette.success.main} !important;
+                    color: ${theme.palette.success.contrastText} !important;
                 }
 
                 .Toastify__toast--error {
-                    background: linear-gradient(135deg, #4a1e1e 0%, #5a2d2d 100%) !important;
-                    border-left: 4px solid #f44336 !important;
+                    background: ${theme.palette.error.main} !important;
+                    border-left: 4px solid ${theme.palette.error.main} !important;
+                    color: ${theme.palette.error.contrastText} !important;
                 }
 
                 .Toastify__toast--warning {
-                    background: linear-gradient(135deg, #4a3a1e 0%, #5a4a2d 100%) !important;
-                    border-left: 4px solid #ff9800 !important;
+                    background: ${theme.palette.warning.main} !important;
+                    border-left: 4px solid ${theme.palette.warning.main} !important;
+                    color: ${theme.palette.warning.contrastText} !important;
                 }
 
                 .Toastify__toast--info {
-                    background: linear-gradient(135deg, #1e3a4a 0%, #2d4a5a 100%) !important;
-                    border-left: 4px solid #2196f3 !important;
+                    background: ${theme.palette.info.main} !important;
+                    border-left: 4px solid ${theme.palette.info.main} !important;
+                    color: ${theme.palette.info.contrastText} !important;
+                }
+
+                .Toastify__progress-bar--success {
+                    background: ${theme.palette.success.contrastText} !important;
+                }
+
+                .Toastify__progress-bar--error {
+                    background: ${theme.palette.error.contrastText} !important;
+                }
+
+                .Toastify__progress-bar--warning {
+                    background: ${theme.palette.warning.contrastText} !important;
+                }
+
+                .Toastify__progress-bar--info {
+                    background: ${theme.palette.info.contrastText} !important;
                 }
 
                 .Toastify__progress-bar {
-                    height: 3px !important;
+                    height: 4px !important;
+                    opacity: 0.8 !important;
                 }
 
                 .Toastify__close-button {
                     opacity: 0.7 !important;
+                    color: ${theme.palette.text.primary} !important;
                 }
 
                 .Toastify__close-button:hover {
@@ -86,7 +111,7 @@ export const ToastContainerWithStyles = () => {
                 pauseOnFocusLoss={true}
                 draggable={false}
                 pauseOnHover={true}
-                theme="dark"
+                theme={theme.palette.mode}
                 transition={Slide}
                 toastClassName="custom-toast"
             />

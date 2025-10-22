@@ -245,6 +245,37 @@ export const themeConfigs = {
             polling: '#ff9800',
         },
     },
+
+    'sunset-orange': {
+        mode: 'dark',
+        primary: { main: '#ff6f00' }, // Deep orange
+        secondary: { main: '#ff9e40' }, // Light orange
+        success: { main: '#66bb6a' }, // Green
+        warning: { main: '#ffa726' }, // Orange
+        error: { main: '#ef5350' }, // Red
+        info: { main: '#42a5f5' }, // Blue
+        background: {
+            default: '#1a0f00', // Very dark brown/orange
+            paper: '#2d1810', // Dark warm brown
+            elevated: '#3d2418', // Medium warm brown
+        },
+        border: {
+            main: '#4d3420',
+            light: '#5d4430',
+            dark: '#3d2410',
+        },
+        overlay: {
+            light: 'rgba(255, 111, 0, 0.08)',
+            medium: 'rgba(255, 111, 0, 0.15)',
+            dark: 'rgba(0, 0, 0, 0.6)',
+        },
+        status: {
+            connected: '#66bb6a',
+            connecting: '#ffa726',
+            disconnected: '#ef5350',
+            polling: '#ff9800',
+        },
+    },
 };
 
 /**
