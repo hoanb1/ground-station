@@ -230,5 +230,26 @@ jobs:
               ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }}
             ```
 
+            ### Upgrading an existing container:
+            ```bash
+            # Stop and remove the existing container
+            docker stop ground-station
+            docker rm ground-station
+
+            # Pull the new version
+            docker pull ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }}
+
+            # Start the container with the new version
+            docker run -d \
+              -p 7000:7000 \
+              --name ground-station \
+              --restart unless-stopped \
+              --device=/dev/bus/usb \
+              --privileged \
+              -v $(pwd)/data:/app/backend/data \
+              -e GS_ENVIRONMENT=${{ needs.extract-version.outputs.env_type }} \
+              ${{ env.REGISTRY }}/${{ steps.image.outputs.name }}:${{ needs.extract-version.outputs.tag_version }}
+            ```
+
             ### Multi-arch support:
             This image supports `linux/amd64` platform.
