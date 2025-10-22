@@ -20,6 +20,7 @@ from demodulators.webaudioproducer import WebAudioProducer
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
 from server import shutdown
+from server.scheduler import start_scheduler, stop_scheduler
 from server.version import get_full_version_info
 from tracker.runner import start_tracker_process
 
@@ -79,10 +80,14 @@ async def lifespan(fastapiapp: FastAPI):
     if _needs_initial_sync:
         asyncio.create_task(run_initial_sync())
 
+    # Start the background task scheduler
+    start_scheduler(sio)
+
     try:
         yield
     finally:
         logger.info("FastAPI lifespan cleanup...")
+        stop_scheduler()
         shutdown.cleanup_everything()
 
 
