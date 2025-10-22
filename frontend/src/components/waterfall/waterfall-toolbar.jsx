@@ -202,11 +202,7 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[0],
-                        backgroundColor: vfoActive[1] ? vfoColors[0] : 'transparent',
-                        opacity: vfoActive[1] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[1] ? vfoColors[0] : 'action.hover',
-                            opacity: vfoActive[1] ? 0.2 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[1] ? '1px solid' : 'none',
@@ -229,10 +225,7 @@ const WaterfallToolbar = ({
                         fontWeight: 'bold',
                         color: vfoColors[1],
                         backgroundColor: vfoActive[2] ? vfoColors[1] : 'transparent',
-                        opacity: vfoActive[2] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[2] ? vfoColors[1] : 'action.hover',
-                            opacity: vfoActive[2] ? 0.2 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[2] ? '1px solid' : 'none',
@@ -255,10 +248,7 @@ const WaterfallToolbar = ({
                         fontWeight: 'bold',
                         color: vfoColors[2],
                         backgroundColor: vfoActive[3] ? vfoColors[2] : 'transparent',
-                        opacity: vfoActive[3] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[3] ? vfoColors[2] : 'action.hover',
-                            opacity: vfoActive[3] ? 0.78 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[3] ? '1px solid' : 'none',
@@ -281,10 +271,7 @@ const WaterfallToolbar = ({
                         fontWeight: 'bold',
                         color: vfoColors[3],
                         backgroundColor: vfoActive[4] ? vfoColors[3] : 'transparent',
-                        opacity: vfoActive[4] ? 0.1 : 1,
                         '&:hover': {
-                            backgroundColor: vfoActive[4] ? vfoColors[3] : 'action.hover',
-                            opacity: vfoActive[4] ? 0.2 : 1,
                         },
                         '& .MuiTouchRipple-root': {
                             border: vfoActive[4] ? '1px solid' : 'none',

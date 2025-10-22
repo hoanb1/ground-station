@@ -42,84 +42,128 @@ export const TleIcon = (props) => {
 };
 
 /**
- * Custom icon displaying "VFO1" text
+ * Custom icon displaying "VFO" with "1" underneath
  */
 export const VFO1Icon = (props) => {
     return (
         <SvgIcon {...props}>
             <text
                 x="50%"
-                y="50%"
+                y="40%"
                 dominantBaseline="middle"
                 textAnchor="middle"
                 fontSize="10"
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO1
+                VFO
+            </text>
+            <text
+                x="50%"
+                y="85%"
+                dominantBaseline="middle"
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="bold"
+                fontFamily="Roboto, Arial, sans-serif"
+            >
+                1
             </text>
         </SvgIcon>
     );
 };
 
 /**
- * Custom icon displaying "VFO2" text
+ * Custom icon displaying "VFO" with "2" underneath
  */
 export const VFO2Icon = (props) => {
     return (
         <SvgIcon {...props}>
             <text
                 x="50%"
-                y="50%"
+                y="40%"
                 dominantBaseline="middle"
                 textAnchor="middle"
                 fontSize="10"
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO2
+                VFO
+            </text>
+            <text
+                x="50%"
+                y="85%"
+                dominantBaseline="middle"
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="bold"
+                fontFamily="Roboto, Arial, sans-serif"
+            >
+                2
             </text>
         </SvgIcon>
     );
 };
 
 /**
- * Custom icon displaying "VFO3" text
+ * Custom icon displaying "VFO" with "3" underneath
  */
 export const VFO3Icon = (props) => {
     return (
         <SvgIcon {...props}>
             <text
                 x="50%"
-                y="50%"
+                y="40%"
                 dominantBaseline="middle"
                 textAnchor="middle"
                 fontSize="10"
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO3
+                VFO
+            </text>
+            <text
+                x="50%"
+                y="85%"
+                dominantBaseline="middle"
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="bold"
+                fontFamily="Roboto, Arial, sans-serif"
+            >
+                3
             </text>
         </SvgIcon>
     );
 };
 
 /**
- * Custom icon displaying "VFO4" text
+ * Custom icon displaying "VFO" with "4" underneath
  */
 export const VFO4Icon = (props) => {
     return (
         <SvgIcon {...props}>
             <text
                 x="50%"
-                y="50%"
+                y="40%"
                 dominantBaseline="middle"
                 textAnchor="middle"
                 fontSize="10"
                 fontWeight="bold"
                 fontFamily="Roboto, Arial, sans-serif"
             >
-                VFO4
+                VFO
+            </text>
+            <text
+                x="50%"
+                y="85%"
+                dominantBaseline="middle"
+                textAnchor="middle"
+                fontSize="10"
+                fontWeight="bold"
+                fontFamily="Roboto, Arial, sans-serif"
+            >
+                4
             </text>
         </SvgIcon>
     );
