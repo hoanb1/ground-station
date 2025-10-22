@@ -99,8 +99,8 @@ function VersionUpdateOverlay() {
                     border: `1px solid ${statusColor}`,
                     borderRadius: 1,
                     padding: 3,
-                    minWidth: 280,
-                    maxWidth: 350,
+                    minWidth: 320,
+                    maxWidth: 370,
                     boxShadow: '0 4px 12px rgba(0, 0, 0, 0.4)',
                 }}
             >
