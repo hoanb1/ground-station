@@ -24,6 +24,7 @@ import {useDispatch, useSelector} from "react-redux";
 import {
     setBookMarks
 } from "./waterfall-slice.jsx";
+import { useTheme } from '@mui/material/styles';
 
 
 const BookmarkCanvas = ({
@@ -34,6 +35,7 @@ const BookmarkCanvas = ({
                             onBookmarkClick = null
                         }) => {
     const dispatch = useDispatch();
+    const theme = useTheme();
     const canvasRef = useRef(null);
     const bookmarkContainerRef = useRef(null);
     const [actualWidth, setActualWidth] = useState(2048);
@@ -86,7 +88,7 @@ const BookmarkCanvas = ({
             bookMarks.push(makeBookMark(
                 transmitter['downlink_low'],
                 `${transmitter['description']} (${preciseHumanizeFrequency(transmitter['downlink_low'])})`,
-                '#40ff00',
+                theme.palette.success.main,
                 {
                     type: 'transmitter',
                     transmitter_id: transmitter['id']
@@ -150,7 +152,7 @@ const BookmarkCanvas = ({
             const newBookMark = {
                 frequency: rigData['observed_freq'],
                 label: `${satelliteData['details']['name']} - ${transmitter?.description || 'Unknown'} - Corrected: ${humanizeFrequency(rigData['observed_freq'])}`,
-                color: '#ffea00',
+                color: theme.palette.warning.main,
                 metadata: {
                     type: 'doppler_shift',
                     transmitter_id: transmitterId
@@ -262,12 +264,12 @@ const BookmarkCanvas = ({
 
                 // Draw bookmark marker
                 ctx.beginPath();
-                ctx.strokeStyle = bookmark.color || '#ffff00';
+                ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
                 ctx.lineWidth = 0.8;
 
                 // Draw a subtle dashed vertical line
                 ctx.setLineDash([2, 4]);
-                ctx.globalAlpha = 0.6;
+                ctx.globalAlpha = 0.9;
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, height);
                 ctx.stroke();
@@ -287,13 +289,15 @@ const BookmarkCanvas = ({
 
                 // If the bookmark is a transmitter, draw a hollow arrow with colored outline
                 if (bookmark.metadata?.type === 'transmitter') {
-                    ctx.strokeStyle = bookmark.color || '#ffff00';
-                    ctx.lineWidth = 1;
+                    ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
+                    ctx.lineWidth = 2;
+                    ctx.globalAlpha = 1.0;
                     ctx.stroke();
 
                 } else {
                     // For all other bookmarks, fill the arrow
-                    ctx.fillStyle = bookmark.color || '#ffff00';
+                    ctx.fillStyle = bookmark.color || theme.palette.warning.main;
+                    ctx.globalAlpha = 1.0;
                     ctx.fill();
                 }
 
@@ -308,7 +312,7 @@ const BookmarkCanvas = ({
                     const labelY = baseY + labelOffset + 30;
 
                     ctx.font = '12px Arial';
-                    ctx.fillStyle = bookmark.color || '#ffff00';
+                    ctx.fillStyle = bookmark.color || theme.palette.warning.main;
                     ctx.textAlign = 'center';
 
                     // Add semi-transparent background
@@ -324,13 +328,17 @@ const BookmarkCanvas = ({
                         textHeight + padding * 2,
                         radius
                     );
-                    ctx.fillStyle = 'rgba(30, 30, 30, 0.7)'; // background.paper with opacity
+                    const bgColor = theme.palette.background.paper;
+                    ctx.fillStyle = bgColor.startsWith('#') 
+                        ? bgColor + 'E6' 
+                        : bgColor.replace(')', ', 0.9)');
                     ctx.fill();
 
                     // Draw the text
-                    ctx.shadowBlur = 1;
-                    ctx.globalAlpha = 0.6;
-                    ctx.fillStyle = bookmark.color || '#ffff00';
+                    ctx.shadowBlur = 2;
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                    ctx.globalAlpha = 1.0;
+                    ctx.fillStyle = bookmark.color || theme.palette.warning.main;
                     ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
 
@@ -341,7 +349,7 @@ const BookmarkCanvas = ({
                 // For doppler_shift bookmarks
                 if (bookmark.label && isDopplerShift) {
                     ctx.font = 'bold 12px Arial';
-                    ctx.fillStyle = bookmark.color || '#00ffff';
+                    ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.textAlign = 'center';
 
                     // Position the label just above the arrow
@@ -360,15 +368,18 @@ const BookmarkCanvas = ({
                         textHeight + padding * 2,
                         radius
                     );
-                    ctx.fillStyle = 'rgba(30, 30, 30, 0.7)'; // background.paper with opacity
+                    const bgColor = theme.palette.background.paper;
+                    ctx.fillStyle = bgColor.startsWith('#') 
+                        ? bgColor + 'B3' 
+                        : bgColor.replace(')', ', 0.7)');
                     ctx.fill();
 
                     // Draw the text
-                    ctx.shadowBlur = 1;
-                    ctx.globalAlpha = 0.8;
-                    ctx.fillStyle = bookmark.color || '#00ffff';
-                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight - padding);
+                    ctx.shadowBlur = 2;
+                    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                     ctx.globalAlpha = 1.0;
+                    ctx.fillStyle = bookmark.color || theme.palette.info.main;
+                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight - padding);
                 }
 
                 // Reset shadow
