@@ -112,7 +112,6 @@ const TargetSatelliteInfoIsland = () => {
             >
                 <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
                     <Box sx={{display: 'flex', alignItems: 'center'}}>
-                        <SatelliteAltIcon fontSize="small" sx={{mr: 1, color: 'secondary.light'}}/>
                         <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
                             {t('satellite_info.title')}
                         </Typography>
