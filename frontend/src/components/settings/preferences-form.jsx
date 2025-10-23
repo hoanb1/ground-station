@@ -66,6 +66,7 @@ const PreferencesForm = () => {
         { name: 'Français', value: 'fr_FR' },
         { name: 'Español', value: 'es_ES' },
         { name: 'Deutsch', value: 'de_DE' },
+        { name: 'Italiano', value: 'it_IT' },
         { name: 'Nederlands', value: 'nl_NL' },
     ];
 

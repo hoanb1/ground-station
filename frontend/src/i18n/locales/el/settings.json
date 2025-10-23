@@ -33,8 +33,15 @@
     "save_preferences": "ΑΠΟΘΗΚΕΥΣΗ ΠΡΟΤΙΜΗΣΕΩΝ",
     "save_success": "Οι προτιμήσεις αποθηκεύτηκαν επιτυχώς",
     "save_error": "Αποτυχία αποθήκευσης προτιμήσεων",
+    "theme_auto": "Αυτόματο (Σύστημα)",
     "theme_light": "Ανοιχτό",
-    "theme_dark": "Σκούρο"
+    "theme_dark": "Σκούρο",
+    "theme_cyberpunk": "Cyberpunk",
+    "theme_high-contrast": "Υψηλή Αντίθεση",
+    "theme_ocean-blue": "Μπλε Ωκεανού",
+    "theme_forest-green": "Πράσινο Δάσους",
+    "theme_night": "Νύχτα (OLED)",
+    "theme_sunset-orange": "Πορτοκαλί Ηλιοβασιλέματος"
   },
   "location": {
     "title": "Επιλέξτε τοποθεσία στον χάρτη",

@@ -33,8 +33,15 @@
     "save_preferences": "EINSTELLUNGEN SPEICHERN",
     "save_success": "Einstellungen erfolgreich gespeichert",
     "save_error": "Fehler beim Speichern der Einstellungen",
+    "theme_auto": "Auto (System)",
     "theme_light": "Hell",
-    "theme_dark": "Dunkel"
+    "theme_dark": "Dunkel",
+    "theme_cyberpunk": "Cyberpunk",
+    "theme_high-contrast": "Hoher Kontrast",
+    "theme_ocean-blue": "Ozeanblau",
+    "theme_forest-green": "Waldgrün",
+    "theme_night": "Nacht (OLED)",
+    "theme_sunset-orange": "Sonnenuntergang Orange"
   },
   "location": {
     "title": "Standort auf Karte auswählen",

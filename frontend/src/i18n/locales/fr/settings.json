@@ -33,8 +33,15 @@
     "save_preferences": "ENREGISTRER LES PRÉFÉRENCES",
     "save_success": "Préférences enregistrées avec succès",
     "save_error": "Échec de l'enregistrement des préférences",
+    "theme_auto": "Auto (Système)",
     "theme_light": "Clair",
-    "theme_dark": "Sombre"
+    "theme_dark": "Sombre",
+    "theme_cyberpunk": "Cyberpunk",
+    "theme_high-contrast": "Contraste Élevé",
+    "theme_ocean-blue": "Bleu Océan",
+    "theme_forest-green": "Vert Forêt",
+    "theme_night": "Nuit (OLED)",
+    "theme_sunset-orange": "Orange Coucher de Soleil"
   },
   "location": {
     "title": "Sélectionner l'emplacement sur la carte",

@@ -279,18 +279,34 @@ export const themeConfigs = {
 };
 
 /**
+ * Detect system theme preference
+ * @returns {string} 'dark' or 'light' based on system preference
+ */
+export function getSystemThemePreference() {
+    if (typeof window !== 'undefined' && window.matchMedia) {
+        return window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+    return 'dark'; // Default fallback
+}
+
+/**
  * Get theme configuration by name
- * @param {string} themeName - Name of the theme (dark, light, cyberpunk, etc.)
+ * @param {string} themeName - Name of the theme (dark, light, cyberpunk, etc., or 'auto' for system preference)
  * @returns {object} Theme configuration object
  */
 export function getThemeConfig(themeName) {
+    // Handle 'auto' theme by detecting system preference
+    if (themeName === 'auto') {
+        const systemTheme = getSystemThemePreference();
+        return themeConfigs[systemTheme];
+    }
     return themeConfigs[themeName] || themeConfigs.dark;
 }
 
 /**
  * Get list of available theme names
- * @returns {string[]} Array of theme names
+ * @returns {string[]} Array of theme names including 'auto'
  */
 export function getAvailableThemes() {
-    return Object.keys(themeConfigs);
+    return ['auto', ...Object.keys(themeConfigs)];
 }

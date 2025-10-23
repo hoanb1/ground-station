@@ -36,11 +36,33 @@ export default function App() {
     const { i18n } = useTranslation();
     const preferences = useSelector((state) => state.preferences.preferences);
     const [navigation, setNavigation] = React.useState(getNavigation());
+    const [systemTheme, setSystemTheme] = React.useState('dark');
 
     // Get theme preference and create theme
     const themePreference = preferences.find(pref => pref.name === 'theme');
     const themeMode = themePreference ? themePreference.value : 'dark';
-    const dashboardTheme = React.useMemo(() => setupTheme(themeMode), [themeMode]);
+
+    // Listen for system theme changes when 'auto' is selected
+    React.useEffect(() => {
+        if (themeMode !== 'auto') return;
+
+        const mediaQuery = window.matchMedia('(prefers-color-scheme: dark)');
+        const handleChange = (e) => {
+            setSystemTheme(e.matches ? 'dark' : 'light');
+        };
+
+        // Set initial value
+        setSystemTheme(mediaQuery.matches ? 'dark' : 'light');
+
+        // Listen for changes
+        mediaQuery.addEventListener('change', handleChange);
+
+        return () => {
+            mediaQuery.removeEventListener('change', handleChange);
+        };
+    }, [themeMode]);
+
+    const dashboardTheme = React.useMemo(() => setupTheme(themeMode), [themeMode, systemTheme]);
 
     // Sync language from Redux to i18n on mount and when it changes
     React.useEffect(() => {

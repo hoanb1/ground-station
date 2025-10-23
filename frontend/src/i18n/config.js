@@ -87,6 +87,17 @@ import targetNL from './locales/nl/target.json';
 import dashboardNL from './locales/nl/dashboard.json';
 import waterfallNL from './locales/nl/waterfall.json';
 
+import commonIT from './locales/it/common.json';
+import navigationIT from './locales/it/navigation.json';
+import hardwareIT from './locales/it/hardware.json';
+import settingsIT from './locales/it/settings.json';
+import satellitesIT from './locales/it/satellites.json';
+import trackingIT from './locales/it/tracking.json';
+import overviewIT from './locales/it/overview.json';
+import targetIT from './locales/it/target.json';
+import dashboardIT from './locales/it/dashboard.json';
+import waterfallIT from './locales/it/waterfall.json';
+
 const resources = {
     en: {
         common: commonEN,
@@ -159,6 +170,18 @@ const resources = {
         target: targetNL,
         dashboard: dashboardNL,
         waterfall: waterfallNL,
+    },
+    it: {
+        common: commonIT,
+        navigation: navigationIT,
+        hardware: hardwareIT,
+        settings: settingsIT,
+        satellites: satellitesIT,
+        tracking: trackingIT,
+        overview: overviewIT,
+        target: targetIT,
+        dashboard: dashboardIT,
+        waterfall: waterfallIT,
     },
 };
 
