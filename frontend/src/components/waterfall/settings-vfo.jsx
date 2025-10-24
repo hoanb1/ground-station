@@ -44,6 +44,47 @@ const VfoAccordion = ({
                           onVFOPropertyChange,
                       }) => {
     const { t } = useTranslation('waterfall');
+    const squelchSliderRef = React.useRef(null);
+    const volumeSliderRef = React.useRef(null);
+
+    React.useEffect(() => {
+        const handleWheel = (e, vfoIndex, property, min, max, current) => {
+            e.preventDefault();
+            const delta = e.deltaY > 0 ? -1 : 1;
+            const newValue = Math.max(min, Math.min(max, current + delta));
+            onVFOPropertyChange(vfoIndex, { [property]: newValue });
+        };
+
+        const squelchElements = document.querySelectorAll('[data-slider="squelch"]');
+        const volumeElements = document.querySelectorAll('[data-slider="volume"]');
+
+        squelchElements.forEach((el) => {
+            const vfoIndex = parseInt(el.getAttribute('data-vfo-index'));
+            const listener = (e) => handleWheel(e, vfoIndex, 'squelch', -150, 0, vfoMarkers[vfoIndex]?.squelch || -150);
+            el.addEventListener('wheel', listener, { passive: false });
+            el._wheelListener = listener;
+        });
+
+        volumeElements.forEach((el) => {
+            const vfoIndex = parseInt(el.getAttribute('data-vfo-index'));
+            const listener = (e) => handleWheel(e, vfoIndex, 'volume', 0, 100, vfoMarkers[vfoIndex]?.volume || 50);
+            el.addEventListener('wheel', listener, { passive: false });
+            el._wheelListener = listener;
+        });
+
+        return () => {
+            squelchElements.forEach((el) => {
+                if (el._wheelListener) {
+                    el.removeEventListener('wheel', el._wheelListener);
+                }
+            });
+            volumeElements.forEach((el) => {
+                if (el._wheelListener) {
+                    el.removeEventListener('wheel', el._wheelListener);
+                }
+            });
+        };
+    }, [vfoMarkers, onVFOPropertyChange]);
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
@@ -280,7 +321,14 @@ const VfoAccordion = ({
                             </ToggleButtonGroup>
                         </Box>
 
-                        <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
+                        <Stack
+                            spacing={2}
+                            direction="row"
+                            alignItems="center"
+                            sx={{mt: 2}}
+                            data-slider="squelch"
+                            data-vfo-index={vfoIndex}
+                        >
                             <Box sx={{textAlign: 'left'}}><SquelchIcon size={24}/></Box>
                             <Slider
                                 value={vfoMarkers[vfoIndex]?.squelch || -150}
@@ -291,13 +339,20 @@ const VfoAccordion = ({
                             <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
                         </Stack>
 
-                        <Stack spacing={2} direction="row" alignItems="center" sx={{mt: 2}}>
-                            <VolumeDown/>
+                        <Stack
+                            spacing={2}
+                            direction="row"
+                            alignItems="center"
+                            sx={{mt: 2}}
+                            data-slider="volume"
+                            data-vfo-index={vfoIndex}
+                        >
+                            <Box sx={{textAlign: 'left'}}><VolumeDown/></Box>
                             <Slider
                                 value={vfoMarkers[vfoIndex]?.volume || 50}
                                 onChange={(e, val) => onVFOPropertyChange(vfoIndex, {volume: val})}
                             />
-                            <VolumeUp/>
+                            <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.volume || 50}%</Box>
                         </Stack>
                     </Box>
                 ))}
