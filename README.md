@@ -81,7 +81,9 @@ flowchart TB
     subgraph Workers["Worker Processes"]
         direction TB
         W1[Satellite Tracker + Hardware Control<br/>- Antenna rotator control<br/>- Rig/radio control<br/>- Real-time tracking calculations<br/>- Hardware state management]
-        W2[SDR Stream Reader<br/>- FFT processing<br/>- Audio streaming<br/>- Waterfall generation<br/>- Signal processing]
+        W2[SDR IQ Acquisition<br/>- Raw IQ sample streaming<br/>- Non-blocking acquisition<br/>- Multi-consumer support]
+        W2A[FFT Processor<br/>- Spectrum computation<br/>- Waterfall generation<br/>- Real-time FFT analysis]
+        W2B[FM Demodulator<br/>- Frequency translation<br/>- FM demodulation<br/>- Audio processing<br/>- Per-session processing]
         W3[SDR Local Probe<br/>- Device discovery<br/>- Local SoapySDR enumeration<br/>- Hardware capability detection]
         W4[SDR Remote Probe<br/>- Remote SoapySDR discovery<br/>- Network device scanning<br/>- Remote capability detection]
     end
@@ -108,6 +110,11 @@ flowchart TB
     B ---|Message Queues<br/>Discovery Requests| W3
     B ---|Message Queues<br/>Remote Scanning| W4
 
+    W2 ---|IQ Queue FFT<br/>Broadcast| W2A
+    W2 ---|IQ Queue Demod<br/>Broadcast| W2B
+    W2A ---|FFT Data<br/>Spectrum| B
+    W2B ---|Audio Data<br/>Demodulated| B
+
     W1 ---|Control Commands| H1
     W1 ---|Frequency Control| H2
     W2 ---|Data Streaming| H3
@@ -128,7 +135,7 @@ flowchart TB
 
     class A frontend
     class B backend
-    class W1,W2,W3,W4 worker
+    class W1,W2,W2A,W2B,W3,W4 worker
     class H1,H2,H3,H4 hardware
     class E1,E2 external
 ```
@@ -161,11 +168,16 @@ flowchart TB
 
 ## SDR Device Support
 
-Dedicated worker processes provide FFT and streaming support for multiple receiver families:
+Dedicated worker processes provide IQ acquisition, FFT processing, and demodulation support for multiple receiver families:
 
 *   **RTL-SDR** (USB or `rtl_tcp`) workers
 *   **SoapySDR** devices locally or through SoapyRemote (Airspy, HackRF, LimeSDR, etc.)
 *   **UHD/USRP** radios via a UHD worker
+
+The SDR architecture separates IQ acquisition from signal processing:
+*   **IQ Acquisition Workers** stream raw samples to a queue
+*   **FFT Processor** consumes IQ for spectrum display
+*   **FM Demodulator** consumes IQ for real-time audio output
 
 ## Getting Started
 

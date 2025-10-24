@@ -173,6 +173,12 @@ loggers:
       - default
     propagate: no
 
+  fft-processor:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

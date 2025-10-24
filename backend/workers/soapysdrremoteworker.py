@@ -16,29 +16,32 @@
 
 import logging
 import time
+from typing import List
 
 import numpy as np
 import SoapySDR
 from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 
-from workers.common import FFTAverager, window_functions
-
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-remote")
 
 
-def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
+def soapysdr_remote_worker_process(
+    config_queue, data_queue, stop_event, iq_queue_fft=None, iq_queue_demod=None
+):
     """
     Worker process for SoapySDR operations.
 
     This function runs in a separate process to handle remote SoapySDR devices.
-    It receives configuration through a queue, processes SDR data, and
-    sends the FFT results back through another queue.
+    It receives configuration through a queue, streams IQ data to separate queues,
+    and sends status/error messages through data_queue.
 
     Args:
         config_queue: Queue for receiving configuration from the main process
         data_queue: Queue for sending processed data back to the main process
         stop_event: Event to signal the process to stop
+        iq_queue_fft: Queue for streaming raw IQ samples to FFT processor
+        iq_queue_demod: Queue for streaming raw IQ samples to demodulators
     """
 
     # Default configuration
@@ -66,13 +69,15 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         fft_size = config.get("fft_size", 16384)
         fft_window = config.get("fft_window", "hanning")
 
-        # FFT averaging configuration
+        # FFT averaging configuration (passed to IQ consumers)
         fft_averaging = config.get("fft_averaging", 6)
 
-        # FFT overlap
+        # FFT overlap (passed to IQ consumers)
         fft_overlap = config.get("fft_overlap", False)
 
-        connection_type = config.get("connection_type", "")
+        # Track whether we have IQ consumers
+        has_iq_consumers = iq_queue_fft is not None or iq_queue_demod is not None
+
         driver = config.get("driver", "")
         serial_number = config.get("serial_number", "")
 
@@ -110,7 +115,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
             logger.debug(f"Supported sample rate ranges: {supported_rates}")
 
             # Add some extra sample rates to the list
-            extra_sample_rates = []
+            extra_sample_rates: List[float] = []
             usable_rates = []
 
             for rate in extra_sample_rates:
@@ -167,7 +172,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
         # Set gain
         if config.get("soapy_agc", False):
             sdr.setGainMode(SOAPY_SDR_RX, channel, True)
-            logger.info(f"Automatic gain control enabled")
+            logger.info("Automatic gain control enabled")
 
         else:
             sdr.setGainMode(SOAPY_SDR_RX, channel, False)
@@ -190,9 +195,6 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
             logger.debug(f"Stream MTU: {mtu}")
         except Exception as e:
             logger.warning(f"Could not get stream MTU: {e}")
-
-        # Initialize FFT averager
-        fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
 
         # Activate the stream
         sdr.activateStream(rx_stream)
@@ -269,7 +271,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                     if "fft_averaging" in new_config:
                         if old_config.get("fft_averaging", 4) != new_config["fft_averaging"]:
                             fft_averaging = new_config["fft_averaging"]
-                            fft_averager.update_averaging_factor(fft_averaging)
+                            # FFT averaging is now handled by FFT processor
                             logger.info(f"Updated FFT averaging: {fft_averaging}")
 
                     if "fft_overlap" in new_config:
@@ -393,9 +395,6 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                             buffer.fill(0)
                             samples_buffer.fill(0)
 
-                            # Reset FFT averager to clear any stale data
-                            fft_averager.reset()
-
                             # Reset to skip this frame
                             buffer_position = 0
                             break
@@ -406,28 +405,28 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                             logger.warning(f"Frame {frame_counter}: readStream timeout (sr.ret=-1)")
 
                         elif sr.ret == -2:  # SOAPY_SDR_STREAM_ERROR
-                            logger.warning(f"Stream error detected (SOAPY_SDR_STREAM_ERROR)")
+                            logger.warning("Stream error detected (SOAPY_SDR_STREAM_ERROR)")
 
                         elif sr.ret == -3:  # SOAPY_SDR_CORRUPTION
-                            logger.warning(f"Data corruption detected (SOAPY_SDR_CORRUPTION)")
+                            logger.warning("Data corruption detected (SOAPY_SDR_CORRUPTION)")
 
                         elif sr.ret == -4:  # SOAPY_SDR_OVERFLOW
                             # Overflow error - the internal ring buffer filled up because we didn't read fast enough
                             logger.warning(
-                                f"Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost"
+                                "Buffer overflow detected (SOAPY_SDR_OVERFLOW), samples may have been lost"
                             )
 
                             # Short sleep to allow the internal buffers to clear
                             # time.sleep(0.01)
 
                         elif sr.ret == -5:  # SOAPY_SDR_NOT_SUPPORTED
-                            logger.warning(f"Operation not supported (SOAPY_SDR_NOT_SUPPORTED)")
+                            logger.warning("Operation not supported (SOAPY_SDR_NOT_SUPPORTED)")
 
                         elif sr.ret == -6:  # SOAPY_SDR_TIME_ERROR
-                            logger.warning(f"Timestamp error detected (SOAPY_SDR_TIME_ERROR)")
+                            logger.warning("Timestamp error detected (SOAPY_SDR_TIME_ERROR)")
 
                         elif sr.ret == -7:  # SOAPY_SDR_UNDERFLOW
-                            logger.warning(f"Buffer underflow detected (SOAPY_SDR_UNDERFLOW)")
+                            logger.warning("Buffer underflow detected (SOAPY_SDR_UNDERFLOW)")
 
                     else:
                         # Error occurred
@@ -436,9 +435,6 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                         # Clear the buffer to prevent contamination
                         buffer.fill(0)
                         samples_buffer.fill(0)
-
-                        # Reset FFT averager to clear any stale data
-                        fft_averager.reset()
 
                         # Reset to skip this frame
                         buffer_position = 0
@@ -455,83 +451,49 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
                 # We have enough samples to process
                 samples = samples_buffer[:buffer_position]
 
-                # Remove DC offset spike
-                # samples = remove_dc_offset(samples)
-
-                # Calculate the number of samples needed for the FFT
-                actual_fft_size = fft_size * 1
-
-                # Apply window function
-                window_func = window_functions.get(fft_window.lower(), np.hanning)
-                window = window_func(actual_fft_size)
-
-                # Calculate FFT segments based on overlap setting
-                if fft_overlap:
-                    # Use 50% overlap
-                    overlap_step = actual_fft_size // 2
-                    num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
-                else:
-                    # No overlap - use non-overlapping segments
-                    overlap_step = actual_fft_size
-                    num_segments = len(samples) // actual_fft_size
-
-                if num_segments <= 0:
-                    overlap_type = "with overlap" if fft_overlap else "without overlap"
-                    logger.warning(
-                        f"Not enough samples for FFT {overlap_type}: {len(samples)} < {actual_fft_size}"
-                    )
-                    continue
-
-                fft_result = np.zeros(actual_fft_size)
-
-                for i in range(num_segments):
-                    start_idx = i * overlap_step
-                    segment = samples[start_idx : start_idx + actual_fft_size]
-
-                    windowed_segment = segment * window
-
-                    # Perform FFT
-                    fft_segment = np.fft.fft(windowed_segment)
-
-                    # Shift DC to center
-                    fft_segment = np.fft.fftshift(fft_segment)
-
-                    # Proper power normalization
-                    N = len(fft_segment)
-                    if fft_overlap:
-                        # Use simpler correction for overlapped FFTs
-                        window_correction = 1.0
-                    else:
-                        # Use proper window correction for non-overlapped FFTs
-                        window_correction = np.sum(window**2) / N
-
-                    power = 10 * np.log10(
-                        (np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10
-                    )
-                    fft_result += power
-
-                # Average the segments
-                if num_segments > 0:
-                    fft_result /= num_segments
-
-                # Convert to Float32 for efficiency in transmission
-                fft_result = fft_result.astype(np.float32)
-
-                # Add FFT to averager and send only when ready
-                averaged_fft = fft_averager.add_fft(fft_result)
-                if averaged_fft is not None:
-                    # Send the averaged result back to the main process
-                    data_queue.put(
-                        {
-                            "type": "fft_data",
-                            "client_id": client_id,
-                            "data": averaged_fft.tobytes(),
+                # Stream IQ data to consumers (FFT processor, demodulators, etc.)
+                # Broadcast to both queues so FFT and demodulation can work independently
+                if has_iq_consumers:
+                    try:
+                        # Prepare IQ message with metadata
+                        iq_message = {
+                            "samples": samples.copy(),  # Copy to prevent data races
+                            "center_freq": actual_freq,
+                            "sample_rate": actual_sample_rate,
                             "timestamp": time.time(),
+                            "config": {
+                                "fft_size": fft_size,
+                                "fft_window": fft_window,
+                                "fft_averaging": fft_averaging,
+                                "fft_overlap": fft_overlap,
+                            },
                         }
-                    )
 
-                # Short sleep to prevent CPU hogging
-                time.sleep(0.01)
+                        # Broadcast to FFT queue
+                        if iq_queue_fft is not None:
+                            try:
+                                if not iq_queue_fft.full():
+                                    iq_queue_fft.put_nowait(iq_message)
+                            except Exception:
+                                pass  # Drop if can't queue
+
+                        # Broadcast to demodulation queue
+                        if iq_queue_demod is not None:
+                            try:
+                                if not iq_queue_demod.full():
+                                    # Make a copy for demod queue
+                                    demod_message = {
+                                        "samples": samples.copy(),
+                                        "center_freq": actual_freq,
+                                        "sample_rate": actual_sample_rate,
+                                        "timestamp": time.time(),
+                                    }
+                                    iq_queue_demod.put_nowait(demod_message)
+                            except Exception:
+                                pass  # Drop if can't queue
+
+                    except Exception as e:
+                        logger.debug(f"Could not queue IQ data: {str(e)}")
 
             except Exception as e:
                 logger.error(f"Error processing SDR data: {str(e)}")
@@ -592,7 +554,7 @@ def soapysdr_remote_worker_process(config_queue, data_queue, stop_event):
             try:
                 sdr.deactivateStream(rx_stream)
                 sdr.closeStream(rx_stream)
-                logger.info(f"SoapySDR stream closed")
+                logger.info("SoapySDR stream closed")
             except Exception as e:
                 logger.error(f"Error closing SoapySDR stream: {str(e)}")
 

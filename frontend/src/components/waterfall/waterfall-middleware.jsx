@@ -24,20 +24,22 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     if (action.type === 'waterfallState/setVFOProperty') {
         const { vfoNumber, updates } = action.payload;
 
-        // Dispatch async thunk to update backend
+        // Get the complete VFO state and merge with updates
+        const vfoState = state.waterfall.vfoMarkers[vfoNumber];
+        const vfoActiveState = state.waterfall.vfoActive[vfoNumber];
+        const isSelected = state.waterfall.selectedVFO === vfoNumber;
+
+        // Dispatch async thunk to update backend with complete state
         store.dispatch(updateVFOParameters({
             socket,
             vfoNumber,
-            updates:
-                {
-                    vfoNumber: vfoNumber,
-                    frequency: updates.frequency,
-                    bandwidth: state.waterfall.vfoMarkers[vfoNumber].bandwidth,
-                    color: updates.color,
-                    active: updates.active,
-                    volume: updates.volume,
-                    squelch: updates.squelch,
-                },
+            updates: {
+                vfoNumber: vfoNumber,
+                ...vfoState,
+                ...updates,
+                active: vfoActiveState,
+                selected: isSelected,
+            },
         }));
     }
 

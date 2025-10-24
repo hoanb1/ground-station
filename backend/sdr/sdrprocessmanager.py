@@ -18,10 +18,9 @@ import asyncio
 import logging
 import multiprocessing
 import signal
-import time
-from collections import defaultdict
 
 from common.constants import DictKeys, QueueMessageTypes, SocketEvents
+from workers.fftprocessor import fft_processor_process
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
 from workers.soapysdrremoteworker import soapysdr_remote_worker_process
@@ -81,9 +80,10 @@ class SDRProcessManager:
     """
 
     def __init__(self, sio=None):
-        self.logger = logging.getLogger("sdr-process-manager")
+        self.logger = logging.getLogger("sdr-manager")
         self.sio = sio
         self.processes = {}  # Map of sdr_id to process information
+        self.session_to_sdr = {}  # Map of session_id (client_id) to sdr_id
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
@@ -117,7 +117,7 @@ class SDRProcessManager:
         process_info = self.processes[sdr_id]
 
         # Create a temporary queue for receiving the response
-        response_queue = multiprocessing.Queue()
+        response_queue: multiprocessing.Queue = multiprocessing.Queue()
 
         # Send a request to the worker process to get the center frequency
         request = {
@@ -189,7 +189,7 @@ class SDRProcessManager:
         process_name = None
 
         if sdr_device["type"] == "rtlsdrusbv3":
-            serial_number = sdr_device["serial"]
+            # serial_number = sdr_device["serial"]
             connection_type = "usb"
             driver = None
             worker_process = rtlsdr_worker_process
@@ -198,14 +198,14 @@ class SDRProcessManager:
         elif sdr_device["type"] == "rtlsdrtcpv3":
             hostname = sdr_device["host"]
             port = sdr_device["port"]
-            serial_number = 0
+            # serial_number = 0
             connection_type = "tcp"
             driver = None
             worker_process = rtlsdr_worker_process
             process_name = f"Ground Station - RTL-SDR-TCP-v3-{sdr_id}"
 
         elif sdr_device["type"] == "rtlsdrusbv4":
-            serial_number = sdr_device["serial"]
+            # serial_number = sdr_device["serial"]
             connection_type = "usb"
             driver = None
             worker_process = rtlsdr_worker_process
@@ -214,7 +214,7 @@ class SDRProcessManager:
         elif sdr_device["type"] == "rtlsdrtcpv4":
             hostname = sdr_device["host"]
             port = sdr_device["port"]
-            serial_number = 0
+            # serial_number = 0
             connection_type = "tcp"
             driver = None
             worker_process = rtlsdr_worker_process
@@ -225,21 +225,20 @@ class SDRProcessManager:
             port = sdr_device["port"]
             connection_type = "soapysdrremote"
             driver = sdr_device["driver"]
-            serial_number = sdr_device["serial"]
+            # serial_number = sdr_device["serial"]
             worker_process = soapysdr_remote_worker_process
             process_name = f"Ground Station - SoapySDR-Remote-{sdr_id}"
 
         elif sdr_device["type"] == "soapysdrlocal":
             connection_type = "soapysdrlocal"
             driver = sdr_device["driver"]
-            serial_number = sdr_device["serial"]
+            # serial_number = sdr_device["serial"]
             worker_process = soapysdr_local_worker_process
             process_name = f"Ground Station - SoapySDR-Local-{sdr_id}"
 
         elif sdr_device["type"] == "uhd":
             connection_type = "uhd"
             driver = "uhd"
-            serial_number = sdr_device["serial"]
             worker_process = uhd_worker_process
             process_name = f"Ground Station - UHD-Worker-{sdr_id}"
 
@@ -279,6 +278,9 @@ class SDRProcessManager:
             # Add this client to the room
             await self.sio.enter_room(client_id, sdr_id)
 
+            # Map session to SDR
+            self.session_to_sdr[client_id] = sdr_id
+
             # Send a message to the UI of the specific client that streaming started
             await self.sio.emit(SocketEvents.SDR_STATUS, {"streaming": True}, room=client_id)
 
@@ -286,8 +288,14 @@ class SDRProcessManager:
 
         else:
             # New process, create communication queues and events
-            config_queue = multiprocessing.Queue()
-            data_queue = multiprocessing.Queue()
+            config_queue: multiprocessing.Queue = multiprocessing.Queue()
+            data_queue: multiprocessing.Queue = multiprocessing.Queue()
+
+            # Separate IQ queues for FFT and demodulation to avoid contention
+            iq_queue_fft: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+            iq_queue_demod: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+
+            # Stop event for the process
             stop_event = multiprocessing.Event()
 
             # Prepare initial configuration
@@ -320,9 +328,10 @@ class SDRProcessManager:
             named_worker = create_named_worker_process(worker_process, process_name)
 
             # Create and start the process with a descriptive name
+            # Pass both IQ queues so SDR can broadcast to both consumers
             process = multiprocessing.Process(
                 target=named_worker,
-                args=(config_queue, data_queue, stop_event),
+                args=(config_queue, data_queue, stop_event, iq_queue_fft, iq_queue_demod),
                 name=process_name,
                 daemon=True,
             )
@@ -332,13 +341,32 @@ class SDRProcessManager:
                 f"Started SDR process '{process_name}' for device {sdr_id} (PID: {process.pid})"
             )
 
+            # Create and start FFT processor process
+            fft_process_name = f"Ground Station - FFT-Processor-{sdr_id}"
+            fft_named_worker = create_named_worker_process(fft_processor_process, fft_process_name)
+            fft_process = multiprocessing.Process(
+                target=fft_named_worker,
+                args=(iq_queue_fft, data_queue, stop_event, client_id),
+                name=fft_process_name,
+                daemon=True,
+            )
+            fft_process.start()
+
+            self.logger.info(
+                f"Started FFT processor '{fft_process_name}' for device {sdr_id} (PID: {fft_process.pid})"
+            )
+
             # Store process information
             self.processes[sdr_id] = {
                 "process": process,
+                "fft_process": fft_process,
                 "config_queue": config_queue,
                 "data_queue": data_queue,
+                "iq_queue_fft": iq_queue_fft,
+                "iq_queue_demod": iq_queue_demod,  # Separate queue for demodulation
                 "stop_event": stop_event,
                 "clients": {client_id},
+                "demodulators": {},  # Will store demodulator threads per session
             }
 
             # Send initial configuration
@@ -346,6 +374,9 @@ class SDRProcessManager:
 
             # Add this client to the room
             await self.sio.enter_room(client_id, sdr_id)
+
+            # Map session to SDR
+            self.session_to_sdr[client_id] = sdr_id
 
             # Start async task to monitor the data queue
             asyncio.create_task(self._monitor_data_queue(sdr_id))
@@ -374,6 +405,13 @@ class SDRProcessManager:
 
                 # Make a client leave a specific room
                 await self.sio.leave_room(client_id, sdr_id)
+
+                # Remove session-to-SDR mapping
+                if client_id in self.session_to_sdr:
+                    del self.session_to_sdr[client_id]
+
+                # Stop any active demodulator for this client
+                self.stop_demodulator(sdr_id, client_id)
 
                 self.logger.info(f"Removed client {client_id} from SDR process {sdr_id}")
 
@@ -492,14 +530,10 @@ class SDRProcessManager:
                                     SocketEvents.SDR_FFT_DATA, data[DictKeys.DATA], room=sdr_id
                                 )
 
-                        if data_type == QueueMessageTypes.AUDIO_DATA and client_id:
-                            if client_id in process_info["clients"]:
-                                # Send audio data to the client
-                                await self.sio.emit(
-                                    SocketEvents.AUDIO_DATA, data[DictKeys.DATA], room=sdr_id
-                                )
+                        # NOTE: Audio data is handled by WebAudioConsumer, not here
+                        # Audio flow: FM Demodulator → audio_queue → WebAudioConsumer → Browser
 
-                        if data_type == QueueMessageTypes.STREAMING_START and client_id:
+                        elif data_type == QueueMessageTypes.STREAMING_START and client_id:
                             if client_id in process_info["clients"]:
                                 # Sent a message to the UI, streaming started
                                 await self.sio.emit(
@@ -563,6 +597,120 @@ class SDRProcessManager:
             # Make sure the process is cleaned up
             if sdr_id in self.processes:
                 await self.stop_sdr_process(sdr_id)
+
+    def start_demodulator(self, sdr_id, session_id, demodulator_class, audio_queue, **kwargs):
+        """
+        Start a demodulator thread for a specific session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier (client session ID)
+            demodulator_class: The demodulator class to instantiate (e.g., FMDemodulator, AMDemodulator)
+            audio_queue: Queue where demodulated audio will be placed
+            **kwargs: Additional arguments to pass to the demodulator constructor
+
+        Returns:
+            bool: True if started successfully, False otherwise
+        """
+        if sdr_id not in self.processes:
+            self.logger.warning(f"No SDR process found for device {sdr_id}")
+            return False
+
+        process_info = self.processes[sdr_id]
+
+        # Check if demodulator already exists for this session
+        if session_id in process_info.get("demodulators", {}):
+            existing_demod = process_info["demodulators"][session_id]
+            # If same type, just return success
+            if isinstance(existing_demod, demodulator_class):
+                self.logger.info(
+                    f"{demodulator_class.__name__} already running for session {session_id}"
+                )
+                return True
+            else:
+                # Different type, stop the old one first
+                self.logger.info(
+                    f"Stopping existing {type(existing_demod).__name__} for session {session_id}"
+                )
+                self.stop_demodulator(sdr_id, session_id)
+
+        try:
+            # Get the demodulation IQ queue from the process info
+            iq_queue = process_info.get("iq_queue_demod")
+            if not iq_queue:
+                self.logger.error(f"No demodulation IQ queue found for device {sdr_id}")
+                return False
+
+            # Create and start demodulator
+            demodulator = demodulator_class(iq_queue, audio_queue, session_id, **kwargs)
+            demodulator.start()
+
+            # Store reference
+            if "demodulators" not in process_info:
+                process_info["demodulators"] = {}
+            process_info["demodulators"][session_id] = demodulator
+
+            self.logger.info(
+                f"Started {demodulator_class.__name__} for session {session_id} on device {sdr_id}"
+            )
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error starting {demodulator_class.__name__}: {str(e)}")
+            self.logger.exception(e)
+            return False
+
+    def stop_demodulator(self, sdr_id, session_id):
+        """
+        Stop a demodulator thread for a specific session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+
+        Returns:
+            bool: True if stopped successfully, False otherwise
+        """
+        if sdr_id not in self.processes:
+            return False
+
+        process_info = self.processes[sdr_id]
+        demodulators = process_info.get("demodulators", {})
+
+        if session_id not in demodulators:
+            return False
+
+        try:
+            demodulator = demodulators[session_id]
+            demod_name = type(demodulator).__name__
+            demodulator.stop()
+            demodulator.join(timeout=2.0)  # Wait up to 2 seconds
+
+            del demodulators[session_id]
+            self.logger.info(f"Stopped {demod_name} for session {session_id}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error stopping demodulator: {str(e)}")
+            return False
+
+    def get_active_demodulator(self, sdr_id, session_id):
+        """
+        Get the active demodulator for a session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+
+        Returns:
+            Demodulator instance or None if not found
+        """
+        if sdr_id not in self.processes:
+            return None
+
+        process_info = self.processes[sdr_id]
+        demodulators = process_info.get("demodulators", {})
+        return demodulators.get(session_id)
 
 
 # Set up the SDR process manager

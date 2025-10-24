@@ -21,25 +21,28 @@ import time
 import numpy as np
 import rtlsdr
 
-from workers.common import FFTAverager, window_functions
 from workers.rtlsdrtcpclient import RtlSdrTcpClient
 
 # Configure logging for the worker process
 logger = logging.getLogger("rtlsdr-worker")
 
 
-def rtlsdr_worker_process(config_queue, data_queue, stop_event):
+def rtlsdr_worker_process(
+    config_queue, data_queue, stop_event, iq_queue_fft=None, iq_queue_demod=None
+):
     """
     Worker process for RTL-SDR operations.
 
     This function runs in a separate process to avoid segmentation faults.
-    It receives configuration through a queue, processes SDR data, and
-    sends the FFT results back through another queue.
+    It receives configuration through a queue, streams IQ data to separate queues,
+    and sends status/error messages through data_queue.
 
     Args:
         config_queue: Queue for receiving configuration from the main process
         data_queue: Queue for sending processed data back to the main process
         stop_event: Event to signal the process to stop
+        iq_queue_fft: Queue for streaming raw IQ samples to FFT processor
+        iq_queue_demod: Queue for streaming raw IQ samples to demodulators
     """
 
     # Default configuration
@@ -63,8 +66,14 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
         fft_size = config.get("fft_size", 16384)
         fft_window = config.get("fft_window", "hanning")
 
-        # FFT averaging configuration
+        # FFT averaging configuration (passed to IQ consumers)
         fft_averaging = config.get("fft_averaging", 6)
+
+        # FFT overlap (passed to IQ consumers)
+        fft_overlap = config.get("fft_overlap", True)
+
+        # Track whether we have IQ consumers
+        has_iq_consumers = iq_queue_fft is not None or iq_queue_demod is not None
 
         # Connect to the RTL-SDR device
         if config.get("connection_type") == "tcp":
@@ -91,9 +100,6 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
 
         # Calculate the number of samples based on sample rate
         num_samples = calculate_samples_per_scan(sdr.sample_rate, fft_size)
-
-        # Initialize FFT averager
-        fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
 
         # if we reached here, we can set the UI to streaming
         data_queue.put(
@@ -141,7 +147,6 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                     if "fft_averaging" in new_config:
                         if old_config.get("fft_averaging", 4) != new_config["fft_averaging"]:
                             fft_averaging = new_config["fft_averaging"]
-                            fft_averager.update_averaging_factor(fft_averaging)
                             logger.info(f"Updated FFT averaging: {fft_averaging}")
 
                     if "bias_t" in new_config:
@@ -194,65 +199,38 @@ def rtlsdr_worker_process(config_queue, data_queue, stop_event):
                 # Remove DC offset
                 samples = remove_dc_offset(samples)
 
-                # Optionally increase virtual resolution
-                actual_fft_size = fft_size * 1
+                # Broadcast IQ samples to consumers (FFT processor and demodulators)
+                if has_iq_consumers:
+                    # Message format: IQ samples + metadata
+                    timestamp = time.time()
 
-                # Apply window function
-                window_func = window_functions.get(fft_window.lower(), np.hanning)
-                window = window_func(actual_fft_size)
+                    # Broadcast to FFT queue (for waterfall display)
+                    if iq_queue_fft is not None:
+                        if not iq_queue_fft.full():
+                            iq_message = {
+                                "samples": samples,
+                                "center_freq": sdr.center_freq,
+                                "sample_rate": sdr.sample_rate,
+                                "timestamp": timestamp,
+                                "config": {
+                                    "fft_size": fft_size,
+                                    "fft_window": fft_window,
+                                    "fft_averaging": fft_averaging,
+                                    "fft_overlap": fft_overlap,
+                                },
+                            }
+                            iq_queue_fft.put_nowait(iq_message)
 
-                # Calculate FFT with 50% overlap
-                num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
-                if num_segments <= 0:
-                    logger.warning(
-                        f"Not enough samples for FFT: {len(samples)} < {actual_fft_size}"
-                    )
-                    continue
-
-                fft_result = np.zeros(actual_fft_size)
-
-                for i in range(num_segments):
-                    start_idx = i * (actual_fft_size // 2)
-                    segment = samples[start_idx : start_idx + actual_fft_size]
-
-                    windowed_segment = segment * window
-
-                    # Perform FFT
-                    fft_segment = np.fft.fft(windowed_segment)
-
-                    # Shift DC to center
-                    fft_segment = np.fft.fftshift(fft_segment)
-
-                    # Proper power normalization
-                    N = len(fft_segment)
-                    window_correction = 1.0
-                    power = 10 * np.log10(
-                        (np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10
-                    )
-                    fft_result += power
-
-                # Average the segments
-                if num_segments > 0:
-                    fft_result /= num_segments
-
-                # Convert to Float32 for efficiency in transmission
-                fft_result = fft_result.astype(np.float32)
-
-                # Add FFT to averager and send only when ready
-                averaged_fft = fft_averager.add_fft(fft_result)
-                if averaged_fft is not None:
-                    # Send the averaged result back to the main process
-                    data_queue.put(
-                        {
-                            "type": "fft_data",
-                            "client_id": client_id,
-                            "data": averaged_fft.tobytes(),
-                            "timestamp": time.time(),
-                        }
-                    )
-
-                # Short sleep to prevent CPU hogging
-                time.sleep(0.01)
+                    # Broadcast to demodulation queue
+                    if iq_queue_demod is not None:
+                        if not iq_queue_demod.full():
+                            demod_message = {
+                                "samples": samples,
+                                "center_freq": sdr.center_freq,
+                                "sample_rate": sdr.sample_rate,
+                                "timestamp": timestamp,
+                            }
+                            iq_queue_demod.put_nowait(demod_message)
 
             except Exception as e:
                 logger.error(f"Error processing SDR data: {str(e)}")

@@ -129,12 +129,16 @@ export const AudioProvider = ({ children }) => {
             source.connect(gainNodeRef.current);
 
             const currentTime = audioContextRef.current.currentTime;
-            // Reduced from 0.05 to minimize latency
+
+            // Schedule audio continuously without gaps
             if (nextPlayTimeRef.current < currentTime) {
-                nextPlayTimeRef.current = currentTime + 0.005; // 5ms instead of 50ms
+                // If we're behind, start immediately
+                nextPlayTimeRef.current = currentTime;
             }
 
             source.start(nextPlayTimeRef.current);
+
+            // Next chunk starts exactly when this one ends (no gap)
             nextPlayTimeRef.current += audioBuffer.duration;
 
         } catch (error) {

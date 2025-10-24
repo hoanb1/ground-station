@@ -1,0 +1,175 @@
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+import logging
+import time
+
+import numpy as np
+
+from workers.common import FFTAverager, window_functions
+
+logger = logging.getLogger("fft-processor")
+
+
+def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
+    """
+    Separate process that consumes IQ data and produces FFT results.
+
+    This decouples FFT computation from SDR acquisition, allowing the SDR worker
+    to focus solely on reading samples without blocking.
+
+    Args:
+        iq_queue: Queue for receiving IQ samples from the SDR worker
+        data_queue: Queue for sending FFT results back to the main process
+        stop_event: Event to signal the process to stop
+        client_id: Client identifier for this processing session
+    """
+
+    logger.info(f"FFT processor started for client {client_id}")
+
+    # Configuration state
+    fft_size = 16384
+    fft_window = "hanning"
+    fft_averaging = 6
+    fft_overlap = True
+
+    # Initialize FFT averager
+    fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
+
+    try:
+        while not stop_event.is_set():
+            try:
+                # Get IQ data from queue with timeout
+                # Message format: {'samples': ndarray, 'center_freq': float,
+                #                  'sample_rate': float, 'timestamp': float, 'config': dict}
+                if iq_queue.empty():
+                    time.sleep(0.001)
+                    continue
+
+                iq_message = iq_queue.get(timeout=0.1)
+
+                # Handle configuration updates
+                if "config" in iq_message:
+                    config = iq_message["config"]
+
+                    if "fft_size" in config and config["fft_size"] != fft_size:
+                        fft_size = config["fft_size"]
+                        logger.info(f"Updated FFT size: {fft_size}")
+
+                    if "fft_window" in config and config["fft_window"] != fft_window:
+                        fft_window = config["fft_window"]
+                        logger.info(f"Updated FFT window: {fft_window}")
+
+                    if "fft_averaging" in config and config["fft_averaging"] != fft_averaging:
+                        fft_averaging = config["fft_averaging"]
+                        fft_averager.update_averaging_factor(fft_averaging)
+                        logger.info(f"Updated FFT averaging: {fft_averaging}")
+
+                    if "fft_overlap" in config and config["fft_overlap"] != fft_overlap:
+                        fft_overlap = config["fft_overlap"]
+                        logger.info(f"Updated FFT overlap: {fft_overlap}")
+
+                # Extract samples
+                samples = iq_message.get("samples")
+                if samples is None or len(samples) == 0:
+                    continue
+
+                # Calculate the number of samples needed for the FFT
+                actual_fft_size = fft_size
+
+                # Apply window function
+                window_func = window_functions.get(fft_window.lower(), np.hanning)
+                window = window_func(actual_fft_size)
+
+                # Calculate FFT segments based on overlap setting
+                if fft_overlap:
+                    # Use 50% overlap
+                    overlap_step = actual_fft_size // 2
+                    num_segments = (len(samples) - actual_fft_size // 2) // (actual_fft_size // 2)
+                else:
+                    # No overlap - use non-overlapping segments
+                    overlap_step = actual_fft_size
+                    num_segments = len(samples) // actual_fft_size
+
+                if num_segments <= 0:
+                    overlap_type = "with overlap" if fft_overlap else "without overlap"
+                    logger.debug(
+                        f"Not enough samples for FFT {overlap_type}: {len(samples)} < {actual_fft_size}"
+                    )
+                    continue
+
+                fft_result = np.zeros(actual_fft_size)
+
+                for i in range(num_segments):
+                    start_idx = i * overlap_step
+                    segment = samples[start_idx : start_idx + actual_fft_size]
+
+                    windowed_segment = segment * window
+
+                    # Perform FFT
+                    fft_segment = np.fft.fft(windowed_segment)
+
+                    # Shift DC to center
+                    fft_segment = np.fft.fftshift(fft_segment)
+
+                    # Proper power normalization
+                    N = len(fft_segment)
+                    if fft_overlap:
+                        # Use simpler correction for overlapped FFTs
+                        window_correction = 1.0
+                    else:
+                        # Use proper window correction for non-overlapped FFTs
+                        window_correction = np.sum(window**2) / N
+
+                    power = 10 * np.log10(
+                        (np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10
+                    )
+                    fft_result += power
+
+                # Average the segments
+                if num_segments > 0:
+                    fft_result /= num_segments
+
+                # Convert to Float32 for efficiency in transmission
+                fft_result = fft_result.astype(np.float32)
+
+                # Add FFT to averager and send only when ready
+                averaged_fft = fft_averager.add_fft(fft_result)
+                if averaged_fft is not None:
+                    # Send the averaged result back to the main process
+                    data_queue.put(
+                        {
+                            "type": "fft_data",
+                            "client_id": client_id,
+                            "data": averaged_fft.tobytes(),
+                            "timestamp": time.time(),
+                        }
+                    )
+
+                # Brief sleep to prevent CPU spinning
+                time.sleep(0.001)
+
+            except Exception as e:
+                if not stop_event.is_set():
+                    logger.error(f"Error processing IQ data for FFT: {str(e)}")
+                    logger.exception(e)
+                time.sleep(0.1)
+
+    except Exception as e:
+        logger.error(f"Fatal error in FFT processor: {str(e)}")
+        logger.exception(e)
+    finally:
+        logger.info(f"FFT processor terminated for client {client_id}")

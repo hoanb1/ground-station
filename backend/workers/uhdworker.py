@@ -9,8 +9,6 @@ from collections import deque
 
 import numpy as np
 
-from workers.common import FFTAverager, window_functions
-
 # Configure logging for the worker process
 logger = logging.getLogger("uhd-worker")
 
@@ -21,18 +19,22 @@ except ImportError:
     logging.warning("UHD library not found. UHD functionality will not be available.")
 
 
-def uhd_worker_process(config_queue, data_queue, stop_event):
+def uhd_worker_process(
+    config_queue, data_queue, stop_event, iq_queue_fft=None, iq_queue_demod=None
+):
     """
     Worker process for UHD operations.
 
     This function runs in a separate process to avoid segmentation faults.
-    It receives configuration through a queue, processes SDR data, and
-    sends the FFT results back through another queue.
+    It receives configuration through a queue, streams IQ data to separate queues,
+    and sends status/error messages through data_queue.
 
     Args:
         config_queue: Queue for receiving configuration from the main process
         data_queue: Queue for sending processed data back to the main process
         stop_event: Event to signal the process to stop
+        iq_queue_fft: Queue for streaming raw IQ samples to FFT processor
+        iq_queue_demod: Queue for streaming raw IQ samples to demodulators
     """
 
     if uhd is None:
@@ -75,8 +77,14 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         fft_size = config.get("fft_size", 16384)
         fft_window = config.get("fft_window", "hanning")
 
-        # FFT averaging configuration
+        # FFT averaging configuration (passed to IQ consumers)
         fft_averaging = config.get("fft_averaging", 8)
+
+        # FFT overlap (passed to IQ consumers)
+        fft_overlap = config.get("fft_overlap", False)
+
+        # Track whether we have IQ consumers
+        has_iq_consumers = iq_queue_fft is not None or iq_queue_demod is not None
 
         # Sample accumulation mode: 'accumulate', 'zero-pad', or 'drop'
         insufficient_samples_mode = config.get("insufficient_samples_mode", "drop")
@@ -182,9 +190,6 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
         # Initialize sample accumulation buffer
         accumulated_samples = deque()
         max_accumulation_size = fft_size * 4  # Prevent excessive memory usage
-
-        # Initialize FFT averager
-        fft_averager = FFTAverager(logger, averaging_factor=fft_averaging)
 
         # Start streaming
         stream_cmd = uhd.types.StreamCMD(uhd.types.StreamMode.start_cont)
@@ -327,8 +332,13 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                     if "fft_averaging" in new_config:
                         if old_config.get("fft_averaging", 4) != new_config["fft_averaging"]:
                             fft_averaging = new_config["fft_averaging"]
-                            fft_averager.update_averaging_factor(fft_averaging)
+                            # FFT averaging is now handled by FFT processor
                             logger.info(f"Updated FFT averaging: {fft_averaging}")
+
+                    if "fft_overlap" in new_config:
+                        if old_config.get("fft_overlap", True) != new_config["fft_overlap"]:
+                            fft_overlap = new_config["fft_overlap"]
+                            logger.info(f"Updated FFT overlap: {fft_overlap}")
 
                     if "antenna" in new_config:
                         if old_config.get("antenna", None) != new_config["antenna"]:
@@ -456,62 +466,50 @@ def uhd_worker_process(config_queue, data_queue, stop_event):
                     else:
                         continue
 
-                # Apply window function
-                window_func = window_functions.get(fft_window.lower(), np.hanning)
-                window = window_func(fft_size)
+                # Stream IQ data to consumers (FFT processor, demodulators, etc.)
+                # Broadcast to both queues so FFT and demodulation can work independently
+                if has_iq_consumers:
+                    try:
+                        # Prepare IQ message with metadata
+                        timestamp = time.time()
 
-                # Calculate FFT with 50% overlap - handle variable sizes
-                num_segments = max(1, (len(samples) - fft_size // 2) // (fft_size // 2))
+                        # Broadcast to FFT queue (for waterfall display)
+                        if iq_queue_fft is not None:
+                            try:
+                                if not iq_queue_fft.full():
+                                    iq_message = {
+                                        "samples": samples.copy(),
+                                        "center_freq": actual_freq,
+                                        "sample_rate": actual_rate,
+                                        "timestamp": timestamp,
+                                        "config": {
+                                            "fft_size": fft_size,
+                                            "fft_window": fft_window,
+                                            "fft_averaging": fft_averaging,
+                                            "fft_overlap": fft_overlap,
+                                        },
+                                    }
+                                    iq_queue_fft.put_nowait(iq_message)
+                            except Exception as e:
+                                pass  # Drop if can't queue
 
-                fft_result = np.zeros(fft_size)
+                        # Broadcast to demodulation queue
+                        if iq_queue_demod is not None:
+                            try:
+                                if not iq_queue_demod.full():
+                                    # Make a copy for demod queue
+                                    demod_message = {
+                                        "samples": samples.copy(),
+                                        "center_freq": actual_freq,
+                                        "sample_rate": actual_rate,
+                                        "timestamp": timestamp,
+                                    }
+                                    iq_queue_demod.put_nowait(demod_message)
+                            except Exception as e:
+                                pass  # Drop if can't queue
 
-                for i in range(num_segments):
-                    start_idx = i * (fft_size // 2)
-                    end_idx = start_idx + fft_size
-
-                    if end_idx > len(samples):
-                        break
-
-                    segment = samples[start_idx:end_idx]
-                    windowed_segment = segment * window
-
-                    # Perform FFT
-                    fft_segment = np.fft.fft(windowed_segment)
-
-                    # Shift DC to center
-                    fft_segment = np.fft.fftshift(fft_segment)
-
-                    # Proper power normalization
-                    N = len(fft_segment)
-                    window_correction = 1.0
-                    power = 10 * np.log10(
-                        (np.abs(fft_segment) ** 2) / (N * window_correction) + 1e-10
-                    )
-                    fft_result += power
-
-                # Average the segments
-                if num_segments > 0:
-                    fft_result /= num_segments
-
-                # Convert to Float32 for efficiency in transmission
-                fft_result = fft_result.astype(np.float32)
-
-                # Add FFT to averager and send only when ready
-                averaged_fft = fft_averager.add_fft(fft_result)
-
-                if averaged_fft is not None:
-                    # Send the averaged result back to the main process
-                    data_queue.put(
-                        {
-                            "type": "fft_data",
-                            "client_id": client_id,
-                            "data": averaged_fft.tobytes(),
-                            "timestamp": time.time(),
-                        }
-                    )
-
-                # Minimal sleep to maintain data flow
-                time.sleep(0.001)  # Reduced from 0.01
+                    except Exception as e:
+                        logger.debug(f"Could not queue IQ data: {str(e)}")
 
             except Exception as e:
                 logger.error(f"Error processing SDR data: {str(e)}")

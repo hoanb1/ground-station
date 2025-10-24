@@ -2,7 +2,7 @@ class AudioProcessor {
     constructor() {
         this.audioQueue = [];
         this.processingQueue = false;
-        this.maxQueueSize = 3; // Smaller queue to prevent interference
+        this.maxQueueSize = 50; // Increased from 3 to 50 for smooth audio streaming
     }
 
     processAudioData(audioData) {
@@ -57,17 +57,15 @@ class AudioProcessor {
 
         this.processingQueue = true;
 
-        // Use setTimeout to prevent overwhelming the main thread
-        setTimeout(() => {
-            this.processQueue();
-        }, 16); // ~60fps timing
+        // Process immediately without delay for real-time audio
+        this.processQueue();
     }
 
     processQueue() {
-        const batchSize = Math.min(1, this.audioQueue.length); // Process one at a time
+        // Process all available chunks at once for continuous audio
         const batch = [];
 
-        for (let i = 0; i < batchSize; i++) {
+        while (this.audioQueue.length > 0) {
             const audioData = this.audioQueue.shift();
             if (audioData) {
                 batch.push(audioData);
@@ -82,11 +80,6 @@ class AudioProcessor {
         }
 
         this.processingQueue = false;
-
-        // Continue processing if there's more
-        if (this.audioQueue.length > 0) {
-            this.scheduleProcessing();
-        }
     }
 
     getQueueStatus() {
