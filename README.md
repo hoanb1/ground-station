@@ -6,10 +6,9 @@
 # Ground Station
 
 
-**Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication,
-and data decoding.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides
+**Ground Station is a full-featured, open-source software solution for satellite tracking and radio communication.** Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides
 a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving
-satellite imagery and telemetry.
+live radio signals from satellites.
 
 ## Screenshots
 
@@ -64,6 +63,8 @@ The following features are planned for future releases:
 *   **Data Decoding:** Decode and display images from weather satellites (e.g., NOAA APT, METEOR LRPT) and telemetry from various amateur satellites
 *   **Pass Scheduler:** Automated scheduling and recording of satellite passes
 *   **Signal Recording:** Enhanced recording capabilities with metadata tagging
+
+**Note:** Data decoding functionality is planned but not yet implemented.
 
 ## Architecture
 <a id="arch-v1"></a>
