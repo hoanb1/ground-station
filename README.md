@@ -73,7 +73,7 @@ The Ground Station application is composed of a frontend, a backend, and a set o
 
 ```mermaid
 flowchart TB
-    %% Cache buster: v1
+    %% Cache buster: v2-20251024
     %% Frontend Layer
     A[Frontend: React + Redux + MUI]
 
