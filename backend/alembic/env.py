@@ -31,7 +31,9 @@ config.set_main_option("sqlalchemy.url", f"sqlite+aiosqlite:///./data/{db_name}"
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
-if config.config_file_name is not None:
+# We skip this when running from the application context (ALEMBIC_CONTEXT=1)
+# to use the application's logging configuration instead
+if config.config_file_name is not None and not os.environ.get("ALEMBIC_CONTEXT"):
     fileConfig(config.config_file_name)
 
 # add your model's MetaData object here

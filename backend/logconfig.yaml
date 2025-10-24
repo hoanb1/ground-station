@@ -179,6 +179,24 @@ loggers:
       - default
     propagate: no
 
+  alembic.runtime.migration:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
+  tzlocal:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
+  apscheduler.scheduler:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
