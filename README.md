@@ -71,6 +71,8 @@ The following features are planned for future releases:
 
 The Ground Station application is composed of a frontend, a backend, and a set of worker processes.
 
+
+
 ```mermaid
 flowchart TB
     %% Cache buster: v2-20251024
