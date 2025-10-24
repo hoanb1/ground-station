@@ -196,7 +196,7 @@ const FrequencyScale = ({ centerFrequency, sampleRate, containerWidth, canvasHei
                     ctx.beginPath();
                     ctx.strokeStyle = isLabeledMinor
                         ? theme.palette.text.secondary
-                        : theme.palette.overlay.light;
+                        : theme.palette.text.disabled;
                     ctx.lineWidth = 1;
                     ctx.moveTo(x, isLabeledMinor ? height - 6 : height - 4);
                     ctx.lineTo(x, height);
