@@ -63,6 +63,7 @@ class FMDemodulator(threading.Thread):
         self.last_sample = 0 + 0j
         self.sdr_sample_rate = None
         self.current_center_freq = None
+        self.current_bandwidth = None
 
         # Filters (will be initialized when we know sample rates)
         self.decimation_filter: Optional[Tuple[np.ndarray, int]] = None
@@ -106,10 +107,26 @@ class FMDemodulator(threading.Thread):
 
         return filter_taps, decimation
 
-    def _design_audio_filter(self, intermediate_rate):
-        """Design audio low-pass filter (3 kHz for voice, 15 kHz for wideband FM)."""
-        # For now, use 15 kHz cutoff for wideband FM
-        cutoff = 15e3
+    def _design_audio_filter(self, intermediate_rate, vfo_bandwidth):
+        """Design audio low-pass filter based on VFO bandwidth.
+
+        For FM, the audio bandwidth is derived from the RF bandwidth:
+        - Narrow FM (< 25 kHz): ~3-5 kHz audio (voice)
+        - Medium FM (25-100 kHz): scaled proportionally
+        - Wide FM (> 100 kHz): ~15 kHz audio (broadcast/music)
+        """
+        # Calculate audio cutoff based on VFO bandwidth
+        # Use a reasonable fraction of the RF bandwidth for audio
+        if vfo_bandwidth < 25e3:
+            # Narrowband FM: limit to voice bandwidth
+            cutoff = min(3e3, vfo_bandwidth * 0.3)
+        elif vfo_bandwidth < 100e3:
+            # Medium bandwidth: scale proportionally
+            cutoff = vfo_bandwidth * 0.15
+        else:
+            # Wideband FM: allow up to 15 kHz for music
+            cutoff = min(15e3, vfo_bandwidth * 0.15)
+
         nyquist = intermediate_rate / 2.0
         normalized_cutoff = min(0.45, cutoff / nyquist)
 
@@ -198,8 +215,13 @@ class FMDemodulator(threading.Thread):
                     continue
 
                 # Check if we need to reinitialize filters
-                if self.sdr_sample_rate != sdr_sample_rate or self.decimation_filter is None:
+                if (
+                    self.sdr_sample_rate != sdr_sample_rate
+                    or self.current_bandwidth != vfo_state.bandwidth
+                    or self.decimation_filter is None
+                ):
                     self.sdr_sample_rate = sdr_sample_rate
+                    self.current_bandwidth = vfo_state.bandwidth
 
                     # Design filters
                     filter_taps, decimation = self._design_decimation_filter(
@@ -208,7 +230,9 @@ class FMDemodulator(threading.Thread):
                     self.decimation_filter = (filter_taps, decimation)
 
                     intermediate_rate = sdr_sample_rate / decimation
-                    self.audio_filter = self._design_audio_filter(intermediate_rate)
+                    self.audio_filter = self._design_audio_filter(
+                        intermediate_rate, vfo_state.bandwidth
+                    )
                     self.deemphasis_filter = self._design_deemphasis_filter(intermediate_rate)
 
                     # Reset filter states
