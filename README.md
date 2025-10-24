@@ -71,16 +71,14 @@ The following features are planned for future releases:
 
 The Ground Station application is composed of a frontend, a backend, and a set of worker processes.
 
-
-
 ```mermaid
 flowchart TB
     %% Cache buster: v2-20251024
     %% Frontend Layer
-    A[Frontend: React + Redux + MUI]
+    A[Frontend: React + Redux + MUI<br/>- Real-time UI updates<br/>- State management<br/>- Interactive satellite maps<br/>- Spectrum & waterfall display<br/>- Audio playback & recording]
 
     %% Backend Layer
-    B[Backend: FastAPI + Socket.IO]
+    B[Backend: FastAPI + Socket.IO<br/>- WebSocket connections<br/>- Worker process management<br/>- Database operations<br/>- TLE data fetching]
 
     %% Worker Layer
     subgraph Workers["Worker Processes"]
@@ -143,6 +141,11 @@ flowchart TB
     class W1,W2,W2A,W2B,W3,W4 worker
     class H1,H2,H3,H4 hardware
     class E1,E2 external
+
+    %% Dashed borders for subgraphs
+    style Workers stroke-dasharray: 5 5
+    style Hardware stroke-dasharray: 5 5
+    style External stroke-dasharray: 5 5
 ```
 
 *   **Frontend:** The frontend is a single-page application built with React, Redux Toolkit, and Material-UI. It communicates with the backend using a socket.io connection for real-time updates.
