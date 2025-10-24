@@ -27,6 +27,10 @@ export const ToastContainerWithStyles = () => {
     return (
         <>
             <style>{`
+                .Toastify__toast-container {
+                    top: 75px !important;
+                }
+
                 .Toastify__toast-container,
                 .Toastify__toast,
                 .Toastify__toast-body,
