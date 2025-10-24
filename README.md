@@ -66,6 +66,7 @@ The following features are planned for future releases:
 *   **Signal Recording:** Enhanced recording capabilities with metadata tagging
 
 ## Architecture
+<a id="arch-v1"></a>
 
 The Ground Station application is composed of a frontend, a backend, and a set of worker processes.
 
