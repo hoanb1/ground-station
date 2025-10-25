@@ -15,7 +15,7 @@ from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
 from db import engine  # Explicit import for type checker
-from demodulators.webaudioconsumer import WebAudioConsumer
+from demodulators.audioconsumer import WebAudioConsumer
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
 from server import shutdown

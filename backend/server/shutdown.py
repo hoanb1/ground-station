@@ -3,7 +3,7 @@ import os
 from typing import Optional
 
 from common.logger import logger
-from demodulators.webaudioconsumer import WebAudioConsumer
+from demodulators.audioconsumer import WebAudioConsumer
 from sdr.utils import cleanup_sdr_session
 
 # Globals used by audio threads
