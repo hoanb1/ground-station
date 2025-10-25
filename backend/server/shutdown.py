@@ -4,11 +4,9 @@ from typing import Optional
 
 from common.logger import logger
 from demodulators.webaudioconsumer import WebAudioConsumer
-from demodulators.webaudioproducer import WebAudioProducer
 from sdr.utils import cleanup_sdr_session
 
 # Globals used by audio threads
-audio_producer: Optional[WebAudioProducer] = None
 audio_consumer: Optional[WebAudioConsumer] = None
 
 
@@ -50,8 +48,6 @@ def cleanup_everything():
 
     # Stop audio threads
     try:
-        if audio_producer:
-            audio_producer.stop()
         if audio_consumer:
             audio_consumer.stop()
     except Exception as e:  # pragma: no cover

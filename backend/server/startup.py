@@ -16,7 +16,6 @@ from common.logger import logger
 from db import *  # noqa: F401,F403
 from db import engine  # Explicit import for type checker
 from demodulators.webaudioconsumer import WebAudioConsumer
-from demodulators.webaudioproducer import WebAudioProducer
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
 from server import shutdown
@@ -67,9 +66,7 @@ async def lifespan(fastapiapp: FastAPI):
     logger.info("FastAPI lifespan startup...")
     start_tracker_process()
     event_loop = asyncio.get_event_loop()
-    shutdown.audio_producer = WebAudioProducer(audio_queue)
     shutdown.audio_consumer = WebAudioConsumer(audio_queue, sio, event_loop)
-    shutdown.audio_producer.start()
     shutdown.audio_consumer.start()
     asyncio.create_task(handle_tracker_messages(sio))
     if arguments.runonce_soapy_discovery:
