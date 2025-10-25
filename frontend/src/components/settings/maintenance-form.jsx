@@ -678,6 +678,134 @@ const MaintenanceForm = () => {
                     )}
                 </Grid>
 
+                <Divider sx={{ my: 3 }} />
+
+                <Alert severity="info">
+                    <AlertTitle>Canvas Rendering Debug Information</AlertTitle>
+                    Information about canvas rendering environment for debugging text distortion issues
+                </Alert>
+
+                <Grid container spacing={2} columns={16} sx={{ mt: 1 }}>
+                    <Grid size={8}>
+                        Device Pixel Ratio
+                        <Typography variant="body2" color="text.secondary">
+                            Scale factor between CSS pixels and physical pixels
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="h6" color="primary">
+                            {window.devicePixelRatio || 'N/A'}
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Window Inner Dimensions
+                        <Typography variant="body2" color="text.secondary">
+                            Viewport width and height in CSS pixels
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {window.innerWidth} × {window.innerHeight} px
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Screen Resolution
+                        <Typography variant="body2" color="text.secondary">
+                            Physical screen dimensions
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {window.screen.width} × {window.screen.height} px
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Available Screen Space
+                        <Typography variant="body2" color="text.secondary">
+                            Screen size minus OS toolbars/taskbar
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {window.screen.availWidth} × {window.screen.availHeight} px
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Color Depth
+                        <Typography variant="body2" color="text.secondary">
+                            Bits per pixel for color representation
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {window.screen.colorDepth} bits
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        User Agent
+                        <Typography variant="body2" color="text.secondary">
+                            Browser identification string
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                            {navigator.userAgent}
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Platform
+                        <Typography variant="body2" color="text.secondary">
+                            Operating system platform
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {navigator.platform}
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Hardware Concurrency
+                        <Typography variant="body2" color="text.secondary">
+                            Number of logical processor cores
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {navigator.hardwareConcurrency || 'N/A'} cores
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Max Touch Points
+                        <Typography variant="body2" color="text.secondary">
+                            Maximum simultaneous touch points supported
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {navigator.maxTouchPoints || 0}
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Language
+                        <Typography variant="body2" color="text.secondary">
+                            Browser language setting
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Typography variant="body1">
+                            {navigator.language}
+                        </Typography>
+                    </Grid>
+                </Grid>
 
                 {/* Confirmation Dialog */}
                 <Dialog open={confirmRestartOpen} onClose={() => setConfirmRestartOpen(false)}>

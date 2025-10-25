@@ -197,6 +197,12 @@ loggers:
       - default
     propagate: no
 
+  fm-demodulator:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

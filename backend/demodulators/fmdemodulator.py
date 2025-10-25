@@ -253,7 +253,7 @@ class FMDemodulator(threading.Thread):
 
                 offset_freq = vfo_state.center_freq - sdr_center_freq
                 if abs(offset_freq) > sdr_sample_rate / 2:
-                    logger.warning(
+                    logger.debug(
                         f"VFO frequency {vfo_state.center_freq} Hz is outside SDR bandwidth "
                         f"(SDR center: {sdr_center_freq} Hz, rate: {sdr_sample_rate} Hz)"
                     )

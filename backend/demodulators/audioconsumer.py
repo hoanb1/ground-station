@@ -41,8 +41,8 @@ class WebAudioConsumer(threading.Thread):
 
                         # Process audio based on VFO settings
                         if vfo_state.active:
-                            # Convert volume from the 0-100 range to 0.0-1.0 multiplier
-                            volume_multiplier = vfo_state.volume / 100.0
+                            # Convert volume from the 0-100 range to 0.0-1.5 multiplier
+                            volume_multiplier = vfo_state.volume / 100.0 * 1.5
                             processed_audio = audio_chunk * volume_multiplier
                         else:
                             # Mute if VFO is inactive but still selected
