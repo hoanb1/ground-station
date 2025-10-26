@@ -1,24 +1,9 @@
-# Copyright (c) 2025 Efstratios Goudelis
-#
-# This program is free software: you can redistribute it and/or modify
-# it under the terms of the GNU General Public License as published by
-# the Free Software Foundation, either version 3 of the License, or
-# (at your option) any later version.
-#
-# This program is distributed in the hope that it will be useful,
-# but WITHOUT ANY WARRANTY; without even the implied warranty of
-# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-# GNU General Public License for more details.
-#
-# You should have received a copy of the GNU General Public License
-# along with this program. If not, see <https://www.gnu.org/licenses/>.
-
-
+import errno
 import logging
 import socket
 import struct
 import time
-from typing import Optional, Tuple
+from typing import Optional
 
 import numpy as np
 
@@ -71,7 +56,7 @@ class RtlSdrTcpClient:
         self._tuner_type_id: Optional[int] = None
         self._tuner_type_name: Optional[str] = None
         self._tuner_gain_count: Optional[int] = None  # Info from server
-        self._logger = logging.getLogger(f"rtlsdr-tcp-client")
+        self._logger = logging.getLogger("rtlsdr-tcp-client")
         if verbose:
             self._logger.setLevel(logging.DEBUG)
         else:
@@ -125,9 +110,12 @@ class RtlSdrTcpClient:
                 )
                 # Continue anyway, but log the warning
 
-            self._tuner_type_name = self._TUNER_TYPES.get(
-                self._tuner_type_id, f"Unknown ({self._tuner_type_id})"
-            )
+            if self._tuner_type_id is not None:
+                self._tuner_type_name = self._TUNER_TYPES.get(
+                    self._tuner_type_id, f"Unknown ({self._tuner_type_id})"
+                )
+            else:
+                self._tuner_type_name = "Unknown"
 
             self._logger.info(
                 f"Connected successfully. Tuner: {self._tuner_type_name}, Gain Count: {self._tuner_gain_count}"
@@ -533,7 +521,7 @@ class RtlSdrTcpClient:
                     self._sock.settimeout(original_timeout)
                 except OSError as e:
                     # Ignore error if socket was closed during read (e.g., by close() in except block)
-                    if e.errno != socket.errno.EBADF:
+                    if e.errno != errno.EBADF:
                         self._logger.warning(f"Could not restore original socket timeout: {e}")
 
     def close(self) -> None:
@@ -558,7 +546,7 @@ class RtlSdrTcpClient:
                 self._sock.shutdown(socket.SHUT_RDWR)
             except OSError as e:
                 # Ignore errors like "not connected" if already closed
-                if e.errno != socket.errno.ENOTCONN and e.errno != socket.errno.EBADF:
+                if e.errno != errno.ENOTCONN and e.errno != errno.EBADF:
                     self._logger.warning(f"Error during socket shutdown: {e} (errno {e.errno})")
             except Exception as e:
                 self._logger.warning(f"Unexpected error during socket shutdown: {e}")
