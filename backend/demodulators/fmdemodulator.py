@@ -416,10 +416,12 @@ class FMDemodulator(threading.Thread):
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
-                        # Put audio chunk in queue
+                        # Put audio chunk in queue with session_id
                         try:
                             # Use timeout to avoid blocking forever if consumer stops
-                            self.audio_queue.put(chunk, timeout=0.5)
+                            self.audio_queue.put(
+                                {"session_id": self.session_id, "audio": chunk}, timeout=0.5
+                            )
                         except Exception as e:
                             logger.warning(f"Could not queue audio: {str(e)}")
 

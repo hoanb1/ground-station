@@ -153,7 +153,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             reply = {"success": sdrs["success"], "data": sdrs.get("data", [])}
 
         elif cmd == "get-locations":
-            logger.debug(f"Getting all locations")
+            logger.debug("Getting all locations")  # noqa: F541
             locations = await crud.locations.fetch_all_locations(dbsession)
             reply = {"success": locations["success"], "data": locations.get("data", [])}
 
@@ -187,7 +187,7 @@ async def data_request_routing(sio, cmd, data, logger, sid):
             reply = {"success": satellites["success"], "data": satellites.get("data", [])}
 
         elif cmd == "fetch-preferences":
-            logger.debug(f"Fetching preferences")
+            logger.debug("Fetching preferences")  # noqa: F541
             preferences = await crud.preferences.fetch_all_preferences(dbsession)
             reply = {"success": preferences["success"], "data": preferences.get("data", [])}
 

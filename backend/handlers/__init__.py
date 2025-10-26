@@ -14,9 +14,9 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from .base import run_async_in_thread
-from .data_requests import data_request_routing
-from .data_submissions import data_submission_routing
+from .requests import data_request_routing
 from .sdr import sdr_data_request_routing
+from .submissions import data_submission_routing
 from .tracking import emit_tracker_data, emit_ui_tracker_values
 
 __all__ = [
