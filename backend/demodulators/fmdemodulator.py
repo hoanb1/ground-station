@@ -80,6 +80,51 @@ class FMDemodulator(threading.Thread):
             return vfo_state
         return None
 
+    def _resize_filter_state(self, old_state, b_coeffs, initial_value, a_coeffs=None):
+        """
+        Resize filter state vector when filter coefficients change.
+
+        This prevents clicks by smoothly transitioning filter states instead of
+        resetting to None when bandwidth changes.
+
+        Args:
+            old_state: Previous filter state (or None)
+            b_coeffs: New numerator coefficients
+            initial_value: Value to use for initialization if needed
+            a_coeffs: Denominator coefficients (for IIR filters)
+
+        Returns:
+            Resized filter state appropriate for the new filter
+        """
+        if a_coeffs is None:
+            # FIR filter: state length is len(b) - 1
+            new_len = len(b_coeffs) - 1
+        else:
+            # IIR filter: state length is max(len(b), len(a)) - 1
+            new_len = max(len(b_coeffs), len(a_coeffs)) - 1
+
+        if old_state is None or len(old_state) == 0:
+            # No previous state, initialize fresh
+            if a_coeffs is None:
+                return signal.lfilter_zi(b_coeffs, 1) * initial_value
+            else:
+                return signal.lfilter_zi(b_coeffs, a_coeffs) * initial_value
+
+        old_len = len(old_state)
+
+        if old_len == new_len:
+            # Same size, keep the state as-is
+            return old_state
+        elif new_len > old_len:
+            # Need more state - pad with zeros or the last value
+            # Use the last state value to avoid discontinuities
+            pad_value = old_state[-1] if old_len > 0 else 0
+            padding = np.full(new_len - old_len, pad_value)
+            return np.concatenate([old_state, padding])
+        else:
+            # Need less state - truncate
+            return old_state[:new_len]
+
     def _design_decimation_filter(self, sdr_rate, bandwidth):
         """Design a decimation filter to reduce sample rate to ~200 kHz for FM processing."""
         # Calculate decimation factor to get to ~200 kHz intermediate rate
@@ -99,6 +144,8 @@ class FMDemodulator(threading.Thread):
         # Use more taps for narrower bandwidths to get better selectivity
         # Transition width: aim for ~20% of bandwidth
         transition_width = 0.2 * bandwidth
+        # Protect against division by zero for very small bandwidths
+        transition_width = max(transition_width, 1000)  # At least 1 kHz transition
         numtaps = int(3.3 * sdr_rate / transition_width)  # Kaiser window formula approximation
         numtaps = max(51, min(1001, numtaps))  # Clamp between 51 and 1001 taps
         numtaps = numtaps + 1 if numtaps % 2 == 0 else numtaps  # Ensure odd
@@ -127,8 +174,14 @@ class FMDemodulator(threading.Thread):
             # Wideband FM: allow up to 15 kHz for music
             cutoff = min(15e3, vfo_bandwidth * 0.15)
 
+        # Ensure minimum cutoff frequency
+        cutoff = max(cutoff, 500)  # At least 500 Hz
+
         nyquist = intermediate_rate / 2.0
-        normalized_cutoff = min(0.45, cutoff / nyquist)
+        normalized_cutoff = cutoff / nyquist
+
+        # Ensure normalized cutoff is valid (0 < f < 1)
+        normalized_cutoff = min(0.45, max(0.01, normalized_cutoff))
 
         numtaps = 101
         filter_taps = signal.firwin(numtaps, normalized_cutoff, window="hamming")
@@ -235,10 +288,18 @@ class FMDemodulator(threading.Thread):
                     )
                     self.deemphasis_filter = self._design_deemphasis_filter(intermediate_rate)
 
-                    # Reset filter states
-                    decimation_state = None
-                    audio_filter_state = None
-                    deemph_state = None
+                    # Smooth filter state transitions instead of resetting to None
+                    # This prevents clicks when bandwidth changes
+                    # Use first sample from current buffer for initialization
+                    initial_value = samples[0] if len(samples) > 0 else 0
+                    decimation_state = self._resize_filter_state(
+                        decimation_state, filter_taps, initial_value
+                    )
+                    audio_filter_state = self._resize_filter_state(
+                        audio_filter_state, self.audio_filter, 0
+                    )
+                    b, a = self.deemphasis_filter  # type: ignore[misc]
+                    deemph_state = self._resize_filter_state(deemph_state, b, 0, a)
 
                     logger.info(
                         f"Filters initialized: SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
@@ -273,20 +334,20 @@ class FMDemodulator(threading.Thread):
                 )
                 decimated = filtered[::decimation]
 
-                # Measure RF signal power for squelch (after filtering to VFO bandwidth)
-                # Calculate mean signal power in dB
-                rf_power = np.mean(np.abs(filtered) ** 2) + 1e-10
-                rf_power_db = 10 * np.log10(rf_power)
+                # Measure RF signal power for squelch AFTER filtering (within VFO bandwidth)
+                # This isolates the signal in the VFO passband
+                signal_power = np.mean(np.abs(filtered) ** 2)
+                rf_power_db_raw = 10 * np.log10(signal_power + 1e-10)
 
-                # Debug: log RF power and squelch threshold occasionally
-                import random
+                # Empirical calibration offset to match waterfall display
+                # Adjusted based on testing to align with FFT waterfall levels
+                # Noise floor: raw=-95dB → target=-78dB (offset=17)
+                # Signal: raw=-64dB → target=-39dB (offset=25)
+                # Using compromise value: 21 dB
+                # This gives: noise=-74dB (4dB off), signal=-43dB (4dB off)
+                calibration_offset_db = 21.0
 
-                if random.random() < 0.02:  # Log 2% of the time
-                    logger.info(
-                        f"VFO: {vfo_state.center_freq/1e6:.3f} MHz, "
-                        f"RF power: {rf_power_db:.1f} dB, Squelch: {vfo_state.squelch} dB, "
-                        f"Squelch open: {self.squelch_open}"
-                    )
+                rf_power_db = rf_power_db_raw + calibration_offset_db
 
                 intermediate_rate = sdr_sample_rate / decimation
 
