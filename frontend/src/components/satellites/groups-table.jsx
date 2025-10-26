@@ -19,7 +19,7 @@
 
 
 
-import React, { useEffect, useCallback } from 'react';
+import React, { useEffect, useCallback, useState, useRef } from 'react';
 import {
     Box,
     Button,
@@ -29,7 +29,9 @@ import {
     DialogTitle,
     DialogContent,
     DialogActions,
-    Stack, DialogContentText,
+    Stack,
+    DialogContentText,
+    Chip,
 } from '@mui/material';
 import { DataGrid, gridClasses } from '@mui/x-data-grid';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
@@ -37,6 +39,7 @@ import { useSocket } from '../common/socket.jsx';
 import { betterDateTimes } from '../common/common.jsx';
 import { AddEditDialog } from './groups-dialog.jsx';
 import { useSelector, useDispatch } from 'react-redux';
+import { useNavigate } from 'react-router-dom';
 import {
     fetchSatelliteGroups,
     deleteSatelliteGroups,
@@ -54,6 +57,7 @@ const GroupsTable = () => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const { t } = useTranslation('satellites');
+    const navigate = useNavigate();
 
     // Redux state
     const {
@@ -79,6 +83,61 @@ const GroupsTable = () => {
             headerName: t('groups.satellites'),
             width: 300,
             flex: 5,
+            renderCell: (params) => {
+                const containerRef = useRef(null);
+                const [visibleCount, setVisibleCount] = useState(null);
+
+                if (!params.value) return null;
+                const ids = Array.isArray(params.value)
+                    ? params.value
+                    : params.value.split(',').map(id => id.trim()).filter(Boolean);
+
+                useEffect(() => {
+                    if (!containerRef.current) return;
+
+                    const calculateVisibleChips = () => {
+                        const containerWidth = containerRef.current.offsetWidth;
+                        // Rough estimate: ~55px per chip (varies by content) + 4px gap
+                        const avgChipWidth = 59;
+                        const moreChipWidth = 75; // "+X more" chip is wider
+
+                        const maxChips = Math.floor((containerWidth - moreChipWidth) / avgChipWidth);
+                        setVisibleCount(Math.max(1, Math.min(maxChips, ids.length)));
+                    };
+
+                    calculateVisibleChips();
+                    window.addEventListener('resize', calculateVisibleChips);
+                    return () => window.removeEventListener('resize', calculateVisibleChips);
+                }, [ids.length]);
+
+                const displayCount = visibleCount || 3; // fallback to 3 while calculating
+                const visibleIds = ids.slice(0, displayCount);
+                const remaining = ids.length - displayCount;
+
+                return (
+                    <Box ref={containerRef} sx={{ display: 'flex', flexWrap: 'nowrap', gap: 0.5, py: 1, overflow: 'hidden' }}>
+                        {visibleIds.map((id, index) => (
+                            <Chip
+                                key={index}
+                                label={id}
+                                variant="outlined"
+                                clickable
+                                onClick={(e) => {
+                                    e.stopPropagation();
+                                    navigate(`/satellite/${id}`);
+                                }}
+                            />
+                        ))}
+                        {remaining > 0 && (
+                            <Chip
+                                label={`+${remaining} more`}
+                                variant="filled"
+                                color="default"
+                            />
+                        )}
+                    </Box>
+                );
+            },
         },
         {
             field: 'added',
