@@ -15,10 +15,6 @@
 
 
 import math
-from datetime import UTC, datetime, timedelta
-from typing import Dict, List, Optional, Tuple, Union
-
-from skyfield.api import EarthSatellite, load, wgs84
 
 
 def get_satellite_coverage_circle(sat_lat, sat_lon, altitude_km, num_points=36):

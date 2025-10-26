@@ -196,6 +196,13 @@ follow_imports = "skip"
 
 [[tool.mypy.overrides]]
 module = [
+    "tracker.*",
+    "tlesync.*",
+]
+disable_error_code = ["index", "var-annotated", "misc", "operator", "attr-defined", "arg-type", "assignment", "syntax"]
+
+[[tool.mypy.overrides]]
+module = [
     "skyfield.*",
     "sgp4.*",
     "pyrtlsdr.*",

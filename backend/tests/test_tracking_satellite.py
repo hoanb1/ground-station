@@ -17,7 +17,7 @@
 Tests for tracking/satellite.py satellite position and path calculation functions.
 """
 
-from datetime import UTC, datetime
+from datetime import datetime, timezone
 
 import pytest
 
@@ -65,7 +65,7 @@ class TestGetSatelliteAzEl:
 
     def test_az_el_returns_tuple(self, iss_tle):
         """Test that function returns a tuple of two values."""
-        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=UTC)
+        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
         result = get_satellite_az_el(
             home_lat=37.7749,
             home_lon=-122.4194,
@@ -79,7 +79,7 @@ class TestGetSatelliteAzEl:
 
     def test_az_el_value_ranges(self, iss_tle):
         """Test that azimuth and elevation are within valid ranges."""
-        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=UTC)
+        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
         azimuth, elevation = get_satellite_az_el(
             home_lat=37.7749,
             home_lon=-122.4194,
@@ -96,7 +96,7 @@ class TestGetSatelliteAzEl:
 
     def test_az_el_value_types(self, iss_tle):
         """Test that returned values are floats."""
-        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=UTC)
+        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
         azimuth, elevation = get_satellite_az_el(
             home_lat=37.7749,
             home_lon=-122.4194,
@@ -110,7 +110,7 @@ class TestGetSatelliteAzEl:
 
     def test_az_el_precision(self, iss_tle):
         """Test that values are rounded to 4 decimal places."""
-        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=UTC)
+        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
         azimuth, elevation = get_satellite_az_el(
             home_lat=37.7749,
             home_lon=-122.4194,
@@ -125,8 +125,8 @@ class TestGetSatelliteAzEl:
 
     def test_az_el_different_times(self, iss_tle):
         """Test that different observation times produce different results."""
-        time1 = datetime(2023, 4, 19, 12, 0, 0, tzinfo=UTC)
-        time2 = datetime(2023, 4, 19, 13, 0, 0, tzinfo=UTC)
+        time1 = datetime(2023, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
+        time2 = datetime(2023, 4, 19, 13, 0, 0, tzinfo=timezone.utc)
 
         az1, el1 = get_satellite_az_el(
             home_lat=37.7749,
@@ -149,7 +149,7 @@ class TestGetSatelliteAzEl:
 
     def test_az_el_different_locations(self, iss_tle):
         """Test that different observer locations produce different results."""
-        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=UTC)
+        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
 
         # San Francisco
         az1, el1 = get_satellite_az_el(
@@ -174,7 +174,7 @@ class TestGetSatelliteAzEl:
 
     def test_az_el_consistency(self, iss_tle):
         """Test that same inputs produce same outputs."""
-        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=UTC)
+        observation_time = datetime(2023, 4, 19, 12, 0, 0, tzinfo=timezone.utc)
 
         result1 = get_satellite_az_el(
             home_lat=37.7749,

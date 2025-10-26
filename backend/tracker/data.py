@@ -16,8 +16,8 @@
 
 import hashlib
 import logging
-from datetime import UTC, datetime, timedelta
-from typing import Any, Dict, Optional, Union
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, TypedDict, Union
 
 import crud
 from common.common import is_geostationary, serialize_object
@@ -28,6 +28,45 @@ from tracking.satellite import (
     get_satellite_path,
     get_satellite_position_from_tle,
 )
+
+
+class SatelliteDetails(TypedDict):
+    """Type definition for satellite details."""
+
+    name: str
+    tle1: str
+    tle2: str
+    norad_id: int
+    is_geostationary: bool
+
+
+class SatellitePosition(TypedDict):
+    """Type definition for satellite position."""
+
+    lat: float
+    lon: float
+    alt: float
+    az: float
+    el: float
+
+
+class SatellitePaths(TypedDict):
+    """Type definition for satellite paths."""
+
+    past: List[Any]
+    future: List[Any]
+
+
+class SatelliteData(TypedDict):
+    """Type definition for compiled satellite data."""
+
+    details: SatelliteDetails
+    position: SatellitePosition
+    paths: SatellitePaths
+    coverage: List[Any]
+    transmitters: List[Any]
+    error: bool
+
 
 logger = logging.getLogger("tracker-worker")
 
@@ -59,7 +98,7 @@ class CacheManager:
         cache_entry = self._cache[cache_key]
 
         # Check if cache has expired
-        if datetime.now(UTC) > cache_entry["expires_at"]:
+        if datetime.now(timezone.utc) > cache_entry["expires_at"]:
             del self._cache[cache_key]
             return None
 
@@ -68,19 +107,19 @@ class CacheManager:
 
     def set(self, cache_key: str, data: Any, ttl_minutes: int = 30) -> None:
         """Store data in cache with specified time-to-live."""
-        expires_at = datetime.now(UTC) + timedelta(minutes=ttl_minutes)
+        expires_at = datetime.now(timezone.utc) + timedelta(minutes=ttl_minutes)
 
         self._cache[cache_key] = {
             "data": data,
             "expires_at": expires_at,
-            "created_at": datetime.now(UTC),
+            "created_at": datetime.now(timezone.utc),
         }
 
         logger.debug(f"Cached data with key: {cache_key}, expires at: {expires_at}")
 
     def clear_expired(self) -> int:
         """Remove all expired cache entries and return count of removed items."""
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         expired_keys = [key for key, entry in self._cache.items() if now > entry["expires_at"]]
 
         for key in expired_keys:
@@ -93,7 +132,7 @@ class CacheManager:
 
     def get_cache_stats(self) -> Dict[str, Any]:
         """Get statistics about the cache."""
-        now = datetime.now(UTC)
+        now = datetime.now(timezone.utc)
         expired_count = sum(1 for entry in self._cache.values() if now > entry["expires_at"])
 
         return {
@@ -151,7 +190,7 @@ def cache_satellite_paths(
     cache_manager.set(cache_key, paths, ttl_minutes)
 
 
-async def compiled_satellite_data(dbsession, norad_id) -> dict:
+async def compiled_satellite_data(dbsession, norad_id: int) -> Dict[str, Any]:
     """
     Compiles detailed information about a satellite, including its orbital details,
     transmitters, and sky position based on tracking data and user's location.
@@ -167,7 +206,7 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
     :raises Exception: If user location is not found in the database
     """
 
-    satellite_data = {
+    satellite_data: Dict[str, Any] = {
         "details": {},
         "position": {},
         "paths": {"past": [], "future": []},
@@ -189,9 +228,10 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
                 f" {len(satellite.get('data', []))}"
             )
 
-        satellite_data["details"] = satellite["data"][0]
+        satellite_details: Dict[str, Any] = satellite["data"][0]
+        satellite_data["details"] = satellite_details
         satellite_data["details"]["is_geostationary"] = is_geostationary(
-            [satellite_data["details"]["tle1"], satellite_data["details"]["tle2"]]
+            [satellite_details["tle1"], satellite_details["tle2"]]
         )
 
         # get target map settings
@@ -212,17 +252,17 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
             or not location.get("data")
             or len(location["data"]) == 0
         ):
-            raise Exception(f"No location found in the db, please set one")
+            raise Exception("No location found in the db, please set one")
 
         # Use the first location from the list
-        location_data = location["data"][0]
+        location_data: Dict[str, Any] = location["data"][0]
 
         # get current position
         position = get_satellite_position_from_tle(
             [
-                satellite_data["details"]["name"],
-                satellite_data["details"]["tle1"],
-                satellite_data["details"]["tle2"],
+                satellite_details["name"],
+                satellite_details["tle1"],
+                satellite_details["tle2"],
             ]
         )
 
@@ -232,14 +272,14 @@ async def compiled_satellite_data(dbsession, norad_id) -> dict:
         sky_point = get_satellite_az_el(
             home_lat,
             home_lon,
-            satellite["data"][0]["tle1"],
-            satellite["data"][0]["tle2"],
-            datetime.now(UTC),
+            satellite_details["tle1"],
+            satellite_details["tle2"],
+            datetime.now(timezone.utc),
         )
 
         # calculate paths with caching
-        tle1 = satellite_data["details"]["tle1"]
-        tle2 = satellite_data["details"]["tle2"]
+        tle1 = satellite_details["tle1"]
+        tle2 = satellite_details["tle2"]
         duration_minutes = int(target_map_settings.get("orbitProjectionDuration", 240))
         step_minutes = 0.5
 
@@ -294,9 +334,9 @@ async def get_ui_tracker_state(group_id: str, norad_id: int):
         if the operation fails.
     :rtype: dict
     """
-    reply: dict[str, Union[bool, None, dict]] = {"success": False, "data": None}
+    reply: Dict[str, Union[bool, None, Dict[str, Any]]] = {"success": False, "data": None}
 
-    data = {
+    data: Dict[str, Any] = {
         "groups": [],
         "satellites": [],
         "transmitters": [],

@@ -15,7 +15,7 @@
 
 
 import math
-from datetime import UTC, datetime, timedelta
+from datetime import datetime, timedelta, timezone
 from typing import Dict, List, Tuple
 
 from skyfield.api import EarthSatellite, load, wgs84
@@ -144,10 +144,7 @@ def get_satellite_path(
         satellite = EarthSatellite(tle[0], tle[1], "Satellite", ts)
 
         # Get current time
-        now = datetime.now(UTC)
-        now_time = ts.utc(
-            now.year, now.month, now.day, now.hour, now.minute, now.second + now.microsecond / 1e6
-        )
+        now = datetime.now(timezone.utc)
 
         past_points = []
         future_points = []

@@ -16,8 +16,8 @@
 import asyncio
 import json
 from concurrent.futures import ThreadPoolExecutor
-from datetime import UTC, datetime, timezone
-from typing import List
+from datetime import datetime, timezone
+from typing import Any, Dict, List, Optional, Set
 
 import requests
 from sqlalchemy import delete, select
@@ -60,7 +60,7 @@ def create_progress_tracker(progress_phases, sync_state, sync_state_manager):
     Returns:
         tuple: (update_progress function, completed_phases set, highest_progress counter)
     """
-    completed_phases = set()
+    completed_phases: Set[str] = set()
     highest_progress = [0]  # Use list to make it mutable in closure
 
     def update_progress(phase, completed, total=1, message=None):
@@ -97,7 +97,7 @@ def create_progress_tracker(progress_phases, sync_state, sync_state_manager):
     return update_progress, completed_phases, highest_progress
 
 
-def sync_fetch(url: str) -> requests.Response | None:
+def sync_fetch(url: str) -> Optional[requests.Response]:
     """
     Synchronously fetch data from a URL.
 
@@ -111,7 +111,7 @@ def sync_fetch(url: str) -> requests.Response | None:
     return reply
 
 
-async def async_fetch(url: str, executor: ThreadPoolExecutor) -> requests.Response:
+async def async_fetch(url: str, executor: ThreadPoolExecutor) -> Optional[requests.Response]:
     """
     Asynchronously fetch data from a URL using a thread pool executor.
 
@@ -120,7 +120,7 @@ async def async_fetch(url: str, executor: ThreadPoolExecutor) -> requests.Respon
         executor (ThreadPoolExecutor): The thread pool executor to use
 
     Returns:
-        requests.Response: The response object
+        requests.Response or None: The response object
     """
     loop = asyncio.get_running_loop()
     return await loop.run_in_executor(executor, sync_fetch, url)
@@ -188,8 +188,8 @@ def detect_duplicate_satellites(celestrak_list, logger):
         dict: Contains duplicate information and deduplicated list
     """
     # Track satellites by NORAD ID
-    satellites_by_norad = {}
-    duplicates_info = {}
+    satellites_by_norad: Dict[int, Dict[str, Any]] = {}
+    duplicates_info: Dict[int, Dict[str, Any]] = {}
 
     for sat in celestrak_list:
         norad_id = get_norad_id_from_tle(sat["line1"])
@@ -608,7 +608,7 @@ def get_norad_ids(tle_objects: list) -> list:
     return [parse_norad_id_from_line1(obj["line1"]) for obj in tle_objects]
 
 
-def get_satellite_by_norad_id(norad_id: int, satellites: List[dict]) -> dict | None:
+def get_satellite_by_norad_id(norad_id: int, satellites: List[dict]) -> Optional[dict]:
     """
     Returns the satellite object from the provided list that matches the given NORAD ID.
 
@@ -708,7 +708,7 @@ async def detect_and_remove_satellites(
     # Find satellites that were in the previous list but not in the current list
     removed_satellite_ids = list(previous_ids_set - current_ids_set)
 
-    removed_data = {"satellites": [], "transmitters": []}
+    removed_data: Dict[str, List[Any]] = {"satellites": [], "transmitters": []}
 
     if removed_satellite_ids:
         logger.info(
