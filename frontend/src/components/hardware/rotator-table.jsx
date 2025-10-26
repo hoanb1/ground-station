@@ -78,8 +78,6 @@ export default function AntennaRotatorTable() {
         {field: 'maxaz', headerName: t('rotator.max_az'), type: 'number', flex: 1, minWidth: 80},
         {field: 'minel', headerName: t('rotator.min_el'), type: 'number', flex: 1, minWidth: 80},
         {field: 'maxel', headerName: t('rotator.max_el'), type: 'number', flex: 1, minWidth: 80},
-        {field: 'aztype', headerName: t('rotator.az_type'), type: 'number', flex: 1, minWidth: 80},
-        {field: 'azendstop', headerName: t('rotator.az_endstop'), type: 'number', flex: 1, minWidth: 80},
     ];
 
     // useEffect(() => {
@@ -183,11 +181,6 @@ export default function AntennaRotatorTable() {
                                                onChange={handleChange} value={formValues.minel}/>
                                     <TextField name="maxel" label={t('rotator.max_el')} type="number" fullWidth variant="filled"
                                                onChange={handleChange} value={formValues.maxel}/>
-                                    <TextField name="aztype" label={t('rotator.az_type')} type="number" fullWidth variant="filled"
-                                               onChange={handleChange} value={formValues.aztype}/>
-                                    <TextField name="azendstop" label={t('rotator.az_endstop')} type="number" fullWidth
-                                               variant="filled"
-                                               onChange={handleChange} value={formValues.azendstop}/>
                                 </Stack>
                             </DialogContent>
                             <DialogActions style={{padding: '0px 24px 20px 20px'}}>

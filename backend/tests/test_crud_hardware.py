@@ -56,8 +56,6 @@ class TestRotatorsCRUD:
             "maxaz": 360,
             "minel": 0,
             "maxel": 90,
-            "aztype": "360",
-            "azendstop": 0,
         }
 
         result = await add_rotator(db_session, rotator_data)
@@ -82,8 +80,6 @@ class TestRotatorsCRUD:
                 "maxaz": 360,
                 "minel": 0,
                 "maxel": 90,
-                "aztype": "360",
-                "azendstop": 0,
             },
         )
         await add_rotator(
@@ -96,8 +92,6 @@ class TestRotatorsCRUD:
                 "maxaz": 450,
                 "minel": 0,
                 "maxel": 180,
-                "aztype": "450",
-                "azendstop": 180,
             },
         )
 
@@ -118,8 +112,6 @@ class TestRotatorsCRUD:
                 "maxaz": 360,
                 "minel": 0,
                 "maxel": 90,
-                "aztype": "360",
-                "azendstop": 0,
             },
         )
 
@@ -141,8 +133,6 @@ class TestRotatorsCRUD:
                 "maxaz": 360,
                 "minel": 0,
                 "maxel": 90,
-                "aztype": "360",
-                "azendstop": 0,
             },
         )
 
@@ -173,8 +163,6 @@ class TestRotatorsCRUD:
                 "maxaz": 360,
                 "minel": 0,
                 "maxel": 90,
-                "aztype": "360",
-                "azendstop": 0,
             },
         )
 

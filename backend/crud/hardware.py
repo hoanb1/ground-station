@@ -71,8 +71,6 @@ async def add_rotator(session: AsyncSession, data: dict) -> dict:
                 maxaz=data["maxaz"],
                 minel=data["minel"],
                 maxel=data["maxel"],
-                aztype=data["aztype"],
-                azendstop=data["azendstop"],
                 added=now,
                 updated=now,
             )
