@@ -48,6 +48,7 @@ import {useStore} from 'react-redux';
 import ProgressFormatter from "./progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 
 
 const TimeFormatter = React.memo(function TimeFormatter({params, value}) {
@@ -235,14 +236,13 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
             flex: 2,
             renderCell: (params) => {
                 const targetSatTrack = targetSatTrackRef.current();
+                const isTracked = targetSatTrack.satelliteData['details']['name'] === params.value;
+
                 return <>
-                    {params.value}
-                    {targetSatTrack.satelliteData['details']['name'] === params.value && (
-                        <Typography component="span" sx={{
-                            ml: 0.5,
-                            fontSize: '1.1rem',
-                        }}>⦿</Typography>
+                    {isTracked && (
+                        <GpsFixedIcon sx={{ mr: 0.5, fontSize: '1.3rem', color: 'info.main', verticalAlign: 'middle' }} />
                     )}
+                    {params.value}
                 </>;
             }
         },

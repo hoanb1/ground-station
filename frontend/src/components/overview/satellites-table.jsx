@@ -35,6 +35,7 @@ import {
 } from './overview-slice.jsx';
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
+import GpsFixedIcon from '@mui/icons-material/GpsFixed';
 
 // Create a separate component for the elevation cell that uses useStore
 const ElevationCell = React.memo(function ElevationCell({ noradId }) {
@@ -176,13 +177,19 @@ const MemoizedStyledDataGrid = React.memo(({
             flex: 2,
             renderCell: (params) => {
                 if (!params || !params.row) return <Typography>-</Typography>;
+                const isTracked = selectedSatelliteId === params.row.norad_id;
                 const tooltipText = [
                     params.row.alternative_name,
                     params.row.name_other
                 ].filter(Boolean).join(' / ') || t('satellites_table.no_alternative_names');
                 return (
                     <Tooltip title={tooltipText}>
-                        <span>{params.value || '-'}</span>
+                        <span>
+                            {isTracked && (
+                                <GpsFixedIcon sx={{ mr: 0.5, fontSize: '1.3rem', color: 'info.main', verticalAlign: 'middle' }} />
+                            )}
+                            {params.value || '-'}
+                        </span>
                     </Tooltip>
                 );
             }
