@@ -539,46 +539,38 @@ class SDRProcessManager:
                         data_type = data.get(DictKeys.TYPE)
                         client_id = data.get(DictKeys.CLIENT_ID)
 
-                        if data_type == QueueMessageTypes.FFT_DATA and client_id:
-                            if client_id in process_info["clients"]:
-                                # Send FFT data to the client
-                                await self.sio.emit(
-                                    SocketEvents.SDR_FFT_DATA, data[DictKeys.DATA], room=sdr_id
-                                )
+                        if data_type == QueueMessageTypes.FFT_DATA:
+                            # Send FFT data to all clients connected to this SDR
+                            # No need to check client_id since FFT is broadcast to the entire room
+                            await self.sio.emit(
+                                SocketEvents.SDR_FFT_DATA, data[DictKeys.DATA], room=sdr_id
+                            )
 
-                        # NOTE: Audio data is handled by WebAudioConsumer, not here
-                        # Audio flow: FM Demodulator → audio_queue → WebAudioConsumer → Browser
+                        elif data_type == QueueMessageTypes.STREAMING_START:
+                            # Send streaming status to all clients connected to this SDR
+                            await self.sio.emit(
+                                SocketEvents.SDR_STATUS, {"streaming": True}, room=sdr_id
+                            )
 
-                        elif data_type == QueueMessageTypes.STREAMING_START and client_id:
-                            if client_id in process_info["clients"]:
-                                # Sent a message to the UI, streaming started
-                                await self.sio.emit(
-                                    SocketEvents.SDR_STATUS, {"streaming": True}, room=sdr_id
-                                )
+                        elif data_type == QueueMessageTypes.CONFIG_ERROR:
+                            # Send config error to all clients connected to this SDR
+                            await self.sio.emit(
+                                SocketEvents.SDR_CONFIG_ERROR,
+                                {DictKeys.MESSAGE: f"SDR error: {data[DictKeys.MESSAGE]}"},
+                                room=sdr_id,
+                            )
+                            self.logger.error(
+                                f"Config error from SDR process: {data[DictKeys.MESSAGE]}"
+                            )
 
-                        elif data_type == QueueMessageTypes.CONFIG_ERROR and client_id:
-                            if client_id in process_info["clients"]:
-                                # Send config error to the client
-                                await self.sio.emit(
-                                    SocketEvents.SDR_CONFIG_ERROR,
-                                    {DictKeys.MESSAGE: f"SDR error: {data[DictKeys.MESSAGE]}"},
-                                    room=sdr_id,
-                                )
-                                self.logger.error(
-                                    f"Config error from SDR process for client {client_id}: {data[DictKeys.MESSAGE]}"
-                                )
-
-                        elif data_type == QueueMessageTypes.ERROR and client_id:
-                            if client_id in process_info["clients"]:
-                                # Send error to the client
-                                await self.sio.emit(
-                                    SocketEvents.SDR_ERROR,
-                                    {DictKeys.MESSAGE: f"SDR error: {data[DictKeys.MESSAGE]}"},
-                                    room=sdr_id,
-                                )
-                                self.logger.error(
-                                    f"Error from SDR process for client {client_id}: {data[DictKeys.MESSAGE]}"
-                                )
+                        elif data_type == QueueMessageTypes.ERROR:
+                            # Send error to all clients connected to this SDR
+                            await self.sio.emit(
+                                SocketEvents.SDR_ERROR,
+                                {DictKeys.MESSAGE: f"SDR error: {data[DictKeys.MESSAGE]}"},
+                                room=sdr_id,
+                            )
+                            self.logger.error(f"Error from SDR process: {data[DictKeys.MESSAGE]}")
 
                         elif data_type == QueueMessageTypes.TERMINATED:
                             # Process has terminated
