@@ -32,13 +32,17 @@ class FMDemodulator(threading.Thread):
     FM demodulator that consumes IQ data and produces audio samples.
 
     This demodulator:
-    1. Reads IQ samples from iq_queue
+    1. Reads IQ samples from iq_queue (a subscriber queue from IQBroadcaster)
     2. Translates frequency based on VFO center frequency
     3. Decimates to appropriate bandwidth
     4. Demodulates FM using phase differentiation
     5. Applies de-emphasis filter
     6. Resamples to 44.1kHz audio
     7. Puts audio in audio_queue
+
+    Note: Multiple demodulators can run simultaneously, each with its own
+    subscriber queue from the IQBroadcaster. This allows multiple VFOs to
+    process the same IQ samples without gaps.
     """
 
     def __init__(self, iq_queue, audio_queue, session_id):
@@ -51,7 +55,7 @@ class FMDemodulator(threading.Thread):
 
         # Audio output parameters
         self.audio_sample_rate = 44100  # 44.1 kHz audio output
-        self.target_chunk_size = 8192  # Large chunks for smooth continuous playback (~186ms)
+        self.target_chunk_size = 4096  # Balanced chunks for low latency playback (~93ms)
 
         # Audio buffer to accumulate samples
         self.audio_buffer = np.array([], dtype=np.float32)

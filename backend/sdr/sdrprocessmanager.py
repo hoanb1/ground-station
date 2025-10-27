@@ -20,6 +20,7 @@ import multiprocessing
 import signal
 
 from common.constants import DictKeys, QueueMessageTypes, SocketEvents
+from sdr.iqbroadcaster import IQBroadcaster
 from workers.fftprocessor import fft_processor_process
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
@@ -356,6 +357,13 @@ class SDRProcessManager:
                 f"Started FFT processor '{fft_process_name}' for device {sdr_id} (PID: {fft_process.pid})"
             )
 
+            # Create and start IQ broadcaster for demodulators
+            # The broadcaster reads from iq_queue_demod and distributes to multiple demodulators
+            iq_broadcaster = IQBroadcaster(iq_queue_demod, sdr_id)
+            iq_broadcaster.start()
+
+            self.logger.info(f"Started IQ broadcaster for device {sdr_id}")
+
             # Store process information
             self.processes[sdr_id] = {
                 "process": process,
@@ -364,6 +372,7 @@ class SDRProcessManager:
                 "data_queue": data_queue,
                 "iq_queue_fft": iq_queue_fft,
                 "iq_queue_demod": iq_queue_demod,  # Separate queue for demodulation
+                "iq_broadcaster": iq_broadcaster,  # Broadcaster for multiple demodulators
                 "stop_event": stop_event,
                 "clients": {client_id},
                 "demodulators": {},  # Will store demodulator threads per session
@@ -418,6 +427,13 @@ class SDRProcessManager:
             # If there are still other clients, don't stop the process
             if process_info["clients"]:
                 return
+
+        # Stop the broadcaster first
+        if "iq_broadcaster" in process_info:
+            broadcaster = process_info["iq_broadcaster"]
+            broadcaster.stop()
+            broadcaster.join(timeout=2.0)
+            self.logger.info(f"Stopped IQ broadcaster for device {sdr_id}")
 
         # Stop the process
         if process_info["process"].is_alive():
@@ -635,14 +651,17 @@ class SDRProcessManager:
                 self.stop_demodulator(sdr_id, session_id)
 
         try:
-            # Get the demodulation IQ queue from the process info
-            iq_queue = process_info.get("iq_queue_demod")
-            if not iq_queue:
-                self.logger.error(f"No demodulation IQ queue found for device {sdr_id}")
+            # Get the IQ broadcaster from the process info
+            broadcaster = process_info.get("iq_broadcaster")
+            if not broadcaster:
+                self.logger.error(f"No IQ broadcaster found for device {sdr_id}")
                 return False
 
-            # Create and start demodulator
-            demodulator = demodulator_class(iq_queue, audio_queue, session_id, **kwargs)
+            # Subscribe to the broadcaster to get a dedicated queue for this demodulator
+            subscriber_queue = broadcaster.subscribe(session_id, maxsize=50)
+
+            # Create and start the demodulator with the subscriber queue
+            demodulator = demodulator_class(subscriber_queue, audio_queue, session_id, **kwargs)
             demodulator.start()
 
             # Store reference
@@ -685,6 +704,11 @@ class SDRProcessManager:
             demod_name = type(demodulator).__name__
             demodulator.stop()
             demodulator.join(timeout=2.0)  # Wait up to 2 seconds
+
+            # Unsubscribe from the broadcaster
+            broadcaster = process_info.get("iq_broadcaster")
+            if broadcaster:
+                broadcaster.unsubscribe(session_id)
 
             del demodulators[session_id]
             self.logger.info(f"Stopped {demod_name} for session {session_id}")
