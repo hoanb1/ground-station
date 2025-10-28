@@ -165,7 +165,6 @@ WORKDIR /src
 RUN wget https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run && \
     chmod +x SDRplay_RSP_API-Linux-3.15.2.run && \
     ./SDRplay_RSP_API-Linux-3.15.2.run --tar -xvf && \
-    cd SDRplay_RSP_API-Linux-3.15.2 && \
     yes | ./install_lib.sh && \
     ldconfig
 
