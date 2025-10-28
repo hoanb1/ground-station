@@ -171,6 +171,9 @@ RUN wget https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run && \
     ln -s libsdrplay_api.so.3.15 libsdrplay_api.so.3 && \
     ln -s libsdrplay_api.so.3 libsdrplay_api.so && \
     cp -r /src/inc/* /usr/local/include/ && \
+    mkdir -p /opt/sdrplay_api && \
+    cp /src/amd64/sdrplay_apiService /opt/sdrplay_api/ && \
+    chmod +x /opt/sdrplay_api/sdrplay_apiService && \
     ldconfig
 
 # compile SoapySDRPlay3

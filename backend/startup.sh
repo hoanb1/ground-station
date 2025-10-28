@@ -10,6 +10,10 @@ sleep 2
 avahi-daemon --no-chroot -D &
 sleep 2
 
+# Start SDRplay API service
+/opt/sdrplay_api/sdrplay_apiService &
+sleep 2
+
 # Download official UHD images
 /usr/local/bin/uhd_images_downloader
 
