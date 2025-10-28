@@ -160,6 +160,26 @@ RUN git clone https://github.com/pothosware/SoapyHackRF.git && \
     sudo make install && \
     sudo ldconfig
 
+# Install SDRplay API (prerequisite for SoapySDRPlay3)
+WORKDIR /src
+RUN wget https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run && \
+    chmod +x SDRplay_RSP_API-Linux-3.15.2.run && \
+    ./SDRplay_RSP_API-Linux-3.15.2.run --tar -xvf && \
+    cd SDRplay_RSP_API-Linux-3.15.2 && \
+    yes | ./install_lib.sh && \
+    ldconfig
+
+# compile SoapySDRPlay3
+WORKDIR /src
+RUN git clone https://github.com/pothosware/SoapySDRPlay3.git && \
+    cd SoapySDRPlay3 && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
+
 # compile LimeSuite
 WORKDIR /src
 RUN git clone https://github.com/myriadrf/LimeSuite.git && \
