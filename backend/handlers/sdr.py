@@ -19,6 +19,7 @@ import crud
 from db import AsyncSessionLocal
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.utils import active_sdr_clients, add_sdr_session, cleanup_sdr_session, get_sdr_session
+from server.startup import audio_queue
 
 
 async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
@@ -227,3 +228,73 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
             logger.error(f"Unknown SDR command: {cmd}")
 
     return reply
+
+
+def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
+    """
+    Start the appropriate demodulator based on modulation mode.
+
+    Args:
+        mode: Modulation mode (fm, am, usb, lsb)
+        sdr_id: SDR device identifier
+        session_id: Session identifier
+        logger: Logger instance
+
+    Returns:
+        bool: True if demodulator was started, False otherwise
+    """
+    mode = mode.lower()
+
+    if mode == "fm":
+        from demodulators.fmdemodulator import FMDemodulator
+
+        sdr_process_manager.start_demodulator(sdr_id, session_id, FMDemodulator, audio_queue)
+        logger.info(f"Started FM demodulator for session {session_id} on SDR {sdr_id}")
+        return True
+
+    elif mode in ["usb", "lsb"]:
+        from demodulators.ssbdemodulator import SSBDemodulator
+
+        sdr_process_manager.start_demodulator(
+            sdr_id, session_id, SSBDemodulator, audio_queue, mode=mode
+        )
+        logger.info(
+            f"Started SSB demodulator ({mode.upper()}) for session {session_id} on SDR {sdr_id}"
+        )
+        return True
+
+    elif mode == "am":
+        from demodulators.amdemodulator import AMDemodulator
+
+        sdr_process_manager.start_demodulator(sdr_id, session_id, AMDemodulator, audio_queue)
+        logger.info(f"Started AM demodulator for session {session_id} on SDR {sdr_id}")
+        return True
+
+    else:
+        logger.warning(f"Unknown modulation mode: {mode}")
+        return False
+
+
+def handle_vfo_demodulator_state(vfo_state, session_id, logger):
+    """
+    Start or stop demodulator based on VFO active state.
+
+    Args:
+        vfo_state: VFO state object
+        session_id: Session identifier
+        logger: Logger instance
+    """
+    if not vfo_state:
+        return
+
+    sdr_id = sdr_process_manager.session_to_sdr.get(session_id)
+    if not sdr_id:
+        return
+
+    if vfo_state.active:
+        # VFO is active, start appropriate demodulator
+        start_demodulator_for_mode(vfo_state.modulation, sdr_id, session_id, logger)
+    else:
+        # VFO is inactive, stop demodulator
+        sdr_process_manager.stop_demodulator(sdr_id, session_id)
+        logger.info(f"Stopped demodulator for session {session_id}")

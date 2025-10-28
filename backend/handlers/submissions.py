@@ -17,11 +17,10 @@ from typing import Dict, Union
 
 import crud
 from db import AsyncSessionLocal
-from sdr.sdrprocessmanager import sdr_process_manager
-from server.startup import audio_queue
 from tracker.runner import queue_to_tracker
 from vfos.state import VFOManager
 
+from .sdr import handle_vfo_demodulator_state
 from .tracking import emit_tracker_data, emit_ui_tracker_values
 
 
@@ -346,39 +345,10 @@ async def data_submission_routing(sio, cmd, data, logger, sid):
             )
 
             # Start/stop demodulator based on VFO state (after update)
-            # Get the updated VFO state from the manager
             vfo_id = data.get("vfoNumber", 0)
             if vfo_id > 0:  # Valid VFO (not deselect-all case)
                 vfo_state = vfomanager.get_vfo_state(sid, vfo_id)
-
-                if vfo_state and vfo_state.active:
-                    # VFO is active, start appropriate demodulator
-
-                    sdr_id = sdr_process_manager.session_to_sdr.get(sid)
-
-                    if sdr_id:
-                        mode = vfo_state.modulation.lower()
-
-                        if mode == "fm":
-                            from demodulators.fmdemodulator import FMDemodulator
-
-                            sdr_process_manager.start_demodulator(
-                                sdr_id, sid, FMDemodulator, audio_queue
-                            )
-                            logger.info(f"Started FM demodulator for session {sid} on SDR {sdr_id}")
-                        # elif mode == "am":
-                        #     from demodulators.amdemodulator import AMDemodulator
-                        #     sdr_process_manager.start_demodulator(sdr_id, sid, AMDemodulator, audio_queue)
-                        # elif mode == "ssb":
-                        #     from demodulators.ssbdemodulator import SSBDemodulator
-                        #     sdr_process_manager.start_demodulator(sdr_id, sid, SSBDemodulator, audio_queue, mode='usb')
-
-                elif vfo_state and not vfo_state.active:
-                    # VFO is inactive, stop demodulator
-                    sdr_id = sdr_process_manager.session_to_sdr.get(sid)
-                    if sdr_id:
-                        sdr_process_manager.stop_demodulator(sdr_id, sid)
-                        logger.info(f"Stopped demodulator for session {sid}")
+                handle_vfo_demodulator_state(vfo_state, sid, logger)
 
             reply = {"success": True, "data": {}}
 

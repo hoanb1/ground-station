@@ -46,7 +46,7 @@ class IQBroadcaster(threading.Thread):
         self.subscribers: Dict[str, queue.Queue] = {}  # session_id -> queue
         self.running = True
         self.lock = threading.Lock()
-        self.logger = logging.getLogger(f"iq-broadcaster-{sdr_id}")
+        self.logger = logging.getLogger("iq-broadcaster")
 
     def subscribe(self, session_id: str, maxsize: int = 50) -> queue.Queue:
         """

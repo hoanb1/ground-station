@@ -203,6 +203,18 @@ loggers:
       - default
     propagate: no
 
+  ssb-demodulator:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
+  am-demodulator:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
