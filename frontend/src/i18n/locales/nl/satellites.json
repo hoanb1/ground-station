@@ -160,7 +160,10 @@
       "unknown": "Onbekend",
       "more_items": "+{{count}} meer items...",
       "satellites_count": "{{count}} Satellieten",
-      "transmitters_count": "{{count}} Zenders"
+      "transmitters_count": "{{count}} Zenders",
+      "no_modified_items": "Geen gewijzigde items",
+      "no_added_items": "Geen toegevoegde items",
+      "no_removed_items": "Geen verwijderde items"
     }
   }
 }

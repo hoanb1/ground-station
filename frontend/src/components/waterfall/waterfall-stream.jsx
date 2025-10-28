@@ -19,7 +19,7 @@ import {
 } from './waterfall-slice.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 
-const WaterfallStream = ({ workerRef, targetFPSRef }) => {
+const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
     const dispatch = useDispatch();
     const { socket } = useSocket();
     const {
@@ -201,4 +201,4 @@ const WaterfallStream = ({ workerRef, targetFPSRef }) => {
     return { startStreaming, stopStreaming, playButtonEnabledOrNot };
 };
 
-export default WaterfallStream;
+export default useWaterfallStream;

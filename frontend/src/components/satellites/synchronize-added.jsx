@@ -105,6 +105,26 @@ const AddedItemsTable = ({ newSatellitesCount, newTransmittersCount, syncState }
                     },
                 },
             })}>
+                {/* Empty State */}
+                {newSatellitesCount === 0 && newTransmittersCount === 0 && (
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        p: 3,
+                    }}>
+                        <Typography sx={{
+                            color: 'text.secondary',
+                            fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' },
+                            fontStyle: 'italic',
+                            textAlign: 'center',
+                        }}>
+                            {t('synchronize.results.no_added_items')}
+                        </Typography>
+                    </Box>
+                )}
+
                 {/* Satellites */}
                 {syncState.newly_added.satellites?.slice(0, 50).map((sat, index) => (
                     <Box

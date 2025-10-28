@@ -160,7 +160,10 @@
       "unknown": "Αγνωστο",
       "more_items": "+{{count}} ακόμα στοιχεία...",
       "satellites_count": "{{count}} Δορυφόροι",
-      "transmitters_count": "{{count}} Πομποδέκτες"
+      "transmitters_count": "{{count}} Πομποδέκτες",
+      "no_modified_items": "Δεν υπάρχουν τροποποιημένα στοιχεία",
+      "no_added_items": "Δεν υπάρχουν προστεθέντα στοιχεία",
+      "no_removed_items": "Δεν υπάρχουν αφαιρεθέντα στοιχεία"
     }
   }
 }

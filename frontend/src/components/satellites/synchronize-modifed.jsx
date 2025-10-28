@@ -105,6 +105,26 @@ const ModifiedItemsTable = ({ modifiedSatellitesCount, modifiedTransmittersCount
                     },
                 },
             })}>
+                {/* Empty State */}
+                {modifiedSatellitesCount === 0 && modifiedTransmittersCount === 0 && (
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        p: 3,
+                    }}>
+                        <Typography sx={{
+                            color: 'text.secondary',
+                            fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' },
+                            fontStyle: 'italic',
+                            textAlign: 'center',
+                        }}>
+                            {t('synchronize.results.no_modified_items')}
+                        </Typography>
+                    </Box>
+                )}
+
                 {/* Satellites */}
                 {syncState.modified.satellites?.slice(0, 50).map((sat, index) => (
                     <Box

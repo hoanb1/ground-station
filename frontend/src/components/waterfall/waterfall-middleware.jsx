@@ -84,6 +84,36 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         }));
     }
 
+    // Handle streaming start - send all VFO data to backend
+    if (action.type === 'waterfallState/setIsStreaming' && action.payload === true) {
+        const vfoMarkers = state.waterfall.vfoMarkers;
+        const vfoActive = state.waterfall.vfoActive;
+        const selectedVFO = state.waterfall.selectedVFO;
+
+        // Send each VFO's complete state to the backend
+        Object.keys(vfoMarkers).forEach(vfoNumber => {
+            const vfoNum = parseInt(vfoNumber);
+            const vfoState = vfoMarkers[vfoNum];
+            const isActive = vfoActive[vfoNum];
+            const isSelected = selectedVFO === vfoNum;
+
+            // Only send VFO data if the VFO has been initialized (frequency is not null)
+            // and the VFO is active
+            if (vfoState.frequency !== null && isActive) {
+                store.dispatch(updateVFOParameters({
+                    socket,
+                    vfoNumber: vfoNum,
+                    updates: {
+                        vfoNumber: vfoNum,
+                        ...vfoState,
+                        active: isActive,
+                        selected: isSelected,
+                    },
+                }));
+            }
+        });
+    }
+
     // I can add more actions here based on type
 
     return result;

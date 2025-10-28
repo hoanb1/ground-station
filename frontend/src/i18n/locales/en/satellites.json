@@ -160,7 +160,10 @@
       "unknown": "Unknown",
       "more_items": "+{{count}} more items...",
       "satellites_count": "{{count}} Satellites",
-      "transmitters_count": "{{count}} Transmitters"
+      "transmitters_count": "{{count}} Transmitters",
+      "no_modified_items": "No modified items",
+      "no_added_items": "No added items",
+      "no_removed_items": "No removed items"
     }
   }
 }

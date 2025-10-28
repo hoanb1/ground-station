@@ -80,7 +80,7 @@ import {frequencyBands} from "./bandplans.jsx";
 import WaterfallStatusBar from "./waterfall-statusbar.jsx";
 import WaterfallToolbar from "./waterfall-toolbar.jsx";
 import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
-import WaterfallStream from "./waterfall-stream.jsx";
+import useWaterfallStream from "./waterfall-stream.jsx";
 import { useTranslation } from 'react-i18next';
 
 // Make a new worker
@@ -430,7 +430,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     }, [dbRange, colorMap, centerFrequency, sampleRate]);
 
 
-    const { startStreaming, stopStreaming, playButtonEnabledOrNot } = WaterfallStream({
+    const { startStreaming, stopStreaming, playButtonEnabledOrNot } = useWaterfallStream({
         workerRef,
         targetFPSRef
     });

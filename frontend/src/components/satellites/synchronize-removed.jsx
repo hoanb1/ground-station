@@ -105,6 +105,26 @@ const RemovedItemsTable = ({ removedSatellitesCount, removedTransmittersCount, s
                     },
                 },
             })}>
+                {/* Empty State */}
+                {removedSatellitesCount === 0 && removedTransmittersCount === 0 && (
+                    <Box sx={{
+                        display: 'flex',
+                        alignItems: 'center',
+                        justifyContent: 'center',
+                        height: '100%',
+                        p: 3,
+                    }}>
+                        <Typography sx={{
+                            color: 'text.secondary',
+                            fontSize: { xs: '0.75rem', sm: '0.85rem', md: '0.9rem' },
+                            fontStyle: 'italic',
+                            textAlign: 'center',
+                        }}>
+                            {t('synchronize.results.no_removed_items')}
+                        </Typography>
+                    </Box>
+                )}
+
                 {/* Satellites */}
                 {syncState.removed.satellites?.slice(0, 50).map((sat, index) => (
                     <Box
