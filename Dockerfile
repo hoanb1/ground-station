@@ -162,10 +162,15 @@ RUN git clone https://github.com/pothosware/SoapyHackRF.git && \
 
 # Install SDRplay API (prerequisite for SoapySDRPlay3)
 WORKDIR /src
+RUN apt-get update && apt-get install -y libusb-1.0-0 libudev1 && rm -rf /var/lib/apt/lists/*
 RUN wget https://www.sdrplay.com/software/SDRplay_RSP_API-Linux-3.15.2.run && \
     chmod +x SDRplay_RSP_API-Linux-3.15.2.run && \
     ./SDRplay_RSP_API-Linux-3.15.2.run --tar -xvf && \
-    yes | ./install_lib.sh && \
+    cp amd64/libsdrplay_api.so.3.15 /usr/local/lib/ && \
+    cd /usr/local/lib && \
+    ln -s libsdrplay_api.so.3.15 libsdrplay_api.so.3 && \
+    ln -s libsdrplay_api.so.3 libsdrplay_api.so && \
+    cp -r /src/inc/* /usr/local/include/ && \
     ldconfig
 
 # compile SoapySDRPlay3
