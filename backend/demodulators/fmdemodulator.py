@@ -1,4 +1,5 @@
-# Copyright (c) 2025 Efstratios Goudelis
+# Ground Station - FM Demodulator
+# Developed by Claude (Anthropic AI) for the Ground Station project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by

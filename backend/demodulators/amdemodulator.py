@@ -1,4 +1,5 @@
-# Copyright (c) 2025 Efstratios Goudelis
+# Ground Station - AM Demodulator
+# Developed by Claude (Anthropic AI) for the Ground Station project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -128,14 +129,20 @@ class AMDemodulator(threading.Thread):
 
     def _design_decimation_filter(self, sdr_rate, bandwidth):
         """Design a decimation filter to reduce sample rate to appropriate level for AM processing."""
-        # For AM, typical bandwidth is 5-10 kHz
-        # Target intermediate rate: ~48 kHz (sufficient for AM audio bandwidth)
-        target_rate = 48e3
+        # For AM, bandwidth can range from 5-10 kHz (broadcast) to 22 kHz (hi-fi)
+        # Target intermediate rate: ~48 kHz, but increase if needed for higher bandwidths
+        min_required_rate = bandwidth * 2.5  # Nyquist + some margin
+        target_rate = max(48e3, min_required_rate)
+
         decimation = int(sdr_rate / target_rate)
         decimation = max(1, decimation)  # At least 1
 
         # Design low-pass filter for the bandwidth
-        cutoff = bandwidth / 2.0
+        # For AM (double sideband), we need to pass both sidebands around DC
+        # So the filter cutoff should be the full bandwidth, not bandwidth/2
+        cutoff = min(bandwidth, 22000)
+        cutoff = max(cutoff, 2500)  # At least 2.5 kHz for minimum AM fidelity
+
         nyquist = sdr_rate / 2.0
         normalized_cutoff = cutoff / nyquist
 
@@ -156,13 +163,14 @@ class AMDemodulator(threading.Thread):
     def _design_audio_filter(self, intermediate_rate, vfo_bandwidth):
         """Design audio low-pass filter based on VFO bandwidth.
 
-        For AM, the audio bandwidth is typically 50 Hz - 5 kHz for broadcast,
-        or up to the full bandwidth for wider AM signals.
+        For AM, the audio bandwidth can range from broadcast (5 kHz)
+        to hi-fi/data (up to 22 kHz).
         """
-        # AM audio cutoff
-        # Typical AM broadcast: 50 Hz to 5 kHz
-        # We'll use the VFO bandwidth as a guide
-        cutoff = min(5000, vfo_bandwidth / 2.0)  # Hz
+        # AM audio cutoff - use the full requested bandwidth
+        # After envelope detection, AM produces audio at baseband
+        # For double-sideband AM, the bandwidth parameter represents the full RF bandwidth
+        # The audio bandwidth is half of that (one sideband)
+        cutoff = min(vfo_bandwidth / 2.0, 22000)  # Hz - AM audio is half the RF bandwidth
         cutoff = max(cutoff, 1000)  # At least 1 kHz for minimum fidelity
 
         nyquist = intermediate_rate / 2.0

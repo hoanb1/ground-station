@@ -1,4 +1,5 @@
-# Copyright (c) 2025 Efstratios Goudelis
+# Ground Station - SSB Demodulator
+# Developed by Claude (Anthropic AI) for the Ground Station project
 #
 # This program is free software: you can redistribute it and/or modify
 # it under the terms of the GNU General Public License as published by
@@ -68,6 +69,7 @@ class SSBDemodulator(threading.Thread):
         self.sdr_sample_rate = None
         self.current_center_freq = None
         self.current_bandwidth = None
+        self.current_mode = None
 
         # Filters (will be initialized when we know sample rates)
         self.decimation_filter: Optional[Tuple[np.ndarray, int]] = None
@@ -127,52 +129,58 @@ class SSBDemodulator(threading.Thread):
 
     def _design_decimation_filter(self, sdr_rate, bandwidth):
         """Design a decimation filter to reduce sample rate to appropriate level for SSB processing."""
-        # For SSB, typical bandwidth is 2.4-3 kHz
-        # Target intermediate rate: ~48 kHz (sufficient for voice bandwidth)
-        target_rate = 48e3
+        # Target intermediate rate: ~48 kHz (sufficient for SSB bandwidth up to 22 kHz)
+        # If bandwidth is higher, increase the target rate to accommodate it
+        min_required_rate = bandwidth * 2.5  # Nyquist + some margin
+        target_rate = max(48e3, min_required_rate)
+
         decimation = int(sdr_rate / target_rate)
         decimation = max(1, decimation)  # At least 1
 
-        # Design bandpass filter for SSB
-        # SSB uses single sideband, so we need to filter accordingly
+        # Simple lowpass filter for decimation
+        # We'll do sideband selection separately
         nyquist = sdr_rate / 2.0
 
-        # For SSB, bandwidth is typically centered around DC after frequency translation
-        # We'll apply the sideband selection in the frequency translation step
-        cutoff = bandwidth / 2.0
-        normalized_cutoff = cutoff / nyquist
+        # For complex signals centered at DC, we need to pass the full bandwidth
+        # not just bandwidth/2. The bandwidth parameter is the full single-sideband width.
+        cutoff = min(bandwidth, 22000)
+        cutoff = max(cutoff, 1500)  # At least 1.5 kHz
 
-        # Ensure cutoff is valid
+        normalized_cutoff = cutoff / nyquist
         normalized_cutoff = min(0.45, max(0.01, normalized_cutoff))
 
-        # Design FIR filter with good selectivity
-        transition_width = 0.2 * bandwidth
-        transition_width = max(transition_width, 100)  # At least 100 Hz transition for SSB
+        # Design simple lowpass for decimation
+        transition_width = 0.2 * cutoff
         numtaps = int(3.3 * sdr_rate / transition_width)
-        numtaps = max(101, min(2001, numtaps))  # More taps for better SSB selectivity
-        numtaps = numtaps + 1 if numtaps % 2 == 0 else numtaps  # Ensure odd
+        numtaps = max(101, min(2001, numtaps))
+        numtaps = numtaps + 1 if numtaps % 2 == 0 else numtaps
 
-        filter_taps = signal.firwin(numtaps, normalized_cutoff, window="blackman")
+        filter_taps = signal.firwin(numtaps, normalized_cutoff, window="hamming")
 
         return filter_taps, decimation
 
     def _design_audio_filter(self, intermediate_rate, vfo_bandwidth):
         """Design audio low-pass filter based on VFO bandwidth.
 
-        For SSB, the audio bandwidth is typically 300 Hz - 3 kHz for voice.
+        For SSB, the audio bandwidth can range from voice (300 Hz - 3 kHz)
+        to wide bandwidth for data/music (up to 22 kHz).
         """
         # SSB audio cutoff (high-pass and low-pass)
-        # Typical SSB voice: 300 Hz to 3 kHz
-        low_cutoff = 300  # Hz
-        high_cutoff = min(3000, vfo_bandwidth / 2.0)  # Hz
+        low_cutoff = 300  # Hz - remove DC and low frequency noise
+        high_cutoff = min(vfo_bandwidth, 22000)  # Hz - use requested bandwidth, cap at 22 kHz
+
+        # Ensure minimum bandwidth
+        if high_cutoff < low_cutoff + 100:
+            low_cutoff = 100
+            high_cutoff = 3000  # Default to 3 kHz if bandwidth is too small
 
         nyquist = intermediate_rate / 2.0
         normalized_low = low_cutoff / nyquist
         normalized_high = high_cutoff / nyquist
 
-        # Ensure normalized cutoffs are valid (0 < f < 1)
+        # Ensure normalized cutoffs are valid (0 < f < 1) and in order
         normalized_low = min(0.45, max(0.01, normalized_low))
-        normalized_high = min(0.45, max(0.01, normalized_high))
+        normalized_high = min(0.45, max(normalized_low + 0.01, normalized_high))
 
         numtaps = 201
         # Design bandpass filter for SSB audio
@@ -194,18 +202,30 @@ class SSBDemodulator(threading.Thread):
 
     def _ssb_demodulate(self, samples):
         """
-        Demodulate SSB by taking the real component.
+        Demodulate SSB by selecting one sideband and taking the real component.
 
-        After frequency translation and filtering, the signal is centered at DC.
-        For USB: take the real part directly
-        For LSB: conjugate first, then take real part
+        Uses FFT to properly select only the desired sideband (USB or LSB).
+        This ensures the opposite sideband is completely rejected.
         """
-        if self.mode.lower() == "lsb":
-            # For LSB, conjugate the signal first
-            samples = np.conj(samples)
+        # Perform FFT to work in frequency domain
+        fft_data = np.fft.fft(samples)
+        freqs = np.fft.fftfreq(len(samples))
+
+        # Zero out the unwanted sideband
+        if self.mode.lower() == "usb":
+            # USB: keep positive frequencies (indices where freq >= 0)
+            # Zero out negative frequencies
+            fft_data[freqs < 0] = 0
+        else:  # LSB
+            # LSB: keep negative frequencies (indices where freq < 0)
+            # Zero out positive frequencies
+            fft_data[freqs > 0] = 0
+
+        # Transform back to time domain
+        filtered = np.fft.ifft(fft_data)
 
         # Extract real component (the audio signal)
-        demodulated = np.real(samples)
+        demodulated = np.real(filtered)
 
         return demodulated
 
@@ -255,10 +275,12 @@ class SSBDemodulator(threading.Thread):
                 if (
                     self.sdr_sample_rate != sdr_sample_rate
                     or self.current_bandwidth != vfo_state.bandwidth
+                    or self.current_mode != self.mode.lower()
                     or self.decimation_filter is None
                 ):
                     self.sdr_sample_rate = sdr_sample_rate
                     self.current_bandwidth = vfo_state.bandwidth
+                    self.current_mode = self.mode.lower()
 
                     # Design filters
                     filter_taps, decimation = self._design_decimation_filter(
@@ -282,7 +304,7 @@ class SSBDemodulator(threading.Thread):
 
                     logger.info(
                         f"Filters initialized: SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
-                        f"decimation={decimation}, intermediate={intermediate_rate/1e3:.1f} kHz"
+                        f"decimation={decimation}, intermediate={intermediate_rate/1e3:.1f} kHz, mode={self.mode.upper()}"
                     )
 
                 # Step 1: Frequency translation (tune to VFO frequency)
@@ -300,7 +322,7 @@ class SSBDemodulator(threading.Thread):
 
                 translated = self._frequency_translate(samples, offset_freq, sdr_sample_rate)
 
-                # Step 2: Decimate and filter to bandwidth
+                # Step 2: Decimate and filter to bandwidth (sideband selection done by filter)
                 filter_taps, decimation = self.decimation_filter
 
                 if decimation_state is None:
