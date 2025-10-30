@@ -28,6 +28,20 @@ export const frequencyBands = [
         textColor: '#ffffff'
     },
     {
+        startFrequency: 446000000,
+        endFrequency: 446200000,
+        name: 'PMR446',
+        color: 'rgba(255, 193, 7, 0.3)',
+        textColor: '#000000'
+    },
+    {
+        startFrequency: 868000000,
+        endFrequency: 868600000,
+        name: '868 ISM',
+        color: 'rgba(156, 39, 176, 0.3)',
+        textColor: '#ffffff'
+    },
+    {
         startFrequency: 225000000,
         endFrequency: 350000000,
         name: 'MIL SATCOM',
@@ -123,6 +137,83 @@ export const frequencyBands = [
         endFrequency: 1575420000,
         name: 'QZSS L1',
         color: 'rgba(0,150,136,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 1610000000,
+        endFrequency: 1618725000,
+        name: 'Globalstar uplink',
+        color: 'rgba(103,58,183,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 2483500000,
+        endFrequency: 2500000000,
+        name: 'Globalstar downlink',
+        color: 'rgba(156,39,176,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 137000000,
+        endFrequency: 138000000,
+        name: 'Orbcomm/Weather Sat downlink',
+        color: 'rgba(96,125,139,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 148000000,
+        endFrequency: 150050000,
+        name: 'Orbcomm uplink',
+        color: 'rgba(120,144,156,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 137100000,
+        endFrequency: 137912500,
+        name: 'NOAA APT',
+        color: 'rgba(33,150,243,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 1691000000,
+        endFrequency: 1691000000,
+        name: 'GOES/Meteosat HRIT/LRIT',
+        color: 'rgba(3,169,244,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 145800000,
+        endFrequency: 146000000,
+        name: 'Amateur Sat downlink',
+        color: 'rgba(244,67,54,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 435000000,
+        endFrequency: 438000000,
+        name: 'Amateur Sat downlink',
+        color: 'rgba(233,30,99,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 121500000,
+        endFrequency: 121500000,
+        name: 'Emergency 121.5 MHz',
+        color: 'rgba(255,87,34,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 1090000000,
+        endFrequency: 1090000000,
+        name: 'ADS-B (Aircraft)',
+        color: 'rgba(0,188,212,0.4)',
+        textColor: '#ffffff'
+    },
+    {
+        startFrequency: 1559000000,
+        endFrequency: 1592000000,
+        name: 'Galileo E1',
+        color: 'rgba(63,81,181,0.4)',
         textColor: '#ffffff'
     }
 ];
