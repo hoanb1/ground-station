@@ -295,7 +295,7 @@ class SDRProcessManager:
             # Target: ~250ms of buffering (good balance between gaps and retune lag)
             # At 15-40ms per buffer, 10 slots = 150-400ms buffering
             iq_queue_fft: multiprocessing.Queue = multiprocessing.Queue(maxsize=3)
-            iq_queue_demod: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+            iq_queue_demod: multiprocessing.Queue = multiprocessing.Queue(maxsize=3)
 
             # Stop event for the process
             stop_event = multiprocessing.Event()
@@ -485,17 +485,28 @@ class SDRProcessManager:
 
         process_info = self.processes[sdr_id]
 
-        # Check if sample rate is changing
+        # Check if sample rate or center frequency is changing
         old_config = process_info.get("config", {})
         old_sample_rate = old_config.get("sample_rate")
         new_sample_rate = config.get("sample_rate")
+        old_center_freq = old_config.get("center_freq")
+        new_center_freq = config.get("center_freq")
 
-        # If sample rate changed, flush all queues
-        if old_sample_rate is not None and new_sample_rate != old_sample_rate:
-            self.logger.info(
-                f"Sample rate changing from {old_sample_rate/1e6:.2f} MHz to {new_sample_rate/1e6:.2f} MHz, "
-                f"flushing all queues"
-            )
+        # If sample rate OR center frequency changed, flush all queues
+        if (old_sample_rate is not None and new_sample_rate != old_sample_rate) or (
+            old_center_freq is not None and new_center_freq != old_center_freq
+        ):
+            # Log appropriate message based on what changed
+            if old_sample_rate is not None and new_sample_rate != old_sample_rate:
+                self.logger.info(
+                    f"Sample rate changing from {old_sample_rate/1e6:.2f} MHz to {new_sample_rate/1e6:.2f} MHz, "
+                    f"flushing all queues"
+                )
+            if old_center_freq is not None and new_center_freq != old_center_freq:
+                self.logger.info(
+                    f"Center frequency changing from {old_center_freq/1e6:.3f} MHz to {new_center_freq/1e6:.3f} MHz, "
+                    f"flushing all queues"
+                )
             # Flush demodulator queues
             self.flush_all_demodulator_queues(sdr_id)
 
@@ -689,16 +700,16 @@ class SDRProcessManager:
         # Check if demodulator already exists for this session
         if session_id in process_info.get("demodulators", {}):
             existing_demod = process_info["demodulators"][session_id]
-            # If same type, just return success
+            # If same type, just return success (already running)
             if isinstance(existing_demod, demodulator_class):
-                self.logger.info(
+                self.logger.debug(
                     f"{demodulator_class.__name__} already running for session {session_id}"
                 )
                 return True
             else:
                 # Different type, stop the old one first
                 self.logger.info(
-                    f"Stopping existing {type(existing_demod).__name__} for session {session_id}"
+                    f"Switching from {type(existing_demod).__name__} to {demodulator_class.__name__} for session {session_id}"
                 )
                 self.stop_demodulator(sdr_id, session_id)
 
@@ -710,7 +721,7 @@ class SDRProcessManager:
                 return False
 
             # Subscribe to the broadcaster to get a dedicated queue for this demodulator
-            subscriber_queue = broadcaster.subscribe(session_id, maxsize=50)
+            subscriber_queue = broadcaster.subscribe(session_id, maxsize=3)
 
             # Create and start the demodulator with the subscriber queue
             demodulator = demodulator_class(subscriber_queue, audio_queue, session_id, **kwargs)

@@ -18,7 +18,7 @@
 import logging
 import threading
 import time
-from typing import Optional, Tuple
+from typing import List, Optional, Tuple
 
 import numpy as np
 from scipy import signal
@@ -131,29 +131,46 @@ class FMDemodulator(threading.Thread):
             return old_state[:new_len]
 
     def _design_decimation_filter(self, sdr_rate, bandwidth):
-        """Design a decimation filter to reduce sample rate to ~200 kHz for FM processing.
+        """Design multi-stage decimation filters to reduce sample rate to ~200 kHz for FM processing.
 
-        Uses IIR Butterworth filter for ~100-250x better performance than FIR at high sample rates.
+        Uses multi-stage IIR decimation for better anti-aliasing at high decimation factors.
+        Returns a list of (filter, decimation) tuples for each stage.
         """
-        # Calculate decimation factor to get to ~200 kHz intermediate rate
+        # Calculate total decimation factor to get to ~200 kHz intermediate rate
         target_rate = 200e3
-        decimation = int(sdr_rate / target_rate)
-        decimation = max(1, decimation)  # At least 1
+        total_decimation = int(sdr_rate / target_rate)
+        total_decimation = max(1, total_decimation)
 
-        # Design low-pass filter for the bandwidth
-        cutoff = bandwidth / 2.0
-        nyquist = sdr_rate / 2.0
-        normalized_cutoff = cutoff / nyquist
+        # Break decimation into stages for better anti-aliasing
+        # Rule of thumb: don't decimate by more than 8x per stage
+        stages = []
+        remaining_decimation = total_decimation
+        current_rate = sdr_rate
 
-        # Ensure cutoff is valid
-        normalized_cutoff = min(0.45, max(0.01, normalized_cutoff))
+        while remaining_decimation > 1:
+            # Choose stage decimation factor (max 8x per stage)
+            stage_decimation = min(8, remaining_decimation)
 
-        # Design IIR Butterworth filter
-        # 6th order filter provides good selectivity with minimal computational cost
-        # At 8 MHz: 1M samples × 6 coefficients = 6M operations (vs 1B for FIR!)
-        b, a = signal.butter(6, normalized_cutoff, btype="low")
+            # Design filter for this stage
+            # Cutoff at 0.4 of the post-decimation Nyquist to prevent aliasing
+            nyquist = current_rate / 2.0
+            # Filter cutoff should be below the post-decimation Nyquist
+            post_decimation_nyquist = (current_rate / stage_decimation) / 2.0
+            cutoff = min(bandwidth / 2.0, post_decimation_nyquist * 0.4)
+            normalized_cutoff = cutoff / nyquist
 
-        return (b, a), decimation
+            # Ensure cutoff is valid
+            normalized_cutoff = min(0.4, max(0.01, normalized_cutoff))
+
+            # Design 8th order Butterworth for better selectivity
+            b, a = signal.butter(8, normalized_cutoff, btype="low")
+
+            stages.append(((b, a), stage_decimation))
+
+            remaining_decimation //= stage_decimation
+            current_rate /= stage_decimation
+
+        return stages, total_decimation
 
     def _design_audio_filter(self, intermediate_rate, vfo_bandwidth):
         """Design audio low-pass filter based on VFO bandwidth.
@@ -236,7 +253,7 @@ class FMDemodulator(threading.Thread):
         logger.info(f"FM demodulator started for session {self.session_id}")
 
         # State for filter applications
-        decimation_state = None
+        decimation_states: List[np.ndarray] = []  # List of states for multi-stage decimation
         audio_filter_state = None
         deemph_state = None
 
@@ -279,25 +296,25 @@ class FMDemodulator(threading.Thread):
                     self.current_bandwidth = vfo_state.bandwidth
 
                     # Design filters
-                    iir_coeffs, decimation = self._design_decimation_filter(
+                    stages, total_decimation = self._design_decimation_filter(
                         sdr_sample_rate, vfo_state.bandwidth
                     )
-                    self.decimation_filter = (iir_coeffs, decimation)
+                    self.decimation_filter = (stages, total_decimation)
 
-                    intermediate_rate = sdr_sample_rate / decimation
+                    intermediate_rate = sdr_sample_rate / total_decimation
                     self.audio_filter = self._design_audio_filter(
                         intermediate_rate, vfo_state.bandwidth
                     )
                     self.deemphasis_filter = self._design_deemphasis_filter(intermediate_rate)
 
-                    # Smooth filter state transitions instead of resetting to None
-                    # This prevents clicks when bandwidth changes
-                    # Use first sample from current buffer for initialization
+                    # Initialize filter states for each decimation stage
                     initial_value = samples[0] if len(samples) > 0 else 0
-                    b, a = iir_coeffs
-                    decimation_state = self._resize_filter_state(
-                        decimation_state, b, initial_value, a
-                    )
+                    decimation_states = []
+                    for (b, a), _ in stages:
+                        state = signal.lfilter_zi(b, a) * initial_value
+                        decimation_states.append(state)
+
+                    # Initialize audio filter states
                     audio_filter_state = self._resize_filter_state(
                         audio_filter_state, self.audio_filter, 0
                     )
@@ -306,7 +323,8 @@ class FMDemodulator(threading.Thread):
 
                     logger.info(
                         f"Filters initialized: SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
-                        f"decimation={decimation}, intermediate={intermediate_rate/1e3:.1f} kHz"
+                        f"stages={len(stages)}, total_decimation={total_decimation}, "
+                        f"intermediate={intermediate_rate/1e3:.1f} kHz"
                     )
 
                 # Step 1: Frequency translation (tune to VFO frequency)
@@ -325,20 +343,28 @@ class FMDemodulator(threading.Thread):
 
                 translated = self._frequency_translate(samples, offset_freq, sdr_sample_rate)
 
-                # Step 2: Decimate and filter to bandwidth
-                iir_coeffs, decimation = self.decimation_filter
-                b, a = iir_coeffs
+                # Step 2: Multi-stage decimation and filtering
+                stages, total_decimation = self.decimation_filter
 
-                if decimation_state is None:
-                    # Initialize filter state on first run
-                    decimation_state = signal.lfilter_zi(b, a) * translated[0]
+                # Apply each decimation stage sequentially
+                decimated = translated
+                for stage_idx, ((b, a), stage_decimation) in enumerate(stages):
+                    # Initialize state if needed
+                    if stage_idx >= len(decimation_states):
+                        decimation_states.append(signal.lfilter_zi(b, a) * decimated[0])
 
-                filtered, decimation_state = signal.lfilter(b, a, translated, zi=decimation_state)
-                decimated = filtered[::decimation]
+                    # Apply filter
+                    filtered, decimation_states[stage_idx] = signal.lfilter(
+                        b, a, decimated, zi=decimation_states[stage_idx]
+                    )
+
+                    # Decimate
+                    decimated = filtered[::stage_decimation]
 
                 # Measure RF signal power for squelch AFTER filtering (within VFO bandwidth)
                 # This isolates the signal in the VFO passband
-                signal_power = np.mean(np.abs(filtered) ** 2)
+                # Use the output from the last stage
+                signal_power = np.mean(np.abs(decimated) ** 2)
                 rf_power_db_raw = 10 * np.log10(signal_power + 1e-10)
 
                 # Empirical calibration offset to match waterfall display
@@ -351,7 +377,7 @@ class FMDemodulator(threading.Thread):
 
                 rf_power_db = rf_power_db_raw + calibration_offset_db
 
-                intermediate_rate = sdr_sample_rate / decimation
+                intermediate_rate = sdr_sample_rate / total_decimation
 
                 # Step 3: FM demodulation
                 demodulated = self._fm_demodulate(decimated)

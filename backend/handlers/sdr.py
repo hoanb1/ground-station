@@ -248,27 +248,34 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
     if mode == "fm":
         from demodulators.fmdemodulator import FMDemodulator
 
-        sdr_process_manager.start_demodulator(sdr_id, session_id, FMDemodulator, audio_queue)
-        logger.info(f"Started FM demodulator for session {session_id} on SDR {sdr_id}")
-        return True
+        result = sdr_process_manager.start_demodulator(
+            sdr_id, session_id, FMDemodulator, audio_queue
+        )
+        if result:
+            logger.debug(f"FM demodulator ensured for session {session_id} on SDR {sdr_id}")
+        return result
 
     elif mode in ["usb", "lsb"]:
         from demodulators.ssbdemodulator import SSBDemodulator
 
-        sdr_process_manager.start_demodulator(
+        result = sdr_process_manager.start_demodulator(
             sdr_id, session_id, SSBDemodulator, audio_queue, mode=mode
         )
-        logger.info(
-            f"Started SSB demodulator ({mode.upper()}) for session {session_id} on SDR {sdr_id}"
-        )
-        return True
+        if result:
+            logger.debug(
+                f"SSB demodulator ({mode.upper()}) ensured for session {session_id} on SDR {sdr_id}"
+            )
+        return result
 
     elif mode == "am":
         from demodulators.amdemodulator import AMDemodulator
 
-        sdr_process_manager.start_demodulator(sdr_id, session_id, AMDemodulator, audio_queue)
-        logger.info(f"Started AM demodulator for session {session_id} on SDR {sdr_id}")
-        return True
+        result = sdr_process_manager.start_demodulator(
+            sdr_id, session_id, AMDemodulator, audio_queue
+        )
+        if result:
+            logger.debug(f"AM demodulator ensured for session {session_id} on SDR {sdr_id}")
+        return result
 
     else:
         logger.warning(f"Unknown modulation mode: {mode}")

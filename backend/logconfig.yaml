@@ -215,6 +215,12 @@ loggers:
       - default
     propagate: no
 
+  sdr-manager:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:
