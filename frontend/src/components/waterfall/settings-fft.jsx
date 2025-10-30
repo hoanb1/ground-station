@@ -98,12 +98,6 @@ const FftAccordion = ({
                                 <MenuItem value={4}>{t('fft.averaging_samples', { count: 4 })}</MenuItem>
                                 <MenuItem value={6}>{t('fft.averaging_samples', { count: 6 })}</MenuItem>
                                 <MenuItem value={8}>{t('fft.averaging_samples', { count: 8 })}</MenuItem>
-                                <MenuItem value={10}>{t('fft.averaging_samples', { count: 10 })}</MenuItem>
-                                <MenuItem value={12}>{t('fft.averaging_samples', { count: 12 })}</MenuItem>
-                                <MenuItem value={16}>{t('fft.averaging_samples', { count: 16 })}</MenuItem>
-                                <MenuItem value={18}>{t('fft.averaging_samples', { count: 18 })}</MenuItem>
-                                <MenuItem value={20}>{t('fft.averaging_samples', { count: 20 })}</MenuItem>
-                                <MenuItem value={24}>{t('fft.averaging_samples', { count: 24 })}</MenuItem>
                             </Select>
                         </FormControl>
                         <FormControl disabled={gettingSDRParameters}

@@ -65,6 +65,12 @@ def fft_processor_process(iq_queue, data_queue, stop_event, client_id):
                 if "config" in iq_message:
                     config = iq_message["config"]
 
+                    # Handle reset command (e.g., on sample rate change)
+                    if config.get("reset_averager", False):
+                        fft_averager.reset()
+                        logger.info("FFT averager reset due to sample rate change")
+                        continue  # Skip processing this empty message
+
                     if "fft_size" in config and config["fft_size"] != fft_size:
                         fft_size = config["fft_size"]
                         logger.info(f"Updated FFT size: {fft_size}")

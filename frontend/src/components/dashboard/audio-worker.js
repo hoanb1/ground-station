@@ -2,7 +2,8 @@ class AudioProcessor {
     constructor() {
         this.audioQueue = [];
         this.processingQueue = false;
-        this.maxQueueSize = 50; // Increased from 3 to 50 for smooth audio streaming
+        // Keep queue small (3-5 chunks) to minimize tuning lag
+        this.maxQueueSize = 5;
     }
 
     processAudioData(audioData) {

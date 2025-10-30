@@ -32,8 +32,9 @@ background_tasks: Set[asyncio.Task] = set()
 _needs_initial_sync: bool = False
 
 # Queues for the sound streams
-# Increased from 2 to 50 to prevent audio drops during demodulation
-audio_queue: queue.Queue = queue.Queue(maxsize=50)
+# Keep small (5-10 chunks) to minimize tuning lag
+# At 1024 samples/chunk @ 44.1kHz = 23ms/chunk, 10 chunks = 230ms latency
+audio_queue: queue.Queue = queue.Queue(maxsize=10)
 
 
 async def run_discover_soapy():

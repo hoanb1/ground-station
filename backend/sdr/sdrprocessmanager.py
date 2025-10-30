@@ -19,6 +19,8 @@ import logging
 import multiprocessing
 import signal
 
+import numpy as np
+
 from common.constants import DictKeys, QueueMessageTypes, SocketEvents
 from sdr.iqbroadcaster import IQBroadcaster
 from workers.fftprocessor import fft_processor_process
@@ -87,10 +89,6 @@ class SDRProcessManager:
         self.session_to_sdr = {}  # Map of session_id (client_id) to sdr_id
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
-
-        # Enforce some rate limiting for FFT data transmission, 15fps
-        # self.target_fps = 15
-        # self.fft_rate_limiters = defaultdict(lambda: {'last_emit': 0, 'min_interval': 1.0/self.target_fps})
 
     def set_sio(self, sio):
         """
@@ -293,7 +291,10 @@ class SDRProcessManager:
             data_queue: multiprocessing.Queue = multiprocessing.Queue()
 
             # Separate IQ queues for FFT and demodulation to avoid contention
-            iq_queue_fft: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+            # FFT can drop frames (visual only), but demod needs moderate buffering
+            # Target: ~250ms of buffering (good balance between gaps and retune lag)
+            # At 15-40ms per buffer, 10 slots = 150-400ms buffering
+            iq_queue_fft: multiprocessing.Queue = multiprocessing.Queue(maxsize=3)
             iq_queue_demod: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
 
             # Stop event for the process
@@ -484,8 +485,68 @@ class SDRProcessManager:
 
         process_info = self.processes[sdr_id]
 
+        # Check if sample rate is changing
+        old_config = process_info.get("config", {})
+        old_sample_rate = old_config.get("sample_rate")
+        new_sample_rate = config.get("sample_rate")
+
+        # If sample rate changed, flush all queues
+        if old_sample_rate is not None and new_sample_rate != old_sample_rate:
+            self.logger.info(
+                f"Sample rate changing from {old_sample_rate/1e6:.2f} MHz to {new_sample_rate/1e6:.2f} MHz, "
+                f"flushing all queues"
+            )
+            # Flush demodulator queues
+            self.flush_all_demodulator_queues(sdr_id)
+
+            # Flush FFT input queue (from SDR worker to FFT processor)
+            iq_queue_fft = process_info.get("iq_queue_fft")
+            if iq_queue_fft:
+                flushed_count = 0
+                while not iq_queue_fft.empty():
+                    try:
+                        iq_queue_fft.get_nowait()
+                        flushed_count += 1
+                    except Exception:
+                        break
+                if flushed_count > 0:
+                    self.logger.info(f"Flushed {flushed_count} items from FFT input queue")
+
+                # Send reset command to FFT processor to clear its internal averager
+                try:
+                    iq_queue_fft.put_nowait(
+                        {
+                            "samples": np.array([], dtype=np.complex64),
+                            "center_freq": 0,
+                            "sample_rate": new_sample_rate,
+                            "timestamp": 0,
+                            "config": {"reset_averager": True},
+                        }
+                    )
+                    self.logger.info("Sent reset command to FFT processor")
+                except Exception:
+                    pass
+
+            # Flush data_queue (FFT output to UI) - CRITICAL for fast UI sync!
+            # At high sample rates (4-8 MHz), this queue accumulates hundreds of stale FFT messages
+            data_queue = process_info.get("data_queue")
+            if data_queue:
+                flushed_count = 0
+                while not data_queue.empty():
+                    try:
+                        data_queue.get_nowait()
+                        flushed_count += 1
+                    except Exception:
+                        break
+                if flushed_count > 0:
+                    self.logger.info(f"Flushed {flushed_count} stale FFT messages from data_queue")
+
         # Send configuration to the process
         process_info["config_queue"].put(config)
+
+        # Store the new config for future comparisons
+        process_info["config"] = config
+
         self.logger.info(f"Sent configuration update to SDR process for device {sdr_id}")
 
     def is_sdr_process_running(self, sdr_id):
@@ -541,7 +602,6 @@ class SDRProcessManager:
 
                         if data_type == QueueMessageTypes.FFT_DATA:
                             # Send FFT data to all clients connected to this SDR
-                            # No need to check client_id since FFT is broadcast to the entire room
                             await self.sio.emit(
                                 SocketEvents.SDR_FFT_DATA, data[DictKeys.DATA], room=sdr_id
                             )
@@ -727,6 +787,29 @@ class SDRProcessManager:
         process_info = self.processes[sdr_id]
         demodulators = process_info.get("demodulators", {})
         return demodulators.get(session_id)
+
+    def flush_all_demodulator_queues(self, sdr_id):
+        """
+        Flush all demodulator IQ queues for an SDR.
+
+        This should be called when sample rate changes, since all buffered
+        data at the old sample rate becomes invalid and would cause
+        processing errors.
+
+        Args:
+            sdr_id: Device identifier
+        """
+        if sdr_id not in self.processes:
+            return
+
+        process_info = self.processes[sdr_id]
+        broadcaster = process_info.get("iq_broadcaster")
+
+        if broadcaster:
+            broadcaster.flush_all_queues()
+            self.logger.info(
+                f"Flushed all demodulator queues for SDR {sdr_id} due to sample rate change"
+            )
 
 
 # Set up the SDR process manager

@@ -103,7 +103,8 @@ class WebAudioConsumer(threading.Thread):
                     audio_data = processed_audio.tolist()
 
                     # Schedule the emit() in the main event loop ONLY for the originating session
-                    future = asyncio.run_coroutine_threadsafe(
+                    # Use fire-and-forget to avoid blocking the audio consumer thread
+                    asyncio.run_coroutine_threadsafe(
                         self.sio.emit(
                             "audio-data",
                             {
@@ -119,14 +120,7 @@ class WebAudioConsumer(threading.Thread):
                         ),  # Emit ONLY to the originating session
                         self.loop,
                     )
-
-                    # Wait for completion with timeout
-                    try:
-                        future.result(timeout=0.1)  # Short timeout to avoid blocking
-                    except asyncio.TimeoutError:
-                        logger.warning(
-                            f"Socket.IO emit timed out for session {originating_session_id} when sending audio data"
-                        )
+                    # Don't wait for result - fire and forget to keep audio flowing
 
                 except Exception as e:
                     logger.error(

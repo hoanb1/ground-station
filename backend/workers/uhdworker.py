@@ -571,11 +571,27 @@ def uhd_worker_process(
         logger.info("UHD worker process terminated")
 
 
+# Target blocks per second for constant rate streaming
+TARGET_BLOCKS_PER_SEC = 10
+
+
 def calculate_samples_per_scan(sample_rate, fft_size):
+    """Calculate number of samples per scan for constant block rate streaming."""
     if fft_size is None:
         fft_size = 16384
 
-    if fft_size <= 16384:
-        fft_size = 16384
+    # Calculate block size for constant rate
+    # At 1 MHz: 1,000,000 / 10 = 100,000 samples (100ms per block)
+    # At 8 MHz: 8,000,000 / 10 = 800,000 samples (100ms per block)
+    num_samples = int(sample_rate / TARGET_BLOCKS_PER_SEC)
 
-    return fft_size
+    # Round up to next power of 2 for efficient FFT processing
+    num_samples = 2 ** int(np.ceil(np.log2(num_samples)))
+
+    # Ensure minimum block size (use fft_size as floor)
+    num_samples = max(num_samples, fft_size)
+
+    # Cap at reasonable maximum (1M samples)
+    num_samples = min(num_samples, 1048576)
+
+    return num_samples

@@ -90,6 +90,27 @@ class IQBroadcaster(threading.Thread):
         with self.lock:
             return len(self.subscribers)
 
+    def flush_all_queues(self):
+        """
+        Flush (empty) all subscriber queues.
+
+        This is useful when sample rate changes, since all buffered data
+        at the old sample rate becomes invalid.
+        """
+        with self.lock:
+            for session_id, subscriber_queue in self.subscribers.items():
+                flushed_count = 0
+                while not subscriber_queue.empty():
+                    try:
+                        subscriber_queue.get_nowait()
+                        flushed_count += 1
+                    except queue.Empty:
+                        break
+                if flushed_count > 0:
+                    self.logger.debug(
+                        f"Flushed {flushed_count} items from queue for session {session_id}"
+                    )
+
     def run(self):
         """
         Main broadcaster loop.

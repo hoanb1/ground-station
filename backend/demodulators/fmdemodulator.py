@@ -56,7 +56,7 @@ class FMDemodulator(threading.Thread):
 
         # Audio output parameters
         self.audio_sample_rate = 44100  # 44.1 kHz audio output
-        self.target_chunk_size = 4096  # Balanced chunks for low latency playback (~93ms)
+        self.target_chunk_size = 1024  # Minimum viable chunks for lowest latency (~23ms)
 
         # Audio buffer to accumulate samples
         self.audio_buffer = np.array([], dtype=np.float32)
@@ -131,7 +131,10 @@ class FMDemodulator(threading.Thread):
             return old_state[:new_len]
 
     def _design_decimation_filter(self, sdr_rate, bandwidth):
-        """Design a decimation filter to reduce sample rate to ~200 kHz for FM processing."""
+        """Design a decimation filter to reduce sample rate to ~200 kHz for FM processing.
+
+        Uses IIR Butterworth filter for ~100-250x better performance than FIR at high sample rates.
+        """
         # Calculate decimation factor to get to ~200 kHz intermediate rate
         target_rate = 200e3
         decimation = int(sdr_rate / target_rate)
@@ -145,19 +148,12 @@ class FMDemodulator(threading.Thread):
         # Ensure cutoff is valid
         normalized_cutoff = min(0.45, max(0.01, normalized_cutoff))
 
-        # Design FIR filter with sharper rolloff
-        # Use more taps for narrower bandwidths to get better selectivity
-        # Transition width: aim for ~20% of bandwidth
-        transition_width = 0.2 * bandwidth
-        # Protect against division by zero for very small bandwidths
-        transition_width = max(transition_width, 1000)  # At least 1 kHz transition
-        numtaps = int(3.3 * sdr_rate / transition_width)  # Kaiser window formula approximation
-        numtaps = max(51, min(1001, numtaps))  # Clamp between 51 and 1001 taps
-        numtaps = numtaps + 1 if numtaps % 2 == 0 else numtaps  # Ensure odd
+        # Design IIR Butterworth filter
+        # 6th order filter provides good selectivity with minimal computational cost
+        # At 8 MHz: 1M samples × 6 coefficients = 6M operations (vs 1B for FIR!)
+        b, a = signal.butter(6, normalized_cutoff, btype="low")
 
-        filter_taps = signal.firwin(numtaps, normalized_cutoff, window="blackman")
-
-        return filter_taps, decimation
+        return (b, a), decimation
 
     def _design_audio_filter(self, intermediate_rate, vfo_bandwidth):
         """Design audio low-pass filter based on VFO bandwidth.
@@ -246,23 +242,24 @@ class FMDemodulator(threading.Thread):
 
         while self.running:
             try:
-                # Check if there's an active VFO
-                vfo_state = self._get_active_vfo()
-                if not vfo_state:
-                    time.sleep(0.1)
-                    continue
-
-                # Check if modulation is FM
-                if vfo_state.modulation.lower() != "fm":
-                    time.sleep(0.1)
-                    continue
-
-                # Get IQ data from queue
+                # CRITICAL: Always drain iq_queue to prevent buffer buildup
+                # Even if VFO is inactive, we must consume samples to avoid lag
                 if self.iq_queue.empty():
                     time.sleep(0.01)
                     continue
 
                 iq_message = self.iq_queue.get(timeout=0.1)
+
+                # Check if there's an active VFO AFTER getting samples
+                vfo_state = self._get_active_vfo()
+                if not vfo_state:
+                    # VFO inactive - discard these samples and continue
+                    continue
+
+                # Check if modulation is FM
+                if vfo_state.modulation.lower() != "fm":
+                    # Wrong modulation - discard these samples and continue
+                    continue
 
                 # Extract samples and metadata
                 samples = iq_message.get("samples")
@@ -282,10 +279,10 @@ class FMDemodulator(threading.Thread):
                     self.current_bandwidth = vfo_state.bandwidth
 
                     # Design filters
-                    filter_taps, decimation = self._design_decimation_filter(
+                    iir_coeffs, decimation = self._design_decimation_filter(
                         sdr_sample_rate, vfo_state.bandwidth
                     )
-                    self.decimation_filter = (filter_taps, decimation)
+                    self.decimation_filter = (iir_coeffs, decimation)
 
                     intermediate_rate = sdr_sample_rate / decimation
                     self.audio_filter = self._design_audio_filter(
@@ -297,14 +294,15 @@ class FMDemodulator(threading.Thread):
                     # This prevents clicks when bandwidth changes
                     # Use first sample from current buffer for initialization
                     initial_value = samples[0] if len(samples) > 0 else 0
+                    b, a = iir_coeffs
                     decimation_state = self._resize_filter_state(
-                        decimation_state, filter_taps, initial_value
+                        decimation_state, b, initial_value, a
                     )
                     audio_filter_state = self._resize_filter_state(
                         audio_filter_state, self.audio_filter, 0
                     )
-                    b, a = self.deemphasis_filter  # type: ignore[misc]
-                    deemph_state = self._resize_filter_state(deemph_state, b, 0, a)
+                    b_deemph, a_deemph = self.deemphasis_filter  # type: ignore[misc]
+                    deemph_state = self._resize_filter_state(deemph_state, b_deemph, 0, a_deemph)
 
                     logger.info(
                         f"Filters initialized: SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
@@ -328,15 +326,14 @@ class FMDemodulator(threading.Thread):
                 translated = self._frequency_translate(samples, offset_freq, sdr_sample_rate)
 
                 # Step 2: Decimate and filter to bandwidth
-                filter_taps, decimation = self.decimation_filter
+                iir_coeffs, decimation = self.decimation_filter
+                b, a = iir_coeffs
 
                 if decimation_state is None:
                     # Initialize filter state on first run
-                    decimation_state = signal.lfilter_zi(filter_taps, 1) * translated[0]
+                    decimation_state = signal.lfilter_zi(b, a) * translated[0]
 
-                filtered, decimation_state = signal.lfilter(
-                    filter_taps, 1, translated, zi=decimation_state
-                )
+                filtered, decimation_state = signal.lfilter(b, a, translated, zi=decimation_state)
                 decimated = filtered[::decimation]
 
                 # Measure RF signal power for squelch AFTER filtering (within VFO bandwidth)

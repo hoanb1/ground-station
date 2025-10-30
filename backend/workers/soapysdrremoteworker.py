@@ -25,6 +25,13 @@ from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX
 # Configure logging for the worker process
 logger = logging.getLogger("soapysdr-remote")
 
+# Target blocks per second for constant rate streaming
+# This determines block size: block_size = sample_rate / TARGET_BLOCKS_PER_SEC
+# Lower rate = larger blocks, less overhead, higher latency
+# Higher rate = smaller blocks, more overhead, lower latency
+# Recommended: 10-15 blocks/sec for balance between latency and performance
+TARGET_BLOCKS_PER_SEC = 15
+
 
 def soapysdr_remote_worker_process(
     config_queue, data_queue, stop_event, iq_queue_fft=None, iq_queue_demod=None
@@ -93,9 +100,9 @@ def soapysdr_remote_worker_process(
             device_args += f",serial={serial_number}"
 
         # Add verified SoapyRemote parameters
-        device_args += ",remote:timeout=1000000"  # 1 seconds timeout (in microseconds)
-        device_args += ",remote:mtu=8192"  # 8KB MTU (reasonable for network)
-        device_args += ",remote:window=65536"  # 64KB socket buffer
+        device_args += ",remote:timeout=1000000"  # 1 second timeout (in microseconds)
+        device_args += ",remote:mtu=65536"  # 64KB MTU (larger for high sample rates)
+        device_args += ",remote:window=524288"  # 512KB socket buffer (larger for high throughput)
 
         logger.info(f"Connecting to SoapySDR device with args: {device_args}")
 
@@ -339,8 +346,13 @@ def soapysdr_remote_worker_process(
                     )
 
             try:
-                # Use the MTU value to determine read size if available, otherwise use a sensible default
-                read_size = mtu if mtu > 0 else 1024
+                # Use larger read size for better throughput at high sample rates
+                # Read at least 8192 samples per call, or MTU if larger
+                # This reduces overhead and prevents gaps at high sample rates
+                if mtu > 0:
+                    read_size = max(8192, mtu)
+                else:
+                    read_size = 8192
                 logger.debug(f"Using read_size of {read_size} samples (MTU: {mtu})")
 
                 # Create a buffer for the individual reads
@@ -357,7 +369,8 @@ def soapysdr_remote_worker_process(
                 read_count = 0
                 while buffer_position < num_samples and not stop_event.is_set():
                     # Read samples from the device
-                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=10000)
+                    # Use longer timeout (100ms) to accommodate larger buffers and network latency
+                    sr = sdr.readStream(rx_stream, [buffer], len(buffer), timeoutUs=100000)
                     read_count += 1
 
                     if sr.ret > 0:
@@ -469,15 +482,8 @@ def soapysdr_remote_worker_process(
                             },
                         }
 
-                        # Broadcast to FFT queue
-                        if iq_queue_fft is not None:
-                            try:
-                                if not iq_queue_fft.full():
-                                    iq_queue_fft.put_nowait(iq_message)
-                            except Exception:
-                                pass  # Drop if can't queue
-
-                        # Broadcast to demodulation queue
+                        # IMPORTANT: Broadcast to demodulation queue FIRST (higher priority for audio)
+                        # Audio has strict latency requirements, FFT display can tolerate drops
                         if iq_queue_demod is not None:
                             try:
                                 if not iq_queue_demod.full():
@@ -489,6 +495,14 @@ def soapysdr_remote_worker_process(
                                         "timestamp": time.time(),
                                     }
                                     iq_queue_demod.put_nowait(demod_message)
+                            except Exception:
+                                pass  # Drop if can't queue
+
+                        # Broadcast to FFT queue (lower priority, can drop frames)
+                        if iq_queue_fft is not None:
+                            try:
+                                if not iq_queue_fft.full():
+                                    iq_queue_fft.put_nowait(iq_message)
                             except Exception:
                                 pass  # Drop if can't queue
 
@@ -572,10 +586,40 @@ def soapysdr_remote_worker_process(
 
 
 def calculate_samples_per_scan(sample_rate, fft_size):
+    """
+    Calculate number of samples per scan for constant block rate streaming.
+
+    Uses blocks-per-second approach (like OpenWebRX+) for predictable, consistent behavior:
+    - Block size = sample_rate / target_blocks_per_sec
+    - This ensures constant block rate regardless of sample rate
+    - Makes queue management and UI synchronization predictable
+
+    Args:
+        sample_rate: SDR sample rate in Hz
+        fft_size: FFT size (used as minimum block size)
+
+    Returns:
+        Number of samples per buffer (block size)
+    """
     if fft_size is None:
         fft_size = 8192
 
-    return fft_size
+    # Calculate block size for constant rate using module-level TARGET_BLOCKS_PER_SEC
+    # block_size = sample_rate / blocks_per_sec
+    # At 1 MHz: 1,000,000 / 10 = 100,000 samples (100ms per block)
+    # At 8 MHz: 8,000,000 / 10 = 800,000 samples (100ms per block)
+    num_samples = int(sample_rate / TARGET_BLOCKS_PER_SEC)
+
+    # Round up to next power of 2 for efficient FFT processing
+    num_samples = 2 ** int(np.ceil(np.log2(num_samples)))
+
+    # Ensure minimum block size (use fft_size as floor)
+    num_samples = max(num_samples, fft_size)
+
+    # Cap at reasonable maximum (1M samples)
+    num_samples = min(num_samples, 1048576)
+
+    return num_samples
 
 
 def remove_dc_offset(samples):
