@@ -16,9 +16,10 @@
 
 
 import logging
+import queue
 import threading
 import time
-from typing import List, Optional, Tuple
+from typing import Optional, Tuple
 
 import numpy as np
 from scipy import signal
@@ -131,44 +132,48 @@ class FMDemodulator(threading.Thread):
             return old_state[:new_len]
 
     def _design_decimation_filter(self, sdr_rate, bandwidth):
-        """Design multi-stage decimation filters to reduce sample rate to ~200 kHz for FM processing.
+        """Design cascaded decimation filters for efficient multi-stage decimation.
 
-        Uses multi-stage IIR decimation for better anti-aliasing at high decimation factors.
-        Returns a list of (filter, decimation) tuples for each stage.
+        Uses cascaded low-order (4th) IIR filters to avoid numerical instability
+        while providing good anti-aliasing at high decimation ratios.
         """
-        # Calculate total decimation factor to get to ~200 kHz intermediate rate
+        # Calculate decimation factor to get to ~200 kHz intermediate rate
         target_rate = 200e3
         total_decimation = int(sdr_rate / target_rate)
         total_decimation = max(1, total_decimation)
 
-        # Break decimation into stages for better anti-aliasing
-        # Rule of thumb: don't decimate by more than 8x per stage
+        # For high decimation ratios, use 2-stage cascaded decimation
+        # This avoids numerical instability and provides better anti-aliasing
         stages = []
-        remaining_decimation = total_decimation
-        current_rate = sdr_rate
 
-        while remaining_decimation > 1:
-            # Choose stage decimation factor (max 8x per stage)
-            stage_decimation = min(8, remaining_decimation)
+        if total_decimation <= 10:
+            # Single stage for low decimation
+            nyquist = sdr_rate / 2.0
+            cutoff = bandwidth / 2.0
+            normalized_cutoff = min(0.4, max(0.01, cutoff / nyquist))
+            b, a = signal.butter(4, normalized_cutoff, btype="low")
+            stages.append(((b, a), total_decimation))
+        else:
+            # Two-stage cascaded decimation for better anti-aliasing
+            # Stage 1: Decimate by 5
+            stage1_decimation = 5
+            nyquist1 = sdr_rate / 2.0
+            # Cutoff at 80% of post-stage1 Nyquist for anti-aliasing
+            cutoff1 = (sdr_rate / stage1_decimation) * 0.4
+            normalized_cutoff1 = min(0.4, max(0.01, cutoff1 / nyquist1))
+            b1, a1 = signal.butter(4, normalized_cutoff1, btype="low")
+            stages.append(((b1, a1), stage1_decimation))
 
-            # Design filter for this stage
-            # Cutoff at 0.4 of the post-decimation Nyquist to prevent aliasing
-            nyquist = current_rate / 2.0
-            # Filter cutoff should be below the post-decimation Nyquist
-            post_decimation_nyquist = (current_rate / stage_decimation) / 2.0
-            cutoff = min(bandwidth / 2.0, post_decimation_nyquist * 0.4)
-            normalized_cutoff = cutoff / nyquist
-
-            # Ensure cutoff is valid
-            normalized_cutoff = min(0.4, max(0.01, normalized_cutoff))
-
-            # Design 8th order Butterworth for better selectivity
-            b, a = signal.butter(8, normalized_cutoff, btype="low")
-
-            stages.append(((b, a), stage_decimation))
-
-            remaining_decimation //= stage_decimation
-            current_rate /= stage_decimation
+            # Stage 2: Decimate by remaining factor
+            stage2_decimation = total_decimation // stage1_decimation
+            if stage2_decimation > 1:
+                rate_after_stage1 = sdr_rate / stage1_decimation
+                nyquist2 = rate_after_stage1 / 2.0
+                # Final cutoff is bandwidth-limited
+                cutoff2 = min(bandwidth / 2.0, (rate_after_stage1 / stage2_decimation) * 0.4)
+                normalized_cutoff2 = min(0.4, max(0.01, cutoff2 / nyquist2))
+                b2, a2 = signal.butter(4, normalized_cutoff2, btype="low")
+                stages.append(((b2, a2), stage2_decimation))
 
         return stages, total_decimation
 
@@ -253,7 +258,7 @@ class FMDemodulator(threading.Thread):
         logger.info(f"FM demodulator started for session {self.session_id}")
 
         # State for filter applications
-        decimation_states: List[np.ndarray] = []  # List of states for multi-stage decimation
+        decimation_state = None
         audio_filter_state = None
         deemph_state = None
 
@@ -307,12 +312,12 @@ class FMDemodulator(threading.Thread):
                     )
                     self.deemphasis_filter = self._design_deemphasis_filter(intermediate_rate)
 
-                    # Initialize filter states for each decimation stage
+                    # Initialize filter states for each stage
                     initial_value = samples[0] if len(samples) > 0 else 0
-                    decimation_states = []
+                    decimation_state = []
                     for (b, a), _ in stages:
                         state = signal.lfilter_zi(b, a) * initial_value
-                        decimation_states.append(state)
+                        decimation_state.append(state)
 
                     # Initialize audio filter states
                     audio_filter_state = self._resize_filter_state(
@@ -343,26 +348,28 @@ class FMDemodulator(threading.Thread):
 
                 translated = self._frequency_translate(samples, offset_freq, sdr_sample_rate)
 
-                # Step 2: Multi-stage decimation and filtering
+                # Step 2: Multi-stage cascaded decimation
                 stages, total_decimation = self.decimation_filter
 
-                # Apply each decimation stage sequentially
+                # Apply each stage sequentially
                 decimated = translated
                 for stage_idx, ((b, a), stage_decimation) in enumerate(stages):
                     # Initialize state if needed
-                    if stage_idx >= len(decimation_states):
-                        decimation_states.append(signal.lfilter_zi(b, a) * decimated[0])
+                    if decimation_state is None or stage_idx >= len(decimation_state):
+                        # Should not happen if properly initialized, but safety check
+                        if decimation_state is None:
+                            decimation_state = []
+                        decimation_state.append(signal.lfilter_zi(b, a) * decimated[0])
 
-                    # Apply filter
-                    filtered, decimation_states[stage_idx] = signal.lfilter(
-                        b, a, decimated, zi=decimation_states[stage_idx]
+                    # Apply IIR filter
+                    filtered, decimation_state[stage_idx] = signal.lfilter(
+                        b, a, decimated, zi=decimation_state[stage_idx]
                     )
 
                     # Decimate
                     decimated = filtered[::stage_decimation]
 
                 # Measure RF signal power for squelch AFTER filtering (within VFO bandwidth)
-                # This isolates the signal in the VFO passband
                 # Use the output from the last stage
                 signal_power = np.mean(np.abs(decimated) ** 2)
                 rf_power_db_raw = 10 * np.log10(signal_power + 1e-10)
@@ -438,20 +445,38 @@ class FMDemodulator(threading.Thread):
                     # Buffer audio samples to create consistent chunk sizes
                     self.audio_buffer = np.concatenate([self.audio_buffer, audio])
 
+                    # CRITICAL: Limit buffer size to prevent unbounded growth
+                    # If buffer grows too large (>10 chunks), drop oldest data
+                    max_buffer_samples = self.target_chunk_size * 10
+                    if len(self.audio_buffer) > max_buffer_samples:
+                        # Keep only the most recent data
+                        self.audio_buffer = self.audio_buffer[-max_buffer_samples:]
+                        logger.warning(
+                            f"Audio buffer overflow ({len(self.audio_buffer)} samples), "
+                            f"dropping old audio to prevent lag buildup"
+                        )
+
                     # Send chunks of target size when buffer is full enough
                     while len(self.audio_buffer) >= self.target_chunk_size:
                         # Extract a chunk
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
-                        # Put audio chunk in queue with session_id
+                        # Put audio chunk in queue - use put_nowait to avoid blocking
+                        # If queue is full, skip this chunk to prevent buffer buildup
                         try:
-                            # Use timeout to avoid blocking forever if consumer stops
-                            self.audio_queue.put(
-                                {"session_id": self.session_id, "audio": chunk}, timeout=0.5
+                            self.audio_queue.put_nowait(
+                                {"session_id": self.session_id, "audio": chunk}
                             )
+                        except queue.Full:
+                            # Queue is full - drop this chunk to prevent lag accumulation
+                            logger.debug(
+                                f"Audio queue full, dropping chunk for session {self.session_id}"
+                            )
+                            break  # Exit while loop to process next IQ samples
                         except Exception as e:
                             logger.warning(f"Could not queue audio: {str(e)}")
+                            break
 
             except Exception as e:
                 if self.running:
