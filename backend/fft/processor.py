@@ -19,7 +19,8 @@ import time
 
 import numpy as np
 
-from workers.common import FFTAverager, window_functions
+from fft.averager import FFTAverager
+from workers.common import window_functions
 
 logger = logging.getLogger("fft-processor")
 

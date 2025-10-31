@@ -14,32 +14,63 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 
-import logging
 import logging.config
 import os
+from typing import Any, Dict, List, Optional, Set, TypedDict
 
-import numpy as np
 import SoapySDR
 import yaml
-from SoapySDR import SOAPY_SDR_CF32, SOAPY_SDR_RX, SOAPY_SDR_TX
+from SoapySDR import SOAPY_SDR_RX, SOAPY_SDR_TX
 
 # Load logger configuration
 with open(os.path.join(os.path.dirname(__file__), "../logconfig.yaml"), "r") as f:
     config = yaml.safe_load(f)
     logging.config.dictConfig(config)
 
-logger = logging.getLogger("soapyremote-probe")
+logger = logging.getLogger("soapylocal-probe")
 
 
-def probe_remote_soapy_sdr(sdr_details):
+class AntennaInfo(TypedDict):
+    rx: List[str]
+    tx: List[str]
+
+
+class FrequencyRange(TypedDict):
+    min: float
+    max: float
+
+
+class ClockInfo(TypedDict):
+    ref_locked: Optional[str]
+    clock_source: Optional[str]
+    available_sensors: List[str]
+    available_settings: Dict[str, Dict[str, Optional[str]]]
+
+
+class SDRData(TypedDict):
+    rates: List[float]
+    gains: List[float]
+    has_soapy_agc: bool
+    antennas: AntennaInfo
+    frequency_ranges: Dict[str, FrequencyRange]
+    clock_info: ClockInfo
+    temperature: Dict[str, str]
+
+
+class ProbeReply(TypedDict):
+    success: Optional[bool]
+    data: Optional[SDRData]
+    error: Optional[str]
+    log: List[str]
+
+
+def probe_local_soapy_sdr(sdr_details: Dict[str, Any]) -> ProbeReply:
     """
-    Connect to a SoapySDR server and retrieve valid sample rates and gain values for a given SDR device.
+    Connect to a locally connected USB SoapySDR device and retrieve valid sample rates and gain values.
 
     Args:
         sdr_details: Dictionary containing SDR connection details with the following keys:
-            - host: Remote server hostname
-            - port: Remote server port
-            - driver: SDR driver name
+            - driver: SDR driver name (e.g., 'rtlsdr', 'hackrf', 'airspy', etc.)
             - serial: SDR serial number (optional)
 
     Returns:
@@ -51,45 +82,44 @@ def probe_remote_soapy_sdr(sdr_details):
             - clock_info: Information about reference clock status and source
     """
 
-    reply: dict[str, bool | dict | str | None | list] = {
+    reply: ProbeReply = {
         "success": None,
         "data": None,
         "error": None,
         "log": [],
     }
 
-    rates = []
-    gains = []
-    has_agc = False
-    antennas = {"rx": [], "tx": []}
-    frequency_ranges = {}
-    clock_info = {}
-    temp_info = {}
+    rates: List[float] = []
+    gains: List[float] = []
+    has_agc: bool = False
+    antennas: AntennaInfo = {"rx": [], "tx": []}
+    frequency_ranges: Dict[str, FrequencyRange] = {}
+    clock_info: ClockInfo = {
+        "ref_locked": None,
+        "clock_source": None,
+        "available_sensors": [],
+        "available_settings": {},
+    }
+    temp_info: Dict[str, str] = {}
 
-    reply["log"].append(f"INFO: Connecting to SoapySDR device with details: {sdr_details}")
+    reply["log"].append(f"INFO: Connecting to local SoapySDR device with details: {sdr_details}")
 
     try:
-        # Build the device args string for connecting to the remote SoapySDR server
-        hostname = sdr_details.get("host", "127.0.0.1")
-        port = sdr_details.get("port", 55132)
+        # Get device parameters
         driver = sdr_details.get("driver", "")
         serial_number = sdr_details.get("serial", "")
 
-        # Format the device args for remote connection
-        device_args = f"remote=tcp://{hostname}:{port},remote:driver={driver}"
+        # Format the device args for the local connection
+        device_args = f"driver={driver}"
 
         # Add the serial number if provided
         if serial_number:
             device_args += f",serial={serial_number}"
 
-        # device_args += ",clock_source=external"
-
-        reply["log"].append(f"INFO: Device args: {device_args}")
-
         # Create the device instance
         sdr = SoapySDR.Device(device_args)
 
-        reply["log"].append(f"INFO: {sdr}")
+        reply["log"].append(f"INFO: device args: {device_args}")
 
         # Get channel (default to 0)
         channel = sdr_details.get("channel", 0)
@@ -97,6 +127,7 @@ def probe_remote_soapy_sdr(sdr_details):
         # Get sample rates
         try:
             rates = sdr.listSampleRates(SOAPY_SDR_RX, channel)
+
             if not rates:
                 raise Exception()
 
@@ -105,7 +136,7 @@ def probe_remote_soapy_sdr(sdr_details):
 
             # Fall back to generating rates from ranges
             sample_rate_ranges = sdr.getSampleRateRange(SOAPY_SDR_RX, channel)
-            rates = set()
+            rates_set: Set[int] = set()
 
             for rate_range in sample_rate_ranges:
                 min_val = rate_range.minimum()
@@ -117,46 +148,44 @@ def probe_remote_soapy_sdr(sdr_details):
                 if step > 0:
                     current = min_val
                     while current <= max_val:
-                        rates.add(int(current))
+                        rates_set.add(int(current))
                         current += step
-            rates = sorted(list(rates))
+            rates = [float(r) for r in sorted(list(rates_set))]
 
         # Get gain values
         gain_range = sdr.getGainRange(SOAPY_SDR_RX, channel)
         min_gain = gain_range.minimum()
         max_gain = gain_range.maximum()
-        step = gain_range.step() if hasattr(gain_range, "step") else 1.0
 
-        # Ensure step is a positive value to prevent infinite loops
-        if step <= 0.0001:  # Threshold for considering a step too small
-            step = 1.0  # Default to 1.0 dB steps
-            reply["log"].append(
-                "WARNING: Gain step is zero or too small, defaulting to 1.0 dB steps"
-            )
+        # Debug step value
+        has_step = hasattr(gain_range, "step")
+
+        step = gain_range.step() if has_step else 1.0
+
+        # Ensure the step is positive and non-zero
+        if step <= 0.001:
+            step = 1.0
 
         max_iterations = 100
         iteration = 0
 
-        # Calculate gain range with steps
         current = min_gain
+
+        # Calculate gain range with steps
         while current <= max_gain and iteration < max_iterations:
             gains.append(float(current))
             current += step
             iteration += 1
 
-        if iteration >= max_iterations:
-            reply["log"].append(
-                f"WARNING: Reached maximum iterations ({max_iterations}) when calculating gain values. Check gain range."
-            )
-
         # Check if automatic gain control is supported
         try:
             has_agc = sdr.hasGainMode(SOAPY_SDR_RX, channel)
-        except Exception as e:
+
+        except Exception:
             reply["log"].append(
                 "WARNING: Could not determine if automatic gain control is supported"
             )
-            reply["log"].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
+            # Note: original had commented out logger.exception(e)
 
         # Get information about antennas
         try:
@@ -171,18 +200,18 @@ def probe_remote_soapy_sdr(sdr_details):
             except Exception as e:
                 reply["log"].append(f"WARNING: Could not get TX antennas: {e}")
                 # This is not critical as we might only be interested in RX
+
         except Exception as e:
             reply["log"].append(f"WARNING: Could not get antenna information: {e}")
-            reply["log"].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
+            # Note: original had commented out logger.exception(e)
 
         # Get frequency range information
         try:
-            # Get the frequency range for RX (receiving)
+            # Get a frequency range for RX (receiving)
             rx_freq_ranges = sdr.getFrequencyRange(SOAPY_SDR_RX, channel)
             min_freq_rx = min([r.minimum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
             max_freq_rx = max([r.maximum() for r in rx_freq_ranges]) / 1e6  # Convert to MHz
             frequency_ranges["rx"] = {"min": min_freq_rx, "max": max_freq_rx}
-            reply["log"].append(f"INFO: RX Frequency Range: {min_freq_rx} MHz - {max_freq_rx} MHz")
 
             # Try to get a frequency range for TX (transmitting) if available
             try:
@@ -190,18 +219,15 @@ def probe_remote_soapy_sdr(sdr_details):
                 min_freq_tx = min([r.minimum() for r in tx_freq_ranges]) / 1e6  # Convert to MHz
                 max_freq_tx = max([r.maximum() for r in tx_freq_ranges]) / 1e6  # Convert to MHz
                 frequency_ranges["tx"] = {"min": min_freq_tx, "max": max_freq_tx}
-                reply["log"].append(
-                    f"INFO: TX Frequency Range: {min_freq_tx} MHz - {max_freq_tx} MHz"
-                )
-            except Exception as e:
-                reply["log"].append(f"INFO: Could not get TX frequency range: {e}")
+            except Exception:
+                reply["log"].append("INFO: Could not get TX frequency range")
                 # This is not critical as we might only be interested in RX
 
         except Exception as e:
             reply["log"].append(f"WARNING: Could not get frequency range information: {e}")
 
         # Get a list of available sensors
-        sensors = []
+        sensors: List[str] = []
         try:
             sensors = sdr.listSensors()
             clock_info["available_sensors"] = sensors
@@ -211,13 +237,6 @@ def probe_remote_soapy_sdr(sdr_details):
 
         # Check reference clock status and source
         try:
-            # Initialize clock_info dictionary
-            clock_info = {
-                "ref_locked": None,
-                "clock_source": None,
-                "available_sensors": [],
-                "available_settings": {},
-            }
 
             # Check if the device has a ref_locked sensor
             if "ref_locked" in sensors:
@@ -237,7 +256,7 @@ def probe_remote_soapy_sdr(sdr_details):
                 except Exception as e:
                     reply["log"].append(f"WARNING: Error reading clock_source sensor: {e}")
 
-            # Try to get clock source from device settings
+            # Try to get the clock source from device settings
             try:
                 clock_source = sdr.readSetting("clock_source")
                 if clock_info["clock_source"] is None:  # Only set if not already set from sensor
@@ -293,13 +312,11 @@ def probe_remote_soapy_sdr(sdr_details):
         reply["success"] = True
 
     except Exception as e:
-        reply["log"].append(f"ERROR: Error connecting to SoapySDR device: {str(e)}")
-        reply["log"].append(f"EXCEPTION: {str(e)}\n{e.__class__.__name__}: {str(e)}")
+        reply["log"].append(f"ERROR: Error connecting to local SoapySDR device: {str(e)}")
         reply["success"] = False
         reply["error"] = str(e)
 
     finally:
-
         reply["data"] = {
             "rates": sorted(rates),
             "gains": gains,

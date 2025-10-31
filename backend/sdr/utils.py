@@ -101,7 +101,7 @@ async def get_local_soapy_sdr_devices():
         probe_process = await asyncio.create_subprocess_exec(
             "python3",
             "-c",
-            "from workers.soapyenum import probe_available_usb_sdrs; "
+            "from sdr.soapyenum import probe_available_usb_sdrs; "
             "import json; print(probe_available_usb_sdrs())",
             stdout=asyncio.subprocess.PIPE,
             stderr=asyncio.subprocess.PIPE,
@@ -240,7 +240,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
-                    f"from workers.soapysdrremoteprobe import probe_remote_soapy_sdr; "
+                    f"from sdr.soapysdrremoteprobe import probe_remote_soapy_sdr; "
                     f"print(probe_remote_soapy_sdr({sdr}))",
                     stdout=asyncio.subprocess.PIPE,
                 )
@@ -259,7 +259,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 probe_process = await asyncio.create_subprocess_exec(
                     "python3",
                     "-c",
-                    f"from workers.soapysdrlocalprobe import probe_local_soapy_sdr; "
+                    f"from sdr.soapysdrlocalprobe import probe_local_soapy_sdr; "
                     f"print(probe_local_soapy_sdr({sdr}))",
                     stdout=asyncio.subprocess.PIPE,
                 )
@@ -313,7 +313,7 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
             probe_process = await asyncio.create_subprocess_exec(
                 "python3",
                 "-c",
-                f"from workers.uhdprobe import probe_uhd_usrp; print(probe_uhd_usrp({sdr}))",
+                f"from sdr.uhdprobe import probe_uhd_usrp; print(probe_uhd_usrp({sdr}))",
                 stdout=asyncio.subprocess.PIPE,
                 stderr=asyncio.subprocess.PIPE,
             )

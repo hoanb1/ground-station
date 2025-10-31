@@ -22,8 +22,8 @@ import signal
 import numpy as np
 
 from common.constants import DictKeys, QueueMessageTypes, SocketEvents
+from fft.processor import fft_processor_process
 from sdr.iqbroadcaster import IQBroadcaster
-from workers.fftprocessor import fft_processor_process
 from workers.rtlsdrworker import rtlsdr_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
 from workers.soapysdrremoteworker import soapysdr_remote_worker_process

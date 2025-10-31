@@ -16,13 +16,10 @@
 
 import json
 import logging
-import os
-import pprint
-from enum import Enum, auto
+from enum import Enum
+from typing import Any, Dict, List, Optional
 
-import numpy as np
 import SoapySDR
-import yaml
 
 # Configure logging
 logger = logging.getLogger("soapysdr-usbenum")
@@ -60,38 +57,39 @@ class SoapySDRDriverType(Enum):
     UNKNOWN = "unknown"
 
 
-def probe_available_usb_sdrs():
+def probe_available_usb_sdrs() -> str:
     """
     List and return information about all USB-connected SoapySDR devices.
     Probes each device for supported frequency ranges.
 
     Returns:
-        List of dictionaries, each containing device information:
-            - driver: The SDR driver name
-            - label: Human-readable device label
-            - serial: Device serial number if available
-            - is_usb: Boolean indicating if device is USB-connected
-            - manufacturer: Device manufacturer if available
-            - product: Product name if available
-            - frequency_ranges: Dictionary of supported frequency ranges per direction
-            - other device-specific attributes
+        JSON string containing:
+            - success: Boolean indicating success
+            - data: List of device dictionaries with:
+                - driver: The SDR driver name
+                - label: Human-readable device label
+                - serial: Device serial number if available
+                - is_usb: Boolean indicating if device is USB-connected
+                - manufacturer: Device manufacturer if available
+                - product: Product name if available
+                - frequency_ranges: Dictionary of supported frequency ranges per direction
+                - other device-specific attributes
+            - error: Error message if any
+            - log: List of log messages
     """
 
-    reply: dict[str, bool | dict | list | str | None] = {
-        "success": None,
-        "data": None,
-        "error": None,
-        "log": [],
-    }
+    log_messages: List[str] = []
+    usb_devices: List[Dict[str, Any]] = []
+    success: Optional[bool] = None
+    error: Optional[str] = None
 
-    reply["log"].append("Enumerating available USB-connected SoapySDR devices")
-    usb_devices = []
+    log_messages.append("Enumerating available USB-connected SoapySDR devices")
 
     try:
         # Enumerate all available devices
         all_devices = SoapySDR.Device.enumerate()
-        reply["log"].append(f"Found {len(all_devices)} SoapySDR devices in total")
-        reply["log"].append(str(all_devices))
+        log_messages.append(f"Found {len(all_devices)} SoapySDR devices in total")
+        log_messages.append(str(all_devices))
 
         for device_info in all_devices:
             device_dict = dict(device_info)
@@ -135,7 +133,7 @@ def probe_available_usb_sdrs():
                     if key in device_dict:
                         device_entry[key] = device_dict[key]
 
-                reply["log"].append(f"Found USB SDR device: {device_entry['label']}")
+                log_messages.append(f"Found USB SDR device: {device_entry['label']}")
 
                 if check_freq_range:
                     # Probe device for frequency ranges
@@ -148,7 +146,7 @@ def probe_available_usb_sdrs():
                         sdr = SoapySDR.Device(simple_args)
 
                         # Get frequency ranges for all available channels (both RX and TX)
-                        frequency_ranges = {}
+                        frequency_ranges: Dict[str, Any] = {}
 
                         # Check RX capabilities
                         try:
@@ -173,7 +171,7 @@ def probe_available_usb_sdrs():
                                     frequency_ranges["rx"].append(parsed_ranges)
 
                         except Exception as e:
-                            reply["log"].append(
+                            log_messages.append(
                                 f"Warning: Error probing RX frequency range: {str(e)}"
                             )
 
@@ -200,7 +198,7 @@ def probe_available_usb_sdrs():
                                     frequency_ranges["tx"].append(parsed_ranges)
 
                         except Exception as e:
-                            reply["log"].append(
+                            log_messages.append(
                                 f"Warning: Error probing TX frequency range: {str(e)}"
                             )
 
@@ -211,21 +209,24 @@ def probe_available_usb_sdrs():
                         sdr.close()
 
                     except Exception as e:
-                        reply["log"].append(f"Warning: Error probing device capabilities: {str(e)}")
+                        log_messages.append(f"Warning: Error probing device capabilities: {str(e)}")
                         device_entry["frequency_ranges"] = {"error": str(e)}
 
                 usb_devices.append(device_entry)
 
-        reply["success"] = True
-        reply["data"] = usb_devices
+        success = True
 
     except Exception as e:
-        reply["log"].append(f"Error: Error enumerating SoapySDR devices: {str(e)}")
-        reply["log"].append(f"Exception: {str(e)}")
-        reply["success"] = False
-        reply["error"] = str(e)
+        log_messages.append(f"Error: Error enumerating SoapySDR devices: {str(e)}")
+        log_messages.append(f"Exception: {str(e)}")
+        success = False
+        error = str(e)
 
-    finally:
-        pass
+    reply: Dict[str, Any] = {
+        "success": success,
+        "data": usb_devices,
+        "error": error,
+        "log": log_messages,
+    }
 
     return json.dumps(reply)
