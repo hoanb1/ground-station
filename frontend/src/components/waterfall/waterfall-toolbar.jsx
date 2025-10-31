@@ -202,11 +202,9 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[0],
+                        backgroundColor: vfoActive[1] ? 'action.selected' : 'transparent',
                         '&:hover': {
-                        },
-                        '& .MuiTouchRipple-root': {
-                            border: vfoActive[1] ? '1px solid' : 'none',
-                            borderColor: vfoColors[0],
+                            backgroundColor: vfoActive[1] ? 'action.hover' : undefined,
                         },
                     }}
                     onClick={() => toggleVfo(1)}
@@ -224,11 +222,9 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[1],
+                        backgroundColor: vfoActive[2] ? 'action.selected' : 'transparent',
                         '&:hover': {
-                        },
-                        '& .MuiTouchRipple-root': {
-                            border: vfoActive[2] ? '1px solid' : 'none',
-                            borderColor: vfoColors[1],
+                            backgroundColor: vfoActive[2] ? 'action.hover' : undefined,
                         },
                     }}
                     onClick={() => toggleVfo(2)}
@@ -246,11 +242,9 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[2],
+                        backgroundColor: vfoActive[3] ? 'action.selected' : 'transparent',
                         '&:hover': {
-                        },
-                        '& .MuiTouchRipple-root': {
-                            border: vfoActive[3] ? '1px solid' : 'none',
-                            borderColor: vfoColors[2],
+                            backgroundColor: vfoActive[3] ? 'action.hover' : undefined,
                         },
                     }}
                     onClick={() => toggleVfo(3)}
@@ -268,11 +262,9 @@ const WaterfallToolbar = ({
                         fontFamily: 'Monospace',
                         fontWeight: 'bold',
                         color: vfoColors[3],
+                        backgroundColor: vfoActive[4] ? 'action.selected' : 'transparent',
                         '&:hover': {
-                        },
-                        '& .MuiTouchRipple-root': {
-                            border: vfoActive[4] ? '1px solid' : 'none',
-                            borderColor: vfoColors[3],
+                            backgroundColor: vfoActive[4] ? 'action.hover' : undefined,
                         },
                     }}
                     onClick={() => toggleVfo(4)}
