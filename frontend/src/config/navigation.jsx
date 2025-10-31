@@ -66,11 +66,11 @@ export const getNavigation = () => [
         title: i18n.t('rotators', { ns: 'navigation' }),
         icon: <SatelliteIcon/>,
     },
-    {
-        segment: 'hardware/cameras',
-        title: i18n.t('cameras', { ns: 'navigation' }),
-        icon: <VideocamIcon/>,
-    },
+    // {
+    //     segment: 'hardware/cameras',
+    //     title: i18n.t('cameras', { ns: 'navigation' }),
+    //     icon: <VideocamIcon/>,
+    // },
     {
         segment: 'hardware/sdrs',
         title: i18n.t('sdrs', { ns: 'navigation' }),
