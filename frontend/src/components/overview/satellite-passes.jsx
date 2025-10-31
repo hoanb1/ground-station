@@ -116,12 +116,15 @@ const DurationFormatter = React.memo(function DurationFormatter({params, value, 
     }
 });
 
-const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false}) {
+const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passes, passesLoading, onRowClick, passesAreCached = false, orbitProjectionDuration = 240}) {
     const apiRef = useGridApiRef();
     const store = useStore();
     const { t, i18n } = useTranslation('overview');
     const currentLanguage = i18n.language;
     const dataGridLocale = currentLanguage === 'el' ? elGR : enUS;
+
+    // Convert minutes to hours for display
+    const projectionHours = Math.round(orbitProjectionDuration / 60);
 
     // This method allows us to reference values in redux without a re-render, crucial in the next passes table
     const targetSatTrackRef = useRef(() => {
@@ -495,7 +498,10 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
             getRowId={(params) => {
                 return params.id;
             }}
-            localeText={dataGridLocale.components.MuiDataGrid.defaultProps.localeText}
+            localeText={{
+                ...dataGridLocale.components.MuiDataGrid.defaultProps.localeText,
+                noRowsLabel: t('passes_table.no_passes', { hours: projectionHours })
+            }}
             sx={{
                 border: 0,
                 marginTop: 0,
@@ -530,7 +536,8 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
     // Custom comparison function - return true if props haven't changed in ways that matter
     return (
         prevProps.passes === nextProps.passes &&
-        prevProps.passesLoading === nextProps.passesLoading
+        prevProps.passesLoading === nextProps.passesLoading &&
+        prevProps.orbitProjectionDuration === nextProps.orbitProjectionDuration
     );
 });
 
@@ -549,6 +556,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
         passesAreCached,
         passesLoading,
         nextPassesHours,
+        orbitProjectionDuration,
         gridEditable
     } = useSelector(state => state.overviewSatTrack);
 
@@ -626,6 +634,7 @@ const NextPassesGroupIsland = React.memo(function NextPassesGroupIsland() {
                         passes={passes}
                         passesLoading={passesLoading}
                         onRowClick={handleOnRowClick}
+                        orbitProjectionDuration={orbitProjectionDuration}
                     />
                 </div>
             </div>

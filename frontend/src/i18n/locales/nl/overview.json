@@ -38,7 +38,8 @@
     "geo_stat": "GEO Stat",
     "geo_sync": "GEO Sync",
     "no_value": "geen waarde",
-    "no_data": "Geen gegevens"
+    "no_data": "Geen gegevens",
+    "no_passes": "Geen overvluchten gedetecteerd voor de komende {{hours}} uur"
   },
   "satellite_selector": {
     "title": "Selecteer groep satellieten",

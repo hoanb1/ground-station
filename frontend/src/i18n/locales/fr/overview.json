@@ -38,7 +38,8 @@
     "geo_stat": "GEO Stat",
     "geo_sync": "GEO Sync",
     "no_value": "aucune valeur",
-    "no_data": "Aucune donnée"
+    "no_data": "Aucune donnée",
+    "no_passes": "Aucun passage détecté pour les prochaines {{hours}} heures"
   },
   "satellite_selector": {
     "title": "Sélectionner un groupe de satellites",

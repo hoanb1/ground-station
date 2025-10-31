@@ -38,7 +38,8 @@
     "geo_stat": "GEO Stat",
     "geo_sync": "GEO Sync",
     "no_value": "kein Wert",
-    "no_data": "Keine Daten"
+    "no_data": "Keine Daten",
+    "no_passes": "Keine Überflüge für die nächsten {{hours}} Stunden erkannt"
   },
   "satellite_selector": {
     "title": "Satellitengruppe auswählen",
