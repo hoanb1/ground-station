@@ -49,6 +49,7 @@ let lastTimestamp = new Date();
 let renderWaterfallCount = 0;
 let vfoMarkers = [];
 let showRotatorDottedLines = true;
+let autoScalePreset = 'medium'; // 'strong', 'medium', 'weak'
 
 // Store theme object
 let theme = {
@@ -270,6 +271,11 @@ self.onmessage = function(eventMessage) {
             vfoMarkers = eventMessage.data.markers;
             break;
 
+        case 'setAutoScalePreset':
+            autoScalePreset = eventMessage.data.preset;
+            console.log('Auto-scale preset changed to:', autoScalePreset);
+            break;
+
         default:
             console.error('Unknown command:', cmd);
     }
@@ -376,31 +382,69 @@ function autoScaleDbRange() {
         return;
     }
 
-    // Calculate mean and standard deviation
-    const sum = allValues.reduce((acc, val) => acc + val, 0);
-    const mean = sum / allValues.length;
+    // Sort values for percentile-based calculation
+    const sortedValues = [...allValues].sort((a, b) => a - b);
 
-    const squaredDiffs = allValues.map(val => (val - mean) ** 2);
-    const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / allValues.length;
-    const stdDev = Math.sqrt(variance);
+    let min, max;
 
-    // Filter out values more than X standard deviations from the mean
-    const stdDevMultiplier = 4.5;
-    const filteredValues = allValues.filter(val =>
-        Math.abs(val - mean) <= stdDevMultiplier * stdDev
-    );
+    // Apply different scaling strategies based on preset
+    switch (autoScalePreset) {
+        case 'strong': {
+            // For strong signals: Very wide dB range to handle strong signals without clipping
+            // Use 2nd to 99th percentile for maximum range
+            const strongLowIdx = Math.floor(sortedValues.length * 0.02);
+            const strongHighIdx = Math.floor(sortedValues.length * 0.99);
+            min = sortedValues[strongLowIdx];
+            max = sortedValues[strongHighIdx];
+            // Extra padding for strong signals
+            min = Math.floor(min - 10);
+            max = Math.ceil(max + 10);
+            break;
+        }
 
-    if (filteredValues.length === 0) {
-        console.warn('No valid values after filtering for auto-scaling');
-        return;
+        case 'medium': {
+            // For medium signals: Moderate range, less strict than weak
+            // Use 5th to 97th percentile
+            const mediumLowIdx = Math.floor(sortedValues.length * 0.05);
+            const mediumHighIdx = Math.floor(sortedValues.length * 0.97);
+            min = sortedValues[mediumLowIdx];
+            max = sortedValues[mediumHighIdx];
+            // Moderate padding
+            min = Math.floor(min - 5);
+            max = Math.ceil(max + 5);
+            break;
+        }
+
+        case 'weak':
+        default: {
+            // For weak signals: Original algorithm with std dev filtering (tight range, good contrast)
+            const sum = allValues.reduce((acc, val) => acc + val, 0);
+            const mean = sum / allValues.length;
+
+            const squaredDiffs = allValues.map(val => (val - mean) ** 2);
+            const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / allValues.length;
+            const stdDev = Math.sqrt(variance);
+
+            // Filter out values more than X standard deviations from the mean
+            const stdDevMultiplier = 4.5;
+            const filteredValues = allValues.filter(val =>
+                Math.abs(val - mean) <= stdDevMultiplier * stdDev
+            );
+
+            if (filteredValues.length === 0) {
+                console.warn('No valid values after filtering for auto-scaling');
+                return;
+            }
+
+            min = filteredValues.reduce((a, b) => Math.min(a, b), filteredValues[0]);
+            max = filteredValues.reduce((a, b) => Math.max(a, b), filteredValues[0]);
+
+            // Minimal padding for tight contrast on weak signals
+            min = Math.floor(min);
+            max = Math.ceil(max);
+            break;
+        }
     }
-
-    let min = filteredValues.reduce((a, b) => Math.min(a, b), filteredValues[0]);
-    let max = filteredValues.reduce((a, b) => Math.max(a, b), filteredValues[0]);
-
-    // Add some padding to the range
-    min = Math.floor(min);
-    max = Math.ceil(max);
 
     // Update the local dbRange
     dbRange = [min, max];
@@ -410,17 +454,15 @@ function autoScaleDbRange() {
         type: 'autoScaleResult',
         data: {
             dbRange: [min, max],
+            preset: autoScalePreset,
             stats: {
-                mean: mean.toFixed(2),
-                stdDev: stdDev.toFixed(2),
                 samplesAnalyzed: allValues.length,
-                framesAnalyzed: samplesToCheck,
-                filteredSamples: filteredValues.length
+                framesAnalyzed: samplesToCheck
             }
         }
     });
 
-    console.log(`Auto-scaled dB range: [${min}, ${max}] (analyzed ${allValues.length} samples from ${samplesToCheck} frames)`);
+    console.log(`Auto-scaled dB range (${autoScalePreset}): [${min}, ${max}] (analyzed ${allValues.length} samples from ${samplesToCheck} frames)`);
 }
 
 // Function to throttle bandscope drawing

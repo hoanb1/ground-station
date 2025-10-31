@@ -231,6 +231,18 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         }
     }, []);
 
+    const setAutoScalePreset = useCallback((preset) => {
+        console.log("Set Auto-Scale Preset:", preset);
+
+        // Send the preset to the worker
+        if (workerRef.current) {
+            workerRef.current.postMessage({
+                cmd: 'setAutoScalePreset',
+                preset: preset,
+            });
+        }
+    }, []);
+
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
             // Enter fullscreen
@@ -549,6 +561,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                     fftDataOverflow={fftDataOverflow}
                     showRotatorDottedLines={showRotatorDottedLines}
                     toggleRotatorDottedLines={toggleRotatorDottedLines}
+                    setAutoScalePreset={setAutoScalePreset}
                 />
             </Box>
 
