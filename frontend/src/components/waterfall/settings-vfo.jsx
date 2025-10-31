@@ -148,8 +148,6 @@ const VfoAccordion = ({
                             </Box>
                         </Box>
 
-                        <RotaryEncoder vfoNumber={vfoIndex} />
-
                         <FormControlLabel
                             control={
                                 <Switch
@@ -160,6 +158,41 @@ const VfoAccordion = ({
                             label={t('vfo.active')}
                             sx={{mt: 0, ml: 0}}
                         />
+
+                        <Stack
+                            spacing={2}
+                            direction="row"
+                            alignItems="center"
+                            sx={{mt: 2}}
+                            data-slider="squelch"
+                            data-vfo-index={vfoIndex}
+                        >
+                            <Box sx={{textAlign: 'left'}}><SquelchIcon size={24}/></Box>
+                            <Slider
+                                value={vfoMarkers[vfoIndex]?.squelch || -150}
+                                min={-150}
+                                max={0}
+                                onChange={(e, val) => onVFOPropertyChange(vfoIndex, {squelch: val})}
+                            />
+                            <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
+                        </Stack>
+
+                        <Stack
+                            spacing={2}
+                            direction="row"
+                            alignItems="center"
+                            sx={{mt: 2}}
+                            data-slider="volume"
+                            data-vfo-index={vfoIndex}
+                        >
+                            <Box sx={{textAlign: 'left'}}><VolumeDown/></Box>
+                            <Slider
+                                value={vfoMarkers[vfoIndex]?.volume || 50}
+                                onChange={(e, val) => onVFOPropertyChange(vfoIndex, {volume: val})}
+                            />
+                            <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.volume || 50}%</Box>
+                        </Stack>
+                        <RotaryEncoder vfoNumber={vfoIndex} />
 
                         <Box sx={{ mt: 1 }}>
                             <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
@@ -203,7 +236,9 @@ const VfoAccordion = ({
                                     }
                                 }}
                             >
+                                <ToggleButton value={50}>50 Hz</ToggleButton>
                                 <ToggleButton value={100}>100 Hz</ToggleButton>
+                                <ToggleButton value={250}>250 Hz</ToggleButton>
                                 <ToggleButton value={500}>500 Hz</ToggleButton>
                                 <ToggleButton value={1000}>1 kHz</ToggleButton>
                                 <ToggleButton value={2500}>2.5 kHz</ToggleButton>
@@ -321,39 +356,7 @@ const VfoAccordion = ({
                             </ToggleButtonGroup>
                         </Box>
 
-                        <Stack
-                            spacing={2}
-                            direction="row"
-                            alignItems="center"
-                            sx={{mt: 2}}
-                            data-slider="squelch"
-                            data-vfo-index={vfoIndex}
-                        >
-                            <Box sx={{textAlign: 'left'}}><SquelchIcon size={24}/></Box>
-                            <Slider
-                                value={vfoMarkers[vfoIndex]?.squelch || -150}
-                                min={-150}
-                                max={0}
-                                onChange={(e, val) => onVFOPropertyChange(vfoIndex, {squelch: val})}
-                            />
-                            <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
-                        </Stack>
 
-                        <Stack
-                            spacing={2}
-                            direction="row"
-                            alignItems="center"
-                            sx={{mt: 2}}
-                            data-slider="volume"
-                            data-vfo-index={vfoIndex}
-                        >
-                            <Box sx={{textAlign: 'left'}}><VolumeDown/></Box>
-                            <Slider
-                                value={vfoMarkers[vfoIndex]?.volume || 50}
-                                onChange={(e, val) => onVFOPropertyChange(vfoIndex, {volume: val})}
-                            />
-                            <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.volume || 50}%</Box>
-                        </Stack>
                     </Box>
                 ))}
             </AccordionDetails>
