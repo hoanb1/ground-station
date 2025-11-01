@@ -187,6 +187,8 @@ The SDR architecture separates IQ acquisition from signal processing:
 *   **FFT Processor** consumes IQ for spectrum display
 *   **FM Demodulator** consumes IQ for real-time audio output
 
+> **Note:** The current signal demodulator implementations (FM, AM, SSB) were developed with assistance from Claude AI (Anthropic) to handle the complex digital signal processing algorithms. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
+
 ## Getting Started
 
 ### Prerequisites
