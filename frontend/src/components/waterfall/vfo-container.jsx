@@ -53,6 +53,7 @@ const VFOMarkersContainer = ({
     const lastMeasuredWidthRef = useRef(0);
     const [activeMarker, setActiveMarker] = useState(null);
     const [isDragging, setIsDragging] = useState(false);
+    const isDraggingRef = useRef(false);
     const [dragMode, setDragMode] = useState(null); // 'body', 'leftEdge', or 'rightEdge'
     const lastClientXRef = useRef(0);
     const lastTouchXRef = useRef(0);
@@ -319,6 +320,7 @@ const VFOMarkersContainer = ({
     // Function after handleDragMovement
     const endDragOperation = useCallback(() => {
         setIsDragging(false);
+        isDraggingRef.current = false;
         setActiveMarker(null);
         setDragMode(null);
     }, []);
@@ -698,6 +700,7 @@ const VFOMarkersContainer = ({
             setActiveMarker(key);
             setDragMode(element);
             setIsDragging(true);
+            isDraggingRef.current = true;  // Set ref immediately
             lastTouchXRef.current = touch.clientX;
 
             // Prevent default to avoid scrolling while dragging
@@ -708,10 +711,19 @@ const VFOMarkersContainer = ({
 
         // Set the selected VFO
         dispatch(setSelectedVFO(parseInt(key) || null));
+
+        // Return element so caller can check it
+        return { key, element };
     };
 
     // Handle touch move for mobile devices
     const handleTouchMove = (e) => {
+        // Cancel any pending tap timeout when touch moves
+        if (touchStartTimeoutRef.current) {
+            clearTimeout(touchStartTimeoutRef.current);
+            touchStartTimeoutRef.current = null;
+        }
+
         if (!isDragging || !activeMarker || e.touches.length !== 1) return;
 
         // Always prevent default and stop propagation when dragging
@@ -727,6 +739,12 @@ const VFOMarkersContainer = ({
 
     // Handle touch end for mobile devices
     const handleTouchEnd = (e) => {
+        // Cancel any pending tap timeout
+        if (touchStartTimeoutRef.current) {
+            clearTimeout(touchStartTimeoutRef.current);
+            touchStartTimeoutRef.current = null;
+        }
+
         if (isDragging) {
             // Prevent default and stop propagation when ending a drag
             e.preventDefault();
@@ -751,6 +769,12 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         if (isDragging && activeMarker) {
             const handleMouseMoveEvent = (e) => {
+                // Ignore mouse events that are synthesized from touch events
+                // This prevents the VFO from jumping when touch-and-hold on tablets
+                if (e.sourceCapabilities && e.sourceCapabilities.firesTouchEvents) {
+                    return;
+                }
+
                 e.preventDefault();
                 e.stopPropagation();
 
@@ -831,10 +855,15 @@ const VFOMarkersContainer = ({
         // Skip if we're dragging
         if (isDragging) return;
 
-        if (!e.touches || e.touches.length !== 1) return;
+        // Check if event is still valid (React synthetic events get nullified)
+        if (!e || !e.touches || e.touches.length !== 1) return;
 
         const touch = e.touches[0];
-        const rect = canvasRef.current.getBoundingClientRect();
+        if (!touch || touch.clientX === undefined || touch.clientY === undefined) return;
+
+        const rect = canvasRef.current?.getBoundingClientRect();
+        if (!rect) return;
+
         const x = touch.clientX - rect.left;
         const y = touch.clientY - rect.top;
 
@@ -845,8 +874,8 @@ const VFOMarkersContainer = ({
             dispatch(setSelectedVFO(parseInt(key) || null));
 
             // Prevent default to stop other handlers
-            e.preventDefault();
-            e.stopPropagation();
+            if (e.preventDefault) e.preventDefault();
+            if (e.stopPropagation) e.stopPropagation();
         }
     };
 
@@ -860,6 +889,7 @@ const VFOMarkersContainer = ({
     // Double tap to remove a marker on mobile devices
     const lastTapRef = useRef(0);
     const tapTimeoutRef = useRef(null);
+    const touchStartTimeoutRef = useRef(null);
 
     return (
         <Box
@@ -898,11 +928,25 @@ const VFOMarkersContainer = ({
 
                         // If not a drag, then it might be a tap for selection
                         // Use a small timeout to ensure we don't interfere with drag operations
-                        if (!isDragging) {
-                            setTimeout(() => {
-                                if (!isDragging) {
-                                    handleTap(e);
+                        // Check the ref (synchronous) not the state (asynchronous)
+                        if (!isDraggingRef.current) {
+                            // Capture touch coordinates before they become invalid
+                            const touch = e.touches[0];
+                            const capturedX = touch.clientX;
+                            const capturedY = touch.clientY;
+
+                            touchStartTimeoutRef.current = setTimeout(() => {
+                                if (!isDraggingRef.current) {
+                                    // Create a synthetic event-like object with captured coordinates
+                                    const syntheticEvent = {
+                                        touches: [{
+                                            clientX: capturedX,
+                                            clientY: capturedY
+                                        }]
+                                    };
+                                    handleTap(syntheticEvent);
                                 }
+                                touchStartTimeoutRef.current = null;
                             }, 50);
                         }
                     }
@@ -911,6 +955,11 @@ const VFOMarkersContainer = ({
                 onTouchMove={handleTouchMove}
                 onTouchEnd={handleTouchEnd}
                 onTouchCancel={handleTouchCancel}
+                onContextMenu={(e) => {
+                    // Prevent context menu on long press
+                    e.preventDefault();
+                    e.stopPropagation();
+                }}
                 style={{
                     display: 'block',
                     width: '100%',
