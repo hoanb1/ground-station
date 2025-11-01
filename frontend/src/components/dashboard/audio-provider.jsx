@@ -1,5 +1,6 @@
 import React, { createContext, useContext, useRef, useState, useEffect, useCallback, useMemo } from 'react';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
+import { registerFlushCallback, unregisterFlushCallback } from './audio-service.js';
 
 const AudioContext = createContext({
     audioEnabled: false,
@@ -8,7 +9,8 @@ const AudioContext = createContext({
     playAudioSamples: () => {},
     setAudioVolume: () => {},
     stopAudio: () => {},
-    getAudioState: () => ({})
+    getAudioState: () => {},
+    flushAudioBuffers: () => {}
 });
 
 export const useAudio = () => {
@@ -195,6 +197,19 @@ export const AudioProvider = ({ children }) => {
         setAudioEnabled(false);
     }, []);
 
+    // Flush audio buffers (clear worker queue and reset audio scheduling)
+    const flushAudioBuffers = useCallback(() => {
+        // Clear the worker queue
+        if (audioWorkerRef.current) {
+            audioWorkerRef.current.postMessage({ type: 'CLEAR_QUEUE' });
+        }
+
+        // Reset the next play time to current time to cancel scheduled audio
+        if (audioContextRef.current) {
+            nextPlayTimeRef.current = audioContextRef.current.currentTime;
+        }
+    }, []);
+
     // Get audio context state
     const getAudioState = useCallback(() => {
         // Also get worker queue status
@@ -209,6 +224,14 @@ export const AudioProvider = ({ children }) => {
             workerActive: !!audioWorkerRef.current
         };
     }, [audioEnabled, volume]);
+
+    // Register flush callback for use by middleware
+    useEffect(() => {
+        registerFlushCallback(flushAudioBuffers);
+        return () => {
+            unregisterFlushCallback();
+        };
+    }, [flushAudioBuffers]);
 
     // Cleanup on unmount
     useEffect(() => {
@@ -230,8 +253,9 @@ export const AudioProvider = ({ children }) => {
         playAudioSamples,
         setAudioVolume,
         stopAudio,
-        getAudioState
-    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, stopAudio, getAudioState]);
+        getAudioState,
+        flushAudioBuffers
+    }), [audioEnabled, volume, initializeAudio, playAudioSamples, setAudioVolume, stopAudio, getAudioState, flushAudioBuffers]);
 
     return (
         <AudioContext.Provider value={value}>

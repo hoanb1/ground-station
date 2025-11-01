@@ -1,4 +1,5 @@
 import { updateVFOParameters } from './waterfall-slice.jsx';
+import { flushAudioBuffers } from '../dashboard/audio-service.js';
 
 // You might want to pass the socket as a parameter or get it differently
 let socketInstance = null;
@@ -46,6 +47,9 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     // Handle selected VFO changes
     if (action.type === 'waterfallState/setSelectedVFO') {
         const selectedVFO = action.payload;
+
+        // Flush audio buffers to minimize lag when switching VFOs
+        flushAudioBuffers();
 
         if (selectedVFO === null) {
             store.dispatch(updateVFOParameters({
