@@ -150,6 +150,7 @@ const initialState = {
     vfoColors: ['#FF0000', '#207820', '#144bff', '#9e129e'],
     selectedVFOTab: 0,
     showRotatorDottedLines: true,
+    autoScalePreset: 'weak',
 };
 
 // Add these new reducers to your createSlice
@@ -326,6 +327,9 @@ export const waterfallSlice = createSlice({
         },
         setShowRotatorDottedLines: (state, action) => {
             state.showRotatorDottedLines = action.payload;
+        },
+        setAutoScalePreset: (state, action) => {
+            state.autoScalePreset = action.payload;
         }
     },
     extraReducers: (builder) => {
@@ -418,6 +422,7 @@ export const {
     setVfoInactive,
     setSelectedVFOTab,
     setShowRotatorDottedLines,
+    setAutoScalePreset,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

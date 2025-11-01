@@ -59,7 +59,9 @@ import {
     setFFTWindow,
     setSelectedSDRId,
     setSelectedOffsetValue,
-    setFFTAveraging, setShowRotatorDottedLines,
+    setFFTAveraging,
+    setShowRotatorDottedLines,
+    setAutoScalePreset,
 } from './waterfall-slice.jsx'
 import {
     enableVFO1,
@@ -231,8 +233,11 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         }
     }, []);
 
-    const setAutoScalePreset = useCallback((preset) => {
+    const handleSetAutoScalePreset = useCallback((preset) => {
         console.log("Set Auto-Scale Preset:", preset);
+
+        // Update Redux state
+        dispatch(setAutoScalePreset(preset));
 
         // Send the preset to the worker
         if (workerRef.current) {
@@ -241,7 +246,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                 preset: preset,
             });
         }
-    }, []);
+    }, [dispatch]);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -561,7 +566,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                     fftDataOverflow={fftDataOverflow}
                     showRotatorDottedLines={showRotatorDottedLines}
                     toggleRotatorDottedLines={toggleRotatorDottedLines}
-                    setAutoScalePreset={setAutoScalePreset}
+                    setAutoScalePreset={handleSetAutoScalePreset}
                 />
             </Box>
 

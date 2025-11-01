@@ -18,6 +18,7 @@ import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
 import TuneIcon from '@mui/icons-material/Tune';
 import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from '../common/custom-icons.jsx';
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 
 const WaterfallToolbar = ({
                               startStreamingLoading,
@@ -48,7 +49,7 @@ const WaterfallToolbar = ({
     const { t } = useTranslation('waterfall');
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
     const menuOpen = Boolean(menuAnchorEl);
-    const [currentPreset, setCurrentPreset] = React.useState('weak');
+    const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
 
     const handleMenuClick = (event) => {
         setMenuAnchorEl(event.currentTarget);
@@ -60,21 +61,18 @@ const WaterfallToolbar = ({
 
     const handleStrongSignals = () => {
         // Set auto-scale preset for strong signals
-        setCurrentPreset('strong');
         setAutoScalePreset('strong');
         handleMenuClose();
     };
 
     const handleMediumSignals = () => {
         // Set auto-scale preset for medium signals
-        setCurrentPreset('medium');
         setAutoScalePreset('medium');
         handleMenuClose();
     };
 
     const handleWeakSignals = () => {
         // Set auto-scale preset for weak signals
-        setCurrentPreset('weak');
         setAutoScalePreset('weak');
         handleMenuClose();
     };
@@ -356,19 +354,19 @@ const WaterfallToolbar = ({
         >
             <MenuItem onClick={handleStrongSignals}>
                 <ListItemIcon>
-                    {currentPreset === 'strong' ? <CheckIcon fontSize="small" /> : <Box sx={{ width: 20 }} />}
+                    {autoScalePreset === 'strong' ? <CheckIcon fontSize="small" /> : <Box sx={{ width: 20 }} />}
                 </ListItemIcon>
                 {t('toolbar.preset_strong_signals')}
             </MenuItem>
             <MenuItem onClick={handleMediumSignals}>
                 <ListItemIcon>
-                    {currentPreset === 'medium' ? <CheckIcon fontSize="small" /> : <Box sx={{ width: 20 }} />}
+                    {autoScalePreset === 'medium' ? <CheckIcon fontSize="small" /> : <Box sx={{ width: 20 }} />}
                 </ListItemIcon>
                 {t('toolbar.preset_medium_signals')}
             </MenuItem>
             <MenuItem onClick={handleWeakSignals}>
                 <ListItemIcon>
-                    {currentPreset === 'weak' ? <CheckIcon fontSize="small" /> : <Box sx={{ width: 20 }} />}
+                    {autoScalePreset === 'weak' ? <CheckIcon fontSize="small" /> : <Box sx={{ width: 20 }} />}
                 </ListItemIcon>
                 {t('toolbar.preset_weak_signals')}
             </MenuItem>
