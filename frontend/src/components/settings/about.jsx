@@ -37,7 +37,6 @@ import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import RadioIcon from '@mui/icons-material/Radio';
 import ImageIcon from '@mui/icons-material/Image';
 import DevicesIcon from '@mui/icons-material/Devices';
-import GroupIcon from '@mui/icons-material/Group';
 import CodeIcon from '@mui/icons-material/Code';
 import StorageIcon from '@mui/icons-material/Storage';
 import WebIcon from '@mui/icons-material/Web';
@@ -71,16 +70,23 @@ const AboutPage = () => {
             icon: <RadioIcon fontSize="small" color="primary" />
         },
         {
-            text: "Data Decoding: Decode and display images from weather satellites (e.g., NOAA APT) and telemetry from various amateur satellites.",
-            icon: <ImageIcon fontSize="small" color="primary" />
-        },
-        {
-            text: "Responsive Web Interface: A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices.",
+            text: "Responsive Web Interface: A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.",
             icon: <DevicesIcon fontSize="small" color="primary" />
+        }
+    ];
+
+    const plannedFeatures = [
+        {
+            text: "Data Decoding: Decode and display images from weather satellites (e.g., NOAA APT, METEOR LRPT) and telemetry from various amateur satellites.",
+            icon: <ImageIcon fontSize="small" color="secondary" />
         },
         {
-            text: "Multi-User Support: Create and manage multiple user accounts with different levels of access and permissions.",
-            icon: <GroupIcon fontSize="small" color="primary" />
+            text: "Pass Scheduler: Automated scheduling and recording of satellite passes.",
+            icon: <SatelliteAltIcon fontSize="small" color="secondary" />
+        },
+        {
+            text: "Signal Recording: Enhanced recording capabilities with metadata tagging.",
+            icon: <RadioIcon fontSize="small" color="secondary" />
         }
     ];
 
@@ -229,7 +235,7 @@ const AboutPage = () => {
                     {/* Introduction */}
                     <Card elevation={1} sx={{ padding: 2, backgroundColor: 'rgba(255,255,255,0.05)' }}>
                         <Typography variant="body1" paragraph sx={{ fontSize: '1.1rem', lineHeight: 1.6 }}>
-                            <strong>Ground Station is a full-featured, open-source software solution for satellite tracking, radio communication, and data decoding.</strong> Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving satellite imagery and telemetry.
+                            <strong>Ground Station is a full-featured, open-source software solution for satellite tracking and radio communication.</strong> Designed for amateur radio operators, satellite enthusiasts, and researchers, it provides a comprehensive and easy-to-use platform for monitoring spacecraft, controlling radio equipment, and receiving live radio signals from satellites.
                         </Typography>
                     </Card>
 
@@ -272,6 +278,35 @@ const AboutPage = () => {
                         </Stack>
                     </Box>
 
+                    {/* Planned Features section */}
+                    <Box>
+                        <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: theme.palette.secondary.main }}>
+                            Planned Features & Roadmap
+                        </Typography>
+                        <Divider sx={{ mb: 2 }} />
+                        <Typography variant="body2" paragraph sx={{ fontStyle: 'italic', color: 'text.secondary' }}>
+                            The following features are planned for future releases:
+                        </Typography>
+
+                        <Stack spacing={2}>
+                            {plannedFeatures.map((feature, index) => (
+                                <Stack key={index} direction="row" spacing={2} alignItems="flex-start">
+                                    <Box sx={{ mt: 0.5 }}>{feature.icon}</Box>
+                                    <Typography variant="body1">{feature.text}</Typography>
+                                </Stack>
+                            ))}
+                        </Stack>
+
+                        <Card elevation={1} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(255, 152, 0, 0.05)', border: `1px solid ${theme.palette.warning.main}30` }}>
+                            <Stack direction="row" spacing={1} alignItems="flex-start">
+                                <InfoIcon fontSize="small" color="warning" sx={{ mt: 0.5 }} />
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    <strong>Note:</strong> Data decoding functionality is planned but not yet implemented.
+                                </Typography>
+                            </Stack>
+                        </Card>
+                    </Box>
+
                     {/* SDR Device Support */}
                     <Box>
                         <Typography variant="h5" gutterBottom sx={{ fontWeight: 600, color: theme.palette.primary.main }}>
@@ -279,7 +314,7 @@ const AboutPage = () => {
                         </Typography>
                         <Divider sx={{ mb: 2 }} />
                         <Typography variant="body1" paragraph>
-                            Dedicated worker processes provide FFT and streaming support for multiple receiver families:
+                            Dedicated worker processes provide IQ acquisition, FFT processing, and demodulation support for multiple receiver families:
                         </Typography>
                         <Stack spacing={2}>
                             {sdrSupport.map((device, index) => (
@@ -289,6 +324,14 @@ const AboutPage = () => {
                                 </Stack>
                             ))}
                         </Stack>
+                        <Card elevation={1} sx={{ p: 2, mt: 2, backgroundColor: 'rgba(33, 150, 243, 0.05)', border: `1px solid ${theme.palette.info.main}30` }}>
+                            <Stack direction="row" spacing={1} alignItems="flex-start">
+                                <InfoIcon fontSize="small" color="info" sx={{ mt: 0.5 }} />
+                                <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                    <strong>Note:</strong> The current signal demodulator implementations (FM, AM, SSB) were developed with assistance from Claude AI (Anthropic) to handle the complex digital signal processing algorithms. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
+                                </Typography>
+                            </Stack>
+                        </Card>
                     </Box>
 
                     {/* Third-Party Libraries & Technologies */}
