@@ -194,7 +194,7 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
         const isStreamingActive = isStreaming;
         const noSDRSelected = selectedSDRId === 'none';
         const isLoadingParameters = gettingSDRParameters;
-        const missingRequiredParameters = !sampleRate || !gain || sampleRate === 'none' || gain === 'none' || selectedAntenna === 'none';
+        const missingRequiredParameters = !sampleRate || gain === null || gain === undefined || sampleRate === 'none' || gain === 'none' || selectedAntenna === 'none';
         return isStreamingActive || noSDRSelected || isLoadingParameters || missingRequiredParameters;
     }, [isStreaming, selectedSDRId, gettingSDRParameters, sampleRate, gain, selectedAntenna]);
 
