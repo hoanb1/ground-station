@@ -359,6 +359,14 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         }
     };
 
+    const handleVFOListenChange = (vfoNumber, isListening) => {
+        if (isListening) {
+            dispatch(setSelectedVFO(vfoNumber));
+        } else {
+            dispatch(setSelectedVFO(null));
+        }
+    };
+
     const handleVFOTabChange = (newValue) => {
         dispatch(setSelectedVFOTab(newValue));
         // Also select the corresponding VFO on the canvas
@@ -467,6 +475,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     vfoActive={vfoActive}
                     onVFOActiveChange={handleVFOActiveChange}
                     onVFOPropertyChange={handleVFOPropertyChange}
+                    selectedVFO={selectedVFO}
+                    onVFOListenChange={handleVFOListenChange}
                 />
             </div>
         </>

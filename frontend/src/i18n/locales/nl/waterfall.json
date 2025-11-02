@@ -70,6 +70,7 @@
     "title": "VFO Bediening",
     "vfo_number": "VFO {{number}}",
     "active": "Actief",
+    "listen": "Luisteren",
     "step_size": "Stapgrootte",
     "modulation": "Modulatie",
     "bandwidth": "Bandbreedte",

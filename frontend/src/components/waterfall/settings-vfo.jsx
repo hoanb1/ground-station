@@ -42,6 +42,8 @@ const VfoAccordion = ({
                           vfoActive,
                           onVFOActiveChange,
                           onVFOPropertyChange,
+                          selectedVFO,
+                          onVFOListenChange,
                       }) => {
     const { t } = useTranslation('waterfall');
     const squelchSliderRef = React.useRef(null);
@@ -49,6 +51,10 @@ const VfoAccordion = ({
 
     React.useEffect(() => {
         const handleWheel = (e, vfoIndex, property, min, max, current) => {
+            // Check if VFO is active before processing wheel event
+            if (!vfoActive[vfoIndex]) {
+                return;
+            }
             e.preventDefault();
             const delta = e.deltaY > 0 ? -1 : 1;
             const newValue = Math.max(min, Math.min(max, current + delta));
@@ -84,7 +90,7 @@ const VfoAccordion = ({
                 }
             });
         };
-    }, [vfoMarkers, onVFOPropertyChange]);
+    }, [vfoMarkers, vfoActive, onVFOPropertyChange]);
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
@@ -127,6 +133,30 @@ const VfoAccordion = ({
                 </Tabs>
                 {[1, 2, 3, 4].map((vfoIndex) => (
                     <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
+                        <Box sx={{ display: 'flex', gap: 1 }}>
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={vfoActive[vfoIndex] || false}
+                                        onChange={(e) => onVFOActiveChange(vfoIndex, e.target.checked)}
+                                    />
+                                }
+                                label={t('vfo.active')}
+                                sx={{mt: 0, ml: 0}}
+                            />
+                            <FormControlLabel
+                                control={
+                                    <Switch
+                                        checked={selectedVFO === vfoIndex}
+                                        onChange={(e) => onVFOListenChange(vfoIndex, e.target.checked)}
+                                        disabled={!vfoActive[vfoIndex]}
+                                    />
+                                }
+                                label={t('vfo.listen')}
+                                sx={{mt: 0, ml: 0}}
+                            />
+                        </Box>
+
                         <Box sx={{
                             mt: 2,
                             mb: 0,
@@ -148,17 +178,6 @@ const VfoAccordion = ({
                             </Box>
                         </Box>
 
-                        <FormControlLabel
-                            control={
-                                <Switch
-                                    checked={vfoActive[vfoIndex] || false}
-                                    onChange={(e) => onVFOActiveChange(vfoIndex, e.target.checked)}
-                                />
-                            }
-                            label={t('vfo.active')}
-                            sx={{mt: 0, ml: 0}}
-                        />
-
                         <Stack
                             spacing={2}
                             direction="row"
@@ -173,6 +192,7 @@ const VfoAccordion = ({
                                 min={-150}
                                 max={0}
                                 onChange={(e, val) => onVFOPropertyChange(vfoIndex, {squelch: val})}
+                                disabled={!vfoActive[vfoIndex]}
                             />
                             <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.squelch || -150} dB</Box>
                         </Stack>
@@ -189,6 +209,7 @@ const VfoAccordion = ({
                             <Slider
                                 value={vfoMarkers[vfoIndex]?.volume || 50}
                                 onChange={(e, val) => onVFOPropertyChange(vfoIndex, {volume: val})}
+                                disabled={!vfoActive[vfoIndex]}
                             />
                             <Box sx={{minWidth: 60}}>{vfoMarkers[vfoIndex]?.volume || 50}%</Box>
                         </Stack>
@@ -201,6 +222,7 @@ const VfoAccordion = ({
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.stepSize || 1000}
                                 exclusive
+                                disabled={!vfoActive[vfoIndex]}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
                                         onVFOPropertyChange(vfoIndex, { stepSize: newValue });
@@ -257,6 +279,7 @@ const VfoAccordion = ({
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.mode || 'none'}
                                 exclusive
+                                disabled={!vfoActive[vfoIndex]}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
                                         onVFOPropertyChange(vfoIndex, { mode: newValue });
@@ -307,6 +330,7 @@ const VfoAccordion = ({
                             <ToggleButtonGroup
                                 value={BANDWIDTHS.hasOwnProperty(vfoMarkers[vfoIndex]?.bandwidth) ? vfoMarkers[vfoIndex]?.bandwidth.toString() : 'custom'}
                                 exclusive
+                                disabled={!vfoActive[vfoIndex]}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
                                         if (newValue === 'custom') {

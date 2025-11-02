@@ -70,6 +70,7 @@
     "title": "Controles VFO",
     "vfo_number": "VFO {{number}}",
     "active": "Activo",
+    "listen": "Escuchar",
     "step_size": "Tamaño de Paso",
     "modulation": "Modulación",
     "bandwidth": "Ancho de Banda",

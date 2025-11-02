@@ -70,6 +70,7 @@
     "title": "Ελεγχοι VFO",
     "vfo_number": "VFO {{number}}",
     "active": "Ενεργό",
+    "listen": "Ακρόαση",
     "step_size": "Μέγεθος Βήματος",
     "modulation": "Διαμόρφωση",
     "bandwidth": "Εύρος Ζώνης",

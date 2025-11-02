@@ -70,6 +70,7 @@
     "title": "VFO Controls",
     "vfo_number": "VFO {{number}}",
     "active": "Active",
+    "listen": "Listen",
     "step_size": "Step Size",
     "modulation": "Modulation",
     "bandwidth": "Bandwidth",

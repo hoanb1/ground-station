@@ -70,6 +70,7 @@
     "title": "VFO-Steuerungen",
     "vfo_number": "VFO {{number}}",
     "active": "Aktiv",
+    "listen": "Hören",
     "step_size": "Schrittgröße",
     "modulation": "Modulation",
     "bandwidth": "Bandbreite",
