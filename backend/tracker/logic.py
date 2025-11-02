@@ -64,7 +64,7 @@ class SatelliteTracker:
         self.queue_in = queue_in
         self.stop_event = stop_event
 
-        # Configuration constants
+        # Configuration constants (will be updated from rotator_details)
         self.azimuth_limits = (0, 360)
         self.elevation_limits = (0, 90)
         self.min_elevation = 10.0
@@ -138,6 +138,22 @@ class SatelliteTracker:
         """Check if rotator is currently in tracking state."""
         return self.current_rotator_state == "tracking"
 
+    def _update_rotator_limits(self):
+        """Update rotator limits from rotator_details if available."""
+        if self.rotator_details:
+            minaz = self.rotator_details.get("minaz")
+            maxaz = self.rotator_details.get("maxaz")
+            minel = self.rotator_details.get("minel")
+            maxel = self.rotator_details.get("maxel")
+
+            if minaz is not None and maxaz is not None:
+                self.azimuth_limits = (minaz, maxaz)
+                logger.info(f"Updated azimuth limits to: {self.azimuth_limits}")
+
+            if minel is not None and maxel is not None:
+                self.elevation_limits = (minel, maxel)
+                logger.info(f"Updated elevation limits to: {self.elevation_limits}")
+
     async def handle_satellite_change(self, old, new):
         """Handle satellite target change events."""
         sat_name = self.satellite_data.get("details", {}).get("name", "Unknown")
@@ -204,6 +220,9 @@ class SatelliteTracker:
                 )
 
                 await self.rotator_controller.connect()  # type: ignore[attr-defined]
+
+                # Update rotator limits from rotator_details
+                self._update_rotator_limits()
 
                 # Update state
                 self.rotator_data.update(
@@ -778,8 +797,13 @@ class SatelliteTracker:
                 abs(skypoint[0] - self.rotator_data["az"]) > self.az_tolerance
                 or abs(skypoint[1] - self.rotator_data["el"]) > self.el_tolerance
             ):
+                # Clamp target position to rotator limits
+                target_az = max(self.azimuth_limits[0], min(skypoint[0], self.azimuth_limits[1]))
+                target_el = max(
+                    self.elevation_limits[0], min(skypoint[1], self.elevation_limits[1])
+                )
 
-                position_gen = self.rotator_controller.set_position(skypoint[0], skypoint[1])
+                position_gen = self.rotator_controller.set_position(target_az, target_el)
                 self.rotator_data["stopped"] = False
 
                 try:
@@ -787,13 +811,17 @@ class SatelliteTracker:
                     self.rotator_data["slewing"] = is_slewing
                     logger.debug(f"Current position: AZ={az}°, EL={el}°, slewing={is_slewing}")
                 except StopAsyncIteration:
-                    logger.info(f"Slewing to AZ={skypoint[0]}° EL={skypoint[1]}° complete")
+                    logger.info(f"Slewing to AZ={target_az}° EL={target_el}° complete")
 
         elif self.rotator_controller and self.current_rotator_state != "tracking":
             # Handle nudge commands when not tracking
             if self.nudge_offset["az"] != 0 or self.nudge_offset["el"] != 0:
                 new_az = self.rotator_data["az"] + self.nudge_offset["az"]
                 new_el = self.rotator_data["el"] + self.nudge_offset["el"]
+
+                # Clamp nudge position to rotator limits
+                new_az = max(self.azimuth_limits[0], min(new_az, self.azimuth_limits[1]))
+                new_el = max(self.elevation_limits[0], min(new_el, self.elevation_limits[1]))
 
                 position_gen = self.rotator_controller.set_position(new_az, new_el)
 
