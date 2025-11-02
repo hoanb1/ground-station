@@ -24,7 +24,9 @@ import {Box, IconButton, useTheme} from "@mui/material";
 import FrequencyScale from "./frequency-scale.jsx";
 import BookmarkCanvas from "./bookmarks-overlay.jsx";
 import {
-    setBookMarks
+    setBookMarks,
+    setWaterFallScaleX,
+    setWaterFallPositionX
 } from "./waterfall-slice.jsx";
 import VFOMarkersContainer from './vfo-container.jsx';
 import FrequencyBandOverlay from './bandplan-overlay.jsx';
@@ -51,6 +53,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     const lastXRef = useRef(0);
     const lastPinchDistanceRef = useRef(0);
     const pinchCenterXRef = useRef(0);
+    const persistTimerRef = useRef(null);
     const dispatch = useDispatch();
     const {
         waterFallVisualWidth,
@@ -160,6 +163,17 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         }
     }, []);
 
+    // Debounced persist function
+    const persistToRedux = useCallback(() => {
+        if (persistTimerRef.current) {
+            clearTimeout(persistTimerRef.current);
+        }
+        persistTimerRef.current = setTimeout(() => {
+            dispatch(setWaterFallScaleX(scaleRef.current));
+            dispatch(setWaterFallPositionX(positionXRef.current));
+        }, 300); // 300ms debounce
+    }, [dispatch]);
+
     const checkMobile = () => {
         setIsMobile(/iPhone|iPad|iPod|Android/i.test(navigator.userAgent) || window.innerWidth < 768);
     };
@@ -169,12 +183,17 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         checkMobile();
         window.addEventListener('resize', checkMobile);
 
-        // Set positionX and scaleX values from Redux
+        // Restore scale and position from Redux on mount
         scaleRef.current = waterFallScaleX;
         positionXRef.current = waterFallPositionX;
+        applyTransform();
 
         return () => {
             window.removeEventListener('resize', checkMobile);
+            // Clear any pending persist operations
+            if (persistTimerRef.current) {
+                clearTimeout(persistTimerRef.current);
+            }
         }
     }, []);
 
@@ -219,7 +238,10 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         // Apply the transform immediately
         applyTransform();
 
-    }, [applyTransform, updateReactState]);
+        // Persist to Redux (debounced)
+        persistToRedux();
+
+    }, [applyTransform, updateReactState, persistToRedux]);
 
     // Panning functionality
     const panOnXAxisOnly = useCallback((deltaX) => {
@@ -298,6 +320,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             if (container) {
                 container.style.cursor = 'grab';
             }
+            // Persist after dragging ends
+            persistToRedux();
         };
 
         // Touch events
@@ -349,6 +373,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
         const handleTouchEnd = () => {
             isDraggingRef.current = false;
+            // Persist after touch interaction ends
+            persistToRedux();
         };
 
         // Set initial cursor
@@ -376,7 +402,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             container.removeEventListener('touchmove', handleTouchMove);
             window.removeEventListener('touchend', handleTouchEnd);
         };
-    }, []);
+    }, [persistToRedux]);
 
     // Expose functions to parent component
     useImperativeHandle(ref, () => ({
