@@ -498,7 +498,7 @@ def soapysdr_local_worker_process(
 
 
 # Target blocks per second for constant rate streaming
-TARGET_BLOCKS_PER_SEC = 10
+TARGET_BLOCKS_PER_SEC = 15
 
 
 def calculate_samples_per_scan(sample_rate, fft_size):
