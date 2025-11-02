@@ -70,6 +70,44 @@ const FrequencyBandOverlay = ({
         updateActualWidth();
     }, [containerWidth, updateActualWidth]);
 
+    // Helper function to create segments from overlapping bands
+    const createBandSegments = useCallback((bands) => {
+        // Create a list of all frequency boundaries
+        const boundaries = new Set();
+        const visibleBands = bands.filter(band =>
+            !(band.endFrequency < startFreq || band.startFrequency > endFreq)
+        );
+
+        visibleBands.forEach(band => {
+            boundaries.add(band.startFrequency);
+            boundaries.add(band.endFrequency);
+        });
+
+        const sortedBoundaries = Array.from(boundaries).sort((a, b) => a - b);
+
+        // Create segments between each pair of boundaries
+        const segments = [];
+        for (let i = 0; i < sortedBoundaries.length - 1; i++) {
+            const segmentStart = sortedBoundaries[i];
+            const segmentEnd = sortedBoundaries[i + 1];
+
+            // Find all bands that contain this segment
+            const bandsInSegment = visibleBands.filter(band =>
+                band.startFrequency <= segmentStart && band.endFrequency >= segmentEnd
+            );
+
+            if (bandsInSegment.length > 0) {
+                segments.push({
+                    startFrequency: segmentStart,
+                    endFrequency: segmentEnd,
+                    bands: bandsInSegment
+                });
+            }
+        }
+
+        return segments;
+    }, [startFreq, endFreq]);
+
     // Draw the frequency bands
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -89,7 +127,30 @@ const FrequencyBandOverlay = ({
         // Calculate the band drawing area (bottom of the canvas)
         const bandY = height - bandHeight - 1;
 
-        // Draw bands and labels in one pass
+        // Create segments from overlapping bands
+        const segments = createBandSegments(bands);
+
+        // Draw each segment
+        segments.forEach((segment) => {
+            const { startFrequency, endFrequency, bands: segmentBands } = segment;
+
+            // Convert frequencies to pixel positions
+            const startX = frequencyToPixel(startFrequency);
+            const endX = frequencyToPixel(endFrequency);
+            const segmentWidth = endX - startX;
+
+            if (segmentWidth <= 0) return;
+
+            // For overlapping bands, use the first band's color (or blend them)
+            // You could also choose to blend colors or use the last band
+            const band = segmentBands[segmentBands.length - 1]; // Use the last (topmost) band
+            const { color = '#ffff00' } = band;
+
+            ctx.fillStyle = color;
+            ctx.fillRect(startX, bandY, segmentWidth, bandHeight);
+        });
+
+        // Draw labels for original bands (not segments)
         bands.forEach((band) => {
             const { startFrequency, endFrequency, color = '#ffff00', textColor = '#000000', name } = band;
 
@@ -101,13 +162,6 @@ const FrequencyBandOverlay = ({
             // Convert frequencies to pixel positions
             const startX = frequencyToPixel(startFrequency);
             const endX = frequencyToPixel(endFrequency);
-            const bandWidth = endX - startX;
-
-            // Draw the colored band (always draw the full band - let CSS transform handle clipping)
-            if (bandWidth > 0) {
-                ctx.fillStyle = color;
-                ctx.fillRect(startX, bandY, bandWidth, bandHeight);
-            }
 
             // Draw the label if there's a name
             if (name) {
@@ -226,7 +280,7 @@ const FrequencyBandOverlay = ({
                 }
             }
         });
-    }, [bands, centerFrequency, sampleRate, actualWidth, height, bandHeight, startFreq, endFreq, frequencyToPixel]);
+    }, [bands, centerFrequency, sampleRate, actualWidth, height, bandHeight, startFreq, endFreq, frequencyToPixel, createBandSegments]);
 
     // Handle click events on the canvas
     const handleCanvasClick = useCallback((e) => {
