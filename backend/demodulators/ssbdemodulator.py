@@ -364,6 +364,11 @@ class SSBDemodulator(threading.Thread):
                 if num_output_samples > 0:
                     audio = signal.resample(audio_filtered, num_output_samples)
 
+                    # Apply amplification to boost low audio levels
+                    # Adjust this gain factor if audio is still too quiet or too loud
+                    audio_gain = 3.0  # 3x amplification (adjustable)
+                    audio = audio * audio_gain
+
                     # Normalize and soft clipping
                     # SSB typically has less dynamic range than FM
                     max_val = np.max(np.abs(audio)) + 1e-10

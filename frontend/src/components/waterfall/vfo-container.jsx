@@ -26,6 +26,7 @@ import {
     setVFOProperty,
     setSelectedVFO,
 } from './waterfall-slice.jsx';
+import { canvasDrawingUtils, getVFOLabelIconWidth } from './vfo-utils.js';
 
 const VFOMarkersContainer = ({
                                  centerFrequency,
@@ -178,71 +179,6 @@ const VFOMarkersContainer = ({
         };
     }, [startFreq, freqRange, actualWidth]);
 
-    // Canvas drawing utilities
-    const canvasDrawingUtils = useMemo(() => ({
-        drawVFOArea: (ctx, leftEdgeX, rightEdgeX, height, color, opacity) => {
-            ctx.fillStyle = `${color}${opacity}`;
-            ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
-        },
-
-        drawVFOLine: (ctx, x, height, color, opacity, lineWidth) => {
-            ctx.beginPath();
-            ctx.strokeStyle = `${color}${opacity}`;
-            ctx.lineWidth = lineWidth;
-            ctx.moveTo(x, 0);
-            ctx.lineTo(x, height);
-            ctx.stroke();
-        },
-
-        drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth) => {
-            ctx.beginPath();
-            ctx.strokeStyle = `${color}${opacity}`;
-            ctx.lineWidth = lineWidth;
-            ctx.setLineDash([4, 4]);
-
-            if (mode === 'USB') {
-                ctx.moveTo(rightEdgeX, 0);
-                ctx.lineTo(rightEdgeX, height);
-            } else if (mode === 'LSB') {
-                ctx.moveTo(leftEdgeX, 0);
-                ctx.lineTo(leftEdgeX, height);
-            } else {
-                // Draw both edges for AM, FM, etc.
-                ctx.moveTo(leftEdgeX, 0);
-                ctx.lineTo(leftEdgeX, height);
-                ctx.moveTo(rightEdgeX, 0);
-                ctx.lineTo(rightEdgeX, height);
-            }
-
-            ctx.stroke();
-            ctx.setLineDash([]);
-        },
-
-        drawVFOHandle: (ctx, x, y, width, height, color, opacity) => {
-            ctx.fillStyle = `${color}${opacity}`;
-            ctx.beginPath();
-            ctx.roundRect(x - width / 2, y - height / 2, width, height, 2);
-            ctx.fill();
-        },
-
-        drawVFOLabel: (ctx, centerX, labelText, color, opacity) => {
-            ctx.font = '12px Monospace';
-            const textMetrics = ctx.measureText(labelText);
-            const labelWidth = textMetrics.width + 10;
-            const labelHeight = 14;
-
-            // Draw background
-            ctx.fillStyle = `${color}${opacity}`;
-            ctx.beginPath();
-            ctx.roundRect(centerX - labelWidth / 2, 5, labelWidth, labelHeight, 2);
-            ctx.fill();
-
-            // Draw text
-            ctx.fillStyle = '#ffffff';
-            ctx.textAlign = 'center';
-            ctx.fillText(labelText, centerX, 16);
-        }
-    }), []);
 
     // When the VFO status changes, detect which VFO was just made active
     useEffect(() => {
@@ -529,7 +465,7 @@ const VFOMarkersContainer = ({
             // Draw frequency label
             const labelText = generateLabelText(marker, mode, bandwidth);
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity);
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected);
         });
     };
 
@@ -568,7 +504,9 @@ const VFOMarkersContainer = ({
                 if (ctx) {
                     ctx.font = '12px Monospace';
                     const textMetrics = ctx.measureText(labelText);
-                    const labelWidth = textMetrics.width + 10;
+                    // Always add extra width for speaker icon (shown as muted or active)
+                    const iconWidth = getVFOLabelIconWidth();
+                    const labelWidth = textMetrics.width + 10 + iconWidth;
 
                     // Check if mouse is over label area
                     if (Math.abs(canvasX - centerX) <= labelWidth / 2) {

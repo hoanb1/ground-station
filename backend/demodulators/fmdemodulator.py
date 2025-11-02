@@ -414,6 +414,11 @@ class FMDemodulator(threading.Thread):
                 if num_output_samples > 0:
                     audio = signal.resample(deemphasized, num_output_samples)
 
+                    # Apply amplification to boost low audio levels
+                    # Adjust this gain factor if audio is still too quiet or too loud
+                    audio_gain = 3.0  # 3x amplification (adjustable)
+                    audio = audio * audio_gain
+
                     # Soft clipping instead of normalization (preserves relative levels)
                     # Only clip values that exceed [-1, 1] range
                     audio = np.clip(audio, -0.95, 0.95)
