@@ -27,8 +27,8 @@ import {
     Slider,
     useTheme,
 } from '@mui/material';
-import HeightIcon from '@mui/icons-material/Height';
 import {useDispatch, useSelector} from "react-redux";
+import { AutoScaleOnceIcon, AutoDBIcon } from '../common/custom-icons.jsx';
 import {
     getClassNamesBasedOnGridEditing,
     humanizeFrequency,
@@ -679,7 +679,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                     >
                         <Stack spacing={0}>
                             <Button
-                                startIcon={<HeightIcon/>}
+                                startIcon={<AutoScaleOnceIcon/>}
                                 variant="filled"
                                 disabled={!isStreaming}
                                 color={autoDBRange? "success": "info"}
@@ -693,6 +693,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                             >
                             </Button>
                             <Button
+                                startIcon={<AutoDBIcon/>}
                                 variant={autoDBRange ? "contained" : "filled"}
                                 disabled={!isStreaming}
                                 color={autoDBRange ? "success" : "info"}
@@ -700,11 +701,8 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                                 title="Toggle automatic dB scale"
                                 sx={{
                                     borderRadius: 0,
-                                    minWidth: '40px',
-                                    padding: '6px'
                                 }}
                             >
-                                Auto
                             </Button>
                         </Stack>
                         <Box sx={{
@@ -746,6 +744,12 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                                 },
                                 '& .MuiSlider-rail': {
                                     width: 10
+                                },
+                                '& .MuiSlider-valueLabel': {
+                                    fontSize: '0.75rem',
+                                    fontWeight: 'bold',
+                                    fontFamily: 'Monospace',
+                                    backgroundColor: 'rgba(0, 0, 0, 0.8)',
                                 }
                             }}
                         />
