@@ -10,7 +10,7 @@ import RadioIcon from '@mui/icons-material/Radio';
 import LanIcon from '@mui/icons-material/Lan';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import {Avatar, Box, Divider, IconButton, ListItemIcon, ListItemText, MenuItem, MenuList, Popover} from "@mui/material";
-import {GroundStationLogoGreenBlue} from "../common/icons.jsx";
+import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import * as React from "react";
 import {stringAvatar} from "../common/common.jsx";

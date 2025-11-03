@@ -31,7 +31,7 @@ import {
     useTheme,
     Link,
 } from "@mui/material";
-import { GroundStationLogoGreenBlue } from "../common/icons.jsx";
+import { GroundStationLogoGreenBlue } from "../common/dataurl-icons.jsx";
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import SettingsInputAntennaIcon from '@mui/icons-material/SettingsInputAntenna';
 import RadioIcon from '@mui/icons-material/Radio';

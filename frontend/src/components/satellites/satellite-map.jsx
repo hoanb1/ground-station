@@ -35,7 +35,7 @@ import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
 import SettingsIcon from '@mui/icons-material/Settings';
 import * as satellite from 'satellite.js';
 import { getTileLayerById } from "../common/tile-layers.jsx";
-import {homeIcon, sunIcon, moonIcon, satelliteIcon2} from '../common/icons.jsx';
+import {homeIcon, sunIcon, moonIcon, satelliteIcon2} from '../common/dataurl-icons.jsx';
 import {
     MapTitleBar,
     MapStatusBar,

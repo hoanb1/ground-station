@@ -17,7 +17,7 @@
  *
  */
 
-import {GroundStationLogoGreenBlue} from "../components/common/icons.jsx";
+import {GroundStationLogoGreenBlue} from "../components/common/dataurl-icons.jsx";
 
 export const BRANDING = {
     logo: (

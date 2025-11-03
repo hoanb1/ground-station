@@ -44,7 +44,7 @@ import {
     setOverviewMapSetting,
 } from './overview-slice.jsx';
 import {getTileLayerById} from '../common/tile-layers.jsx';
-import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/icons.jsx';
+import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/dataurl-icons.jsx';
 import {
     MapTitleBar,
     MapStatusBar,

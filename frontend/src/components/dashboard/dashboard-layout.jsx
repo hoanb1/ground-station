@@ -37,7 +37,7 @@ import {
     MenuList
 } from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
-import {GroundStationLogoGreenBlue} from "../common/icons.jsx";
+import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
 import {stringAvatar} from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import BorderColorIcon from '@mui/icons-material/BorderColor';

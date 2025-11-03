@@ -20,7 +20,7 @@ import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
-import {SquelchIcon} from "../common/icons.jsx";
+import {SquelchIcon} from "../common/dataurl-icons.jsx";
 import { useTranslation } from 'react-i18next';
 
 const BANDWIDTHS = {
