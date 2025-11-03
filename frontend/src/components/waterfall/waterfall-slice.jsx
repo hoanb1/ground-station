@@ -80,10 +80,11 @@ export const startRecording = createAsyncThunk(
 
 export const stopRecording = createAsyncThunk(
     'waterfall/stopRecording',
-    async ({socket, selectedSDRId}, {rejectWithValue}) => {
+    async ({socket, selectedSDRId, waterfallImage}, {rejectWithValue}) => {
         return new Promise((resolve, reject) => {
             socket.emit('sdr_data', 'stop-recording', {
-                selectedSDRId
+                selectedSDRId,
+                waterfallImage
             }, (response) => {
                 if (response && response.success) {
                     resolve(response.data);

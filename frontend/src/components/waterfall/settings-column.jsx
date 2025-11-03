@@ -415,12 +415,61 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
             });
     };
 
-    const handleStopRecording = () => {
-        dispatch(stopRecording({ socket, selectedSDRId }))
-            .unwrap()
-            .catch((error) => {
-                toast.error(`Failed to stop recording: ${error}`);
-            });
+    const handleStopRecording = async () => {
+        try {
+            console.log('Starting recording stop process...');
+
+            // Capture waterfall canvas as PNG
+            let waterfallImage = null;
+
+            try {
+                // Dispatch custom event to request canvas capture
+                console.log('Dispatching canvas capture event...');
+                const captureEvent = new CustomEvent('capture-waterfall-canvas');
+                window.dispatchEvent(captureEvent);
+
+                // Wait for the canvas to be captured and converted to data URL
+                // Poll for up to 2 seconds
+                const maxWaitTime = 2000;
+                const pollInterval = 50;
+                let elapsed = 0;
+
+                while (elapsed < maxWaitTime) {
+                    await new Promise(resolve => setTimeout(resolve, pollInterval));
+                    elapsed += pollInterval;
+
+                    if (window.waterfallCanvasDataURL) {
+                        waterfallImage = window.waterfallCanvasDataURL;
+                        console.log('Waterfall captured, size:', waterfallImage?.length || 0, 'bytes');
+                        // Clean up
+                        delete window.waterfallCanvasDataURL;
+                        break;
+                    }
+                }
+
+                if (!waterfallImage) {
+                    console.warn('Waterfall capture timed out or failed, proceeding without image');
+                }
+            } catch (captureError) {
+                console.error('Error capturing waterfall:', captureError);
+                // Continue without image
+                waterfallImage = null;
+            }
+
+            console.log('Sending stop recording request...');
+            dispatch(stopRecording({ socket, selectedSDRId, waterfallImage }))
+                .unwrap()
+                .then(() => {
+                    console.log('Recording stopped successfully');
+                })
+                .catch((error) => {
+                    console.error('Failed to stop recording:', error);
+                    toast.error(`Failed to stop recording: ${error}`);
+                });
+        } catch (error) {
+            console.error('Error in handleStopRecording:', error);
+            toast.error(`Failed to stop recording: ${error.message}`);
+        }
     };
 
     return (

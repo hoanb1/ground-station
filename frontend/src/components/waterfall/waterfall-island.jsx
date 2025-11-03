@@ -316,6 +316,48 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
 
                             // Update your Redux store
                             dispatch(setDbRange(dbRange));
+                        } else if (type === 'waterfallCaptured') {
+                            console.log('Waterfall captured message received from worker');
+                            // Convert blob to data URL in main thread
+                            const blob = data.blob;
+                            const width = data.width;
+                            const height = data.height;
+                            const originalWidth = data.originalWidth;
+                            const originalHeight = data.originalHeight;
+
+                            if (originalWidth && originalHeight && (originalWidth !== width || originalHeight !== height)) {
+                                console.log('Received SCALED image:');
+                                console.log('  Original:', originalWidth, 'x', originalHeight);
+                                console.log('  Scaled to:', width, 'x', height);
+                                console.log('  Blob size:', blob?.size || 0, 'bytes');
+                            } else {
+                                console.log('Received captured image - dimensions:', width, 'x', height, ', blob size:', blob?.size || 0, 'bytes');
+                            }
+
+                            const reader = new FileReader();
+                            reader.onloadstart = function() {
+                                console.log('FileReader: Starting to read blob of size', blob.size, 'bytes');
+                            };
+                            reader.onprogress = function(event) {
+                                if (event.lengthComputable) {
+                                    console.log('FileReader: Progress', event.loaded, '/', event.total, 'bytes');
+                                }
+                            };
+                            reader.onloadend = function() {
+                                console.log('FileReader: Finished reading. Data URL length:', reader.result?.length || 0, 'characters');
+                                console.log('FileReader: Data URL first 50 chars:', reader.result?.substring(0, 50));
+                                // Store the captured canvas data URL in window for retrieval
+                                window.waterfallCanvasDataURL = reader.result;
+                            };
+                            reader.onerror = function(error) {
+                                console.error('FileReader error:', error);
+                                window.waterfallCanvasDataURL = null;
+                            };
+                            console.log('FileReader: Starting to convert blob to data URL...');
+                            reader.readAsDataURL(blob);
+                        } else if (type === 'waterfallCaptureFailed') {
+                            console.error('Waterfall capture failed:', data?.error);
+                            window.waterfallCanvasDataURL = null;
                         }
                     };
                 } else {
@@ -403,6 +445,28 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
             document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
             document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
             document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
+        };
+    }, []);
+
+    // Add event listener for waterfall canvas capture
+    useEffect(() => {
+        const handleCaptureCanvas = () => {
+            console.log('Capture canvas event received');
+            if (workerRef.current) {
+                console.log('Posting captureWaterfallCanvas message to worker');
+                // Request canvas capture from worker
+                workerRef.current.postMessage({
+                    cmd: 'captureWaterfallCanvas'
+                });
+            } else {
+                console.error('Worker ref is not available');
+            }
+        };
+
+        window.addEventListener('capture-waterfall-canvas', handleCaptureCanvas);
+
+        return () => {
+            window.removeEventListener('capture-waterfall-canvas', handleCaptureCanvas);
         };
     }, []);
 

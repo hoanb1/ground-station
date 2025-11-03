@@ -17,6 +17,7 @@
 import logging
 import os
 from datetime import datetime
+from typing import Optional
 
 from demodulators.iqrecorder import IQRecorder
 from sdr.sdrprocessmanager import sdr_process_manager
@@ -76,13 +77,14 @@ def start_recording(sdr_id: str, client_id: str, recording_name: str = "") -> di
         raise Exception("Failed to start IQ recorder")
 
 
-def stop_recording(sdr_id: str, client_id: str) -> dict:
+def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] = None) -> dict:
     """
     Stop IQ recording for a given SDR and client.
 
     Args:
         sdr_id: SDR device identifier
         client_id: Client session identifier
+        waterfall_image: Base64 encoded PNG image of the waterfall (optional)
 
     Returns:
         dict: Result with 'success' (bool), 'data' or 'error' fields
@@ -99,8 +101,47 @@ def stop_recording(sdr_id: str, client_id: str) -> dict:
     if not isinstance(recorder, IQRecorder):
         raise Exception("Active demodulator is not an IQ recorder")
 
+    # Get the recording path before stopping
+    recording_path = recorder.recording_path
+
     # Stop the recorder (this will finalize the SigMF metadata)
     sdr_process_manager.stop_demodulator(sdr_id, client_id)
     logger.info(f"Stopped IQ recording for client {client_id}")
+
+    # Save the waterfall image if provided
+    if waterfall_image:
+        try:
+            import base64
+            import re
+
+            logger.info(f"Received waterfall image data, length: {len(waterfall_image)} characters")
+
+            # Extract base64 data from data URL
+            # Format: data:image/png;base64,iVBORw0KG...
+            match = re.match(r"data:image/(\w+);base64,(.+)", waterfall_image)
+            if match:
+                image_format = match.group(1)
+                image_data = match.group(2)
+                logger.info(
+                    f"Extracted base64 data for {image_format} image, length: {len(image_data)} characters"
+                )
+
+                image_bytes = base64.b64decode(image_data)
+                logger.info(f"Decoded image bytes, size: {len(image_bytes)} bytes")
+
+                # Save the image with the same name as the recording
+                image_path = f"{recording_path}.png"
+                with open(image_path, "wb") as f:
+                    f.write(image_bytes)
+
+                logger.info(f"Successfully saved waterfall image: {image_path}")
+            else:
+                logger.warning(
+                    f"Invalid waterfall image data URL format. First 100 chars: {waterfall_image[:100]}"
+                )
+        except Exception as e:
+            logger.error(f"Failed to save waterfall image: {str(e)}")
+            logger.exception(e)
+            # Don't raise - recording stop should succeed even if image save fails
 
     return {"success": True}

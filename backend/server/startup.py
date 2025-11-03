@@ -23,7 +23,10 @@ from server.scheduler import start_scheduler, stop_scheduler
 from server.version import get_full_version_info
 from tracker.runner import start_tracker_process
 
+# Increase payload limits to handle large waterfall PNG images (typically 2-5MB as base64)
 Payload.max_decode_packets = 50
+# Default is 100KB (100000 bytes), increase to 10MB to handle large PNG images
+Payload.max_decode_packet_size = 10 * 1024 * 1024  # 10MB
 
 # At the top of the file, add a global to track background tasks
 background_tasks: Set[asyncio.Task] = set()
@@ -91,7 +94,12 @@ async def lifespan(fastapiapp: FastAPI):
 
 
 sio = socketio.AsyncServer(
-    async_mode="asgi", cors_allowed_origins="*", logger=True, engineio_logger=True, binary=True
+    async_mode="asgi",
+    cors_allowed_origins="*",
+    logger=True,
+    engineio_logger=True,
+    binary=True,
+    max_http_buffer_size=10 * 1024 * 1024,  # 10MB to handle large waterfall PNG images
 )
 app = FastAPI(
     lifespan=lifespan,

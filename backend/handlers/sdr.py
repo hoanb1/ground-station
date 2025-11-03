@@ -250,8 +250,16 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 from server.recorder import stop_recording
 
                 sdr_id = data.get("selectedSDRId", None)
+                waterfall_image = data.get("waterfallImage", None)
 
-                result = stop_recording(sdr_id, client_id)
+                if waterfall_image:
+                    logger.info(
+                        f"stop-recording command received with waterfall image, length: {len(waterfall_image)} characters"
+                    )
+                else:
+                    logger.info("stop-recording command received without waterfall image")
+
+                result = stop_recording(sdr_id, client_id, waterfall_image)
                 reply.update(result)
 
             except Exception as e:
