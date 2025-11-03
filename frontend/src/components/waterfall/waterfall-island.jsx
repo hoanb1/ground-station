@@ -62,6 +62,7 @@ import {
     setFFTAveraging,
     setShowRotatorDottedLines,
     setAutoScalePreset,
+    saveWaterfallSnapshot,
 } from './waterfall-slice.jsx'
 import {
     enableVFO1,
@@ -78,12 +79,14 @@ import {
     setFFTdataOverflow,
 } from './waterfall-slice.jsx';
 import { toast } from "../../utils/toast-with-timestamp.jsx";
+import { useSocket } from "../common/socket.jsx";
 import {frequencyBands} from "./bandplans.jsx";
 import WaterfallStatusBar from "./waterfall-statusbar.jsx";
 import WaterfallToolbar from "./waterfall-toolbar.jsx";
 import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
 import useWaterfallStream from "./waterfall-stream.jsx";
 import { useTranslation } from 'react-i18next';
+import { useWaterfallSnapshot } from "./waterfall-snapshot.js";
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -102,6 +105,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const { t } = useTranslation('waterfall');
     const theme = useTheme();
     const dispatch = useDispatch();
+    const { socket } = useSocket();
     const waterFallCanvasRef = useRef(null);
     const bandscopeCanvasRef = useRef(null);
     const dBAxisScopeCanvasRef = useRef(null);
@@ -177,6 +181,25 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         fftDataOverflowLimit,
         showRotatorDottedLines,
     } = useSelector((state) => state.waterfall);
+
+    // Initialize waterfall snapshot hook
+    const { captureSnapshot } = useWaterfallSnapshot({
+        bandscopeCanvasRef,
+        dBAxisScopeCanvasRef,
+        waterFallLeftMarginCanvasRef,
+        bandScopeHeight,
+        frequencyScaleHeight,
+        waterFallCanvasHeight,
+        waterFallCanvasWidth,
+    });
+
+    // Expose captureSnapshot globally for recording
+    useEffect(() => {
+        window.captureWaterfallSnapshot = captureSnapshot;
+        return () => {
+            delete window.captureWaterfallSnapshot;
+        };
+    }, [captureSnapshot]);
     const centerFrequencyRef = useRef(centerFrequency);
     const sampleRateRef = useRef(sampleRate);
 
@@ -248,6 +271,24 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         }
     }, [dispatch]);
 
+    const takeSnapshot = useCallback(async () => {
+        try {
+            const compositeImage = await captureSnapshot(1620);
+            if (!compositeImage) {
+                return;
+            }
+
+            // Send snapshot to backend using Redux async thunk
+            dispatch(saveWaterfallSnapshot({ socket, waterfallImage: compositeImage, snapshotName: '' }))
+                .unwrap()
+                .catch((error) => {
+                    console.error('Failed to save snapshot:', error);
+                });
+        } catch (error) {
+            console.error('Error in takeSnapshot:', error);
+        }
+    }, [socket, dispatch, captureSnapshot]);
+
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
             // Enter fullscreen
@@ -317,35 +358,10 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                             // Update your Redux store
                             dispatch(setDbRange(dbRange));
                         } else if (type === 'waterfallCaptured') {
-                            console.log('Waterfall captured message received from worker');
                             // Convert blob to data URL in main thread
                             const blob = data.blob;
-                            const width = data.width;
-                            const height = data.height;
-                            const originalWidth = data.originalWidth;
-                            const originalHeight = data.originalHeight;
-
-                            if (originalWidth && originalHeight && (originalWidth !== width || originalHeight !== height)) {
-                                console.log('Received SCALED image:');
-                                console.log('  Original:', originalWidth, 'x', originalHeight);
-                                console.log('  Scaled to:', width, 'x', height);
-                                console.log('  Blob size:', blob?.size || 0, 'bytes');
-                            } else {
-                                console.log('Received captured image - dimensions:', width, 'x', height, ', blob size:', blob?.size || 0, 'bytes');
-                            }
-
                             const reader = new FileReader();
-                            reader.onloadstart = function() {
-                                console.log('FileReader: Starting to read blob of size', blob.size, 'bytes');
-                            };
-                            reader.onprogress = function(event) {
-                                if (event.lengthComputable) {
-                                    console.log('FileReader: Progress', event.loaded, '/', event.total, 'bytes');
-                                }
-                            };
                             reader.onloadend = function() {
-                                console.log('FileReader: Finished reading. Data URL length:', reader.result?.length || 0, 'characters');
-                                console.log('FileReader: Data URL first 50 chars:', reader.result?.substring(0, 50));
                                 // Store the captured canvas data URL in window for retrieval
                                 window.waterfallCanvasDataURL = reader.result;
                             };
@@ -353,7 +369,6 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                                 console.error('FileReader error:', error);
                                 window.waterfallCanvasDataURL = null;
                             };
-                            console.log('FileReader: Starting to convert blob to data URL...');
                             reader.readAsDataURL(blob);
                         } else if (type === 'waterfallCaptureFailed') {
                             console.error('Waterfall capture failed:', data?.error);
@@ -451,9 +466,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     // Add event listener for waterfall canvas capture
     useEffect(() => {
         const handleCaptureCanvas = () => {
-            console.log('Capture canvas event received');
             if (workerRef.current) {
-                console.log('Posting captureWaterfallCanvas message to worker');
                 // Request canvas capture from worker
                 workerRef.current.postMessage({
                     cmd: 'captureWaterfallCanvas'
@@ -627,6 +640,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                     vfoColors={vfoColors}
                     vfoActive={vfoActive}
                     toggleVfo={handleToggleVfo}
+                    takeSnapshot={takeSnapshot}
                     fftDataOverflow={fftDataOverflow}
                     showRotatorDottedLines={showRotatorDottedLines}
                     toggleRotatorDottedLines={toggleRotatorDottedLines}

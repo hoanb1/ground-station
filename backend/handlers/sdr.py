@@ -27,12 +27,14 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
     async with AsyncSessionLocal() as dbsession:
         reply: Dict[str, Union[bool, None, dict, list, str]] = {"success": False, "data": None}
 
+        logger.info(f"SDR command received: {cmd}")
+
         if cmd == "configure-sdr":
             try:
                 # SDR device id
                 sdr_id = data.get("selectedSDRId", None)
 
-                logger.info(f"Configuring SDR {sdr_id} for client {client_id} with config {data}")
+                logger.info(f"Configuring SDR {sdr_id} for client {client_id}")
 
                 # Fetch SDR device details from database
                 sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
@@ -268,6 +270,31 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 await sio.emit(
                     "sdr-error",
                     {"message": f"Failed to stop recording: {str(e)}"},
+                    room=client_id,
+                )
+                reply["success"] = False
+                reply["error"] = str(e)
+
+        elif cmd == "save-waterfall-snapshot":
+            try:
+                from server.snapshots import save_waterfall_snapshot
+
+                waterfall_image = data.get("waterfallImage", None)
+                snapshot_name = data.get("snapshotName", "")
+
+                result = save_waterfall_snapshot(waterfall_image, snapshot_name)
+
+                if result["success"]:
+                    reply["success"] = True
+                    reply["data"] = {"snapshot_path": result["snapshot_path"]}
+                else:
+                    raise Exception(result.get("error", "Unknown error"))
+
+            except Exception as e:
+                logger.error(f"Error saving waterfall snapshot: {str(e)}")
+                await sio.emit(
+                    "sdr-error",
+                    {"message": f"Failed to save waterfall snapshot: {str(e)}"},
                     room=client_id,
                 )
                 reply["success"] = False

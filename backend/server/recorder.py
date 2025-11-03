@@ -114,34 +114,23 @@ def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] =
             import base64
             import re
 
-            logger.info(f"Received waterfall image data, length: {len(waterfall_image)} characters")
-
             # Extract base64 data from data URL
             # Format: data:image/png;base64,iVBORw0KG...
             match = re.match(r"data:image/(\w+);base64,(.+)", waterfall_image)
             if match:
-                image_format = match.group(1)
                 image_data = match.group(2)
-                logger.info(
-                    f"Extracted base64 data for {image_format} image, length: {len(image_data)} characters"
-                )
-
                 image_bytes = base64.b64decode(image_data)
-                logger.info(f"Decoded image bytes, size: {len(image_bytes)} bytes")
 
                 # Save the image with the same name as the recording
                 image_path = f"{recording_path}.png"
                 with open(image_path, "wb") as f:
                     f.write(image_bytes)
 
-                logger.info(f"Successfully saved waterfall image: {image_path}")
+                logger.info(f"Saved waterfall image: {image_path}")
             else:
-                logger.warning(
-                    f"Invalid waterfall image data URL format. First 100 chars: {waterfall_image[:100]}"
-                )
+                logger.warning("Invalid waterfall image data URL format")
         except Exception as e:
             logger.error(f"Failed to save waterfall image: {str(e)}")
-            logger.exception(e)
             # Don't raise - recording stop should succeed even if image save fails
 
     return {"success": True}

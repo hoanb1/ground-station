@@ -8,6 +8,7 @@ import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ErrorIcon from '@mui/icons-material/Error';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import {
     VFO1Icon,
     VFO2Icon,
@@ -48,7 +49,8 @@ const WaterfallToolbar = ({
                               fftDataOverflow,
                               showRotatorDottedLines,
                               toggleRotatorDottedLines,
-                              setAutoScalePreset
+                              setAutoScalePreset,
+                              takeSnapshot
                           }) => {
     const { t } = useTranslation('waterfall');
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
@@ -239,6 +241,17 @@ const WaterfallToolbar = ({
                     }}
                 >
                     <RotatorLinesIcon/>
+                </IconButton>
+
+                {/* Waterfall snapshot button */}
+                <IconButton
+                    sx={{ borderRadius: 0 }}
+                    onClick={takeSnapshot}
+                    color="primary"
+                    title={t('toolbar.take_snapshot')}
+                    disabled={!isStreaming}
+                >
+                    <CameraAltIcon/>
                 </IconButton>
 
                 <IconButton

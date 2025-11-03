@@ -17,6 +17,7 @@
     "zoom_out": "Zoom out",
     "reset_zoom": "Reset zoom",
     "toggle_rotator_lines": "Toggle rotator event dotted lines",
+    "take_snapshot": "Take waterfall snapshot",
     "toggle_vfo": "Toggle VFO {{number}}",
     "fft_overflow": "FFT update rate overflow — incoming updates are being throttled"
   },

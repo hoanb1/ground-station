@@ -29,13 +29,13 @@ def register_socketio_handlers(sio):
 
     @sio.on("sdr_data")
     async def handle_sdr_data_requests(sid, cmd, data=None):
-        logger.info(f"Received SDR event from: {sid}, with cmd: {cmd}, and data: {data}")
+        logger.info(f"Received SDR event from: {sid}, with cmd: {cmd}")
         reply = await sdr_data_request_routing(sio, cmd, data, logger, sid)
         return reply
 
     @sio.on("data_request")
     async def handle_frontend_data_requests(sid, cmd, data=None):
-        logger.info(f"Received event from: {sid}, with cmd: {cmd}, and data: {data}")
+        logger.info(f"Received event from: {sid}, with cmd: {cmd}")
         reply = await data_request_routing(sio, cmd, data, logger, sid)
         return reply
 

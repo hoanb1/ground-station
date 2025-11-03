@@ -277,15 +277,12 @@ self.onmessage = function(eventMessage) {
             break;
 
         case 'captureWaterfallCanvas':
-            console.log('Worker: captureWaterfallCanvas command received');
             // Capture waterfall canvas as PNG
             if (waterfallCanvas && waterfallCtx) {
-                console.log('Worker: Canvas BEFORE capture - dimensions:', waterfallCanvas.width, 'x', waterfallCanvas.height);
                 try {
                     // Get the original canvas dimensions
                     const originalWidth = waterfallCanvas.width;
                     const originalHeight = waterfallCanvas.height;
-                    console.log('Worker: Original canvas dimensions:', originalWidth, 'x', originalHeight);
 
                     // Calculate reasonable output dimensions
                     // Max width: 2048px (reasonable for web display, good quality)
@@ -298,30 +295,21 @@ self.onmessage = function(eventMessage) {
 
                     if (originalWidth > maxWidth) {
                         targetWidth = maxWidth;
-                        console.log('Worker: Scaling width only from', originalWidth, 'x', originalHeight, 'to', targetWidth, 'x', targetHeight);
                     } else {
                         targetWidth = originalWidth;
-                        console.log('Worker: No scaling needed, using original dimensions');
                     }
 
                     // Create a temporary canvas with target dimensions
                     const tempCanvas = new OffscreenCanvas(targetWidth, targetHeight);
-                    console.log('Worker: Temporary canvas created with dimensions:', tempCanvas.width, 'x', tempCanvas.height);
                     const tempCtx = tempCanvas.getContext('2d');
 
                     // Draw the entire waterfall canvas scaled to the temp canvas
                     // This performs high-quality image scaling
-                    console.log('Worker: Drawing scaled image to temp canvas...');
                     tempCtx.drawImage(waterfallCanvas, 0, 0, originalWidth, originalHeight, 0, 0, targetWidth, targetHeight);
-                    console.log('Worker: Image scaled and drawn to temp canvas');
 
                     // Convert to blob (this works in workers)
-                    console.log('Worker: Converting canvas (', tempCanvas.width, 'x', tempCanvas.height, ') to blob...');
                     tempCanvas.convertToBlob({ type: 'image/png' })
                         .then(blob => {
-                            console.log('Worker: Blob created successfully - size:', blob.size, 'bytes, type:', blob.type);
-                            console.log('Worker: Original canvas was', originalWidth, 'x', originalHeight, ', saved as', targetWidth, 'x', targetHeight);
-                            console.log('Worker: Canvas AFTER capture - dimensions:', waterfallCanvas.width, 'x', waterfallCanvas.height);
                             // Send the blob back to main thread
                             // Main thread will convert to data URL
                             self.postMessage({
@@ -334,7 +322,6 @@ self.onmessage = function(eventMessage) {
                                     originalHeight: originalHeight
                                 }
                             });
-                            console.log('Worker: Blob sent to main thread with dimensions metadata');
                         })
                         .catch(err => {
                             console.error('Worker: Failed to convert canvas to blob:', err);

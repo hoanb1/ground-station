@@ -96,6 +96,24 @@ export const stopRecording = createAsyncThunk(
     }
 );
 
+export const saveWaterfallSnapshot = createAsyncThunk(
+    'waterfall/saveWaterfallSnapshot',
+    async ({socket, waterfallImage, snapshotName}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('sdr_data', 'save-waterfall-snapshot', {
+                waterfallImage,
+                snapshotName: snapshotName || ''
+            }, (response) => {
+                if (response && response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue(response?.error || 'Failed to save waterfall snapshot'));
+                }
+            });
+        });
+    }
+);
+
 const initialState = {
     fftDataOverflow: false,
     fftDataOverflowLimit: 20,

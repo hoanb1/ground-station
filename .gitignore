@@ -86,3 +86,6 @@ venv.bak/
 
 # IQ Recordings
 /backend/recordings/
+
+# Waterfall Snapshots
+/backend/snapshots/
