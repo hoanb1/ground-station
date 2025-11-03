@@ -3,20 +3,24 @@ import { Paper, Box, Stack, IconButton, Menu, MenuItem, ListItemIcon } from '@mu
 import StopIcon from '@mui/icons-material/Stop';
 import CheckIcon from '@mui/icons-material/Check';
 import PlayArrowIcon from '@mui/icons-material/PlayArrow';
-import AlignHorizontalLeftIcon from '@mui/icons-material/AlignHorizontalLeft';
-import AlignHorizontalRightIcon from '@mui/icons-material/AlignHorizontalRight';
-import AutoGraphIcon from '@mui/icons-material/AutoGraph';
-import HeightIcon from '@mui/icons-material/Height';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FullscreenExitIcon from '@mui/icons-material/FullscreenExit';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
-import RestartAltIcon from '@mui/icons-material/RestartAlt';
 import ErrorIcon from '@mui/icons-material/Error';
-import TimelineIcon from '@mui/icons-material/Timeline';
-import HorizontalRuleIcon from '@mui/icons-material/HorizontalRule';
-import TuneIcon from '@mui/icons-material/Tune';
-import { VFO1Icon, VFO2Icon, VFO3Icon, VFO4Icon } from '../common/custom-icons.jsx';
+import {
+    VFO1Icon,
+    VFO2Icon,
+    VFO3Icon,
+    VFO4Icon,
+    ToggleLeftPanelIcon,
+    ToggleRightPanelIcon,
+    AutoDBIcon,
+    AutoScaleOnceIcon,
+    SignalPresetsIcon,
+    ResetZoomIcon,
+    RotatorLinesIcon
+} from '../common/custom-icons.jsx';
 import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 
@@ -134,7 +138,7 @@ const WaterfallToolbar = ({
                         }
                     }}
                 >
-                    <AlignHorizontalLeftIcon/>
+                    <ToggleLeftPanelIcon/>
                 </IconButton>
 
                 <IconButton
@@ -148,7 +152,7 @@ const WaterfallToolbar = ({
                         }
                     }}
                 >
-                    <AlignHorizontalRightIcon/>
+                    <ToggleRightPanelIcon/>
                 </IconButton>
                 <IconButton
                     onClick={toggleAutoDBRange}
@@ -161,7 +165,7 @@ const WaterfallToolbar = ({
                         }
                     }}
                 >
-                    <AutoGraphIcon/>
+                    <AutoDBIcon/>
                 </IconButton>
 
                 <IconButton
@@ -171,7 +175,7 @@ const WaterfallToolbar = ({
                     color="primary"
                     title={t('toolbar.auto_scale_once')}
                 >
-                    <HeightIcon/>
+                    <AutoScaleOnceIcon/>
                 </IconButton>
 
                 <IconButton
@@ -181,7 +185,7 @@ const WaterfallToolbar = ({
                     color="primary"
                     title={t('toolbar.signal_strength_presets')}
                 >
-                    <TuneIcon />
+                    <SignalPresetsIcon />
                 </IconButton>
 
                 <IconButton
@@ -216,7 +220,7 @@ const WaterfallToolbar = ({
                     color="primary"
                     title={t('toolbar.reset_zoom')}
                 >
-                    <RestartAltIcon/>
+                    <ResetZoomIcon/>
                 </IconButton>
 
                 {/* New toggle button for rotator dotted lines */}
@@ -234,7 +238,7 @@ const WaterfallToolbar = ({
                         }
                     }}
                 >
-                    <HorizontalRuleIcon/>
+                    <RotatorLinesIcon/>
                 </IconButton>
 
                 <IconButton
