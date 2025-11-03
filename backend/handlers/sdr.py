@@ -224,6 +224,47 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 )
                 reply["success"] = False
 
+        elif cmd == "start-recording":
+            try:
+                from server.recorder import start_recording
+
+                sdr_id = data.get("selectedSDRId", None)
+                recording_name = data.get("recordingName", "")
+
+                result = start_recording(sdr_id, client_id, recording_name)
+                reply.update(result)
+
+            except Exception as e:
+                logger.error(f"Error starting recording: {str(e)}")
+                logger.exception(e)
+                await sio.emit(
+                    "sdr-error",
+                    {"message": f"Failed to start recording: {str(e)}"},
+                    room=client_id,
+                )
+                reply["success"] = False
+                reply["error"] = str(e)
+
+        elif cmd == "stop-recording":
+            try:
+                from server.recorder import stop_recording
+
+                sdr_id = data.get("selectedSDRId", None)
+
+                result = stop_recording(sdr_id, client_id)
+                reply.update(result)
+
+            except Exception as e:
+                logger.error(f"Error stopping recording: {str(e)}")
+                logger.exception(e)
+                await sio.emit(
+                    "sdr-error",
+                    {"message": f"Failed to stop recording: {str(e)}"},
+                    room=client_id,
+                )
+                reply["success"] = False
+                reply["error"] = str(e)
+
         else:
             logger.error(f"Unknown SDR command: {cmd}")
 

@@ -47,6 +47,7 @@ const SdrAccordion = ({
                           hasRtlAgc,
                           rtlAgc,
                           onRtlAgcChange,
+                          isRecording,
                       }) => {
     const { t } = useTranslation('waterfall');
 
@@ -140,13 +141,13 @@ const SdrAccordion = ({
                                 ))}
                             </Select>
                         </FormControl>
-                        <FormControl disabled={gettingSDRParameters}
+                        <FormControl disabled={gettingSDRParameters || isRecording}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
                             <InputLabel>{t('sdr.sample_rate')}</InputLabel>
                             <Select
-                                disabled={gettingSDRParameters}
+                                disabled={gettingSDRParameters || isRecording}
                                 size={'small'}
                                 value={sampleRateValues.includes(localSampleRate) ? localSampleRate : "none"}
                                 onChange={(e) => onSampleRateChange(e.target.value)}
@@ -170,13 +171,13 @@ const SdrAccordion = ({
                                 })}
                             </Select>
                         </FormControl>
-                        <FormControl disabled={gettingSDRParameters}
+                        <FormControl disabled={gettingSDRParameters || isRecording}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
                             <InputLabel>{t('sdr.antenna')}</InputLabel>
                             <Select
-                                disabled={gettingSDRParameters}
+                                disabled={gettingSDRParameters || isRecording}
                                 size={'small'}
                                 value={antennasList.rx.includes(selectedAntenna) ? selectedAntenna : "none"}
                                 onChange={(e) => onAntennaChange(e.target.value)}

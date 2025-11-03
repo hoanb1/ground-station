@@ -83,3 +83,6 @@ venv.bak/
 /backend/de421.bsp
 /backend/data/gs.db
 /backend/server/version-info.json
+
+# IQ Recordings
+/backend/recordings/

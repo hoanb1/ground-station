@@ -59,6 +59,10 @@ import {
     setSelectedVFOTab,
     setVfoInactive,
     setVfoActive,
+    startRecording,
+    stopRecording,
+    setRecordingName,
+    incrementRecordingDuration,
 } from './waterfall-slice.jsx';
 
 import {useSocket} from "../common/socket.jsx";
@@ -68,6 +72,7 @@ import FrequencyControlAccordion from "./settings-frequency.jsx";
 import SdrAccordion from "./settings-sdr.jsx";
 import FftAccordion from "./settings-fft.jsx";
 import VfoAccordion from "./settings-vfo.jsx";
+import RecordingAccordion from "./settings-recording.jsx";
 import { useTranslation } from 'react-i18next';
 
 const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
@@ -119,6 +124,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         vfoActive,
         vfoColors,
         fftAveraging,
+        isRecording,
+        recordingDuration,
+        recordingName,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -384,17 +392,63 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         }
     }, [selectedVFO, maxVFOMarkers, selectedVFOTab, dispatch]);
 
+    // Recording timer
+    useEffect(() => {
+        let intervalId;
+        if (isRecording) {
+            intervalId = setInterval(() => {
+                dispatch(incrementRecordingDuration());
+            }, 1000);
+        }
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
+    }, [isRecording, dispatch]);
+
+    const handleStartRecording = () => {
+        dispatch(startRecording({ socket, recordingName, selectedSDRId }))
+            .unwrap()
+            .catch((error) => {
+                toast.error(`Failed to start recording: ${error}`);
+            });
+    };
+
+    const handleStopRecording = () => {
+        dispatch(stopRecording({ socket, selectedSDRId }))
+            .unwrap()
+            .catch((error) => {
+                toast.error(`Failed to stop recording: ${error}`);
+            });
+    };
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>{t('title')}</TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
+
+                <RecordingAccordion
+                    expanded={expandedPanels.includes('recording')}
+                    onAccordionChange={handleAccordionChange('recording')}
+                    isRecording={isRecording}
+                    recordingDuration={recordingDuration}
+                    recordingName={recordingName}
+                    onRecordingNameChange={(name) => dispatch(setRecordingName(name))}
+                    onStartRecording={handleStartRecording}
+                    onStopRecording={handleStopRecording}
+                    isStreaming={isStreaming}
+                    selectedSDRId={selectedSDRId}
+                />
 
                 <FrequencyControlAccordion
                     expanded={expandedPanels.includes('freqControl')}
                     onAccordionChange={handleAccordionChange('freqControl')}
                     centerFrequency={centerFrequency}
                     onCenterFrequencyChange={(newFrequency) => {
-                        dispatch(updateCenterFrequency(newFrequency));
+                        if (!isRecording) {
+                            dispatch(updateCenterFrequency(newFrequency));
+                        }
                     }}
                     availableTransmitters={availableTransmitters}
                     getProperTransmitterId={getProperTransmitterId}
@@ -403,6 +457,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     onOffsetModeChange={handleOffsetModeChange}
                     selectedOffsetValue={selectedOffsetValue}
                     onOffsetValueChange={handleOffsetValueChange}
+                    isRecording={isRecording}
                 />
 
                 <SdrAccordion
@@ -422,8 +477,10 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     sampleRateValues={sampleRateValues}
                     localSampleRate={localSampleRate}
                     onSampleRateChange={(value) => {
-                        setLocalSampleRate(value);
-                        dispatch(updateSampleRate(value));
+                        if (!isRecording) {
+                            setLocalSampleRate(value);
+                            dispatch(updateSampleRate(value));
+                        }
                     }}
                     antennasList={antennasList}
                     selectedAntenna={selectedAntenna}
@@ -440,6 +497,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     hasRtlAgc={hasRtlAgc}
                     rtlAgc={rtlAgc}
                     onRtlAgcChange={(checked) => dispatch(updateRtlAgc(checked))}
+                    isRecording={isRecording}
                 />
 
                 <FftAccordion

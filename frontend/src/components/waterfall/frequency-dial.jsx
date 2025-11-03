@@ -29,7 +29,8 @@ const FrequencyDisplay = ({
                               integerDigits = 8, // prop to configure the number of integer digits
                               decimalDigits = 3, // prop to configure decimal digits
                               size = 'medium', // prop to control size - can be 'small', 'medium', 'large' or a number
-                              hideHzDigits = false // new prop to show disabled zeros instead of Hz digits
+                              hideHzDigits = false, // new prop to show disabled zeros instead of Hz digits
+                              disabled = false // prop to disable the entire component
                           }) => {
     const [frequency, setFrequency] = useState(initialFrequency);
 
@@ -91,7 +92,8 @@ const FrequencyDisplay = ({
     };
 
     // Create a single digit with controls
-    const renderDigit = (digit, position, index, disabled = false) => {
+    const renderDigit = (digit, position, index, digitDisabled = false) => {
+        const isDisabled = disabled || digitDisabled;
         return (
             <Box
                 key={`digit-${index}`}
@@ -104,29 +106,31 @@ const FrequencyDisplay = ({
             >
                 <IconButton
                     size={iconSize}
-                    onClick={() => !disabled && adjustDigit(position, 1)}
-                    sx={{ 
+                    onClick={() => !isDisabled && adjustDigit(position, 1)}
+                    disabled={isDisabled}
+                    sx={{
                         p: 0,
-                        visibility: disabled ? 'hidden' : 'visible'
+                        visibility: isDisabled ? 'hidden' : 'visible'
                     }}
                 >
                     <ArrowDropUpIcon sx={iconSx} />
                 </IconButton>
-                <Typography 
-                    sx={{ 
+                <Typography
+                    sx={{
                         fontFamily: 'monospace',
                         fontSize: fontSizes.digits,
-                        color: disabled ? 'text.disabled' : 'text.primary'
+                        color: isDisabled ? 'text.disabled' : 'text.primary'
                     }}
                 >
                     {digit}
                 </Typography>
                 <IconButton
                     size={iconSize}
-                    onClick={() => !disabled && adjustDigit(position, -1)}
-                    sx={{ 
+                    onClick={() => !isDisabled && adjustDigit(position, -1)}
+                    disabled={isDisabled}
+                    sx={{
                         p: 0,
-                        visibility: disabled ? 'hidden' : 'visible'
+                        visibility: isDisabled ? 'hidden' : 'visible'
                     }}
                 >
                     <ArrowDropDownIcon sx={iconSx} />
@@ -148,10 +152,11 @@ const FrequencyDisplay = ({
                 }}
             >
                 <Box sx={{ height: 24 * scaleFactor }}></Box>
-                <Typography 
-                    sx={{ 
+                <Typography
+                    sx={{
                         fontFamily: 'monospace',
-                        fontSize: fontSizes.digits
+                        fontSize: fontSizes.digits,
+                        color: disabled ? 'text.disabled' : 'text.primary'
                     }}
                 >
                     {separator}
@@ -252,7 +257,7 @@ const FrequencyDisplay = ({
                                 <Typography
                                     sx={{
                                         fontSize: fontSizes.unitLabel,
-                                        color: 'text.secondary',
+                                        color: disabled ? 'text.disabled' : 'text.secondary',
                                         mt: 0.5 * scaleFactor,
                                         mb: 1 * scaleFactor,
                                         fontFamily: 'monospace'
@@ -283,7 +288,10 @@ const FrequencyDisplay = ({
             flexDirection: 'column',
             alignItems: 'center',
             my: 0,
-            width: '100%'
+            width: '100%',
+            opacity: disabled ? 0.5 : 1,
+            pointerEvents: disabled ? 'none' : 'auto',
+            transition: 'opacity 0.3s ease'
         }}>
             <Box sx={{
                 display: 'flex',

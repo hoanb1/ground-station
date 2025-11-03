@@ -60,6 +60,41 @@ export const updateVFOParameters = createAsyncThunk(
     }
 );
 
+export const startRecording = createAsyncThunk(
+    'waterfall/startRecording',
+    async ({socket, recordingName, selectedSDRId}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('sdr_data', 'start-recording', {
+                recordingName,
+                selectedSDRId
+            }, (response) => {
+                if (response && response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue(response?.error || 'Failed to start recording'));
+                }
+            });
+        });
+    }
+);
+
+export const stopRecording = createAsyncThunk(
+    'waterfall/stopRecording',
+    async ({socket, selectedSDRId}, {rejectWithValue}) => {
+        return new Promise((resolve, reject) => {
+            socket.emit('sdr_data', 'stop-recording', {
+                selectedSDRId
+            }, (response) => {
+                if (response && response.success) {
+                    resolve(response.data);
+                } else {
+                    reject(rejectWithValue(response?.error || 'Failed to stop recording'));
+                }
+            });
+        });
+    }
+);
+
 const initialState = {
     fftDataOverflow: false,
     fftDataOverflowLimit: 20,
@@ -113,7 +148,7 @@ const initialState = {
     waterFallPositionX: 0,
     showRightSideWaterFallAccessories: true,
     showLeftSideWaterFallAccessories: true,
-    expandedPanels: ['sdr', 'freqControl', 'fft', 'vfo'],
+    expandedPanels: ['recording', 'sdr', 'freqControl', 'fft', 'vfo'],
     selectedSDRId: "none",
     selectedTransmitterId: "none",
     startStreamingLoading: false,
@@ -151,6 +186,10 @@ const initialState = {
     selectedVFOTab: 0,
     showRotatorDottedLines: true,
     autoScalePreset: 'weak',
+    // Recording state
+    isRecording: false,
+    recordingDuration: 0,
+    recordingName: '',
 };
 
 // Add these new reducers to your createSlice
@@ -330,6 +369,18 @@ export const waterfallSlice = createSlice({
         },
         setAutoScalePreset: (state, action) => {
             state.autoScalePreset = action.payload;
+        },
+        setIsRecording: (state, action) => {
+            state.isRecording = action.payload;
+        },
+        setRecordingDuration: (state, action) => {
+            state.recordingDuration = action.payload;
+        },
+        setRecordingName: (state, action) => {
+            state.recordingName = action.payload;
+        },
+        incrementRecordingDuration: (state) => {
+            state.recordingDuration += 1;
         }
     },
     extraReducers: (builder) => {
@@ -361,6 +412,27 @@ export const waterfallSlice = createSlice({
                 // Successfully updated VFO parameters
             })
             .addCase(updateVFOParameters.rejected, (state, action) => {
+                state.errorMessage = action.payload;
+            })
+            .addCase(startRecording.pending, (state) => {
+                state.errorMessage = null;
+            })
+            .addCase(startRecording.fulfilled, (state, action) => {
+                state.isRecording = true;
+                state.recordingDuration = 0;
+            })
+            .addCase(startRecording.rejected, (state, action) => {
+                state.isRecording = false;
+                state.errorMessage = action.payload;
+            })
+            .addCase(stopRecording.pending, (state) => {
+                state.errorMessage = null;
+            })
+            .addCase(stopRecording.fulfilled, (state, action) => {
+                state.isRecording = false;
+                state.recordingDuration = 0;
+            })
+            .addCase(stopRecording.rejected, (state, action) => {
                 state.errorMessage = action.payload;
             });
     }
@@ -423,6 +495,10 @@ export const {
     setSelectedVFOTab,
     setShowRotatorDottedLines,
     setAutoScalePreset,
+    setIsRecording,
+    setRecordingDuration,
+    setRecordingName,
+    incrementRecordingDuration,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

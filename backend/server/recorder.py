@@ -1,0 +1,106 @@
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+
+import logging
+import os
+from datetime import datetime
+
+from demodulators.iqrecorder import IQRecorder
+from sdr.sdrprocessmanager import sdr_process_manager
+
+logger = logging.getLogger("recorder")
+
+
+def start_recording(sdr_id: str, client_id: str, recording_name: str = "") -> dict:
+    """
+    Start IQ recording for a given SDR and client.
+
+    Args:
+        sdr_id: SDR device identifier
+        client_id: Client session identifier
+        recording_name: Optional custom recording name (auto-generated if empty)
+
+    Returns:
+        dict: Result with 'success' (bool), 'data' or 'error' fields
+
+    Raises:
+        Exception: If SDR is not streaming or recording fails to start
+    """
+    # Validate SDR is streaming
+    if not sdr_process_manager.is_sdr_process_running(sdr_id):
+        raise Exception(f"SDR {sdr_id} is not streaming. Start streaming before recording.")
+
+    # Generate timestamp
+    now = datetime.now()
+    date = now.strftime("%Y%m%d")
+    time_str = now.strftime("%H%M%S")
+    timestamp = f"{date}_{time_str}"
+
+    # Use default name if not provided
+    if not recording_name or not recording_name.strip():
+        recording_name = "unknown_recording"
+
+    # Append timestamp to recording name
+    recording_name_with_timestamp = f"{recording_name}_{timestamp}"
+
+    # Create recordings directory if it doesn't exist
+    # Get the backend directory (parent of server/)
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    recordings_dir = os.path.join(backend_dir, "recordings")
+    os.makedirs(recordings_dir, exist_ok=True)
+
+    recording_path = os.path.join(recordings_dir, recording_name_with_timestamp)
+
+    # Start recorder (uses same pattern as demodulators)
+    result = sdr_process_manager.start_demodulator(
+        sdr_id, client_id, IQRecorder, None, recording_path=recording_path
+    )
+
+    if result:
+        logger.info(f"Started IQ recording for client {client_id}: {recording_path}")
+        return {"success": True, "data": {"recording_path": recording_path}}
+    else:
+        raise Exception("Failed to start IQ recorder")
+
+
+def stop_recording(sdr_id: str, client_id: str) -> dict:
+    """
+    Stop IQ recording for a given SDR and client.
+
+    Args:
+        sdr_id: SDR device identifier
+        client_id: Client session identifier
+
+    Returns:
+        dict: Result with 'success' (bool), 'data' or 'error' fields
+
+    Raises:
+        Exception: If no active recording found or recorder type is invalid
+    """
+    # Get the active demodulator (which should be an IQ recorder)
+    recorder = sdr_process_manager.get_active_demodulator(sdr_id, client_id)
+
+    if not recorder:
+        raise Exception("No active recording found")
+
+    if not isinstance(recorder, IQRecorder):
+        raise Exception("Active demodulator is not an IQ recorder")
+
+    # Stop the recorder (this will finalize the SigMF metadata)
+    sdr_process_manager.stop_demodulator(sdr_id, client_id)
+    logger.info(f"Stopped IQ recording for client {client_id}")
+
+    return {"success": True}
