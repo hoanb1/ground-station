@@ -67,13 +67,52 @@ const MaintenanceForm = () => {
         localStorage.setItem(waterfallGridLayoutName, null);
     }
 
-    const clearSatelliteDataLocalStorage = () => {
-        localStorage.setItem('target-satellite-noradid', null);
-        localStorage.setItem('overview-selected-satellites', null);
+    const clearReduxPersistentState = () => {
+        // Clear all Redux persist keys
+        const persistKeys = [
+            'persist:waterfall',
+            'persist:rigs',
+            'persist:rotators',
+            'persist:tleSources',
+            'persist:satellites',
+            'persist:satelliteGroups',
+            'persist:location',
+            'persist:synchronize',
+            'persist:preferences',
+            'persist:targetSatTrack',
+            'persist:overviewSatTrack',
+            'persist:dashboard',
+            'persist:weather',
+            'persist:camera',
+            'persist:sdr',
+            'persist:version',
+            'persist:filebrowser',
+            'persist:root'
+        ];
+
+        persistKeys.forEach(key => {
+            localStorage.removeItem(key);
+        });
     }
 
-    const clearReduxPersistentState = () => {
-        localStorage.setItem('persist:root', null);
+    const clearFileBrowserPersist = () => {
+        localStorage.removeItem('persist:filebrowser');
+    }
+
+    const clearWaterfallPersist = () => {
+        localStorage.removeItem('persist:waterfall');
+    }
+
+    const clearPreferencesPersist = () => {
+        localStorage.removeItem('persist:preferences');
+    }
+
+    const clearOverviewSatTrackPersist = () => {
+        localStorage.removeItem('persist:overviewSatTrack');
+    }
+
+    const clearCameraPersist = () => {
+        localStorage.removeItem('persist:camera');
     }
 
     // Service restart function
@@ -417,21 +456,97 @@ const MaintenanceForm = () => {
                             {t('maintenance.clear_layout_button')}
                         </Button>
                     </Grid>
-                    <Grid size={8}>
-                        {t('maintenance.clear_satellite_data')}
+
+                    <Grid size={16}>
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                            Redux Persistent Settings
+                        </Typography>
                     </Grid>
-                    <Grid size={8}>
-                        <Button variant="contained" color="warning" onClick={clearSatelliteDataLocalStorage}>
-                            {t('maintenance.clear_satellite_data_button')}
-                        </Button>
+
+                    <Grid size={16}>
+                        <Alert severity="warning" sx={{ mb: 2 }}>
+                            <AlertTitle>Clear All Redux Settings</AlertTitle>
+                            This will reset all application settings below to their defaults. Use individual buttons to clear specific settings only.
+                        </Alert>
                     </Grid>
 
                     <Grid size={8}>
                         {t('maintenance.clear_redux')}
+                        <Typography variant="body2" color="text.secondary">
+                            Clears all Redux persistent data (all settings below)
+                        </Typography>
                     </Grid>
                     <Grid size={8}>
-                        <Button variant="contained" color="warning" onClick={clearReduxPersistentState}>
+                        <Button variant="contained" color="error" onClick={clearReduxPersistentState}>
                             {t('maintenance.clear_redux_button')}
+                        </Button>
+                    </Grid>
+
+                    <Grid size={16}>
+                        <Divider sx={{ my: 2 }} />
+                        <Typography variant="body2" color="text.secondary" gutterBottom>
+                            Or clear individual settings:
+                        </Typography>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Clear File Browser Settings
+                        <Typography variant="body2" color="text.secondary">
+                            Resets page size, sorting, filters, and view mode
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Button variant="outlined" color="warning" onClick={clearFileBrowserPersist}>
+                            Clear File Browser
+                        </Button>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Clear Waterfall Settings
+                        <Typography variant="body2" color="text.secondary">
+                            Resets frequency, gain, sample rate, colormap, FFT settings, VFO markers
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Button variant="outlined" color="warning" onClick={clearWaterfallPersist}>
+                            Clear Waterfall
+                        </Button>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Clear Preferences
+                        <Typography variant="body2" color="text.secondary">
+                            Resets all user preferences like timezone, theme, etc.
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Button variant="outlined" color="warning" onClick={clearPreferencesPersist}>
+                            Clear Preferences
+                        </Button>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Clear Overview Satellite Selection
+                        <Typography variant="body2" color="text.secondary">
+                            Resets selected satellite group and satellite in overview page
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Button variant="outlined" color="warning" onClick={clearOverviewSatTrackPersist}>
+                            Clear Overview Selection
+                        </Button>
+                    </Grid>
+
+                    <Grid size={8}>
+                        Clear Camera Selection
+                        <Typography variant="body2" color="text.secondary">
+                            Resets selected camera and camera ID
+                        </Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <Button variant="outlined" color="warning" onClick={clearCameraPersist}>
+                            Clear Camera
                         </Button>
                     </Grid>
                 </Grid>
