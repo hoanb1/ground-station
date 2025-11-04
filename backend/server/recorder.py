@@ -92,20 +92,20 @@ def stop_recording(sdr_id: str, client_id: str, waterfall_image: Optional[str] =
     Raises:
         Exception: If no active recording found or recorder type is invalid
     """
-    # Get the active demodulator (which should be an IQ recorder)
-    recorder = sdr_process_manager.get_active_demodulator(sdr_id, client_id)
+    # Get the active recorder (stored separately from demodulators)
+    recorder = sdr_process_manager.get_active_recorder(sdr_id, client_id)
 
     if not recorder:
         raise Exception("No active recording found")
 
     if not isinstance(recorder, IQRecorder):
-        raise Exception("Active demodulator is not an IQ recorder")
+        raise Exception("Active recorder is not an IQ recorder")
 
     # Get the recording path before stopping
     recording_path = recorder.recording_path
 
     # Stop the recorder (this will finalize the SigMF metadata)
-    sdr_process_manager.stop_demodulator(sdr_id, client_id)
+    sdr_process_manager.stop_recorder(sdr_id, client_id)
     logger.info(f"Stopped IQ recording for client {client_id}")
 
     # Save the waterfall image if provided

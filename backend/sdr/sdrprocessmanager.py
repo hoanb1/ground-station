@@ -377,6 +377,7 @@ class SDRProcessManager:
                 "stop_event": stop_event,
                 "clients": {client_id},
                 "demodulators": {},  # Will store demodulator threads per session
+                "recorders": {},  # Will store recorder threads per session (separate from demodulators)
             }
 
             # Send initial configuration
@@ -422,6 +423,9 @@ class SDRProcessManager:
 
                 # Stop any active demodulator for this client
                 self.stop_demodulator(sdr_id, client_id)
+
+                # Stop any active recorder for this client
+                self.stop_recorder(sdr_id, client_id)
 
                 self.logger.info(f"Removed client {client_id} from SDR process {sdr_id}")
 
@@ -684,8 +688,8 @@ class SDRProcessManager:
         Args:
             sdr_id: Device identifier
             session_id: Session identifier (client session ID)
-            demodulator_class: The demodulator class to instantiate (e.g., FMDemodulator, AMDemodulator)
-            audio_queue: Queue where demodulated audio will be placed
+            demodulator_class: The demodulator class to instantiate (e.g., FMDemodulator, AMDemodulator, IQRecorder)
+            audio_queue: Queue where demodulated audio will be placed (None for IQRecorder)
             **kwargs: Additional arguments to pass to the demodulator constructor
 
         Returns:
@@ -697,11 +701,24 @@ class SDRProcessManager:
 
         process_info = self.processes[sdr_id]
 
-        # Check if demodulator already exists for this session
-        if session_id in process_info.get("demodulators", {}):
-            existing_demod = process_info["demodulators"][session_id]
+        # Import IQRecorder to check if this is a recorder
+        from demodulators.iqrecorder import IQRecorder
+
+        is_recorder = demodulator_class == IQRecorder
+
+        # Choose the appropriate storage based on whether this is a recorder or demodulator
+        storage_key = "recorders" if is_recorder else "demodulators"
+
+        # Check if demodulator/recorder already exists for this session
+        if session_id in process_info.get(storage_key, {}):
+            existing_entry = process_info[storage_key][session_id]
+            existing = (
+                existing_entry.get("instance")
+                if isinstance(existing_entry, dict)
+                else existing_entry
+            )
             # If same type, just return success (already running)
-            if isinstance(existing_demod, demodulator_class):
+            if isinstance(existing, demodulator_class):
                 self.logger.debug(
                     f"{demodulator_class.__name__} already running for session {session_id}"
                 )
@@ -709,9 +726,12 @@ class SDRProcessManager:
             else:
                 # Different type, stop the old one first
                 self.logger.info(
-                    f"Switching from {type(existing_demod).__name__} to {demodulator_class.__name__} for session {session_id}"
+                    f"Switching from {type(existing).__name__} to {demodulator_class.__name__} for session {session_id}"
                 )
-                self.stop_demodulator(sdr_id, session_id)
+                if is_recorder:
+                    self.stop_recorder(sdr_id, session_id)
+                else:
+                    self.stop_demodulator(sdr_id, session_id)
 
         try:
             # Get the IQ broadcaster from the process info
@@ -720,17 +740,24 @@ class SDRProcessManager:
                 self.logger.error(f"No IQ broadcaster found for device {sdr_id}")
                 return False
 
-            # Subscribe to the broadcaster to get a dedicated queue for this demodulator
-            subscriber_queue = broadcaster.subscribe(session_id, maxsize=3)
+            # Create a unique subscription key to prevent sharing queues between recorder and demodulator
+            # Recorders use "recorder:<session_id>", demodulators use "demod:<session_id>"
+            subscription_key = f"{'recorder' if is_recorder else 'demod'}:{session_id}"
 
-            # Create and start the demodulator with the subscriber queue
+            # Subscribe to the broadcaster to get a dedicated queue for this demodulator/recorder
+            subscriber_queue = broadcaster.subscribe(subscription_key, maxsize=3)
+
+            # Create and start the demodulator/recorder with the subscriber queue
             demodulator = demodulator_class(subscriber_queue, audio_queue, session_id, **kwargs)
             demodulator.start()
 
-            # Store reference
-            if "demodulators" not in process_info:
-                process_info["demodulators"] = {}
-            process_info["demodulators"][session_id] = demodulator
+            # Store reference in the appropriate storage along with subscription key for cleanup
+            if storage_key not in process_info:
+                process_info[storage_key] = {}
+            process_info[storage_key][session_id] = {
+                "instance": demodulator,
+                "subscription_key": subscription_key,
+            }
 
             self.logger.info(
                 f"Started {demodulator_class.__name__} for session {session_id} on device {sdr_id}"
@@ -763,15 +790,23 @@ class SDRProcessManager:
             return False
 
         try:
-            demodulator = demodulators[session_id]
+            demod_entry = demodulators[session_id]
+            # Handle both old format (direct instance) and new format (dict with instance + key)
+            if isinstance(demod_entry, dict):
+                demodulator = demod_entry["instance"]
+                subscription_key = demod_entry["subscription_key"]
+            else:
+                demodulator = demod_entry
+                subscription_key = session_id  # Fallback for old format
+
             demod_name = type(demodulator).__name__
             demodulator.stop()
             demodulator.join(timeout=2.0)  # Wait up to 2 seconds
 
-            # Unsubscribe from the broadcaster
+            # Unsubscribe from the broadcaster using the correct subscription key
             broadcaster = process_info.get("iq_broadcaster")
             if broadcaster:
-                broadcaster.unsubscribe(session_id)
+                broadcaster.unsubscribe(subscription_key)
 
             del demodulators[session_id]
             self.logger.info(f"Stopped {demod_name} for session {session_id}")
@@ -779,6 +814,53 @@ class SDRProcessManager:
 
         except Exception as e:
             self.logger.error(f"Error stopping demodulator: {str(e)}")
+            return False
+
+    def stop_recorder(self, sdr_id, session_id):
+        """
+        Stop a recorder thread for a specific session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+
+        Returns:
+            bool: True if stopped successfully, False otherwise
+        """
+        if sdr_id not in self.processes:
+            return False
+
+        process_info = self.processes[sdr_id]
+        recorders = process_info.get("recorders", {})
+
+        if session_id not in recorders:
+            return False
+
+        try:
+            recorder_entry = recorders[session_id]
+            # Handle both old format (direct instance) and new format (dict with instance + key)
+            if isinstance(recorder_entry, dict):
+                recorder = recorder_entry["instance"]
+                subscription_key = recorder_entry["subscription_key"]
+            else:
+                recorder = recorder_entry
+                subscription_key = session_id  # Fallback for old format
+
+            recorder_name = type(recorder).__name__
+            recorder.stop()
+            recorder.join(timeout=2.0)  # Wait up to 2 seconds
+
+            # Unsubscribe from the broadcaster using the correct subscription key
+            broadcaster = process_info.get("iq_broadcaster")
+            if broadcaster:
+                broadcaster.unsubscribe(subscription_key)
+
+            del recorders[session_id]
+            self.logger.info(f"Stopped {recorder_name} for session {session_id}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error stopping recorder: {str(e)}")
             return False
 
     def get_active_demodulator(self, sdr_id, session_id):
@@ -797,7 +879,41 @@ class SDRProcessManager:
 
         process_info = self.processes[sdr_id]
         demodulators = process_info.get("demodulators", {})
-        return demodulators.get(session_id)
+        demod_entry = demodulators.get(session_id)
+
+        if demod_entry is None:
+            return None
+
+        # Handle both old format (direct instance) and new format (dict with instance)
+        if isinstance(demod_entry, dict):
+            return demod_entry.get("instance")
+        return demod_entry
+
+    def get_active_recorder(self, sdr_id, session_id):
+        """
+        Get the active recorder for a session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+
+        Returns:
+            Recorder instance or None if not found
+        """
+        if sdr_id not in self.processes:
+            return None
+
+        process_info = self.processes[sdr_id]
+        recorders = process_info.get("recorders", {})
+        recorder_entry = recorders.get(session_id)
+
+        if recorder_entry is None:
+            return None
+
+        # Handle both old format (direct instance) and new format (dict with instance)
+        if isinstance(recorder_entry, dict):
+            return recorder_entry.get("instance")
+        return recorder_entry
 
     def flush_all_demodulator_queues(self, sdr_id):
         """

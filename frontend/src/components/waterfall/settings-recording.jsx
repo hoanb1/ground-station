@@ -147,7 +147,7 @@ const RecordingAccordion = ({
 
                     <Box
                         sx={{
-                            p: isRecording ? 2 : 1,
+                            p: 2,
                             backgroundColor: isRecording ? 'rgba(255, 0, 0, 0.05)' : 'rgba(128, 128, 128, 0.05)',
                             borderRadius: 1,
                             border: isRecording ? '1px solid rgba(255, 0, 0, 0.3)' : '1px solid rgba(128, 128, 128, 0.2)',
@@ -155,14 +155,15 @@ const RecordingAccordion = ({
                             transition: 'all 0.3s ease',
                         }}
                     >
-                        <Stack spacing={isRecording ? 1 : 0.5}>
-                            {isRecording && (
-                                <Typography variant="body2" color="text.secondary">
-                                    {t('recording.recording_in_progress', 'Recording in progress...')}
-                                </Typography>
-                            )}
+                        <Stack spacing={1}>
+                            <Typography variant="body2" color="text.secondary">
+                                {isRecording
+                                    ? t('recording.recording_in_progress', 'Recording in progress...')
+                                    : t('recording.not_recording', 'Not recording')
+                                }
+                            </Typography>
                             <Typography
-                                variant={isRecording ? "h4" : "h6"}
+                                variant="h4"
                                 sx={{
                                     fontFamily: 'monospace',
                                     textAlign: 'center',
@@ -171,19 +172,6 @@ const RecordingAccordion = ({
                             >
                                 {formatDuration(recordingDuration)}
                             </Typography>
-                            {isRecording && (
-                                <Typography
-                                    variant="caption"
-                                    color="text.secondary"
-                                    sx={{
-                                        textAlign: 'center',
-                                        wordBreak: 'break-all',
-                                        fontFamily: 'monospace'
-                                    }}
-                                >
-                                    {recordingStartFilename}.sigmf-data
-                                </Typography>
-                            )}
                         </Stack>
                     </Box>
 
