@@ -161,7 +161,7 @@ const versionInfoConfig = {
 const fileBrowserPersistConfig = {
     key: 'filebrowser',
     storage,
-    whitelist: ['sortBy', 'sortOrder', 'viewMode']
+    whitelist: ['sortBy', 'sortOrder', 'viewMode', 'pageSize']
 };
 
 
