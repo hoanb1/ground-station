@@ -65,6 +65,9 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         frequencyScaleHeight,
         autoDBRange,
         bookmarks,
+        isRecording,
+        isStreaming,
+        selectedSDRId,
     } = useSelector((state) => state.waterfall);
 
     // Add state for bookmarks
@@ -485,6 +488,77 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                         zoomScale={scaleRef.current}
                         panOffset={positionXRef.current}
                     />
+                    {/* Recording indicator overlay */}
+                    {isRecording && (
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: 8,
+                                left: 8,
+                                backgroundColor: 'rgba(255, 0, 0, 0.85)',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                fontSize: '0.75rem',
+                                fontWeight: 'bold',
+                                zIndex: 1000,
+                                animation: 'pulse 2s ease-in-out infinite',
+                                '@keyframes pulse': {
+                                    '0%, 100%': { opacity: 1 },
+                                    '50%': { opacity: 0.7 },
+                                },
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 8,
+                                    height: 8,
+                                    borderRadius: '50%',
+                                    backgroundColor: 'white',
+                                }}
+                            />
+                            REC
+                        </Box>
+                    )}
+                    {/* Playback indicator overlay */}
+                    {isStreaming && selectedSDRId === 'sigmf-playback' && (
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: 8,
+                                left: 8,
+                                backgroundColor: 'rgba(33, 150, 243, 0.85)',
+                                color: 'white',
+                                padding: '4px 8px',
+                                borderRadius: '4px',
+                                display: 'flex',
+                                alignItems: 'center',
+                                gap: 0.5,
+                                fontSize: '0.75rem',
+                                fontWeight: 'bold',
+                                zIndex: 1000,
+                                animation: 'pulse 2s ease-in-out infinite',
+                                '@keyframes pulse': {
+                                    '0%, 100%': { opacity: 1 },
+                                    '50%': { opacity: 0.7 },
+                                },
+                            }}
+                        >
+                            <Box
+                                sx={{
+                                    width: 0,
+                                    height: 0,
+                                    borderLeft: '6px solid white',
+                                    borderTop: '4px solid transparent',
+                                    borderBottom: '4px solid transparent',
+                                }}
+                            />
+                            PLAYBACK
+                        </Box>
+                    )}
                 </Box>
 
                 <FrequencyScale

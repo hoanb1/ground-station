@@ -95,7 +95,7 @@ const RecordingAccordion = ({
         onRecordingNameChange(value);
     };
 
-    const canStartRecording = isStreaming && !isRecording && selectedSDRId !== "none";
+    const canStartRecording = isStreaming && !isRecording && selectedSDRId !== "none" && selectedSDRId !== "sigmf-playback";
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
@@ -107,7 +107,7 @@ const RecordingAccordion = ({
                 aria-controls="panel-recording-content"
                 id="panel-recording-header"
             >
-                <Stack direction="row" spacing={1} alignItems="center" width="100%">
+                <Stack direction="row" spacing={1} alignItems="center" width="100%" justifyContent="space-between">
                     <Typography component="span">
                         {t('recording.title', 'IQ Recording')}
                     </Typography>
@@ -123,6 +123,7 @@ const RecordingAccordion = ({
                                     '0%, 100%': { opacity: 1 },
                                     '50%': { opacity: 0.6 },
                                 },
+                                fontWeight: 'bold',
                             }}
                         />
                     )}
@@ -145,35 +146,7 @@ const RecordingAccordion = ({
                         placeholder="unknown_recording"
                     />
 
-                    <Box
-                        sx={{
-                            p: 2,
-                            backgroundColor: isRecording ? 'rgba(255, 0, 0, 0.05)' : 'rgba(128, 128, 128, 0.05)',
-                            borderRadius: 1,
-                            border: isRecording ? '1px solid rgba(255, 0, 0, 0.3)' : '1px solid rgba(128, 128, 128, 0.2)',
-                            opacity: isRecording ? 1 : 0.5,
-                            transition: 'all 0.3s ease',
-                        }}
-                    >
-                        <Stack spacing={1}>
-                            <Typography variant="body2" color="text.secondary">
-                                {isRecording
-                                    ? t('recording.recording_in_progress', 'Recording in progress...')
-                                    : t('recording.not_recording', 'Not recording')
-                                }
-                            </Typography>
-                            <Typography
-                                variant="h4"
-                                sx={{
-                                    fontFamily: 'monospace',
-                                    textAlign: 'center',
-                                    transition: 'font-size 0.3s ease'
-                                }}
-                            >
-                                {formatDuration(recordingDuration)}
-                            </Typography>
-                        </Stack>
-                    </Box>
+
 
                     <Stack direction="row" spacing={1}>
                         <Button
