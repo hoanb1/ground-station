@@ -92,5 +92,23 @@
   },
   "statusbar": {
     "stopped": "stopped"
+  },
+  "recording": {
+    "title": "IQ Recording",
+    "filename": "Recording Name",
+    "start": "RECORD",
+    "stop": "Stop"
+  },
+  "playback": {
+    "title": "IQ Playback",
+    "select_recording": "Select a recording to playback",
+    "refresh": "Refresh recordings",
+    "no_recordings": "No recordings available. Record some IQ data first!",
+    "sort_by": "Sort By",
+    "sort_modified": "Date Modified",
+    "sort_created": "Date Created",
+    "sort_name": "Name",
+    "sort_size": "Size",
+    "sort_sample_rate": "Sample Rate"
   }
 }

@@ -193,18 +193,18 @@ const PlaybackAccordion = ({
                     </Stack>
 
                     <FormControl size="small" fullWidth>
-                        <InputLabel>Sort By</InputLabel>
+                        <InputLabel>{t('playback.sort_by', 'Sort By')}</InputLabel>
                         <Select
                             value={sortBy}
-                            label="Sort By"
+                            label={t('playback.sort_by', 'Sort By')}
                             onChange={handleSortChange}
                             startAdornment={<SortIcon sx={{ mr: 1, ml: 1, color: 'action.active' }} />}
                         >
-                            <MenuItem value="modified">Date Modified</MenuItem>
-                            <MenuItem value="created">Date Created</MenuItem>
-                            <MenuItem value="name">Name</MenuItem>
-                            <MenuItem value="size">Size</MenuItem>
-                            <MenuItem value="sample_rate">Sample Rate</MenuItem>
+                            <MenuItem value="modified">{t('playback.sort_modified', 'Date Modified')}</MenuItem>
+                            <MenuItem value="created">{t('playback.sort_created', 'Date Created')}</MenuItem>
+                            <MenuItem value="name">{t('playback.sort_name', 'Name')}</MenuItem>
+                            <MenuItem value="size">{t('playback.sort_size', 'Size')}</MenuItem>
+                            <MenuItem value="sample_rate">{t('playback.sort_sample_rate', 'Sample Rate')}</MenuItem>
                         </Select>
                     </FormControl>
 

@@ -69,6 +69,7 @@ import {
     setPage,
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
+import { useTranslation } from 'react-i18next';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -109,6 +110,7 @@ function formatDuration(startTime, endTime) {
 export default function FileBrowser() {
     const dispatch = useDispatch();
     const { socket } = useSocket();
+    const { t } = useTranslation('filebrowser');
 
     // Get timezone preference
     const timezone = useSelector((state) => {
@@ -131,14 +133,29 @@ export default function FileBrowser() {
         const diffHours = Math.floor(diffMins / 60);
         const diffDays = Math.floor(diffHours / 24);
 
-        if (diffSecs < 60) return 'just now';
-        if (diffMins < 60) return `${diffMins} min${diffMins > 1 ? 's' : ''} ago`;
-        if (diffHours < 24) return `${diffHours} hour${diffHours > 1 ? 's' : ''} ago`;
-        if (diffDays === 1) return 'yesterday';
-        if (diffDays < 7) return `${diffDays} days ago`;
-        if (diffDays < 30) return `${Math.floor(diffDays / 7)} week${Math.floor(diffDays / 7) > 1 ? 's' : ''} ago`;
-        if (diffDays < 365) return `${Math.floor(diffDays / 30)} month${Math.floor(diffDays / 30) > 1 ? 's' : ''} ago`;
-        return `${Math.floor(diffDays / 365)} year${Math.floor(diffDays / 365) > 1 ? 's' : ''} ago`;
+        if (diffSecs < 60) return t('humanize.date.just_now', { ns: 'common', defaultValue: 'just now' });
+        if (diffMins === 1) return t('humanize.date.minute_ago', { ns: 'common', count: diffMins, defaultValue: '1 minute ago' });
+        if (diffMins < 60) return t('humanize.date.minutes_ago', { ns: 'common', count: diffMins, defaultValue: `${diffMins} minutes ago` });
+        if (diffHours === 1) return t('humanize.date.hour_ago', { ns: 'common', count: diffHours, defaultValue: '1 hour ago' });
+        if (diffHours < 24) return t('humanize.date.hours_ago', { ns: 'common', count: diffHours, defaultValue: `${diffHours} hours ago` });
+        if (diffDays === 1) return t('humanize.date.day_ago', { ns: 'common', count: diffDays, defaultValue: '1 day ago' });
+        if (diffDays < 7) return t('humanize.date.days_ago', { ns: 'common', count: diffDays, defaultValue: `${diffDays} days ago` });
+
+        const weeks = Math.floor(diffDays / 7);
+        if (diffDays < 30) {
+            if (weeks === 1) return t('humanize.date.week_ago', { ns: 'common', count: weeks, defaultValue: '1 week ago' });
+            return t('humanize.date.weeks_ago', { ns: 'common', count: weeks, defaultValue: `${weeks} weeks ago` });
+        }
+
+        const months = Math.floor(diffDays / 30);
+        if (diffDays < 365) {
+            if (months === 1) return t('humanize.date.month_ago', { ns: 'common', count: months, defaultValue: '1 month ago' });
+            return t('humanize.date.months_ago', { ns: 'common', count: months, defaultValue: `${months} months ago` });
+        }
+
+        const years = Math.floor(diffDays / 365);
+        if (years === 1) return t('humanize.date.year_ago', { ns: 'common', count: years, defaultValue: '1 year ago' });
+        return t('humanize.date.years_ago', { ns: 'common', count: years, defaultValue: `${years} years ago` });
     };
 
     const {
@@ -258,15 +275,15 @@ export default function FileBrowser() {
             try {
                 if (itemToDelete.type === 'recording') {
                     await dispatch(deleteRecording({ socket, name: itemToDelete.name })).unwrap();
-                    toast.success(`Recording "${itemToDelete.name}" deleted successfully`);
+                    toast.success(t('toast.recording_deleted', 'Recording "{{name}}" deleted successfully', { name: itemToDelete.name }));
                 } else {
                     await dispatch(deleteSnapshot({ socket, filename: itemToDelete.filename })).unwrap();
-                    toast.success(`Snapshot "${itemToDelete.name}" deleted successfully`);
+                    toast.success(t('toast.snapshot_deleted', 'Snapshot "{{name}}" deleted successfully', { name: itemToDelete.name }));
                 }
                 setDeleteDialogOpen(false);
                 setItemToDelete(null);
             } catch (error) {
-                toast.error(`Failed to delete: ${error}`);
+                toast.error(t('toast.delete_failed', 'Failed to delete: {{error}}', { error }));
             }
         }
     };
@@ -310,31 +327,31 @@ export default function FileBrowser() {
                     flex: 1
                 }}>
                     <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 200 } }}>
-                        <InputLabel>Sort By</InputLabel>
+                        <InputLabel>{t('sort_by', 'Sort By')}</InputLabel>
                         <Select
                             value={sortBy}
-                            label="Sort By"
+                            label={t('sort_by', 'Sort By')}
                             onChange={handleSortChange}
                             startAdornment={<SortIcon sx={{ mr: 1, color: 'action.active' }} />}
                         >
-                            <MenuItem value="created">Date Created</MenuItem>
-                            <MenuItem value="modified">Date Modified</MenuItem>
-                            <MenuItem value="name">Name</MenuItem>
-                            <MenuItem value="size">Size</MenuItem>
-                            <MenuItem value="sample_rate">Sample Rate</MenuItem>
+                            <MenuItem value="created">{t('sort.created', 'Date Created')}</MenuItem>
+                            <MenuItem value="modified">{t('sort.modified', 'Date Modified')}</MenuItem>
+                            <MenuItem value="name">{t('sort.name', 'Name')}</MenuItem>
+                            <MenuItem value="size">{t('sort.size', 'Size')}</MenuItem>
+                            <MenuItem value="sample_rate">{t('sort.sample_rate', 'Sample Rate')}</MenuItem>
                         </Select>
                     </FormControl>
 
                     <FormControl size="small" sx={{ minWidth: { xs: '100%', sm: 150 } }}>
-                        <InputLabel>Filter</InputLabel>
+                        <InputLabel>{t('filter', 'Filter')}</InputLabel>
                         <Select
                             multiple
                             value={Object.keys(filters).filter(key => filters[key])}
-                            input={<OutlinedInput label="Filter" />}
+                            input={<OutlinedInput label={t('filter', 'Filter')} />}
                             renderValue={(selected) => {
                                 const labels = {
-                                    showRecordings: 'Recordings',
-                                    showSnapshots: 'Snapshots',
+                                    showRecordings: t('filters.recordings', 'Recordings'),
+                                    showSnapshots: t('filters.snapshots', 'Snapshots'),
                                 };
                                 return selected.map(s => labels[s]).join(', ');
                             }}
@@ -342,11 +359,11 @@ export default function FileBrowser() {
                         >
                             <MenuItem value="showRecordings" onClick={() => dispatch(toggleFilter('showRecordings'))}>
                                 <Checkbox checked={filters.showRecordings} />
-                                <ListItemText primary="Recordings" />
+                                <ListItemText primary={t('filters.recordings', 'Recordings')} />
                             </MenuItem>
                             <MenuItem value="showSnapshots" onClick={() => dispatch(toggleFilter('showSnapshots'))}>
                                 <Checkbox checked={filters.showSnapshots} />
-                                <ListItemText primary="Snapshots" />
+                                <ListItemText primary={t('filters.snapshots', 'Snapshots')} />
                             </MenuItem>
                         </Select>
                     </FormControl>
@@ -364,7 +381,7 @@ export default function FileBrowser() {
                         onClick={() => dispatch(toggleSortOrder())}
                         sx={{ flex: { xs: 1, sm: 'initial' } }}
                     >
-                        {sortOrder === 'asc' ? 'Ascending' : 'Descending'}
+                        {sortOrder === 'asc' ? t('sort_order.ascending', 'Ascending') : t('sort_order.descending', 'Descending')}
                     </Button>
                     <Button
                         variant="outlined"
@@ -373,7 +390,7 @@ export default function FileBrowser() {
                         onClick={handleRefresh}
                         sx={{ flex: { xs: 1, sm: 'initial' } }}
                     >
-                        Refresh
+                        {t('refresh', 'Refresh')}
                     </Button>
                 </Box>
             </Box>
@@ -414,19 +431,19 @@ export default function FileBrowser() {
             {displayItems.length === 0 ? (
                 <Box sx={{ textAlign: 'center', py: 8 }}>
                     <Typography variant="h6" color="text.secondary" gutterBottom>
-                        No files found
+                        {t('no_files.title', 'No files found')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
                         {!filters.showRecordings && !filters.showSnapshots
-                            ? 'Enable at least one filter to see files'
-                            : 'Take snapshots or record IQ data from the waterfall view'}
+                            ? t('no_files.message_filter', 'Enable at least one filter to see files')
+                            : t('no_files.message_empty', 'Take snapshots or record IQ data from the waterfall view')}
                     </Typography>
                     <Button
                         variant="outlined"
                         startIcon={<RefreshIcon />}
                         onClick={handleRefresh}
                     >
-                        Refresh
+                        {t('refresh', 'Refresh')}
                     </Button>
                 </Box>
             ) : (
@@ -511,7 +528,7 @@ export default function FileBrowser() {
                                                             letterSpacing: '0.5px',
                                                         }}
                                                     >
-                                                        Recording
+                                                        {t('recording.in_progress', 'Recording')}
                                                     </Typography>
                                                 </Box>
                                             )}
@@ -592,10 +609,10 @@ export default function FileBrowser() {
                                                     }}
                                                 />
                                                 <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                    Recording in Progress
+                                                    {t('recording.in_progress_message', 'Recording in Progress')}
                                                 </Typography>
                                                 <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>
-                                                    Waterfall snapshot will be saved on stop
+                                                    {t('recording.snapshot_message', 'Waterfall snapshot will be saved on stop')}
                                                 </Typography>
                                                 {/* Recording badge (top-right) */}
                                                 <Box
@@ -619,7 +636,7 @@ export default function FileBrowser() {
                                                             letterSpacing: '0.5px',
                                                         }}
                                                     >
-                                                        Recording
+                                                        {t('recording.in_progress', 'Recording')}
                                                     </Typography>
                                                 </Box>
                                                 {/* Duration overlay (bottom-left) */}
@@ -696,7 +713,7 @@ export default function FileBrowser() {
                                             )
                                         ) : (
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
-                                                Ground Station Waterfall Snapshot
+                                                {t('snapshot.description', 'Ground Station Waterfall Snapshot')}
                                             </Typography>
                                         )}
                                         <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
@@ -737,7 +754,7 @@ export default function FileBrowser() {
                                     </CardContent>
                                     <CardActions sx={{ pt: 0 }} onClick={(e) => e.stopPropagation()}>
                                         {isRecording && (
-                                            <Tooltip title="View Details">
+                                            <Tooltip title={t('actions.view_details', 'View Details')}>
                                                 <IconButton
                                                     size="small"
                                                     onClick={() => handleShowDetails(item)}
@@ -746,7 +763,7 @@ export default function FileBrowser() {
                                                 </IconButton>
                                             </Tooltip>
                                         )}
-                                        <Tooltip title="Download">
+                                        <Tooltip title={t('actions.download', 'Download')}>
                                             <IconButton
                                                 size="small"
                                                 onClick={() => handleDownload(item)}
@@ -754,7 +771,7 @@ export default function FileBrowser() {
                                                 <DownloadIcon fontSize="small" />
                                             </IconButton>
                                         </Tooltip>
-                                        <Tooltip title={item.recording_in_progress ? "Cannot delete active recording" : "Delete"}>
+                                        <Tooltip title={item.recording_in_progress ? t('actions.cannot_delete_active', 'Cannot delete active recording') : t('actions.delete', 'Delete')}>
                                             <span>
                                                 <IconButton
                                                     size="small"
@@ -964,24 +981,24 @@ export default function FileBrowser() {
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
             >
-                <DialogTitle>Delete {itemToDelete?.type === 'recording' ? 'Recording' : 'Snapshot'}</DialogTitle>
+                <DialogTitle>{itemToDelete?.type === 'recording' ? t('delete_dialog.title_recording', 'Delete Recording') : t('delete_dialog.title_snapshot', 'Delete Snapshot')}</DialogTitle>
                 <DialogContent>
                     <Alert severity="warning" sx={{ mb: 2 }}>
-                        This action cannot be undone!
+                        {t('delete_dialog.warning', 'This action cannot be undone!')}
                     </Alert>
                     <Typography>
-                        Are you sure you want to delete <strong>{itemToDelete?.displayName || itemToDelete?.name}</strong>?
+                        {t('delete_dialog.confirm', 'Are you sure you want to delete')} <strong>{itemToDelete?.displayName || itemToDelete?.name}</strong>?
                     </Typography>
                     {itemToDelete?.type === 'recording' && (
                         <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
-                            This will delete the data file, metadata file, and snapshot.
+                            {t('recording.delete_message', 'This will delete the data file, metadata file, and snapshot.')}
                         </Typography>
                     )}
                 </DialogContent>
                 <DialogActions>
-                    <Button onClick={() => setDeleteDialogOpen(false)}>Cancel</Button>
+                    <Button onClick={() => setDeleteDialogOpen(false)}>{t('delete_dialog.cancel', 'Cancel')}</Button>
                     <Button onClick={confirmDelete} color="error" variant="contained">
-                        Delete
+                        {t('delete_dialog.delete', 'Delete')}
                     </Button>
                 </DialogActions>
             </Dialog>

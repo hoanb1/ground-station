@@ -102,7 +102,7 @@ const RecordingAccordion = ({
             <AccordionSummary
                 sx={{
                     boxShadow: '-1px 4px 7px #00000059',
-                    backgroundColor: isRecording ? 'rgba(255, 0, 0, 0.1)' : 'inherit',
+                    ...(isRecording && { backgroundColor: 'rgba(255, 0, 0, 0.1)' }),
                 }}
                 aria-controls="panel-recording-content"
                 id="panel-recording-header"
