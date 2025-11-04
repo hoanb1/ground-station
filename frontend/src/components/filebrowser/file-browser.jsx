@@ -81,6 +81,13 @@ function formatDuration(startTime, endTime) {
 
     const start = new Date(startTime);
     const end = endTime ? new Date(endTime) : new Date();
+
+    // Check if dates are valid
+    if (isNaN(start.getTime()) || isNaN(end.getTime())) {
+        console.error('Invalid date in formatDuration:', { startTime, endTime });
+        return null;
+    }
+
     const diffMs = end - start;
 
     if (diffMs < 0) return null;
@@ -664,7 +671,7 @@ export default function FileBrowser() {
                                                     color="primary"
                                                 />
                                             )}
-                                            {isRecording && item.metadata?.start_time && (
+                                            {isRecording && item.metadata?.start_time && formatDuration(item.metadata.start_time, item.metadata.finalized_time) && (
                                                 <Chip
                                                     label={formatDuration(item.metadata.start_time, item.metadata.finalized_time)}
                                                     size="small"
