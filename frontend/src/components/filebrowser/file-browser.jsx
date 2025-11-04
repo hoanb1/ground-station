@@ -45,6 +45,7 @@ import {
     ListItemText,
     OutlinedInput,
     Pagination,
+    LinearProgress,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -55,6 +56,7 @@ import FilterListIcon from '@mui/icons-material/FilterList';
 import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import RadioIcon from '@mui/icons-material/Radio';
+import StorageIcon from '@mui/icons-material/Storage';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -71,8 +73,8 @@ import { toast } from 'react-toastify';
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
     const k = 1024;
-    const sizes = ['Bytes', 'KB', 'MB', 'GB'];
-    const i = Math.floor(Math.log(bytes) / Math.log(k));
+    const sizes = ['Bytes', 'KB', 'MB', 'GB', 'TB', 'PB'];
+    const i = Math.min(Math.floor(Math.log(bytes) / Math.log(k)), sizes.length - 1);
     return Math.round(bytes / Math.pow(k, i) * 100) / 100 + ' ' + sizes[i];
 }
 
@@ -145,6 +147,7 @@ export default function FileBrowser() {
         sortBy,
         sortOrder,
         filters,
+        diskUsage,
     } = useSelector((state) => state.filebrowser);
 
     const [selectedItem, setSelectedItem] = useState(null);
@@ -197,13 +200,21 @@ export default function FileBrowser() {
     // Files are already sorted and filtered by backend
     // Just add display properties for UI
     const displayItems = useMemo(() => {
-        return files.map(item => ({
-            ...item,
-            displayName: item.name || item.filename,
-            image: item.type === 'recording'
-                ? (item.recording_in_progress ? null : item.snapshot?.url)
-                : item.url,
-        }));
+        return files.map(item => {
+            const isRecording = item.type === 'recording';
+            const duration = isRecording && item.metadata?.start_time
+                ? formatDuration(item.metadata.start_time, item.metadata.finalized_time)
+                : null;
+
+            return {
+                ...item,
+                displayName: item.name || item.filename,
+                image: item.type === 'recording'
+                    ? (item.recording_in_progress ? null : item.snapshot?.url)
+                    : item.url,
+                duration,
+            };
+        });
     }, [files]);
 
     const handleSortChange = (event) => {
@@ -362,6 +373,33 @@ export default function FileBrowser() {
                     </Button>
                 </Box>
             </Box>
+
+            {/* Storage Information */}
+            {diskUsage && diskUsage.total > 0 && (
+                <Box sx={{ mb: 2, p: 2, backgroundColor: 'background.paper', borderRadius: 1, border: 1, borderColor: 'divider' }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', mb: 1 }}>
+                        <StorageIcon sx={{ mr: 1, color: 'text.secondary' }} />
+                        <Typography variant="body2" color="text.secondary">
+                            Storage: {formatBytes(diskUsage.used)} used of {formatBytes(diskUsage.total)} ({Math.round((diskUsage.used / diskUsage.total) * 100)}%)
+                        </Typography>
+                        <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
+                            {formatBytes(diskUsage.available)} available
+                        </Typography>
+                    </Box>
+                    <LinearProgress
+                        variant="determinate"
+                        value={(diskUsage.used / diskUsage.total) * 100}
+                        sx={{
+                            height: 8,
+                            borderRadius: 1,
+                            backgroundColor: 'action.hover',
+                            '& .MuiLinearProgress-bar': {
+                                backgroundColor: diskUsage.used / diskUsage.total > 0.9 ? 'error.main' : diskUsage.used / diskUsage.total > 0.7 ? 'warning.main' : 'primary.main',
+                            },
+                        }}
+                    />
+                </Box>
+            )}
 
             {hasError && (
                 <Alert severity="error" sx={{ mb: 2 }}>
@@ -671,9 +709,9 @@ export default function FileBrowser() {
                                                     color="primary"
                                                 />
                                             )}
-                                            {isRecording && item.metadata?.start_time && formatDuration(item.metadata.start_time, item.metadata.finalized_time) && (
+                                            {isRecording && item.duration && (
                                                 <Chip
-                                                    label={formatDuration(item.metadata.start_time, item.metadata.finalized_time)}
+                                                    label={item.duration}
                                                     size="small"
                                                     variant="outlined"
                                                     color="error"

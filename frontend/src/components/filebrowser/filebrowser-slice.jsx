@@ -129,6 +129,11 @@ const initialState = {
         showRecordings: true,
         showSnapshots: true,
     },
+    diskUsage: {
+        total: 0,
+        used: 0,
+        available: 0,
+    },
     // Legacy state (kept for backward compatibility)
     recordings: [],
     snapshots: [],
@@ -246,6 +251,7 @@ const fileBrowserSlice = createSlice({
             state.total = action.payload.total || 0;
             state.page = action.payload.page || state.page;
             state.pageSize = action.payload.pageSize || state.pageSize;
+            state.diskUsage = action.payload.diskUsage || { total: 0, used: 0, available: 0 };
         });
         builder.addCase(fetchFiles.rejected, (state, action) => {
             state.filesLoading = false;

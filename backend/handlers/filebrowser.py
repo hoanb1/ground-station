@@ -21,9 +21,36 @@ IQ recordings and waterfall snapshots stored on the filesystem.
 """
 
 import json
+import shutil
 from datetime import datetime
 from pathlib import Path
 from typing import Any, Dict, Tuple, Union, cast
+
+
+def get_disk_usage(path: Path) -> Dict[str, Union[int, str]]:
+    """
+    Get disk usage statistics for the filesystem containing the given path.
+
+    Args:
+        path: Path to check disk usage for
+
+    Returns:
+        Dictionary with 'total', 'used', and 'available' in bytes, optionally 'error' string
+    """
+    try:
+        stat = shutil.disk_usage(path)
+        return {
+            "total": stat.total,
+            "used": stat.used,
+            "available": stat.free,
+        }
+    except Exception as e:
+        return {
+            "total": 0,
+            "used": 0,
+            "available": 0,
+            "error": str(e),
+        }
 
 
 def parse_sigmf_metadata(meta_file_path: str) -> dict:
@@ -258,6 +285,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                         }
                     )
 
+            # Get disk usage for the recordings directory
+            disk_usage = get_disk_usage(recordings_dir)
+
             reply = {
                 "success": True,
                 "data": {
@@ -265,6 +295,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "total": total,
                     "page": page,
                     "pageSize": page_size,
+                    "diskUsage": disk_usage,
                 },
             }
 
