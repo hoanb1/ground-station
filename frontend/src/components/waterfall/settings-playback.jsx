@@ -275,14 +275,6 @@ const PlaybackAccordion = ({
                                                                     sx={{ height: '18px', fontSize: '0.65rem', px: 0 }}
                                                                 />
                                                             )}
-                                                            {dataSize && (
-                                                                <Chip
-                                                                    label={formatBytes(dataSize)}
-                                                                    size="small"
-                                                                    variant="outlined"
-                                                                    sx={{ height: '18px', fontSize: '0.65rem', px: 0 }}
-                                                                />
-                                                            )}
                                                             {duration && (
                                                                 <Chip
                                                                     label={formatDuration(duration)}

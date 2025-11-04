@@ -700,6 +700,11 @@ export default function FileBrowser() {
                                             </Typography>
                                         )}
                                         <Box sx={{ display: 'flex', gap: 0.5, mt: 1, flexWrap: 'wrap' }}>
+                                            <Chip
+                                                label={formatBytes(item.data_size || item.size)}
+                                                size="small"
+                                                variant="outlined"
+                                            />
                                             {isRecording && item.metadata?.sample_rate && (
                                                 <Chip
                                                     label={`${(item.metadata.sample_rate / 1e6).toFixed(2)} MHz`}
