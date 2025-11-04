@@ -90,9 +90,8 @@ export const useWaterfallSnapshot = ({
         const bandscopeCanvas = bandscopeCanvasRef.current;
 
         allCanvases.forEach(canvas => {
-            const parent = canvas.parentElement;
-            if (parent && parent.style.position === 'absolute') {
-                // Bookmark canvas is positioned absolutely over the bandscope
+            // Look for bookmark canvas by its class name
+            if (canvas.classList.contains('bookmark-canvas')) {
                 bookmarkCanvas = canvas;
             } else if (canvas.height === 21) {
                 // Small canvas between dB axes
@@ -101,7 +100,8 @@ export const useWaterfallSnapshot = ({
                 canvas !== bandscopeCanvas &&
                 canvas.classList.contains('waterfall-canvas') === false &&
                 canvas.classList.contains('bandscope-canvas') === false &&
-                canvas.classList.contains('waterfall-left-margin-canvas') === false
+                canvas.classList.contains('waterfall-left-margin-canvas') === false &&
+                canvas.classList.contains('bookmark-canvas') === false
             ) {
                 // Frequency scale is the other canvas that's not bandscope or waterfall
                 if (!frequencyScaleCanvas && canvas.height < 30 && canvas.height !== 21) {
