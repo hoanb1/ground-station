@@ -125,6 +125,16 @@ sdr_process_manager.set_sio(sio)
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
+# Mount data directories for recordings and snapshots
+# These directories are created at startup in init_db()
+backend_dir = os.path.dirname(os.path.abspath(__file__))
+recordings_dir = os.path.join(backend_dir, "..", "data", "recordings")
+snapshots_dir = os.path.join(backend_dir, "..", "data", "snapshots")
+
+# Use html=True to enable directory browsing
+app.mount("/recordings", StaticFiles(directory=recordings_dir, html=True), name="recordings")
+app.mount("/snapshots", StaticFiles(directory=snapshots_dir, html=True), name="snapshots")
+
 
 # Add the version API endpoint BEFORE the catch-all route
 @app.get("/api/version")
