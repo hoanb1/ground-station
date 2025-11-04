@@ -19,7 +19,8 @@ from sqlalchemy.ext.asyncio import AsyncSession, async_sessionmaker, create_asyn
 from common.arguments import arguments
 
 # sql alchemy engine
-DATABASE_URL = f"sqlite+aiosqlite:///./data/{arguments.db}"
+# The db path from arguments already includes data/db/ prefix
+DATABASE_URL = f"sqlite+aiosqlite:///./{arguments.db}"
 engine = create_async_engine(
     DATABASE_URL,
     echo=False,

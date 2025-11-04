@@ -157,6 +157,18 @@ async def init_db():
 
     logger.info("Initializing database...")
 
+    # Ensure required data directories exist
+    logger.info("Ensuring data directories exist...")
+    backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    data_dirs = [
+        os.path.join(backend_dir, "data", "db"),
+        os.path.join(backend_dir, "data", "recordings"),
+        os.path.join(backend_dir, "data", "snapshots"),
+    ]
+    for directory in data_dirs:
+        os.makedirs(directory, exist_ok=True)
+        logger.info(f"Ensured directory exists: {directory}")
+
     # Check if database exists by trying to query metadata
     database_existed = False
     try:

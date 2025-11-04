@@ -81,11 +81,13 @@ env.bak/
 venv.bak/
 /backend/db/gs.db
 /backend/de421.bsp
-/backend/data/gs.db
 /backend/server/version-info.json
 
-# IQ Recordings
-/backend/recordings/
+# Data directories (database, recordings, snapshots)
+/backend/data/db/
+/backend/data/recordings/
+/backend/data/snapshots/
 
-# Waterfall Snapshots
+# Old paths (kept for backwards compatibility during migration)
+/backend/recordings/
 /backend/snapshots/

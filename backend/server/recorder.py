@@ -60,7 +60,7 @@ def start_recording(sdr_id: str, client_id: str, recording_name: str = "") -> di
     # Create recordings directory if it doesn't exist
     # Get the backend directory (parent of server/)
     backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-    recordings_dir = os.path.join(backend_dir, "recordings")
+    recordings_dir = os.path.join(backend_dir, "data", "recordings")
     os.makedirs(recordings_dir, exist_ok=True)
 
     recording_path = os.path.join(recordings_dir, recording_name_with_timestamp)

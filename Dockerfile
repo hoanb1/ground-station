@@ -269,8 +269,8 @@ ENV GS_ENVIRONMENT=${GS_ENVIRONMENT}
 RUN cd /app/backend && python -c "import os; from server.version import write_version_info_during_build; write_version_info_during_build({'gitCommit': os.environ.get('GIT_COMMIT', 'unknown')})"
 
 # Configure backend to serve static files
-# Create a volume for persistent data
-VOLUME /app/data
+# Create a volume for persistent data (database, recordings, snapshots)
+VOLUME /app/backend/data
 
 # Set environment variables
 ENV PYTHONPATH=/app

@@ -20,7 +20,7 @@ import os
 parser = argparse.ArgumentParser(description="Start the Ground Station app with custom arguments.")
 parser.add_argument("--host", type=str, default="0.0.0.0", help="Host to run the server on")
 parser.add_argument("--port", type=int, default=5000, help="Port to run the server on")
-parser.add_argument("--db", type=str, default="./gs.db", help="Path to the database file")
+parser.add_argument("--db", type=str, default="data/db/gs.db", help="Path to the database file")
 parser.add_argument(
     "--log-level",
     type=str,
@@ -57,7 +57,7 @@ if os.environ.get("ALEMBIC_CONTEXT"):
     arguments = argparse.Namespace(
         host="0.0.0.0",
         port=5000,
-        db="gs.db",
+        db="data/db/gs.db",
         log_level="INFO",
         log_config="logconfig.yaml",
         secret_key="YOUR_RANDOM_SECRET_KEY",

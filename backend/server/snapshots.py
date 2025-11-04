@@ -46,7 +46,7 @@ def save_waterfall_snapshot(waterfall_image: str, snapshot_name: str = "") -> di
         # Create snapshots directory if it doesn't exist
         # Get the backend directory (2 levels up from this file)
         backend_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        snapshots_dir = os.path.join(backend_dir, "snapshots")
+        snapshots_dir = os.path.join(backend_dir, "data", "snapshots")
         os.makedirs(snapshots_dir, exist_ok=True)
 
         snapshot_path = os.path.join(snapshots_dir, snapshot_name_with_timestamp)

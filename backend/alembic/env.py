@@ -17,8 +17,8 @@ sys.path.insert(0, str(backend_dir))
 # We need to handle arguments differently for alembic
 import os
 
-# Get the database name from environment or use default
-db_name = os.environ.get("GS_DB", "gs.db")
+# Get the database path from environment or use default
+db_path = os.environ.get("GS_DB", "data/db/gs.db")
 
 from db.models import Base
 
@@ -27,7 +27,7 @@ from db.models import Base
 config = context.config
 
 # Set the SQLAlchemy URL from our application configuration
-config.set_main_option("sqlalchemy.url", f"sqlite+aiosqlite:///./data/{db_name}")
+config.set_main_option("sqlalchemy.url", f"sqlite+aiosqlite:///./{db_path}")
 
 # Interpret the config file for Python logging.
 # This line sets up loggers basically.
