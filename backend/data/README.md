@@ -1,5 +1,7 @@
 # Data Directory
 
+> **⚠️ NOTE:** If you can see this README file inside a running Docker container, it means the data volume is **NOT** properly mounted! This file should be replaced by the mounted volume in production deployments.
+
 This directory contains all persistent application data for Ground Station.
 
 ## Structure
