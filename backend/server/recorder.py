@@ -65,9 +65,9 @@ def start_recording(sdr_id: str, client_id: str, recording_name: str = "") -> di
 
     recording_path = os.path.join(recordings_dir, recording_name_with_timestamp)
 
-    # Start recorder (uses same pattern as demodulators)
-    result = sdr_process_manager.start_demodulator(
-        sdr_id, client_id, IQRecorder, None, recording_path=recording_path
+    # Start recorder
+    result = sdr_process_manager.start_recorder(
+        sdr_id, client_id, IQRecorder, recording_path=recording_path
     )
 
     if result:

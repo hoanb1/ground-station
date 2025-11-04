@@ -681,16 +681,27 @@ class SDRProcessManager:
             if sdr_id in self.processes:
                 await self.stop_sdr_process(sdr_id)
 
-    def start_demodulator(self, sdr_id, session_id, demodulator_class, audio_queue, **kwargs):
+    def _start_iq_consumer(
+        self,
+        sdr_id,
+        session_id,
+        consumer_class,
+        audio_queue,
+        storage_key,
+        subscription_prefix,
+        **kwargs,
+    ):
         """
-        Start a demodulator thread for a specific session.
+        Internal method to start an IQ consumer (demodulator or recorder).
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier (client session ID)
-            demodulator_class: The demodulator class to instantiate (e.g., FMDemodulator, AMDemodulator, IQRecorder)
-            audio_queue: Queue where demodulated audio will be placed (None for IQRecorder)
-            **kwargs: Additional arguments to pass to the demodulator constructor
+            consumer_class: The consumer class to instantiate
+            audio_queue: Queue where audio will be placed (None for recorders)
+            storage_key: "demodulators" or "recorders"
+            subscription_prefix: "demod" or "recorder"
+            **kwargs: Additional arguments to pass to the consumer constructor
 
         Returns:
             bool: True if started successfully, False otherwise
@@ -701,15 +712,7 @@ class SDRProcessManager:
 
         process_info = self.processes[sdr_id]
 
-        # Import IQRecorder to check if this is a recorder
-        from demodulators.iqrecorder import IQRecorder
-
-        is_recorder = demodulator_class == IQRecorder
-
-        # Choose the appropriate storage based on whether this is a recorder or demodulator
-        storage_key = "recorders" if is_recorder else "demodulators"
-
-        # Check if demodulator/recorder already exists for this session
+        # Check if consumer already exists for this session
         if session_id in process_info.get(storage_key, {}):
             existing_entry = process_info[storage_key][session_id]
             existing = (
@@ -718,17 +721,18 @@ class SDRProcessManager:
                 else existing_entry
             )
             # If same type, just return success (already running)
-            if isinstance(existing, demodulator_class):
+            if isinstance(existing, consumer_class):
                 self.logger.debug(
-                    f"{demodulator_class.__name__} already running for session {session_id}"
+                    f"{consumer_class.__name__} already running for session {session_id}"
                 )
                 return True
             else:
                 # Different type, stop the old one first
                 self.logger.info(
-                    f"Switching from {type(existing).__name__} to {demodulator_class.__name__} for session {session_id}"
+                    f"Switching from {type(existing).__name__} to {consumer_class.__name__} for session {session_id}"
                 )
-                if is_recorder:
+                # Stop using the appropriate method based on storage key
+                if storage_key == "recorders":
                     self.stop_recorder(sdr_id, session_id)
                 else:
                     self.stop_demodulator(sdr_id, session_id)
@@ -740,34 +744,68 @@ class SDRProcessManager:
                 self.logger.error(f"No IQ broadcaster found for device {sdr_id}")
                 return False
 
-            # Create a unique subscription key to prevent sharing queues between recorder and demodulator
-            # Recorders use "recorder:<session_id>", demodulators use "demod:<session_id>"
-            subscription_key = f"{'recorder' if is_recorder else 'demod'}:{session_id}"
+            # Create a unique subscription key to prevent sharing queues
+            subscription_key = f"{subscription_prefix}:{session_id}"
 
-            # Subscribe to the broadcaster to get a dedicated queue for this demodulator/recorder
+            # Subscribe to the broadcaster to get a dedicated queue
             subscriber_queue = broadcaster.subscribe(subscription_key, maxsize=3)
 
-            # Create and start the demodulator/recorder with the subscriber queue
-            demodulator = demodulator_class(subscriber_queue, audio_queue, session_id, **kwargs)
-            demodulator.start()
+            # Create and start the consumer with the subscriber queue
+            consumer = consumer_class(subscriber_queue, audio_queue, session_id, **kwargs)
+            consumer.start()
 
-            # Store reference in the appropriate storage along with subscription key for cleanup
+            # Store reference along with subscription key for cleanup
             if storage_key not in process_info:
                 process_info[storage_key] = {}
             process_info[storage_key][session_id] = {
-                "instance": demodulator,
+                "instance": consumer,
                 "subscription_key": subscription_key,
             }
 
             self.logger.info(
-                f"Started {demodulator_class.__name__} for session {session_id} on device {sdr_id}"
+                f"Started {consumer_class.__name__} for session {session_id} on device {sdr_id}"
             )
             return True
 
         except Exception as e:
-            self.logger.error(f"Error starting {demodulator_class.__name__}: {str(e)}")
+            self.logger.error(f"Error starting {consumer_class.__name__}: {str(e)}")
             self.logger.exception(e)
             return False
+
+    def start_demodulator(self, sdr_id, session_id, demodulator_class, audio_queue, **kwargs):
+        """
+        Start a demodulator thread for a specific session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier (client session ID)
+            demodulator_class: The demodulator class to instantiate (e.g., FMDemodulator, AMDemodulator, SSBDemodulator)
+            audio_queue: Queue where demodulated audio will be placed
+            **kwargs: Additional arguments to pass to the demodulator constructor
+
+        Returns:
+            bool: True if started successfully, False otherwise
+        """
+        return self._start_iq_consumer(
+            sdr_id, session_id, demodulator_class, audio_queue, "demodulators", "demod", **kwargs
+        )
+
+    def start_recorder(self, sdr_id, session_id, recorder_class, **kwargs):
+        """
+        Start a recorder thread for a specific session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier (client session ID)
+            recorder_class: The recorder class to instantiate (e.g., IQRecorder)
+            **kwargs: Additional arguments to pass to the recorder constructor (e.g., recording_path)
+
+        Returns:
+            bool: True if started successfully, False otherwise
+        """
+        return self._start_iq_consumer(
+            sdr_id, session_id, recorder_class, None, "recorders", "recorder", **kwargs
+        )
 
     def stop_demodulator(self, sdr_id, session_id):
         """
