@@ -19,7 +19,7 @@ import json
 import logging
 import threading
 import time
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 
 logger = logging.getLogger("iq-recorder")
@@ -48,8 +48,11 @@ class IQRecorder(threading.Thread):
         self.current_sample_rate = None
         self.start_datetime = None
 
-        # Store start time to preserve it in final metadata (use utcnow for clean ISO format)
-        self.start_time_iso = datetime.utcnow().isoformat() + "Z"
+        # Store start time to preserve it in final metadata
+        # Use timezone-aware datetime and format as ISO string with Z suffix
+        self.start_time_iso = (
+            datetime.now(timezone.utc).replace(microsecond=0, tzinfo=None).isoformat() + "Z"
+        )
 
         # Open data file for writing
         self.data_file = open(f"{recording_path}.sigmf-data", "wb")
@@ -88,7 +91,10 @@ class IQRecorder(threading.Thread):
                         {
                             "core:sample_start": self.total_samples,
                             "core:frequency": int(center_freq),
-                            "core:datetime": datetime.utcfromtimestamp(timestamp).isoformat() + "Z",
+                            "core:datetime": datetime.fromtimestamp(timestamp, tz=timezone.utc)
+                            .replace(microsecond=0, tzinfo=None)
+                            .isoformat()
+                            + "Z",
                         }
                     )
 
@@ -164,7 +170,10 @@ class IQRecorder(threading.Thread):
                 "core:description": "Ground Station IQ Recording",
                 "core:recorder": "ground-station",
                 "gs:start_time": self.start_time_iso,
-                "gs:finalized_time": datetime.utcnow().isoformat() + "Z",
+                "gs:finalized_time": datetime.now(timezone.utc)
+                .replace(microsecond=0, tzinfo=None)
+                .isoformat()
+                + "Z",
             },
             "captures": self.captures,
             "annotations": self.annotations,

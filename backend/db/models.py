@@ -114,6 +114,7 @@ class SDRType(str, PyEnum):
     SOAPYSDRLOCAL = "soapysdrlocal"
     SOAPYSDRREMOTE = "soapysdrremote"
     UHD = "uhd"
+    SIGMFPLAYBACK = "sigmfplayback"
 
 
 class Satellites(Base):

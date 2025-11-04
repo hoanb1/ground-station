@@ -63,6 +63,9 @@ import {
     stopRecording,
     setRecordingName,
     incrementRecordingDuration,
+    setSelectedPlaybackRecording,
+    setPlaybackRecordingPath,
+    clearPlaybackRecording,
 } from './waterfall-slice.jsx';
 
 import {useSocket} from "../common/socket.jsx";
@@ -73,6 +76,7 @@ import SdrAccordion from "./settings-sdr.jsx";
 import FftAccordion from "./settings-fft.jsx";
 import VfoAccordion from "./settings-vfo.jsx";
 import RecordingAccordion from "./settings-recording.jsx";
+import PlaybackAccordion from "./settings-playback.jsx";
 import { useTranslation } from 'react-i18next';
 
 const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
@@ -127,6 +131,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         isRecording,
         recordingDuration,
         recordingName,
+        selectedPlaybackRecording,
+        playbackRecordingPath,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -182,6 +188,12 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     // Convert to useCallback to ensure stability of the function reference
     const sendSDRConfigToBackend = useCallback((updates = {}) => {
             if (selectedSDRId !== "none" && selectedSDRId !== "") {
+                // For sigmfplayback, NEVER send configure without a recording path
+                // This prevents overwriting the session with empty recording_path
+                if (selectedSDRId === "sigmf-playback" && !playbackRecordingPath) {
+                    return;
+                }
+
                 let SDRSettings = {
                     selectedSDRId: selectedSDRId,
                     centerFrequency: centerFrequency,
@@ -196,12 +208,10 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     soapyAgc: soapyAgc,
                     offsetFrequency: selectedOffsetValue,
                     fftAveraging: fftAveraging,
+                    recordingPath: playbackRecordingPath,
                 }
                 SDRSettings = {...SDRSettings, ...updates};
                 socket.emit('sdr_data', 'configure-sdr', SDRSettings);
-
-            } else {
-                console.warn("No SDR selected, not sending SDR settings to backend");
             }
         }, [
             selectedSDRId,
@@ -216,8 +226,10 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
             rtlAgc,
             socket,
             selectedOffsetValue,
+            playbackRecordingPath,
             selectedAntenna,
             soapyAgc,
+            isStreaming,
         ]
     );
 
@@ -444,22 +456,89 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         }
     };
 
+    const handleRecordingSelect = (recording) => {
+        // When a recording is selected, auto-select the sigmfplayback SDR
+        const sigmfSdr = sdrs.find(sdr => sdr.type === 'sigmfplayback');
+
+        if (sigmfSdr) {
+            // Set the selected playback recording
+            dispatch(setSelectedPlaybackRecording(recording));
+
+            // Just send the recording name, backend will resolve the full path
+            const recordingPath = recording.name;
+            dispatch(setPlaybackRecordingPath(recordingPath));
+
+            // Get sample rate from recording metadata and set it in the UI
+            const recordingSampleRate = recording.metadata?.sample_rate;
+            if (recordingSampleRate) {
+                dispatch(setSampleRate(recordingSampleRate));
+            }
+
+            // Set antenna to "RX" for sigmfplayback
+            dispatch(setSelectedAntenna("RX"));
+
+            // Set gain to 0 for playback
+            dispatch(setGain(0));
+
+            // Auto-select the SigMF Playback SDR
+            dispatch(setSelectedSDRId(sigmfSdr.id));
+
+            // Expand the SDR accordion
+            if (!expandedPanels.includes('sdr')) {
+                dispatch(setExpandedPanels([...expandedPanels, 'sdr']));
+            }
+
+            // Manually send configure-sdr with the recording path
+            // since the useEffect won't have the updated playbackRecordingPath yet
+            setTimeout(() => {
+                const SDRSettings = {
+                    selectedSDRId: sigmfSdr.id,
+                    centerFrequency: centerFrequency,
+                    sampleRate: recordingSampleRate || sampleRate,
+                    gain: 0,
+                    fftSize: fftSize,
+                    biasT: biasT,
+                    tunerAgc: tunerAgc,
+                    rtlAgc: rtlAgc,
+                    fftWindow: fftWindow,
+                    antenna: "RX",
+                    soapyAgc: soapyAgc,
+                    offsetFrequency: selectedOffsetValue,
+                    fftAveraging: fftAveraging,
+                    recordingPath: recordingPath,
+                };
+                socket.emit('sdr_data', 'configure-sdr', SDRSettings);
+
+                // Now fetch SDR parameters after configure-sdr has set the recording path
+                setTimeout(() => {
+                    dispatch(getSDRConfigParameters({
+                        socket,
+                        selectedSDRId: sigmfSdr.id
+                    }));
+                }, 200);
+            }, 100);
+        } else {
+            toast.error('SigMF Playback SDR not found. Please refresh the page.');
+        }
+    };
+
     return (
         <>
             <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>{t('title')}</TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
-                <RecordingAccordion
-                    expanded={expandedPanels.includes('recording')}
-                    onAccordionChange={handleAccordionChange('recording')}
-                    isRecording={isRecording}
-                    recordingDuration={recordingDuration}
-                    recordingName={recordingName}
-                    onRecordingNameChange={(name) => dispatch(setRecordingName(name))}
-                    onStartRecording={handleStartRecording}
-                    onStopRecording={handleStopRecording}
-                    isStreaming={isStreaming}
-                    selectedSDRId={selectedSDRId}
+                <VfoAccordion
+                    expanded={expandedPanels.includes('vfo')}
+                    onAccordionChange={handleAccordionChange('vfo')}
+                    selectedVFOTab={selectedVFOTab}
+                    onVFOTabChange={handleVFOTabChange}
+                    vfoColors={vfoColors}
+                    vfoMarkers={vfoMarkers}
+                    vfoActive={vfoActive}
+                    onVFOActiveChange={handleVFOActiveChange}
+                    onVFOPropertyChange={handleVFOPropertyChange}
+                    selectedVFO={selectedVFO}
+                    onVFOListenChange={handleVFOListenChange}
                 />
 
                 <FrequencyControlAccordion
@@ -479,6 +558,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     selectedOffsetValue={selectedOffsetValue}
                     onOffsetValueChange={handleOffsetValueChange}
                     isRecording={isRecording}
+                    selectedSDRId={selectedSDRId}
+                    isStreaming={isStreaming}
                 />
 
                 <SdrAccordion
@@ -544,18 +625,25 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     }}
                 />
 
-                <VfoAccordion
-                    expanded={expandedPanels.includes('vfo')}
-                    onAccordionChange={handleAccordionChange('vfo')}
-                    selectedVFOTab={selectedVFOTab}
-                    onVFOTabChange={handleVFOTabChange}
-                    vfoColors={vfoColors}
-                    vfoMarkers={vfoMarkers}
-                    vfoActive={vfoActive}
-                    onVFOActiveChange={handleVFOActiveChange}
-                    onVFOPropertyChange={handleVFOPropertyChange}
-                    selectedVFO={selectedVFO}
-                    onVFOListenChange={handleVFOListenChange}
+                <RecordingAccordion
+                    expanded={expandedPanels.includes('recording')}
+                    onAccordionChange={handleAccordionChange('recording')}
+                    isRecording={isRecording}
+                    recordingDuration={recordingDuration}
+                    recordingName={recordingName}
+                    onRecordingNameChange={(name) => dispatch(setRecordingName(name))}
+                    onStartRecording={handleStartRecording}
+                    onStopRecording={handleStopRecording}
+                    isStreaming={isStreaming}
+                    selectedSDRId={selectedSDRId}
+                />
+
+                <PlaybackAccordion
+                    expanded={expandedPanels.includes('playback')}
+                    onAccordionChange={handleAccordionChange('playback')}
+                    isStreaming={isStreaming}
+                    selectedPlaybackRecording={selectedPlaybackRecording}
+                    onRecordingSelect={handleRecordingSelect}
                 />
             </div>
         </>

@@ -145,7 +145,7 @@ const initialState = {
     selectedSnapshot: null,
     recordingsPage: 1,
     snapshotsPage: 1,
-    recordingsPageSize: 20,
+    recordingsPageSize: 5,
     snapshotsPageSize: 20,
     recordingsTotal: 0,
     snapshotsTotal: 0,

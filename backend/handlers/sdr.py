@@ -36,12 +36,26 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                 logger.info(f"Configuring SDR {sdr_id} for client {client_id}")
 
-                # Fetch SDR device details from database
-                sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
-                if not sdr_device_reply["success"] or not sdr_device_reply["data"]:
-                    raise Exception(f"SDR device with id {sdr_id} not found in database")
+                # Handle hardcoded sigmfplayback SDR
+                if sdr_id == "sigmf-playback":
+                    sdr_device = {
+                        "id": "sigmf-playback",
+                        "name": "SigMF Playback",
+                        "type": "sigmfplayback",
+                        "driver": "sigmfplayback",
+                        "serial": None,
+                        "host": None,
+                        "port": None,
+                        "frequency_min": 0,
+                        "frequency_max": 6000000000,
+                    }
+                else:
+                    # Fetch SDR device details from database
+                    sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
+                    if not sdr_device_reply["success"] or not sdr_device_reply["data"]:
+                        raise Exception(f"SDR device with id {sdr_id} not found in database")
 
-                sdr_device = sdr_device_reply["data"]
+                    sdr_device = sdr_device_reply["data"]
                 sdr_serial = sdr_device.get("serial", 0)
                 sdr_host = sdr_device.get("host", None)
                 sdr_port = sdr_device.get("port", None)
@@ -53,13 +67,16 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 frequency_range = sdr_device.get(
                     "frequency_range", {"min": float("-inf"), "max": float("inf")}
                 )
-                if not (
-                    frequency_range["min"] * 1e6 <= center_freq <= frequency_range["max"] * 1e6
-                ):
-                    raise Exception(
-                        f"Center frequency {center_freq / 1e6:.2f} MHz is outside device limits "
-                        f"({frequency_range['min']:.2f} MHz - {frequency_range['max']:.2f} MHz)"
-                    )
+                # Type check: ensure frequency_range is a dict
+                if isinstance(frequency_range, dict):
+                    freq_min = frequency_range.get("min", float("-inf"))
+                    freq_max = frequency_range.get("max", float("inf"))
+                    if isinstance(freq_min, (int, float)) and isinstance(freq_max, (int, float)):
+                        if not (freq_min * 1e6 <= center_freq <= freq_max * 1e6):
+                            raise Exception(
+                                f"Center frequency {center_freq / 1e6:.2f} MHz is outside device limits "
+                                f"({freq_min:.2f} MHz - {freq_max:.2f} MHz)"
+                            )
 
                 # Default to 2.048 MSPS
                 sample_rate = data.get("sampleRate", 2.048e6)
@@ -94,6 +111,9 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # Offset frequency for downconverters and upconverters
                 offset_freq = data.get("offsetFrequency", 0)
 
+                # Recording path for sigmfplayback
+                recording_path = data.get("recordingPath", "")
+
                 # SDR configuration dictionary
                 sdr_config = {
                     "center_freq": center_freq,
@@ -107,6 +127,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                     "fft_averaging": fft_averaging,
                     "antenna": antenna,
                     "sdr_id": sdr_id,
+                    "recording_path": recording_path,
                     "serial_number": sdr_serial,
                     "host": sdr_host,
                     "port": sdr_port,
@@ -157,18 +178,29 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # SDR device id
                 sdr_id = data.get("selectedSDRId", None)
 
-                # Fetch SDR device details from database
-                sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
-                if not sdr_device_reply["success"] or not sdr_device_reply["data"]:
-                    raise Exception(f"SDR device with id {sdr_id} not found in database")
+                # Handle hardcoded sigmfplayback SDR
+                if sdr_id == "sigmf-playback":
+                    sdr_device = {
+                        "id": "sigmf-playback",
+                        "name": "SigMF Playback",
+                        "type": "sigmfplayback",
+                        "driver": "sigmfplayback",
+                        "serial": None,
+                        "host": None,
+                        "port": None,
+                    }
+                else:
+                    # Fetch SDR device details from database
+                    sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
+                    if not sdr_device_reply["success"] or not sdr_device_reply["data"]:
+                        raise Exception(f"SDR device with id {sdr_id} not found in database")
 
-                sdr_device = sdr_device_reply["data"]
+                    sdr_device = sdr_device_reply["data"]
 
                 if client_id not in active_sdr_clients:
                     raise Exception(f"Client with id: {client_id} not registered")
 
                 sdr_config = get_sdr_session(client_id)
-
                 logger.info(f"Starting streaming SDR data for client {client_id}")
 
                 # Start or join the SDR process
@@ -195,12 +227,20 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 # SDR device id
                 sdr_id = data.get("selectedSDRId", None)
 
-                # Fetch SDR device details from database
-                sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
-                if not sdr_device_reply["success"] or not sdr_device_reply["data"]:
-                    raise Exception(f"SDR device with id {sdr_id} not found in database")
+                # Handle hardcoded sigmfplayback SDR
+                if sdr_id == "sigmf-playback":
+                    sdr_device = {
+                        "id": "sigmf-playback",
+                        "name": "SigMF Playback",
+                        "type": "sigmfplayback",
+                    }
+                else:
+                    # Fetch SDR device details from database
+                    sdr_device_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id)
+                    if not sdr_device_reply["success"] or not sdr_device_reply["data"]:
+                        raise Exception(f"SDR device with id {sdr_id} not found in database")
 
-                sdr_device = sdr_device_reply["data"]
+                    sdr_device = sdr_device_reply["data"]
 
                 get_sdr_session(client_id)
 

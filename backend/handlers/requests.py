@@ -150,7 +150,23 @@ async def data_request_routing(sio, cmd, data, logger, sid):
         elif cmd == "get-sdrs":
             logger.debug(f"Getting SDRs, data: {data}")
             sdrs = await crud.hardware.fetch_sdrs(dbsession)
-            reply = {"success": sdrs["success"], "data": sdrs.get("data", [])}
+
+            # Add hardcoded SigMF Playback SDR for recording playback
+            sdrs_list = sdrs.get("data", [])
+            sigmf_playback_sdr = {
+                "id": "sigmf-playback",
+                "name": "SigMF Playback",
+                "type": "sigmfplayback",
+                "driver": "sigmfplayback",
+                "serial": None,
+                "host": None,
+                "port": None,
+                "frequency_min": 0,
+                "frequency_max": 6000000000,
+            }
+            sdrs_list.append(sigmf_playback_sdr)
+
+            reply = {"success": sdrs["success"], "data": sdrs_list}
 
         elif cmd == "get-locations":
             logger.debug("Getting all locations")  # noqa: F541

@@ -120,13 +120,13 @@ const SdrAccordion = ({
                             </Select>
                         </FormControl>
 
-                        <FormControl disabled={gettingSDRParameters}
+                        <FormControl disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
                             <InputLabel>{t('sdr.gain_db')}</InputLabel>
                             <Select
-                                disabled={gettingSDRParameters}
+                                disabled={gettingSDRParameters || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size={'small'}
                                 value={gainValues.length ? localGain : "none"}
                                 onChange={(e) => onGainChange(e.target.value)}
@@ -141,13 +141,13 @@ const SdrAccordion = ({
                                 ))}
                             </Select>
                         </FormControl>
-                        <FormControl disabled={gettingSDRParameters || isRecording}
+                        <FormControl disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
                             <InputLabel>{t('sdr.sample_rate')}</InputLabel>
                             <Select
-                                disabled={gettingSDRParameters || isRecording}
+                                disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size={'small'}
                                 value={sampleRateValues.includes(localSampleRate) ? localSampleRate : "none"}
                                 onChange={(e) => onSampleRateChange(e.target.value)}
@@ -171,13 +171,13 @@ const SdrAccordion = ({
                                 })}
                             </Select>
                         </FormControl>
-                        <FormControl disabled={gettingSDRParameters || isRecording}
+                        <FormControl disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                      sx={{minWidth: 200, marginTop: 0, marginBottom: 1}}
                                      fullWidth={true}
                                      variant="filled" size="small">
                             <InputLabel>{t('sdr.antenna')}</InputLabel>
                             <Select
-                                disabled={gettingSDRParameters || isRecording}
+                                disabled={gettingSDRParameters || isRecording || (selectedSDRId === 'sigmf-playback' && isStreaming)}
                                 size={'small'}
                                 value={antennasList.rx.includes(selectedAntenna) ? selectedAntenna : "none"}
                                 onChange={(e) => onAntennaChange(e.target.value)}

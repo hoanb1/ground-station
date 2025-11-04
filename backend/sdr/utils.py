@@ -148,18 +148,31 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
     sdr_params = {}
 
     # Check if parameters for this SDR are already cached
-    if sdr_id in sdr_parameters_cache:
+    # For sigmfplayback, don't use cache since recording_path may have changed
+    if sdr_id in sdr_parameters_cache and sdr_id != "sigmf-playback":
         logger.info(f"Using cached parameters for SDR with id {sdr_id}")
         return {"success": True, "data": sdr_parameters_cache[sdr_id]}
+    elif sdr_id == "sigmf-playback" and sdr_id in sdr_parameters_cache:
+        logger.info("Skipping cache for sigmfplayback SDR, will re-probe")
 
     try:
-        # Fetch SDR device details from database
-        sdr_device_reply = await hardware.fetch_sdr(dbsession, sdr_id)
+        # Handle hardcoded SigMF playback SDR
+        if sdr_id == "sigmf-playback":
+            sdr = {
+                "id": "sigmf-playback",
+                "name": "SigMF Playback",
+                "type": "sigmfplayback",
+                "driver": "sigmfplayback",
+                "recording_path": "",  # Will be set when recording is selected
+            }
+        else:
+            # Fetch SDR device details from database
+            sdr_device_reply = await hardware.fetch_sdr(dbsession, sdr_id)
 
-        if not sdr_device_reply["data"]:
-            raise Exception(f"SDR device with id {sdr_id} not found in database")
+            if not sdr_device_reply["data"]:
+                raise Exception(f"SDR device with id {sdr_id} not found in database")
 
-        sdr = sdr_device_reply["data"]
+            sdr = sdr_device_reply["data"]
 
         if sdr.get("type") in ["rtlsdrtcpv3", "rtlsdrusbv3", "rtlsdrtcpv4", "rtlsdrusbv4"]:
 
@@ -357,6 +370,105 @@ async def get_sdr_parameters(dbsession, sdr_id, timeout=30.0):
                 "frequency_ranges": sdr_params.get("frequency_ranges", {}),
                 "clock_info": sdr_params.get("clock_info", {}),
                 "temperature": sdr_params.get("temperature", {}),
+            }
+
+            # Cache the parameters
+            sdr_parameters_cache[sdr_id] = params
+            reply = {"success": True, "data": params}
+
+        elif sdr.get("type") in ["sigmfplayback"]:
+            logger.info(f"Getting parameters from SigMF recording for SDR: {sdr}")
+
+            # For sigmfplayback, we need the recording_path from the session
+            # Get the first active client's session to get the recording_path
+            recording_path = sdr.get("recording_path", "")
+
+            # If not in sdr dict, try to get from active sessions
+            if not recording_path:
+                for client_id, session in active_sdr_clients.items():
+                    if session.get("sdr_id") == sdr_id:
+                        recording_path = session.get("recording_path", "")
+                        break
+
+            if not recording_path:
+                logger.warning("No recording_path available yet for sigmfplayback SDR")
+                # Return default values without probing
+                window_function_names = list(window_functions.keys())
+                fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
+
+                params = {
+                    "gain_values": [0.0],
+                    "sample_rate_values": [2048000],  # Default
+                    "fft_size_values": fft_size_values,
+                    "fft_window_values": window_function_names,
+                    "has_agc": False,
+                    "has_bias_t": False,
+                    "has_tuner_agc": False,
+                    "has_rtl_agc": False,
+                    "has_soapy_agc": False,
+                    "antennas": {"tx": [], "rx": ["RX"]},
+                    "frequency_ranges": {"rx": {"min": 0, "max": 6000, "step": 0.1}},
+                }
+
+                reply = {"success": True, "data": params}
+                return reply
+
+            # Update sdr dict with recording_path for probing
+            sdr["recording_path"] = recording_path
+
+            # Get parameters from SigMF file in a separate process
+            probe_process = await asyncio.create_subprocess_exec(
+                "python3",
+                "-c",
+                f"from sdr.sigmfprobe import probe_sigmf_recording; print(probe_sigmf_recording({sdr}))",
+                stdout=asyncio.subprocess.PIPE,
+                stderr=asyncio.subprocess.PIPE,
+            )
+
+            try:
+                stdout, stderr = await asyncio.wait_for(
+                    probe_process.communicate(), timeout=timeout
+                )
+
+                if probe_process.returncode != 0:
+                    error_output = stderr.decode().strip()
+                    raise Exception(f"SigMF probe process failed: {error_output}")
+
+            except asyncio.TimeoutError:
+                probe_process.kill()
+                raise TimeoutError("Timed out while getting parameters from SigMF recording")
+
+            sdr_params_reply = eval(stdout.decode().strip())
+
+            if sdr_params_reply["success"] is False:
+                logger.error(sdr_params_reply)
+                raise Exception(sdr_params_reply["error"])
+
+            sdr_params = sdr_params_reply["data"]
+
+            logger.debug(f"Got parameters from SigMF recording: {sdr_params}")
+
+            # Common window functions
+            window_function_names = list(window_functions.keys())
+
+            # Common FFT sizes
+            fft_size_values = [256, 512, 1024, 2048, 4096, 8192, 16384, 32768, 65536]
+
+            params = {
+                "gain_values": sdr_params["gains"],
+                "sample_rate_values": sdr_params["rates"],
+                "fft_size_values": fft_size_values,
+                "fft_window_values": window_function_names,
+                "has_agc": sdr_params.get("has_agc", False),
+                "has_bias_t": False,
+                "has_tuner_agc": False,
+                "has_rtl_agc": False,
+                "has_soapy_agc": False,
+                "antennas": {"tx": [], "rx": ["RX"]},
+                "frequency_ranges": sdr_params.get("frequency_ranges", {}),
+                "metadata": sdr_params.get("metadata", {}),
+                "total_samples": sdr_params.get("total_samples", 0),
+                "duration": sdr_params.get("duration", 0),
             }
 
             # Cache the parameters

@@ -31,8 +31,13 @@ const FrequencyControlAccordion = ({
                                        selectedOffsetValue,
                                        onOffsetValueChange,
                                        isRecording,
+                                       selectedSDRId,
+                                       isStreaming,
                                    }) => {
     const { t } = useTranslation('waterfall');
+
+    // Check if we're playing back a SigMF recording
+    const isPlayingback = selectedSDRId === 'sigmf-playback' && isStreaming;
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
@@ -52,11 +57,11 @@ const FrequencyControlAccordion = ({
                         onChange={onCenterFrequencyChange}
                         size={"small"}
                         hideHzDigits={true}
-                        disabled={isRecording}
+                        disabled={isRecording || isPlayingback}
                     />
                 </Box>
 
-                <FormControl disabled={isRecording}
+                <FormControl disabled={isRecording || isPlayingback}
                              sx={{minWidth: 200, marginTop: 1, marginBottom: 0}} fullWidth variant="filled"
                              size="small">
                     <InputLabel htmlFor="transmitter-select">{t('frequency.go_to_transmitter')}</InputLabel>
@@ -95,7 +100,7 @@ const FrequencyControlAccordion = ({
                 </FormControl>
 
                 <FormControl
-                    disabled={isRecording}
+                    disabled={isRecording || isPlayingback}
                     sx={{minWidth: 200, marginTop: 1, marginBottom: 0}}
                     fullWidth
                     variant="filled"
@@ -122,11 +127,11 @@ const FrequencyControlAccordion = ({
                     </Select>
                 </FormControl>
 
-                <FormControl disabled={selectedOffsetMode !== "manual" || isRecording} sx={{minWidth: 200, marginTop: 1}}
+                <FormControl disabled={selectedOffsetMode !== "manual" || isRecording || isPlayingback} sx={{minWidth: 200, marginTop: 1}}
                              fullWidth variant="filled"
                              size="small">
                     <TextField
-                        disabled={selectedOffsetMode !== "manual" || isRecording}
+                        disabled={selectedOffsetMode !== "manual" || isRecording || isPlayingback}
                         label={t('frequency.manual_offset_hz')}
                         value={selectedOffsetValue}
                         variant="filled"

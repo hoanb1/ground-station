@@ -25,6 +25,7 @@ from common.constants import DictKeys, QueueMessageTypes, SocketEvents
 from fft.processor import fft_processor_process
 from sdr.iqbroadcaster import IQBroadcaster
 from workers.rtlsdrworker import rtlsdr_worker_process
+from workers.sigmfplaybackworker import sigmf_playback_worker_process
 from workers.soapysdrlocalworker import soapysdr_local_worker_process
 from workers.soapysdrremoteworker import soapysdr_remote_worker_process
 from workers.uhdworker import uhd_worker_process
@@ -176,6 +177,7 @@ class SDRProcessManager:
             "soapysdrremote",
             "soapysdrlocal",
             "uhd",
+            "sigmfplayback",
         ]
         assert sdr_device["id"]
 
@@ -240,6 +242,12 @@ class SDRProcessManager:
             driver = "uhd"
             worker_process = uhd_worker_process
             process_name = f"Ground Station - UHD-Worker-{sdr_id}"
+
+        elif sdr_device["type"] == "sigmfplayback":
+            connection_type = "sigmfplayback"
+            driver = "sigmfplayback"
+            worker_process = sigmf_playback_worker_process
+            process_name = f"Ground Station - SigMF-Playback-{sdr_id}"
 
         # Check if a process for this device already exists
         if sdr_id in self.processes and self.processes[sdr_id]["process"].is_alive():
@@ -321,6 +329,8 @@ class SDRProcessManager:
                 "soapy_agc": sdr_config.get("soapy_agc", False),
                 "offset_freq": int(sdr_config.get("offset_freq", 0)),
                 "fft_averaging": sdr_config.get("fft_averaging", 1),
+                "recording_path": sdr_config.get("recording_path", ""),
+                "loop_playback": sdr_config.get("loop_playback", True),
             }
 
             if not worker_process:

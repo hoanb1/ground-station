@@ -81,8 +81,12 @@ function formatBytes(bytes) {
 function formatDuration(startTime, endTime) {
     if (!startTime) return null;
 
-    const start = new Date(startTime);
-    const end = endTime ? new Date(endTime) : new Date();
+    // Clean up timestamps that may have both +00:00 and Z (invalid format)
+    const cleanStart = typeof startTime === 'string' ? startTime.replace(/\+00:00Z$/, 'Z') : startTime;
+    const cleanEnd = typeof endTime === 'string' ? endTime.replace(/\+00:00Z$/, 'Z') : endTime;
+
+    const start = new Date(cleanStart);
+    const end = cleanEnd ? new Date(cleanEnd) : new Date();
 
     // Check if dates are valid
     if (isNaN(start.getTime()) || isNaN(end.getTime())) {

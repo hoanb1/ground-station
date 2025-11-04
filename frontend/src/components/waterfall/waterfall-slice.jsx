@@ -167,7 +167,7 @@ const initialState = {
     waterFallPositionX: 0,
     showRightSideWaterFallAccessories: true,
     showLeftSideWaterFallAccessories: true,
-    expandedPanels: ['recording', 'sdr', 'freqControl', 'fft', 'vfo'],
+    expandedPanels: ['recording', 'playback', 'sdr', 'freqControl', 'fft', 'vfo'],
     selectedSDRId: "none",
     selectedTransmitterId: "none",
     startStreamingLoading: false,
@@ -210,6 +210,9 @@ const initialState = {
     recordingDuration: 0,
     recordingStartTime: null, // ISO timestamp when recording started
     recordingName: '',
+    // Playback state
+    selectedPlaybackRecording: null, // Selected recording for playback
+    playbackRecordingPath: '', // Path to the selected recording file
 };
 
 // Add these new reducers to your createSlice
@@ -412,7 +415,17 @@ export const waterfallSlice = createSlice({
                 // Fallback to simple increment if no start time
                 state.recordingDuration += 1;
             }
-        }
+        },
+        setSelectedPlaybackRecording: (state, action) => {
+            state.selectedPlaybackRecording = action.payload;
+        },
+        setPlaybackRecordingPath: (state, action) => {
+            state.playbackRecordingPath = action.payload;
+        },
+        clearPlaybackRecording: (state) => {
+            state.selectedPlaybackRecording = null;
+            state.playbackRecordingPath = '';
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -533,6 +546,9 @@ export const {
     setRecordingName,
     setRecordingStartTime,
     incrementRecordingDuration,
+    setSelectedPlaybackRecording,
+    setPlaybackRecordingPath,
+    clearPlaybackRecording,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;

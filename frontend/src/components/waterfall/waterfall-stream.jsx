@@ -40,6 +40,7 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
         gettingSDRParameters,
         autoDBRange,
         vfoActive,
+        playbackRecordingPath,
     } = useSelector((state) => state.waterfall);
 
     const animationFrameRef = useRef(null);
@@ -152,8 +153,16 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
 
     const startStreaming = useCallback(() => {
         if (!isStreaming) {
+            // For sigmfplayback, we should not send configure-sdr if there's no recording path
+            // This prevents overwriting the session with empty recording_path
+            if (selectedSDRId === "sigmf-playback" && !playbackRecordingPath) {
+                toast.error('Please select a recording first');
+                return;
+            }
+
             dispatch(setStartStreamingLoading(true));
             dispatch(setErrorMessage(''));
+
             socket.emit('sdr_data', 'configure-sdr', {
                 selectedSDRId,
                 centerFrequency,
@@ -168,6 +177,7 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
                 offsetFrequency: selectedOffsetValue,
                 soapyAgc,
                 fftAveraging,
+                recordingPath: playbackRecordingPath,
             }, (response) => {
                 if (response['success']) {
                     socket.emit('sdr_data', 'start-streaming', { selectedSDRId });
@@ -180,7 +190,7 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
                 }
             });
         }
-    }, [isStreaming, dispatch, socket, selectedSDRId, centerFrequency, sampleRate, gain, fftSize, biasT, tunerAgc, rtlAgc, fftWindow, selectedAntenna, selectedOffsetValue, soapyAgc, fftAveraging, workerRef, targetFPSRef]);
+    }, [isStreaming, dispatch, socket, selectedSDRId, centerFrequency, sampleRate, gain, fftSize, biasT, tunerAgc, rtlAgc, fftWindow, selectedAntenna, selectedOffsetValue, soapyAgc, fftAveraging, playbackRecordingPath, workerRef, targetFPSRef]);
 
     const stopStreaming = useCallback(() => {
         if (isStreaming) {
