@@ -257,14 +257,22 @@ const PlaybackAccordion = ({
                                                 <ListItemText
                                                     primary={recording.name}
                                                     secondary={
-                                                        <Stack direction="row" spacing={0.5} sx={{ mt: 0.25 }}>
+                                                        <Stack
+                                                            direction="row"
+                                                            spacing={0.25}
+                                                            sx={{
+                                                                mt: 0.25,
+                                                                flexWrap: 'wrap',
+                                                                gap: 0.25,
+                                                            }}
+                                                        >
                                                             {sampleRate && (
                                                                 <Chip
                                                                     label={`${(sampleRate / 1e6).toFixed(2)} MS/s`}
                                                                     size="small"
                                                                     variant="outlined"
                                                                     color="primary"
-                                                                    sx={{ height: '18px', fontSize: '0.7rem' }}
+                                                                    sx={{ height: '18px', fontSize: '0.65rem', px: 0 }}
                                                                 />
                                                             )}
                                                             {dataSize && (
@@ -272,7 +280,7 @@ const PlaybackAccordion = ({
                                                                     label={formatBytes(dataSize)}
                                                                     size="small"
                                                                     variant="outlined"
-                                                                    sx={{ height: '18px', fontSize: '0.7rem' }}
+                                                                    sx={{ height: '18px', fontSize: '0.65rem', px: 0 }}
                                                                 />
                                                             )}
                                                             {duration && (
@@ -281,7 +289,7 @@ const PlaybackAccordion = ({
                                                                     size="small"
                                                                     variant="outlined"
                                                                     color="error"
-                                                                    sx={{ height: '18px', fontSize: '0.7rem', fontFamily: 'monospace' }}
+                                                                    sx={{ height: '18px', fontSize: '0.65rem', fontFamily: 'monospace', px: 0 }}
                                                                 />
                                                             )}
                                                             {recording.created && (
@@ -290,7 +298,7 @@ const PlaybackAccordion = ({
                                                                     size="small"
                                                                     variant="outlined"
                                                                     color="success"
-                                                                    sx={{ height: '18px', fontSize: '0.7rem' }}
+                                                                    sx={{ height: '18px', fontSize: '0.65rem', px: 0 }}
                                                                 />
                                                             )}
                                                         </Stack>
@@ -298,6 +306,11 @@ const PlaybackAccordion = ({
                                                     primaryTypographyProps={{
                                                         fontSize: '0.9rem',
                                                         fontWeight: isSelected ? 'bold' : 'normal',
+                                                        noWrap: true,
+                                                        sx: {
+                                                            overflow: 'hidden',
+                                                            textOverflow: 'ellipsis',
+                                                        }
                                                     }}
                                                     secondaryTypographyProps={{
                                                         component: 'div'
