@@ -81,6 +81,12 @@ const SatelliteTable = React.memo(function SatelliteTable() {
         loading,
     } = useSelector((state) => state.satellites);
 
+    // Get timezone preference
+    const timezone = useSelector((state) => {
+        const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
+        return tzPref?.value || 'UTC';
+    });
+
     const columns = [
         {
             field: 'name',
@@ -191,7 +197,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             headerName: t('satellite_database.decayed'),
             width: 150,
             renderCell: (params) => {
-                return betterDateTimes(params.value);
+                return betterDateTimes(params.value, timezone);
             },
         },
         {
@@ -199,7 +205,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             headerName: t('satellite_database.launched'),
             width: 150,
             renderCell: (params) => {
-                return betterDateTimes(params.value);
+                return betterDateTimes(params.value, timezone);
             },
         },
         {
@@ -207,7 +213,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             headerName: t('satellite_database.deployed'),
             width: 150,
             renderCell: (params) => {
-                return betterDateTimes(params.value);
+                return betterDateTimes(params.value, timezone);
             },
         },
         {
@@ -215,7 +221,7 @@ const SatelliteTable = React.memo(function SatelliteTable() {
             headerName: t('satellite_database.updated'),
             width: 150,
             renderCell: (params) => {
-                return betterDateTimes(params.value);
+                return betterDateTimes(params.value, timezone);
             },
         },
     ];

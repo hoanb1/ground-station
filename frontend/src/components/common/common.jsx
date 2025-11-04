@@ -302,10 +302,14 @@ export const humanizeFutureDateInMinutes = (isoString, zeroPadding = 2) => {
     return `in ${formatWithZeros(diffInMinutes, zeroPadding)}m ${formatWithZeros(remainingSeconds, zeroPadding)}s`;
 };
 
-export const betterDateTimes = (date) => {
+export const betterDateTimes = (date, timezone = 'UTC') => {
     if (date) {
+        // Format the date in the user's timezone for the tooltip
+        const dateObj = new Date(date);
+        const formattedDate = dateObj.toLocaleString('en-US', { timeZone: timezone });
+
         return (
-            <Tooltip title={date} arrow>
+            <Tooltip title={formattedDate} arrow>
                     <span>
                         {humanizeDate(date)}
                     </span>

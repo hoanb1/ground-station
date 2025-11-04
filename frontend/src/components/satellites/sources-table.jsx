@@ -51,6 +51,12 @@ export default function SourcesTable() {
     const { t } = useTranslation('satellites');
     const {tleSources, loading, formValues, openDeleteConfirm, openAddDialog, selected} = useSelector((state) => state.tleSources);
 
+    // Get timezone preference
+    const timezone = useSelector((state) => {
+        const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
+        return tzPref?.value || 'UTC';
+    });
+
     const columns = [
         {field: 'name', headerName: t('tle_sources.name'), width: 150},
         {field: 'url', headerName: t('tle_sources.url'), flex: 2},
@@ -63,7 +69,7 @@ export default function SourcesTable() {
             headerAlign: 'right',
             width: 100,
             renderCell: (params) => {
-                return betterDateTimes(params.value);
+                return betterDateTimes(params.value, timezone);
             }
         },
         {
@@ -74,7 +80,7 @@ export default function SourcesTable() {
             align: 'right',
             headerAlign: 'right',
             renderCell: (params) => {
-                return betterDateTimes(params.value);
+                return betterDateTimes(params.value, timezone);
             }
         },
     ];

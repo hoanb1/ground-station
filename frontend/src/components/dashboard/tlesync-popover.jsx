@@ -52,6 +52,12 @@ const SatelliteSyncPopover = () => {
         (state) => state.syncSatellite
     );
 
+    // Get timezone preference
+    const timezone = useSelector((state) => {
+        const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
+        return tzPref?.value || 'UTC';
+    });
+
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
     };
@@ -75,16 +81,17 @@ const SatelliteSyncPopover = () => {
         if (syncState?.status === 'inprogress') return t('tlesync_popover.syncing', { progress: syncState?.progress || 0 });
         if (syncState?.status === 'complete' && syncState?.success === false) return t('tlesync_popover.sync_failed', { error: syncState.errors?.[0] || 'Unknown error' });
         if (syncState?.status === 'complete' && syncState?.success === true) {
-            return t('tlesync_popover.last_sync', { date: new Date(syncState.last_update).toLocaleString() });
+            const date = new Date(syncState.last_update);
+            return t('tlesync_popover.last_sync', { date: date.toLocaleString('en-US', { timeZone: timezone }) });
         }
         return t('tlesync_popover.satellite_tle_sync');
     };
 
-    // Format date nicely
+    // Format date nicely with user's timezone
     const formatDate = (dateString) => {
         if (!dateString) return t('tlesync_popover.na');
         const date = new Date(dateString);
-        return date.toLocaleString();
+        return date.toLocaleString('en-US', { timeZone: timezone });
     };
 
     // Show icon only when in progress or when complete with success === false

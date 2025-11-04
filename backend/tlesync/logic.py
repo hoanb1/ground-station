@@ -142,7 +142,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     sync_state["errors"].append(error_msg)
                     sync_state["success"] = False
                     sync_state["message"] = e.message
-                    sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
+                    sync_state["last_update"] = datetime.now(timezone.utc).isoformat() + "Z"
                     sync_state_manager.set_state(sync_state)
 
                     await sio.emit("sat-sync-events", sync_state)
@@ -156,7 +156,7 @@ async def synchronize_satellite_data(dbsession, logger, sio):
                     sync_state["errors"].append(error_msg)
                     sync_state["success"] = False
                     sync_state["message"] = str(e)
-                    sync_state["last_update"] = datetime.now(timezone.utc).isoformat()
+                    sync_state["last_update"] = datetime.now(timezone.utc).isoformat() + "Z"
                     sync_state_manager.set_state(sync_state)
 
                     await sio.emit("sat-sync-events", sync_state)

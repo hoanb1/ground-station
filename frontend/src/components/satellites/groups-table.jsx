@@ -116,6 +116,12 @@ const GroupsTable = () => {
     const { t } = useTranslation('satellites');
     const navigate = useNavigate();
 
+    // Get timezone preference
+    const timezone = useSelector((state) => {
+        const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
+        return tzPref?.value || 'UTC';
+    });
+
     // Redux state
     const {
         groups,
@@ -149,7 +155,7 @@ const GroupsTable = () => {
             flex: 1,
             align: 'right',
             headerAlign: 'right',
-            renderCell: (params) => betterDateTimes(params.value),
+            renderCell: (params) => betterDateTimes(params.value, timezone),
         },
         {
             field: 'updated',
@@ -158,7 +164,7 @@ const GroupsTable = () => {
             flex: 1,
             align: 'right',
             headerAlign: 'right',
-            renderCell: (params) => betterDateTimes(params.value),
+            renderCell: (params) => betterDateTimes(params.value, timezone),
         },
     ];
 

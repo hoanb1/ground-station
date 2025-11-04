@@ -120,6 +120,12 @@ const SatelliteInfo = () => {
     // Get satellite list, clickedSatellite and loading state from Redux store
     const { satellites, clickedSatellite, loading, error } = useSelector(state => state.satellites);
 
+    // Get timezone preference
+    const timezone = useSelector((state) => {
+        const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
+        return tzPref?.value || 'UTC';
+    });
+
     useEffect(() => {
         const noradIdInt = parseInt(noradId);
 
@@ -550,7 +556,7 @@ const SatelliteInfo = () => {
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.launched')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['launched'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['launched'], timezone)}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -563,7 +569,7 @@ const SatelliteInfo = () => {
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.deployed')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['deployed'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['deployed'], timezone)}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -576,7 +582,7 @@ const SatelliteInfo = () => {
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.decayed')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['decayed'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['decayed'], timezone)}</span>
                                 </Box>
                                 <Box
                                     sx={{
@@ -589,7 +595,7 @@ const SatelliteInfo = () => {
                                     }}
                                 >
                                     <strong>{t('satellite_info.fields.updated')}</strong>
-                                    <span>{betterDateTimes(clickedSatellite['updated'])}</span>
+                                    <span>{betterDateTimes(clickedSatellite['updated'], timezone)}</span>
                                 </Box>
                                 <Box
                                     sx={{

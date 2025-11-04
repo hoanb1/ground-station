@@ -64,6 +64,12 @@ const OverviewSatelliteInfoCard = () => {
         selectedTransmitter
     } = useSelector(state => state.targetSatTrack);
 
+    // Get timezone preference
+    const timezone = useSelector((state) => {
+        const tzPref = state.preferences?.preferences?.find(p => p.name === 'timezone');
+        return tzPref?.value || 'UTC';
+    });
+
     useEffect(() => {
         if (selectedSatelliteId) {
             dispatch(fetchSatelliteData({socket: socket, noradId: selectedSatelliteId}));
@@ -348,7 +354,7 @@ const OverviewSatelliteInfoCard = () => {
                                             {t('satellite_info.last_update')}
                                         </Typography>
                                         <Typography variant="body2" sx={{ color: 'warning.light' }}>
-                                            {satelliteData && satelliteData['details'] ? betterDateTimes(satelliteData['details']['updated']) : 'N/A'}
+                                            {satelliteData && satelliteData['details'] ? betterDateTimes(satelliteData['details']['updated'], timezone) : 'N/A'}
                                         </Typography>
                                     </Box>
                                 </Grid>
