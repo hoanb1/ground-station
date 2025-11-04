@@ -474,6 +474,12 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                 dispatch(setSampleRate(recordingSampleRate));
             }
 
+            // Get center frequency from recording metadata (from captures)
+            const recordingCenterFreq = recording.metadata?.captures?.[0]?.["core:frequency"];
+            if (recordingCenterFreq) {
+                dispatch(setCenterFrequency(recordingCenterFreq));
+            }
+
             // Set antenna to "RX" for sigmfplayback
             dispatch(setSelectedAntenna("RX"));
 
@@ -493,7 +499,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
             setTimeout(() => {
                 const SDRSettings = {
                     selectedSDRId: sigmfSdr.id,
-                    centerFrequency: centerFrequency,
+                    centerFrequency: recordingCenterFreq || centerFrequency,
                     sampleRate: recordingSampleRate || sampleRate,
                     gain: 0,
                     fftSize: fftSize,
