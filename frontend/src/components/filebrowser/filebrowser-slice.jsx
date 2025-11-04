@@ -250,7 +250,7 @@ const fileBrowserSlice = createSlice({
             state.files = action.payload.items || [];
             state.total = action.payload.total || 0;
             state.page = action.payload.page || state.page;
-            state.pageSize = action.payload.pageSize || state.pageSize;
+            // Don't update pageSize from response - it should only be set by user actions
             state.diskUsage = action.payload.diskUsage || { total: 0, used: 0, available: 0 };
         });
         builder.addCase(fetchFiles.rejected, (state, action) => {
