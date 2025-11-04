@@ -281,11 +281,16 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
             // Send snapshot to backend using Redux async thunk
             dispatch(saveWaterfallSnapshot({ socket, waterfallImage: compositeImage, snapshotName: '' }))
                 .unwrap()
+                .then(() => {
+                    toast.success('Waterfall snapshot saved successfully', { autoClose: 3000 });
+                })
                 .catch((error) => {
                     console.error('Failed to save snapshot:', error);
+                    toast.error('Failed to save snapshot');
                 });
         } catch (error) {
             console.error('Error in takeSnapshot:', error);
+            toast.error('Error capturing snapshot');
         }
     }, [socket, dispatch, captureSnapshot]);
 
