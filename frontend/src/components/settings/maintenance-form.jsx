@@ -447,360 +447,312 @@ const MaintenanceForm = () => {
                 {t('maintenance.subtitle')}
             </Alert>
             <Box component="form" sx={{mt: 2}}>
-                <Grid container spacing={2} columns={16}>
-                    <Grid size={8}>
-                        {t('maintenance.clear_layout')}
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="contained" color="warning" onClick={clearLayoutLocalStorage}>
-                            {t('maintenance.clear_layout_button')}
-                        </Button>
-                    </Grid>
+                <Grid container spacing={3}>
+                    {/* Left Column - Storage & Settings Management */}
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
+                            <Typography variant="h6" gutterBottom>
+                                Storage & Settings Management
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
 
-                    <Grid size={16}>
-                        <Divider sx={{ my: 2 }} />
-                        <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                            Redux Persistent Settings
-                        </Typography>
-                    </Grid>
+                            <Grid container spacing={2} columns={16}>
+                                <Grid size={16}>
+                                    <Typography variant="subtitle2" color="text.secondary">
+                                        Grid Layout Storage
+                                    </Typography>
+                                </Grid>
+                                <Grid size={10}>
+                                    {t('maintenance.clear_layout')}
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="contained"
+                                        color="warning"
+                                        onClick={clearLayoutLocalStorage}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        {t('maintenance.clear_layout_button')}
+                                    </Button>
+                                </Grid>
 
-                    <Grid size={16}>
-                        <Alert severity="warning" sx={{ mb: 2 }}>
-                            <AlertTitle>Clear All Redux Settings</AlertTitle>
-                            This will reset all application settings below to their defaults. Use individual buttons to clear specific settings only.
-                        </Alert>
-                    </Grid>
+                                <Grid size={16}>
+                                    <Divider sx={{ my: 2 }} />
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                        Redux Persistent Settings
+                                    </Typography>
+                                </Grid>
 
-                    <Grid size={8}>
-                        {t('maintenance.clear_redux')}
-                        <Typography variant="body2" color="text.secondary">
-                            Clears all Redux persistent data (all settings below)
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="contained" color="error" onClick={clearReduxPersistentState}>
-                            {t('maintenance.clear_redux_button')}
-                        </Button>
-                    </Grid>
+                                <Grid size={16}>
+                                    <Alert severity="warning" sx={{ mb: 2 }}>
+                                        <AlertTitle>Clear All Redux Settings</AlertTitle>
+                                        This will reset all application settings below to their defaults. Use individual buttons to clear specific settings only.
+                                    </Alert>
+                                </Grid>
 
-                    <Grid size={16}>
-                        <Divider sx={{ my: 2 }} />
-                        <Typography variant="body2" color="text.secondary" gutterBottom>
-                            Or clear individual settings:
-                        </Typography>
-                    </Grid>
+                                <Grid size={10}>
+                                    {t('maintenance.clear_redux')}
+                                    <Typography variant="body2" color="text.secondary">
+                                        Clears all Redux persistent data (all settings below)
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="contained"
+                                        color="error"
+                                        onClick={clearReduxPersistentState}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        {t('maintenance.clear_redux_button')}
+                                    </Button>
+                                </Grid>
 
-                    <Grid size={8}>
-                        Clear File Browser Settings
-                        <Typography variant="body2" color="text.secondary">
-                            Resets page size, sorting, filters, and view mode
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="outlined" color="warning" onClick={clearFileBrowserPersist}>
-                            Clear File Browser
-                        </Button>
-                    </Grid>
+                                <Grid size={16}>
+                                    <Divider sx={{ my: 2 }} />
+                                    <Typography variant="body2" color="text.secondary" gutterBottom>
+                                        Or clear individual settings:
+                                    </Typography>
+                                </Grid>
 
-                    <Grid size={8}>
-                        Clear Waterfall Settings
-                        <Typography variant="body2" color="text.secondary">
-                            Resets frequency, gain, sample rate, colormap, FFT settings, VFO markers
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="outlined" color="warning" onClick={clearWaterfallPersist}>
-                            Clear Waterfall
-                        </Button>
-                    </Grid>
+                                <Grid size={10}>
+                                    Clear File Browser Settings
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets page size, sorting, filters, and view mode
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={clearFileBrowserPersist}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
 
-                    <Grid size={8}>
-                        Clear Preferences
-                        <Typography variant="body2" color="text.secondary">
-                            Resets all user preferences like timezone, theme, etc.
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="outlined" color="warning" onClick={clearPreferencesPersist}>
-                            Clear Preferences
-                        </Button>
-                    </Grid>
+                                <Grid size={10}>
+                                    Clear Waterfall Settings
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets frequency, gain, sample rate, colormap, FFT settings, VFO markers
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={clearWaterfallPersist}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
 
-                    <Grid size={8}>
-                        Clear Overview Satellite Selection
-                        <Typography variant="body2" color="text.secondary">
-                            Resets selected satellite group and satellite in overview page
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="outlined" color="warning" onClick={clearOverviewSatTrackPersist}>
-                            Clear Overview Selection
-                        </Button>
-                    </Grid>
+                                <Grid size={10}>
+                                    Clear Preferences
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets all user preferences like timezone, theme, etc.
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={clearPreferencesPersist}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
 
-                    <Grid size={8}>
-                        Clear Camera Selection
-                        <Typography variant="body2" color="text.secondary">
-                            Resets selected camera and camera ID
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Button variant="outlined" color="warning" onClick={clearCameraPersist}>
-                            Clear Camera
-                        </Button>
-                    </Grid>
-                </Grid>
+                                <Grid size={10}>
+                                    Clear Overview Satellite Selection
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets selected satellite group and satellite in overview page
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={clearOverviewSatTrackPersist}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
 
-                <Divider sx={{ my: 3 }} />
-
-                <Alert severity="warning">
-                    <AlertTitle>{t('maintenance.service_control_title')}</AlertTitle>
-                    {t('maintenance.service_control_subtitle')}
-                </Alert>
-
-                <Grid container spacing={2} columns={16} sx={{ mt: 1 }}>
-                    <Grid size={8}>
-                        {t('maintenance.restart_service')}
-                        <Typography variant="body2" color="text.secondary">
-                            {t('maintenance.restart_service_description')}
-                        </Typography>
-                    </Grid>
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Button
-                            variant="contained"
-                            color="error"
-                            startIcon={isRestarting ? <CircularProgress size={20} color="inherit" /> : <RestartAltIcon />}
-                            onClick={() => setConfirmRestartOpen(true)}
-                            disabled={isRestarting}
-                        >
-                            {isRestarting ? t('maintenance.restarting') : t('maintenance.restart_service_button')}
-                        </Button>
-                    </Grid>
-
-                    {restartMessage && (
-                        <>
-                            <Grid size={8}>
-                                {t('maintenance.restart_status')}
+                                <Grid size={10}>
+                                    Clear Camera Selection
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets selected camera and camera ID
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={clearCameraPersist}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
                             </Grid>
-                            <Grid size={8}>
-                                <Alert
-                                    severity={restartMessage.includes('Failed') ? "error" : "warning"}
-                                    sx={{ mt: 1 }}
-                                >
-                                    {restartMessage}
-                                </Alert>
-                            </Grid>
-                        </>
-                    )}
-                </Grid>
-
-                <Divider sx={{ my: 3 }} />
-
-                <Alert severity="info">
-                    <AlertTitle>{t('maintenance.browser_features_title')}</AlertTitle>
-                    {t('maintenance.browser_features_subtitle')}
-                </Alert>
-
-                <Grid container spacing={2} columns={16} sx={{ mt: 1 }}>
-                    <Grid size={8}>
-                        {t('maintenance.web_workers')}
-                        <Typography variant="body2" color="text.secondary">
-                            {t('maintenance.web_workers_description')}
-                        </Typography>
-                    </Grid>
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        {getSupportIcon(workersSupported)}
-                        <Typography sx={{ ml: 1 }}>
-                            {workersSupported === null ? t('maintenance.not_tested') :
-                                workersSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={testWebWorkers}
-                            disabled={isTestingWorkers}
-                            sx={{ ml: 2 }}
-                        >
-                            {isTestingWorkers ? <CircularProgress size={24} /> : t('maintenance.test_now')}
-                        </Button>
+                        </Paper>
                     </Grid>
 
-                    {workerTestResult && (
-                        <>
-                            <Grid size={8}>
-                                {t('maintenance.worker_test_result')}
-                            </Grid>
-                            <Grid size={8}>
-                                <Typography
-                                    color={workerTestResult.includes('Error') ? 'error' : 'success.main'}
-                                >
-                                    {workerTestResult}
-                                </Typography>
-                            </Grid>
-                        </>
-                    )}
+                    {/* Right Column - Service Control & Browser Features */}
+                    <Grid size={{ xs: 12, md: 6 }}>
+                        <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
+                            <Typography variant="h6" gutterBottom>
+                                Service Control
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
 
-                    <Grid size={8}>
-                        {t('maintenance.offscreen_canvas')}
-                        <Typography variant="body2" color="text.secondary">
-                            {t('maintenance.offscreen_canvas_description')}
-                        </Typography>
-                    </Grid>
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        {getSupportIcon(offscreenCanvasSupported)}
-                        <Typography sx={{ ml: 1 }}>
-                            {offscreenCanvasSupported === null ? t('maintenance.not_tested') :
-                                offscreenCanvasSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={testOffscreenCanvas}
-                            disabled={isTestingOffscreen}
-                            sx={{ ml: 2 }}
-                        >
-                            {isTestingOffscreen ? <CircularProgress size={24} /> : t('maintenance.test_now')}
-                        </Button>
-                    </Grid>
-
-                    {offscreenTestResult && (
-                        <>
-                            <Grid size={8}>
-                                {t('maintenance.offscreen_test_result')}
-                            </Grid>
-                            <Grid size={8}>
-                                <Typography
-                                    color={offscreenTestResult.includes('Error') ? 'error' : 'success.main'}
-                                >
-                                    {offscreenTestResult}
-                                </Typography>
-                            </Grid>
-                        </>
-                    )}
-
-                    <Grid size={8}>
-                        {t('maintenance.canvas_transfer')}
-                        <Typography variant="body2" color="text.secondary">
-                            {t('maintenance.canvas_transfer_description')}
-                        </Typography>
-                    </Grid>
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        {getSupportIcon(offscreenTransferSupported)}
-                        <Typography sx={{ ml: 1 }}>
-                            {offscreenTransferSupported === null ? t('maintenance.not_tested') :
-                                offscreenTransferSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        {t('maintenance.offscreen_in_worker')}
-                        <Typography variant="body2" color="text.secondary">
-                            {t('maintenance.offscreen_in_worker_description')}
-                        </Typography>
-                    </Grid>
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        {getSupportIcon(offscreenInWorkerSupported)}
-                        <Typography sx={{ ml: 1 }}>
-                            {offscreenInWorkerSupported === null ? t('maintenance.not_tested') :
-                                offscreenInWorkerSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={testOffscreenCanvasInWorker}
-                            disabled={isTestingOffscreenInWorker}
-                            sx={{ ml: 2 }}
-                        >
-                            {isTestingOffscreenInWorker ? <CircularProgress size={24} /> : t('maintenance.test_now')}
-                        </Button>
-                    </Grid>
-
-                    {offscreenInWorkerResult && (
-                        <>
-                            <Grid size={8}>
-                                {t('maintenance.worker_offscreen_test_result')}
-                            </Grid>
-                            <Grid size={8}>
-                                <Typography
-                                    color={offscreenInWorkerResult.includes('Error') || offscreenInWorkerResult.includes('not supported') ? 'error' : 'success.main'}
-                                >
-                                    {offscreenInWorkerResult}
-                                </Typography>
-                            </Grid>
-                        </>
-                    )}
-
-                    <Grid size={8}>
-                        {t('maintenance.canvas_transfer_worker')}
-                        <Typography variant="body2" color="text.secondary">
-                            {t('maintenance.canvas_transfer_worker_description')}
-                        </Typography>
-                    </Grid>
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        {getSupportIcon(canvasTransferToWorkerSupported)}
-                        <Typography sx={{ ml: 1 }}>
-                            {canvasTransferToWorkerSupported === null ? t('maintenance.not_tested') :
-                                canvasTransferToWorkerSupported ? t('maintenance.supported') : t('maintenance.not_supported')}
-                        </Typography>
-                        <Button
-                            variant="contained"
-                            color="primary"
-                            onClick={testCanvasTransferToWorker}
-                            disabled={isTestingCanvasTransfer}
-                            sx={{ ml: 2 }}
-                        >
-                            {isTestingCanvasTransfer ? <CircularProgress size={24} /> : t('maintenance.test_now')}
-                        </Button>
-                    </Grid>
-
-                    {canvasTransferResult && (
-                        <>
-                            <Grid size={8}>
-                                {t('maintenance.canvas_transfer_test_result')}
-                            </Grid>
-                            <Grid size={8}>
-                                <Typography
-                                    color={canvasTransferResult.includes('Error') || canvasTransferResult.includes('not supported') ? 'error' : 'success.main'}
-                                >
-                                    {canvasTransferResult}
-                                </Typography>
-                            </Grid>
-                        </>
-                    )}
-
-                    {(workersSupported !== null || offscreenCanvasSupported !== null ||
-                        offscreenTransferSupported !== null || offscreenInWorkerSupported !== null ||
-                        canvasTransferToWorkerSupported !== null) && (
-                        <Grid size={16}>
-                            <Alert severity={
-                                (workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
-                                    offscreenInWorkerSupported && canvasTransferToWorkerSupported)
-                                    ? 'success'
-                                    : 'warning'
-                            } sx={{ mt: 2 }}>
-                                <AlertTitle>
-                                    {(workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
-                                        offscreenInWorkerSupported && canvasTransferToWorkerSupported)
-                                        ? t('maintenance.all_features_supported')
-                                        : t('maintenance.missing_feature_support')}
-                                </AlertTitle>
-                                {(workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
-                                    offscreenInWorkerSupported && canvasTransferToWorkerSupported)
-                                    ? t('maintenance.all_features_message')
-                                    : t('maintenance.missing_features_message')}
+                            <Alert severity="warning" sx={{ mb: 2 }}>
+                                <AlertTitle>{t('maintenance.service_control_title')}</AlertTitle>
+                                {t('maintenance.service_control_subtitle')}
                             </Alert>
-                        </Grid>
-                    )}
+
+                            <Grid container spacing={2} columns={16}>
+                                <Grid size={10}>
+                                    {t('maintenance.restart_service')}
+                                    <Typography variant="body2" color="text.secondary">
+                                        {t('maintenance.restart_service_description')}
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6} sx={{ display: 'flex', alignItems: 'center' }}>
+                                    <Button
+                                        variant="contained"
+                                        color="error"
+                                        startIcon={isRestarting ? <CircularProgress size={20} color="inherit" /> : <RestartAltIcon />}
+                                        onClick={() => setConfirmRestartOpen(true)}
+                                        disabled={isRestarting}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        {isRestarting ? t('maintenance.restarting') : t('maintenance.restart_service_button')}
+                                    </Button>
+                                </Grid>
+
+                                {restartMessage && (
+                                    <>
+                                        <Grid size={16}>
+                                            <Alert
+                                                severity={restartMessage.includes('Failed') ? "error" : "warning"}
+                                                sx={{ mt: 1 }}
+                                            >
+                                                {restartMessage}
+                                            </Alert>
+                                        </Grid>
+                                    </>
+                                )}
+
+                                <Grid size={16}>
+                                    <Divider sx={{ my: 2 }} />
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                        Browser Features & Diagnostics
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={16}>
+                                    <Alert severity="info" size="small">
+                                        {t('maintenance.browser_features_subtitle')}
+                                    </Alert>
+                                </Grid>
+
+                                <Grid size={12}>
+                                    <Typography variant="body2" fontWeight="medium">
+                                        {t('maintenance.web_workers')}
+                                    </Typography>
+                                </Grid>
+                                <Grid size={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                                    {getSupportIcon(workersSupported)}
+                                    {isTestingWorkers && <CircularProgress size={16} />}
+                                </Grid>
+
+                                <Grid size={12}>
+                                    <Typography variant="body2" fontWeight="medium">
+                                        {t('maintenance.offscreen_canvas')}
+                                    </Typography>
+                                </Grid>
+                                <Grid size={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                                    {getSupportIcon(offscreenCanvasSupported)}
+                                    {isTestingOffscreen && <CircularProgress size={16} />}
+                                </Grid>
+
+                                <Grid size={12}>
+                                    <Typography variant="body2" fontWeight="medium">
+                                        Canvas Transfer to Offscreen
+                                    </Typography>
+                                </Grid>
+                                <Grid size={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                                    {getSupportIcon(offscreenTransferSupported)}
+                                </Grid>
+
+                                <Grid size={12}>
+                                    <Typography variant="body2" fontWeight="medium">
+                                        {t('maintenance.offscreen_in_worker')}
+                                    </Typography>
+                                </Grid>
+                                <Grid size={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                                    {getSupportIcon(offscreenInWorkerSupported)}
+                                    {isTestingOffscreenInWorker && <CircularProgress size={16} />}
+                                </Grid>
+
+                                <Grid size={12}>
+                                    <Typography variant="body2" fontWeight="medium">
+                                        Canvas Transfer to Worker
+                                    </Typography>
+                                </Grid>
+                                <Grid size={4} sx={{ display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 1 }}>
+                                    {getSupportIcon(canvasTransferToWorkerSupported)}
+                                    {isTestingCanvasTransfer && <CircularProgress size={16} />}
+                                </Grid>
+
+                                {(workersSupported !== null || offscreenCanvasSupported !== null ||
+                                    offscreenTransferSupported !== null || offscreenInWorkerSupported !== null ||
+                                    canvasTransferToWorkerSupported !== null) && (
+                                    <Grid size={16}>
+                                        <Alert severity={
+                                            (workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
+                                                offscreenInWorkerSupported && canvasTransferToWorkerSupported)
+                                                ? 'success'
+                                                : 'warning'
+                                        } sx={{ mt: 1 }} size="small">
+                                            {(workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
+                                                offscreenInWorkerSupported && canvasTransferToWorkerSupported)
+                                                ? t('maintenance.all_features_message')
+                                                : t('maintenance.missing_features_message')}
+                                        </Alert>
+                                    </Grid>
+                                )}
+                            </Grid>
+                        </Paper>
+                    </Grid>
                 </Grid>
 
-                <Divider sx={{ my: 3 }} />
+                {/* Canvas Debug Information - Full Width Row with Two Columns */}
+                <Grid container spacing={3} sx={{ mt: 1 }}>
+                    <Grid size={12}>
+                        <Paper elevation={1} sx={{ p: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Canvas Rendering Debug Information
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Information about canvas rendering environment for debugging text distortion issues
+                            </Typography>
 
-                <Alert severity="info">
-                    <AlertTitle>Canvas Rendering Debug Information</AlertTitle>
-                    Information about canvas rendering environment for debugging text distortion issues
-                </Alert>
-
-                <Grid container spacing={2} columns={16} sx={{ mt: 1 }}>
+                            <Grid container spacing={2} columns={16}>
                     <Grid size={8}>
                         Device Pixel Ratio
                         <Typography variant="body2" color="text.secondary">
@@ -909,16 +861,19 @@ const MaintenanceForm = () => {
                         </Typography>
                     </Grid>
 
-                    <Grid size={8}>
-                        Language
-                        <Typography variant="body2" color="text.secondary">
-                            Browser language setting
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {navigator.language}
-                        </Typography>
+                                <Grid size={8}>
+                                    Language
+                                    <Typography variant="body2" color="text.secondary">
+                                        Browser language setting
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {navigator.language}
+                                    </Typography>
+                                </Grid>
+                            </Grid>
+                        </Paper>
                     </Grid>
                 </Grid>
 
