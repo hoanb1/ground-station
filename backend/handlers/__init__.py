@@ -14,6 +14,7 @@
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
 from .base import run_async_in_thread
+from .filebrowser import filebrowser_request_routing
 from .requests import data_request_routing
 from .sdr import sdr_data_request_routing
 from .submissions import data_submission_routing
@@ -24,6 +25,7 @@ __all__ = [
     "data_request_routing",
     "data_submission_routing",
     "sdr_data_request_routing",
+    "filebrowser_request_routing",
     "emit_tracker_data",
     "emit_ui_tracker_values",
 ]

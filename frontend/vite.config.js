@@ -34,6 +34,16 @@ export default defineConfig(({ mode }) => {
           changeOrigin: true,
           secure: false,
         },
+        '/recordings': {
+          target: `http://${backendHost}:${backendPort}`,
+          changeOrigin: true,
+          secure: false,
+        },
+        '/snapshots': {
+          target: `http://${backendHost}:${backendPort}`,
+          changeOrigin: true,
+          secure: false,
+        },
         '/api': {  // For regular HTTP API requests
           target: `http://${backendHost}:${backendPort}`,
           changeOrigin: true,

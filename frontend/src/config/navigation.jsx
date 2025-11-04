@@ -28,6 +28,7 @@ import MicrowaveIcon from '@mui/icons-material/Microwave';
 import GroupWorkIcon from '@mui/icons-material/GroupWork';
 import WavesIcon from '@mui/icons-material/Waves';
 import VideocamIcon from '@mui/icons-material/Videocam';
+import FolderIcon from '@mui/icons-material/Folder';
 import i18n from '../i18n/config.js';
 import { TleIcon } from '../components/common/custom-icons.jsx';
 
@@ -50,6 +51,11 @@ export const getNavigation = () => [
         segment: 'waterfall',
         title: i18n.t('waterfall_view', { ns: 'navigation' }),
         icon: <WavesIcon />,
+    },
+    {
+        segment: 'filebrowser',
+        title: 'File Browser',
+        icon: <FolderIcon />,
     },
     {kind: 'divider'},
     {

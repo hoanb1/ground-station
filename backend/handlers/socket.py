@@ -4,7 +4,12 @@ import time
 from typing import Dict
 
 from common.logger import logger
-from handlers import data_request_routing, data_submission_routing, sdr_data_request_routing
+from handlers import (
+    data_request_routing,
+    data_submission_routing,
+    filebrowser_request_routing,
+    sdr_data_request_routing,
+)
 from sdr.utils import cleanup_sdr_session
 from server.shutdown import cleanup_everything
 
@@ -43,6 +48,12 @@ def register_socketio_handlers(sio):
     async def handle_frontend_data_submissions(sid, cmd, data=None):
         logger.info(f"Received event from: {sid}, with cmd: {cmd}, and data: {data}")
         reply = await data_submission_routing(sio, cmd, data, logger, sid)
+        return reply
+
+    @sio.on("file_browser")
+    async def handle_file_browser_requests(sid, cmd, data=None):
+        logger.info(f"Received file browser event from: {sid}, with cmd: {cmd}")
+        reply = await filebrowser_request_routing(sio, cmd, data, logger, sid)
         return reply
 
     @sio.on("service_control")

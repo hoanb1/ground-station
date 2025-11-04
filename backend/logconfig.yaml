@@ -221,6 +221,12 @@ loggers:
       - default
     propagate: no
 
+  PIL.PngImagePlugin:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

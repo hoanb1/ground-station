@@ -67,7 +67,7 @@ repos:
       - id: eslint
         name: Lint JavaScript/React code with ESLint
         files: ^frontend/.*\.(js|jsx)$
-        exclude: ^frontend/(e2e/|src/test/|.*\.test\.(js|jsx)$|.*\.spec\.(js|jsx)$|src/.*/(__tests__/|__mocks__/)|vitest\.config\.js$|playwright\.config\.js$|setup-tests\.sh$)
+        exclude: ^frontend/(e2e/|src/test/|.*\.test\.(js|jsx)$|.*\.spec\.(js|jsx)$|src/.*/(__tests__/|__mocks__/)|vitest\.config\.js$|playwright\.config\.js$|vite\.config\.js$|setup-tests\.sh$)
         args: ['--fix', '--config=frontend/eslint.config.js']
         additional_dependencies:
           - eslint@9.19.0

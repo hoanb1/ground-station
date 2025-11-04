@@ -7,7 +7,19 @@ import reactRefresh from 'eslint-plugin-react-refresh'
 export default [
     {ignores: ['dist', 'coverage', '**/*.test.js', '**/*.test.jsx', '**/*.spec.js', '**/*.spec.jsx',
             'e2e/**', 'src/test/**', '**/__tests__/**', 'vitest.config.js', 'playwright.config.js',
-            'vite.config.js', 'setup-tests.sh', 'playwright-report/**']},
+            'setup-tests.sh', 'playwright-report/**']},
+    // Separate config for vite.config.js with Node.js globals
+    {
+        files: ['vite.config.js'],
+        languageOptions: {
+            ecmaVersion: 2020,
+            globals: globals.node,
+            parserOptions: {
+                ecmaVersion: 'latest',
+                sourceType: 'module',
+            },
+        },
+    },
     {
         files: ['**/*.{js,jsx}'],
         languageOptions: {

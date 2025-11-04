@@ -38,6 +38,7 @@ import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
+import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
 import backendSyncMiddleware from '../waterfall/waterfall-middleware.jsx';
 
 
@@ -156,6 +157,13 @@ const versionInfoConfig = {
     whitelist: []
 };
 
+// Persist configuration for file browser slice
+const fileBrowserPersistConfig = {
+    key: 'filebrowser',
+    storage,
+    whitelist: ['sortBy', 'sortOrder', 'viewMode']
+};
+
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
@@ -174,6 +182,7 @@ const persistedWeatherReducer = persistReducer(weatherPersistConfig, weatherRedu
 const persistedCameraReducer = persistReducer(cameraPersistConfig, cameraReducer);
 const persistedSdrReducer = persistReducer(sdrPersistConfig, sdrsReducer);
 const persistedVersionInfoReducer = persistReducer(versionInfoConfig, versionReducer);
+const persistedFileBrowserReducer = persistReducer(fileBrowserPersistConfig, fileBrowserReducer);
 
 
 export const store = configureStore({
@@ -194,6 +203,7 @@ export const store = configureStore({
         cameras: persistedCameraReducer,
         sdrs: persistedSdrReducer,
         version: persistedVersionInfoReducer,
+        filebrowser: persistedFileBrowserReducer,
     },
     devTools: process.env.NODE_ENV !== "production",
     middleware: (getDefaultMiddleware) =>
