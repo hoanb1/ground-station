@@ -71,8 +71,6 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
     } = useSelector((state) => state.waterfall);
 
     // Add state for bookmarks
-    const [customScale, setCustomScale] = useState(1);
-    const [customPositionX, setCustomPositionX] = useState(0);
     const [visualContainerWidth, setVisualContainerWidth] = useState(waterFallCanvasWidth);
 
     // Function to recalculate position when the container resizes
@@ -103,9 +101,8 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         // Update width reference
         containerWidthRef.current = newWidth;
 
-        // Apply transform
+        // Apply transform (this now also updates React state)
         applyTransform();
-        updateReactState();
     }, []);
 
     // Function to add a bookmark at a specific frequency
@@ -200,12 +197,6 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         }
     }, []);
 
-    // Update React state for rendering (but not for calculations)
-    const updateReactState = useCallback(() => {
-        setCustomScale(scaleRef.current);
-        setCustomPositionX(positionXRef.current);
-    }, []);
-
     // Zoom functionality
     const zoomOnXAxisOnly = useCallback((deltaScale, centerX) => {
         const prevScale = scaleRef.current;
@@ -244,7 +235,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         // Persist to Redux (debounced)
         persistToRedux();
 
-    }, [applyTransform, updateReactState, persistToRedux]);
+    }, [applyTransform, persistToRedux]);
 
     // Panning functionality
     const panOnXAxisOnly = useCallback((deltaX) => {
@@ -267,10 +258,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
 
         // Apply transform directly
         applyTransform();
-
-        // Update React state for rendering purposes only
-        updateReactState();
-    }, [applyTransform, updateReactState]);
+    }, [applyTransform]);
 
     // Reset to the default state
     const resetCustomTransform = useCallback(() => {
@@ -278,8 +266,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         positionXRef.current = 0;
 
         applyTransform();
-        updateReactState();
-    }, [applyTransform, updateReactState]);
+    }, [applyTransform]);
 
     // Set up all event handlers
     useEffect(() => {
@@ -438,6 +425,80 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
             touchAction: 'pan-y',
             position: 'relative',
         }}>
+            {/* Recording indicator overlay - outside transformed container */}
+            {isRecording && (
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                        backgroundColor: 'rgba(255, 0, 0, 0.85)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        zIndex: 1000,
+                        pointerEvents: 'none',
+                        animation: 'pulse 2s ease-in-out infinite',
+                        '@keyframes pulse': {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.7 },
+                        },
+                    }}
+                >
+                    <Box
+                        sx={{
+                            width: 8,
+                            height: 8,
+                            borderRadius: '50%',
+                            backgroundColor: 'white',
+                        }}
+                    />
+                    REC
+                </Box>
+            )}
+            {/* Playback indicator overlay - outside transformed container */}
+            {isStreaming && selectedSDRId === 'sigmf-playback' && (
+                <Box
+                    sx={{
+                        position: 'absolute',
+                        top: 8,
+                        left: 8,
+                        backgroundColor: 'rgba(33, 150, 243, 0.85)',
+                        color: 'white',
+                        padding: '4px 8px',
+                        borderRadius: '4px',
+                        display: 'flex',
+                        alignItems: 'center',
+                        gap: 0.5,
+                        fontSize: '0.75rem',
+                        fontWeight: 'bold',
+                        zIndex: 1000,
+                        pointerEvents: 'none',
+                        animation: 'pulse 2s ease-in-out infinite',
+                        '@keyframes pulse': {
+                            '0%, 100%': { opacity: 1 },
+                            '50%': { opacity: 0.7 },
+                        },
+                    }}
+                >
+                    <Box
+                        sx={{
+                            width: 0,
+                            height: 0,
+                            borderLeft: '6px solid white',
+                            borderTop: '4px solid transparent',
+                            borderBottom: '4px solid transparent',
+                        }}
+                    />
+                    PLAYBACK
+                </Box>
+            )}
+
             {/* Canvases */}
             <Box
                 ref={containerRef}
@@ -488,77 +549,6 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                         zoomScale={scaleRef.current}
                         panOffset={positionXRef.current}
                     />
-                    {/* Recording indicator overlay */}
-                    {isRecording && (
-                        <Box
-                            sx={{
-                                position: 'absolute',
-                                top: 8,
-                                left: 8,
-                                backgroundColor: 'rgba(255, 0, 0, 0.85)',
-                                color: 'white',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                fontSize: '0.75rem',
-                                fontWeight: 'bold',
-                                zIndex: 1000,
-                                animation: 'pulse 2s ease-in-out infinite',
-                                '@keyframes pulse': {
-                                    '0%, 100%': { opacity: 1 },
-                                    '50%': { opacity: 0.7 },
-                                },
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    width: 8,
-                                    height: 8,
-                                    borderRadius: '50%',
-                                    backgroundColor: 'white',
-                                }}
-                            />
-                            REC
-                        </Box>
-                    )}
-                    {/* Playback indicator overlay */}
-                    {isStreaming && selectedSDRId === 'sigmf-playback' && (
-                        <Box
-                            sx={{
-                                position: 'absolute',
-                                top: 8,
-                                left: 8,
-                                backgroundColor: 'rgba(33, 150, 243, 0.85)',
-                                color: 'white',
-                                padding: '4px 8px',
-                                borderRadius: '4px',
-                                display: 'flex',
-                                alignItems: 'center',
-                                gap: 0.5,
-                                fontSize: '0.75rem',
-                                fontWeight: 'bold',
-                                zIndex: 1000,
-                                animation: 'pulse 2s ease-in-out infinite',
-                                '@keyframes pulse': {
-                                    '0%, 100%': { opacity: 1 },
-                                    '50%': { opacity: 0.7 },
-                                },
-                            }}
-                        >
-                            <Box
-                                sx={{
-                                    width: 0,
-                                    height: 0,
-                                    borderLeft: '6px solid white',
-                                    borderTop: '4px solid transparent',
-                                    borderBottom: '4px solid transparent',
-                                }}
-                            />
-                            PLAYBACK
-                        </Box>
-                    )}
                 </Box>
 
                 <FrequencyScale

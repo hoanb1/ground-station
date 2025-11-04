@@ -583,38 +583,98 @@ export default function FileBrowser() {
                                             </Box>
                                         </Box>
                                     ) : (
-                                        /* Placeholder for recordings in progress */
-                                        isRecording && item.recording_in_progress && (
+                                        /* Placeholder for recordings without snapshots */
+                                        <Box
+                                            sx={{
+                                                height: 200,
+                                                display: 'flex',
+                                                flexDirection: 'column',
+                                                alignItems: 'center',
+                                                justifyContent: 'center',
+                                                backgroundColor: isRecording && item.recording_in_progress
+                                                    ? 'rgba(244, 67, 54, 0.1)'
+                                                    : 'action.hover',
+                                                position: 'relative',
+                                            }}
+                                        >
+                                            {isRecording && item.recording_in_progress ? (
+                                                <>
+                                                    <RadioIcon
+                                                        sx={{
+                                                            fontSize: 80,
+                                                            color: 'error.main',
+                                                            mb: 1,
+                                                            animation: 'pulse 2s infinite',
+                                                            '@keyframes pulse': {
+                                                                '0%, 100%': { opacity: 0.6 },
+                                                                '50%': { opacity: 1 },
+                                                            },
+                                                        }}
+                                                    />
+                                                    <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 600 }}>
+                                                        {t('recording.in_progress_message', 'Recording in Progress')}
+                                                    </Typography>
+                                                    <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>
+                                                        {t('recording.snapshot_message', 'Waterfall snapshot will be saved on stop')}
+                                                    </Typography>
+                                                </>
+                                            ) : (
+                                                <>
+                                                    {isRecording ? (
+                                                        <FiberManualRecordIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'text.disabled',
+                                                                mb: 1,
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <CameraAltIcon
+                                                            sx={{
+                                                                fontSize: 80,
+                                                                color: 'text.disabled',
+                                                                mb: 1,
+                                                            }}
+                                                        />
+                                                    )}
+                                                    <Typography variant="body2" sx={{ color: 'text.secondary' }}>
+                                                        No snapshot available
+                                                    </Typography>
+                                                </>
+                                            )}
+                                            {/* Type icon overlay (top-left) */}
                                             <Box
                                                 sx={{
-                                                    height: 200,
+                                                    position: 'absolute',
+                                                    top: 8,
+                                                    left: 8,
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                                    borderRadius: '50%',
+                                                    width: 32,
+                                                    height: 32,
                                                     display: 'flex',
-                                                    flexDirection: 'column',
                                                     alignItems: 'center',
                                                     justifyContent: 'center',
-                                                    backgroundColor: 'rgba(244, 67, 54, 0.1)',
-                                                    position: 'relative',
                                                 }}
                                             >
-                                                <RadioIcon
-                                                    sx={{
-                                                        fontSize: 80,
-                                                        color: 'error.main',
-                                                        mb: 1,
-                                                        animation: 'pulse 2s infinite',
-                                                        '@keyframes pulse': {
-                                                            '0%, 100%': { opacity: 0.6 },
-                                                            '50%': { opacity: 1 },
-                                                        },
-                                                    }}
-                                                />
-                                                <Typography variant="h6" sx={{ color: 'error.main', fontWeight: 600 }}>
-                                                    {t('recording.in_progress_message', 'Recording in Progress')}
-                                                </Typography>
-                                                <Typography variant="caption" sx={{ color: 'text.secondary', mt: 1 }}>
-                                                    {t('recording.snapshot_message', 'Waterfall snapshot will be saved on stop')}
-                                                </Typography>
-                                                {/* Recording badge (top-right) */}
+                                                {isRecording ? (
+                                                    <FiberManualRecordIcon
+                                                        sx={{
+                                                            color: item.recording_in_progress ? 'error.main' : 'error.main',
+                                                            fontSize: 20,
+                                                            animation: item.recording_in_progress ? 'pulse 2s infinite' : 'none',
+                                                            '@keyframes pulse': {
+                                                                '0%, 100%': { opacity: 1 },
+                                                                '50%': { opacity: 0.4 },
+                                                            },
+                                                        }}
+                                                    />
+                                                ) : (
+                                                    <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                                )}
+                                            </Box>
+                                            {/* Recording badge (top-right) */}
+                                            {isRecording && item.recording_in_progress && (
                                                 <Box
                                                     sx={{
                                                         position: 'absolute',
@@ -639,38 +699,14 @@ export default function FileBrowser() {
                                                         {t('recording.in_progress', 'Recording')}
                                                     </Typography>
                                                 </Box>
-                                                {/* Duration overlay (bottom-left) */}
-                                                {item.metadata?.start_time && (
-                                                    <Box
-                                                        sx={{
-                                                            position: 'absolute',
-                                                            bottom: 8,
-                                                            left: 8,
-                                                            backgroundColor: 'rgba(0, 0, 0, 0.7)',
-                                                            borderRadius: 1,
-                                                            px: 1,
-                                                            py: 0.5,
-                                                        }}
-                                                    >
-                                                        <Typography
-                                                            variant="caption"
-                                                            sx={{
-                                                                color: 'white',
-                                                                fontWeight: 500,
-                                                                fontSize: '0.75rem',
-                                                                fontFamily: 'monospace',
-                                                            }}
-                                                        >
-                                                            {formatDuration(item.metadata.start_time, null)}
-                                                        </Typography>
-                                                    </Box>
-                                                )}
-                                                {/* Date overlay (bottom-right) */}
+                                            )}
+                                            {/* Duration overlay (bottom-left) */}
+                                            {isRecording && item.metadata?.start_time && (
                                                 <Box
                                                     sx={{
                                                         position: 'absolute',
                                                         bottom: 8,
-                                                        right: 8,
+                                                        left: 8,
                                                         backgroundColor: 'rgba(0, 0, 0, 0.7)',
                                                         borderRadius: 1,
                                                         px: 1,
@@ -683,13 +719,37 @@ export default function FileBrowser() {
                                                             color: 'white',
                                                             fontWeight: 500,
                                                             fontSize: '0.75rem',
+                                                            fontFamily: 'monospace',
                                                         }}
                                                     >
-                                                        {formatRelativeTime(item.created)}
+                                                        {formatDuration(item.metadata.start_time, item.recording_in_progress ? null : item.metadata.finalized_time)}
                                                     </Typography>
                                                 </Box>
+                                            )}
+                                            {/* Date overlay (bottom-right) */}
+                                            <Box
+                                                sx={{
+                                                    position: 'absolute',
+                                                    bottom: 8,
+                                                    right: 8,
+                                                    backgroundColor: 'rgba(0, 0, 0, 0.7)',
+                                                    borderRadius: 1,
+                                                    px: 1,
+                                                    py: 0.5,
+                                                }}
+                                            >
+                                                <Typography
+                                                    variant="caption"
+                                                    sx={{
+                                                        color: 'white',
+                                                        fontWeight: 500,
+                                                        fontSize: '0.75rem',
+                                                    }}
+                                                >
+                                                    {formatRelativeTime(item.created)}
+                                                </Typography>
                                             </Box>
-                                        )
+                                        </Box>
                                     )}
                                     <CardContent sx={{ pb: 1 }}>
                                         <Tooltip title={item.displayName}>
