@@ -288,7 +288,12 @@ const fileBrowserSlice = createSlice({
 
         // Delete recording
         builder.addCase(deleteRecording.fulfilled, (state, action) => {
+            // Update legacy state
             state.recordings = state.recordings.filter(r => r.name !== action.payload);
+            // Update unified files state
+            state.files = state.files.filter(f => !(f.type === 'recording' && f.name === action.payload));
+            // Update total count
+            state.total = Math.max(0, state.total - 1);
             if (state.selectedRecording?.name === action.payload) {
                 state.selectedRecording = null;
             }
@@ -296,7 +301,12 @@ const fileBrowserSlice = createSlice({
 
         // Delete snapshot
         builder.addCase(deleteSnapshot.fulfilled, (state, action) => {
+            // Update legacy state
             state.snapshots = state.snapshots.filter(s => s.filename !== action.payload);
+            // Update unified files state
+            state.files = state.files.filter(f => !(f.type === 'snapshot' && f.filename === action.payload));
+            // Update total count
+            state.total = Math.max(0, state.total - 1);
             if (state.selectedSnapshot?.filename === action.payload) {
                 state.selectedSnapshot = null;
             }

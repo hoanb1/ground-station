@@ -48,6 +48,9 @@ def parse_sigmf_metadata(meta_file_path: str) -> dict:
             "version": global_meta.get("core:version"),
             "description": global_meta.get("core:description"),
             "recorder": global_meta.get("core:recorder"),
+            "recording_in_progress": global_meta.get("gs:recording_in_progress", False),
+            "start_time": global_meta.get("gs:start_time"),
+            "finalized_time": global_meta.get("gs:finalized_time"),
             "captures": metadata.get("captures", []),
             "annotations": metadata.get("annotations", []),
         }
@@ -198,6 +201,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     data_stat = data_file.stat()
                     metadata = parse_sigmf_metadata(str(meta_file))
 
+                    # Check if recording is in progress (extracted by parse_sigmf_metadata)
+                    is_recording_in_progress = metadata.get("recording_in_progress", False)
+
                     # Check for waterfall snapshot
                     snapshot_file = recordings_dir / f"{base_name}.png"
                     snapshot_info = None
@@ -221,6 +227,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "modified": datetime.fromtimestamp(data_stat.st_mtime).isoformat(),
                             "metadata": metadata,
                             "snapshot": snapshot_info,
+                            "recording_in_progress": is_recording_in_progress,
                             "download_urls": {
                                 "data": f"/recordings/{data_file.name}",
                                 "meta": f"/recordings/{meta_file.name}",
@@ -315,6 +322,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 # Parse metadata
                 metadata = parse_sigmf_metadata(str(meta_file))
 
+                # Check if recording is in progress (extracted by parse_sigmf_metadata)
+                is_recording_in_progress = metadata.get("recording_in_progress", False)
+
                 # Check for waterfall snapshot
                 snapshot_file = recordings_dir / f"{base_name}.png"
                 snapshot_info = None
@@ -336,6 +346,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "modified": datetime.fromtimestamp(data_stat.st_mtime).isoformat(),
                     "metadata": metadata,
                     "snapshot": snapshot_info,
+                    "recording_in_progress": is_recording_in_progress,
                     "download_urls": {
                         "data": f"/recordings/{data_file.name}",
                         "meta": f"/recordings/{meta_file.name}",
@@ -371,6 +382,9 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             # Parse metadata
             metadata = parse_sigmf_metadata(str(meta_file))
 
+            # Check if recording is in progress (extracted by parse_sigmf_metadata)
+            is_recording_in_progress = metadata.get("recording_in_progress", False)
+
             # Check for waterfall snapshot
             snapshot_file = recordings_dir / f"{recording_name}.png"
             snapshot_info = None
@@ -392,6 +406,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 "modified": datetime.fromtimestamp(data_stat.st_mtime).isoformat(),
                 "metadata": metadata,
                 "snapshot": snapshot_info,
+                "recording_in_progress": is_recording_in_progress,
                 "download_urls": {
                     "data": f"/recordings/{data_file.name}",
                     "meta": f"/recordings/{meta_file.name}",

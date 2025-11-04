@@ -208,6 +208,7 @@ const initialState = {
     // Recording state
     isRecording: false,
     recordingDuration: 0,
+    recordingStartTime: null, // ISO timestamp when recording started
     recordingName: '',
 };
 
@@ -398,8 +399,19 @@ export const waterfallSlice = createSlice({
         setRecordingName: (state, action) => {
             state.recordingName = action.payload;
         },
+        setRecordingStartTime: (state, action) => {
+            state.recordingStartTime = action.payload;
+        },
         incrementRecordingDuration: (state) => {
-            state.recordingDuration += 1;
+            // Calculate duration from start time for accuracy
+            if (state.recordingStartTime) {
+                const now = new Date();
+                const start = new Date(state.recordingStartTime);
+                state.recordingDuration = Math.floor((now - start) / 1000);
+            } else {
+                // Fallback to simple increment if no start time
+                state.recordingDuration += 1;
+            }
         }
     },
     extraReducers: (builder) => {
@@ -439,6 +451,7 @@ export const waterfallSlice = createSlice({
             .addCase(startRecording.fulfilled, (state, action) => {
                 state.isRecording = true;
                 state.recordingDuration = 0;
+                state.recordingStartTime = new Date().toISOString();
             })
             .addCase(startRecording.rejected, (state, action) => {
                 state.isRecording = false;
@@ -450,6 +463,7 @@ export const waterfallSlice = createSlice({
             .addCase(stopRecording.fulfilled, (state, action) => {
                 state.isRecording = false;
                 state.recordingDuration = 0;
+                state.recordingStartTime = null;
             })
             .addCase(stopRecording.rejected, (state, action) => {
                 state.errorMessage = action.payload;
@@ -517,6 +531,7 @@ export const {
     setIsRecording,
     setRecordingDuration,
     setRecordingName,
+    setRecordingStartTime,
     incrementRecordingDuration,
 } = waterfallSlice.actions;
 

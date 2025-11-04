@@ -48,8 +48,15 @@ class IQRecorder(threading.Thread):
         self.current_sample_rate = None
         self.start_datetime = None
 
+        # Store start time to preserve it in final metadata
+        self.start_time_iso = datetime.utcnow().isoformat() + "Z"
+
         # Open data file for writing
         self.data_file = open(f"{recording_path}.sigmf-data", "wb")
+
+        # Create preliminary sigmf-meta file to mark recording as in progress
+        self._write_preliminary_metadata()
+
         logger.info(f"IQ recorder started: {recording_path}")
 
     def run(self):
@@ -108,6 +115,26 @@ class IQRecorder(threading.Thread):
 
         logger.info(f"IQ recorder stopped: {self.total_samples} samples written")
 
+    def _write_preliminary_metadata(self):
+        """Write preliminary metadata file to mark recording as in progress."""
+        preliminary_metadata = {
+            "global": {
+                "core:datatype": "cf32_le",
+                "core:version": "1.0.0",
+                "core:description": "Ground Station IQ Recording",
+                "core:recorder": "ground-station",
+                "gs:recording_in_progress": True,
+                "gs:start_time": self.start_time_iso,
+            },
+            "captures": [],
+            "annotations": [],
+        }
+
+        with open(f"{self.recording_path}.sigmf-meta", "w") as f:
+            json.dump(preliminary_metadata, f, indent=2)
+
+        logger.info(f"Preliminary metadata written: {self.recording_path}.sigmf-meta")
+
     def add_annotation(self, start_sample, sample_count, freq_lower, freq_upper, comment):
         """Add signal annotation to metadata."""
         self.annotations.append(
@@ -128,7 +155,7 @@ class IQRecorder(threading.Thread):
         # Close data file
         self.data_file.close()
 
-        # Write SigMF metadata
+        # Write final SigMF metadata (replaces preliminary metadata, preserves start_time)
         metadata = {
             "global": {
                 "core:datatype": "cf32_le",
@@ -136,6 +163,8 @@ class IQRecorder(threading.Thread):
                 "core:version": "1.0.0",
                 "core:description": "Ground Station IQ Recording",
                 "core:recorder": "ground-station",
+                "gs:start_time": self.start_time_iso,
+                "gs:finalized_time": datetime.utcnow().isoformat() + "Z",
             },
             "captures": self.captures,
             "annotations": self.annotations,
