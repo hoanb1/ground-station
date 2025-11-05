@@ -34,7 +34,7 @@ import {
     setSelectedTransmitter,
     setStarting,
     setTrackingStateInBackend
-} from "./target-slice.jsx";
+} from "../target/target-slice.jsx";
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import { useTranslation } from 'react-i18next';
 import {
@@ -45,7 +45,7 @@ import {
 } from "../common/common.jsx";
 import Grid from "@mui/material/Grid2";
 import {Box, Button, Divider, FormControl, InputLabel, ListSubheader, MenuItem, Select} from "@mui/material";
-import SatelliteList from "./satellite-dropdown.jsx";
+import SatelliteList from "../target/satellite-dropdown.jsx";
 import Typography from "@mui/material/Typography";
 import CheckCircleOutlineIcon from "@mui/icons-material/CheckCircleOutline";
 import ErrorOutlineIcon from "@mui/icons-material/ErrorOutline";

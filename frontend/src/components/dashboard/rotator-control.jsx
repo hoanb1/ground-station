@@ -26,7 +26,7 @@ import {
     setRotatorConnecting,
     setRotatorDisconnecting,
     sendNudgeCommand,
-} from "./target-slice.jsx";
+} from "../target/target-slice.jsx";
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import {getClassNamesBasedOnGridEditing, TitleBar} from "../common/common.jsx";
 import { useTranslation } from 'react-i18next';
@@ -34,7 +34,7 @@ import Grid from "@mui/material/Grid2";
 import {Button, FormControl, InputLabel, MenuItem, Select} from "@mui/material";
 import Paper from "@mui/material/Paper";
 import Typography from "@mui/material/Typography";
-import { GaugeAz, GaugeEl } from './rotator-gauges.jsx';
+import { GaugeAz, GaugeEl } from '../target/rotator-gauges.jsx';
 import {
     getCurrentStatusofRotator,
     createTrackingState,
@@ -43,7 +43,7 @@ import {
     canStopTracking,
     canConnectRotator,
     isRotatorSelectionDisabled
-} from './rotator-utils.js';
+} from '../target/rotator-utils.js';
 
 
 const RotatorControl = React.memo(function RotatorControl() {

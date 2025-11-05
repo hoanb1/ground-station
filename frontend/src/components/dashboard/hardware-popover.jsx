@@ -31,8 +31,8 @@ import RadioIcon from '@mui/icons-material/Radio';
 import {
     Popover,
 } from '@mui/material';
-import RotatorControl from "../target/rotator-control.jsx";
-import RigControl from "../target/rig-control.jsx";
+import RotatorControl from "./rotator-control.jsx";
+import RigControl from "./rig-control.jsx";
 import {SatelliteIcon} from "hugeicons-react";
 import OverlayIcon from "./icons-overlay.jsx";
 
