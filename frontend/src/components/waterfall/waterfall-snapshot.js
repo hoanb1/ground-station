@@ -26,6 +26,7 @@ import { useTheme } from '@mui/material';
  * This hook provides functionality to capture a complete waterfall display including:
  * - Bandscope spectrum analyzer
  * - Bookmark overlays
+ * - Bandplan overlays
  * - Frequency scale labels
  * - dB axis scales (left margin)
  * - Main waterfall canvas
@@ -79,11 +80,12 @@ export const useWaterfallSnapshot = ({
 
     /**
      * Finds overlay canvases in the DOM
-     * @returns {Object} Object containing bookmarkCanvas, frequencyScaleCanvas, and frequencyScaleLeftCanvas
+     * @returns {Object} Object containing bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, and frequencyScaleLeftCanvas
      */
     const findOverlayCanvases = useCallback(() => {
         const allCanvases = document.querySelectorAll('canvas');
         let bookmarkCanvas = null;
+        let bandplanCanvas = null;
         let frequencyScaleCanvas = null;
         let frequencyScaleLeftCanvas = null;
 
@@ -93,6 +95,9 @@ export const useWaterfallSnapshot = ({
             // Look for bookmark canvas by its class name
             if (canvas.classList.contains('bookmark-canvas')) {
                 bookmarkCanvas = canvas;
+            } else if (canvas.classList.contains('frequency-band-overlay')) {
+                // Look for bandplan overlay canvas by its class name
+                bandplanCanvas = canvas;
             } else if (canvas.height === 21) {
                 // Small canvas between dB axes
                 frequencyScaleLeftCanvas = canvas;
@@ -101,7 +106,8 @@ export const useWaterfallSnapshot = ({
                 canvas.classList.contains('waterfall-canvas') === false &&
                 canvas.classList.contains('bandscope-canvas') === false &&
                 canvas.classList.contains('waterfall-left-margin-canvas') === false &&
-                canvas.classList.contains('bookmark-canvas') === false
+                canvas.classList.contains('bookmark-canvas') === false &&
+                canvas.classList.contains('frequency-band-overlay') === false
             ) {
                 // Frequency scale is the other canvas that's not bandscope or waterfall
                 if (!frequencyScaleCanvas && canvas.height < 30 && canvas.height !== 21) {
@@ -110,7 +116,7 @@ export const useWaterfallSnapshot = ({
             }
         });
 
-        return { bookmarkCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas };
+        return { bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas };
     }, [bandscopeCanvasRef]);
 
     /**
@@ -123,7 +129,7 @@ export const useWaterfallSnapshot = ({
         const bandscopeCanvas = bandscopeCanvasRef.current;
         const dBAxisScopeCanvas = dBAxisScopeCanvasRef.current;
         const waterfallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
-        const { bookmarkCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas } = overlayCanvases;
+        const { bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas } = overlayCanvases;
 
         const leftMarginWidth = dBAxisScopeCanvas ? dBAxisScopeCanvas.width : 0;
         const totalHeight = bandScopeHeight + frequencyScaleHeight + waterFallCanvasHeight;
@@ -152,6 +158,11 @@ export const useWaterfallSnapshot = ({
         // Draw bookmark overlay on top of bandscope if available
         if (bookmarkCanvas && bookmarkCanvas.width > 0 && bookmarkCanvas.height > 0) {
             ctx.drawImage(bookmarkCanvas, leftMarginWidth, yOffset, waterFallCanvasWidth, bandScopeHeight);
+        }
+
+        // Draw bandplan overlay on top of bandscope if available
+        if (bandplanCanvas && bandplanCanvas.width > 0 && bandplanCanvas.height > 0) {
+            ctx.drawImage(bandplanCanvas, leftMarginWidth, yOffset, waterFallCanvasWidth, bandScopeHeight);
         }
 
         yOffset += bandScopeHeight;
