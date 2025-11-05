@@ -134,6 +134,32 @@ const PlaybackAccordion = ({
         }
     }, [socket, dispatch, page, sortBy, sortOrder, expanded]);
 
+    // Listen for file browser updates to refresh the list
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleFileBrowserState = (state) => {
+            // Refetch when recordings are added/removed
+            if (['recording-started', 'recording-stopped', 'snapshot-saved', 'delete-recording'].includes(state.action)) {
+                dispatch(fetchFiles({
+                    socket,
+                    page,
+                    pageSize: 5,
+                    sortBy,
+                    sortOrder,
+                    showRecordings: true,
+                    showSnapshots: false,
+                }));
+            }
+        };
+
+        socket.on('file_browser_state', handleFileBrowserState);
+
+        return () => {
+            socket.off('file_browser_state', handleFileBrowserState);
+        };
+    }, [socket, dispatch, page, sortBy, sortOrder]);
+
     const handleRefresh = () => {
         if (socket) {
             dispatch(fetchFiles({

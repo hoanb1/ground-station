@@ -193,48 +193,20 @@ export default function FileBrowser() {
         }
     }, [socket, dispatch, page, pageSize, sortBy, sortOrder, filters.showRecordings, filters.showSnapshots]);
 
-    // Listen for file browser state updates from backend (pub/sub model)
+    // Listen for file browser state updates to trigger refetch (global handler in socket-event-handlers.jsx updates Redux)
     useEffect(() => {
         if (!socket) return;
 
         const handleFileBrowserState = (state) => {
-            console.log('File browser state received:', state);
-
-            // Dispatch Redux action based on the action type
+            // Global handler already updated Redux state for 'list-files'
+            // Here we only handle actions that need refetch
             switch (state.action) {
-                case 'list-files':
-                    // Manually dispatch fulfilled action with actual data (not pending)
-                    dispatch({
-                        type: 'filebrowser/fetchFiles/fulfilled',
-                        payload: {
-                            items: state.items,
-                            total: state.total,
-                            page: state.page,
-                            diskUsage: state.diskUsage,
-                            pending: false, // Mark as not pending so reducer processes it
-                        },
-                    });
-                    break;
-
                 case 'delete-recording':
                 case 'delete-snapshot':
-                    // Refetch files after deletion
-                    dispatch(fetchFiles({
-                        socket,
-                        page,
-                        pageSize,
-                        sortBy,
-                        sortOrder,
-                        showRecordings: filters.showRecordings,
-                        showSnapshots: filters.showSnapshots,
-                    }));
-                    toast.success(state.message || 'Item deleted successfully');
-                    break;
-
                 case 'recording-started':
                 case 'recording-stopped':
                 case 'snapshot-saved':
-                    // Refetch files when recording/snapshot operations complete
+                    // Refetch files to show updated list
                     dispatch(fetchFiles({
                         socket,
                         page,
@@ -245,25 +217,13 @@ export default function FileBrowser() {
                         showSnapshots: filters.showSnapshots,
                     }));
                     break;
-
-                default:
-                    console.warn('Unknown file browser action:', state.action);
             }
         };
 
-        const handleFileBrowserError = (errorData) => {
-            console.error('File browser error:', errorData);
-            toast.error(errorData.error || 'An error occurred');
-        };
-
-        // Subscribe to events
         socket.on('file_browser_state', handleFileBrowserState);
-        socket.on('file_browser_error', handleFileBrowserError);
 
-        // Cleanup on unmount
         return () => {
             socket.off('file_browser_state', handleFileBrowserState);
-            socket.off('file_browser_error', handleFileBrowserError);
         };
     }, [socket, dispatch, page, pageSize, sortBy, sortOrder, filters.showRecordings, filters.showSnapshots]);
 

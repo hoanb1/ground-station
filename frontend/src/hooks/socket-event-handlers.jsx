@@ -43,6 +43,8 @@ import { setSyncState } from '../components/satellites/synchronize-slice.jsx';
 import { setSatelliteData, setUITrackerValues } from '../components/target/target-slice.jsx';
 import { setSynchronizing } from '../components/satellites/synchronize-slice.jsx';
 import { initializeAppData } from '../services/data-sync.js';
+import { setIsRecording, setRecordingDuration, setRecordingStartTime } from '../components/waterfall/waterfall-slice.jsx';
+import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
 
 /**
  * Custom hook to handle all socket event listeners
@@ -151,6 +153,80 @@ export const useSocketEventHandlers = (socket) => {
         // UI tracker state event
         socket.on("ui-tracker-state", (data) => {
             store.dispatch(setUITrackerValues(data));
+        });
+
+        // File browser state updates (pub/sub model)
+        socket.on("file_browser_state", (state) => {
+            console.log('File browser state received:', state);
+
+            switch (state.action) {
+                case 'list-files':
+                    // Manually dispatch fulfilled action with actual data (not pending)
+                    store.dispatch({
+                        type: 'filebrowser/fetchFiles/fulfilled',
+                        payload: {
+                            items: state.items,
+                            total: state.total,
+                            page: state.page,
+                            diskUsage: state.diskUsage,
+                            pending: false,
+                        },
+                    });
+                    break;
+
+                case 'delete-recording':
+                case 'delete-snapshot':
+                    toast.success(state.message || t('notifications.file_browser.item_deleted'));
+                    break;
+
+                case 'recording-started':
+                case 'recording-stopped':
+                case 'snapshot-saved':
+                    // These events trigger refetch in components
+                    break;
+
+                default:
+                    console.warn('Unknown file browser action:', state.action);
+            }
+        });
+
+        // File browser errors
+        socket.on("file_browser_error", (errorData) => {
+            console.error('File browser error:', errorData);
+            toast.error(errorData.error || t('notifications.file_browser.error'));
+        });
+
+        // Recording state updates (pub/sub model)
+        socket.on("recording_state", (state) => {
+            console.log('Recording state received:', state);
+
+            switch (state.action) {
+                case 'started':
+                    if (state.success) {
+                        store.dispatch(setIsRecording(true));
+                        store.dispatch(setRecordingDuration(0));
+                        store.dispatch(setRecordingStartTime(new Date().toISOString()));
+                        toast.success(t('notifications.recording.started'));
+                    }
+                    break;
+
+                case 'stopped':
+                    if (state.success) {
+                        store.dispatch(setIsRecording(false));
+                        store.dispatch(setRecordingDuration(0));
+                        store.dispatch(setRecordingStartTime(null));
+                        toast.success(t('notifications.recording.stopped'));
+                    }
+                    break;
+
+                case 'start-failed':
+                    toast.error(t('notifications.recording.start_failed', { error: state.error }));
+                    break;
+
+                case 'stop-failed':
+                    toast.error(t('notifications.recording.stop_failed', { error: state.error }));
+                    break;
+            }
         });
 
         // Satellite tracking events
@@ -290,6 +366,9 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("sat-sync-events");
             socket.off("satellite-tracking");
             socket.off("ui-tracker-state");
+            socket.off("file_browser_state");
+            socket.off("file_browser_error");
+            socket.off("recording_state");
         };
-    }, [socket, dispatch]);
+    }, [socket, dispatch, t]);
 };
