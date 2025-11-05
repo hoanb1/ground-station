@@ -29,9 +29,9 @@ describe('getCurrentStatusofRotator', () => {
 
   it('should return tracking status when connected and tracking', () => {
     const rotatorData = { connected: true };
-    const result = getCurrentStatusofRotator(rotatorData, 'tracking');
+    const result = getCurrentStatusofRotator(rotatorData, 'TRK');
 
-    expect(result.key).toBe('tracking');
+    expect(result.key).toBe('TRK');
     expect(result.value).toBe('Tracking');
     expect(result.bgColor).toBe('success.light');
     expect(result.fgColor).toBe('success.dark');
@@ -39,9 +39,9 @@ describe('getCurrentStatusofRotator', () => {
 
   it('should return slewing status when connected and slewing', () => {
     const rotatorData = { connected: true };
-    const result = getCurrentStatusofRotator(rotatorData, 'slewing');
+    const result = getCurrentStatusofRotator(rotatorData, 'SLEW');
 
-    expect(result.key).toBe('slewing');
+    expect(result.key).toBe('SLEW');
     expect(result.value).toBe('Slewing');
     expect(result.bgColor).toBe('warning.light');
     expect(result.fgColor).toBe('warning.dark');
@@ -49,9 +49,9 @@ describe('getCurrentStatusofRotator', () => {
 
   it('should return stopped status when connected and stopped', () => {
     const rotatorData = { connected: true };
-    const result = getCurrentStatusofRotator(rotatorData, 'stopped');
+    const result = getCurrentStatusofRotator(rotatorData, 'STOP');
 
-    expect(result.key).toBe('stopped');
+    expect(result.key).toBe('STOP');
     expect(result.value).toBe('Stopped');
     expect(result.bgColor).toBe('info.light');
     expect(result.fgColor).toBe('info.dark');
@@ -59,19 +59,19 @@ describe('getCurrentStatusofRotator', () => {
 
   it('should return minimum elevation status', () => {
     const rotatorData = { connected: true };
-    const result = getCurrentStatusofRotator(rotatorData, 'minelevation');
+    const result = getCurrentStatusofRotator(rotatorData, 'EL-MIN');
 
-    expect(result.key).toBe('minelevation');
-    expect(result.value).toBe('Target below elevation limit');
+    expect(result.key).toBe('EL-MIN');
+    expect(result.value).toBe('Target below minimum elevation');
     expect(result.bgColor).toBe('error.light');
     expect(result.fgColor).toBe('error.dark');
   });
 
   it('should return out of bounds status', () => {
     const rotatorData = { connected: true };
-    const result = getCurrentStatusofRotator(rotatorData, 'outofbounds');
+    const result = getCurrentStatusofRotator(rotatorData, 'OOB');
 
-    expect(result.key).toBe('outofbounds');
+    expect(result.key).toBe('OOB');
     expect(result.value).toBe('Target below the horizon');
     expect(result.bgColor).toBe('#701c49');
     expect(result.fgColor).toBe('#f8440e');
