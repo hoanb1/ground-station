@@ -17,6 +17,7 @@ from typing import Dict, Union
 
 import crud
 from db import AsyncSessionLocal
+from handlers.filebrowser import emit_file_browser_state
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.utils import active_sdr_clients, add_sdr_session, cleanup_sdr_session, get_sdr_session
 from server.startup import audio_queue
@@ -284,6 +285,17 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 )
                 reply.update(result)
 
+                # Emit file browser state update so all clients see the new recording
+                if result.get("success"):
+                    await emit_file_browser_state(
+                        sio,
+                        {
+                            "action": "recording-started",
+                            "recording_name": recording_name,
+                        },
+                        logger,
+                    )
+
             except Exception as e:
                 logger.error(f"Error starting recording: {str(e)}")
                 logger.exception(e)
@@ -312,6 +324,17 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 result = stop_recording(sdr_id, client_id, waterfall_image)
                 reply.update(result)
 
+                # Emit file browser state update so all clients see the completed recording
+                if result.get("success"):
+                    await emit_file_browser_state(
+                        sio,
+                        {
+                            "action": "recording-stopped",
+                            "recording_path": result.get("data", {}).get("recording_path"),
+                        },
+                        logger,
+                    )
+
             except Exception as e:
                 logger.error(f"Error stopping recording: {str(e)}")
                 logger.exception(e)
@@ -335,6 +358,16 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 if result["success"]:
                     reply["success"] = True
                     reply["data"] = {"snapshot_path": result["snapshot_path"]}
+
+                    # Emit file browser state update so all clients see the new snapshot
+                    await emit_file_browser_state(
+                        sio,
+                        {
+                            "action": "snapshot-saved",
+                            "snapshot_path": result["snapshot_path"],
+                        },
+                        logger,
+                    )
                 else:
                     raise Exception(result.get("error", "Unknown error"))
 

@@ -231,6 +231,21 @@ export default function FileBrowser() {
                     toast.success(state.message || 'Item deleted successfully');
                     break;
 
+                case 'recording-started':
+                case 'recording-stopped':
+                case 'snapshot-saved':
+                    // Refetch files when recording/snapshot operations complete
+                    dispatch(fetchFiles({
+                        socket,
+                        page,
+                        pageSize,
+                        sortBy,
+                        sortOrder,
+                        showRecordings: filters.showRecordings,
+                        showSnapshots: filters.showSnapshots,
+                    }));
+                    break;
+
                 default:
                     console.warn('Unknown file browser action:', state.action);
             }
