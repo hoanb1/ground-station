@@ -113,7 +113,8 @@ export const ToastContainerWithStyles = () => {
                 closeOnClick={false}
                 rtl={false}
                 pauseOnFocusLoss={true}
-                draggable={false}
+                draggable={true}
+                draggablePercent={30}
                 pauseOnHover={true}
                 theme={theme.palette.mode}
                 transition={Slide}
