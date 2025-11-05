@@ -156,7 +156,8 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
     """
 
     # Get the data directories
-    backend_dir = Path(__file__).parent.parent
+    # __file__ is handlers/entities/filebrowser.py, so we need to go up 2 levels to get to backend/
+    backend_dir = Path(__file__).parent.parent.parent
     recordings_dir = backend_dir / "data" / "recordings"
     snapshots_dir = backend_dir / "data" / "snapshots"
 

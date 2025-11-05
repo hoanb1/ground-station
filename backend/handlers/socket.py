@@ -4,17 +4,44 @@ import time
 from typing import Dict
 
 from common.logger import logger
-from handlers import (
-    data_request_routing,
-    data_submission_routing,
-    filebrowser_request_routing,
-    sdr_data_request_routing,
+
+# Import all entity modules to register their handlers
+from handlers.entities import (
+    groups,
+    hardware,
+    locations,
+    preferences,
+    satellites,
+    tle_sources,
+    tracking,
+    transmitters,
+    vfo,
 )
+from handlers.entities.filebrowser import filebrowser_request_routing
+from handlers.entities.sdr import sdr_data_request_routing
+from handlers.routing import dispatch_request, handler_registry
 from sdr.utils import cleanup_sdr_session
 from server.shutdown import cleanup_everything
 
 # hold a list of sessions
 SESSIONS: Dict[str, Dict] = {}
+
+
+def _register_all_handlers():
+    """Register all entity handlers with the global registry."""
+    satellites.register_handlers(handler_registry)
+    tle_sources.register_handlers(handler_registry)
+    groups.register_handlers(handler_registry)
+    hardware.register_handlers(handler_registry)
+    locations.register_handlers(handler_registry)
+    preferences.register_handlers(handler_registry)
+    transmitters.register_handlers(handler_registry)
+    tracking.register_handlers(handler_registry)
+    vfo.register_handlers(handler_registry)
+
+
+# Register all handlers at module load time
+_register_all_handlers()
 
 
 def register_socketio_handlers(sio):
@@ -41,13 +68,13 @@ def register_socketio_handlers(sio):
     @sio.on("data_request")
     async def handle_frontend_data_requests(sid, cmd, data=None):
         logger.info(f"Received event from: {sid}, with cmd: {cmd}")
-        reply = await data_request_routing(sio, cmd, data, logger, sid)
+        reply = await dispatch_request(sio, cmd, data, logger, sid, handler_registry)
         return reply
 
     @sio.on("data_submission")
     async def handle_frontend_data_submissions(sid, cmd, data=None):
         logger.info(f"Received event from: {sid}, with cmd: {cmd}, and data: {data}")
-        reply = await data_submission_routing(sio, cmd, data, logger, sid)
+        reply = await dispatch_request(sio, cmd, data, logger, sid, handler_registry)
         return reply
 
     @sio.on("file_browser")

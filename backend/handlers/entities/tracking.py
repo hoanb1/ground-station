@@ -1,0 +1,177 @@
+# Copyright (c) 2025 Efstratios Goudelis
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+
+"""Tracking state handlers and emission functions."""
+
+from typing import Any, Dict, Optional, Union
+
+import crud
+from db import AsyncSessionLocal
+from tracker.data import compiled_satellite_data, get_ui_tracker_state
+from tracking.events import fetch_next_events_for_satellite
+
+
+async def emit_tracker_data(dbsession, sio, logger):
+    """
+    Emits satellite tracking data to the provided Socket.IO instance. This function retrieves the
+    current state of satellite tracking from the database, processes the relevant satellite data,
+    fetches the UI tracker state, and emits the resulting combined data to a specific event on
+    the Socket.IO instance. Errors during data retrieval, processing, or emitting are logged.
+
+    :param dbsession: Database session object used to access and query the database.
+    :type dbsession: Any
+    :param sio: Socket.IO server instance for emitting events.
+    :type sio: AsyncServer
+    :param logger: Logger object for logging errors or exceptions.
+    :type logger: Any
+    :return: This function does not return any value as it emits data asynchronously.
+    :rtype: None
+    """
+    try:
+        logger.debug("Sending tracker data to clients...")
+
+        tracking_state_reply = await crud.tracking_state.get_tracking_state(
+            dbsession, name="satellite-tracking"
+        )
+        norad_id = tracking_state_reply["data"]["value"].get("norad_id", None)
+        satellite_data = await compiled_satellite_data(dbsession, norad_id)
+        data = {
+            "satellite_data": satellite_data,
+            "tracking_state": tracking_state_reply["data"]["value"],
+        }
+        await sio.emit("satellite-tracking", data)
+
+    except Exception as e:
+        logger.error(f"Error emitting tracker data: {e}")
+        logger.exception(e)
+
+
+async def emit_ui_tracker_values(dbsession, sio, logger):
+    """
+    Call this when UI tracker values are updated
+
+    :param dbsession:
+    :param sio:
+    :param logger:
+    :return:
+    """
+
+    try:
+        logger.debug("Sending UI tracker value to clients...")
+
+        tracking_state_reply = await crud.tracking_state.get_tracking_state(
+            dbsession, name="satellite-tracking"
+        )
+        group_id = tracking_state_reply["data"]["value"].get("group_id", None)
+        norad_id = tracking_state_reply["data"]["value"].get("norad_id", None)
+        ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
+        data = ui_tracker_state["data"]
+        await sio.emit("ui-tracker-state", data)
+
+    except Exception as e:
+        logger.error(f"Error emitting UI tracker values: {e}")
+        logger.exception(e)
+
+
+async def get_tracking_state(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, list]]:
+    """
+    Get current tracking state and emit tracker data.
+
+    Args:
+        sio: Socket.IO server instance
+        data: Not used
+        logger: Logger instance
+        sid: Socket.IO session ID
+
+    Returns:
+        Dictionary with success status and tracking state
+    """
+    async with AsyncSessionLocal() as dbsession:
+        logger.debug(f"Fetching tracking state, data: {data}")
+        tracking_state = await crud.tracking_state.get_tracking_state(
+            dbsession, name="satellite-tracking"
+        )
+        await emit_tracker_data(dbsession, sio, logger)
+        await emit_ui_tracker_values(dbsession, sio, logger)
+        return {"success": tracking_state["success"], "data": tracking_state.get("data", [])}
+
+
+async def set_tracking_state(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, dict]]:
+    """
+    Update tracking state and emit tracker data.
+
+    Args:
+        sio: Socket.IO server instance
+        data: Tracking state updates
+        logger: Logger instance
+        sid: Socket.IO session ID
+
+    Returns:
+        Dictionary with success status and updated tracking state
+    """
+    async with AsyncSessionLocal() as dbsession:
+        logger.info(f"Updating satellite tracking state, data: {data}")
+        # Store the tracking state in the db
+        tracking_state_reply = await crud.tracking_state.set_tracking_state(dbsession, data)
+
+        # Emit so that any open browsers are also informed of any change
+        await emit_tracker_data(dbsession, sio, logger)
+        await emit_ui_tracker_values(dbsession, sio, logger)
+        return {
+            "success": tracking_state_reply["success"],
+            "data": tracking_state_reply["data"]["value"],
+        }
+
+
+async def fetch_next_passes(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, list, float]]:
+    """
+    Fetch next passes for a satellite.
+
+    Args:
+        sio: Socket.IO server instance
+        data: NORAD ID and forecast hours
+        logger: Logger instance
+        sid: Socket.IO session ID
+
+    Returns:
+        Dictionary with success status and next passes
+    """
+    logger.debug(f"Fetching next passes, data: {data}")
+    norad_id = data.get("norad_id", None) if data else None
+    hours = data.get("hours", 4.0) if data else 4.0
+    next_passes = await fetch_next_events_for_satellite(norad_id=norad_id, hours=hours)
+    return {
+        "success": next_passes["success"],
+        "data": next_passes.get("data", []),
+        "cached": next_passes.get("cached", False),
+        "forecast_hours": next_passes.get("forecast_hours", 4.0),
+    }
+
+
+def register_handlers(registry):
+    """Register tracking handlers with the command registry."""
+    registry.register_batch(
+        {
+            "get-tracking-state": (get_tracking_state, "data_request"),
+            "set-tracking-state": (set_tracking_state, "data_submission"),
+            "fetch-next-passes": (fetch_next_passes, "data_request"),
+        }
+    )

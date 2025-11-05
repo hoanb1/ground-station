@@ -17,7 +17,7 @@ from typing import Dict, Union
 
 import crud
 from db import AsyncSessionLocal
-from handlers.filebrowser import emit_file_browser_state
+from handlers.entities.filebrowser import emit_file_browser_state
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.utils import active_sdr_clients, add_sdr_session, cleanup_sdr_session, get_sdr_session
 from server.startup import audio_queue

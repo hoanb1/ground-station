@@ -13,19 +13,60 @@
 # You should have received a copy of the GNU General Public License
 # along with this program. If not, see <https://www.gnu.org/licenses/>.
 
+"""
+Handlers package - refactored into entity-based modules with clean routing.
+
+New structure:
+- handlers/entities/: Entity-specific handlers (satellites, hardware, etc.)
+- handlers/routing/: Routing registry and dispatcher
+- handlers/socket.py: Socket.IO event registration
+
+Legacy handlers (deprecated):
+- handlers/requests.py: Use handlers/entities/* instead
+- handlers/submissions.py: Use handlers/entities/* instead
+- handlers/tracking.py: Moved to handlers/entities/tracking.py
+"""
+
 from .base import run_async_in_thread
-from .filebrowser import filebrowser_request_routing
-from .requests import data_request_routing
-from .sdr import sdr_data_request_routing
-from .submissions import data_submission_routing
-from .tracking import emit_tracker_data, emit_ui_tracker_values
+from .entities import (
+    filebrowser,
+    groups,
+    hardware,
+    locations,
+    preferences,
+    satellites,
+    sdr,
+    tle_sources,
+    tracking,
+    transmitters,
+)
+from .entities.filebrowser import filebrowser_request_routing
+from .entities.sdr import sdr_data_request_routing
+from .entities.tracking import emit_tracker_data, emit_ui_tracker_values
+from .routing import HandlerRegistry, dispatch_request, handler_registry
 
 __all__ = [
+    # Base utilities
     "run_async_in_thread",
-    "data_request_routing",
-    "data_submission_routing",
-    "sdr_data_request_routing",
+    # Routing
+    "handler_registry",
+    "HandlerRegistry",
+    "dispatch_request",
+    # Entity modules
+    "satellites",
+    "tle_sources",
+    "groups",
+    "hardware",
+    "locations",
+    "preferences",
+    "transmitters",
+    "tracking",
+    "filebrowser",
+    "sdr",
+    # Special routing functions (for backwards compatibility)
     "filebrowser_request_routing",
+    "sdr_data_request_routing",
+    # Tracking utilities
     "emit_tracker_data",
     "emit_ui_tracker_values",
 ]
