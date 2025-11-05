@@ -880,16 +880,28 @@ function updateWaterfallLeftMargin() {
     // Process last rotator events, if there are any then print a line
     const newRotatorEvent = rotatorEventQueue.pop();
     if (newRotatorEvent) {
-        // Draw a more visible background for the timestamp
-        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
-        waterFallLeftMarginCtx.fillRect(0, 0, dBAxisCanvas.width, 14);
-
-        // Draw the time text
+        // Set font properties first to measure text
         waterFallLeftMarginCtx.font = '12px monospace';
-        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
         waterFallLeftMarginCtx.textAlign = 'center';
         waterFallLeftMarginCtx.textBaseline = 'top';
-        waterFallLeftMarginCtx.fillText(newRotatorEvent, dBAxisCanvas.width / 2, 2);
+
+        // Measure text to get precise dimensions
+        const textMetrics = waterFallLeftMarginCtx.measureText(newRotatorEvent);
+        const textWidth = textMetrics.width;
+        const textHeight = 12; // Match the actual font size
+        const centerX = waterfallLeftMarginCanvas.width / 2;
+        const textX = centerX - (textWidth / 2);
+
+        // Only clear the specific rectangle where the text will be drawn
+        waterFallLeftMarginCtx.clearRect(textX - 1, 0, textWidth + 2, textHeight);
+
+        // Fill with background color
+        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
+        waterFallLeftMarginCtx.fillRect(textX - 1, 0, textWidth + 2, textHeight);
+
+        // Draw the time text at y=0
+        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
+        waterFallLeftMarginCtx.fillText(newRotatorEvent, centerX, 0);
 
         // Draw dotted line only if showRotatorDottedLines is enabled
         if (showRotatorDottedLines) {
@@ -925,11 +937,14 @@ function updateWaterfallLeftMargin() {
         }
     }
 
-    // Calculate seconds since the epoch and check if divisible by 15
+    // Calculate seconds since the epoch and check if we need to update
     const now = new Date();
     const currentSeconds = Math.floor(now.getTime() / 1000);
+
+    // Only update if this is a NEW timestamp (check if lastTimestamp second has changed)
+    const lastSeconds = lastTimestamp ? Math.floor(lastTimestamp.getTime() / 1000) : -1;
     const shouldUpdate = !lastTimestamp ||
-        currentSeconds % 15 === 0 ||
+        (currentSeconds !== lastSeconds && currentSeconds % 15 === 0) ||
         (lastTimestamp.getMinutes() !== now.getMinutes()) ||
         (lastTimestamp.getHours() !== now.getHours());
 
@@ -941,16 +956,28 @@ function updateWaterfallLeftMargin() {
         const seconds = String(now.getSeconds()).padStart(2, '0');
         const timeString = `${hours}:${minutes}:${seconds}`;
 
-        // Draw a more visible background for the timestamp
-        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
-        waterFallLeftMarginCtx.fillRect(0, 0, dBAxisCanvas.width, 14);
-
-        // Draw the time text
+        // Set font properties first to measure text
         waterFallLeftMarginCtx.font = '12px monospace';
-        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
         waterFallLeftMarginCtx.textAlign = 'center';
         waterFallLeftMarginCtx.textBaseline = 'top';
-        waterFallLeftMarginCtx.fillText(timeString, dBAxisCanvas.width / 2, 2);
+
+        // Measure text to get precise dimensions
+        const textMetrics = waterFallLeftMarginCtx.measureText(timeString);
+        const textWidth = textMetrics.width;
+        const textHeight = 12; // Match the actual font size
+        const centerX = waterfallLeftMarginCanvas.width / 2;
+        const textX = centerX - (textWidth / 2);
+
+        // Only clear the specific rectangle where the text will be drawn
+        waterFallLeftMarginCtx.clearRect(textX - 1, 0, textWidth + 2, textHeight);
+
+        // Fill with background color
+        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
+        waterFallLeftMarginCtx.fillRect(textX - 1, 0, textWidth + 2, textHeight);
+
+        // Draw the time text at y=0
+        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
+        waterFallLeftMarginCtx.fillText(timeString, centerX, 0);
 
         // Update the last timestamp reference
         lastTimestamp = now;

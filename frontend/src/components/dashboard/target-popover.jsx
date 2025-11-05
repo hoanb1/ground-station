@@ -404,39 +404,6 @@ const SatelliteInfoPopover = () => {
                                 </Grid2>
                             </Box>
 
-                            <Divider sx={{ borderColor: 'border.main', mb: 2 }} />
-
-                            {/* Mission Information */}
-                            <Box sx={{ mb: 2 }}>
-                                <Typography variant="subtitle2" sx={{ color: 'warning.light', mb: 1, fontWeight: 'bold' }}>
-                                    {t('target_popover.sections.mission_information')}
-                                </Typography>
-                                <Grid2 container spacing={1}>
-                                    <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                            <strong>{t('target_popover.launched')}</strong> <span style={{ color: 'inherit' }}>{formatDate(satelliteData.details.launched)}</span>
-                                        </Typography>
-                                    </Grid2>
-                                    <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                            <strong>{t('target_popover.deployed')}</strong> <span style={{ color: 'inherit' }}>{formatDate(satelliteData.details.deployed)}</span>
-                                        </Typography>
-                                    </Grid2>
-                                    {satelliteData.details.decayed && (
-                                        <Grid2 size={6}>
-                                            <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                                <strong>{t('target_popover.decayed')}</strong> <span style={{ color: 'inherit' }}>{formatDate(satelliteData.details.decayed)}</span>
-                                            </Typography>
-                                        </Grid2>
-                                    )}
-                                    <Grid2 size={12}>
-                                        <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                            <strong>{t('target_popover.geostationary')}</strong> <Box component="span" sx={{ color: satelliteData.details.is_geostationary ? 'success.main' : 'error.main' }}>{satelliteData.details.is_geostationary ? t('target_popover.yes') : t('target_popover.no')}</Box>
-                                        </Typography>
-                                    </Grid2>
-                                </Grid2>
-                            </Box>
-
                             {/* Website Link */}
                             {satelliteData.details.website && (
                                 <Box sx={{ mt: 2, pt: 1, borderTop: '1px solid', borderColor: 'border.main' }}>
@@ -463,15 +430,15 @@ const SatelliteInfoPopover = () => {
                                     onClick={handleNavigateToSatelliteInfo}
                                     startIcon={<OpenInNewIcon />}
                                     sx={{
-                                        backgroundColor: 'info.main',
-                                        color: 'text.primary',
+                                        backgroundColor: 'action.hover',
+                                        color: 'text.secondary',
                                         '&:hover': {
-                                            backgroundColor: 'info.dark',
+                                            backgroundColor: 'action.selected',
                                         },
-                                        fontWeight: 'bold',
+                                        textTransform: 'none',
                                     }}
                                 >
-                                    View Detailed Info
+                                    View detailed info
                                 </Button>
                             </Box>
                         </>
