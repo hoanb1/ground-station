@@ -113,10 +113,48 @@ const PlaybackAccordion = ({
     const [sortBy, setSortBy] = useState('modified');
     const [sortOrder, setSortOrder] = useState('desc');
 
-    // Filter only recordings from files
-    const recordings = useMemo(() => files.filter(f => f.type === 'recording'), [files]);
+    // Filter, sort, and paginate recordings in the frontend
+    const recordings = useMemo(() => {
+        // Filter only recordings
+        let recordingsList = files.filter(f => f.type === 'recording');
 
-    // Fetch recordings and SDRs when component mounts or page/sort changes
+        // Apply sorting
+        const reverse = sortOrder === 'desc';
+        recordingsList.sort((a, b) => {
+            let aVal, bVal;
+
+            if (sortBy === 'name') {
+                aVal = a.name;
+                bVal = b.name;
+                return reverse
+                    ? bVal.localeCompare(aVal)
+                    : aVal.localeCompare(bVal);
+            } else if (sortBy === 'size') {
+                aVal = a.data_size || 0;
+                bVal = b.data_size || 0;
+            } else if (sortBy === 'created') {
+                aVal = new Date(a.created).getTime();
+                bVal = new Date(b.created).getTime();
+            } else if (sortBy === 'modified') {
+                aVal = new Date(a.modified).getTime();
+                bVal = new Date(b.modified).getTime();
+            } else if (sortBy === 'sample_rate') {
+                aVal = a.metadata?.sample_rate || 0;
+                bVal = b.metadata?.sample_rate || 0;
+            } else {
+                return 0;
+            }
+
+            return reverse ? bVal - aVal : aVal - bVal;
+        });
+
+        // Apply pagination (5 items per page)
+        const startIdx = (page - 1) * 5;
+        const endIdx = startIdx + 5;
+        return recordingsList.slice(startIdx, endIdx);
+    }, [files, sortBy, sortOrder, page]);
+
+    // Fetch recordings and SDRs when component mounts or when expanded
     useEffect(() => {
         if (socket && expanded) {
             // Refresh SDRs to ensure SigMF Playback SDR is available
@@ -124,15 +162,11 @@ const PlaybackAccordion = ({
 
             dispatch(fetchFiles({
                 socket,
-                page,
-                pageSize: 5,
-                sortBy,
-                sortOrder,
                 showRecordings: true,
                 showSnapshots: false,
             }));
         }
-    }, [socket, dispatch, page, sortBy, sortOrder, expanded]);
+    }, [socket, dispatch, expanded]);
 
     // Listen for file browser updates to refresh the list
     useEffect(() => {
@@ -143,10 +177,6 @@ const PlaybackAccordion = ({
             if (['recording-started', 'recording-stopped', 'snapshot-saved', 'delete-recording'].includes(state.action)) {
                 dispatch(fetchFiles({
                     socket,
-                    page,
-                    pageSize: 5,
-                    sortBy,
-                    sortOrder,
                     showRecordings: true,
                     showSnapshots: false,
                 }));
@@ -158,16 +188,12 @@ const PlaybackAccordion = ({
         return () => {
             socket.off('file_browser_state', handleFileBrowserState);
         };
-    }, [socket, dispatch, page, sortBy, sortOrder]);
+    }, [socket, dispatch]);
 
     const handleRefresh = () => {
         if (socket) {
             dispatch(fetchFiles({
                 socket,
-                page,
-                pageSize: 5,
-                sortBy,
-                sortOrder,
                 showRecordings: true,
                 showSnapshots: false,
             }));
@@ -182,7 +208,9 @@ const PlaybackAccordion = ({
         setSortBy(event.target.value);
     };
 
-    const totalPages = Math.ceil(total / 5);
+    // Calculate total pages based on all recordings (filtered from files)
+    const totalRecordings = files.filter(f => f.type === 'recording').length;
+    const totalPages = Math.ceil(totalRecordings / 5);
 
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>

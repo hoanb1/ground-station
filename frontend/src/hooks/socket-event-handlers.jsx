@@ -162,12 +162,11 @@ export const useSocketEventHandlers = (socket) => {
             switch (state.action) {
                 case 'list-files':
                     // Manually dispatch fulfilled action with actual data (not pending)
+                    // Backend now returns all files, frontend handles pagination
                     store.dispatch({
                         type: 'filebrowser/fetchFiles/fulfilled',
                         payload: {
                             items: state.items,
-                            total: state.total,
-                            page: state.page,
                             diskUsage: state.diskUsage,
                             pending: false,
                         },

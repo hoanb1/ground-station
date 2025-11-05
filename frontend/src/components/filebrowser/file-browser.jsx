@@ -178,20 +178,16 @@ export default function FileBrowser() {
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
 
-    // Fetch data when pagination, sorting, or filters change
+    // Fetch data when filters change (not pagination/sorting - those are handled in UI)
     useEffect(() => {
         if (socket) {
             dispatch(fetchFiles({
                 socket,
-                page,
-                pageSize,
-                sortBy,
-                sortOrder,
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
             }));
         }
-    }, [socket, dispatch, page, pageSize, sortBy, sortOrder, filters.showRecordings, filters.showSnapshots]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots]);
 
     // Listen for file browser state updates to trigger refetch (global handler in socket-event-handlers.jsx updates Redux)
     useEffect(() => {
@@ -209,10 +205,6 @@ export default function FileBrowser() {
                     // Refetch files to show updated list
                     dispatch(fetchFiles({
                         socket,
-                        page,
-                        pageSize,
-                        sortBy,
-                        sortOrder,
                         showRecordings: filters.showRecordings,
                         showSnapshots: filters.showSnapshots,
                     }));
@@ -238,10 +230,6 @@ export default function FileBrowser() {
             // Refresh the unified list
             dispatch(fetchFiles({
                 socket,
-                page,
-                pageSize,
-                sortBy,
-                sortOrder,
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
             }));
@@ -254,10 +242,10 @@ export default function FileBrowser() {
         };
     }, [socket, dispatch]);
 
-    // Files are already sorted and filtered by backend
-    // Just add display properties for UI
+    // Sort, paginate, and format files in the frontend
     const displayItems = useMemo(() => {
-        return files.map(item => {
+        // First, add display properties
+        let processedFiles = files.map(item => {
             const isRecording = item.type === 'recording';
             const duration = isRecording && item.metadata?.start_time
                 ? formatDuration(item.metadata.start_time, item.metadata.finalized_time)
@@ -272,7 +260,42 @@ export default function FileBrowser() {
                 duration,
             };
         });
-    }, [files]);
+
+        // Apply sorting
+        const reverse = sortOrder === 'desc';
+        processedFiles.sort((a, b) => {
+            let aVal, bVal;
+
+            if (sortBy === 'name') {
+                aVal = a.displayName;
+                bVal = b.displayName;
+                return reverse
+                    ? bVal.localeCompare(aVal)
+                    : aVal.localeCompare(bVal);
+            } else if (sortBy === 'size') {
+                aVal = a.data_size || a.size || 0;
+                bVal = b.data_size || b.size || 0;
+            } else if (sortBy === 'created') {
+                aVal = new Date(a.created).getTime();
+                bVal = new Date(b.created).getTime();
+            } else if (sortBy === 'modified') {
+                aVal = new Date(a.modified).getTime();
+                bVal = new Date(b.modified).getTime();
+            } else if (sortBy === 'sample_rate') {
+                aVal = a.metadata?.sample_rate || 0;
+                bVal = b.metadata?.sample_rate || 0;
+            } else {
+                return 0;
+            }
+
+            return reverse ? bVal - aVal : aVal - bVal;
+        });
+
+        // Apply pagination
+        const startIdx = (page - 1) * pageSize;
+        const endIdx = startIdx + pageSize;
+        return processedFiles.slice(startIdx, endIdx);
+    }, [files, sortBy, sortOrder, page, pageSize]);
 
     const handleSortChange = (event) => {
         dispatch(setSortBy(event.target.value));
@@ -282,10 +305,6 @@ export default function FileBrowser() {
         if (socket) {
             dispatch(fetchFiles({
                 socket,
-                page,
-                pageSize,
-                sortBy,
-                sortOrder,
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
             }));
@@ -904,7 +923,7 @@ export default function FileBrowser() {
             )}
 
             {/* Pagination Controls */}
-            {displayItems.length > 0 && (
+            {total > pageSize && (
                 <Box sx={{ display: 'flex', justifyContent: 'center', mt: 3 }}>
                     <Pagination
                         count={Math.ceil(total / pageSize)}
