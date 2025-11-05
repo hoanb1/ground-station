@@ -376,22 +376,23 @@ const targetSatTrackSlice = createSlice({
                 }
 
                 // Update rotator events - check specific limit flags first
+                // Use descriptive text for waterfall display
                 if (action.payload['rotator_data']['minelevation']) {
-                    state.lastRotatorEvent = 'minelevation';
+                    state.lastRotatorEvent = 'EL-MIN';
                 } else if (action.payload['rotator_data']['maxelevation']) {
-                    state.lastRotatorEvent = 'maxelevation';
+                    state.lastRotatorEvent = 'EL-MAX';
                 } else if (action.payload['rotator_data']['minazimuth']) {
-                    state.lastRotatorEvent = 'minazimuth';
+                    state.lastRotatorEvent = 'AZ-MIN';
                 } else if (action.payload['rotator_data']['maxazimuth']) {
-                    state.lastRotatorEvent = 'maxazimuth';
+                    state.lastRotatorEvent = 'AZ-MAX';
                 } else if (action.payload['rotator_data']['outofbounds']) {
-                    state.lastRotatorEvent = 'outofbounds';
+                    state.lastRotatorEvent = 'OOB';
                 } else if (action.payload['rotator_data']['slewing']) {
-                    state.lastRotatorEvent = 'slewing';
+                    state.lastRotatorEvent = 'SLEW';
                 } else if (action.payload['rotator_data']['tracking']) {
-                    state.lastRotatorEvent = 'tracking';
+                    state.lastRotatorEvent = 'TRK';
                 } else if (action.payload['rotator_data']['stopped']) {
-                    state.lastRotatorEvent = 'stopped';
+                    state.lastRotatorEvent = 'STOP';
                 }
             }
 

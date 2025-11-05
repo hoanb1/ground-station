@@ -25,43 +25,44 @@
  */
 export function getCurrentStatusofRotator(rotatorData, lastRotatorEvent) {
     // Define a status mapping with colors
+    // Keys match the abbreviated event names from target-slice.jsx
     const statusMap = {
-        'minelevation': {
+        'EL-MIN': {
             text: "Target below minimum elevation",
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
-        'maxelevation': {
+        'EL-MAX': {
             text: "Target above maximum elevation",
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
-        'minazimuth': {
+        'AZ-MIN': {
             text: "Target below minimum azimuth",
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
-        'maxazimuth': {
+        'AZ-MAX': {
             text: "Target above maximum azimuth",
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },
-        'slewing': {
+        'SLEW': {
             text: "Slewing",
             bgColor: 'warning.light',
             fgColor: 'warning.dark'
         },
-        'tracking': {
+        'TRK': {
             text: "Tracking",
             bgColor: 'success.light',
             fgColor: 'success.dark'
         },
-        'stopped': {
+        'STOP': {
             text: "Stopped",
             bgColor: 'info.light',
             fgColor: 'info.dark'
         },
-        'outofbounds': {
+        'OOB': {
             text: "Target below the horizon",
             bgColor: '#701c49',
             fgColor: '#f8440e'
