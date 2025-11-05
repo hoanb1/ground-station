@@ -46,6 +46,7 @@ import {
     OutlinedInput,
     Pagination,
     LinearProgress,
+    Stack,
 } from '@mui/material';
 import DeleteIcon from '@mui/icons-material/Delete';
 import DownloadIcon from '@mui/icons-material/Download';
@@ -993,11 +994,38 @@ export default function FileBrowser() {
                                         {selectedItem.metadata.captures?.length > 0 && (
                                             <>
                                                 <Typography variant="subtitle2" gutterBottom>
-                                                    Captures ({selectedItem.metadata.captures.length})
+                                                    Capture Segments ({selectedItem.metadata.captures.length})
                                                 </Typography>
-                                                <Alert severity="info" sx={{ mb: 2 }}>
-                                                    {JSON.stringify(selectedItem.metadata.captures, null, 2)}
-                                                </Alert>
+                                                <Stack spacing={1} sx={{ mb: 2 }}>
+                                                    {selectedItem.metadata.captures.map((capture, index) => (
+                                                        <Box
+                                                            key={index}
+                                                            sx={{
+                                                                p: 1.5,
+                                                                border: '1px solid',
+                                                                borderColor: 'divider',
+                                                                borderRadius: 1,
+                                                                backgroundColor: 'background.paper',
+                                                            }}
+                                                        >
+                                                            <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 0.5, display: 'block' }}>
+                                                                Segment {index + 1}
+                                                            </Typography>
+                                                            <Box sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
+                                                                {Object.entries(capture).map(([key, value]) => (
+                                                                    <Box key={key} sx={{ display: 'flex', gap: 1, py: 0.25 }}>
+                                                                        <Box component="span" sx={{ color: 'text.secondary', minWidth: '140px' }}>
+                                                                            {key}:
+                                                                        </Box>
+                                                                        <Box component="span" sx={{ wordBreak: 'break-word' }}>
+                                                                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
+                                                                        </Box>
+                                                                    </Box>
+                                                                ))}
+                                                            </Box>
+                                                        </Box>
+                                                    ))}
+                                                </Stack>
                                             </>
                                         )}
                                     </>
