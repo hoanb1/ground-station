@@ -57,6 +57,7 @@ import FiberManualRecordIcon from '@mui/icons-material/FiberManualRecord';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import RadioIcon from '@mui/icons-material/Radio';
 import StorageIcon from '@mui/icons-material/Storage';
+import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
@@ -790,6 +791,15 @@ export default function FileBrowser() {
                                                     color="primary"
                                                 />
                                             )}
+                                            {isRecording && item.metadata?.target_satellite_name && (
+                                                <Chip
+                                                    label={item.metadata.target_satellite_name}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="secondary"
+                                                    icon={<SatelliteAltIcon />}
+                                                />
+                                            )}
                                             {isRecording && item.duration && (
                                                 <Chip
                                                     label={item.duration}
@@ -925,6 +935,22 @@ export default function FileBrowser() {
 
                                 {selectedItem.metadata && (
                                     <>
+                                        {(selectedItem.metadata.target_satellite_name || selectedItem.metadata.target_satellite_norad_id) && (
+                                            <>
+                                                <Typography variant="subtitle2" gutterBottom>
+                                                    Target Satellite
+                                                </Typography>
+                                                <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
+                                                    {selectedItem.metadata.target_satellite_name && (
+                                                        <div>Name: {selectedItem.metadata.target_satellite_name}</div>
+                                                    )}
+                                                    {selectedItem.metadata.target_satellite_norad_id && (
+                                                        <div>NORAD ID: {selectedItem.metadata.target_satellite_norad_id}</div>
+                                                    )}
+                                                </Box>
+                                            </>
+                                        )}
+
                                         <Typography variant="subtitle2" gutterBottom>
                                             Metadata
                                         </Typography>

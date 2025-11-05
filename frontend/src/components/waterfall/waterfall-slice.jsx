@@ -62,11 +62,17 @@ export const updateVFOParameters = createAsyncThunk(
 
 export const startRecording = createAsyncThunk(
     'waterfall/startRecording',
-    async ({socket, recordingName, selectedSDRId}, {rejectWithValue}) => {
+    async ({socket, recordingName, selectedSDRId}, {getState, rejectWithValue}) => {
         return new Promise((resolve, reject) => {
+            const state = getState();
+            const targetNoradId = state.targetSatTrack?.trackingState?.norad_id || '';
+            const targetSatelliteName = state.targetSatTrack?.satelliteData?.details?.name || '';
+
             socket.emit('sdr_data', 'start-recording', {
                 recordingName,
-                selectedSDRId
+                selectedSDRId,
+                targetSatelliteNoradId: targetNoradId,
+                targetSatelliteName: targetSatelliteName
             }, (response) => {
                 if (response && response.success) {
                     resolve(response.data);

@@ -272,8 +272,16 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
 
                 sdr_id = data.get("selectedSDRId", None)
                 recording_name = data.get("recordingName", "")
+                target_satellite_norad_id = data.get("targetSatelliteNoradId", "")
+                target_satellite_name = data.get("targetSatelliteName", "")
 
-                result = start_recording(sdr_id, client_id, recording_name)
+                result = start_recording(
+                    sdr_id,
+                    client_id,
+                    recording_name,
+                    target_satellite_norad_id,
+                    target_satellite_name,
+                )
                 reply.update(result)
 
             except Exception as e:

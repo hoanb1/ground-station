@@ -33,12 +33,22 @@ class IQRecorder(threading.Thread):
     This allows recording to be managed through the same infrastructure as demodulators.
     """
 
-    def __init__(self, iq_queue, audio_queue, session_id, recording_path):
+    def __init__(
+        self,
+        iq_queue,
+        audio_queue,
+        session_id,
+        recording_path,
+        target_satellite_norad_id="",
+        target_satellite_name="",
+    ):
         super().__init__(daemon=True, name=f"IQRecorder-{session_id}")
         self.iq_queue = iq_queue
         self.recording_path = Path(recording_path)
         self.session_id = session_id
         self.running = True
+        self.target_satellite_norad_id = target_satellite_norad_id
+        self.target_satellite_name = target_satellite_name
 
         # Metadata tracking
         self.total_samples = 0
@@ -123,15 +133,25 @@ class IQRecorder(threading.Thread):
 
     def _write_preliminary_metadata(self):
         """Write preliminary metadata file to mark recording as in progress."""
+        global_metadata: dict = {
+            "core:datatype": "cf32_le",
+            "core:version": "1.0.0",
+            "core:description": "Ground Station IQ Recording",
+            "core:recorder": "ground-station",
+            "gs:recording_in_progress": True,
+            "gs:start_time": self.start_time_iso,
+        }
+
+        # Add target satellite NORAD ID if provided
+        if self.target_satellite_norad_id:
+            global_metadata["gs:target_satellite_norad_id"] = self.target_satellite_norad_id
+
+        # Add target satellite name if provided
+        if self.target_satellite_name:
+            global_metadata["gs:target_satellite_name"] = self.target_satellite_name
+
         preliminary_metadata = {
-            "global": {
-                "core:datatype": "cf32_le",
-                "core:version": "1.0.0",
-                "core:description": "Ground Station IQ Recording",
-                "core:recorder": "ground-station",
-                "gs:recording_in_progress": True,
-                "gs:start_time": self.start_time_iso,
-            },
+            "global": global_metadata,
             "captures": [],
             "annotations": [],
         }
@@ -162,19 +182,29 @@ class IQRecorder(threading.Thread):
         self.data_file.close()
 
         # Write final SigMF metadata (replaces preliminary metadata, preserves start_time)
+        global_metadata: dict = {
+            "core:datatype": "cf32_le",
+            "core:sample_rate": self.current_sample_rate,
+            "core:version": "1.0.0",
+            "core:description": "Ground Station IQ Recording",
+            "core:recorder": "ground-station",
+            "gs:start_time": self.start_time_iso,
+            "gs:finalized_time": datetime.now(timezone.utc)
+            .replace(microsecond=0, tzinfo=None)
+            .isoformat()
+            + "Z",
+        }
+
+        # Add target satellite NORAD ID if provided
+        if self.target_satellite_norad_id:
+            global_metadata["gs:target_satellite_norad_id"] = self.target_satellite_norad_id
+
+        # Add target satellite name if provided
+        if self.target_satellite_name:
+            global_metadata["gs:target_satellite_name"] = self.target_satellite_name
+
         metadata = {
-            "global": {
-                "core:datatype": "cf32_le",
-                "core:sample_rate": self.current_sample_rate,
-                "core:version": "1.0.0",
-                "core:description": "Ground Station IQ Recording",
-                "core:recorder": "ground-station",
-                "gs:start_time": self.start_time_iso,
-                "gs:finalized_time": datetime.now(timezone.utc)
-                .replace(microsecond=0, tzinfo=None)
-                .isoformat()
-                + "Z",
-            },
+            "global": global_metadata,
             "captures": self.captures,
             "annotations": self.annotations,
         }

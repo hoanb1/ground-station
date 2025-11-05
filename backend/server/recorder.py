@@ -25,7 +25,13 @@ from sdr.sdrprocessmanager import sdr_process_manager
 logger = logging.getLogger("recorder")
 
 
-def start_recording(sdr_id: str, client_id: str, recording_name: str = "") -> dict:
+def start_recording(
+    sdr_id: str,
+    client_id: str,
+    recording_name: str = "",
+    target_satellite_norad_id: str = "",
+    target_satellite_name: str = "",
+) -> dict:
     """
     Start IQ recording for a given SDR and client.
 
@@ -33,6 +39,8 @@ def start_recording(sdr_id: str, client_id: str, recording_name: str = "") -> di
         sdr_id: SDR device identifier
         client_id: Client session identifier
         recording_name: Optional custom recording name (auto-generated if empty)
+        target_satellite_norad_id: Optional target satellite NORAD ID to include in metadata
+        target_satellite_name: Optional target satellite name to include in metadata
 
     Returns:
         dict: Result with 'success' (bool), 'data' or 'error' fields
@@ -67,7 +75,12 @@ def start_recording(sdr_id: str, client_id: str, recording_name: str = "") -> di
 
     # Start recorder
     result = sdr_process_manager.start_recorder(
-        sdr_id, client_id, IQRecorder, recording_path=recording_path
+        sdr_id,
+        client_id,
+        IQRecorder,
+        recording_path=recording_path,
+        target_satellite_norad_id=target_satellite_norad_id,
+        target_satellite_name=target_satellite_name,
     )
 
     if result:

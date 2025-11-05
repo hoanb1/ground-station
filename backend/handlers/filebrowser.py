@@ -78,6 +78,8 @@ def parse_sigmf_metadata(meta_file_path: str) -> dict:
             "recording_in_progress": global_meta.get("gs:recording_in_progress", False),
             "start_time": global_meta.get("gs:start_time"),
             "finalized_time": global_meta.get("gs:finalized_time"),
+            "target_satellite_norad_id": global_meta.get("gs:target_satellite_norad_id"),
+            "target_satellite_name": global_meta.get("gs:target_satellite_name"),
             "captures": metadata.get("captures", []),
             "annotations": metadata.get("annotations", []),
         }
