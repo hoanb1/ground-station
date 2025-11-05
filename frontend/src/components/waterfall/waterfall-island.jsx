@@ -26,7 +26,9 @@ import {
     Stack,
     Slider,
     useTheme,
+    Fade,
 } from '@mui/material';
+import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import {useDispatch, useSelector} from "react-redux";
 import { AutoScaleOnceIcon, AutoDBIcon } from '../common/custom-icons.jsx';
 import {
@@ -137,6 +139,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const lastMetricUpdateRef = useRef(Date.now());
     const lastTimestampRef = useRef(null);
     const mainWaterFallContainer = useRef(null);
+    const [showSnapshotOverlay, setShowSnapshotOverlay] = useState(false);
     const {
         colorMap,
         colorMaps,
@@ -181,6 +184,9 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         fftDataOverflowLimit,
         showRotatorDottedLines,
     } = useSelector((state) => state.waterfall);
+
+    // Get target satellite name from Redux
+    const targetSatelliteName = useSelector((state) => state.targetSatTrack?.satelliteData?.details?.name || '');
 
     // Initialize waterfall snapshot hook
     const { captureSnapshot } = useWaterfallSnapshot({
@@ -271,15 +277,64 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         }
     }, [dispatch]);
 
+    // Shared function to capture snapshot with overlay
+    const captureSnapshotWithOverlay = useCallback(async (targetWidth = 1620) => {
+        try {
+            // Show snapshot overlay
+            setShowSnapshotOverlay(true);
+
+            const compositeImage = await captureSnapshot(targetWidth);
+
+            // Hide overlay after capture
+            setShowSnapshotOverlay(false);
+
+            return compositeImage;
+        } catch (error) {
+            console.error('Error capturing snapshot with overlay:', error);
+            setShowSnapshotOverlay(false);
+            return null;
+        }
+    }, [captureSnapshot]);
+
+    // Expose the capture function with overlay globally for use by other components
+    useEffect(() => {
+        window.captureWaterfallSnapshotWithOverlay = captureSnapshotWithOverlay;
+        return () => {
+            delete window.captureWaterfallSnapshotWithOverlay;
+        };
+    }, [captureSnapshotWithOverlay]);
+
+    const generateSnapshotName = useCallback(() => {
+        // Helper to sanitize filename
+        const sanitizeFilename = (name) => {
+            return name.replace(/[^a-zA-Z0-9\-_]/g, '_').replace(/_+/g, '_');
+        };
+
+        // Helper to format frequency
+        const formatFrequencyShort = (freqHz) => {
+            const freqMHz = freqHz / 1e6;
+            return `${freqMHz.toFixed(3).replace('.', '_')}MHz`;
+        };
+
+        const satName = sanitizeFilename(targetSatelliteName || 'unknown');
+        const freqShort = formatFrequencyShort(centerFrequency);
+
+        // Backend will append timestamp, so we just return the base name
+        return `${satName}-${freqShort}`;
+    }, [targetSatelliteName, centerFrequency]);
+
     const takeSnapshot = useCallback(async () => {
         try {
-            const compositeImage = await captureSnapshot(1620);
+            const compositeImage = await captureSnapshotWithOverlay(1620);
             if (!compositeImage) {
                 return;
             }
 
+            // Generate snapshot name
+            const snapshotName = generateSnapshotName();
+
             // Send snapshot to backend using Redux async thunk
-            dispatch(saveWaterfallSnapshot({ socket, waterfallImage: compositeImage, snapshotName: '' }))
+            dispatch(saveWaterfallSnapshot({ socket, waterfallImage: compositeImage, snapshotName }))
                 .unwrap()
                 .then(() => {
                     toast.success('Waterfall snapshot saved successfully', { autoClose: 3000 });
@@ -292,7 +347,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
             console.error('Error in takeSnapshot:', error);
             toast.error('Error capturing snapshot');
         }
-    }, [socket, dispatch, captureSnapshot]);
+    }, [socket, dispatch, captureSnapshotWithOverlay, generateSnapshotName]);
 
     const toggleFullscreen = () => {
         if (!document.fullscreenElement) {
@@ -669,7 +724,25 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                     height: '100%',
                     display: 'flex',
                     flexDirection: 'row',
+                    position: 'relative',
                 }}>
+                    {/* Snapshot overlay - covers entire waterfall content area */}
+                    <Fade in={showSnapshotOverlay}>
+                        <Box
+                            sx={{
+                                position: 'absolute',
+                                top: 0,
+                                left: 0,
+                                right: 0,
+                                bottom: 0,
+                                backgroundColor: 'rgba(0, 0, 0, 0.5)',
+                                zIndex: 1000,
+                                pointerEvents: 'none',
+                            }}
+                        >
+                        </Box>
+                    </Fade>
+
                     {/* Left column - Y-axis canvases */}
                     <Box
                         className={"left-vertical-bar"}

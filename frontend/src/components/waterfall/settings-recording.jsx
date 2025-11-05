@@ -18,6 +18,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import { useSelector } from 'react-redux';
 import {
     Accordion,
     AccordionSummary,
@@ -47,14 +48,26 @@ const RecordingAccordion = ({
     onStopRecording,
     isStreaming,
     selectedSDRId,
+    centerFrequency,
 }) => {
     const { t } = useTranslation('waterfall');
     const [localRecordingName, setLocalRecordingName] = useState(recordingName);
     const [recordingStartFilename, setRecordingStartFilename] = useState('');
 
+    // Get target satellite name from Redux
+    const targetSatelliteName = useSelector((state) => state.targetSatTrack?.satelliteData?.details?.name || '');
+
     useEffect(() => {
         setLocalRecordingName(recordingName);
     }, [recordingName]);
+
+    // Clear textbox when recording stops
+    useEffect(() => {
+        if (!isRecording && localRecordingName) {
+            setLocalRecordingName('');
+            onRecordingNameChange('');
+        }
+    }, [isRecording]);
 
     const formatDuration = (seconds) => {
         const hours = Math.floor(seconds / 3600);
@@ -74,8 +87,30 @@ const RecordingAccordion = ({
         return `${date}_${time}`;
     };
 
+    const formatFrequencyShort = (freqHz) => {
+        const freqMHz = freqHz / 1e6;
+        // Replace decimal point with underscore for filename compatibility
+        return `${freqMHz.toFixed(3).replace('.', '_')}MHz`;
+    };
+
+    const sanitizeFilename = (name) => {
+        // Replace spaces and special characters with underscores, keep only alphanumeric, dash, underscore
+        return name.replace(/[^a-zA-Z0-9\-_]/g, '_').replace(/_+/g, '_');
+    };
+
     const handleStartRecording = () => {
-        const baseName = localRecordingName.trim() || 'unknown_recording';
+        let baseName = localRecordingName.trim();
+
+        // If empty, generate name: <satellite-name>-<center-freq>-<timestamp>
+        if (!baseName) {
+            const satName = sanitizeFilename(targetSatelliteName || 'unknown');
+            const freqShort = formatFrequencyShort(centerFrequency);
+            const timestamp = generateTimestamp();
+            baseName = `${satName}-${freqShort}-${timestamp}`;
+        } else {
+            // Sanitize user-provided name
+            baseName = sanitizeFilename(baseName);
+        }
 
         // Generate the actual filename with timestamp (matching backend logic)
         const timestamp = generateTimestamp();
@@ -84,9 +119,11 @@ const RecordingAccordion = ({
         // Store the actual filename for display during recording
         setRecordingStartFilename(actualFilename);
 
-        // Send the base name - backend will append timestamp
+        // Update Redux state with the name
         onRecordingNameChange(baseName);
-        onStartRecording();
+
+        // Pass the base name directly to avoid race condition with Redux state update
+        onStartRecording(baseName);
     };
 
     const handleNameChange = (e) => {

@@ -281,6 +281,18 @@ export default function FileBrowser() {
                     await dispatch(deleteSnapshot({ socket, filename: itemToDelete.filename })).unwrap();
                     toast.success(t('toast.snapshot_deleted', 'Snapshot "{{name}}" deleted successfully', { name: itemToDelete.name }));
                 }
+
+                // Refetch files to update the current page
+                await dispatch(fetchFiles({
+                    socket,
+                    page,
+                    pageSize,
+                    sortBy,
+                    sortOrder,
+                    showRecordings: filters.showRecordings,
+                    showSnapshots: filters.showSnapshots,
+                }));
+
                 setDeleteDialogOpen(false);
                 setItemToDelete(null);
             } catch (error) {

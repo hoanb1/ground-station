@@ -15,7 +15,8 @@ import {
     setErrorMessage,
     setErrorDialogOpen,
     setStartStreamingLoading,
-    setFFTdataOverflow
+    setFFTdataOverflow,
+    stopRecording
 } from './waterfall-slice.jsx';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
 
@@ -41,6 +42,7 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
         autoDBRange,
         vfoActive,
         playbackRecordingPath,
+        isRecording,
     } = useSelector((state) => state.waterfall);
 
     const animationFrameRef = useRef(null);
@@ -192,13 +194,36 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
         }
     }, [isStreaming, dispatch, socket, selectedSDRId, centerFrequency, sampleRate, gain, fftSize, biasT, tunerAgc, rtlAgc, fftWindow, selectedAntenna, selectedOffsetValue, soapyAgc, fftAveraging, playbackRecordingPath, workerRef, targetFPSRef]);
 
-    const stopStreaming = useCallback(() => {
+    const stopStreaming = useCallback(async () => {
         if (isStreaming) {
+            // If recording is active, stop it first
+            if (isRecording) {
+                try {
+                    // Capture waterfall snapshot
+                    let waterfallImage = null;
+                    try {
+                        if (window.captureWaterfallSnapshot) {
+                            waterfallImage = await window.captureWaterfallSnapshot(1620);
+                        }
+                    } catch (captureError) {
+                        console.error('Error capturing waterfall:', captureError);
+                    }
+
+                    // Stop recording and wait for it to complete
+                    await dispatch(stopRecording({ socket, selectedSDRId, waterfallImage })).unwrap();
+                    console.log('Recording stopped successfully before stopping stream');
+                } catch (error) {
+                    console.error('Error stopping recording:', error);
+                    toast.error(`Failed to stop recording: ${error}`);
+                }
+            }
+
+            // Now stop streaming
             socket.emit('sdr_data', 'stop-streaming', { selectedSDRId });
             dispatch(setIsStreaming(false));
             cancelAnimations();
         }
-    }, [isStreaming, socket, selectedSDRId, dispatch, cancelAnimations]);
+    }, [isStreaming, isRecording, socket, selectedSDRId, dispatch, cancelAnimations]);
 
     const playButtonEnabledOrNot = useCallback(() => {
         const isStreamingActive = isStreaming;

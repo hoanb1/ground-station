@@ -419,8 +419,11 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         };
     }, [isRecording, dispatch]);
 
-    const handleStartRecording = () => {
-        dispatch(startRecording({ socket, recordingName, selectedSDRId }))
+    const handleStartRecording = (customRecordingName) => {
+        // Use custom name if provided, otherwise use state
+        const nameToUse = customRecordingName !== undefined ? customRecordingName : recordingName;
+
+        dispatch(startRecording({ socket, recordingName: nameToUse, selectedSDRId }))
             .unwrap()
             .catch((error) => {
                 toast.error(`Failed to start recording: ${error}`);
@@ -429,11 +432,14 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
 
     const handleStopRecording = async () => {
         try {
-            // Capture waterfall snapshot using the new hook
+            // Capture waterfall snapshot with overlay using the shared function
             let waterfallImage = null;
 
             try {
-                if (window.captureWaterfallSnapshot) {
+                if (window.captureWaterfallSnapshotWithOverlay) {
+                    waterfallImage = await window.captureWaterfallSnapshotWithOverlay(1620);
+                } else if (window.captureWaterfallSnapshot) {
+                    // Fallback to the old method if the new one is not available
                     waterfallImage = await window.captureWaterfallSnapshot(1620);
                 }
             } catch (captureError) {
@@ -642,6 +648,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     onStopRecording={handleStopRecording}
                     isStreaming={isStreaming}
                     selectedSDRId={selectedSDRId}
+                    centerFrequency={centerFrequency}
                 />
 
                 <PlaybackAccordion
