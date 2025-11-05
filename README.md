@@ -54,6 +54,7 @@ live radio signals from satellites.
 *   **Real-time Satellite Tracking:** Track hundreds of satellites with high-precision orbital models. TLE data is automatically updated from CelesTrak and SatNOGS.
 *   **Automated Antenna Control:** Interface with popular antenna rotators to automatically track satellites as they pass overhead.
 *   **SDR Integration:** Stream and record live radio signals from a wide range of SDR devices, including RTL-SDR, SoapySDR, and UHD/USRP radios.
+*   **IQ Recording & Playback:** Record raw IQ data in SigMF format with complete metadata (center frequency, sample rate, satellite info) and play back recordings through a virtual SDR device for analysis and debugging.
 *   **Responsive Web Interface:** A modern, responsive, and intuitive web interface built with Material-UI that adapts seamlessly to desktop, tablet, and mobile devices, allowing you to control all aspects of the ground station from anywhere on your network.
 
 ## Planned Features & Roadmap
@@ -62,7 +63,6 @@ The following features are planned for future releases:
 
 *   **Data Decoding:** Decode and display images from weather satellites (e.g., NOAA APT, METEOR LRPT) and telemetry from various amateur satellites
 *   **Pass Scheduler:** Automated scheduling and recording of satellite passes
-*   **Signal Recording:** Enhanced recording capabilities with metadata tagging
 
 **Note:** Data decoding functionality is planned but not yet implemented.
 
@@ -73,12 +73,12 @@ The Ground Station application is composed of a frontend, a backend, and a set o
 
 ```mermaid
 flowchart TB
-    %% Cache buster: v2-20251024
+    %% Cache buster: v3-20251105
     %% Frontend Layer
-    A[Frontend: React + Redux + MUI<br/>- Real-time UI updates<br/>- State management<br/>- Interactive satellite maps<br/>- Spectrum & waterfall display<br/>- Audio playback & recording]
+    A[Frontend: React + Redux + MUI<br/>- Real-time UI updates<br/>- State management<br/>- Interactive satellite maps<br/>- Spectrum & waterfall display<br/>- Audio playback & recording<br/>- IQ recording & playback controls]
 
     %% Backend Layer
-    B[Backend: FastAPI + Socket.IO<br/>- WebSocket connections<br/>- Worker process management<br/>- Database operations<br/>- TLE data fetching]
+    B[Backend: FastAPI + Socket.IO<br/>- WebSocket connections<br/>- Worker process management<br/>- Database operations<br/>- TLE data fetching<br/>- Recording & file management]
 
     %% Worker Layer
     subgraph Workers["Worker Processes"]
@@ -87,6 +87,7 @@ flowchart TB
         W2[SDR IQ Acquisition<br/>- Raw IQ sample streaming<br/>- Non-blocking acquisition<br/>- Multi-consumer support]
         W2A[FFT Processor<br/>- Spectrum computation<br/>- Waterfall generation<br/>- Real-time FFT analysis]
         W2B[FM Demodulator<br/>- Frequency translation<br/>- FM demodulation<br/>- Audio processing<br/>- Per-session processing]
+        W2C[IQ Recorder<br/>- SigMF format recording<br/>- Metadata capture<br/>- Satellite info tagging<br/>- Waterfall snapshot saving]
         W3[SDR Local Probe<br/>- Device discovery<br/>- Local SoapySDR enumeration<br/>- Hardware capability detection]
         W4[SDR Remote Probe<br/>- Remote SoapySDR discovery<br/>- Network device scanning<br/>- Remote capability detection]
     end
@@ -98,6 +99,12 @@ flowchart TB
         H2[Radios/Rigs<br/>- CAT control<br/>- Frequency tuning]
         H3[Local SDR Devices<br/>- RTL-SDR<br/>- SoapySDR devices<br/>- UHD/USRP]
         H4[Remote SDR Devices<br/>- SoapyRemote<br/>- rtl_tcp servers<br/>- Network receivers]
+        H5[SigMF Playback<br/>- Virtual SDR device<br/>- Recording playback<br/>- SigMF metadata reader]
+    end
+
+    %% Storage Layer
+    subgraph Storage["Data Storage"]
+        S1[SigMF Recordings<br/>- .sigmf-data files<br/>- .sigmf-meta files<br/>- Waterfall snapshots]
     end
 
     %% External Services
@@ -115,15 +122,21 @@ flowchart TB
 
     W2 ---|IQ Queue FFT<br/>Broadcast| W2A
     W2 ---|IQ Queue Demod<br/>Broadcast| W2B
+    W2 ---|IQ Queue Record<br/>Broadcast| W2C
     W2A ---|FFT Data<br/>Spectrum| B
     W2B ---|Audio Data<br/>Demodulated| B
+    W2C ---|Recording Files<br/>SigMF Format| S1
 
     W1 ---|Control Commands| H1
     W1 ---|Frequency Control| H2
     W2 ---|Data Streaming| H3
     W2 ---|Network Streaming| H4
+    W2 ---|Playback Source| H5
     W3 ---|Device Enumeration| H3
     W4 ---|Remote Discovery| H4
+
+    H5 ---|Read Files| S1
+    B ---|File Management| S1
 
     B ---|HTTP/API Requests| E1
     B ---|Database Queries| E2
@@ -133,18 +146,21 @@ flowchart TB
     classDef backend fill:#2e7d32,stroke:#4caf50,stroke-width:2px,color:#ffffff
     classDef worker fill:#e65100,stroke:#ff9800,stroke-width:2px,color:#ffffff
     classDef hardware fill:#4a148c,stroke:#9c27b0,stroke-width:2px,color:#ffffff
+    classDef storage fill:#01579b,stroke:#0288d1,stroke-width:2px,color:#ffffff
     classDef external fill:#b71c1c,stroke:#f44336,stroke-width:2px,color:#ffffff
 
 
     class A frontend
     class B backend
-    class W1,W2,W2A,W2B,W3,W4 worker
-    class H1,H2,H3,H4 hardware
+    class W1,W2,W2A,W2B,W2C,W3,W4 worker
+    class H1,H2,H3,H4,H5 hardware
+    class S1 storage
     class E1,E2 external
 
     %% Dashed borders for subgraphs
     style Workers stroke-dasharray: 5 5
     style Hardware stroke-dasharray: 5 5
+    style Storage stroke-dasharray: 5 5
     style External stroke-dasharray: 5 5
 ```
 
@@ -186,8 +202,37 @@ The SDR architecture separates IQ acquisition from signal processing:
 *   **IQ Acquisition Workers** stream raw samples to a queue
 *   **FFT Processor** consumes IQ for spectrum display
 *   **FM Demodulator** consumes IQ for real-time audio output
+*   **IQ Recorder** captures raw samples to SigMF format files
 
 > **Note:** The current signal demodulator implementations (FM, AM, SSB) were developed with assistance from Claude AI (Anthropic) to handle the complex digital signal processing algorithms. These components are clearly marked in the source code and are licensed under GPL-3.0 like the rest of the project.
+
+## IQ Recording & Playback
+
+Ground Station includes comprehensive IQ recording and playback capabilities using the [SigMF (Signal Metadata Format)](https://github.com/gnuradio/SigMF) standard:
+
+### Recording Features
+*   **SigMF Format:** Records IQ data as `.sigmf-data` files with accompanying `.sigmf-meta` JSON metadata
+*   **Automatic Metadata:** Captures center frequency, sample rate, timestamp, and recording duration
+*   **Satellite Tracking:** Automatically tags recordings with target satellite name and NORAD ID
+*   **Waterfall Snapshots:** Saves PNG snapshots of the waterfall display alongside recordings
+*   **Multi-segment Support:** Handles parameter changes (frequency, sample rate) as separate capture segments
+*   **Real-time Monitoring:** Live duration counter and visual recording indicator in the UI
+
+### Playback Features
+*   **Virtual SDR Device:** Recordings appear as "SigMF Playback" SDR in the device list
+*   **Full Processing Pipeline:** Playback supports FFT display, demodulation, and all signal processing
+*   **Recording Browser:** Sortable list of recordings with metadata preview (sample rate, duration, timestamp)
+*   **Seamless Integration:** Switch between live SDR and playback without changing workflows
+
+### File Organization
+Recordings are stored in `backend/data/recordings/` with the following naming convention:
+```
+<satellite-name>-<frequency>-<timestamp>.sigmf-data
+<satellite-name>-<frequency>-<timestamp>.sigmf-meta
+<satellite-name>-<frequency>-<timestamp>.png
+```
+
+Example: `ISS-145_800MHz-20251105_143022.sigmf-data`
 
 ## Getting Started
 
