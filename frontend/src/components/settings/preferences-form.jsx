@@ -244,41 +244,6 @@ const PreferencesForm = () => {
                         </FormControl>
                     </Grid>
 
-                    {/* Ground Station Configuration */}
-                    <Grid size={16} sx={{ mt: 2 }}>
-                        <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>
-                            {t('preferences.ground_station_configuration')}
-                        </Typography>
-                        <Divider sx={{ mb: 2 }} />
-                    </Grid>
-
-                    {/* Minimum Elevation */}
-                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
-                        <Typography>{t('preferences.minimum_elevation')}</Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
-                            disabled={isLoading}
-                            size="small"
-                        >
-                            <TextField
-                                fullWidth
-                                id="minimum-elevation"
-                                variant="filled"
-                                type="number"
-                                size="small"
-                                disabled={isLoading}
-                                label={t('preferences.minimum_elevation')}
-                                value={getPreferenceValue('minimum_elevation')}
-                                onChange={handleChange('minimum_elevation')}
-                                inputProps={{
-                                    min: 0,
-                                    max: 90,
-                                    step: 1
-                                }}
-                            />
-                        </FormControl>
-                    </Grid>
                 </Grid>
 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>

@@ -221,6 +221,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                 targetCurrentAz={satelliteData?.['position']['az']}
                                 isGeoStationary={activePass?.['is_geostationary']}
                                 isGeoSynchronous={activePass?.['is_geosynchronous']}
+                                hardwareLimits={[rotatorData['minaz'], rotatorData['maxaz']]}
                             />
                         </Grid>
                         <Grid size="grow" style={{textAlign: 'center'}}>
@@ -228,6 +229,7 @@ const RotatorControl = React.memo(function RotatorControl() {
                                 el={rotatorData['el']}
                                 maxElevation={activePass?.['peak_altitude']}
                                 targetCurrentEl={satelliteData?.['position']['el']}
+                                hardwareLimits={[rotatorData['minel'], rotatorData['maxel']]}
                             />
                         </Grid>
 

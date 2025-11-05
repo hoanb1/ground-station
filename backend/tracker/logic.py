@@ -67,7 +67,6 @@ class SatelliteTracker:
         # Configuration constants (will be updated from rotator_details)
         self.azimuth_limits = (0, 360)
         self.elevation_limits = (0, 90)
-        self.min_elevation = 10.0
         self.az_tolerance = 2.0
         self.el_tolerance = 2.0
 
@@ -97,6 +96,10 @@ class SatelliteTracker:
             "error": False,
             "host": "",
             "port": 0,
+            "minaz": None,
+            "maxaz": None,
+            "minel": None,
+            "maxel": None,
         }
         self.rig_data = {
             "connected": False,
@@ -148,10 +151,14 @@ class SatelliteTracker:
 
             if minaz is not None and maxaz is not None:
                 self.azimuth_limits = (minaz, maxaz)
+                self.rotator_data["minaz"] = minaz
+                self.rotator_data["maxaz"] = maxaz
                 logger.info(f"Updated azimuth limits to: {self.azimuth_limits}")
 
             if minel is not None and maxel is not None:
                 self.elevation_limits = (minel, maxel)
+                self.rotator_data["minel"] = minel
+                self.rotator_data["maxel"] = maxel
                 logger.info(f"Updated elevation limits to: {self.elevation_limits}")
 
     async def handle_satellite_change(self, old, new):
@@ -696,20 +703,7 @@ class SatelliteTracker:
                 events.append({DictKeys.NAME: TrackingEvents.ELEVATION_OUT_OF_BOUNDS})
             self.notified[TrackingEvents.ELEVATION_OUT_OF_BOUNDS] = True
             self.rotator_data["outofbounds"] = True
-            self.rotator_data["stopped"] = True
-
-        # Check minimum elevation
-        if skypoint[1] < self.min_elevation:
-            logger.debug(
-                f"Elevation below minimum ({self.min_elevation})° for satellite "
-                f"#{self.current_norad_id} {satellite_name}"
-            )
-            if self.in_tracking_state() and not self.notified.get(
-                TrackingEvents.MIN_ELEVATION_ERROR, False
-            ):
-                events.append({DictKeys.NAME: TrackingEvents.MIN_ELEVATION_ERROR})
-            self.notified[TrackingEvents.MIN_ELEVATION_ERROR] = True
-            self.rotator_data["minelevation"] = True
+            self.rotator_data["minelevation"] = skypoint[1] < self.elevation_limits[0]
             self.rotator_data["stopped"] = True
 
         # Send events if any

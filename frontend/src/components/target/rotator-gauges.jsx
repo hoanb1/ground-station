@@ -310,9 +310,11 @@ const rescaleToRange = (value, originalMin, originalMax, targetMin, targetMax) =
 
 function GaugeAz({az, limits = [null, null],
                      peakAz = null, targetCurrentAz = null,
-                     isGeoStationary = false, isGeoSynchronous = false
+                     isGeoStationary = false, isGeoSynchronous = false,
+                     hardwareLimits = [null, null]
 }) {
     let [maxAz, minAz] = limits;
+    let [hwMinAz, hwMaxAz] = hardwareLimits;
 
     return (
         <GaugeContainer
@@ -342,6 +344,26 @@ function GaugeAz({az, limits = [null, null],
             <Pointer angle={180} dotted={true} stroke="#666" opacity={0.3}/>
             <Pointer angle={90} dotted={true} stroke="#666" opacity={0.3}/>
             <Pointer angle={0} dotted={true} stroke="#666" opacity={0.3}/>
+            {/* Hardware limits - red restricted zones */}
+            {hwMinAz !== null && hwMaxAz !== null && <>
+                {/* Show red zone from 0 to hwMinAz if hwMinAz > 0 */}
+                {hwMinAz > 0 && <CircleSlice
+                    startAngle={0}
+                    endAngle={hwMinAz}
+                    stroke='#f44336'
+                    fill='#f44336'
+                    opacity={0.3}
+                />}
+                {/* Show red zone from hwMaxAz to 360 if hwMaxAz < 360 */}
+                {hwMaxAz < 360 && <CircleSlice
+                    startAngle={hwMaxAz}
+                    endAngle={360}
+                    stroke='#f44336'
+                    fill='#f44336'
+                    opacity={0.3}
+                />}
+            </>}
+            {/* Pass limits - green allowed zone */}
             {minAz !== null && maxAz !== null && (!isGeoStationary && !isGeoSynchronous) && <>
                 <Pointer angle={maxAz} stroke="#888" strokeWidth={1} opacity={0.3}/>
                 <Pointer angle={minAz} stroke="#888" strokeWidth={1} opacity={0.3}/>
@@ -364,12 +386,17 @@ function GaugeAz({az, limits = [null, null],
     );
 }
 
-function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
+function GaugeEl({el, maxElevation = null, targetCurrentEl = null, hardwareLimits = [null, null]}) {
     const angle = rescaleToRange(maxElevation, 0, 90, 90, 0);
+    let [hwMinEl, hwMaxEl] = hardwareLimits;
 
     const rescaleValue = (value) => {
         return 90 - value;
     };
+
+    // Convert hardware limits to gauge angles (elevation gauge is inverted)
+    const hwMinElAngle = hwMinEl !== null ? rescaleToRange(hwMinEl, 0, 90, 90, 0) : null;
+    const hwMaxElAngle = hwMaxEl !== null ? rescaleToRange(hwMaxEl, 0, 90, 90, 0) : null;
 
     return (
         <GaugeContainer
@@ -395,12 +422,33 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
             }}
         >
             <GaugeReferenceArc/>
-            <Pointer angle={80} stroke="#f44336" strokeWidth={0.8} opacity={0.2} dotted={true}/>
             <Pointer angle={0} dotted={true} stroke="#666" opacity={0.3}/>
-            {maxElevation !== null && <>
+            {/* Hardware limits - red restricted zones */}
+            {hwMinElAngle !== null && hwMaxElAngle !== null && <>
+                {/* Show red zone from gauge angle 90 (0° elevation) to hwMinElAngle */}
+                <CircleSlice
+                    startAngle={90}
+                    endAngle={hwMinElAngle}
+                    stroke='#f44336'
+                    fill='#f44336'
+                    forElevation={true}
+                    opacity={0.3}
+                />
+                {/* Show red zone from hwMaxElAngle to 0 (90° elevation) if maxel < 90 */}
+                {hwMaxEl < 90 && <CircleSlice
+                    startAngle={hwMaxElAngle}
+                    endAngle={0}
+                    stroke='#f44336'
+                    fill='#f44336'
+                    forElevation={true}
+                    opacity={0.3}
+                />}
+            </>}
+            {/* Pass limits - green allowed zone */}
+            {maxElevation !== null && hwMinElAngle !== null && <>
                 <Pointer angle={angle} stroke="#888" strokeWidth={1} opacity={0.3}/>
                 <CircleSlice
-                    startAngle={80}
+                    startAngle={hwMinElAngle}
                     endAngle={angle}
                     stroke='#4caf50'
                     fill='#4caf50'
@@ -409,14 +457,6 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null}) {
                     spansNorth={false}
                 />
             </>}
-            <CircleSlice
-                startAngle={90}
-                endAngle={80}
-                stroke='#f44336'
-                fill='#f44336'
-                forElevation={true}
-                opacity={0.2}
-            />
             <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
             <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
             <text x="10" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
