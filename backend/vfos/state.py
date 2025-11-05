@@ -51,13 +51,13 @@ class VFOManager:
         self,
         session_id: str,
         vfo_id: int,
-        center_freq: int = None,
-        bandwidth: int = None,
-        modulation: str = None,
-        active: bool = None,
-        selected: bool = None,
-        volume=None,
-        squelch=None,
+        center_freq: Optional[int] = None,
+        bandwidth: Optional[int] = None,
+        modulation: Optional[str] = None,
+        active: Optional[bool] = None,
+        selected: Optional[bool] = None,
+        volume: Optional[int] = None,
+        squelch: Optional[int] = None,
     ) -> None:
 
         assert session_id is not None, "session_id is required"
@@ -103,10 +103,6 @@ class VFOManager:
 
         # check if selected
         if selected is not None:
-            # if a VFO was selected, then also set it to active = true
-            if selected:
-                vfo_state.active = True
-
             # since a VFO is now selected set the other VFOs to not selected for this session
             for _vfo_id in session_vfos:
                 session_vfos[_vfo_id].selected = False
