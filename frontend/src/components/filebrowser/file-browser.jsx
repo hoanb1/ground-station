@@ -464,6 +464,11 @@ export default function FileBrowser() {
                         </Typography>
                         <Typography variant="body2" color="text.secondary" sx={{ ml: 'auto' }}>
                             {formatBytes(diskUsage.available)} available
+                            {files.length > 0 && (
+                                <Typography component="span" variant="caption" color="text.disabled" sx={{ ml: 1 }}>
+                                    ({files.filter(f => f.type === 'recording').length}R / {files.filter(f => f.type === 'snapshot').length}S)
+                                </Typography>
+                            )}
                         </Typography>
                     </Box>
                     <LinearProgress
