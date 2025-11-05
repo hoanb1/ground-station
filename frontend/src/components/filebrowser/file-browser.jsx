@@ -973,6 +973,12 @@ export default function FileBrowser() {
                                             {selectedItem.metadata.sample_rate && (
                                                 <div>Sample Rate: {selectedItem.metadata.sample_rate} Hz</div>
                                             )}
+                                            {selectedItem.metadata.start_time && (
+                                                <div>Start Time: {formatDate(selectedItem.metadata.start_time)}</div>
+                                            )}
+                                            {selectedItem.metadata.finalized_time && (
+                                                <div>End Time: {formatDate(selectedItem.metadata.finalized_time)}</div>
+                                            )}
                                             {selectedItem.metadata.version && (
                                                 <div>SigMF Version: {selectedItem.metadata.version}</div>
                                             )}
