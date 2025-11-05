@@ -157,7 +157,6 @@ export const useSocketEventHandlers = (socket) => {
 
         // File browser state updates (pub/sub model)
         socket.on("file_browser_state", (state) => {
-            console.log('File browser state received:', state);
 
             switch (state.action) {
                 case 'list-files':
