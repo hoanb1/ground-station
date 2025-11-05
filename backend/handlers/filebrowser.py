@@ -22,7 +22,7 @@ IQ recordings and waterfall snapshots stored on the filesystem.
 
 import json
 import shutil
-from datetime import datetime
+from datetime import datetime, timezone
 from pathlib import Path
 from typing import Any, Dict, Tuple, Union, cast
 
@@ -284,10 +284,12 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "data_file": data_file.name,
                             "meta_file": meta_file.name,
                             "data_size": data_stat.st_size,
-                            "created": datetime.utcfromtimestamp(data_stat.st_ctime).isoformat()
-                            + "Z",
-                            "modified": datetime.utcfromtimestamp(data_stat.st_mtime).isoformat()
-                            + "Z",
+                            "created": datetime.fromtimestamp(
+                                data_stat.st_ctime, timezone.utc
+                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(
+                                data_stat.st_mtime, timezone.utc
+                            ).isoformat(),
                             "metadata": metadata,
                             "snapshot": snapshot_info,
                             "recording_in_progress": is_recording_in_progress,
@@ -309,10 +311,12 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "name": png_file.stem,
                             "filename": png_file.name,
                             "size": file_stat.st_size,
-                            "created": datetime.utcfromtimestamp(file_stat.st_ctime).isoformat()
-                            + "Z",
-                            "modified": datetime.utcfromtimestamp(file_stat.st_mtime).isoformat()
-                            + "Z",
+                            "created": datetime.fromtimestamp(
+                                file_stat.st_ctime, timezone.utc
+                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(
+                                file_stat.st_mtime, timezone.utc
+                            ).isoformat(),
                             "width": width,
                             "height": height,
                             "url": f"/snapshots/{png_file.name}",
@@ -414,8 +418,10 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "data_file": data_file.name,
                     "meta_file": meta_file.name,
                     "data_size": data_stat.st_size,
-                    "created": datetime.utcfromtimestamp(data_stat.st_ctime).isoformat() + "Z",
-                    "modified": datetime.utcfromtimestamp(data_stat.st_mtime).isoformat() + "Z",
+                    "created": datetime.fromtimestamp(data_stat.st_ctime, timezone.utc).isoformat(),
+                    "modified": datetime.fromtimestamp(
+                        data_stat.st_mtime, timezone.utc
+                    ).isoformat(),
                     "metadata": metadata,
                     "snapshot": snapshot_info,
                     "recording_in_progress": is_recording_in_progress,
@@ -469,8 +475,8 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 "data_file": data_file.name,
                 "meta_file": meta_file.name,
                 "data_size": data_stat.st_size,
-                "created": datetime.utcfromtimestamp(data_stat.st_ctime).isoformat() + "Z",
-                "modified": datetime.utcfromtimestamp(data_stat.st_mtime).isoformat() + "Z",
+                "created": datetime.fromtimestamp(data_stat.st_ctime, timezone.utc).isoformat(),
+                "modified": datetime.fromtimestamp(data_stat.st_mtime, timezone.utc).isoformat(),
                 "metadata": metadata,
                 "snapshot": snapshot_info,
                 "recording_in_progress": is_recording_in_progress,
@@ -581,8 +587,10 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "name": png_file.stem,
                     "filename": png_file.name,
                     "size": file_stat.st_size,
-                    "created": datetime.utcfromtimestamp(file_stat.st_ctime).isoformat() + "Z",
-                    "modified": datetime.utcfromtimestamp(file_stat.st_mtime).isoformat() + "Z",
+                    "created": datetime.fromtimestamp(file_stat.st_ctime, timezone.utc).isoformat(),
+                    "modified": datetime.fromtimestamp(
+                        file_stat.st_mtime, timezone.utc
+                    ).isoformat(),
                     "width": width,
                     "height": height,
                     "url": f"/snapshots/{png_file.name}",
