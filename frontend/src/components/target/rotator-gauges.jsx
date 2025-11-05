@@ -344,25 +344,6 @@ function GaugeAz({az, limits = [null, null],
             <Pointer angle={180} dotted={true} stroke="#666" opacity={0.3}/>
             <Pointer angle={90} dotted={true} stroke="#666" opacity={0.3}/>
             <Pointer angle={0} dotted={true} stroke="#666" opacity={0.3}/>
-            {/* Hardware limits - red restricted zones */}
-            {hwMinAz !== null && hwMaxAz !== null && <>
-                {/* Show red zone from 0 to hwMinAz if hwMinAz > 0 */}
-                {hwMinAz > 0 && <CircleSlice
-                    startAngle={0}
-                    endAngle={hwMinAz}
-                    stroke='#f44336'
-                    fill='#f44336'
-                    opacity={0.3}
-                />}
-                {/* Show red zone from hwMaxAz to 360 if hwMaxAz < 360 */}
-                {hwMaxAz < 360 && <CircleSlice
-                    startAngle={hwMaxAz}
-                    endAngle={360}
-                    stroke='#f44336'
-                    fill='#f44336'
-                    opacity={0.3}
-                />}
-            </>}
             {/* Pass limits - green allowed zone */}
             {minAz !== null && maxAz !== null && (!isGeoStationary && !isGeoSynchronous) && <>
                 <Pointer angle={maxAz} stroke="#888" strokeWidth={1} opacity={0.3}/>
@@ -382,6 +363,25 @@ function GaugeAz({az, limits = [null, null],
             <text x="15" y="70" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>270</text>
             <EdgeArrow angle={targetCurrentAz} />
             <GaugePointer/>
+            {/* Hardware limits - red restricted zones (rendered last to be on top) */}
+            {hwMinAz !== null && hwMaxAz !== null && <>
+                {/* Show red zone from 0 to hwMinAz if hwMinAz > 0 */}
+                {hwMinAz > 0 && <CircleSlice
+                    startAngle={0}
+                    endAngle={hwMinAz}
+                    stroke='#f44336'
+                    fill='#f44336'
+                    opacity={0.3}
+                />}
+                {/* Show red zone from hwMaxAz to 360 if hwMaxAz < 360 */}
+                {hwMaxAz < 360 && <CircleSlice
+                    startAngle={hwMaxAz}
+                    endAngle={360}
+                    stroke='#f44336'
+                    fill='#f44336'
+                    opacity={0.3}
+                />}
+            </>}
         </GaugeContainer>
     );
 }
@@ -423,7 +423,25 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null, hardwareLimit
         >
             <GaugeReferenceArc/>
             <Pointer angle={0} dotted={true} stroke="#666" opacity={0.3}/>
-            {/* Hardware limits - red restricted zones */}
+            {/* Pass limits - green allowed zone */}
+            {maxElevation !== null && hwMinElAngle !== null && <>
+                <Pointer angle={angle} stroke="#888" strokeWidth={1} opacity={0.3}/>
+                <CircleSlice
+                    startAngle={hwMinElAngle}
+                    endAngle={angle}
+                    stroke='#4caf50'
+                    fill='#4caf50'
+                    opacity={0.2}
+                    forElevation={true}
+                    spansNorth={false}
+                />
+            </>}
+            <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
+            <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
+            <text x="10" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
+            <EdgeArrow angle={rescaleValue(targetCurrentEl)} />
+            <GaugePointer/>
+            {/* Hardware limits - red restricted zones (rendered last to be on top) */}
             {hwMinElAngle !== null && hwMaxElAngle !== null && <>
                 {/* Show red zone from gauge angle 90 (0° elevation) to hwMinElAngle */}
                 <CircleSlice
@@ -444,24 +462,6 @@ function GaugeEl({el, maxElevation = null, targetCurrentEl = null, hardwareLimit
                     opacity={0.3}
                 />}
             </>}
-            {/* Pass limits - green allowed zone */}
-            {maxElevation !== null && hwMinElAngle !== null && <>
-                <Pointer angle={angle} stroke="#888" strokeWidth={1} opacity={0.3}/>
-                <CircleSlice
-                    startAngle={hwMinElAngle}
-                    endAngle={angle}
-                    stroke='#4caf50'
-                    fill='#4caf50'
-                    opacity={0.2}
-                    forElevation={true}
-                    spansNorth={false}
-                />
-            </>}
-            <text x="107" y="120" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>0</text>
-            <text x="80" y="55" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>45</text>
-            <text x="10" y="23" textAnchor="middle" dominantBaseline="middle" fontSize="12" fontWeight={"bold"}>90</text>
-            <EdgeArrow angle={rescaleValue(targetCurrentEl)} />
-            <GaugePointer/>
         </GaugeContainer>
     );
 }

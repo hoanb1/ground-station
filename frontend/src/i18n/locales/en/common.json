@@ -49,6 +49,9 @@
       "elevation_below_horizon": "Elevation of target below the horizon",
       "azimuth_out_of_bounds": "Target azimuth out of bounds",
       "below_min_elevation": "Target below minimum elevation",
+      "above_max_elevation": "Target above maximum elevation",
+      "below_min_azimuth": "Target below minimum azimuth",
+      "above_max_azimuth": "Target above maximum azimuth",
       "satellite_changed": "Target satellite changed",
       "satellite_info": "{{name}} (NORAD {{noradId}})"
     }

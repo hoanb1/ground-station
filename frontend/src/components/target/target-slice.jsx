@@ -299,6 +299,9 @@ const targetSatTrackSlice = createSlice({
             'connected': false,
             'tracking': false,
             'minelevation': false,
+            'maxelevation': false,
+            'minazimuth': false,
+            'maxazimuth': false,
             'outofbounds': false,
         },
         lastRotatorEvent: "",
@@ -372,11 +375,17 @@ const targetSatTrackSlice = createSlice({
                     state.rotatorDisconnecting = false;
                 }
 
-                // Update rotator events
-                if (action.payload['rotator_data']['outofbounds']) {
-                    state.lastRotatorEvent = 'outofbounds';
-                } else if (action.payload['rotator_data']['minelevation']) {
+                // Update rotator events - check specific limit flags first
+                if (action.payload['rotator_data']['minelevation']) {
                     state.lastRotatorEvent = 'minelevation';
+                } else if (action.payload['rotator_data']['maxelevation']) {
+                    state.lastRotatorEvent = 'maxelevation';
+                } else if (action.payload['rotator_data']['minazimuth']) {
+                    state.lastRotatorEvent = 'minazimuth';
+                } else if (action.payload['rotator_data']['maxazimuth']) {
+                    state.lastRotatorEvent = 'maxazimuth';
+                } else if (action.payload['rotator_data']['outofbounds']) {
+                    state.lastRotatorEvent = 'outofbounds';
                 } else if (action.payload['rotator_data']['slewing']) {
                     state.lastRotatorEvent = 'slewing';
                 } else if (action.payload['rotator_data']['tracking']) {

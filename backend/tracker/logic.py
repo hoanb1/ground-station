@@ -92,6 +92,9 @@ class SatelliteTracker:
             "slewing": False,
             "outofbounds": False,
             "minelevation": False,
+            "maxelevation": False,
+            "minazimuth": False,
+            "maxazimuth": False,
             "stopped": False,
             "error": False,
             "host": "",
@@ -168,6 +171,9 @@ class SatelliteTracker:
 
         # Reset state
         self.rotator_data["minelevation"] = False
+        self.rotator_data["maxelevation"] = False
+        self.rotator_data["minazimuth"] = False
+        self.rotator_data["maxazimuth"] = False
         self.notified = {}
 
         # Notify about change
@@ -300,6 +306,9 @@ class SatelliteTracker:
         logger.info(f"Rotator state change detected from '{old}' to '{new}'")
 
         self.rotator_data["minelevation"] = False
+        self.rotator_data["maxelevation"] = False
+        self.rotator_data["minazimuth"] = False
+        self.rotator_data["maxazimuth"] = False
 
         if new == "connected":
             await self.connect_to_rotator()
@@ -677,34 +686,76 @@ class SatelliteTracker:
     def _check_position_limits(self, skypoint, satellite_name):
         """Check if satellite position is within limits."""
         events = []
+        out_of_bounds = False
 
         # Check azimuth limits
-        if skypoint[0] > self.azimuth_limits[1] or skypoint[0] < self.azimuth_limits[0]:
+        if skypoint[0] < self.azimuth_limits[0]:
             logger.debug(
-                f"Azimuth out of bounds for satellite #{self.current_norad_id} {satellite_name}"
+                f"Azimuth below minimum for satellite #{self.current_norad_id} {satellite_name}"
             )
             if self.in_tracking_state() and not self.notified.get(
-                TrackingEvents.AZIMUTH_OUT_OF_BOUNDS, False
+                TrackingEvents.MIN_AZIMUTH_OUT_OF_BOUNDS, False
             ):
-                events.append({DictKeys.NAME: TrackingEvents.AZIMUTH_OUT_OF_BOUNDS})
-            self.notified[TrackingEvents.AZIMUTH_OUT_OF_BOUNDS] = True
-            self.rotator_data["outofbounds"] = True
-            self.rotator_data["stopped"] = True
+                events.append({DictKeys.NAME: TrackingEvents.MIN_AZIMUTH_OUT_OF_BOUNDS})
+            self.notified[TrackingEvents.MIN_AZIMUTH_OUT_OF_BOUNDS] = True
+            self.rotator_data["minazimuth"] = True
+            self.rotator_data["maxazimuth"] = False
+            out_of_bounds = True
+        elif skypoint[0] > self.azimuth_limits[1]:
+            logger.debug(
+                f"Azimuth above maximum for satellite #{self.current_norad_id} {satellite_name}"
+            )
+            if self.in_tracking_state() and not self.notified.get(
+                TrackingEvents.MAX_AZIMUTH_OUT_OF_BOUNDS, False
+            ):
+                events.append({DictKeys.NAME: TrackingEvents.MAX_AZIMUTH_OUT_OF_BOUNDS})
+            self.notified[TrackingEvents.MAX_AZIMUTH_OUT_OF_BOUNDS] = True
+            self.rotator_data["minazimuth"] = False
+            self.rotator_data["maxazimuth"] = True
+            out_of_bounds = True
+        else:
+            # Azimuth is within bounds
+            self.rotator_data["minazimuth"] = False
+            self.rotator_data["maxazimuth"] = False
 
         # Check elevation limits
-        if skypoint[1] < self.elevation_limits[0] or skypoint[1] > self.elevation_limits[1]:
+        if skypoint[1] < self.elevation_limits[0]:
             logger.debug(
-                f"Elevation out of bounds for satellite "
+                f"Elevation below minimum for satellite "
                 f"#{self.current_norad_id} {satellite_name}"
             )
             if self.in_tracking_state() and not self.notified.get(
-                TrackingEvents.ELEVATION_OUT_OF_BOUNDS, False
+                TrackingEvents.MIN_ELEVATION_OUT_OF_BOUNDS, False
             ):
-                events.append({DictKeys.NAME: TrackingEvents.ELEVATION_OUT_OF_BOUNDS})
-            self.notified[TrackingEvents.ELEVATION_OUT_OF_BOUNDS] = True
+                events.append({DictKeys.NAME: TrackingEvents.MIN_ELEVATION_OUT_OF_BOUNDS})
+            self.notified[TrackingEvents.MIN_ELEVATION_OUT_OF_BOUNDS] = True
+            self.rotator_data["minelevation"] = True
+            self.rotator_data["maxelevation"] = False
+            out_of_bounds = True
+        elif skypoint[1] > self.elevation_limits[1]:
+            logger.debug(
+                f"Elevation above maximum for satellite "
+                f"#{self.current_norad_id} {satellite_name}"
+            )
+            if self.in_tracking_state() and not self.notified.get(
+                TrackingEvents.MAX_ELEVATION_OUT_OF_BOUNDS, False
+            ):
+                events.append({DictKeys.NAME: TrackingEvents.MAX_ELEVATION_OUT_OF_BOUNDS})
+            self.notified[TrackingEvents.MAX_ELEVATION_OUT_OF_BOUNDS] = True
+            self.rotator_data["minelevation"] = False
+            self.rotator_data["maxelevation"] = True
+            out_of_bounds = True
+        else:
+            # Elevation is within bounds
+            self.rotator_data["minelevation"] = False
+            self.rotator_data["maxelevation"] = False
+
+        # Update outofbounds and stopped flags
+        if out_of_bounds:
             self.rotator_data["outofbounds"] = True
-            self.rotator_data["minelevation"] = skypoint[1] < self.elevation_limits[0]
             self.rotator_data["stopped"] = True
+        else:
+            self.rotator_data["outofbounds"] = False
 
         # Send events if any
         if events:
@@ -830,9 +881,9 @@ class SatelliteTracker:
         """Clean up temporary state flags."""
         # Clean up rotator_data
         self.rotator_data["slewing"] = False
-        self.rotator_data["outofbounds"] = False
-        self.rotator_data["minelevation"] = False
         self.rotator_data["error"] = False
+        # Note: outofbounds, minelevation, maxelevation, minazimuth, maxazimuth
+        # are NOT reset here - they persist until next position check
 
         # Clean up rig_data
         self.rig_data["tuning"] = False

@@ -85,9 +85,16 @@ class TrackingEvents:
     ROTATOR_DISCONNECTED = "rotator_disconnected"
     ROTATOR_ERROR = "rotator_error"
     ROTATOR_PARKED = "rotator_parked"
+
+    # Rotator Limit Events (specific)
+    MIN_ELEVATION_OUT_OF_BOUNDS = "min_elevation_out_of_bounds"
+    MAX_ELEVATION_OUT_OF_BOUNDS = "max_elevation_out_of_bounds"
+    MIN_AZIMUTH_OUT_OF_BOUNDS = "min_azimuth_out_of_bounds"
+    MAX_AZIMUTH_OUT_OF_BOUNDS = "max_azimuth_out_of_bounds"
+
+    # Rotator Limit Events (deprecated - kept for backwards compatibility)
     AZIMUTH_OUT_OF_BOUNDS = "azimuth_out_of_bounds"
     ELEVATION_OUT_OF_BOUNDS = "elevation_out_of_bounds"
-    MIN_ELEVATION_ERROR = "minelevation_error"
 
     # Rig Events
     RIG_CONNECTED = "rig_connected"

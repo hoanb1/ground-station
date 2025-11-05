@@ -276,43 +276,56 @@ export const useSocketEventHandlers = (socket) => {
                                 icon: () => <RadioIcon />,
                             }
                         );
-                    } else if (event.name === 'elevation_out_of_bounds') {
+                    } else if (event.name === 'min_elevation_out_of_bounds') {
                         const satelliteData = message['data']?.['satellite_data'];
                         const satName = satelliteData?.details?.name || 'Unknown';
                         const noradId = satelliteData?.details?.norad_id || '';
                         toast.error(
-                            <ToastMessage
-                                title={t('notifications.tracking.elevation_below_horizon')}
-                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
-                            />,
-                            {
-                                icon: () => <ArrowUpwardIcon />,
-                            }
-                        );
-                    } else if (event.name === 'azimuth_out_of_bounds') {
-                        const satelliteData = message['data']?.['satellite_data'];
-                        const satName = satelliteData?.details?.name || 'Unknown';
-                        const noradId = satelliteData?.details?.norad_id || '';
-                        toast.error(
-                            <ToastMessage
-                                title={t('notifications.tracking.azimuth_out_of_bounds')}
-                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
-                            />,
-                            {
-                                icon: () => <ExploreIcon />,
-                            }
-                        );
-                    } else if (event.name === 'minelevation_error') {
-                        const satelliteData = message['data']?.['satellite_data'];
-                        const satName = satelliteData?.details?.name || 'Unknown';
-                        const noradId = satelliteData?.details?.norad_id || '';
-                        toast.warning(
                             <ToastMessage
                                 title={t('notifications.tracking.below_min_elevation')}
                                 body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
                             />,
                             {
                                 icon: () => <ArrowDownwardIcon />,
+                            }
+                        );
+                    } else if (event.name === 'max_elevation_out_of_bounds') {
+                        const satelliteData = message['data']?.['satellite_data'];
+                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const noradId = satelliteData?.details?.norad_id || '';
+                        toast.error(
+                            <ToastMessage
+                                title={t('notifications.tracking.above_max_elevation')}
+                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
+                            />,
+                            {
+                                icon: () => <ArrowUpwardIcon />,
+                            }
+                        );
+                    } else if (event.name === 'min_azimuth_out_of_bounds') {
+                        const satelliteData = message['data']?.['satellite_data'];
+                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const noradId = satelliteData?.details?.norad_id || '';
+                        toast.error(
+                            <ToastMessage
+                                title={t('notifications.tracking.below_min_azimuth')}
+                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
+                            />,
+                            {
+                                icon: () => <ExploreIcon />,
+                            }
+                        );
+                    } else if (event.name === 'max_azimuth_out_of_bounds') {
+                        const satelliteData = message['data']?.['satellite_data'];
+                        const satName = satelliteData?.details?.name || 'Unknown';
+                        const noradId = satelliteData?.details?.norad_id || '';
+                        toast.error(
+                            <ToastMessage
+                                title={t('notifications.tracking.above_max_azimuth')}
+                                body={t('notifications.tracking.satellite_info', { name: satName, noradId })}
+                            />,
+                            {
+                                icon: () => <ExploreIcon />,
                             }
                         );
                     } else if (event.name === 'norad_id_change') {

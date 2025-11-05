@@ -27,7 +27,22 @@ export function getCurrentStatusofRotator(rotatorData, lastRotatorEvent) {
     // Define a status mapping with colors
     const statusMap = {
         'minelevation': {
-            text: "Target below elevation limit",
+            text: "Target below minimum elevation",
+            bgColor: 'error.light',
+            fgColor: 'error.dark'
+        },
+        'maxelevation': {
+            text: "Target above maximum elevation",
+            bgColor: 'error.light',
+            fgColor: 'error.dark'
+        },
+        'minazimuth': {
+            text: "Target below minimum azimuth",
+            bgColor: 'error.light',
+            fgColor: 'error.dark'
+        },
+        'maxazimuth': {
+            text: "Target above maximum azimuth",
             bgColor: 'error.light',
             fgColor: 'error.dark'
         },

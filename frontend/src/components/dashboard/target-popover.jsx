@@ -52,7 +52,7 @@ const SatelliteInfoPopover = () => {
     const { t } = useTranslation('dashboard');
 
     // Get satellite data from Redux store
-    const { satelliteData, trackingState } = useSelector(state => state.targetSatTrack);
+    const { satelliteData, trackingState, rotatorData } = useSelector(state => state.targetSatTrack);
 
     const handleClick = (event) => {
         setAnchorEl(event.currentTarget);
@@ -98,15 +98,16 @@ const SatelliteInfoPopover = () => {
         }
 
         const elevation = satelliteData.position.el;
+        const minElevation = rotatorData.minel ?? 0;
 
         if (elevation < 0) {
             return 'error.main'; // Red when satellite is below horizon
-        } else if (elevation < 10) {
-            return 'status.polling'; // Orange when satellite is low (0-10 degrees)
+        } else if (elevation < minElevation) {
+            return 'status.polling'; // Orange when satellite is below minimum elevation limit
         } else if (isTrackingActive) {
-            return 'success.main'; // Bright green when actively tracking and above 10 degrees
+            return 'success.main'; // Bright green when actively tracking and above minimum elevation
         } else {
-            return 'info.main'; // Light blue when satellite is well above horizon (>10 degrees)
+            return 'info.main'; // Light blue when satellite is well above minimum elevation
         }
     };
 
@@ -123,6 +124,7 @@ const SatelliteInfoPopover = () => {
         }
 
         const elevation = satelliteData.position.el;
+        const minElevation = rotatorData.minel ?? 0;
 
         if (elevation < 0) {
             return {
@@ -134,7 +136,7 @@ const SatelliteInfoPopover = () => {
                 icon: <VisibilityOffIcon />,
                 description: 'Satellite is not visible from current location'
             };
-        } else if (elevation < 10) {
+        } else if (elevation < minElevation) {
             return {
                 status: 'Low Elevation',
                 color: 'warning.main',
@@ -142,7 +144,7 @@ const SatelliteInfoPopover = () => {
                     ? `${theme.palette.warning.main}25` // 15% opacity on dark
                     : 'warning.light',
                 icon: <TrendingDownIcon />,
-                description: 'Satellite is visible but low on the horizon'
+                description: `Satellite is below minimum elevation limit (${minElevation}°)`
             };
         } else if (isTrackingActive) {
             return {
@@ -169,10 +171,12 @@ const SatelliteInfoPopover = () => {
 
     // Get elevation color based on value
     const getElevationColor = (elevation) => {
-        if (elevation < 0) return 'error.main'; // Red
-        if (elevation < 10) return 'warning.main'; // Orange
-        if (elevation < 45) return 'info.main'; // Light blue
-        return 'success.main'; // Green
+        const minElevation = rotatorData.minel ?? 0;
+
+        if (elevation < 0) return 'error.main'; // Red - below horizon
+        if (elevation < minElevation) return 'warning.main'; // Orange - below minimum elevation limit
+        if (elevation < 45) return 'info.main'; // Light blue - above minimum but not optimal
+        return 'success.main'; // Green - optimal elevation
     };
 
     // Component for displaying numerical values with monospace font
