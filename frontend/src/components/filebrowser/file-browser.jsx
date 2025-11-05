@@ -845,7 +845,7 @@ export default function FileBrowser() {
                                                 label={formatBytes(item.data_size || item.size)}
                                                 size="small"
                                                 variant="outlined"
-                                                sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
+                                                sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                             />
                                             {isRecording && item.metadata?.sample_rate && (
                                                 <Chip
@@ -853,7 +853,7 @@ export default function FileBrowser() {
                                                     size="small"
                                                     variant="outlined"
                                                     color="primary"
-                                                    sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
                                             {isRecording && item.metadata?.target_satellite_name && (
@@ -863,7 +863,7 @@ export default function FileBrowser() {
                                                     variant="outlined"
                                                     color="secondary"
                                                     icon={<SatelliteAltIcon />}
-                                                    sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 }, '& .MuiChip-icon': { fontSize: '0.9rem' } }}
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, '& .MuiChip-icon': { fontSize: '0.85rem' } }}
                                                 />
                                             )}
                                             {isRecording && item.duration && (
@@ -872,7 +872,7 @@ export default function FileBrowser() {
                                                     size="small"
                                                     variant="outlined"
                                                     color="error"
-                                                    sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 }, fontFamily: 'monospace' }}
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 }, fontFamily: 'monospace' }}
                                                 />
                                             )}
                                             {!isRecording && item.width && item.height && (
@@ -881,6 +881,7 @@ export default function FileBrowser() {
                                                     size="small"
                                                     variant="outlined"
                                                     color="primary"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
                                         </Box>
@@ -957,10 +958,10 @@ export default function FileBrowser() {
                                     <Chip
                                         label={`${selectedItem.snapshot.width}×${selectedItem.snapshot.height}`}
                                         size="small"
-                                        sx={{ mr: 1 }}
+                                        sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                     />
                                 )}
-                                <Chip label={formatBytes(selectedItem?.data_size || 0)} size="small" />
+                                <Chip label={formatBytes(selectedItem?.data_size || 0)} size="small" sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
                             </Box>
                         </Box>
                     </DialogTitle>
@@ -1128,10 +1129,10 @@ export default function FileBrowser() {
                                     <Chip
                                         label={`${selectedItem.width}×${selectedItem.height}`}
                                         size="small"
-                                        sx={{ mr: 1 }}
+                                        sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                     />
                                 )}
-                                <Chip label={formatBytes(selectedItem?.size || 0)} size="small" />
+                                <Chip label={formatBytes(selectedItem?.size || 0)} size="small" sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
                             </Box>
                         </Box>
                     </DialogTitle>
