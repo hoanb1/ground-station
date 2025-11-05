@@ -330,9 +330,9 @@ const VFOMarkersContainer = ({
         const marker = vfoMarkers[selectedVFO];
 
         // Calculate frequency change based on wheel direction
-        // Positive deltaY = wheel down = increase frequency (inverted)
-        // Negative deltaY = wheel up = decrease frequency (inverted)
-        const freqChange = Math.sign(e.deltaY) * marker.stepSize;
+        // Positive deltaY = wheel down = decrease frequency
+        // Negative deltaY = wheel up = increase frequency
+        const freqChange = -Math.sign(e.deltaY) * marker.stepSize;
         const newFrequency = marker.frequency + freqChange;
 
         // Ensure the frequency stays within the visible range
