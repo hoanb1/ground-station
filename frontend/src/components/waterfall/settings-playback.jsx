@@ -228,7 +228,7 @@ const PlaybackAccordion = ({
             <AccordionDetails
                 sx={{
                     backgroundColor: 'background.elevated',
-                    maxHeight: '500px',
+                    maxHeight: '520px',
                     overflowY: 'auto',
                 }}
             >
