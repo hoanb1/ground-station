@@ -20,18 +20,19 @@
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
 // Unified async thunk to fetch all files (recordings and snapshots)
+// Note: This now uses pub/sub model - it sends a request and the response comes via socket event
 export const fetchFiles = createAsyncThunk(
     'filebrowser/fetchFiles',
     async ({ socket, page = 1, pageSize = 8, sortBy = 'created', sortOrder = 'desc', showRecordings = true, showSnapshots = true }, { rejectWithValue }) => {
-        return new Promise((resolve, reject) => {
-            socket.emit('file_browser', 'list-files', { page, pageSize, sortBy, sortOrder, showRecordings, showSnapshots }, (response) => {
-                if (response.success) {
-                    resolve(response.data);
-                } else {
-                    reject(rejectWithValue(response.error || 'Failed to fetch files'));
-                }
-            });
-        });
+        try {
+            // Emit request without callback - response will come via 'file_browser_state' event
+            socket.emit('file_browser', 'list-files', { page, pageSize, sortBy, sortOrder, showRecordings, showSnapshots });
+
+            // Return pending state - actual data will be updated via socket listener
+            return { pending: true };
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to fetch files');
+        }
     }
 );
 
@@ -68,34 +69,36 @@ export const fetchSnapshots = createAsyncThunk(
 );
 
 // Async thunk to delete a recording
+// Note: This now uses pub/sub model - response comes via 'file_browser_state' event
 export const deleteRecording = createAsyncThunk(
     'filebrowser/deleteRecording',
     async ({ socket, name }, { rejectWithValue }) => {
-        return new Promise((resolve, reject) => {
-            socket.emit('file_browser', 'delete-recording', { name }, (response) => {
-                if (response.success) {
-                    resolve(name);
-                } else {
-                    reject(rejectWithValue(response.error || 'Failed to delete recording'));
-                }
-            });
-        });
+        try {
+            // Emit request without callback - response will come via 'file_browser_state' event
+            socket.emit('file_browser', 'delete-recording', { name });
+
+            // Return the name for optimistic updates if needed
+            return { name, pending: true };
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to delete recording');
+        }
     }
 );
 
 // Async thunk to delete a snapshot
+// Note: This now uses pub/sub model - response comes via 'file_browser_state' event
 export const deleteSnapshot = createAsyncThunk(
     'filebrowser/deleteSnapshot',
     async ({ socket, filename }, { rejectWithValue }) => {
-        return new Promise((resolve, reject) => {
-            socket.emit('file_browser', 'delete-snapshot', { filename }, (response) => {
-                if (response.success) {
-                    resolve(filename);
-                } else {
-                    reject(rejectWithValue(response.error || 'Failed to delete snapshot'));
-                }
-            });
-        });
+        try {
+            // Emit request without callback - response will come via 'file_browser_state' event
+            socket.emit('file_browser', 'delete-snapshot', { filename });
+
+            // Return the filename for optimistic updates if needed
+            return { filename, pending: true };
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to delete snapshot');
+        }
     }
 );
 
@@ -246,6 +249,12 @@ const fileBrowserSlice = createSlice({
             state.filesError = null;
         });
         builder.addCase(fetchFiles.fulfilled, (state, action) => {
+            // If this is just a pending state (pub/sub model), don't update data
+            if (action.payload.pending) {
+                // Keep loading true, actual data will come via socket event
+                return;
+            }
+
             state.filesLoading = false;
             state.files = action.payload.items || [];
             state.total = action.payload.total || 0;

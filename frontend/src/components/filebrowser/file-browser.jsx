@@ -193,7 +193,66 @@ export default function FileBrowser() {
         }
     }, [socket, dispatch, page, pageSize, sortBy, sortOrder, filters.showRecordings, filters.showSnapshots]);
 
-    // Listen for file change events from backend
+    // Listen for file browser state updates from backend (pub/sub model)
+    useEffect(() => {
+        if (!socket) return;
+
+        const handleFileBrowserState = (state) => {
+            console.log('File browser state received:', state);
+
+            // Dispatch Redux action based on the action type
+            switch (state.action) {
+                case 'list-files':
+                    // Manually dispatch fulfilled action with actual data (not pending)
+                    dispatch({
+                        type: 'filebrowser/fetchFiles/fulfilled',
+                        payload: {
+                            items: state.items,
+                            total: state.total,
+                            page: state.page,
+                            diskUsage: state.diskUsage,
+                            pending: false, // Mark as not pending so reducer processes it
+                        },
+                    });
+                    break;
+
+                case 'delete-recording':
+                case 'delete-snapshot':
+                    // Refetch files after deletion
+                    dispatch(fetchFiles({
+                        socket,
+                        page,
+                        pageSize,
+                        sortBy,
+                        sortOrder,
+                        showRecordings: filters.showRecordings,
+                        showSnapshots: filters.showSnapshots,
+                    }));
+                    toast.success(state.message || 'Item deleted successfully');
+                    break;
+
+                default:
+                    console.warn('Unknown file browser action:', state.action);
+            }
+        };
+
+        const handleFileBrowserError = (errorData) => {
+            console.error('File browser error:', errorData);
+            toast.error(errorData.error || 'An error occurred');
+        };
+
+        // Subscribe to events
+        socket.on('file_browser_state', handleFileBrowserState);
+        socket.on('file_browser_error', handleFileBrowserError);
+
+        // Cleanup on unmount
+        return () => {
+            socket.off('file_browser_state', handleFileBrowserState);
+            socket.off('file_browser_error', handleFileBrowserError);
+        };
+    }, [socket, dispatch, page, pageSize, sortBy, sortOrder, filters.showRecordings, filters.showSnapshots]);
+
+    // Legacy: Listen for file change events from backend
     useEffect(() => {
         if (!socket) return;
 
@@ -277,26 +336,18 @@ export default function FileBrowser() {
             try {
                 if (itemToDelete.type === 'recording') {
                     await dispatch(deleteRecording({ socket, name: itemToDelete.name })).unwrap();
-                    toast.success(t('toast.recording_deleted', 'Recording "{{name}}" deleted successfully', { name: itemToDelete.name }));
+                    // Success toast will be shown by socket event listener
                 } else {
                     await dispatch(deleteSnapshot({ socket, filename: itemToDelete.filename })).unwrap();
-                    toast.success(t('toast.snapshot_deleted', 'Snapshot "{{name}}" deleted successfully', { name: itemToDelete.name }));
+                    // Success toast will be shown by socket event listener
                 }
 
-                // Refetch files to update the current page
-                await dispatch(fetchFiles({
-                    socket,
-                    page,
-                    pageSize,
-                    sortBy,
-                    sortOrder,
-                    showRecordings: filters.showRecordings,
-                    showSnapshots: filters.showSnapshots,
-                }));
+                // No need to refetch - socket event will trigger refetch automatically
 
                 setDeleteDialogOpen(false);
                 setItemToDelete(null);
             } catch (error) {
+                // Error will be shown by socket error event listener, but show local toast too
                 toast.error(t('toast.delete_failed', 'Failed to delete: {{error}}', { error }));
             }
         }
@@ -795,6 +846,7 @@ export default function FileBrowser() {
                                                 label={formatBytes(item.data_size || item.size)}
                                                 size="small"
                                                 variant="outlined"
+                                                sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
                                             />
                                             {isRecording && item.metadata?.sample_rate && (
                                                 <Chip
@@ -802,6 +854,7 @@ export default function FileBrowser() {
                                                     size="small"
                                                     variant="outlined"
                                                     color="primary"
+                                                    sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 } }}
                                                 />
                                             )}
                                             {isRecording && item.metadata?.target_satellite_name && (
@@ -811,6 +864,7 @@ export default function FileBrowser() {
                                                     variant="outlined"
                                                     color="secondary"
                                                     icon={<SatelliteAltIcon />}
+                                                    sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 }, '& .MuiChip-icon': { fontSize: '0.9rem' } }}
                                                 />
                                             )}
                                             {isRecording && item.duration && (
@@ -819,7 +873,7 @@ export default function FileBrowser() {
                                                     size="small"
                                                     variant="outlined"
                                                     color="error"
-                                                    sx={{ fontFamily: 'monospace' }}
+                                                    sx={{ height: '22px', fontSize: '0.7rem', '& .MuiChip-label': { px: 1 }, fontFamily: 'monospace' }}
                                                 />
                                             )}
                                             {!isRecording && item.width && item.height && (

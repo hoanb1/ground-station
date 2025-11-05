@@ -107,9 +107,45 @@ def get_image_dimensions(image_path: str) -> Tuple[Any, ...]:
         return (None, None)
 
 
+async def emit_file_browser_state(sio, state_data, logger):
+    """
+    Emit file browser state to all connected clients.
+
+    Args:
+        sio: Socket.IO server instance
+        state_data: State data to emit
+        logger: Logger instance
+    """
+    try:
+        await sio.emit("file_browser_state", state_data)
+        logger.debug(f"Emitted file_browser_state: {state_data.get('action', 'unknown')}")
+    except Exception as e:
+        logger.error(f"Error emitting file_browser_state: {str(e)}")
+
+
+async def emit_file_browser_error(sio, error_message, action, logger):
+    """
+    Emit file browser error to all connected clients.
+
+    Args:
+        sio: Socket.IO server instance
+        error_message: Error message
+        action: Action that caused the error
+        logger: Logger instance
+    """
+    try:
+        await sio.emit("file_browser_error", {"error": error_message, "action": action})
+        logger.error(f"Emitted file_browser_error for action '{action}': {error_message}")
+    except Exception as e:
+        logger.error(f"Error emitting file_browser_error: {str(e)}")
+
+
 async def filebrowser_request_routing(sio, cmd, data, logger, sid):
     """
     Route file browser requests via Socket.IO.
+
+    This function processes commands and emits state updates via pub/sub model.
+    No return value - all responses are emitted as events.
 
     Args:
         sio: Socket.IO server instance
@@ -117,11 +153,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
         data: Additional data for the command
         logger: Logger instance
         sid: Socket.IO session ID
-
-    Returns:
-        Dictionary containing 'success' status and 'data'
     """
-    reply: Dict[str, Union[bool, None, dict, list, str]] = {"success": False, "data": None}
 
     # Get the data directories
     backend_dir = Path(__file__).parent.parent
@@ -290,16 +322,19 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             # Get disk usage for the recordings directory
             disk_usage = get_disk_usage(recordings_dir)
 
-            reply = {
-                "success": True,
-                "data": {
+            # Emit state update instead of returning
+            await emit_file_browser_state(
+                sio,
+                {
+                    "action": "list-files",
                     "items": processed_items,
                     "total": total,
                     "page": page,
                     "pageSize": page_size,
                     "diskUsage": disk_usage,
                 },
-            }
+                logger,
+            )
 
         elif cmd == "list-recordings":
             # Extract pagination parameters
@@ -391,11 +426,6 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 }
                 recordings.append(recording)
 
-            reply = {
-                "success": True,
-                "data": {"items": recordings, "total": total, "page": page, "pageSize": page_size},
-            }
-
         elif cmd == "get-recording-details":
             logger.info(f"Getting recording details for: {data}")
             recording_name = data.get("name")
@@ -450,8 +480,6 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 },
             }
 
-            reply = {"success": True, "data": recording}
-
         elif cmd == "delete-recording":
             logger.info(f"Deleting recording: {data}")
             recording_name = data.get("name")
@@ -485,16 +513,24 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 deleted_files.append(snapshot_file.name)
 
             if not deleted_files:
-                return {"success": False, "error": "Recording not found"}
+                await emit_file_browser_error(
+                    sio, "Recording not found", "delete-recording", logger
+                )
+                return
 
             logger.info(f"Deleted recording: {recording_name}")
-            reply = {
-                "success": True,
-                "data": {
+
+            # Emit state update with delete action
+            await emit_file_browser_state(
+                sio,
+                {
+                    "action": "delete-recording",
+                    "name": recording_name,
                     "deleted_files": deleted_files,
                     "message": f"Deleted {len(deleted_files)} file(s)",
                 },
-            }
+                logger,
+            )
 
         elif cmd == "list-snapshots":
             # Extract pagination parameters
@@ -553,11 +589,6 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 }
                 snapshots.append(snapshot)
 
-            reply = {
-                "success": True,
-                "data": {"items": snapshots, "total": total, "page": page, "pageSize": page_size},
-            }
-
         elif cmd == "delete-snapshot":
             logger.info(f"Deleting snapshot: {data}")
             snapshot_filename = data.get("filename")
@@ -580,15 +611,22 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             snapshot_file.unlink()
             logger.info(f"Deleted snapshot: {snapshot_filename}")
 
-            reply = {"success": True, "data": {"message": f"Deleted snapshot: {snapshot_filename}"}}
+            # Emit state update with delete action
+            await emit_file_browser_state(
+                sio,
+                {
+                    "action": "delete-snapshot",
+                    "filename": snapshot_filename,
+                    "message": f"Deleted snapshot: {snapshot_filename}",
+                },
+                logger,
+            )
 
         else:
             logger.warning(f"Unknown file browser command: {cmd}")
-            reply = {"success": False, "error": f"Unknown command: {cmd}"}
+            await emit_file_browser_error(sio, f"Unknown command: {cmd}", cmd, logger)
 
     except Exception as e:
         logger.error(f"Error handling file browser command '{cmd}': {str(e)}")
         logger.exception(e)
-        reply = {"success": False, "error": str(e)}
-
-    return reply
+        await emit_file_browser_error(sio, str(e), cmd, logger)

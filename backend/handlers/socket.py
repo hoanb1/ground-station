@@ -53,8 +53,8 @@ def register_socketio_handlers(sio):
     @sio.on("file_browser")
     async def handle_file_browser_requests(sid, cmd, data=None):
         logger.info(f"Received file browser event from: {sid}, with cmd: {cmd}")
-        reply = await filebrowser_request_routing(sio, cmd, data, logger, sid)
-        return reply
+        # No callback - responses are emitted as events
+        await filebrowser_request_routing(sio, cmd, data, logger, sid)
 
     @sio.on("service_control")
     async def handle_service_control_requests(sid, cmd, data=None):
