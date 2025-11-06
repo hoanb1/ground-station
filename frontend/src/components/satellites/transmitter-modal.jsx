@@ -55,7 +55,9 @@ const MODE_OPTIONS = [
     {name: "BPSK", value: "BPSK"},
     {name: "QPSK", value: "QPSK"},
     {name: "FSK", value: "FSK"},
-    {name: "GMSK", value: "GMSK"}
+    {name: "GMSK", value: "GMSK"},
+    {name: "USB", value: "USB"},
+    {name: "LSB", value: "LSB"},
 ];
 
 
