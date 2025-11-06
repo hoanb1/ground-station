@@ -72,6 +72,7 @@ import {
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
+import RecordingDialog from './recording-dialog.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -948,173 +949,11 @@ export default function FileBrowser() {
 
             {/* Recording Details Dialog */}
             {selectedItem?.type === 'recording' && (
-                <Dialog
+                <RecordingDialog
                     open={detailsOpen}
                     onClose={() => setDetailsOpen(false)}
-                    maxWidth="lg"
-                    fullWidth
-                >
-                    <DialogTitle>
-                        <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
-                            <Typography variant="h6">Recording Details</Typography>
-                            <Box>
-                                {selectedItem?.snapshot?.width && selectedItem?.snapshot?.height && (
-                                    <Chip
-                                        label={`${selectedItem.snapshot.width}×${selectedItem.snapshot.height}`}
-                                        size="small"
-                                        sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
-                                    />
-                                )}
-                                <Chip label={formatBytes(selectedItem?.data_size || 0)} size="small" sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }} />
-                            </Box>
-                        </Box>
-                    </DialogTitle>
-                    <DialogContent>
-                        {selectedItem && (
-                            <Box sx={{ mt: 1 }}>
-                                {selectedItem.snapshot && (
-                                    <Box sx={{ mb: 2, textAlign: 'center' }}>
-                                        <img
-                                            src={selectedItem.snapshot.url}
-                                            alt={selectedItem.name}
-                                            style={{ maxWidth: '100%', height: 'auto' }}
-                                        />
-                                    </Box>
-                                )}
-
-                                <Typography variant="subtitle2" gutterBottom>
-                                    Name
-                                </Typography>
-                                <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace' }}>
-                                    {selectedItem.name}
-                                </Typography>
-
-                                <Typography variant="subtitle2" gutterBottom>
-                                    Files
-                                </Typography>
-                                <Typography variant="body2" sx={{ mb: 2, fontFamily: 'monospace' }}>
-                                    {selectedItem.data_file} ({formatBytes(selectedItem.data_size)})
-                                    <br />
-                                    {selectedItem.meta_file}
-                                    {selectedItem.snapshot && (
-                                        <>
-                                            <br />
-                                            {selectedItem.snapshot.filename} ({selectedItem.snapshot.width}×{selectedItem.snapshot.height})
-                                        </>
-                                    )}
-                                </Typography>
-
-                                {selectedItem.metadata && (
-                                    <>
-                                        {(selectedItem.metadata.target_satellite_name || selectedItem.metadata.target_satellite_norad_id) && (
-                                            <>
-                                                <Typography variant="subtitle2" gutterBottom>
-                                                    Target Satellite
-                                                </Typography>
-                                                <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                                                    {selectedItem.metadata.target_satellite_name && (
-                                                        <div>Name: {selectedItem.metadata.target_satellite_name}</div>
-                                                    )}
-                                                    {selectedItem.metadata.target_satellite_norad_id && (
-                                                        <div>NORAD ID: {selectedItem.metadata.target_satellite_norad_id}</div>
-                                                    )}
-                                                </Box>
-                                            </>
-                                        )}
-
-                                        <Typography variant="subtitle2" gutterBottom>
-                                            Metadata
-                                        </Typography>
-                                        <Box sx={{ mb: 2, fontFamily: 'monospace', fontSize: '0.875rem' }}>
-                                            {selectedItem.metadata.datatype && (
-                                                <div>Data Type: {selectedItem.metadata.datatype}</div>
-                                            )}
-                                            {selectedItem.metadata.sample_rate && (
-                                                <div>Sample Rate: {selectedItem.metadata.sample_rate} Hz</div>
-                                            )}
-                                            {selectedItem.metadata.start_time && (
-                                                <div>Start Time: {formatDate(selectedItem.metadata.start_time)}</div>
-                                            )}
-                                            {selectedItem.metadata.finalized_time && (
-                                                <div>End Time: {formatDate(selectedItem.metadata.finalized_time)}</div>
-                                            )}
-                                            {selectedItem.metadata.version && (
-                                                <div>SigMF Version: {selectedItem.metadata.version}</div>
-                                            )}
-                                            {selectedItem.metadata.recorder && (
-                                                <div>Recorder: {selectedItem.metadata.recorder}</div>
-                                            )}
-                                            {selectedItem.metadata.description && (
-                                                <div>Description: {selectedItem.metadata.description}</div>
-                                            )}
-                                        </Box>
-
-                                        {selectedItem.metadata.captures?.length > 0 && (
-                                            <>
-                                                <Typography variant="subtitle2" gutterBottom>
-                                                    Capture Segments ({selectedItem.metadata.captures.length})
-                                                </Typography>
-                                                <Stack spacing={1} sx={{ mb: 2 }}>
-                                                    {selectedItem.metadata.captures.map((capture, index) => (
-                                                        <Box
-                                                            key={index}
-                                                            sx={{
-                                                                p: 1.5,
-                                                                border: '1px solid',
-                                                                borderColor: 'divider',
-                                                                borderRadius: 1,
-                                                                backgroundColor: 'background.paper',
-                                                            }}
-                                                        >
-                                                            <Typography variant="caption" sx={{ fontWeight: 'bold', mb: 0.5, display: 'block' }}>
-                                                                Segment {index + 1}
-                                                            </Typography>
-                                                            <Box sx={{ fontFamily: 'monospace', fontSize: '0.75rem' }}>
-                                                                {Object.entries(capture).map(([key, value]) => (
-                                                                    <Box key={key} sx={{ display: 'flex', gap: 1, py: 0.25 }}>
-                                                                        <Box component="span" sx={{ color: 'text.secondary', minWidth: '140px' }}>
-                                                                            {key}:
-                                                                        </Box>
-                                                                        <Box component="span" sx={{ wordBreak: 'break-word' }}>
-                                                                            {typeof value === 'object' ? JSON.stringify(value) : String(value)}
-                                                                        </Box>
-                                                                    </Box>
-                                                                ))}
-                                                            </Box>
-                                                        </Box>
-                                                    ))}
-                                                </Stack>
-                                            </>
-                                        )}
-                                    </>
-                                )}
-                            </Box>
-                        )}
-                    </DialogContent>
-                    <DialogActions>
-                        <Button
-                            onClick={() => window.open(selectedItem?.download_urls.data, '_blank')}
-                            startIcon={<DownloadIcon />}
-                        >
-                            Download Data
-                        </Button>
-                        <Button
-                            onClick={() => window.open(selectedItem?.download_urls.meta, '_blank')}
-                            startIcon={<DownloadIcon />}
-                        >
-                            Download Metadata
-                        </Button>
-                        {selectedItem?.snapshot && (
-                            <Button
-                                onClick={() => window.open(selectedItem.snapshot.url, '_blank')}
-                                startIcon={<DownloadIcon />}
-                            >
-                                Download Snapshot
-                            </Button>
-                        )}
-                        <Button onClick={() => setDetailsOpen(false)}>Close</Button>
-                    </DialogActions>
-                </Dialog>
+                    recording={selectedItem}
+                />
             )}
 
             {/* Snapshot Preview Dialog */}

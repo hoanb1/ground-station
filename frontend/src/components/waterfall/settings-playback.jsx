@@ -42,13 +42,18 @@ import {
     InputLabel,
     Select,
     MenuItem,
+    Paper,
 } from "@mui/material";
 import RefreshIcon from '@mui/icons-material/Refresh';
 import SortIcon from '@mui/icons-material/Sort';
+import PlayArrowIcon from '@mui/icons-material/PlayArrow';
+import StopIcon from '@mui/icons-material/Stop';
+import InfoIcon from '@mui/icons-material/Info';
 import { useTranslation } from 'react-i18next';
 import { useSocket } from '../common/socket.jsx';
 import { fetchFiles, setPage } from '../filebrowser/filebrowser-slice.jsx';
 import { fetchSDRs } from '../hardware/sdr-slice.jsx';
+import RecordingDialog from '../filebrowser/recording-dialog.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -95,6 +100,9 @@ const PlaybackAccordion = ({
     isStreaming,
     selectedPlaybackRecording,
     onRecordingSelect,
+    onPlaybackPlay,
+    onPlaybackStop,
+    playbackDuration,
 }) => {
     const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
@@ -112,6 +120,9 @@ const PlaybackAccordion = ({
     // Local state for sort options
     const [sortBy, setSortBy] = useState('modified');
     const [sortOrder, setSortOrder] = useState('desc');
+
+    // State for details dialog
+    const [detailsOpen, setDetailsOpen] = useState(false);
 
     // Filter, sort, and paginate recordings in the frontend
     const recordings = useMemo(() => {
@@ -212,6 +223,17 @@ const PlaybackAccordion = ({
     const totalRecordings = files.filter(f => f.type === 'recording').length;
     const totalPages = Math.ceil(totalRecordings / 5);
 
+    const formatDuration = (seconds) => {
+        const hours = Math.floor(seconds / 3600);
+        const minutes = Math.floor((seconds % 3600) / 60);
+        const secs = Math.floor(seconds % 60);
+
+        if (hours > 0) {
+            return `${hours}:${minutes.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
+        }
+        return `${minutes}:${secs.toString().padStart(2, '0')}`;
+    };
+
     return (
         <Accordion expanded={expanded} onChange={onAccordionChange}>
             <AccordionSummary
@@ -221,22 +243,76 @@ const PlaybackAccordion = ({
                 aria-controls="panel-playback-content"
                 id="panel-playback-header"
             >
-                <Typography component="span">
-                    {t('playback.title', 'IQ Playback')}
-                </Typography>
+                <Stack direction="row" spacing={1} alignItems="center" width="100%" justifyContent="space-between">
+                    <Typography component="span">
+                        {t('playback.title', 'IQ Playback')}
+                    </Typography>
+                    {isStreaming && playbackDuration > 0 && (
+                        <Chip
+                            label={formatDuration(playbackDuration)}
+                            color="primary"
+                            size="small"
+                            sx={{
+                                fontWeight: 'bold',
+                            }}
+                        />
+                    )}
+                </Stack>
             </AccordionSummary>
             <AccordionDetails
                 sx={{
                     backgroundColor: 'background.elevated',
-                    maxHeight: '520px',
+                    maxHeight: '600px',
                     overflowY: 'auto',
                 }}
             >
                 <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                    <Stack direction="row" spacing={1} alignItems="center" justifyContent="space-between" sx={{ mb: 1 }}>
-                        <Typography variant="body2" color="text.secondary">
-                            {t('playback.select_recording', 'Select a recording to playback')}
-                        </Typography>
+                    <Paper
+                        elevation={2}
+                        sx={{
+                            p: 1,
+                            backgroundColor: 'background.paper',
+                            display: 'flex',
+                            gap: 1,
+                            justifyContent: 'center',
+                        }}
+                    >
+                        <Tooltip title={t('playback.play', 'Play')}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={onPlaybackPlay}
+                                    disabled={!selectedPlaybackRecording || isStreaming}
+                                    color="primary"
+                                >
+                                    <PlayArrowIcon />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title={t('playback.stop', 'Stop')}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={onPlaybackStop}
+                                    disabled={!isStreaming}
+                                    color="error"
+                                >
+                                    <StopIcon />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
+                        <Tooltip title={t('playback.details', 'View Details')}>
+                            <span>
+                                <IconButton
+                                    size="small"
+                                    onClick={() => setDetailsOpen(true)}
+                                    disabled={!selectedPlaybackRecording}
+                                    color="primary"
+                                >
+                                    <InfoIcon fontSize="small" />
+                                </IconButton>
+                            </span>
+                        </Tooltip>
                         <Tooltip title={t('playback.refresh', 'Refresh recordings')}>
                             <span>
                                 <IconButton size="small" onClick={handleRefresh} disabled={filesLoading}>
@@ -244,7 +320,7 @@ const PlaybackAccordion = ({
                                 </IconButton>
                             </span>
                         </Tooltip>
-                    </Stack>
+                    </Paper>
 
                     <FormControl size="small" fullWidth>
                         <InputLabel>{t('playback.sort_by', 'Sort By')}</InputLabel>
@@ -390,6 +466,13 @@ const PlaybackAccordion = ({
                     )}
                 </Box>
             </AccordionDetails>
+
+            {/* Recording Details Dialog */}
+            <RecordingDialog
+                open={detailsOpen}
+                onClose={() => setDetailsOpen(false)}
+                recording={selectedPlaybackRecording}
+            />
         </Accordion>
     );
 };

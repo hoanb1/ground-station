@@ -419,6 +419,29 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         };
     }, [isRecording, dispatch]);
 
+    // Playback timer and state
+    const [playbackDuration, setPlaybackDuration] = useState(0);
+    const [isPlaybackPaused, setIsPlaybackPaused] = useState(false);
+
+    useEffect(() => {
+        let intervalId;
+        const isPlayingback = selectedSDRId === 'sigmf-playback' && isStreaming && !isPlaybackPaused;
+        if (isPlayingback) {
+            intervalId = setInterval(() => {
+                setPlaybackDuration((prev) => prev + 1);
+            }, 1000);
+        } else if (!isStreaming) {
+            // Reset duration when streaming stops
+            setPlaybackDuration(0);
+            setIsPlaybackPaused(false);
+        }
+        return () => {
+            if (intervalId) {
+                clearInterval(intervalId);
+            }
+        };
+    }, [isStreaming, selectedSDRId, isPlaybackPaused]);
+
     const handleStartRecording = (customRecordingName) => {
         // Use custom name if provided, otherwise use state
         const nameToUse = customRecordingName !== undefined ? customRecordingName : recordingName;
@@ -531,6 +554,23 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
             }, 100);
         } else {
             toast.error('SigMF Playback SDR not found. Please refresh the page.');
+        }
+    };
+
+    const handlePlaybackPlay = () => {
+        // Start streaming if not already streaming
+        if (!isStreaming && selectedSDRId === 'sigmf-playback' && playbackRecordingPath) {
+            socket.emit('sdr_data', 'start-streaming', { selectedSDRId });
+            setIsPlaybackPaused(false);
+        }
+    };
+
+    const handlePlaybackStop = () => {
+        // Stop playback completely by stopping streaming
+        if (isStreaming) {
+            socket.emit('sdr_data', 'stop-streaming', { selectedSDRId });
+            setPlaybackDuration(0);
+            setIsPlaybackPaused(false);
         }
     };
 
@@ -657,6 +697,9 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     isStreaming={isStreaming}
                     selectedPlaybackRecording={selectedPlaybackRecording}
                     onRecordingSelect={handleRecordingSelect}
+                    onPlaybackPlay={handlePlaybackPlay}
+                    onPlaybackStop={handlePlaybackStop}
+                    playbackDuration={playbackDuration}
                 />
             </div>
         </>
