@@ -42,7 +42,7 @@ export const canvasDrawingUtils = {
         ctx.lineWidth = lineWidth;
         ctx.setLineDash([4, 4]);
 
-        if (mode === 'USB') {
+        if (mode === 'USB' || mode === 'CW') {
             ctx.moveTo(rightEdgeX, 0);
             ctx.lineTo(rightEdgeX, height);
         } else if (mode === 'LSB') {

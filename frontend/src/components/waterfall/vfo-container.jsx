@@ -147,7 +147,7 @@ const VFOMarkersContainer = ({
 
         let markerLowFreq, markerHighFreq, leftEdgeX, rightEdgeX;
 
-        if (mode === 'USB') {
+        if (mode === 'USB' || mode === 'CW') {
             markerLowFreq = marker.frequency;
             markerHighFreq = marker.frequency + bandwidth;
             leftEdgeX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
@@ -264,7 +264,7 @@ const VFOMarkersContainer = ({
     // Utility function after canvasDrawingUtils:
     const generateLabelText = useCallback((marker, mode, bandwidth) => {
         const modeText = ` [${mode}]`;
-        const bwText = mode === 'USB' || mode === 'LSB' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
+        const bwText = mode === 'USB' || mode === 'LSB' || mode === 'CW' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
         return `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
     }, [formatFrequency]);
 
@@ -454,7 +454,7 @@ const VFOMarkersContainer = ({
             const edgeHandleYPosition = edgeHandleYOffset;
             const edgeHandleWidth = isSelected ? 14 : 6;
 
-            if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
+            if (mode === 'USB' || mode === 'CW' || mode === 'AM' || mode === 'FM') {
                 canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
             }
 
@@ -520,7 +520,7 @@ const VFOMarkersContainer = ({
             const edgeYMin = edgeHandleYPosition - edgeHandleHeight / 2;
             const edgeYMax = edgeHandleYPosition + edgeHandleHeight / 2;
 
-            if (mode === 'USB' || mode === 'AM' || mode === 'FM') {
+            if (mode === 'USB' || mode === 'CW' || mode === 'AM' || mode === 'FM') {
                 // Check right edge with updated Y position
                 if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - rightEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'rightEdge' };
