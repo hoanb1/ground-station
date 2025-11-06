@@ -219,6 +219,7 @@ const initialState = {
     // Playback state
     selectedPlaybackRecording: null, // Selected recording for playback
     playbackRecordingPath: '', // Path to the selected recording file
+    playbackStartTime: null, // ISO timestamp when playback started
 };
 
 // Add these new reducers to your createSlice
@@ -431,6 +432,13 @@ export const waterfallSlice = createSlice({
         clearPlaybackRecording: (state) => {
             state.selectedPlaybackRecording = null;
             state.playbackRecordingPath = '';
+            state.playbackStartTime = null;
+        },
+        setPlaybackStartTime: (state, action) => {
+            state.playbackStartTime = action.payload;
+        },
+        resetPlaybackStartTime: (state) => {
+            state.playbackStartTime = null;
         },
         updateAllVFOStates: (state, action) => {
             // action.payload is an object with vfo_number as keys and VFO state objects as values
@@ -580,6 +588,8 @@ export const {
     setSelectedPlaybackRecording,
     setPlaybackRecordingPath,
     clearPlaybackRecording,
+    setPlaybackStartTime,
+    resetPlaybackStartTime,
     updateAllVFOStates,
 } = waterfallSlice.actions;
 

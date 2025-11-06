@@ -66,6 +66,8 @@ import {
     setSelectedPlaybackRecording,
     setPlaybackRecordingPath,
     clearPlaybackRecording,
+    setPlaybackStartTime,
+    resetPlaybackStartTime,
 } from './waterfall-slice.jsx';
 
 import {useSocket} from "../common/socket.jsx";
@@ -133,6 +135,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         recordingName,
         selectedPlaybackRecording,
         playbackRecordingPath,
+        playbackStartTime,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -419,28 +422,18 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         };
     }, [isRecording, dispatch]);
 
-    // Playback timer and state
-    const [playbackDuration, setPlaybackDuration] = useState(0);
-    const [isPlaybackPaused, setIsPlaybackPaused] = useState(false);
-
+    // Set playback start time when playback streaming starts
     useEffect(() => {
-        let intervalId;
-        const isPlayingback = selectedSDRId === 'sigmf-playback' && isStreaming && !isPlaybackPaused;
-        if (isPlayingback) {
-            intervalId = setInterval(() => {
-                setPlaybackDuration((prev) => prev + 1);
-            }, 1000);
-        } else if (!isStreaming) {
-            // Reset duration when streaming stops
-            setPlaybackDuration(0);
-            setIsPlaybackPaused(false);
+        const isPlayingback = selectedSDRId === 'sigmf-playback' && isStreaming;
+
+        if (isPlayingback && !playbackStartTime) {
+            // Playback just started, set the start time
+            dispatch(setPlaybackStartTime(new Date().toISOString()));
+        } else if (!isStreaming && playbackStartTime) {
+            // Streaming stopped, reset start time
+            dispatch(resetPlaybackStartTime());
         }
-        return () => {
-            if (intervalId) {
-                clearInterval(intervalId);
-            }
-        };
-    }, [isStreaming, selectedSDRId, isPlaybackPaused]);
+    }, [isStreaming, selectedSDRId, playbackStartTime, dispatch]);
 
     const handleStartRecording = (customRecordingName) => {
         // Use custom name if provided, otherwise use state
@@ -561,7 +554,6 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         // Start streaming if not already streaming
         if (!isStreaming && selectedSDRId === 'sigmf-playback' && playbackRecordingPath) {
             socket.emit('sdr_data', 'start-streaming', { selectedSDRId });
-            setIsPlaybackPaused(false);
         }
     };
 
@@ -569,8 +561,6 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         // Stop playback completely by stopping streaming
         if (isStreaming) {
             socket.emit('sdr_data', 'stop-streaming', { selectedSDRId });
-            setPlaybackDuration(0);
-            setIsPlaybackPaused(false);
         }
     };
 
@@ -699,7 +689,7 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     onRecordingSelect={handleRecordingSelect}
                     onPlaybackPlay={handlePlaybackPlay}
                     onPlaybackStop={handlePlaybackStop}
-                    playbackDuration={playbackDuration}
+                    playbackStartTime={playbackStartTime}
                 />
             </div>
         </>

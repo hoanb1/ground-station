@@ -102,7 +102,7 @@ const PlaybackAccordion = ({
     onRecordingSelect,
     onPlaybackPlay,
     onPlaybackStop,
-    playbackDuration,
+    playbackStartTime,
 }) => {
     const { t } = useTranslation('waterfall');
     const dispatch = useDispatch();
@@ -123,6 +123,32 @@ const PlaybackAccordion = ({
 
     // State for details dialog
     const [detailsOpen, setDetailsOpen] = useState(false);
+
+    // Calculate playback duration from start time
+    const [playbackDuration, setPlaybackDuration] = useState(0);
+
+    useEffect(() => {
+        if (!playbackStartTime) {
+            setPlaybackDuration(0);
+            return;
+        }
+
+        // Update duration every second
+        const updateDuration = () => {
+            const startTime = new Date(playbackStartTime);
+            const now = new Date();
+            const elapsedSeconds = Math.floor((now - startTime) / 1000);
+            setPlaybackDuration(elapsedSeconds);
+        };
+
+        // Initial update
+        updateDuration();
+
+        // Set up interval to update every second
+        const intervalId = setInterval(updateDuration, 1000);
+
+        return () => clearInterval(intervalId);
+    }, [playbackStartTime]);
 
     // Filter, sort, and paginate recordings in the frontend
     const recordings = useMemo(() => {
