@@ -36,7 +36,7 @@ class SDRController:
     1. User manually sets SDR center frequency from UI (e.g., 437.000 MHz)
     2. SDR streams I/Q data continuously at that fixed center frequency
     3. When tracking, only the VFO overlay markers are updated with doppler shifts
-    4. VFO updates happen in main process via handle_vfo_updates_for_tracking() in startup.py
+    4. VFO updates happen in main process via handle_vfo_updates_for_tracking() in vfos/updates.py
     5. Multiple sessions can track different transmitters on the same SDR stream
 
     This controller exists for:
@@ -51,7 +51,7 @@ class SDRController:
     - Don't add center frequency updates during tracking (breaks multi-session tracking)
 
     Related files:
-    - backend/server/startup.py:handle_vfo_updates_for_tracking() - Where VFO doppler updates happen
+    - backend/vfos/updates.py:handle_vfo_updates_for_tracking() - Where VFO doppler updates happen
     - backend/sdr/sdrprocessmanager.py - Manages SDR worker processes
     - backend/tracker/logic.py:_control_rig_frequency() - Distinguishes SDR vs hardware rig behavior
     - backend/session/tracker.py - Tracks which sessions are using which SDRs/VFOs

@@ -82,7 +82,8 @@
       "am": "AM",
       "fm": "FM",
       "lsb": "LSB",
-      "usb": "USB"
+      "usb": "USB",
+      "cw": "CW"
     }
   },
   "error_dialog": {

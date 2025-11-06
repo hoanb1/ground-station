@@ -204,16 +204,17 @@ class SSBDemodulator(threading.Thread):
         """
         Demodulate SSB by selecting one sideband and taking the real component.
 
-        Uses FFT to properly select only the desired sideband (USB or LSB).
+        Uses FFT to properly select only the desired sideband (USB, LSB, or CW).
         This ensures the opposite sideband is completely rejected.
+        CW is treated as narrowband USB.
         """
         # Perform FFT to work in frequency domain
         fft_data = np.fft.fft(samples)
         freqs = np.fft.fftfreq(len(samples))
 
         # Zero out the unwanted sideband
-        if self.mode.lower() == "usb":
-            # USB: keep positive frequencies (indices where freq >= 0)
+        if self.mode.lower() in ["usb", "cw"]:
+            # USB/CW: keep positive frequencies (indices where freq >= 0)
             # Zero out negative frequencies
             fft_data[freqs < 0] = 0
         else:  # LSB
@@ -253,9 +254,9 @@ class SSBDemodulator(threading.Thread):
                     # VFO inactive - discard these samples and continue
                     continue
 
-                # Check if modulation is SSB (USB or LSB)
+                # Check if modulation is SSB (USB, LSB, or CW)
                 vfo_modulation = vfo_state.modulation.lower()
-                if vfo_modulation not in ["usb", "lsb"]:
+                if vfo_modulation not in ["usb", "lsb", "cw"]:
                     # Wrong modulation - discard these samples and continue
                     continue
 

@@ -417,7 +417,7 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
             logger.debug(f"FM demodulator ensured for session {session_id} on SDR {sdr_id}")
         return result
 
-    elif mode in ["usb", "lsb"]:
+    elif mode in ["usb", "lsb", "cw"]:
         from demodulators.ssbdemodulator import SSBDemodulator
 
         result = sdr_process_manager.start_demodulator(

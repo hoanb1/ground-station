@@ -320,6 +320,7 @@ const VfoAccordion = ({
                                 <ToggleButton value="fm">{t('vfo.modes.fm')}</ToggleButton>
                                 <ToggleButton value="lsb">{t('vfo.modes.lsb')}</ToggleButton>
                                 <ToggleButton value="usb">{t('vfo.modes.usb')}</ToggleButton>
+                                <ToggleButton value="cw">{t('vfo.modes.cw')}</ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
 

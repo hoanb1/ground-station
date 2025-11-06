@@ -877,7 +877,7 @@ class SatelliteTracker:
             # Check if this is an SDR or hardware rig
             if isinstance(self.rig_controller, SDRController):
                 # SDR: Don't set center frequency - user controls that manually from UI
-                # VFO frequency updates are handled in the main process via handle_vfo_updates_for_tracking()
+                # VFO frequency updates are handled in vfos/updates.py:handle_vfo_updates_for_tracking()
                 logger.debug(
                     f"SDR tracking - doppler freq: {self.rig_data['observed_freq']:.0f} Hz (VFO updates handled separately)"
                 )
