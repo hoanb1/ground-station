@@ -152,3 +152,145 @@ export const canvasDrawingUtils = {
  * Get the icon width constant used in label calculations
  */
 export const getVFOLabelIconWidth = () => 28;
+
+/**
+ * Calculate bandwidth change based on drag mode and frequency delta
+ * @param {number} currentBandwidth - Current bandwidth in Hz
+ * @param {number} freqDelta - Frequency change in Hz
+ * @param {string} dragMode - 'leftEdge' or 'rightEdge'
+ * @param {number} minBandwidth - Minimum allowed bandwidth
+ * @param {number} maxBandwidth - Maximum allowed bandwidth
+ * @returns {number} New bandwidth value
+ */
+export const calculateBandwidthChange = (currentBandwidth, freqDelta, dragMode, minBandwidth, maxBandwidth) => {
+    let newBandwidth;
+    if (dragMode === 'leftEdge') {
+        newBandwidth = currentBandwidth - (2 * freqDelta);
+    } else if (dragMode === 'rightEdge') {
+        newBandwidth = currentBandwidth + (2 * freqDelta);
+    } else {
+        return currentBandwidth;
+    }
+
+    return Math.round(Math.max(minBandwidth, Math.min(maxBandwidth, newBandwidth)));
+};
+
+/**
+ * Calculate VFO frequency bounds and positions based on mode
+ * @param {Object} marker - VFO marker object
+ * @param {number} startFreq - Start frequency of visible range
+ * @param {number} freqRange - Total frequency range
+ * @param {number} actualWidth - Actual canvas width
+ * @returns {Object} Bounds and positions
+ */
+export const calculateVFOFrequencyBounds = (marker, startFreq, freqRange, actualWidth) => {
+    const bandwidth = marker.bandwidth || 3000;
+    const mode = marker.mode || 'USB';
+
+    let markerLowFreq, markerHighFreq, leftEdgeX, rightEdgeX;
+
+    if (mode === 'USB' || mode === 'CW') {
+        markerLowFreq = marker.frequency;
+        markerHighFreq = marker.frequency + bandwidth;
+        leftEdgeX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
+        rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * actualWidth;
+    } else if (mode === 'LSB') {
+        markerLowFreq = marker.frequency - bandwidth;
+        markerHighFreq = marker.frequency;
+        leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * actualWidth;
+        rightEdgeX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
+    } else { // AM, FM, etc.
+        markerLowFreq = marker.frequency - bandwidth/2;
+        markerHighFreq = marker.frequency + bandwidth/2;
+        leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * actualWidth;
+        rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * actualWidth;
+    }
+
+    // Ensure edges are within bounds
+    leftEdgeX = Math.max(0, leftEdgeX);
+    rightEdgeX = Math.min(actualWidth, rightEdgeX);
+
+    return {
+        markerLowFreq,
+        markerHighFreq,
+        leftEdgeX,
+        rightEdgeX,
+        centerX: ((marker.frequency - startFreq) / freqRange) * actualWidth,
+        mode,
+        bandwidth
+    };
+};
+
+/**
+ * Generate label text for VFO marker
+ * @param {Object} marker - VFO marker object
+ * @param {string} mode - VFO mode
+ * @param {number} bandwidth - VFO bandwidth
+ * @param {Function} formatFrequency - Function to format frequency
+ * @returns {string} Label text
+ */
+export const generateVFOLabelText = (marker, mode, bandwidth, formatFrequency) => {
+    const modeText = ` [${mode}]`;
+    const bwText = mode === 'USB' || mode === 'LSB' || mode === 'CW' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
+    return `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
+};
+
+/**
+ * Calculate visible frequency range considering zoom and pan
+ * @param {number} centerFrequency - Center frequency
+ * @param {number} sampleRate - Sample rate
+ * @param {number} actualWidth - Actual canvas width
+ * @param {number} containerWidth - Container width
+ * @param {number} currentPositionX - Current pan position
+ * @returns {Object} Visible frequency range
+ */
+export const getVisibleFrequencyRange = (centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX) => {
+    // When zoomed out (actualWidth < containerWidth), we see the full spectrum
+    if (actualWidth <= containerWidth) {
+        return {
+            startFrequency: centerFrequency - sampleRate / 2,
+            endFrequency: centerFrequency + sampleRate / 2,
+            centerFrequency: centerFrequency,
+            bandwidth: sampleRate
+        };
+    }
+
+    // When zoomed in (actualWidth > containerWidth), calculate visible portion
+    const zoomFactor = actualWidth / containerWidth;
+
+    // Calculate the visible width as a fraction of the total zoomed width
+    const visibleWidthRatio = containerWidth / actualWidth;
+
+    // Calculate the pan offset as a fraction of the total zoomed width
+    // currentPositionX is negative when panned right
+    const panOffsetRatio = -currentPositionX / actualWidth;
+
+    // Calculate start and end ratios, ensuring they stay within bounds
+    const startRatio = Math.max(0, Math.min(1 - visibleWidthRatio, panOffsetRatio));
+    const endRatio = Math.min(1, startRatio + visibleWidthRatio);
+
+    // Calculate the full frequency range
+    const fullStartFreq = centerFrequency - sampleRate / 2;
+    const fullEndFreq = centerFrequency + sampleRate / 2;
+    const fullFreqRange = fullEndFreq - fullStartFreq;
+
+    // Calculate visible frequency range
+    const visibleStartFreq = fullStartFreq + (startRatio * fullFreqRange);
+    const visibleEndFreq = fullStartFreq + (endRatio * fullFreqRange);
+
+    return {
+        startFrequency: visibleStartFreq,
+        endFrequency: visibleEndFreq,
+        centerFrequency: (visibleStartFreq + visibleEndFreq) / 2,
+        bandwidth: visibleEndFreq - visibleStartFreq
+    };
+};
+
+/**
+ * Format frequency to MHz with 3 decimal places
+ * @param {number} freq - Frequency in Hz
+ * @returns {string} Formatted frequency
+ */
+export const formatFrequency = (freq) => {
+    return (freq / 1e6).toFixed(3);
+};

@@ -89,6 +89,15 @@ import WaterfallErrorDialog from "./waterfall-error-dialog.jsx";
 import useWaterfallStream from "./waterfall-stream.jsx";
 import { useTranslation } from 'react-i18next';
 import { useWaterfallSnapshot } from "./waterfall-snapshot.js";
+import {
+    generateSnapshotName,
+    toggleFullscreen as toggleFullscreenUtil,
+    setupFullscreenListeners,
+    initializeWorkerWithCanvases,
+    setupCanvasCaptureListener,
+    paintLeftMarginFiller
+} from './waterfall-utils.jsx';
+import { useWaterfallEventHandlers, useSnapshotHandlers } from './waterfall-events.jsx';
 
 // Make a new worker
 export const createExternalWorker = () => {
@@ -141,6 +150,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const lastTimestampRef = useRef(null);
     const mainWaterFallContainer = useRef(null);
     const [showSnapshotOverlay, setShowSnapshotOverlay] = useState(false);
+    const [isFullscreen, setIsFullscreen] = useState(false);
     const {
         colorMap,
         colorMaps,
@@ -221,7 +231,6 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const accumulatedRowsRef = useRef(0);
     const [bandscopeAxisYWidth, setBandscopeAxisYWidth] = useState(60);
     const [dimensions, setDimensions] = useState({ width: 0, height: 0 });
-    const [isFullscreen, setIsFullscreen] = useState(false);
 
     // Rolling window rate limiting
     const overflowRef = useRef(false);
@@ -232,153 +241,58 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const timestampWindowRef = useRef([]);
     const windowSizeMs = 1000;
 
-    const handleZoomIn = useCallback(() => {
-        if (waterfallControlRef.current) {
-            waterfallControlRef.current.zoomOnXAxisOnly(0.5, window.innerWidth / 2);
-        }
-    }, []);
+    // Use event handlers hook
+    const {
+        handleZoomIn,
+        handleZoomOut,
+        handleZoomReset,
+        toggleRotatorDottedLines,
+        handleSetAutoScalePreset
+    } = useWaterfallEventHandlers({
+        waterfallControlRef,
+        workerRef,
+        dispatch,
+        setShowRotatorDottedLines,
+        setAutoScalePreset
+    });
 
-    const handleZoomOut = useCallback(() => {
-        if (waterfallControlRef.current) {
-            waterfallControlRef.current.zoomOnXAxisOnly(-0.5, window.innerWidth / 2);
-        }
-    }, []);
+    // Use snapshot handlers hook
+    const snapshotNameGenerator = useCallback(() => {
+        return generateSnapshotName(targetSatelliteName, centerFrequency);
+    }, [targetSatelliteName, centerFrequency]);
 
-    const handleZoomReset = useCallback(() => {
-        if (waterfallControlRef.current) {
-            waterfallControlRef.current.resetCustomTransform();
-        }
-    }, []);
+    const {
+        captureSnapshotWithOverlay,
+        takeSnapshot
+    } = useSnapshotHandlers({
+        captureSnapshot,
+        generateSnapshotName: snapshotNameGenerator,
+        socket,
+        dispatch,
+        saveWaterfallSnapshot
+    });
 
-    const toggleRotatorDottedLines = useCallback((value) => {
-        console.log("Toggle Rotator Dotted Lines", value);
-        dispatch(setShowRotatorDottedLines(value));
+    // Wrap takeSnapshot to pass setShowSnapshotOverlay
+    const handleTakeSnapshot = useCallback(async () => {
+        await takeSnapshot(setShowSnapshotOverlay);
+    }, [takeSnapshot]);
 
-        // Send the toggle command to the worker
-        if (workerRef.current) {
-            workerRef.current.postMessage({
-                cmd: 'toggleRotatorDottedLines',
-                show: value,
-            });
-        }
-    }, []);
-
-    const handleSetAutoScalePreset = useCallback((preset) => {
-        console.log("Set Auto-Scale Preset:", preset);
-
-        // Update Redux state
-        dispatch(setAutoScalePreset(preset));
-
-        // Send the preset to the worker
-        if (workerRef.current) {
-            workerRef.current.postMessage({
-                cmd: 'setAutoScalePreset',
-                preset: preset,
-            });
-        }
-    }, [dispatch]);
-
-    // Shared function to capture snapshot with overlay
-    // Uses original method by default (new simplified method available but disabled for testing)
-    const captureSnapshotWithOverlay = useCallback(async (targetWidth = 1620) => {
-        try {
-            // Show snapshot overlay
-            setShowSnapshotOverlay(true);
-
-            // Use original method
-            const compositeImage = await captureSnapshot(targetWidth);
-
-            // Hide overlay after capture
-            setShowSnapshotOverlay(false);
-
-            return compositeImage;
-        } catch (error) {
-            console.error('Error capturing snapshot with overlay:', error);
-            setShowSnapshotOverlay(false);
-            return null;
-        }
-    }, [captureSnapshot]);
+    // Wrap captureSnapshotWithOverlay to pass setShowSnapshotOverlay
+    const handleCaptureSnapshotWithOverlay = useCallback(async (targetWidth = 1620) => {
+        return await captureSnapshotWithOverlay(setShowSnapshotOverlay, targetWidth);
+    }, [captureSnapshotWithOverlay]);
 
     // Expose the capture function with overlay globally for use by other components
     useEffect(() => {
-        window.captureWaterfallSnapshotWithOverlay = captureSnapshotWithOverlay;
+        window.captureWaterfallSnapshotWithOverlay = handleCaptureSnapshotWithOverlay;
         return () => {
             delete window.captureWaterfallSnapshotWithOverlay;
         };
-    }, [captureSnapshotWithOverlay]);
+    }, [handleCaptureSnapshotWithOverlay]);
 
-    const generateSnapshotName = useCallback(() => {
-        // Helper to sanitize filename
-        const sanitizeFilename = (name) => {
-            return name.replace(/[^a-zA-Z0-9\-_]/g, '_').replace(/_+/g, '_');
-        };
-
-        // Helper to format frequency
-        const formatFrequencyShort = (freqHz) => {
-            const freqMHz = freqHz / 1e6;
-            return `${freqMHz.toFixed(3).replace('.', '_')}MHz`;
-        };
-
-        const satName = sanitizeFilename(targetSatelliteName || 'unknown');
-        const freqShort = formatFrequencyShort(centerFrequency);
-
-        // Backend will append timestamp, so we just return the base name
-        return `${satName}-${freqShort}`;
-    }, [targetSatelliteName, centerFrequency]);
-
-    const takeSnapshot = useCallback(async () => {
-        try {
-            const compositeImage = await captureSnapshotWithOverlay(1620);
-            if (!compositeImage) {
-                return;
-            }
-
-            // Generate snapshot name
-            const snapshotName = generateSnapshotName();
-
-            // Send snapshot to backend using Redux async thunk
-            dispatch(saveWaterfallSnapshot({ socket, waterfallImage: compositeImage, snapshotName }))
-                .unwrap()
-                .then(() => {
-                    toast.success('Waterfall snapshot saved successfully', { autoClose: 3000 });
-                })
-                .catch((error) => {
-                    console.error('Failed to save snapshot:', error);
-                    toast.error('Failed to save snapshot');
-                });
-        } catch (error) {
-            console.error('Error in takeSnapshot:', error);
-            toast.error('Error capturing snapshot');
-        }
-    }, [socket, dispatch, captureSnapshotWithOverlay, generateSnapshotName]);
-
-    const toggleFullscreen = () => {
-        if (!document.fullscreenElement) {
-            // Enter fullscreen
-            if (mainWaterFallContainer.current.requestFullscreen) {
-                mainWaterFallContainer.current.requestFullscreen();
-            } else if (mainWaterFallContainer.current.mozRequestFullScreen) { /* Firefox */
-                mainWaterFallContainer.current.mozRequestFullScreen();
-            } else if (mainWaterFallContainer.current.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
-                mainWaterFallContainer.current.webkitRequestFullscreen();
-            } else if (mainWaterFallContainer.current.msRequestFullscreen) { /* IE/Edge */
-                mainWaterFallContainer.current.msRequestFullscreen();
-            }
-            setIsFullscreen(true);
-        } else {
-            // Exit fullscreen
-            if (document.exitFullscreen) {
-                document.exitFullscreen();
-            } else if (document.mozCancelFullScreen) { /* Firefox */
-                document.mozCancelFullScreen();
-            } else if (document.webkitExitFullscreen) { /* Chrome, Safari & Opera */
-                document.webkitExitFullscreen();
-            } else if (document.msExitFullscreen) { /* IE/Edge */
-                document.msExitFullscreen();
-            }
-            setIsFullscreen(false);
-        }
-    };
+    const toggleFullscreen = useCallback(() => {
+        toggleFullscreenUtil(mainWaterFallContainer.current, setIsFullscreen);
+    }, []);
 
     useEffect(() => {
         if (workerRef.current) {
@@ -391,169 +305,75 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
 
     useEffect(() => {
         if (waterFallCanvasRef.current && !canvasTransferredRef.current) {
-            try {
-                // Create the offscreen canvas, if it gets called twice it won't work
-                const waterfallOffscreenCanvas = waterFallCanvasRef.current.transferControlToOffscreen();
-                const bandscopeOffscreenCanvas = bandscopeCanvasRef.current.transferControlToOffscreen();
-                const dBAxisOffScreenCanvas = dBAxisScopeCanvasRef.current.transferControlToOffscreen();
-                const waterfallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current.transferControlToOffscreen();
-                canvasTransferredRef.current = true;
+            // Worker message handler
+            const handleWorkerMessage = (event) => {
+                const { type, data } = event.data;
 
-                // Initialize the worker if it doesn't exist
-                if (!workerRef.current) {
-                    workerRef.current = createExternalWorker();
-
-                    // Set up message handling from the worker
-                    workerRef.current.onmessage = (event) => {
-                        const { type, data } = event.data;
-
-                        if (type === 'metrics') {
-                            //setEventMetrics(data);
-                            eventMetrics.current = data;
-                        } else if (type === 'status') {
-                            // Optional: handle status updates from the worker
-                            //console.log('Worker status:', status);
-                        } else if (type === 'autoScaleResult') {
-                            const { dbRange, stats } = data;
-                            console.log('New dB range:', dbRange);
-                            console.log('Analysis stats:', stats);
-
-                            // Update your Redux store
-                            dispatch(setDbRange(dbRange));
-                        } else if (type === 'waterfallCaptured') {
-                            // Convert blob to data URL in main thread
-                            const blob = data.blob;
-                            const reader = new FileReader();
-                            reader.onloadend = function() {
-                                // Store the captured canvas data URL in window for retrieval
-                                window.waterfallCanvasDataURL = reader.result;
-                            };
-                            reader.onerror = function(error) {
-                                console.error('FileReader error:', error);
-                                window.waterfallCanvasDataURL = null;
-                            };
-                            reader.readAsDataURL(blob);
-                        } else if (type === 'waterfallCaptureFailed') {
-                            console.error('Waterfall capture failed:', data?.error);
-                            window.waterfallCanvasDataURL = null;
-                        }
+                if (type === 'metrics') {
+                    eventMetrics.current = data;
+                } else if (type === 'status') {
+                    // Optional: handle status updates from the worker
+                } else if (type === 'autoScaleResult') {
+                    const { dbRange, stats } = data;
+                    console.log('New dB range:', dbRange);
+                    console.log('Analysis stats:', stats);
+                    dispatch(setDbRange(dbRange));
+                } else if (type === 'waterfallCaptured') {
+                    // Convert blob to data URL in main thread
+                    const blob = data.blob;
+                    const reader = new FileReader();
+                    reader.onloadend = function() {
+                        window.waterfallCanvasDataURL = reader.result;
                     };
-                } else {
-                    console.info('Waterfall worker already exists');
+                    reader.onerror = function(error) {
+                        console.error('FileReader error:', error);
+                        window.waterfallCanvasDataURL = null;
+                    };
+                    reader.readAsDataURL(blob);
+                } else if (type === 'waterfallCaptureFailed') {
+                    console.error('Waterfall capture failed:', data?.error);
+                    window.waterfallCanvasDataURL = null;
                 }
+            };
 
-                // Transfer the canvases to the worker
-                workerRef.current.postMessage({
-                    cmd: 'initCanvas',
-                    waterfallCanvas: waterfallOffscreenCanvas,
-                    bandscopeCanvas: bandscopeOffscreenCanvas,
-                    dBAxisCanvas: dBAxisOffScreenCanvas,
-                    waterfallLeftMarginCanvas: waterfallLeftMarginCanvas,
-                    config: {
-                        width: waterFallCanvasWidth,
-                        height: waterFallCanvasHeight,
-                        colorMap: colorMap,
-                        dbRange: dbRange,
-                        fftSize: fftSize,
-                        showRotatorDottedLines: showRotatorDottedLines,
-                        theme: {
-                            palette: {
-                                background: {
-                                    default: theme.palette.background.default,
-                                    paper: theme.palette.background.paper,
-                                    elevated: theme.palette.background.elevated,
-                                },
-                                border: {
-                                    main: theme.palette.border.main,
-                                    light: theme.palette.border.light,
-                                    dark: theme.palette.border.dark,
-                                },
-                                overlay: {
-                                    light: theme.palette.overlay.light,
-                                    medium: theme.palette.overlay.medium,
-                                    dark: theme.palette.overlay.dark,
-                                },
-                                text: {
-                                    primary: theme.palette.text.primary,
-                                    secondary: theme.palette.text.secondary,
-                                }
-                            }
-                        }
-                    }
-                }, [waterfallOffscreenCanvas, bandscopeOffscreenCanvas, dBAxisOffScreenCanvas, waterfallLeftMarginCanvas]);
-
-                console.log('Canvases successfully transferred');
-
-            } catch (error) {
-                console.error('Canvases transfer failed:', error);
-                // Reset the flag if transfer failed
-                canvasTransferredRef.current = false;
-            }
+            // Initialize worker with canvases
+            initializeWorkerWithCanvases({
+                waterFallCanvasRef,
+                bandscopeCanvasRef,
+                dBAxisScopeCanvasRef,
+                waterFallLeftMarginCanvasRef,
+                waterFallCanvasWidth,
+                waterFallCanvasHeight,
+                colorMap,
+                dbRange,
+                fftSize,
+                showRotatorDottedLines,
+                theme,
+                workerRef,
+                canvasTransferredRef,
+                createWorker: createExternalWorker,
+                onMessage: handleWorkerMessage
+            });
         }
 
         return () => {
-            // // Clean up
-            // if (workerRef.current) {
-            //     workerRef.current.postMessage({ cmd: 'releaseCanvas' });
-            // }
-
-            // We don't want to clean up the worker or reset the transfer flag
-            // in the cleanup function since StrictMode will call this
-            // and then immediately call the effect again
-
-            // Only clean up when component is actually unmounting
-            // We can't easily detect this in the cleanup function,
-            // so we'll handle it elsewhere
+            // Cleanup handled elsewhere to avoid StrictMode issues
         };
-    }, []);
+    }, [waterFallCanvasWidth, waterFallCanvasHeight, colorMap, dbRange, fftSize, showRotatorDottedLines, theme, dispatch]);
 
     // Add event listener for fullscreen change
     useEffect(() => {
-        const handleFullscreenChange = () => {
-            setIsFullscreen(!!document.fullscreenElement);
-        };
-
-        document.addEventListener('fullscreenchange', handleFullscreenChange);
-        document.addEventListener('webkitfullscreenchange', handleFullscreenChange);
-        document.addEventListener('mozfullscreenchange', handleFullscreenChange);
-        document.addEventListener('MSFullscreenChange', handleFullscreenChange);
-
-        return () => {
-            document.removeEventListener('fullscreenchange', handleFullscreenChange);
-            document.removeEventListener('webkitfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('mozfullscreenchange', handleFullscreenChange);
-            document.removeEventListener('MSFullscreenChange', handleFullscreenChange);
-        };
+        return setupFullscreenListeners(setIsFullscreen);
     }, []);
 
     // Add event listener for waterfall canvas capture
     useEffect(() => {
-        const handleCaptureCanvas = () => {
-            if (workerRef.current) {
-                // Request canvas capture from worker
-                workerRef.current.postMessage({
-                    cmd: 'captureWaterfallCanvas'
-                });
-            } else {
-                console.error('Worker ref is not available');
-            }
-        };
-
-        window.addEventListener('capture-waterfall-canvas', handleCaptureCanvas);
-
-        return () => {
-            window.removeEventListener('capture-waterfall-canvas', handleCaptureCanvas);
-        };
+        return setupCanvasCaptureListener(workerRef);
     }, []);
 
     // Paint the waterfall left margin filler canvas with background color
     useEffect(() => {
-        if (waterFallLeftMarginFillerRef.current) {
-            const canvas = waterFallLeftMarginFillerRef.current;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = theme.palette.background.paper;
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
+        paintLeftMarginFiller(waterFallLeftMarginFillerRef.current, theme.palette.background.paper);
     }, [theme.palette.background.paper, bandscopeAxisYWidth]);
 
     // Update refs when Redux state changes
@@ -713,7 +533,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                     vfoColors={vfoColors}
                     vfoActive={vfoActive}
                     toggleVfo={handleToggleVfo}
-                    takeSnapshot={takeSnapshot}
+                    takeSnapshot={handleTakeSnapshot}
                     fftDataOverflow={fftDataOverflow}
                     showRotatorDottedLines={showRotatorDottedLines}
                     toggleRotatorDottedLines={toggleRotatorDottedLines}
