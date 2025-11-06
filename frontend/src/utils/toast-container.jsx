@@ -29,6 +29,7 @@ export const ToastContainerWithStyles = () => {
             <style>{`
                 .Toastify__toast-container {
                     top: 75px !important;
+                    z-index: 1299 !important;
                 }
 
                 .Toastify__toast-container,
