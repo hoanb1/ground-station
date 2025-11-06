@@ -240,20 +240,33 @@ const VfoAccordion = ({
                                         padding: '4px 6px',
                                         fontSize: '0.8rem',
                                         border: '1px solid',
-                                        borderColor: 'overlay.light',
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
                                         borderRadius: '4px',
                                         color: 'text.secondary',
                                         textAlign: 'center',
                                         textTransform: 'none',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease-in-out',
                                         '&.Mui-selected': {
                                             backgroundColor: 'primary.main',
                                             color: 'primary.contrastText',
+                                            borderColor: 'primary.main',
+                                            fontWeight: 600,
+                                            boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
                                             '&:hover': {
                                                 backgroundColor: 'primary.dark',
+                                                boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
                                             }
                                         },
                                         '&:hover': {
-                                            backgroundColor: 'overlay.light',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            borderColor: 'rgba(255, 255, 255, 0.4)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
                                         }
                                     }
                                 }}
@@ -297,20 +310,33 @@ const VfoAccordion = ({
                                         padding: '4px 6px',
                                         fontSize: '0.8rem',
                                         border: '1px solid',
-                                        borderColor: 'overlay.light',
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
                                         borderRadius: '4px',
                                         color: 'text.secondary',
                                         textAlign: 'center',
                                         textTransform: 'none',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease-in-out',
                                         '&.Mui-selected': {
                                             backgroundColor: 'primary.main',
                                             color: 'primary.contrastText',
+                                            borderColor: 'primary.main',
+                                            fontWeight: 600,
+                                            boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
                                             '&:hover': {
                                                 backgroundColor: 'primary.dark',
+                                                boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
                                             }
                                         },
                                         '&:hover': {
-                                            backgroundColor: 'overlay.light',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            borderColor: 'rgba(255, 255, 255, 0.4)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
                                         }
                                     }
                                 }}
@@ -354,20 +380,33 @@ const VfoAccordion = ({
                                         padding: '4px 6px',
                                         fontSize: '0.8rem',
                                         border: '1px solid',
-                                        borderColor: 'overlay.light',
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
                                         borderRadius: '4px',
                                         color: 'text.secondary',
                                         textAlign: 'center',
                                         textTransform: 'none',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease-in-out',
                                         '&.Mui-selected': {
                                             backgroundColor: 'primary.main',
                                             color: 'primary.contrastText',
+                                            borderColor: 'primary.main',
+                                            fontWeight: 600,
+                                            boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
                                             '&:hover': {
                                                 backgroundColor: 'primary.dark',
+                                                boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
                                             }
                                         },
                                         '&:hover': {
-                                            backgroundColor: 'overlay.light',
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            borderColor: 'rgba(255, 255, 255, 0.4)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
                                         }
                                     }
                                 }}

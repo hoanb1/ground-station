@@ -97,31 +97,18 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                     current_vfo.bandwidth if current_vfo and current_vfo.bandwidth > 0 else 3000
                 )
 
-                # Calculate frequency offset for USB/LSB/CW modes
-                # USB/CW: audio is above carrier, offset up by half bandwidth to center
-                # LSB: audio is below carrier, offset down by half bandwidth to center
-                frequency_offset: float = 0.0
-                mode_normalized = transmitter_mode.lower() if transmitter_mode else None
-
                 # Normalize digital modes to FM for VFO demodulation
                 # Digital modes (FSK/AFSK/PSK/BPSK/QPSK/GMSK) are transmitted over FM carriers
+                mode_normalized = transmitter_mode.lower() if transmitter_mode else None
                 if mode_normalized in ["fsk", "afsk", "psk", "bpsk", "qpsk", "gmsk"]:
                     mode_normalized = "fm"
                     logger.debug(
                         f"Digital mode {transmitter_mode} mapped to FM for VFO demodulation"
                     )
 
-                if mode_normalized in ["usb", "upper sideband", "cw"]:
-                    frequency_offset = vfo_bandwidth / 2
-                    logger.debug(
-                        f"{mode_normalized.upper()} mode detected, applying +{frequency_offset:.0f} Hz offset"
-                    )
-                elif mode_normalized in ["lsb", "lower sideband"]:
-                    frequency_offset = -vfo_bandwidth / 2
-                    logger.debug(f"LSB mode detected, applying {frequency_offset:.0f} Hz offset")
-
-                # Apply offset to doppler-corrected frequency
-                final_freq = observed_freq + frequency_offset
+                # Use the doppler-corrected frequency directly
+                # The VFO visualization handles bandwidth positioning based on mode
+                final_freq = observed_freq
 
                 # Update VFO state with offset frequency
                 # Only set active=True when rig_state is "tracking"
@@ -134,8 +121,8 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                         "center_freq": int(final_freq),
                         "active": True,
                     }
-                    if transmitter_mode:
-                        update_params["modulation"] = transmitter_mode.lower()
+                    if mode_normalized:
+                        update_params["modulation"] = mode_normalized
                     vfo_manager.update_vfo_state(**update_params)
                 else:
                     # Only update frequency and modulation, don't touch active state
@@ -144,8 +131,8 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                         "vfo_id": vfo_number,
                         "center_freq": int(final_freq),
                     }
-                    if transmitter_mode:
-                        update_params["modulation"] = transmitter_mode.lower()
+                    if mode_normalized:
+                        update_params["modulation"] = mode_normalized
                     vfo_manager.update_vfo_state(**update_params)
 
                 # Emit VFO states to this specific session
@@ -153,8 +140,7 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
 
                 logger.debug(
                     f"Emitted VFO {vfo_id} update to session {session_id}: "
-                    f"base_freq={observed_freq:.0f} Hz, offset={frequency_offset:.0f} Hz, "
-                    f"final_freq={final_freq:.0f} Hz, mode={transmitter_mode}, "
+                    f"freq={final_freq:.0f} Hz, mode={mode_normalized or transmitter_mode}, "
                     f"bandwidth={vfo_bandwidth} Hz, doppler={doppler_shift:.0f} Hz, "
                     f"auto_activate={should_activate}"
                 )
