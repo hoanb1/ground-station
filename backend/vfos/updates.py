@@ -103,6 +103,14 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 frequency_offset: float = 0.0
                 mode_normalized = transmitter_mode.lower() if transmitter_mode else None
 
+                # Normalize digital modes to FM for VFO demodulation
+                # Digital modes (FSK/AFSK/PSK/BPSK/QPSK/GMSK) are transmitted over FM carriers
+                if mode_normalized in ["fsk", "afsk", "psk", "bpsk", "qpsk", "gmsk"]:
+                    mode_normalized = "fm"
+                    logger.debug(
+                        f"Digital mode {transmitter_mode} mapped to FM for VFO demodulation"
+                    )
+
                 if mode_normalized in ["usb", "upper sideband", "cw"]:
                     frequency_offset = vfo_bandwidth / 2
                     logger.debug(
