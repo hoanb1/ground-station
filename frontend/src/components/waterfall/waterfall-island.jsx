@@ -112,6 +112,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     const bandscopeCanvasRef = useRef(null);
     const dBAxisScopeCanvasRef = useRef(null);
     const waterFallLeftMarginCanvasRef = useRef(null);
+    const waterFallLeftMarginFillerRef = useRef(null);
     const workerRef = useRef(null);
     const dottedLineImageDataRef = useRef(null);
     const canvasTransferredRef = useRef(false);
@@ -278,11 +279,13 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
     }, [dispatch]);
 
     // Shared function to capture snapshot with overlay
+    // Uses original method by default (new simplified method available but disabled for testing)
     const captureSnapshotWithOverlay = useCallback(async (targetWidth = 1620) => {
         try {
             // Show snapshot overlay
             setShowSnapshotOverlay(true);
 
+            // Use original method
             const compositeImage = await captureSnapshot(targetWidth);
 
             // Hide overlay after capture
@@ -543,6 +546,16 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         };
     }, []);
 
+    // Paint the waterfall left margin filler canvas with background color
+    useEffect(() => {
+        if (waterFallLeftMarginFillerRef.current) {
+            const canvas = waterFallLeftMarginFillerRef.current;
+            const ctx = canvas.getContext('2d');
+            ctx.fillStyle = theme.palette.background.paper;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+    }, [theme.palette.background.paper, bandscopeAxisYWidth]);
+
     // Update refs when Redux state changes
     useEffect(() => {
         centerFrequencyRef.current = centerFrequency;
@@ -774,6 +787,8 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                             }}
                         />
                         <canvas
+                            ref={waterFallLeftMarginFillerRef}
+                            className={"waterfall-left-margin-filler"}
                             width={bandscopeAxisYWidth}
                             height={21}
                             style={{

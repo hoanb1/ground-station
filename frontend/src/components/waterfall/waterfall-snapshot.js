@@ -98,14 +98,15 @@ export const useWaterfallSnapshot = ({
             } else if (canvas.classList.contains('frequency-band-overlay')) {
                 // Look for bandplan overlay canvas by its class name
                 bandplanCanvas = canvas;
-            } else if (canvas.height === 21) {
-                // Small canvas between dB axes
+            } else if (canvas.classList.contains('waterfall-left-margin-filler')) {
+                // Small canvas between dB axes (frequency scale left margin filler)
                 frequencyScaleLeftCanvas = canvas;
             } else if (
                 canvas !== bandscopeCanvas &&
                 canvas.classList.contains('waterfall-canvas') === false &&
                 canvas.classList.contains('bandscope-canvas') === false &&
                 canvas.classList.contains('waterfall-left-margin-canvas') === false &&
+                canvas.classList.contains('waterfall-left-margin-filler') === false &&
                 canvas.classList.contains('bookmark-canvas') === false &&
                 canvas.classList.contains('frequency-band-overlay') === false
             ) {
