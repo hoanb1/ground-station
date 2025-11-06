@@ -1,5 +1,5 @@
 import logging
-from dataclasses import dataclass
+from dataclasses import asdict, dataclass
 from typing import Dict, List, Optional
 
 # Configure logging for the worker process
@@ -125,3 +125,17 @@ class VFOManager:
                 return vfo_state
 
         return None
+
+    async def emit_vfo_states(self, sio, session_id: str) -> None:
+        """Emit all VFO states for a specific session to that session's room."""
+        self._ensure_session_vfos(session_id)
+        session_vfos = self._session_vfo_states[session_id]
+
+        # Convert VFO states to dictionaries for JSON serialization
+        vfo_states_dict = {vfo_id: asdict(vfo_state) for vfo_id, vfo_state in session_vfos.items()}
+
+        await sio.emit(
+            "vfo-states",
+            vfo_states_dict,
+            room=session_id,
+        )

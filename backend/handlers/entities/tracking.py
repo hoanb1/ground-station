@@ -130,6 +130,23 @@ async def set_tracking_state(
         # Store the tracking state in the db
         tracking_state_reply = await crud.tracking_state.set_tracking_state(dbsession, data)
 
+        # Track session's rig and VFO selection
+        if data and "value" in data:
+            value = data["value"]
+            rig_id = value.get("rig_id")
+            rig_vfo = value.get("rig_vfo")
+
+            # Import here to avoid circular dependency
+            from session.tracker import session_tracker
+
+            if rig_id and rig_id != "none":
+                session_tracker.set_session_rig(sid, rig_id)
+                logger.debug(f"Session {sid} tracking rig {rig_id}")
+
+            if rig_vfo and rig_vfo != "none":
+                session_tracker.set_session_vfo(sid, rig_vfo)
+                logger.debug(f"Session {sid} selected VFO {rig_vfo}")
+
         # Emit so that any open browsers are also informed of any change
         await emit_tracker_data(dbsession, sio, logger)
         await emit_ui_tracker_values(dbsession, sio, logger)

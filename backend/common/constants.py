@@ -40,6 +40,9 @@ class SocketEvents:
     # Audio
     AUDIO_DATA = "audio-data"
 
+    # VFO
+    VFO_STATES = "vfo-states"
+
     # TLE Sync
     SAT_SYNC_EVENTS = "sat-sync-events"
 

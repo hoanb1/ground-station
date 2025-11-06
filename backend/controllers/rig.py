@@ -17,7 +17,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Tuple
+from typing import AsyncGenerator, Optional, Tuple
 
 from common.arguments import arguments as args
 
@@ -25,7 +25,7 @@ from common.arguments import arguments as args
 class RigController:
     def __init__(
         self,
-        model: int = None,  # Model is no longer used directly
+        model: Optional[int] = None,  # Model is no longer used directly
         host: str = "127.0.0.1",
         port: int = 4532,
         verbose: bool = False,
@@ -42,8 +42,8 @@ class RigController:
         self.port = port
         self.device_path = device_path
         self.verbose = verbose
-        self.reader = None
-        self.writer = None
+        self.reader: Optional[asyncio.StreamReader] = None
+        self.writer: Optional[asyncio.StreamWriter] = None
         self.connected = False
         self.timeout = timeout
 
@@ -60,9 +60,10 @@ class RigController:
             self.logger.debug(f"Connecting to rig at {self.device_path}")
 
             # Create a persistent connection
-            self.reader, self.writer = await asyncio.wait_for(
+            reader_writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port), timeout=self.timeout
             )
+            self.reader, self.writer = reader_writer
 
             self.connected = True
             self.logger.info(f"Successfully connected to rig at {self.device_path}")
@@ -81,7 +82,7 @@ class RigController:
             # Send a quit command (optional)
             try:
                 await self._send_command("q", waitforreply=False)
-            except Exception as e:
+            except Exception:
                 self.logger.warning("Error sending quit command to rig")
 
             # Close the connection
@@ -127,9 +128,12 @@ class RigController:
                         # Ignore errors during cleanup
                         pass
 
-    async def _send_command(self, command: str, waitforreply=True) -> str:
+    async def _send_command(self, command: str, waitforreply: bool = True) -> str:
         """Send a command to the rig and get the response."""
         self.check_connection()
+
+        if self.writer is None or self.reader is None:
+            raise RuntimeError("Writer or reader is None")
 
         try:
             # Add newline to the command
@@ -285,7 +289,7 @@ class RigController:
             self.logger.info("Setting rig to standby")
 
             # Format the power status command for standby (0)
-            command = f"set_powerstat 0"
+            command = "set_powerstat 0"
             response = await self._send_command(command)
 
             # Check the response
@@ -311,13 +315,30 @@ class RigController:
         return True
 
     async def set_frequency(
-        self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0
+        self,
+        target_freq: float,
+        update_interval: float = 0.5,
+        freq_tolerance: float = 10.0,
+        vfo: str = "1",
     ) -> AsyncGenerator[Tuple[float, bool], None]:
         """Set the rig frequency and yield updates until it reaches the target."""
+        # Map VFO string to rigctld VFO name
+        vfo_map = {
+            "1": "VFOA",
+            "2": "VFOB",
+            "none": "VFOA",  # Default to VFO A
+        }
+        rigctld_vfo = vfo_map.get(vfo, "VFOA")
+
         # Start the frequency setting operation
-        self.logger.debug(f"Setting rig frequency to {target_freq} Hz")
+        self.logger.debug(f"Setting rig frequency to {target_freq} Hz on VFO {vfo}")
 
         try:
+            # First, set the VFO if needed
+            vfo_command = f"V {rigctld_vfo}"
+            vfo_response = await self._send_command(vfo_command)
+            self.logger.debug(f"Set VFO command: response={vfo_response}")
+
             # Format the set frequency command
             command = f"F {target_freq}"
             response = await self._send_command(command)

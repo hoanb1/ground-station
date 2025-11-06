@@ -95,10 +95,13 @@
   },
   "rig_control_labels": {
     "rig_label": "Radio rig",
+    "vfo_label": "VFO",
     "transmitter_label": "Transmitter",
     "no_rig_control": "[no radio rig control]",
     "select_rig": "select a rig",
     "select_sdr": "select a SDR",
+    "no_vfo_control": "[no VFO control]",
+    "select_vfo": "select a VFO",
     "no_frequency_control": "[no frequency control]",
     "select_transmitter": "select a transmitter",
     "no_transmitters": "No transmitters available for this satellite"

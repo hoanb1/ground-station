@@ -87,7 +87,7 @@ class SDRProcessManager:
         self.logger = logging.getLogger("sdr-manager")
         self.sio = sio
         self.processes = {}  # Map of sdr_id to process information
-        self.session_to_sdr = {}  # Map of session_id (client_id) to sdr_id
+        # Note: session_to_sdr mapping is now handled by SessionTracker singleton
         signal.signal(signal.SIGINT, self._signal_handler)
         signal.signal(signal.SIGTERM, self._signal_handler)
 
@@ -285,8 +285,7 @@ class SDRProcessManager:
             # Add this client to the room
             await self.sio.enter_room(client_id, sdr_id)
 
-            # Map session to SDR
-            self.session_to_sdr[client_id] = sdr_id
+            # Note: session-to-SDR mapping is handled by SessionTracker in handlers/entities/sdr.py
 
             # Send a message to the UI of the specific client that streaming started
             await self.sio.emit(SocketEvents.SDR_STATUS, {"streaming": True}, room=client_id)
@@ -396,8 +395,7 @@ class SDRProcessManager:
             # Add this client to the room
             await self.sio.enter_room(client_id, sdr_id)
 
-            # Map session to SDR
-            self.session_to_sdr[client_id] = sdr_id
+            # Note: session-to-SDR mapping is handled by SessionTracker in handlers/entities/sdr.py
 
             # Start async task to monitor the data queue
             asyncio.create_task(self._monitor_data_queue(sdr_id))
@@ -427,9 +425,7 @@ class SDRProcessManager:
                 # Make a client leave a specific room
                 await self.sio.leave_room(client_id, sdr_id)
 
-                # Remove session-to-SDR mapping
-                if client_id in self.session_to_sdr:
-                    del self.session_to_sdr[client_id]
+                # Note: session-to-SDR mapping cleanup is handled by SessionTracker in handlers/socket.py
 
                 # Stop any active demodulator for this client
                 self.stop_demodulator(sdr_id, client_id)

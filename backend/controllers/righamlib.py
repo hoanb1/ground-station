@@ -18,11 +18,14 @@ import asyncio
 import logging
 from concurrent.futures import ProcessPoolExecutor
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Tuple
+from typing import TYPE_CHECKING, Any, AsyncGenerator, Tuple
 
 from Hamlib import Hamlib
 
 from common.arguments import arguments as args
+
+if TYPE_CHECKING:
+    from Hamlib import Rig  # noqa: F401
 
 
 class RigController:
@@ -52,7 +55,7 @@ class RigController:
         self.model = model
         self.device_path = device_path
         self.verbose = verbose
-        self.rig = None
+        self.rig: Any = None
         self.connected = False
         self.timeout = timeout
 
@@ -92,7 +95,7 @@ class RigController:
             return True
 
         try:
-            close_task = asyncio.create_task(asyncio.to_thread(self.rig.close))
+            close_task = asyncio.create_task(asyncio.to_thread(self.rig.close))  # type: ignore[attr-defined]
 
             # Wait with timeout
             await asyncio.wait_for(close_task, timeout=3.0)
@@ -190,7 +193,7 @@ class RigController:
         self.check_connection()
 
         try:
-            freq = await asyncio.to_thread(self.rig.get_freq)
+            freq = await asyncio.to_thread(self.rig.get_freq)  # type: ignore[attr-defined]
             assert freq is not None, "Frequency is None"
 
             self.logger.debug(f"Current frequency: {freq} Hz")
@@ -199,14 +202,14 @@ class RigController:
             self.logger.error(f"Error getting frequency: {e}")
             raise RuntimeError(f"Error getting frequency: {e}")
 
-        return round(freq, 0)
+        return float(round(freq, 0))
 
     async def get_mode(self) -> Tuple[str, int]:
 
         self.check_connection()
 
         try:
-            mode, bandwidth = await asyncio.to_thread(self.rig.get_mode)
+            mode, bandwidth = await asyncio.to_thread(self.rig.get_mode)  # type: ignore[attr-defined]
             assert mode is not None, "Mode is None"
 
             self.logger.debug(f"Current mode: {mode}, bandwidth: {bandwidth} Hz")
@@ -284,16 +287,26 @@ class RigController:
         return error_messages.get(error_code, f"Unknown error code: {error_code}")
 
     async def set_frequency(
-        self, target_freq: float, update_interval: float = 0.5, freq_tolerance: float = 10.0
+        self,
+        target_freq: float,
+        update_interval: float = 0.5,
+        freq_tolerance: float = 10.0,
+        vfo: str = "1",
     ) -> AsyncGenerator[Tuple[float, bool], None]:
 
+        # Map VFO string to Hamlib VFO constant
+        vfo_map = {
+            "1": Hamlib.RIG_VFO_A,
+            "2": Hamlib.RIG_VFO_B,
+            "none": Hamlib.RIG_VFO_A,  # Default to VFO A
+        }
+        hamlib_vfo = vfo_map.get(vfo, Hamlib.RIG_VFO_A)
+
         # Start the frequency setting operation
-        self.logger.info(f"Setting rig frequency to {target_freq} Hz")
+        self.logger.info(f"Setting rig frequency to {target_freq} Hz on VFO {vfo}")
 
         try:
-            status = await asyncio.to_thread(
-                self.rig.set_freq, _freq_t=target_freq, vfo=Hamlib.RIG_VFO_A
-            )
+            status = await asyncio.to_thread(self.rig.set_freq, _freq_t=target_freq, vfo=hamlib_vfo)  # type: ignore[attr-defined]
             self.logger.debug(f"Set frequency command: status={status}")
 
         except Exception as e:
@@ -328,7 +341,7 @@ class RigController:
 
         try:
             self.logger.info(f"Setting rig mode to {mode}, bandwidth={bandwidth} Hz")
-            status = await asyncio.to_thread(self.rig.set_mode, mode, bandwidth)
+            status = await asyncio.to_thread(self.rig.set_mode, mode, bandwidth)  # type: ignore[attr-defined]
             self.logger.debug(f"Set mode command: status={status}")
 
             return True

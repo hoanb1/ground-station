@@ -107,7 +107,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
     'targetSatTrack/setTrackingStateBackend',
     async ({socket, data}, {getState, dispatch, rejectWithValue}) => {
         const state = getState();
-        const {norad_id, rotator_state, rig_state, group_id, rig_id, rotator_id, transmitter_id} = data;
+        const {norad_id, rotator_state, rig_state, group_id, rig_id, rotator_id, transmitter_id, rig_vfo} = data;
         const trackState = {
             'name': 'satellite-tracking',
             'value': {
@@ -118,6 +118,7 @@ export const setTrackingStateInBackend = createAsyncThunk(
                 'rotator_id': rotator_id,
                 'rig_id': rig_id,
                 'transmitter_id': transmitter_id,
+                'rig_vfo': rig_vfo,
             }
         };
         return new Promise((resolve, reject) => {
@@ -287,6 +288,7 @@ const targetSatTrackSlice = createSlice({
         starting: true,
         selectedRadioRig: "",
         selectedRotator: "",
+        selectedRigVFO: "none",
         openMapSettingsDialog: false,
         nextPassesHours: 24.0,
         cachedPasses: {},
@@ -411,6 +413,7 @@ const targetSatTrackSlice = createSlice({
             state.selectedRadioRig = action.payload['rig_id'];
             state.selectedRotator = action.payload['rotator_id'];
             state.selectedTransmitter = action.payload['transmitter_id'];
+            // Don't sync selectedRigVFO from backend - it's session-specific
         },
         setSatellitePasses(state, action) {
             state.satellitePasses = action.payload;
@@ -501,6 +504,9 @@ const targetSatTrackSlice = createSlice({
         },
         setRotator(state, action) {
             state.selectedRotator = action.payload;
+        },
+        setRigVFO(state, action) {
+            state.selectedRigVFO = action.payload;
         },
         setOpenMapSettingsDialog(state, action) {
             state.openMapSettingsDialog = action.payload;
@@ -660,6 +666,7 @@ const targetSatTrackSlice = createSlice({
                 state.trackingState = action.payload['value'];
                 state.selectedRadioRig = action.payload['value']['rig_id'];
                 state.selectedRotator = action.payload['value']['rotator_id'];
+                // Don't sync selectedRigVFO from backend - it's session-specific
                 state.error = null;
             })
             .addCase(getTrackingStateFromBackend.rejected, (state, action) => {
@@ -750,6 +757,7 @@ export const {
     setStarting,
     setRadioRig,
     setRotator,
+    setRigVFO,
     setOpenMapSettingsDialog,
     setNextPassesHours,
     setSelectedTransmitter,

@@ -74,6 +74,7 @@ class SatelliteTracker:
         self.current_rotator_id = "none"
         self.current_rig_id = "none"
         self.current_transmitter_id = "none"
+        self.current_rig_vfo = "none"
         self.current_rotator_state = "disconnected"
         self.current_rig_state = "disconnected"
         self.current_norad_id = None
@@ -873,15 +874,31 @@ class SatelliteTracker:
     async def _control_rig_frequency(self):
         """Control rig frequency based on doppler calculations."""
         if self.rig_controller and self.current_rig_state == "tracking":
-            frequency_gen = self.rig_controller.set_frequency(self.rig_data["observed_freq"])
+            # Check if this is an SDR or hardware rig
+            if isinstance(self.rig_controller, SDRController):
+                # SDR: Don't set center frequency - user controls that manually from UI
+                # VFO frequency updates are handled in the main process via handle_vfo_updates_for_tracking()
+                logger.debug(
+                    f"SDR tracking - doppler freq: {self.rig_data['observed_freq']:.0f} Hz (VFO updates handled separately)"
+                )
 
-            try:
-                current_frequency, is_tuning = await anext(frequency_gen)
-                self.rig_data["tuning"] = is_tuning
+            else:
+                # Hardware rig: Use the global rig_vfo to tune specific VFO
+                frequency_gen = self.rig_controller.set_frequency(
+                    self.rig_data["observed_freq"], vfo=self.current_rig_vfo
+                )
 
-                logger.debug(f"Current frequency: {current_frequency}, tuning={is_tuning}")
-            except StopAsyncIteration:
-                logger.info(f"Tuning to frequency {self.rig_data['observed_freq']} complete")
+                try:
+                    current_frequency, is_tuning = await anext(frequency_gen)
+                    self.rig_data["tuning"] = is_tuning
+
+                    logger.debug(
+                        f"Hardware rig VFO {self.current_rig_vfo} frequency: {current_frequency}, tuning={is_tuning}"
+                    )
+                except StopAsyncIteration:
+                    logger.info(
+                        f"Hardware rig tuning VFO {self.current_rig_vfo} to frequency {self.rig_data['observed_freq']} complete"
+                    )
 
     async def _control_rotator_position(self, skypoint):
         """Control rotator position for tracking or nudging."""
@@ -1016,6 +1033,7 @@ class SatelliteTracker:
                 self.current_rotator_id = tracker.get("rotator_id", "none")
                 self.current_rig_id = tracker.get("rig_id", "none")
                 self.current_transmitter_id = tracker.get("transmitter_id", "none")
+                self.current_rig_vfo = tracker.get("rig_vfo", "none")
                 self.current_rotator_state = tracker.get("rotator_state", "disconnected")
                 self.current_rig_state = tracker.get("rig_state", "disconnected")
 

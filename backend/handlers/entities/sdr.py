@@ -141,6 +141,11 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 logger.info(f"Creating an SDR session for client {client_id}")
                 add_sdr_session(client_id, sdr_config)
 
+                # Track session streaming in session_tracker
+                from session.tracker import session_tracker
+
+                session_tracker.register_session_streaming(client_id, sdr_id)
+
                 # Check if other clients are already connected in the same room (SDR),
                 # if so then send them an update
                 if sdr_process_manager.processes.get(sdr_id, None) is not None:
@@ -451,7 +456,10 @@ def handle_vfo_demodulator_state(vfo_state, session_id, logger):
     if not vfo_state:
         return
 
-    sdr_id = sdr_process_manager.session_to_sdr.get(session_id)
+    # Get SDR ID from SessionTracker
+    from session.tracker import session_tracker
+
+    sdr_id = session_tracker.get_session_sdr(session_id)
     if not sdr_id:
         return
 

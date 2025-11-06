@@ -22,6 +22,7 @@ from handlers.entities.sdr import sdr_data_request_routing
 from handlers.routing import dispatch_request, handler_registry
 from sdr.utils import cleanup_sdr_session
 from server.shutdown import cleanup_everything
+from session.tracker import session_tracker
 
 # hold a list of sessions
 SESSIONS: Dict[str, Dict] = {}
@@ -57,6 +58,8 @@ def register_socketio_handlers(sio):
     async def disconnect(sid, environ):
         logger.info(f'Client {sid} from {SESSIONS[sid]["REMOTE_ADDR"]} disconnected')
         del SESSIONS[sid]
+        # Clean up session tracking
+        session_tracker.clear_session(sid)
         await cleanup_sdr_session(sid)
 
     @sio.on("sdr_data")

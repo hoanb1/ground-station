@@ -15,15 +15,51 @@
 
 
 import logging
-from typing import AsyncGenerator, Tuple
+from typing import Any, AsyncGenerator, Dict, Optional, Tuple
 
 from common.arguments import arguments as args
+from vfos.state import VFOManager
 
 
 class SDRController:
+    """
+    Controller for SDR (Software-Defined Radio) devices used in satellite tracking.
+
+    IMPORTANT ARCHITECTURAL NOTE:
+    This controller is a STUB/PLACEHOLDER and does NOT control SDR center frequency during tracking.
+
+    Why SDRs are different from hardware rigs:
+    - Hardware rigs (righamlib.py, rig.py): Physically tune VFO1/VFO2 to doppler-corrected frequencies
+    - SDRs: User manually sets center frequency ONCE, then VFO software windows are updated
+
+    How SDR tracking works:
+    1. User manually sets SDR center frequency from UI (e.g., 437.000 MHz)
+    2. SDR streams I/Q data continuously at that fixed center frequency
+    3. When tracking, only the VFO overlay markers are updated with doppler shifts
+    4. VFO updates happen in main process via handle_vfo_updates_for_tracking() in startup.py
+    5. Multiple sessions can track different transmitters on the same SDR stream
+
+    This controller exists for:
+    - Type compatibility with RigController/HamlibController interfaces
+    - Future SDR control features (gain, sample rate, antenna switching)
+    - VFO manager integration (update_vfo_with_doppler method)
+
+    If you want to add SDR control features:
+    - Gain control: Add methods to communicate with sdr_process_manager
+    - Sample rate changes: Use sdr_process_manager.update_configuration()
+    - Antenna switching: Add hamlib-style commands for SDRs that support it
+    - Don't add center frequency updates during tracking (breaks multi-session tracking)
+
+    Related files:
+    - backend/server/startup.py:handle_vfo_updates_for_tracking() - Where VFO doppler updates happen
+    - backend/sdr/sdrprocessmanager.py - Manages SDR worker processes
+    - backend/tracker/logic.py:_control_rig_frequency() - Distinguishes SDR vs hardware rig behavior
+    - backend/session/tracker.py - Tracks which sessions are using which SDRs/VFOs
+    """
+
     def __init__(
         self,
-        sdr_details: None,
+        sdr_details: Optional[Dict[str, Any]] = None,
         verbose: bool = False,
         timeout: float = 3.0,
     ):
@@ -32,27 +68,30 @@ class SDRController:
         assert isinstance(sdr_details, dict), "SDR details must be a dictionary"
 
         # Set up logging
-        self.logger = logging.getLogger("sdr-controller")
+        self.logger: logging.Logger = logging.getLogger("sdr-controller")
         self.logger.setLevel(args.log_level)
 
         # Initialize attributes
-        self.verbose = verbose
-        self.connected = False
-        self.timeout = timeout
+        self.verbose: bool = verbose
+        self.connected: bool = False
+        self.timeout: float = timeout
 
         # Setup init values from SDR details
-        self.sdr_details = sdr_details
-        self.sdr_id = sdr_details["id"]
-        self.sdr_name = sdr_details["name"]
-        self.sdr_type = sdr_details["type"]
-        self.sdr_serial = sdr_details["serial"]
-        self.sdr_host = sdr_details["host"]
-        self.sdr_port = sdr_details["port"]
-        self.sdr_driver = sdr_details["driver"]
-        self.frequency_range = {
+        self.sdr_details: Dict[str, Any] = sdr_details
+        self.sdr_id: Any = sdr_details["id"]
+        self.sdr_name: Any = sdr_details["name"]
+        self.sdr_type: Any = sdr_details["type"]
+        self.sdr_serial: Any = sdr_details["serial"]
+        self.sdr_host: Any = sdr_details["host"]
+        self.sdr_port: Any = sdr_details["port"]
+        self.sdr_driver: Any = sdr_details["driver"]
+        self.frequency_range: Dict[str, Any] = {
             "min": sdr_details["frequency_min"],
             "max": sdr_details["frequency_max"],
         }
+
+        # VFO management (session-specific)
+        self.vfo_manager: VFOManager = VFOManager()
 
         self.logger.info(f"Initialized SDRController for SDR with id {self.sdr_id}")
 
@@ -173,7 +212,6 @@ class SDRController:
 
             # Initial status (placeholder)
             current_freq = target_freq  # Assume immediate tuning in this stub
-            freq_reached = True
             is_tuning = False
 
             # First yield with initial frequency
@@ -237,6 +275,67 @@ class SDRController:
                 self.logger.warning(
                     "Object SDRController being destroyed while still connected to SDR"
                 )
+
+    async def update_vfo_with_doppler(
+        self,
+        sio,
+        session_id: str,
+        vfo_id: str,
+        observed_freq: float,
+        doppler_shift: float,
+        original_freq: float,
+        bandwidth: Optional[int] = None,
+        modulation: Optional[str] = None,
+    ) -> None:
+        """Update a specific VFO for a session with doppler-corrected frequency.
+
+        Args:
+            sio: Socket.IO server instance for emitting updates
+            session_id: Session ID to update
+            vfo_id: VFO number ("1", "2", "3", or "4")
+            observed_freq: Doppler-corrected frequency
+            doppler_shift: Doppler shift value
+            original_freq: Original transmitted frequency
+            bandwidth: Optional bandwidth to set
+            modulation: Optional modulation to set
+        """
+        try:
+            # Convert vfo_id string to int for VFOManager
+            vfo_number = int(vfo_id) if vfo_id != "none" else None
+
+            if vfo_number is None:
+                self.logger.debug(f"Skipping VFO update for session {session_id} - no VFO selected")
+                return
+
+            # Update VFO state in the manager
+            self.vfo_manager.update_vfo_state(
+                session_id=session_id,
+                vfo_id=vfo_number,
+                center_freq=int(observed_freq),
+                bandwidth=bandwidth,
+                modulation=modulation,
+                active=True,
+            )
+
+            # Emit updated VFO states to the session
+            await self.vfo_manager.emit_vfo_states(sio, session_id)
+
+            self.logger.debug(
+                f"Updated VFO {vfo_id} for session {session_id}: "
+                f"freq={observed_freq:.0f} Hz, doppler={doppler_shift:.0f} Hz"
+            )
+
+        except Exception as e:
+            self.logger.error(f"Error updating VFO for session {session_id}: {e}")
+            self.logger.exception(e)
+
+    def get_vfo_manager(self) -> VFOManager:
+        """Get the VFO manager instance.
+
+        Returns:
+            VFOManager: The VFO manager for this SDR controller
+        """
+        return self.vfo_manager
 
     @staticmethod
     def get_error_message(error_code: int) -> str:

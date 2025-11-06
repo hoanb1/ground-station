@@ -43,7 +43,7 @@ import { setSyncState } from '../components/satellites/synchronize-slice.jsx';
 import { setSatelliteData, setUITrackerValues } from '../components/target/target-slice.jsx';
 import { setSynchronizing } from '../components/satellites/synchronize-slice.jsx';
 import { initializeAppData } from '../services/data-sync.js';
-import { setIsRecording, setRecordingDuration, setRecordingStartTime } from '../components/waterfall/waterfall-slice.jsx';
+import { setIsRecording, setRecordingDuration, setRecordingStartTime, updateAllVFOStates } from '../components/waterfall/waterfall-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
 
 /**
@@ -227,6 +227,11 @@ export const useSocketEventHandlers = (socket) => {
             }
         });
 
+        // VFO states update
+        socket.on("vfo-states", (vfoStates) => {
+            store.dispatch(updateAllVFOStates(vfoStates));
+        });
+
         // Satellite tracking events
         socket.on("satellite-tracking", (message) => {
             store.dispatch(setSatelliteData(message));
@@ -380,6 +385,7 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("file_browser_state");
             socket.off("file_browser_error");
             socket.off("recording_state");
+            socket.off("vfo-states");
         };
     }, [socket, dispatch, t]);
 };

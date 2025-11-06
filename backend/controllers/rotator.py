@@ -17,7 +17,7 @@
 import asyncio
 import logging
 from contextlib import asynccontextmanager
-from typing import AsyncGenerator, Tuple
+from typing import AsyncGenerator, Optional, Tuple
 
 from common.arguments import arguments as args
 
@@ -25,7 +25,7 @@ from common.arguments import arguments as args
 class RotatorController:
     def __init__(
         self,
-        model: int = None,  # Model no longer used directly
+        model: Optional[int] = None,  # Model no longer used directly
         host: str = "127.0.0.1",
         port: int = 4533,
         verbose: bool = False,
@@ -42,8 +42,8 @@ class RotatorController:
         self.port = port
         self.device_path = device_path
         self.verbose = verbose
-        self.reader = None
-        self.writer = None
+        self.reader: Optional[asyncio.StreamReader] = None
+        self.writer: Optional[asyncio.StreamWriter] = None
         self.connected = False
         self.timeout = timeout
 
@@ -60,9 +60,10 @@ class RotatorController:
             self.logger.debug(f"Connecting to rotator at {self.device_path}")
 
             # Create a persistent connection
-            self.reader, self.writer = await asyncio.wait_for(
+            reader_writer = await asyncio.wait_for(
                 asyncio.open_connection(self.host, self.port), timeout=self.timeout
             )
+            self.reader, self.writer = reader_writer
 
             self.connected = True
             self.logger.info(f"Successfully connected to rotator as {self.device_path}")
@@ -127,9 +128,12 @@ class RotatorController:
                         # Ignore errors during cleanup
                         pass
 
-    async def _send_command(self, command: str, waitforreply=True) -> str:
+    async def _send_command(self, command: str, waitforreply: bool = True) -> str:
         """Send a command to the rotator and get the response."""
         self.check_connection()
+
+        if self.writer is None or self.reader is None:
+            raise RuntimeError("Writer or reader is None")
 
         try:
             # Add newline to the command

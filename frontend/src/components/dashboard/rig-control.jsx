@@ -28,6 +28,7 @@ import {
     setGroupOfSats,
     setRadioRig,
     setRotator,
+    setRigVFO,
     setSatelliteGroupSelectOpen,
     setSatelliteId,
     setSatGroupId,
@@ -71,10 +72,19 @@ const RigControl = React.memo(function RigControl() {
         starting,
         selectedRadioRig,
         selectedRotator,
+        selectedRigVFO,
         selectedTransmitter,
         availableTransmitters,
         rigData,
     } = useSelector((state) => state.targetSatTrack);
+
+    // Safeguard: Reset VFO if hardware rig is selected with VFO 3 or 4
+    React.useEffect(() => {
+        const rigType = determineRadioType(selectedRadioRig);
+        if (rigType === "rig" && (selectedRigVFO === "3" || selectedRigVFO === "4")) {
+            dispatch(setRigVFO("none"));
+        }
+    }, [selectedRadioRig, selectedRigVFO, dispatch]);
 
     const {
         selectedSDRId,
@@ -113,6 +123,7 @@ const RigControl = React.memo(function RigControl() {
             'rig_id': selectedRadioRig,
             'rotator_id': selectedRotator,
             'transmitter_id': selectedTransmitter,
+            'rig_vfo': selectedRigVFO,
         };
 
         dispatch(setTrackingStateInBackend({socket, data: newTrackingState}))
@@ -150,6 +161,9 @@ const RigControl = React.memo(function RigControl() {
 
         // Set the selected radio rig
         dispatch(setRadioRig(selectedValue));
+
+        // Reset VFO selection when changing rigs
+        dispatch(setRigVFO("none"));
     }
 
     function handleTransmitterChange(event) {
@@ -165,6 +179,33 @@ const RigControl = React.memo(function RigControl() {
             'rig_id': selectedRadioRig,
             'rotator_id': selectedRotator,
             'transmitter_id': event.target.value,
+            'rig_vfo': selectedRigVFO,
+        };
+
+        dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
+            .unwrap()
+            .then((response) => {
+
+            })
+            .catch((error) => {
+
+            });
+    }
+
+    function handleRigVFOChange(event) {
+        const vfoValue = event.target.value;
+        dispatch(setRigVFO(vfoValue));
+
+        const data = {
+            ...trackingState,
+            'norad_id': satelliteId,
+            'rotator_state': trackingState['rotator_state'],
+            'rig_state': trackingState['rig_state'],
+            'group_id': groupId,
+            'rig_id': selectedRadioRig,
+            'rotator_id': selectedRotator,
+            'transmitter_id': selectedTransmitter,
+            'rig_vfo': event.target.value,
         };
 
         dispatch(setTrackingStateInBackend({ socket: socket, data: data}))
@@ -182,6 +223,7 @@ const RigControl = React.memo(function RigControl() {
             ...trackingState,
             'rig_state': "connected",
             'rig_id': selectedRadioRig,
+            'rig_vfo': selectedRigVFO,
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
@@ -191,6 +233,7 @@ const RigControl = React.memo(function RigControl() {
             ...trackingState,
             'rig_state': "disconnected",
             'rig_id': selectedRadioRig,
+            'rig_vfo': selectedRigVFO,
         };
         dispatch(setTrackingStateInBackend({ socket, data: data}));
     }
@@ -224,9 +267,35 @@ const RigControl = React.memo(function RigControl() {
                             <MenuItem value="" disabled>
                                 <em>{t('rig_control_labels.select_sdr')}</em>
                             </MenuItem>
-                            {sdrs.map((sdr, index) => {
-                                return <MenuItem type={"sdr"} value={sdr.id} key={index}>{sdr.name}</MenuItem>;
+                            {sdrs.filter(sdr => sdr.type !== 'sigmfplayback').map((sdr, index) => {
+                                return <MenuItem type={"sdr"} value={sdr.id} key={index}>{sdr.name} ({sdr.type})</MenuItem>;
                             })}
+                        </Select>
+                    </FormControl>
+                </Grid>
+
+                <Grid size={{ xs: 12, sm: 12, md: 12 }} style={{padding: '0rem 0.5rem 0rem 0.5rem'}}>
+                    <FormControl disabled={["tracking", "connected", "stopped"].includes(trackingState['rig_state'])}
+                                 sx={{minWidth: 200, marginTop: 0, marginBottom: 1}} fullWidth variant="filled"
+                                 size="small">
+                        <InputLabel htmlFor="vfo-select">{t('rig_control_labels.vfo_label')}</InputLabel>
+                        <Select
+                            id="vfo-select"
+                            value={selectedRigVFO || "none"}
+                            onChange={(event) => {
+                                handleRigVFOChange(event);
+                            }}
+                            variant={'filled'}>
+                            <MenuItem value="none">
+                                {t('rig_control_labels.no_vfo_control')}
+                            </MenuItem>
+                            <MenuItem value="" disabled>
+                                <em>{t('rig_control_labels.select_vfo')}</em>
+                            </MenuItem>
+                            <MenuItem value="1">VFO 1</MenuItem>
+                            <MenuItem value="2">VFO 2</MenuItem>
+                            {determineRadioType(selectedRadioRig) === "sdr" && <MenuItem value="3">VFO 3</MenuItem>}
+                            {determineRadioType(selectedRadioRig) === "sdr" && <MenuItem value="4">VFO 4</MenuItem>}
                         </Select>
                     </FormControl>
                 </Grid>

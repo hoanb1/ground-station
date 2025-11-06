@@ -56,12 +56,108 @@ async def handle_tracker_messages(sockio):
                 message = queue_from_tracker.get_nowait()
                 event = message.get("event")
                 data = message.get("data", {})
+
                 if event:
                     await sockio.emit(event, data)
+
+                    # Handle VFO updates for SDR tracking
+                    if event == "satellite-tracking" and data.get("rig_data"):
+                        await handle_vfo_updates_for_tracking(sockio, data)
+
             await asyncio.sleep(0.1)
         except Exception as e:  # pragma: no cover - best effort
             logger.error(f"Error handling tracker messages: {e}")
             await asyncio.sleep(1)
+
+
+async def handle_vfo_updates_for_tracking(sockio, tracking_data):
+    """
+    Handle VFO updates when tracker sends doppler-corrected frequency data.
+
+    For SDR rigs, emit VFO state updates to sessions that have VFOs selected.
+    """
+    try:
+        import crud
+        from db import AsyncSessionLocal
+        from session.tracker import session_tracker
+        from vfos.state import VFOManager
+
+        rig_data = tracking_data.get("rig_data", {})
+        tracking_state = tracking_data.get("tracking_state", {})
+
+        # Get the rig being tracked
+        rig_id = tracking_state.get("rig_id")
+        if not rig_id or rig_id == "none":
+            return
+
+        # Check if it's an SDR (not a hardware rig)
+        async with AsyncSessionLocal() as dbsession:
+            # Try to get as SDR
+            sdr_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id=rig_id)
+            if not sdr_reply.get("success") or not sdr_reply.get("data"):
+                # Not an SDR, probably a hardware rig - skip VFO updates
+                return
+
+        # This is an SDR - get doppler-corrected frequency
+        observed_freq = rig_data.get("observed_freq")
+        doppler_shift = rig_data.get("doppler_shift", 0)
+
+        if not observed_freq:
+            return
+
+        # Get all sessions tracking this SDR with a VFO selected
+        sessions_with_vfos = session_tracker.get_sessions_with_vfo_for_rig(rig_id)
+
+        if not sessions_with_vfos:
+            logger.debug(f"No sessions with VFOs selected for SDR {rig_id}")
+            return
+
+        # Create a VFO manager instance to emit updates
+        vfo_manager = VFOManager()
+
+        # Check if we should auto-activate VFO (only when transitioning to tracking)
+        rig_state = tracking_state.get("rig_state")
+        should_activate = rig_state == "tracking"
+
+        # Update and emit VFO states for each session
+        for session_id, vfo_id in sessions_with_vfos.items():
+            try:
+                # Convert vfo_id to int
+                vfo_number = int(vfo_id)
+
+                # Update VFO state with doppler-corrected frequency
+                # Only set active=True when rig_state is "tracking"
+                # Otherwise, only update frequency and preserve user's active state
+                if should_activate:
+                    vfo_manager.update_vfo_state(
+                        session_id=session_id,
+                        vfo_id=vfo_number,
+                        center_freq=int(observed_freq),
+                        active=True,
+                    )
+                else:
+                    # Only update frequency, don't touch active state
+                    vfo_manager.update_vfo_state(
+                        session_id=session_id,
+                        vfo_id=vfo_number,
+                        center_freq=int(observed_freq),
+                    )
+
+                # Emit VFO states to this specific session
+                await vfo_manager.emit_vfo_states(sockio, session_id)
+
+                logger.debug(
+                    f"Emitted VFO {vfo_id} update to session {session_id}: "
+                    f"freq={observed_freq:.0f} Hz, doppler={doppler_shift:.0f} Hz, "
+                    f"auto_activate={should_activate}"
+                )
+
+            except Exception as e:
+                logger.error(f"Error updating VFO for session {session_id}: {e}")
+
+    except Exception as e:
+        logger.error(f"Error in handle_vfo_updates_for_tracking: {e}")
+        logger.exception(e)
 
 
 @asynccontextmanager

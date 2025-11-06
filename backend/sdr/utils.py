@@ -66,6 +66,7 @@ async def cleanup_sdr_session(sid):
     - Cancels any running processing tasks
     - Releases the RTLSDR device if no other clients are using it
     - Removes the client from the active clients list
+    - Unregisters session from SessionTracker
 
     Args:
         sid: Client session ID to clean up
@@ -78,6 +79,11 @@ async def cleanup_sdr_session(sid):
         if sdr_id:
             # Stop or leave the SDR process
             await sdr_process_manager.stop_sdr_process(sdr_id, sid)
+
+        # Unregister session from SessionTracker
+        from session.tracker import session_tracker
+
+        session_tracker.unregister_session_streaming(sid)
 
         # Remove client from active clients
         del active_sdr_clients[sid]

@@ -432,6 +432,31 @@ export const waterfallSlice = createSlice({
             state.selectedPlaybackRecording = null;
             state.playbackRecordingPath = '';
         },
+        updateAllVFOStates: (state, action) => {
+            // action.payload is an object with vfo_number as keys and VFO state objects as values
+            const vfoStates = action.payload;
+
+            Object.entries(vfoStates).forEach(([vfoNumber, vfoState]) => {
+                const vfoNum = parseInt(vfoNumber);
+
+                if (state.vfoMarkers[vfoNum]) {
+                    // Map backend field names to frontend field names
+                    state.vfoMarkers[vfoNum].frequency = vfoState.center_freq;
+                    state.vfoMarkers[vfoNum].bandwidth = vfoState.bandwidth;
+                    state.vfoMarkers[vfoNum].mode = vfoState.modulation;
+                    state.vfoMarkers[vfoNum].volume = vfoState.volume;
+                    state.vfoMarkers[vfoNum].squelch = vfoState.squelch;
+
+                    // Update active state
+                    state.vfoActive[vfoNum] = vfoState.active;
+
+                    // Update selected VFO if this VFO is selected
+                    if (vfoState.selected) {
+                        state.selectedVFO = vfoNum;
+                    }
+                }
+            });
+        },
     },
     extraReducers: (builder) => {
         builder
@@ -555,6 +580,7 @@ export const {
     setSelectedPlaybackRecording,
     setPlaybackRecordingPath,
     clearPlaybackRecording,
+    updateAllVFOStates,
 } = waterfallSlice.actions;
 
 export default waterfallSlice.reducer;
