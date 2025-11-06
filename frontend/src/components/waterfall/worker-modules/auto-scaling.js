@@ -51,58 +51,76 @@ export function autoScaleDbRange(waterfallHistory, preset = 'medium') {
         return null;
     }
 
-    // Flatten all FFT data into a single array for analysis
-    const allValues = waterfallHistory.flat();
+    // Only use the most recent 10 frames for auto-scaling (matches old behavior)
+    const samplesToCheck = Math.min(10, waterfallHistory.length);
+    const recentFrames = waterfallHistory.slice(0, samplesToCheck);
+
+    // Flatten FFT data from recent frames into a single array for analysis
+    const allValues = recentFrames.flat();
 
     // Sort values for percentile calculation
     const sortedValues = allValues.slice().sort((a, b) => a - b);
 
-    // Calculate percentiles based on preset
-    let minPercentile, maxPercentile;
+    // Apply different scaling strategies based on preset (matches old behavior exactly)
+    let minDb, maxDb;
 
     switch (preset) {
-        case 'strong':
-            // Strong: Very tight range, 10-90th percentile
-            // Good for seeing fine details, may clip strong signals
-            minPercentile = 0.10;
-            maxPercentile = 0.90;
+        case 'strong': {
+            // For strong signals: Very wide dB range to handle strong signals without clipping
+            // Use 2nd to 99th percentile for maximum range
+            const strongLowIdx = Math.floor(sortedValues.length * 0.02);
+            const strongHighIdx = Math.floor(sortedValues.length * 0.99);
+            minDb = sortedValues[strongLowIdx];
+            maxDb = sortedValues[strongHighIdx];
+            // Extra padding for strong signals
+            minDb = Math.floor(minDb - 10);
+            maxDb = Math.ceil(maxDb + 10);
             break;
+        }
 
-        case 'medium':
-            // Medium: Balanced range, 5-95th percentile
-            // Good general purpose, shows most signals
-            minPercentile = 0.05;
-            maxPercentile = 0.95;
+        case 'medium': {
+            // For medium signals: Moderate range, less strict than weak
+            // Use 5th to 97th percentile
+            const mediumLowIdx = Math.floor(sortedValues.length * 0.05);
+            const mediumHighIdx = Math.floor(sortedValues.length * 0.97);
+            minDb = sortedValues[mediumLowIdx];
+            maxDb = sortedValues[mediumHighIdx];
+            // Moderate padding
+            minDb = Math.floor(minDb - 5);
+            maxDb = Math.ceil(maxDb + 5);
             break;
+        }
 
         case 'weak':
-            // Weak: Wide range, 2-98th percentile
-            // Shows full dynamic range, may compress weak signals
-            minPercentile = 0.02;
-            maxPercentile = 0.98;
+        default: {
+            // For weak signals: Original algorithm with std dev filtering (tight range, good contrast)
+            const sum = allValues.reduce((acc, val) => acc + val, 0);
+            const mean = sum / allValues.length;
+
+            const squaredDiffs = allValues.map(val => (val - mean) ** 2);
+            const variance = squaredDiffs.reduce((acc, val) => acc + val, 0) / allValues.length;
+            const stdDev = Math.sqrt(variance);
+
+            // Filter out values more than X standard deviations from the mean
+            const stdDevMultiplier = 4.5;
+            const filteredValues = allValues.filter(val =>
+                Math.abs(val - mean) <= stdDevMultiplier * stdDev
+            );
+
+            if (filteredValues.length === 0) {
+                console.warn('No valid values after filtering for auto-scaling');
+                return null;
+            }
+
+            minDb = filteredValues.reduce((a, b) => Math.min(a, b), filteredValues[0]);
+            maxDb = filteredValues.reduce((a, b) => Math.max(a, b), filteredValues[0]);
+
+            // Minimal padding for tight contrast on weak signals
+            minDb = Math.floor(minDb);
+            maxDb = Math.ceil(maxDb);
             break;
-
-        default:
-            minPercentile = 0.05;
-            maxPercentile = 0.95;
+        }
     }
-
-    const minIndex = Math.floor(sortedValues.length * minPercentile);
-    const maxIndex = Math.floor(sortedValues.length * maxPercentile);
-
-    let minDb = sortedValues[minIndex];
-    let maxDb = sortedValues[maxIndex];
-
-    // Ensure minimum range of 10 dB
-    if (maxDb - minDb < 10) {
-        const center = (minDb + maxDb) / 2;
-        minDb = center - 5;
-        maxDb = center + 5;
-    }
-
-    // Round to nearest 5 dB for cleaner display
-    minDb = Math.round(minDb / 5) * 5;
-    maxDb = Math.round(maxDb / 5) * 5;
 
     // Calculate some statistics for debugging
     const mean = allValues.reduce((sum, val) => sum + val, 0) / allValues.length;

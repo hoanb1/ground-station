@@ -18,183 +18,368 @@
  */
 
 /**
- * Rendering functions for bandscope and dB axis
+ * Rendering functions for bandscope, dB axis, and waterfall left margin
  */
+
+import { getColorForPower } from './color-maps.js';
 
 /**
  * Draw bandscope (FFT line display)
- * @param {CanvasRenderingContext2D} bandscopeCtx - Bandscope canvas context
- * @param {Array<number>} fftData - FFT data to display
- * @param {Array<number>} dbRange - [minDb, maxDb]
- * @param {number} canvasWidth - Canvas width
- * @param {number} canvasHeight - Canvas height
- * @param {Object} theme - Theme colors
+ * @param {Object} params - Parameters object
+ * @param {CanvasRenderingContext2D} params.bandscopeCtx - Bandscope canvas context
+ * @param {OffscreenCanvas} params.bandscopeCanvas - Bandscope canvas
+ * @param {Array<number>} params.fftData - FFT data to display
+ * @param {Array<number>} params.smoothedFftData - Smoothed FFT data
+ * @param {Array<number>} params.dbRange - [minDb, maxDb]
+ * @param {string} params.colorMap - Color map name
+ * @param {Object} params.theme - Theme colors
+ * @param {CanvasRenderingContext2D} params.dBAxisCtx - dB axis canvas context
+ * @param {OffscreenCanvas} params.dBAxisCanvas - dB axis canvas
  */
-export function drawBandscope(bandscopeCtx, fftData, dbRange, canvasWidth, canvasHeight, theme) {
+export function drawBandscope({
+    bandscopeCtx,
+    bandscopeCanvas,
+    fftData,
+    smoothedFftData,
+    dbRange,
+    colorMap,
+    theme,
+    dBAxisCtx,
+    dBAxisCanvas
+}) {
+    if (!bandscopeCanvas || fftData.length === 0) {
+        return;
+    }
+
+    const width = bandscopeCanvas.width;
+    const height = bandscopeCanvas.height;
+
+    // Clear the canvas
+    bandscopeCtx.fillStyle = theme.palette.background.default;
+    bandscopeCtx.fillRect(0, 0, width, height);
+
     const [minDb, maxDb] = dbRange;
 
-    // Clear bandscope canvas
-    bandscopeCtx.fillStyle = theme.palette.background.paper;
-    bandscopeCtx.fillRect(0, 0, canvasWidth, canvasHeight);
+    // Draw dB marks and labels
+    bandscopeCtx.fillStyle = 'white';
+    bandscopeCtx.font = '12px Monospace';
+    bandscopeCtx.textAlign = 'right';
 
-    // Draw grid lines
-    drawBandscopeGrid(bandscopeCtx, dbRange, canvasWidth, canvasHeight, theme);
+    // Calculate step size based on range
+    const dbRangeDiff = maxDb - minDb;
+    const steps = Math.min(6, dbRangeDiff); // Maximum 10 steps
+    const stepSize = Math.ceil(dbRangeDiff / steps);
 
-    // Draw FFT line
-    drawFftLine(bandscopeCtx, fftData, dbRange, canvasWidth, canvasHeight);
+    for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
+        const y = height - ((db - minDb) / (maxDb - minDb)) * height;
+
+        // Draw a horizontal dotted grid line
+        bandscopeCtx.strokeStyle = 'rgba(150, 150, 150, 0.4)';
+        bandscopeCtx.setLineDash([5, 5]);
+        bandscopeCtx.beginPath();
+        bandscopeCtx.moveTo(0, y);
+        bandscopeCtx.lineTo(width, y);
+        bandscopeCtx.stroke();
+        bandscopeCtx.setLineDash([]);
+    }
+
+    // Draw the dB axis (y-axis)
+    drawDbAxis({
+        dBAxisCtx,
+        dBAxisCanvas,
+        width,
+        height,
+        dbRange,
+        theme
+    });
+
+    // Draw the FFT data as a line graph using smoothed data
+    drawFftLine({
+        ctx: bandscopeCtx,
+        fftData: smoothedFftData,
+        width,
+        height,
+        dbRange,
+        colorMap
+    });
 }
 
 /**
- * Draw grid lines on bandscope
- * @param {CanvasRenderingContext2D} ctx - Canvas context
- * @param {Array<number>} dbRange - [minDb, maxDb]
- * @param {number} width - Canvas width
- * @param {number} height - Canvas height
- * @param {Object} theme - Theme colors
+ * Draw dB axis scale
+ * @param {Object} params - Parameters object
+ * @param {CanvasRenderingContext2D} params.dBAxisCtx - dB axis canvas context
+ * @param {OffscreenCanvas} params.dBAxisCanvas - dB axis canvas
+ * @param {number} params.width - Canvas width
+ * @param {number} params.height - Canvas height
+ * @param {Array<number>} params.dbRange - [minDb, maxDb]
+ * @param {Object} params.theme - Theme colors
  */
-function drawBandscopeGrid(ctx, dbRange, width, height, theme) {
+export function drawDbAxis({
+    dBAxisCtx,
+    dBAxisCanvas,
+    width,
+    height,
+    dbRange,
+    theme
+}) {
     const [minDb, maxDb] = dbRange;
-    const dbStep = 10; // Draw a line every 10 dB
 
-    ctx.strokeStyle = theme.palette.border.light;
-    ctx.lineWidth = 0.5;
-    ctx.setLineDash([2, 2]);
+    // Draw background for the axis area
+    dBAxisCtx.fillStyle = theme.palette.background.elevated;
+    dBAxisCtx.fillRect(0, 0, dBAxisCanvas.width, height);
 
-    // Draw horizontal grid lines
-    for (let db = Math.ceil(minDb / dbStep) * dbStep; db <= maxDb; db += dbStep) {
+    // Draw dB marks and labels
+    dBAxisCtx.fillStyle = theme.palette.text.primary;
+    dBAxisCtx.font = '12px Monospace';
+    dBAxisCtx.textAlign = 'right';
+
+    // Calculate step size based on range
+    const dbRangeValue = maxDb - minDb;
+    const steps = Math.min(6, dbRangeValue); // Maximum 10 steps
+    const stepSize = Math.ceil(dbRangeValue / steps);
+
+    for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
         const y = height - ((db - minDb) / (maxDb - minDb)) * height;
 
-        ctx.beginPath();
-        ctx.moveTo(0, y);
-        ctx.lineTo(width, y);
-        ctx.stroke();
-    }
+        // Draw a horizontal dotted grid line (matches old behavior exactly)
+        dBAxisCtx.strokeStyle = theme.palette.overlay.light;
+        dBAxisCtx.setLineDash([2, 2]);
+        dBAxisCtx.beginPath();
+        dBAxisCtx.moveTo(dBAxisCanvas.width, y);
+        dBAxisCtx.lineTo(width, y);
+        dBAxisCtx.stroke();
+        dBAxisCtx.setLineDash([]);
 
-    ctx.setLineDash([]);
+        // Draw label
+        dBAxisCtx.fillText(`${db} dB`, dBAxisCanvas.width - 5, y + 3);
+    }
 }
 
 /**
  * Draw FFT line on bandscope
- * @param {CanvasRenderingContext2D} ctx - Canvas context
- * @param {Array<number>} fftData - FFT data
- * @param {Array<number>} dbRange - [minDb, maxDb]
- * @param {number} width - Canvas width
- * @param {number} height - Canvas height
+ * @param {Object} params - Parameters object
+ * @param {CanvasRenderingContext2D} params.ctx - Canvas context
+ * @param {Array<number>} params.fftData - FFT data
+ * @param {number} params.width - Canvas width
+ * @param {number} params.height - Canvas height
+ * @param {Array<number>} params.dbRange - [minDb, maxDb]
+ * @param {string} params.colorMap - Color map name
  */
-function drawFftLine(ctx, fftData, dbRange, width, height) {
+export function drawFftLine({
+    ctx,
+    fftData,
+    width,
+    height,
+    dbRange,
+    colorMap
+}) {
     const [minDb, maxDb] = dbRange;
+    const graphWidth = width;
+    const skipFactor = fftData.length / graphWidth;
 
-    ctx.strokeStyle = '#00ff00';
-    ctx.lineWidth = 1.5;
+    // Generate line color based on a "hot" point in the colormap (e.g., 80% intensity)
+    // This gives a color that's representative of the colormap
+    const lineColorPoint = 0.8; // Use 80% intensity for the line
+    const lineRgb = getColorForPower(
+        minDb + (maxDb - minDb) * lineColorPoint,
+        colorMap,
+        [minDb, maxDb],
+    );
+
+    // Create line color with proper opacity
+    const lineColor = `rgba(${lineRgb.r}, ${lineRgb.g}, ${lineRgb.b}, 0.8)`;
+
+    // Generate fill color based on the same colormap but with lower intensity
+    const fillColorPoint = 0.7; // Use 50% intensity for fill base color
+    const fillRgb = getColorForPower(
+        minDb + (maxDb - minDb) * fillColorPoint,
+        colorMap,
+        [minDb, maxDb],
+    );
+
+    // Create fill color with low opacity
+    const fillColor = `rgba(${fillRgb.r}, ${fillRgb.g}, ${fillRgb.b}, 0.3)`;
+
+    // Set line style with generated color
+    ctx.strokeStyle = lineColor;
+    ctx.lineWidth = 1;
     ctx.beginPath();
 
-    for (let i = 0; i < fftData.length; i++) {
-        const x = (i / fftData.length) * width;
-        const normalizedValue = (fftData[i] - minDb) / (maxDb - minDb);
+    // Draw the line path
+    for (let x = 0; x < graphWidth; x++) {
+        // Map canvas pixel to the appropriate FFT bin using scaling
+        const fftIndex = Math.min(Math.floor(x * skipFactor), fftData.length - 1);
+        const amplitude = fftData[fftIndex];
+
+        // Normalize amplitude to canvas height using dB range
+        const normalizedValue = Math.max(0, Math.min(1, (amplitude - minDb) / (maxDb - minDb)));
         const y = height - (normalizedValue * height);
 
-        if (i === 0) {
+        if (x === 0) {
             ctx.moveTo(x, y);
         } else {
             ctx.lineTo(x, y);
         }
     }
 
+    // Draw the line
     ctx.stroke();
+
+    // Add fill below the line using the generated fill color
+    ctx.fillStyle = fillColor;
+    ctx.lineTo(width, height);
+    ctx.lineTo(0, height);
+    ctx.fill();
 }
 
 /**
- * Draw dB axis scale
- * @param {CanvasRenderingContext2D} dBAxisCtx - dB axis canvas context
- * @param {Array<number>} dbRange - [minDb, maxDb]
- * @param {number} canvasWidth - Canvas width
- * @param {number} canvasHeight - Canvas height
- * @param {Object} theme - Theme colors
+ * Update waterfall left margin with timestamps and rotator events
+ * @param {Object} params - Parameters object
+ * @param {CanvasRenderingContext2D} params.waterFallLeftMarginCtx - Left margin canvas context
+ * @param {OffscreenCanvas} params.waterfallLeftMarginCanvas - Left margin canvas
+ * @param {OffscreenCanvas} params.waterfallCanvas - Main waterfall canvas
+ * @param {CanvasRenderingContext2D} params.waterfallCtx - Main waterfall canvas context
+ * @param {Array<string>} params.rotatorEventQueue - Queue of rotator events
+ * @param {boolean} params.showRotatorDottedLines - Whether to show dotted lines
+ * @param {Object} params.theme - Theme colors
+ * @param {Object} params.lastTimestamp - Last timestamp reference (mutable)
+ * @param {Object} params.dottedLineImageData - Cached dotted line image data (mutable)
+ * @returns {Object} Updated state { lastTimestamp, dottedLineImageData }
  */
-export function drawDbAxis(dBAxisCtx, dbRange, canvasWidth, canvasHeight, theme) {
-    const [minDb, maxDb] = dbRange;
-
-    // Clear dB axis canvas
-    dBAxisCtx.fillStyle = theme.palette.background.paper;
-    dBAxisCtx.fillRect(0, 0, canvasWidth, canvasHeight);
-
-    // Draw axis labels
-    dBAxisCtx.fillStyle = theme.palette.text.primary;
-    dBAxisCtx.font = '10px monospace';
-    dBAxisCtx.textAlign = 'right';
-    dBAxisCtx.textBaseline = 'middle';
-
-    const dbStep = 10;
-
-    for (let db = Math.ceil(minDb / dbStep) * dbStep; db <= maxDb; db += dbStep) {
-        const y = canvasHeight - ((db - minDb) / (maxDb - minDb)) * canvasHeight;
-        dBAxisCtx.fillText(`${db}`, canvasWidth - 5, y);
-    }
-}
-
-/**
- * Update waterfall left margin with rotator information
- * @param {CanvasRenderingContext2D} waterfallLeftMarginCtx - Left margin canvas context
- * @param {Object} rotatorEvent - Rotator event data
- * @param {number} canvasWidth - Canvas width
- * @param {number} canvasHeight - Canvas height
- * @param {boolean} showRotatorDottedLines - Whether to show dotted lines
- * @param {Object} theme - Theme colors
- */
-export function updateWaterfallLeftMargin(
-    waterfallLeftMarginCtx,
-    rotatorEvent,
-    canvasWidth,
-    canvasHeight,
+export function updateWaterfallLeftMargin({
+    waterFallLeftMarginCtx,
+    waterfallLeftMarginCanvas,
+    waterfallCanvas,
+    waterfallCtx,
+    rotatorEventQueue,
     showRotatorDottedLines,
-    theme
-) {
-    // Clear the left margin canvas
-    waterfallLeftMarginCtx.clearRect(0, 0, canvasWidth, canvasHeight);
+    theme,
+    lastTimestamp,
+    dottedLineImageData
+}) {
+    // This part should run on EVERY frame, not just when minutes change
+    // Move existing pixels DOWN by 1 pixel
+    waterFallLeftMarginCtx.drawImage(
+        waterfallLeftMarginCanvas,
+        0, 0,
+        waterfallLeftMarginCanvas.width, waterfallLeftMarginCanvas.height - 1,
+        0, 1,
+        waterfallLeftMarginCanvas.width, waterfallLeftMarginCanvas.height - 1
+    );
 
-    if (!rotatorEvent || !rotatorEvent.timestamp) {
-        return;
-    }
+    // Fill the top row with the background color
+    waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
+    waterFallLeftMarginCtx.fillRect(0, 0, waterfallLeftMarginCanvas.width, 1);
 
-    // Calculate Y position based on timestamp
-    const now = Date.now();
-    const eventTime = new Date(rotatorEvent.timestamp).getTime();
-    const timeDiff = now - eventTime;
+    // Process last rotator events, if there are any then print a line
+    const newRotatorEvent = rotatorEventQueue.pop();
+    if (newRotatorEvent) {
+        // Set font properties first to measure text
+        waterFallLeftMarginCtx.font = '12px monospace';
+        waterFallLeftMarginCtx.textAlign = 'center';
+        waterFallLeftMarginCtx.textBaseline = 'top';
 
-    // Assume waterfall scrolls at approximately 10 pixels per second (adjust as needed)
-    const scrollSpeed = 10;
-    const yOffset = Math.floor((timeDiff / 1000) * scrollSpeed);
+        // Measure text to get precise dimensions
+        const textMetrics = waterFallLeftMarginCtx.measureText(newRotatorEvent);
+        const textWidth = textMetrics.width;
+        const textHeight = 12; // Match the actual font size
+        const centerX = waterfallLeftMarginCanvas.width / 2;
+        const textX = centerX - (textWidth / 2);
 
-    // Only draw if the event is still visible on screen
-    if (yOffset < canvasHeight) {
-        const y = yOffset;
+        // Only clear the specific rectangle where the text will be drawn
+        waterFallLeftMarginCtx.clearRect(textX - 1, 0, textWidth + 2, textHeight);
 
-        // Draw background indicator
-        waterfallLeftMarginCtx.fillStyle = theme.palette.overlay.medium;
-        waterfallLeftMarginCtx.fillRect(0, y - 10, canvasWidth, 20);
+        // Fill with background color
+        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
+        waterFallLeftMarginCtx.fillRect(textX - 1, 0, textWidth + 2, textHeight);
 
-        // Draw text
-        waterfallLeftMarginCtx.fillStyle = theme.palette.text.primary;
-        waterfallLeftMarginCtx.font = '10px monospace';
-        waterfallLeftMarginCtx.textAlign = 'left';
-        waterfallLeftMarginCtx.textBaseline = 'middle';
+        // Draw the time text at y=0
+        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
+        waterFallLeftMarginCtx.fillText(newRotatorEvent, centerX, 0);
 
-        const azText = `Az: ${rotatorEvent.azimuth.toFixed(1)}°`;
-        const elText = `El: ${rotatorEvent.elevation.toFixed(1)}°`;
-
-        waterfallLeftMarginCtx.fillText(azText, 5, y - 5);
-        waterfallLeftMarginCtx.fillText(elText, 5, y + 5);
-
-        // Draw dotted line across if enabled
+        // Draw dotted line only if showRotatorDottedLines is enabled
         if (showRotatorDottedLines) {
-            waterfallLeftMarginCtx.strokeStyle = theme.palette.border.main;
-            waterfallLeftMarginCtx.lineWidth = 1;
-            waterfallLeftMarginCtx.setLineDash([4, 4]);
-            waterfallLeftMarginCtx.beginPath();
-            waterfallLeftMarginCtx.moveTo(canvasWidth - 5, y);
-            waterfallLeftMarginCtx.lineTo(canvasWidth, y);
-            waterfallLeftMarginCtx.stroke();
-            waterfallLeftMarginCtx.setLineDash([]);
+            // Get or create the imageData for the dotted line
+            let imageData;
+
+            // Check if we have a cached imageData for the dotted line
+            if (!dottedLineImageData || dottedLineImageData.width !== waterfallCanvas.width) {
+                // Create new ImageData if none exists or if width changed
+                imageData = waterfallCtx.createImageData(waterfallCanvas.width, 1);
+                dottedLineImageData = imageData;
+
+                // Pre-fill the dotted line pattern
+                const data = imageData.data;
+                for (let i = 0; i < data.length; i += 32) { // Increase step to create dots
+                    for (let j = 0; j < 4; j++) { // Dot width of 1 pixel
+                        const idx = i + (j * 4);
+                        if (idx < data.length) {
+                            data[idx] = 255;     // R
+                            data[idx + 1] = 255; // G
+                            data[idx + 2] = 255; // B
+                            data[idx + 3] = 100; // A
+                        }
+                    }
+                }
+            } else {
+                // Reuse the cached imageData
+                imageData = dottedLineImageData;
+            }
+
+            // Draw the dotted line
+            waterfallCtx.putImageData(imageData, 0, 0);
         }
     }
+
+    // Calculate seconds since the epoch and check if we need to update
+    const now = new Date();
+    const currentSeconds = Math.floor(now.getTime() / 1000);
+
+    // Only update if this is a NEW timestamp (check if lastTimestamp second has changed)
+    const lastSeconds = lastTimestamp ? Math.floor(lastTimestamp.getTime() / 1000) : -1;
+    const shouldUpdate = !lastTimestamp ||
+        (currentSeconds !== lastSeconds && currentSeconds % 15 === 0) ||
+        (lastTimestamp.getMinutes() !== now.getMinutes()) ||
+        (lastTimestamp.getHours() !== now.getHours());
+
+    // Update the timestamp every 15 seconds
+    if (shouldUpdate) {
+        // Format the time as HH:MM:SS
+        const hours = String(now.getHours()).padStart(2, '0');
+        const minutes = String(now.getMinutes()).padStart(2, '0');
+        const seconds = String(now.getSeconds()).padStart(2, '0');
+        const timeString = `${hours}:${minutes}:${seconds}`;
+
+        // Set font properties first to measure text
+        waterFallLeftMarginCtx.font = '12px monospace';
+        waterFallLeftMarginCtx.textAlign = 'center';
+        waterFallLeftMarginCtx.textBaseline = 'top';
+
+        // Measure text to get precise dimensions
+        const textMetrics = waterFallLeftMarginCtx.measureText(timeString);
+        const textWidth = textMetrics.width;
+        const textHeight = 12; // Match the actual font size
+        const centerX = waterfallLeftMarginCanvas.width / 2;
+        const textX = centerX - (textWidth / 2);
+
+        // Only clear the specific rectangle where the text will be drawn
+        waterFallLeftMarginCtx.clearRect(textX - 1, 0, textWidth + 2, textHeight);
+
+        // Fill with background color
+        waterFallLeftMarginCtx.fillStyle = theme.palette.background.paper;
+        waterFallLeftMarginCtx.fillRect(textX - 1, 0, textWidth + 2, textHeight);
+
+        // Draw the time text at y=0
+        waterFallLeftMarginCtx.fillStyle = theme.palette.text.primary;
+        waterFallLeftMarginCtx.fillText(timeString, centerX, 0);
+
+        // Update the last timestamp reference
+        lastTimestamp = now;
+    }
+
+    // Return updated mutable state
+    return {
+        lastTimestamp,
+        dottedLineImageData
+    };
 }
