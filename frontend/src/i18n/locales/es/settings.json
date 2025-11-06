@@ -41,7 +41,14 @@
     "theme_ocean-blue": "Azul Océano",
     "theme_forest-green": "Verde Bosque",
     "theme_night": "Noche (OLED)",
-    "theme_sunset-orange": "Naranja Atardecer"
+    "theme_sunset-orange": "Naranja Atardecer",
+    "toast_position": "Posición de Notificaciones",
+    "toast_position_top_left": "Arriba Izquierda",
+    "toast_position_top_center": "Arriba Centro",
+    "toast_position_top_right": "Arriba Derecha",
+    "toast_position_bottom_left": "Abajo Izquierda",
+    "toast_position_bottom_center": "Abajo Centro",
+    "toast_position_bottom_right": "Abajo Derecha"
   },
   "location": {
     "title": "Seleccionar ubicación en el mapa",

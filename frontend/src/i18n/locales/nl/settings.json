@@ -41,7 +41,14 @@
     "theme_ocean-blue": "Oceaanblauw",
     "theme_forest-green": "Bosgroen",
     "theme_night": "Nacht (OLED)",
-    "theme_sunset-orange": "Zonsondergang Oranje"
+    "theme_sunset-orange": "Zonsondergang Oranje",
+    "toast_position": "Meldingspositie",
+    "toast_position_top_left": "Boven Links",
+    "toast_position_top_center": "Boven Midden",
+    "toast_position_top_right": "Boven Rechts",
+    "toast_position_bottom_left": "Onder Links",
+    "toast_position_bottom_center": "Onder Midden",
+    "toast_position_bottom_right": "Onder Rechts"
   },
   "location": {
     "title": "Selecteer locatie op kaart",

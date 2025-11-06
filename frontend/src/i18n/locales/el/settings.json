@@ -41,7 +41,14 @@
     "theme_ocean-blue": "Μπλε Ωκεανού",
     "theme_forest-green": "Πράσινο Δάσους",
     "theme_night": "Νύχτα (OLED)",
-    "theme_sunset-orange": "Πορτοκαλί Ηλιοβασιλέματος"
+    "theme_sunset-orange": "Πορτοκαλί Ηλιοβασιλέματος",
+    "toast_position": "Θέση Ειδοποιήσεων",
+    "toast_position_top_left": "Πάνω Αριστερά",
+    "toast_position_top_center": "Πάνω Κέντρο",
+    "toast_position_top_right": "Πάνω Δεξιά",
+    "toast_position_bottom_left": "Κάτω Αριστερά",
+    "toast_position_bottom_center": "Κάτω Κέντρο",
+    "toast_position_bottom_right": "Κάτω Δεξιά"
   },
   "location": {
     "title": "Επιλέξτε τοποθεσία στον χάρτη",

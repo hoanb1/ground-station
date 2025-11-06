@@ -66,7 +66,7 @@ const preferencesSlice = createSlice({
             {
                 id: null,
                 name: 'theme',
-                value: 'dark',
+                value: 'auto',
             },
             {
                 id: null,
@@ -82,6 +82,11 @@ const preferencesSlice = createSlice({
                 id: null,
                 name: 'openweather_api_key',
                 value: "",
+            },
+            {
+                id: null,
+                name: 'toast_position',
+                value: 'top-right',
             }
         ],
         status: 'idle',
@@ -112,6 +117,9 @@ const preferencesSlice = createSlice({
                     const existingPreference = state.preferences.find((pref) => pref.name === preference.name);
                     if (existingPreference) {
                         existingPreference.value = preference.value;
+                    } else {
+                        // Add new preference from backend if it doesn't exist in state
+                        state.preferences.push(preference);
                     }
                 });
             })

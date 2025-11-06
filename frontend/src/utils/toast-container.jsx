@@ -20,16 +20,33 @@
 import React from 'react';
 import { ToastContainer, Slide } from 'react-toastify';
 import { useTheme } from '@mui/material/styles';
+import { useSelector } from 'react-redux';
 
 export const ToastContainerWithStyles = () => {
     const theme = useTheme();
+    const preferences = useSelector((state) => state.preferences.preferences);
+
+    // Get toast position preference
+    const toastPositionPreference = preferences.find(pref => pref.name === 'toast_position');
+    const position = toastPositionPreference ? toastPositionPreference.value : 'top-right';
 
     return (
         <>
             <style>{`
                 .Toastify__toast-container {
-                    top: 75px !important;
                     z-index: 1299 !important;
+                }
+
+                .Toastify__toast-container--top-left,
+                .Toastify__toast-container--top-center,
+                .Toastify__toast-container--top-right {
+                    top: 75px !important;
+                }
+
+                .Toastify__toast-container--bottom-left,
+                .Toastify__toast-container--bottom-center,
+                .Toastify__toast-container--bottom-right {
+                    bottom: 20px !important;
                 }
 
                 .Toastify__toast-container,
@@ -107,7 +124,7 @@ export const ToastContainerWithStyles = () => {
                 }
             `}</style>
             <ToastContainer
-                position="top-right"
+                position={position}
                 autoClose={4000}
                 hideProgressBar={false}
                 newestOnTop={false}

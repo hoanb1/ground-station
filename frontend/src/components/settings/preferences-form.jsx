@@ -70,6 +70,15 @@ const PreferencesForm = () => {
         { name: 'Nederlands', value: 'nl_NL' },
     ];
 
+    const toastPositionOptions = [
+        { name: t('preferences.toast_position_top_left'), value: 'top-left' },
+        { name: t('preferences.toast_position_top_center'), value: 'top-center' },
+        { name: t('preferences.toast_position_top_right'), value: 'top-right' },
+        { name: t('preferences.toast_position_bottom_left'), value: 'bottom-left' },
+        { name: t('preferences.toast_position_bottom_center'), value: 'bottom-center' },
+        { name: t('preferences.toast_position_bottom_right'), value: 'bottom-right' },
+    ];
+
     // Generate theme options from available themes
     const availableThemes = getAvailableThemes();
     const themesOptions = availableThemes.map(themeName => ({
@@ -181,6 +190,31 @@ const PreferencesForm = () => {
                                 label={t('preferences.theme')}
                              variant={'filled'}>
                                 {themesOptions.map((option) => (
+                                    <MenuItem key={option.value} value={option.value}>
+                                        {option.name}
+                                    </MenuItem>
+                                ))}
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    {/* Toast Notification Position */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>{t('preferences.toast_position')}</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                            disabled={isLoading}
+                            size="small"
+                        >
+                            <InputLabel htmlFor={"toast-position-selector"}>{t('preferences.toast_position')}</InputLabel>
+                            <Select
+                                id={'toast-position-selector'}
+                                value={getPreferenceValue('toast_position')}
+                                onChange={handleChange('toast_position')}
+                                label={t('preferences.toast_position')}
+                                variant={'filled'}>
+                                {toastPositionOptions.map((option) => (
                                     <MenuItem key={option.value} value={option.value}>
                                         {option.name}
                                     </MenuItem>

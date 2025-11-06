@@ -55,9 +55,10 @@ async def fetch_all_preferences(session: AsyncSession) -> dict:
     defaults = {
         "timezone": "Europe/Athens",
         "language": "en_US",
-        "theme": "dark",
+        "theme": "auto",
         "stadia_maps_api_key": "",
         "openweather_api_key": "",
+        "toast_position": "top-right",
     }
 
     try:

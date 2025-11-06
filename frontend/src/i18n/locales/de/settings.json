@@ -41,7 +41,14 @@
     "theme_ocean-blue": "Ozeanblau",
     "theme_forest-green": "Waldgrün",
     "theme_night": "Nacht (OLED)",
-    "theme_sunset-orange": "Sonnenuntergang Orange"
+    "theme_sunset-orange": "Sonnenuntergang Orange",
+    "toast_position": "Benachrichtigungsposition",
+    "toast_position_top_left": "Oben Links",
+    "toast_position_top_center": "Oben Mitte",
+    "toast_position_top_right": "Oben Rechts",
+    "toast_position_bottom_left": "Unten Links",
+    "toast_position_bottom_center": "Unten Mitte",
+    "toast_position_bottom_right": "Unten Rechts"
   },
   "location": {
     "title": "Standort auf Karte auswählen",

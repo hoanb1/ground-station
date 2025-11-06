@@ -42,7 +42,14 @@
     "theme_ocean-blue": "Ocean Blue",
     "theme_forest-green": "Forest Green",
     "theme_night": "Night (OLED)",
-    "theme_sunset-orange": "Sunset Orange"
+    "theme_sunset-orange": "Sunset Orange",
+    "toast_position": "Notification Position",
+    "toast_position_top_left": "Top Left",
+    "toast_position_top_center": "Top Center",
+    "toast_position_top_right": "Top Right",
+    "toast_position_bottom_left": "Bottom Left",
+    "toast_position_bottom_center": "Bottom Center",
+    "toast_position_bottom_right": "Bottom Right"
   },
   "location": {
     "title": "Select location on map",
