@@ -114,6 +114,7 @@ class SatelliteTracker:
             "doppler_shift": 0,
             "original_freq": 0,
             "transmitter_id": "none",
+            "transmitters": [],
             "device_type": "",
             "host": "",
             "port": 0,
@@ -815,6 +816,60 @@ class SatelliteTracker:
             self.rig_data["tracking"] = False
             self.rig_data["stopped"] = True
 
+    async def _calculate_all_transmitters_doppler(self, satellite_tles, location):
+        """Calculate doppler shift for all active transmitters of the current satellite."""
+        if self.current_norad_id is None:
+            self.rig_data["transmitters"] = []
+            return
+
+        try:
+            async with AsyncSessionLocal() as dbsession:
+                all_transmitters_reply = await crud.transmitters.fetch_transmitters_for_satellite(
+                    dbsession, norad_id=self.current_norad_id
+                )
+                all_transmitters = all_transmitters_reply.get("data", [])
+
+            # Filter only active transmitters (status == "active")
+            active_transmitters = [t for t in all_transmitters if t.get("status") == "active"]
+
+            # Calculate doppler shift for each active transmitter
+            transmitters_with_doppler = []
+            for transmitter in active_transmitters:
+                downlink_freq = transmitter.get("downlink_low", 0)
+                if downlink_freq and downlink_freq > 0:
+                    observed_freq, doppler_shift = calculate_doppler_shift(
+                        satellite_tles[0],
+                        satellite_tles[1],
+                        location["lat"],
+                        location["lon"],
+                        0,
+                        downlink_freq,
+                    )
+
+                    transmitters_with_doppler.append(
+                        {
+                            "id": transmitter.get("id"),
+                            "description": transmitter.get("description"),
+                            "type": transmitter.get("type"),
+                            "mode": transmitter.get("mode"),
+                            "downlink_low": downlink_freq,
+                            "downlink_high": transmitter.get("downlink_high"),
+                            "observed_freq": observed_freq,
+                            "doppler_shift": doppler_shift,
+                        }
+                    )
+
+            self.rig_data["transmitters"] = transmitters_with_doppler
+            logger.debug(
+                f"Calculated doppler shift for {len(transmitters_with_doppler)} "
+                f"active transmitters for satellite #{self.current_norad_id}"
+            )
+
+        except Exception as e:
+            logger.error(f"Error calculating doppler for all transmitters: {e}")
+            logger.exception(e)
+            self.rig_data["transmitters"] = []
+
     async def _control_rig_frequency(self):
         """Control rig frequency based on doppler calculations."""
         if self.rig_controller and self.current_rig_state == "tracking":
@@ -991,6 +1046,9 @@ class SatelliteTracker:
 
                 # Handle transmitter tracking
                 await self._handle_transmitter_tracking(satellite_tles, location)
+
+                # Calculate doppler shift for all active transmitters
+                await self._calculate_all_transmitters_doppler(satellite_tles, location)
 
                 # Control rig frequency
                 await self._control_rig_frequency()

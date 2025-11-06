@@ -81,29 +81,6 @@ const BookmarkCanvas = ({
         };
     };
 
-    // Add bookmarks for available transmitters whenever they change
-    useEffect(() => {
-        const bookMarks = [];
-        availableTransmitters.forEach(transmitter => {
-            bookMarks.push(makeBookMark(
-                transmitter['downlink_low'],
-                `${transmitter['description']} (${preciseHumanizeFrequency(transmitter['downlink_low'])})`,
-                theme.palette.success.main,
-                {
-                    type: 'transmitter',
-                    transmitter_id: transmitter['id']
-                }
-            ));
-        })
-
-        // Clear any existing doppler shift bookmarks when switching satellites
-        const filteredBookmarks = bookmarks.filter(bookmark =>
-            bookmark.metadata?.type !== 'doppler_shift'
-        );
-
-        dispatch(setBookMarks([...bookMarks]));
-    }, [availableTransmitters]);
-
     // Poll for container width changes
     useEffect(() => {
         const interval = setInterval(() => {
@@ -141,74 +118,46 @@ const BookmarkCanvas = ({
         return true;
     }
 
+    // Merged effect: Create both transmitter and doppler-shifted bookmarks
     useEffect(() => {
-        // First, check if we need to update based on rigData conditions
-        if (rigData['observed_freq'] > 0 && rigData['transmitter_id'] !== "none") {
-            // Get the transmitter ID and look up transmitter details
-            const transmitterId = rigData['transmitter_id'];
-            const transmitter = availableTransmitters.find(t => t.id === transmitterId);
+        // 1. Create static transmitter bookmarks from availableTransmitters
+        const transmitterBookmarks = [];
+        availableTransmitters.forEach(transmitter => {
+            const isActive = transmitter['status'] === 'active';
+            transmitterBookmarks.push(makeBookMark(
+                transmitter['downlink_low'],
+                `${transmitter['description']} (${preciseHumanizeFrequency(transmitter['downlink_low'])})`,
+                isActive ? theme.palette.success.main : theme.palette.grey[500],
+                {
+                    type: 'transmitter',
+                    transmitter_id: transmitter['id'],
+                    active: isActive
+                }
+            ));
+        });
 
-            // Create a new bookmark for the doppler shifted frequency
-            const newBookMark = {
-                frequency: rigData['observed_freq'],
-                label: `${satelliteData['details']['name']} - ${transmitter?.description || 'Unknown'} - Corrected: ${humanizeFrequency(rigData['observed_freq'])}`,
+        // 2. Create doppler-shifted bookmarks from rigData
+        const transmittersWithDoppler = rigData['transmitters'] || [];
+        const dopplerBookmarks = transmittersWithDoppler
+            .filter(transmitter => transmitter.observed_freq > 0)
+            .map(transmitter => ({
+                frequency: transmitter.observed_freq,
+                label: `${satelliteData['details']['name']} - ${transmitter.description || 'Unknown'} - Corrected: ${humanizeFrequency(transmitter.observed_freq)}`,
                 color: theme.palette.warning.main,
                 metadata: {
                     type: 'doppler_shift',
-                    transmitter_id: transmitterId
+                    transmitter_id: transmitter.id
                 }
-            };
+            }));
 
-            // Check if this bookmark already exists with the same frequency
-            const existingBookmarkIndex = bookmarks.findIndex(bookmark =>
-                bookmark.metadata?.type === 'doppler_shift' &&
-                bookmark.metadata?.transmitter_id === transmitterId
-            );
+        // 3. Combine both types of bookmarks
+        const updatedBookmarks = [...transmitterBookmarks, ...dopplerBookmarks];
 
-            // Only update if necessary
-            if (existingBookmarkIndex === -1 ||
-                bookmarks[existingBookmarkIndex].frequency !== newBookMark.frequency) {
-
-                // Make a direct modification to the Redux store
-                const updatedBookmarks = [...bookmarks]; // One unavoidable copy
-
-                if (existingBookmarkIndex !== -1) {
-                    // Replace the existing bookmark
-                    updatedBookmarks[existingBookmarkIndex] = newBookMark;
-                } else {
-                    // Remove any old doppler shift bookmarks for this transmitter (shouldn't be any)
-                    // and add the new one
-                    const filteredIndex = updatedBookmarks.findIndex(bookmark =>
-                        bookmark.metadata?.type === 'doppler_shift' &&
-                        bookmark.metadata?.transmitter_id === transmitterId
-                    );
-
-                    if (filteredIndex !== -1) {
-                        updatedBookmarks[filteredIndex] = newBookMark;
-                    } else {
-                        updatedBookmarks.push(newBookMark);
-                    }
-                }
-
-                // Only dispatch if bookmarks actually changed
-                if (!areBookmarksEqual(bookmarks, updatedBookmarks)) {
-                    dispatch(setBookMarks(updatedBookmarks));
-                }
-            }
-
-        } else if (rigData['transmitter_id'] === "none") {
-            // If no transmitters are selected, check if we need to remove doppler_shift bookmarks
-            const hasDopplerShiftBookmarks = bookmarks.some(bookmark => bookmark.metadata?.type === 'doppler_shift');
-
-            if (hasDopplerShiftBookmarks) {
-                // Only create a new array if we need to remove items
-                const filteredBookmarks = bookmarks.filter(bookmark =>
-                    !(bookmark.metadata?.type === 'doppler_shift')
-                );
-                dispatch(setBookMarks(filteredBookmarks));
-            }
+        // 4. Only dispatch if bookmarks actually changed
+        if (!areBookmarksEqual(bookmarks, updatedBookmarks)) {
+            dispatch(setBookMarks(updatedBookmarks));
         }
-    }, [rigData]);
+    }, [availableTransmitters, rigData, satelliteData, theme.palette.success.main, theme.palette.warning.main, theme.palette.grey]);
 
     useEffect(() => {
         const canvas = canvasRef.current;
@@ -262,14 +211,17 @@ const BookmarkCanvas = ({
                 // Calculate x position based on frequency
                 const x = ((bookmark.frequency - startFreq) / freqRange) * canvas.width;
 
+                // Check if this is an inactive transmitter for line styling
+                const isInactiveTransmitter = bookmark.metadata?.type === 'transmitter' && !bookmark.metadata?.active;
+
                 // Draw bookmark marker
                 ctx.beginPath();
                 ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
-                ctx.lineWidth = 0.8;
+                ctx.lineWidth = isInactiveTransmitter ? 0.5 : 0.8;
 
                 // Draw a subtle dashed vertical line
                 ctx.setLineDash([2, 4]);
-                ctx.globalAlpha = 0.9;
+                ctx.globalAlpha = isInactiveTransmitter ? 0.4 : 0.9;
                 ctx.moveTo(x, 0);
                 ctx.lineTo(x, height);
                 ctx.stroke();
@@ -278,7 +230,7 @@ const BookmarkCanvas = ({
 
                 // Draw a downward-pointing arrow at the bottom of the canvas
                 ctx.beginPath();
-                const arrowSize = 6;
+                const arrowSize = isInactiveTransmitter ? 4 : 6;
                 const arrowY = height - arrowSize; // Position at bottom of canvas
 
                 // Draw the arrow path
@@ -290,8 +242,8 @@ const BookmarkCanvas = ({
                 // If the bookmark is a transmitter, draw a hollow arrow with colored outline
                 if (bookmark.metadata?.type === 'transmitter') {
                     ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
-                    ctx.lineWidth = 2;
-                    ctx.globalAlpha = 1.0;
+                    ctx.lineWidth = isInactiveTransmitter ? 1 : 2;
+                    ctx.globalAlpha = isInactiveTransmitter ? 0.5 : 1.0;
                     ctx.stroke();
 
                 } else {
@@ -311,7 +263,11 @@ const BookmarkCanvas = ({
                     const labelOffset = (visibleBookmarkIndex % 2) * verticalSpacing;
                     const labelY = baseY + labelOffset + 30;
 
-                    ctx.font = '12px Arial';
+                    // Check if this is an inactive transmitter
+                    const isInactive = bookmark.metadata?.type === 'transmitter' && !bookmark.metadata?.active;
+                    const fontSize = isInactive ? '10px' : '12px';
+
+                    ctx.font = `${fontSize} Arial`;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
                     ctx.textAlign = 'center';
 
@@ -329,15 +285,15 @@ const BookmarkCanvas = ({
                         radius
                     );
                     const bgColor = theme.palette.background.paper;
-                    ctx.fillStyle = bgColor.startsWith('#') 
-                        ? bgColor + 'E6' 
+                    ctx.fillStyle = bgColor.startsWith('#')
+                        ? bgColor + 'E6'
                         : bgColor.replace(')', ', 0.9)');
                     ctx.fill();
 
                     // Draw the text
                     ctx.shadowBlur = 2;
                     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
-                    ctx.globalAlpha = 1.0;
+                    ctx.globalAlpha = isInactive ? 0.6 : 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
                     ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
@@ -346,14 +302,25 @@ const BookmarkCanvas = ({
                     visibleBookmarkIndex++;
                 }
 
-                // For doppler_shift bookmarks
+                // For doppler_shift bookmarks - track their index separately for stacking
                 if (bookmark.label && isDopplerShift) {
+                    // Find the index of this doppler bookmark among all doppler bookmarks
+                    const dopplerBookmarks = bookmarks.filter(b =>
+                        b.metadata?.type === 'doppler_shift' &&
+                        b.frequency >= startFreq &&
+                        b.frequency <= endFreq
+                    );
+                    const dopplerIndex = dopplerBookmarks.findIndex(b =>
+                        b.metadata?.transmitter_id === bookmark.metadata?.transmitter_id
+                    );
+
                     ctx.font = 'bold 12px Arial';
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.textAlign = 'center';
 
-                    // Position the label just above the arrow
-                    const dopplerLabelY = 45 - padding - textHeight;
+                    // Calculate label vertical position based on doppler index (alternating heights)
+                    const dopplerLabelOffset = (dopplerIndex % 2) * verticalSpacing;
+                    const dopplerLabelY = 45 - padding - textHeight + dopplerLabelOffset;
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);
@@ -369,8 +336,8 @@ const BookmarkCanvas = ({
                         radius
                     );
                     const bgColor = theme.palette.background.paper;
-                    ctx.fillStyle = bgColor.startsWith('#') 
-                        ? bgColor + 'B3' 
+                    ctx.fillStyle = bgColor.startsWith('#')
+                        ? bgColor + 'B3'
                         : bgColor.replace(')', ', 0.7)');
                     ctx.fill();
 

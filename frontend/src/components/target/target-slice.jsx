@@ -310,7 +310,8 @@ const targetSatTrackSlice = createSlice({
             'doppler_shift': 0,
             'frequency': 0,
             'observed_freq': 0,
-            'tracking': false
+            'tracking': false,
+            'transmitters': [],
         },
         colorMaps: [
             'viridis',
