@@ -23,7 +23,12 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
 
     // Handle VFO property changes
     if (action.type === 'waterfallState/setVFOProperty') {
-        const { vfoNumber, updates } = action.payload;
+        const { vfoNumber, updates, skipBackendSync } = action.payload;
+
+        // Skip backend sync if this update came from the backend (e.g., frequency-only tracking updates)
+        if (skipBackendSync) {
+            return result;
+        }
 
         // Get the complete VFO state and merge with updates
         const vfoState = state.waterfall.vfoMarkers[vfoNumber];

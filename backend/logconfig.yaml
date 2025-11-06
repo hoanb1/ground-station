@@ -227,6 +227,12 @@ loggers:
       - default
     propagate: no
 
+  vfo-state:
+    level: INFO
+    handlers:
+      - default
+    propagate: no
+
 root:
   level: DEBUG
   handlers:

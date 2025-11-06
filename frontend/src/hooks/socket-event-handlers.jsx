@@ -43,7 +43,7 @@ import { setSyncState } from '../components/satellites/synchronize-slice.jsx';
 import { setSatelliteData, setUITrackerValues } from '../components/target/target-slice.jsx';
 import { setSynchronizing } from '../components/satellites/synchronize-slice.jsx';
 import { initializeAppData } from '../services/data-sync.js';
-import { setIsRecording, setRecordingDuration, setRecordingStartTime, updateAllVFOStates } from '../components/waterfall/waterfall-slice.jsx';
+import { setIsRecording, setRecordingDuration, setRecordingStartTime, updateAllVFOStates, setVFOProperty } from '../components/waterfall/waterfall-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
 
 /**
@@ -232,6 +232,15 @@ export const useSocketEventHandlers = (socket) => {
             store.dispatch(updateAllVFOStates(vfoStates));
         });
 
+        // VFO frequency-only update (during tracking to avoid overwriting user's bandwidth changes)
+        socket.on("vfo-frequency-update", (data) => {
+            store.dispatch(setVFOProperty({
+                vfoNumber: data.vfo_id,
+                updates: { frequency: data.frequency },
+                skipBackendSync: true  // Don't send this back to backend
+            }));
+        });
+
         // Satellite tracking events
         socket.on("satellite-tracking", (message) => {
             store.dispatch(setSatelliteData(message));
@@ -386,6 +395,7 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("file_browser_error");
             socket.off("recording_state");
             socket.off("vfo-states");
+            socket.off("vfo-frequency-update");
         };
     }, [socket, dispatch, t]);
 };

@@ -143,7 +143,7 @@ const VFOMarkersContainer = ({
     // Utility function for VFO frequency calculations
     const calculateVFOFrequencyBounds = useCallback((marker) => {
         const bandwidth = marker.bandwidth || 3000;
-        const mode = (marker.mode || 'USB').toUpperCase();
+        const mode = marker.mode || 'USB';
 
         let markerLowFreq, markerHighFreq, leftEdgeX, rightEdgeX;
 

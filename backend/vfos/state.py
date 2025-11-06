@@ -13,8 +13,8 @@ VFO_NUMBER = 4
 class VFOState:
     vfo_number: int = 0
     center_freq: int = 0
-    bandwidth: int = 0
-    modulation: str = "fm"
+    bandwidth: int = 10000
+    modulation: str = "FM"
     active: bool = False
     selected: bool = False
     volume: int = 50
@@ -139,3 +139,18 @@ class VFOManager:
             vfo_states_dict,
             room=session_id,
         )
+
+    async def emit_vfo_frequency_update(self, sio, session_id: str, vfo_id: int) -> None:
+        """Emit only frequency update for a specific VFO to avoid overwriting user's other settings."""
+        self._ensure_session_vfos(session_id)
+        vfo_state = self._session_vfo_states[session_id].get(vfo_id)
+
+        if vfo_state:
+            await sio.emit(
+                "vfo-frequency-update",
+                {
+                    "vfo_id": vfo_id,
+                    "frequency": vfo_state.center_freq,
+                },
+                room=session_id,
+            )

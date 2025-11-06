@@ -341,12 +341,12 @@ const VfoAccordion = ({
                                     }
                                 }}
                             >
-                                <ToggleButton value="none">{t('vfo.modes.none')}</ToggleButton>
-                                <ToggleButton value="am">{t('vfo.modes.am')}</ToggleButton>
-                                <ToggleButton value="fm">{t('vfo.modes.fm')}</ToggleButton>
-                                <ToggleButton value="lsb">{t('vfo.modes.lsb')}</ToggleButton>
-                                <ToggleButton value="usb">{t('vfo.modes.usb')}</ToggleButton>
-                                <ToggleButton value="cw">{t('vfo.modes.cw')}</ToggleButton>
+                                <ToggleButton value="NONE">{t('vfo.modes.none')}</ToggleButton>
+                                <ToggleButton value="AM">{t('vfo.modes.am')}</ToggleButton>
+                                <ToggleButton value="FM">{t('vfo.modes.fm')}</ToggleButton>
+                                <ToggleButton value="LSB">{t('vfo.modes.lsb')}</ToggleButton>
+                                <ToggleButton value="USB">{t('vfo.modes.usb')}</ToggleButton>
+                                <ToggleButton value="CW">{t('vfo.modes.cw')}</ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
 
@@ -373,10 +373,10 @@ const VfoAccordion = ({
                                     flexWrap: 'wrap',
                                     gap: 0.5,
                                     '& .MuiToggleButton-root': {
-                                        width: '65px',
+                                        width: '75px',
                                         height: '28px',
-                                        minWidth: '65px',
-                                        maxWidth: '65px',
+                                        minWidth: '75px',
+                                        maxWidth: '75px',
                                         padding: '4px 6px',
                                         fontSize: '0.8rem',
                                         border: '1px solid',
