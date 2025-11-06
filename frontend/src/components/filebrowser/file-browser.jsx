@@ -605,8 +605,9 @@ export default function FileBrowser() {
                                                         left: 8,
                                                         backgroundColor: 'rgba(0, 0, 0, 0.7)',
                                                         borderRadius: 1,
-                                                        px: 1,
-                                                        py: 0.5,
+                                                        px: 0.5,
+                                                        pt: 0.125,
+                                                        pb: 0.25,
                                                     }}
                                                 >
                                                     <Typography
@@ -630,8 +631,9 @@ export default function FileBrowser() {
                                                     right: 8,
                                                     backgroundColor: 'rgba(0, 0, 0, 0.7)',
                                                     borderRadius: 1,
-                                                    px: 1,
-                                                    py: 0.5,
+                                                    px: 0.5,
+                                                    pt: 0.125,
+                                                    pb: 0.25,
                                                 }}
                                             >
                                                 <Typography
@@ -773,8 +775,9 @@ export default function FileBrowser() {
                                                         left: 8,
                                                         backgroundColor: 'rgba(0, 0, 0, 0.7)',
                                                         borderRadius: 1,
-                                                        px: 1,
-                                                        py: 0.5,
+                                                        px: 0.5,
+                                                        pt: 0.125,
+                                                        pb: 0.25,
                                                     }}
                                                 >
                                                     <Typography
@@ -798,8 +801,9 @@ export default function FileBrowser() {
                                                     right: 8,
                                                     backgroundColor: 'rgba(0, 0, 0, 0.7)',
                                                     borderRadius: 1,
-                                                    px: 1,
-                                                    py: 0.5,
+                                                    px: 0.5,
+                                                    pt: 0.125,
+                                                    pb: 0.25,
                                                 }}
                                             >
                                                 <Typography
