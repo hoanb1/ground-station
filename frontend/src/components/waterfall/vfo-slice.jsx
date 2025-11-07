@@ -105,6 +105,14 @@ export const vfoSlice = createSlice({
         setSelectedVFOTab: (state, action) => {
             state.selectedVFOTab = action.payload;
         },
+        unlockAllVFOs: (state) => {
+            // Unlock all VFOs (used for fixing stuck locked states)
+            Object.keys(state.vfoMarkers).forEach(vfoNum => {
+                if (state.vfoMarkers[vfoNum]) {
+                    state.vfoMarkers[vfoNum].locked = false;
+                }
+            });
+        },
         updateAllVFOStates: (state, action) => {
             // action.payload is an object with vfo_number as keys and VFO state objects as values
             const vfoStates = action.payload;
@@ -160,6 +168,7 @@ export const {
     setVfoActive,
     setVfoInactive,
     setSelectedVFOTab,
+    unlockAllVFOs,
     updateAllVFOStates,
 } = vfoSlice.actions;
 
