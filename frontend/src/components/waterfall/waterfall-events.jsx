@@ -18,6 +18,7 @@
  */
 
 import { useCallback } from 'react';
+import { toast } from '../../utils/toast-with-timestamp.jsx';
 
 /**
  * Custom hook for waterfall event handlers
@@ -129,17 +130,14 @@ export const useSnapshotHandlers = ({
             dispatch(saveWaterfallSnapshot({ socket, waterfallImage: compositeImage, snapshotName }))
                 .unwrap()
                 .then(() => {
-                    const { toast } = require("../../utils/toast-with-timestamp.jsx");
                     toast.success('Waterfall snapshot saved successfully', { autoClose: 3000 });
                 })
                 .catch((error) => {
                     console.error('Failed to save snapshot:', error);
-                    const { toast } = require("../../utils/toast-with-timestamp.jsx");
                     toast.error('Failed to save snapshot');
                 });
         } catch (error) {
             console.error('Error in takeSnapshot:', error);
-            const { toast } = require("../../utils/toast-with-timestamp.jsx");
             toast.error('Error capturing snapshot');
         }
     }, [captureSnapshot, generateSnapshotName, socket, dispatch, saveWaterfallSnapshot]);
