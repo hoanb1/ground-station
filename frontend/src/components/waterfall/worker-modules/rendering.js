@@ -35,7 +35,6 @@ import { getColorForPower } from './color-maps.js';
  * @param {Object} params.theme - Theme colors
  * @param {CanvasRenderingContext2D} params.dBAxisCtx - dB axis canvas context
  * @param {OffscreenCanvas} params.dBAxisCanvas - dB axis canvas
- * @param {number} params.bandscopeTopPadding - Top padding offset
  */
 export function drawBandscope({
     bandscopeCtx,
@@ -46,8 +45,7 @@ export function drawBandscope({
     colorMap,
     theme,
     dBAxisCtx,
-    dBAxisCanvas,
-    bandscopeTopPadding = 0
+    dBAxisCanvas
 }) {
     if (!bandscopeCanvas || fftData.length === 0) {
         return;
@@ -91,7 +89,7 @@ export function drawBandscope({
         dBAxisCanvas,
         width,
         height,
-        topPadding: bandscopeTopPadding,
+        topPadding: 0,
         dbRange,
         theme
     });

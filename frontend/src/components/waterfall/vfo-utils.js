@@ -67,7 +67,7 @@ export const canvasDrawingUtils = {
         ctx.fill();
     },
 
-    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, topPadding = 0, locked = false) => {
+    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false) => {
         ctx.font = 'bold 12px Monospace';
         const textMetrics = ctx.measureText(labelText);
 

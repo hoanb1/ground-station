@@ -182,7 +182,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         waterFallCanvasWidth,
         waterFallCanvasHeight,
         bandScopeHeight,
-        bandscopeTopPadding,
+        bandscopeTopPadding = 0,
         frequencyScaleHeight,
         selectedSDRId,
         startStreamingLoading,

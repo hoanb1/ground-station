@@ -60,7 +60,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         waterFallCanvasWidth,
         waterFallCanvasHeight,
         bandScopeHeight,
-        bandscopeTopPadding,
+        bandscopeTopPadding = 0,
         waterFallScaleX,
         waterFallPositionX,
         frequencyScaleHeight,

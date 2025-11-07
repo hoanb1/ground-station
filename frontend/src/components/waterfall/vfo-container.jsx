@@ -333,7 +333,7 @@ const VFOMarkersContainer = ({
             // Draw frequency label
             const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, 0, marker.locked);
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, marker.locked);
         });
     };
 
