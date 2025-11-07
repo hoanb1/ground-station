@@ -159,9 +159,14 @@ class SatelliteTracker:
                 # Get tracking data from database
                 async with AsyncSessionLocal() as dbsession:
 
-                    # Get tracking state from the db
+                    # Get tracking state from the db (snapshot at start of iteration)
                     tracking_state_reply = await crud.tracking_state.get_tracking_state(
                         dbsession, name=TrackingStateNames.SATELLITE_TRACKING
+                    )
+                    initial_tracking_state = (
+                        tracking_state_reply["data"]["value"].copy()
+                        if tracking_state_reply.get("success")
+                        else None
                     )
 
                     if tracking_state_reply["success"] is False:
@@ -253,28 +258,53 @@ class SatelliteTracker:
                 logger.exception(e)
 
             finally:
+                # Check for race condition: re-read tracking state and compare
+                final_tracking_state = None
+                if initial_tracking_state:
+                    try:
+                        async with AsyncSessionLocal() as dbsession:
+                            final_tracking_state_reply = (
+                                await crud.tracking_state.get_tracking_state(
+                                    dbsession, name=TrackingStateNames.SATELLITE_TRACKING
+                                )
+                            )
+                            if final_tracking_state_reply.get("success"):
+                                final_tracking_state = final_tracking_state_reply["data"]["value"]
+                    except Exception as e:
+                        logger.error(f"Error re-reading tracking state in finally block: {e}")
+
                 # Send updates via the queue
                 # Check if we have satellite data and tracker data
                 if self.satellite_data and tracker:
-                    try:
-                        full_msg = {
-                            DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
-                            DictKeys.DATA: {
-                                DictKeys.SATELLITE_DATA: self.satellite_data,
-                                DictKeys.EVENTS: self.events.copy(),
-                                DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
-                                DictKeys.RIG_DATA: self.rig_data.copy(),
-                                DictKeys.TRACKING_STATE: tracker.copy(),
-                            },
-                        }
+                    # Check if tracking state changed during iteration
+                    if (
+                        initial_tracking_state
+                        and final_tracking_state
+                        and initial_tracking_state != final_tracking_state
+                    ):
                         logger.debug(
-                            f"Sending satellite tracking data: " f"\n{pretty_dict(full_msg)}"
+                            "Tracking state changed during iteration, skipping UI update to avoid race condition"
                         )
-                        self.queue_out.put(full_msg)
+                    else:
+                        try:
+                            full_msg = {
+                                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                                DictKeys.DATA: {
+                                    DictKeys.SATELLITE_DATA: self.satellite_data,
+                                    DictKeys.EVENTS: self.events.copy(),
+                                    DictKeys.ROTATOR_DATA: self.rotator_data.copy(),
+                                    DictKeys.RIG_DATA: self.rig_data.copy(),
+                                    DictKeys.TRACKING_STATE: tracker.copy(),
+                                },
+                            }
+                            logger.debug(
+                                f"Sending satellite tracking data: " f"\n{pretty_dict(full_msg)}"
+                            )
+                            self.queue_out.put(full_msg)
 
-                    except Exception as e:
-                        logger.critical(f"Error sending satellite tracking data: {e}")
-                        logger.exception(e)
+                        except Exception as e:
+                            logger.critical(f"Error sending satellite tracking data: {e}")
+                            logger.exception(e)
 
                 # Calculate sleep time
                 if self.start_loop_date:
