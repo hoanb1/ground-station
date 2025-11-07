@@ -323,7 +323,7 @@ const BookmarkCanvas = ({
                         b.metadata?.transmitter_id === bookmark.metadata?.transmitter_id
                     );
 
-                    ctx.font = 'bold 11px Arial';
+                    ctx.font = '11px Arial';
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
