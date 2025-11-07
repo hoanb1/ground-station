@@ -43,7 +43,8 @@ import { setSyncState } from '../components/satellites/synchronize-slice.jsx';
 import { setSatelliteData, setUITrackerValues } from '../components/target/target-slice.jsx';
 import { setSynchronizing } from '../components/satellites/synchronize-slice.jsx';
 import { initializeAppData } from '../services/data-sync.js';
-import { setIsRecording, setRecordingDuration, setRecordingStartTime, updateAllVFOStates, setVFOProperty } from '../components/waterfall/waterfall-slice.jsx';
+import { setIsRecording, setRecordingDuration, setRecordingStartTime } from '../components/waterfall/waterfall-slice.jsx';
+import { updateAllVFOStates, setVFOProperty } from '../components/waterfall/vfo-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
 
 /**

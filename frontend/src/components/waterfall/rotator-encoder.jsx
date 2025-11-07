@@ -2,7 +2,7 @@
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
 import { Box, Typography, Paper } from '@mui/material';
-import { setVFOProperty } from './waterfall-slice.jsx';
+import { setVFOProperty } from './vfo-slice.jsx';
 
 const RotaryEncoder = ({
                            vfoNumber,
@@ -12,7 +12,7 @@ const RotaryEncoder = ({
                            style = {}
                        }) => {
     const dispatch = useDispatch();
-    const { vfoMarkers, vfoActive } = useSelector(state => state.waterfall);
+    const { vfoMarkers, vfoActive } = useSelector(state => state.vfo);
 
     const [isDragging, setIsDragging] = useState(false);
     const [rotation, setRotation] = useState(0);

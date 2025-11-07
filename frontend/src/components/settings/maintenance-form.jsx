@@ -71,6 +71,7 @@ const MaintenanceForm = () => {
         // Clear all Redux persist keys
         const persistKeys = [
             'persist:waterfall',
+            'persist:vfo',
             'persist:rigs',
             'persist:rotators',
             'persist:tleSources',
@@ -101,6 +102,10 @@ const MaintenanceForm = () => {
 
     const clearWaterfallPersist = () => {
         localStorage.removeItem('persist:waterfall');
+    }
+
+    const clearVfoPersist = () => {
+        localStorage.removeItem('persist:vfo');
     }
 
     const clearPreferencesPersist = () => {
@@ -537,7 +542,7 @@ const MaintenanceForm = () => {
                                 <Grid size={10}>
                                     Clear Waterfall Settings
                                     <Typography variant="body2" color="text.secondary">
-                                        Resets frequency, gain, sample rate, colormap, FFT settings, VFO markers
+                                        Resets frequency, gain, sample rate, colormap, FFT settings
                                     </Typography>
                                 </Grid>
                                 <Grid size={6}>
@@ -545,6 +550,24 @@ const MaintenanceForm = () => {
                                         variant="outlined"
                                         color="warning"
                                         onClick={clearWaterfallPersist}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
+
+                                <Grid size={10}>
+                                    Clear VFO Settings
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets all VFO markers, frequencies, modes, and active states
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={clearVfoPersist}
                                         fullWidth
                                         size="small"
                                     >

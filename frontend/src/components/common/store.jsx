@@ -36,6 +36,7 @@ import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
+import vfoReducer from '../waterfall/vfo-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
 import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
@@ -48,7 +49,14 @@ const waterfallPersistConfig = {
     storage,
     whitelist: ['centerFrequency', 'colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
         'showLeftSideWaterFallAccessories', 'selectedAntenna', 'selectedSDRId', 'selectedOffsetMode',
-        'selectedOffsetValue', 'fftAveraging', 'showRotatorDottedLines', 'vfoMarkers', 'autoScalePreset', 'expandedPanels']
+        'selectedOffsetValue', 'fftAveraging', 'showRotatorDottedLines', 'autoScalePreset', 'expandedPanels']
+};
+
+// Persist configuration for VFO slice
+const vfoPersistConfig = {
+    key: 'vfo',
+    storage,
+    whitelist: ['vfoMarkers']
 };
 
 // Persist configuration for the 'rigs' slice
@@ -167,6 +175,7 @@ const fileBrowserPersistConfig = {
 
 // Wrap reducers with persistReducer
 const persistedWaterfallReducer = persistReducer(waterfallPersistConfig, waterfallReducer);
+const persistedVfoReducer = persistReducer(vfoPersistConfig, vfoReducer);
 const persistedRigsReducer = persistReducer(rigsPersistConfig, rigsReducer);
 const persistedRotatorsReducer = persistReducer(rotatorsPersistConfig, rotatorsReducer);
 const persistedTleSourcesReducer = persistReducer(tleSourcesPersistConfig, tleSourcesReducer);
@@ -188,6 +197,7 @@ const persistedFileBrowserReducer = persistReducer(fileBrowserPersistConfig, fil
 export const store = configureStore({
     reducer: {
         waterfall: persistedWaterfallReducer,
+        vfo: persistedVfoReducer,
         rigs: persistedRigsReducer,
         rotators: persistedRotatorsReducer,
         tleSources: persistedTleSourcesReducer,

@@ -31,7 +31,6 @@ import {
     setGridEditable,
     setRtlAgc,
     setTunerAgc,
-    setVFOProperty,
     setColorMap,
     setColorMaps,
     setDbRange,
@@ -55,10 +54,6 @@ import {
     setSelectedTransmitterId,
     setSelectedOffsetMode,
     setSelectedOffsetValue,
-    setSelectedVFO,
-    setSelectedVFOTab,
-    setVfoInactive,
-    setVfoActive,
     startRecording,
     stopRecording,
     setRecordingName,
@@ -69,6 +64,14 @@ import {
     setPlaybackStartTime,
     resetPlaybackStartTime,
 } from './waterfall-slice.jsx';
+
+import {
+    setVFOProperty,
+    setSelectedVFO,
+    setSelectedVFOTab,
+    setVfoInactive,
+    setVfoActive,
+} from './vfo-slice.jsx';
 
 import {useSocket} from "../common/socket.jsx";
 import { toast } from "../../utils/toast-with-timestamp.jsx";
@@ -123,12 +126,6 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         hasSoapyAgc,
         soapyAgc,
         selectedTransmitterId,
-        selectedVFO,
-        vfoMarkers,
-        maxVFOMarkers,
-        selectedVFOTab,
-        vfoActive,
-        vfoColors,
         fftAveraging,
         isRecording,
         recordingDuration,
@@ -137,6 +134,15 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         playbackRecordingPath,
         playbackStartTime,
     } = useSelector((state) => state.waterfall);
+
+    const {
+        selectedVFO,
+        vfoMarkers,
+        maxVFOMarkers,
+        selectedVFOTab,
+        vfoActive,
+        vfoColors,
+    } = useSelector((state) => state.vfo);
 
     const {
         availableTransmitters,

@@ -25,7 +25,7 @@ import { Box, IconButton } from '@mui/material';
 import {
     setVFOProperty,
     setSelectedVFO,
-} from './waterfall-slice.jsx';
+} from './vfo-slice.jsx';
 import {
     canvasDrawingUtils,
     getVFOLabelIconWidth,
@@ -59,7 +59,7 @@ const VFOMarkersContainer = ({
         selectedVFO,
         vfoColors,
         vfoActive,
-    } = useSelector(state => state.waterfall);
+    } = useSelector(state => state.vfo);
 
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
@@ -154,6 +154,16 @@ const VFOMarkersContainer = ({
                 const marker = vfoMarkers[vfoNumber];
 
                 if (marker) {
+                    const updates = {};
+
+                    // Check if color needs to be set
+                    if (marker.color === null) {
+                        // Use the color from vfoColors array based on VFO number
+                        const colorIndex = parseInt(vfoNumber) - 1;
+                        updates.color = vfoColors[colorIndex] || '#FF0000';
+                    }
+
+                    // Check if frequency needs to be updated
                     const visibleRange = getVisibleFrequencyRange(centerFrequency, sampleRate, actualWidth, containerWidth, currentPositionX);
                     const needsFrequencyUpdate =
                         marker.frequency === null ||
@@ -162,19 +172,11 @@ const VFOMarkersContainer = ({
 
                     if (needsFrequencyUpdate) {
                         // Set frequency to center of visible range
-                        const newFrequency = visibleRange.centerFrequency;
+                        updates.frequency = visibleRange.centerFrequency;
+                    }
 
-                        // Also ensure color is set if null
-                        const updates = {
-                            frequency: newFrequency
-                        };
-
-                        if (marker.color === null) {
-                            // Use the color from vfoColors array based on VFO number
-                            const colorIndex = parseInt(vfoNumber) - 1;
-                            updates.color = vfoColors[colorIndex] || '#FF0000';
-                        }
-
+                    // Only dispatch if there are updates to make
+                    if (Object.keys(updates).length > 0) {
                         dispatch(setVFOProperty({
                             vfoNumber: parseInt(vfoNumber),
                             updates,

@@ -1,4 +1,4 @@
-import { updateVFOParameters } from './waterfall-slice.jsx';
+import { updateVFOParameters } from './vfo-slice.jsx';
 import { flushAudioBuffers } from '../dashboard/audio-service.js';
 
 // You might want to pass the socket as a parameter or get it differently
@@ -22,7 +22,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     }
 
     // Handle VFO property changes
-    if (action.type === 'waterfallState/setVFOProperty') {
+    if (action.type === 'vfo/setVFOProperty') {
         const { vfoNumber, updates, skipBackendSync } = action.payload;
 
         // Skip backend sync if this update came from the backend (e.g., frequency-only tracking updates)
@@ -31,9 +31,9 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
         }
 
         // Get the complete VFO state and merge with updates
-        const vfoState = state.waterfall.vfoMarkers[vfoNumber];
-        const vfoActiveState = state.waterfall.vfoActive[vfoNumber];
-        const isSelected = state.waterfall.selectedVFO === vfoNumber;
+        const vfoState = state.vfo.vfoMarkers[vfoNumber];
+        const vfoActiveState = state.vfo.vfoActive[vfoNumber];
+        const isSelected = state.vfo.selectedVFO === vfoNumber;
 
         // Dispatch async thunk to update backend with complete state
         store.dispatch(updateVFOParameters({
@@ -50,7 +50,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     }
 
     // Handle selected VFO changes
-    if (action.type === 'waterfallState/setSelectedVFO') {
+    if (action.type === 'vfo/setSelectedVFO') {
         const selectedVFO = action.payload;
 
         // Flush audio buffers to minimize lag when switching VFOs
@@ -72,10 +72,10 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     }
 
     // Handle VFO activation
-    if (action.type === 'waterfallState/setVfoActive') {
+    if (action.type === 'vfo/setVfoActive') {
         const vfoNumber = action.payload;
-        const vfoState = state.waterfall.vfoMarkers[vfoNumber];
-        const isSelected = state.waterfall.selectedVFO === vfoNumber;
+        const vfoState = state.vfo.vfoMarkers[vfoNumber];
+        const isSelected = state.vfo.selectedVFO === vfoNumber;
 
         // Send complete VFO state when activating to ensure backend has all parameters
         store.dispatch(updateVFOParameters({
@@ -91,7 +91,7 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     }
 
     // Handle VFO deactivation
-    if (action.type === 'waterfallState/setVfoInactive') {
+    if (action.type === 'vfo/setVfoInactive') {
         const vfoNumber = action.payload;
 
         store.dispatch(updateVFOParameters({
@@ -103,9 +103,9 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
 
     // Handle streaming start - send all VFO data to backend
     if (action.type === 'waterfallState/setIsStreaming' && action.payload === true) {
-        const vfoMarkers = state.waterfall.vfoMarkers;
-        const vfoActive = state.waterfall.vfoActive;
-        const selectedVFO = state.waterfall.selectedVFO;
+        const vfoMarkers = state.vfo.vfoMarkers;
+        const vfoActive = state.vfo.vfoActive;
+        const selectedVFO = state.vfo.selectedVFO;
 
         // Send each VFO's complete state to the backend
         Object.keys(vfoMarkers).forEach(vfoNumber => {

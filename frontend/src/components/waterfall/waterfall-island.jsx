@@ -65,7 +65,8 @@ import {
     setShowRotatorDottedLines,
     setAutoScalePreset,
     saveWaterfallSnapshot,
-} from './waterfall-slice.jsx'
+    setFFTdataOverflow,
+} from './waterfall-slice.jsx';
 import {
     enableVFO1,
     enableVFO2,
@@ -78,8 +79,7 @@ import {
     setVFOProperty,
     setVfoInactive,
     setVfoActive,
-    setFFTdataOverflow,
-} from './waterfall-slice.jsx';
+} from './vfo-slice.jsx';
 import { toast } from "../../utils/toast-with-timestamp.jsx";
 import { useSocket } from "../common/socket.jsx";
 import {frequencyBands} from "./bandplans.jsx";
@@ -191,14 +191,17 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         showLeftSideWaterFallAccessories,
         selectedAntenna,
         selectedOffsetValue,
-        vfoMarkers,
-        maxVFOMarkers,
-        vfoColors,
-        vfoActive,
         fftDataOverflow,
         fftDataOverflowLimit,
         showRotatorDottedLines,
     } = useSelector((state) => state.waterfall);
+
+    const {
+        vfoMarkers,
+        maxVFOMarkers,
+        vfoColors,
+        vfoActive,
+    } = useSelector((state) => state.vfo);
 
     // Get target satellite name from Redux
     const targetSatelliteName = useSelector((state) => state.targetSatTrack?.satelliteData?.details?.name || '');

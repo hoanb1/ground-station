@@ -40,10 +40,13 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
         isStreaming,
         gettingSDRParameters,
         autoDBRange,
-        vfoActive,
         playbackRecordingPath,
         isRecording,
     } = useSelector((state) => state.waterfall);
+
+    const {
+        vfoActive,
+    } = useSelector((state) => state.vfo);
 
     const animationFrameRef = useRef(null);
     const bandscopeAnimationFrameRef = useRef(null);
