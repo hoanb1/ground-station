@@ -67,26 +67,55 @@ export const canvasDrawingUtils = {
         ctx.fill();
     },
 
-    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, topPadding = 0) => {
-        ctx.font = '12px Monospace';
+    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, topPadding = 0, locked = false) => {
+        ctx.font = 'bold 12px Monospace';
         const textMetrics = ctx.measureText(labelText);
 
-        // Add extra width for speaker icon (16px icon + 4px left padding + 8px right padding)
-        const iconWidth = 28;
-        const labelWidth = textMetrics.width + 10 + iconWidth;
-        const labelHeight = 14;
+        // Add extra width for speaker icon (16px icon + 10px left padding + 8px right padding)
+        const speakerIconWidth = 34;
+        // Add extra width for lock icon if locked (reduced gap between lock and text)
+        const lockIconWidth = locked ? 5 : 0;
+        const labelWidth = textMetrics.width + 10 + speakerIconWidth + lockIconWidth;
+        const labelHeight = 20; // Always use taller height
+        const labelTop = 3; // Always start at same position
 
         // Draw background
         ctx.fillStyle = `${color}${opacity}`;
         ctx.beginPath();
-        ctx.roundRect(centerX - labelWidth / 2, 5, labelWidth, labelHeight, 2);
+        ctx.roundRect(centerX - labelWidth / 2, labelTop, labelWidth, labelHeight, 2);
         ctx.fill();
 
-        // Draw text (shifted left to make room for icon with padding)
+        // Draw lock icon on the left if locked
+        if (locked) {
+            const lockIconX = centerX - (labelWidth / 2) + 6;
+            // Label starts at y=3, has height 20, so goes to y=23
+            // Position shackle so its top (center - radius - lineWidth/2) is well within bounds
+            const shackleCenterY = 11; // This puts top at ~11 - 3.5 - 1 = 6.5, safely below y=3
+            const lockBodyY = 12; // Moved up 2px to touch the shackle
+
+            // Draw lock shackle (arc) - larger and more visible
+            ctx.strokeStyle = '#ffffff';
+            ctx.lineWidth = 2;
+            ctx.lineCap = 'round';
+            ctx.beginPath();
+            // Draw semicircle rotated 180 degrees - from 0 to PI going downward
+            ctx.arc(lockIconX + 4, shackleCenterY, 3.5, 0, Math.PI, true);
+            ctx.stroke();
+
+            // Draw lock body (rectangle) - positioned to overlap with shackle bottom
+            ctx.fillStyle = '#ffffff';
+            ctx.beginPath();
+            ctx.roundRect(lockIconX - 0.5, lockBodyY, 9, 6, 1);
+            ctx.fill();
+        }
+
+        // Draw text (shifted to maintain consistent spacing with speaker icon)
         ctx.fillStyle = '#ffffff';
         ctx.textAlign = 'center';
-        const textOffset = -10;
-        ctx.fillText(labelText, centerX + textOffset, 16);
+        // When not locked, shift text left to compensate for missing lock icon
+        const textOffset = locked ? 0 : -10;
+        const textY = 17; // Always use same text position
+        ctx.fillText(labelText, centerX + textOffset, textY);
 
         // Draw speaker icon (selected or muted) - scaled up by 1.5x
         // Position icon with more padding on the right side
@@ -150,8 +179,13 @@ export const canvasDrawingUtils = {
 
 /**
  * Get the icon width constant used in label calculations
+ * @param {boolean} locked - Whether the VFO is locked (adds lock icon width)
  */
-export const getVFOLabelIconWidth = () => 28;
+export const getVFOLabelIconWidth = (locked = false) => {
+    const speakerIconWidth = 34;
+    const lockIconWidth = locked ? 5 : 0;
+    return speakerIconWidth + lockIconWidth;
+};
 
 /**
  * Calculate bandwidth change based on drag mode and frequency delta

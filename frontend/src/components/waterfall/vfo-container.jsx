@@ -334,7 +334,7 @@ const VFOMarkersContainer = ({
             // Draw frequency label
             const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, bandscopeTopPadding);
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, bandscopeTopPadding, marker.locked);
         });
     };
 
@@ -373,8 +373,8 @@ const VFOMarkersContainer = ({
                 if (ctx) {
                     ctx.font = '12px Monospace';
                     const textMetrics = ctx.measureText(labelText);
-                    // Always add extra width for speaker icon (shown as muted or active)
-                    const iconWidth = getVFOLabelIconWidth();
+                    // Always add extra width for speaker icon (shown as muted or active) and lock icon if locked
+                    const iconWidth = getVFOLabelIconWidth(marker.locked);
                     const labelWidth = textMetrics.width + 10 + iconWidth;
 
                     // Check if mouse is over label area

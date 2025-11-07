@@ -19,6 +19,7 @@ class VFOState:
     selected: bool = False
     volume: int = 50
     squelch: int = -150
+    locked: bool = False
 
 
 class VFOManager:
@@ -58,6 +59,7 @@ class VFOManager:
         selected: Optional[bool] = None,
         volume: Optional[int] = None,
         squelch: Optional[int] = None,
+        locked: Optional[bool] = None,
     ) -> None:
 
         assert session_id is not None, "session_id is required"
@@ -108,6 +110,10 @@ class VFOManager:
                 session_vfos[_vfo_id].selected = False
 
             vfo_state.selected = selected
+
+        # check locked
+        if locked is not None:
+            vfo_state.locked = locked
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 

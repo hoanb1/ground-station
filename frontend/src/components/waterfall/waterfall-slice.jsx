@@ -201,10 +201,10 @@ const initialState = {
         4: false,
     },
     vfoMarkers: {
-        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000},
-        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000},
-        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000},
-        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000},
+        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false},
+        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false},
+        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false},
+        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false},
     },
     maxVFOMarkers: 4,
     selectedVFO: null,
@@ -458,6 +458,7 @@ export const waterfallSlice = createSlice({
                     state.vfoMarkers[vfoNum].mode = vfoState.modulation;
                     state.vfoMarkers[vfoNum].volume = vfoState.volume;
                     state.vfoMarkers[vfoNum].squelch = vfoState.squelch;
+                    state.vfoMarkers[vfoNum].locked = vfoState.locked;
 
                     // Update active state
                     state.vfoActive[vfoNum] = vfoState.active;

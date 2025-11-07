@@ -220,7 +220,7 @@ const BookmarkCanvas = ({
                 ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
                 ctx.lineWidth = isInactiveTransmitter ? 0.5 : 0.8;
 
-                // Draw a subtle dashed vertical line
+                // Draw a subtle dashed vertical line from top to bottom
                 ctx.setLineDash([2, 4]);
                 ctx.globalAlpha = isInactiveTransmitter ? 0.4 : 0.9;
                 ctx.moveTo(x, 0);
@@ -262,11 +262,11 @@ const BookmarkCanvas = ({
                     // Calculate label vertical position based on index
                     // Use visibleBookmarkIndex to ensure proper alternating heights (3 rows)
                     const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
-                    const labelY = baseY + labelOffset + 30;
+                    const labelY = baseY + labelOffset + 33; // Moved down 5px from 28
 
                     // Check if this is an inactive transmitter
                     const isInactive = bookmark.metadata?.type === 'transmitter' && !bookmark.metadata?.active;
-                    const fontSize = isInactive ? '10px' : '12px';
+                    const fontSize = isInactive ? '9px' : '11px';
 
                     ctx.font = `${fontSize} Arial`;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
@@ -323,14 +323,14 @@ const BookmarkCanvas = ({
                         b.metadata?.transmitter_id === bookmark.metadata?.transmitter_id
                     );
 
-                    ctx.font = 'bold 12px Arial';
+                    ctx.font = 'bold 11px Arial';
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.textAlign = 'center';
                     ctx.textBaseline = 'middle';
 
                     // Calculate label vertical position based on doppler index (alternating heights - 3 rows)
                     const dopplerLabelOffset = (dopplerIndex % 3) * verticalSpacing;
-                    const dopplerLabelY = 45 - padding - textHeight + dopplerLabelOffset;
+                    const dopplerLabelY = 48 - padding - textHeight + dopplerLabelOffset; // Moved down 5px from 43
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);

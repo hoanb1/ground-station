@@ -71,13 +71,6 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 if tx_reply.get("success") and tx_reply.get("data"):
                     transmitter_mode = tx_reply["data"].get("mode")
 
-        # This is an SDR - get doppler-corrected frequency
-        observed_freq = rig_data.get("observed_freq")
-        doppler_shift = rig_data.get("doppler_shift", 0)
-
-        if not observed_freq:
-            return
-
         # Get all sessions tracking this SDR with a VFO selected
         sessions_with_vfos = session_tracker.get_sessions_with_vfo_for_rig(rig_id)
 
@@ -91,9 +84,31 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
         # Check if we should auto-activate VFO (only when transitioning to tracking)
         rig_state = tracking_state.get("rig_state")
 
-        # Clear initialized sessions when not tracking
+        # Clear initialized sessions when not tracking and unlock VFOs
         if rig_state != "tracking":
             _vfo_initialized_sessions.clear()
+            # Unlock all VFOs that were locked by tracking
+            for session_id, vfo_id in sessions_with_vfos.items():
+                try:
+                    vfo_number = int(vfo_id)
+                    vfo_manager.update_vfo_state(
+                        session_id=session_id,
+                        vfo_id=vfo_number,
+                        locked=False,
+                    )
+                    await vfo_manager.emit_vfo_states(sockio, session_id)
+                    logger.debug(f"Unlocked VFO {vfo_id} for session {session_id}")
+                except Exception as e:
+                    logger.error(f"Error unlocking VFO for session {session_id}: {e}")
+            # Return early - no need to process tracking updates when not tracking
+            return
+
+        # This is an SDR - get doppler-corrected frequency
+        observed_freq = rig_data.get("observed_freq")
+        doppler_shift = rig_data.get("doppler_shift", 0)
+
+        if not observed_freq:
+            return
 
         # Update and emit VFO states for each session
         for session_id, vfo_id in sessions_with_vfos.items():
@@ -133,12 +148,13 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 # Only set active=True and modulation on first tracking update for this session
                 # Otherwise, only update frequency to preserve user's manual settings
                 if is_first_tracking_update:
-                    # Transitioning to tracking - set frequency, activate VFO, and set modulation
+                    # Transitioning to tracking - set frequency, activate VFO, set modulation, and lock
                     update_params = {
                         "session_id": session_id,
                         "vfo_id": vfo_number,
                         "center_freq": int(final_freq),
                         "active": True,
+                        "locked": True,
                     }
                     if mode_normalized:
                         update_params["modulation"] = mode_normalized.upper()
@@ -151,6 +167,7 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                         "session_id": session_id,
                         "vfo_id": vfo_number,
                         "center_freq": int(final_freq),
+                        "locked": True,
                     }
                     vfo_manager.update_vfo_state(**update_params)
                     # Emit only frequency update to avoid overwriting user's bandwidth/mode changes
