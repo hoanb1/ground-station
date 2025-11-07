@@ -56,7 +56,19 @@ const waterfallPersistConfig = {
 const vfoPersistConfig = {
     key: 'vfo',
     storage,
-    whitelist: ['vfoMarkers']
+    whitelist: ['vfoMarkers'],
+    // Migration to fix stuck locked state from old deployments
+    migrate: (state) => {
+        if (state && state.vfoMarkers) {
+            // Unlock all VFOs on rehydration to fix any stuck locked states
+            Object.keys(state.vfoMarkers).forEach(vfoNum => {
+                if (state.vfoMarkers[vfoNum]) {
+                    state.vfoMarkers[vfoNum].locked = false;
+                }
+            });
+        }
+        return Promise.resolve(state);
+    }
 };
 
 // Persist configuration for the 'rigs' slice
