@@ -48,6 +48,7 @@ const VFOMarkersContainer = ({
                                  sampleRate,
                                  waterfallHeight,
                                  bandscopeHeight,
+                                 bandscopeTopPadding = 0,
                                  containerWidth,
                                  zoomScale,
                                  currentPositionX,
@@ -74,7 +75,7 @@ const VFOMarkersContainer = ({
     const lastClientXRef = useRef(0);
     const lastTouchXRef = useRef(0);
     //const height = bandscopeHeight + waterfallHeight;
-    const height = bandscopeHeight;
+    const height = bandscopeHeight + bandscopeTopPadding;
     const [cursor, setCursor] = useState('default');
 
     // Track the previous VFO active state to detect changes
@@ -88,7 +89,7 @@ const VFOMarkersContainer = ({
     const [edgeHandleHeight] = useState(20);
 
     // Configurable Y position offset for resize handles
-    const [edgeHandleYOffset] = useState(50);
+    const [edgeHandleYOffset] = useState(40);
 
     // Configurable mousewheel frequency step (in Hz)
     const [mousewheelFreqStep] = useState(1000); // 100 Hz step
@@ -314,9 +315,9 @@ const VFOMarkersContainer = ({
             const lineOpacity = isSelected ? 'FF' : '99';
 
             // Use drawing utilities
-            canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, marker.color, areaOpacity);
-            canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5);
-            canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1);
+            canvasDrawingUtils.drawVFOArea(ctx, leftEdgeX, rightEdgeX, height, marker.color, areaOpacity, bandscopeTopPadding);
+            canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5, bandscopeTopPadding);
+            canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1, bandscopeTopPadding);
 
             // Draw edge handles based on mode
             const edgeHandleYPosition = edgeHandleYOffset;
@@ -333,7 +334,7 @@ const VFOMarkersContainer = ({
             // Draw frequency label
             const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected);
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, bandscopeTopPadding);
         });
     };
 
@@ -362,7 +363,7 @@ const VFOMarkersContainer = ({
             const bounds = calculateVFOFrequencyBounds(marker, startFreq, freqRange, actualWidth);
             const { leftEdgeX, rightEdgeX, centerX, mode, bandwidth } = bounds;
 
-            // Check label (y between 0-20px with enlarged touch area) - treat as body drag
+            // Check label (y between 0 and labelYRange with enlarged touch area) - treat as body drag
             if (y >= 0 && y <= labelYRange) {
                 // Calculate label width (approximated based on drawing code)
                 const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);

@@ -26,6 +26,7 @@ const FrequencyBandOverlay = ({
                                   sampleRate,
                                   containerWidth,
                                   height,
+                                  topPadding = 0,
                                   bands = [],
                                   bandHeight = 20,
                                   onBandClick = null,

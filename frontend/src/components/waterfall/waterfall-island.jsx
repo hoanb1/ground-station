@@ -182,6 +182,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         waterFallCanvasWidth,
         waterFallCanvasHeight,
         bandScopeHeight,
+        bandscopeTopPadding,
         frequencyScaleHeight,
         selectedSDRId,
         startStreamingLoading,
@@ -347,6 +348,7 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                 waterFallLeftMarginCanvasRef,
                 waterFallCanvasWidth,
                 waterFallCanvasHeight,
+                bandscopeTopPadding,
                 colorMap,
                 dbRange,
                 fftSize,
@@ -597,10 +599,10 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
                         <canvas
                             ref={dBAxisScopeCanvasRef}
                             width={bandscopeAxisYWidth}
-                            height={bandScopeHeight}
+                            height={bandScopeHeight + bandscopeTopPadding}
                             style={{
                                 width: '100%',
-                                height: `${bandScopeHeight}px`,
+                                height: `${bandScopeHeight + bandscopeTopPadding}px`,
                                 backgroundColor: theme.palette.background.elevated,
                                 display: 'block',
                                 transform: 'translateZ(0)',

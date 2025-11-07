@@ -22,12 +22,12 @@
  */
 
 export const canvasDrawingUtils = {
-    drawVFOArea: (ctx, leftEdgeX, rightEdgeX, height, color, opacity) => {
+    drawVFOArea: (ctx, leftEdgeX, rightEdgeX, height, color, opacity, topPadding = 0) => {
         ctx.fillStyle = `${color}${opacity}`;
         ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
     },
 
-    drawVFOLine: (ctx, x, height, color, opacity, lineWidth) => {
+    drawVFOLine: (ctx, x, height, color, opacity, lineWidth, topPadding = 0) => {
         ctx.beginPath();
         ctx.strokeStyle = `${color}${opacity}`;
         ctx.lineWidth = lineWidth;
@@ -36,7 +36,7 @@ export const canvasDrawingUtils = {
         ctx.stroke();
     },
 
-    drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth) => {
+    drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth, topPadding = 0) => {
         ctx.beginPath();
         ctx.strokeStyle = `${color}${opacity}`;
         ctx.lineWidth = lineWidth;
@@ -67,7 +67,7 @@ export const canvasDrawingUtils = {
         ctx.fill();
     },
 
-    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected) => {
+    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, topPadding = 0) => {
         ctx.font = '12px Monospace';
         const textMetrics = ctx.measureText(labelText);
 

@@ -35,6 +35,7 @@ import { getColorForPower } from './color-maps.js';
  * @param {Object} params.theme - Theme colors
  * @param {CanvasRenderingContext2D} params.dBAxisCtx - dB axis canvas context
  * @param {OffscreenCanvas} params.dBAxisCanvas - dB axis canvas
+ * @param {number} params.bandscopeTopPadding - Top padding offset
  */
 export function drawBandscope({
     bandscopeCtx,
@@ -45,7 +46,8 @@ export function drawBandscope({
     colorMap,
     theme,
     dBAxisCtx,
-    dBAxisCanvas
+    dBAxisCanvas,
+    bandscopeTopPadding = 0
 }) {
     if (!bandscopeCanvas || fftData.length === 0) {
         return;
@@ -89,6 +91,7 @@ export function drawBandscope({
         dBAxisCanvas,
         width,
         height,
+        topPadding: bandscopeTopPadding,
         dbRange,
         theme
     });
@@ -110,7 +113,8 @@ export function drawBandscope({
  * @param {CanvasRenderingContext2D} params.dBAxisCtx - dB axis canvas context
  * @param {OffscreenCanvas} params.dBAxisCanvas - dB axis canvas
  * @param {number} params.width - Canvas width
- * @param {number} params.height - Canvas height
+ * @param {number} params.height - Canvas height (actual drawing area, excluding top padding)
+ * @param {number} params.topPadding - Top padding offset
  * @param {Array<number>} params.dbRange - [minDb, maxDb]
  * @param {Object} params.theme - Theme colors
  */
@@ -119,16 +123,17 @@ export function drawDbAxis({
     dBAxisCanvas,
     width,
     height,
+    topPadding = 0,
     dbRange,
     theme
 }) {
     const [minDb, maxDb] = dbRange;
 
-    // Draw background for the axis area
+    // Draw background for the entire canvas including top padding
     dBAxisCtx.fillStyle = theme.palette.background.elevated;
-    dBAxisCtx.fillRect(0, 0, dBAxisCanvas.width, height);
+    dBAxisCtx.fillRect(0, 0, dBAxisCanvas.width, dBAxisCanvas.height);
 
-    // Draw dB marks and labels
+    // Draw dB marks and labels (offset by topPadding)
     dBAxisCtx.fillStyle = theme.palette.text.primary;
     dBAxisCtx.font = '12px Monospace';
     dBAxisCtx.textAlign = 'right';
@@ -139,7 +144,7 @@ export function drawDbAxis({
     const stepSize = Math.ceil(dbRangeValue / steps);
 
     for (let db = Math.ceil(minDb / stepSize) * stepSize; db <= maxDb; db += stepSize) {
-        const y = height - ((db - minDb) / (maxDb - minDb)) * height;
+        const y = topPadding + height - ((db - minDb) / (maxDb - minDb)) * height;
 
         // Draw a horizontal dotted grid line (matches old behavior exactly)
         dBAxisCtx.strokeStyle = theme.palette.overlay.light;

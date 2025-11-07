@@ -60,6 +60,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
         waterFallCanvasWidth,
         waterFallCanvasHeight,
         bandScopeHeight,
+        bandscopeTopPadding,
         waterFallScaleX,
         waterFallPositionX,
         frequencyScaleHeight,
@@ -513,7 +514,7 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                 }}
             >
                 {/* Bandscope container with relative positioning */}
-                <Box sx={{position: 'relative'}}>
+                <Box sx={{position: 'relative', height: `${bandScopeHeight + bandscopeTopPadding}px`}}>
                     <canvas
                         className={"bandscope-canvas"}
                         ref={bandscopeCanvasRef}
@@ -529,13 +530,15 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                             transform: 'translateZ(0)',
                             backfaceVisibility: 'hidden',
                             perspective: '1000px',
+                            marginTop: `${bandscopeTopPadding}px`,
                         }}
                     />
                     <BookmarkCanvas
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
                         containerWidth={visualContainerWidth}
-                        height={bandScopeHeight}
+                        height={bandScopeHeight + bandscopeTopPadding}
+                        topPadding={bandscopeTopPadding}
                         onBookmarkClick={handleBookmarkClick}
                     />
                     {/* Add the new FrequencyBandOverlay component */}
@@ -543,11 +546,22 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                         centerFrequency={centerFrequency}
                         sampleRate={sampleRate}
                         containerWidth={visualContainerWidth}
-                        height={bandScopeHeight}
+                        height={bandScopeHeight + bandscopeTopPadding}
+                        topPadding={bandscopeTopPadding}
                         bands={frequencyBands}
                         bandHeight={20}
                         zoomScale={scaleRef.current}
                         panOffset={positionXRef.current}
+                    />
+                    <VFOMarkersContainer
+                        centerFrequency={centerFrequency}
+                        sampleRate={sampleRate}
+                        waterfallHeight={waterFallCanvasHeight}
+                        bandscopeHeight={bandScopeHeight}
+                        bandscopeTopPadding={bandscopeTopPadding}
+                        containerWidth={containerWidthRef.current}
+                        zoomScale={scaleRef.current}
+                        currentPositionX={positionXRef.current}
                     />
                 </Box>
 
@@ -573,15 +587,6 @@ const WaterfallAndBandscope = forwardRef(function WaterfallAndBandscope({
                         backfaceVisibility: 'hidden',
                         perspective: '1000px',
                     }}
-                />
-                <VFOMarkersContainer
-                    centerFrequency={centerFrequency}
-                    sampleRate={sampleRate}
-                    waterfallHeight={waterFallCanvasHeight}
-                    bandscopeHeight={bandScopeHeight}
-                    containerWidth={containerWidthRef.current}
-                    zoomScale={scaleRef.current}
-                    currentPositionX={positionXRef.current}
                 />
             </Box>
 

@@ -168,6 +168,7 @@ const initialState = {
     waterFallCanvasHeight: 1200,
     //bandScopeHeight: 125,
     bandScopeHeight: 140,
+    bandscopeTopPadding: 20,
     frequencyScaleHeight: 20,
     waterFallScaleX: 1,
     waterFallPositionX: 0,
@@ -319,6 +320,9 @@ export const waterfallSlice = createSlice({
         },
         setBandScopeHeight(state, action) {
             state.bandScopeHeight = action.payload;
+        },
+        setBandscopeTopPadding(state, action) {
+            state.bandscopeTopPadding = action.payload;
         },
         setFrequencyScaleHeight(state, action) {
             state.frequencyScaleHeight = action.payload;
@@ -555,6 +559,7 @@ export const {
     setErrorDialogOpen,
     setWaterFallCanvasHeight,
     setBandScopeHeight,
+    setBandscopeTopPadding,
     setFrequencyScaleHeight,
     setShowRightSideWaterFallAccessories,
     setShowLeftSideWaterFallAccessories,

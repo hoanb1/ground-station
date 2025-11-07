@@ -58,6 +58,7 @@ let renderWaterfallCount = 0;
 let vfoMarkers = [];
 let showRotatorDottedLines = true;
 let autoScalePreset = 'medium'; // 'strong', 'medium', 'weak'
+let bandscopeTopPadding = 0;
 
 // Store theme object
 let theme = {
@@ -409,7 +410,8 @@ function throttledDrawBandscope() {
             colorMap,
             theme,
             dBAxisCtx,
-            dBAxisCanvas
+            dBAxisCanvas,
+            bandscopeTopPadding
         });
         lastBandscopeDrawTime = now;
     }
@@ -474,6 +476,7 @@ function setupCanvas(config) {
     dbRange = config.dbRange;
     fftSize = config.fftSize;
     showRotatorDottedLines = config.showRotatorDottedLines;
+    bandscopeTopPadding = config.bandscopeTopPadding || 0;
 
     // Update theme if provided
     if (config.theme) {

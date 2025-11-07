@@ -114,6 +114,7 @@ export const initializeWorkerWithCanvases = ({
     waterFallLeftMarginCanvasRef,
     waterFallCanvasWidth,
     waterFallCanvasHeight,
+    bandscopeTopPadding,
     colorMap,
     dbRange,
     fftSize,
@@ -156,6 +157,7 @@ export const initializeWorkerWithCanvases = ({
             config: {
                 width: waterFallCanvasWidth,
                 height: waterFallCanvasHeight,
+                bandscopeTopPadding: bandscopeTopPadding,
                 colorMap: colorMap,
                 dbRange: dbRange,
                 fftSize: fftSize,

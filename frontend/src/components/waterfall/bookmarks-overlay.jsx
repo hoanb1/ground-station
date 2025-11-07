@@ -32,6 +32,7 @@ const BookmarkCanvas = ({
                             sampleRate,
                             containerWidth,
                             height,
+                            topPadding = 0,
                             onBookmarkClick = null
                         }) => {
     const dispatch = useDispatch();
@@ -259,8 +260,8 @@ const BookmarkCanvas = ({
                 // For regular bookmarks - display at top with alternating heights
                 if (bookmark.label && !isDopplerShift) {
                     // Calculate label vertical position based on index
-                    // Use visibleBookmarkIndex to ensure proper alternating heights
-                    const labelOffset = (visibleBookmarkIndex % 2) * verticalSpacing;
+                    // Use visibleBookmarkIndex to ensure proper alternating heights (3 rows)
+                    const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
                     const labelY = baseY + labelOffset + 30;
 
                     // Check if this is an inactive transmitter
@@ -270,6 +271,7 @@ const BookmarkCanvas = ({
                     ctx.font = `${fontSize} Arial`;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
                     ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);
@@ -290,12 +292,19 @@ const BookmarkCanvas = ({
                         : bgColor.replace(')', ', 0.9)');
                     ctx.fill();
 
+                    // Add subtle border
+                    ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
+                    ctx.globalAlpha = isInactive ? 0.2 : 0.3;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1.0;
+
                     // Draw the text
                     ctx.shadowBlur = 2;
                     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                     ctx.globalAlpha = isInactive ? 0.6 : 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
-                    ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
+                    ctx.fillText(bookmark.label, x, labelY + textHeight / 2 + 1);
                     ctx.globalAlpha = 1.0;
 
                     // Increment the visible bookmark index only for non-doppler bookmarks
@@ -317,9 +326,10 @@ const BookmarkCanvas = ({
                     ctx.font = 'bold 12px Arial';
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.textAlign = 'center';
+                    ctx.textBaseline = 'middle';
 
-                    // Calculate label vertical position based on doppler index (alternating heights)
-                    const dopplerLabelOffset = (dopplerIndex % 2) * verticalSpacing;
+                    // Calculate label vertical position based on doppler index (alternating heights - 3 rows)
+                    const dopplerLabelOffset = (dopplerIndex % 3) * verticalSpacing;
                     const dopplerLabelY = 45 - padding - textHeight + dopplerLabelOffset;
 
                     // Add semi-transparent background
@@ -341,12 +351,19 @@ const BookmarkCanvas = ({
                         : bgColor.replace(')', ', 0.7)');
                     ctx.fill();
 
+                    // Add subtle border
+                    ctx.strokeStyle = bookmark.color || theme.palette.info.main;
+                    ctx.globalAlpha = 0.3;
+                    ctx.lineWidth = 1;
+                    ctx.stroke();
+                    ctx.globalAlpha = 1.0;
+
                     // Draw the text
                     ctx.shadowBlur = 2;
                     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                     ctx.globalAlpha = 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
-                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight - padding);
+                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight / 2 + 1);
                 }
 
                 // Reset shadow
