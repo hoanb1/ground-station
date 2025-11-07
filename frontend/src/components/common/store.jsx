@@ -20,7 +20,7 @@
 /* global process */
 
 import {combineReducers, configureStore} from '@reduxjs/toolkit';
-import { persistStore, persistReducer, REHYDRATE } from "redux-persist";
+import { persistStore, persistReducer } from "redux-persist";
 import storage from "redux-persist/lib/storage";
 import rigsReducer from '../hardware/rig-slice.jsx';
 import rotatorsReducer from '../hardware/rotaror-slice.jsx';
@@ -36,7 +36,7 @@ import dashboardReducer from '../dashboard/dashboard-slice.jsx';
 import weatherReducer from '../overview/weather-slice.jsx';
 import cameraReducer from '../hardware/camera-slice.jsx';
 import waterfallReducer from '../waterfall/waterfall-slice.jsx';
-import vfoReducer, { unlockAllVFOs } from '../waterfall/vfo-slice.jsx';
+import vfoReducer from '../waterfall/vfo-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
 import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
@@ -50,22 +50,6 @@ const waterfallPersistConfig = {
     whitelist: ['centerFrequency', 'colorMap', 'dbRange', 'gain', 'sampleRate', 'showRightSideWaterFallAccessories',
         'showLeftSideWaterFallAccessories', 'selectedAntenna', 'selectedSDRId', 'selectedOffsetMode',
         'selectedOffsetValue', 'fftAveraging', 'showRotatorDottedLines', 'autoScalePreset', 'expandedPanels']
-};
-
-// Middleware to unlock all VFOs after rehydration
-const vfoUnlockMiddleware = (store) => (next) => (action) => {
-    const result = next(action);
-
-    // After VFO state is rehydrated, unlock all VFOs to fix any stuck locked states
-    if (action.type === REHYDRATE && action.key === 'vfo') {
-        // Use setTimeout to ensure this runs after the rehydration is fully processed
-        setTimeout(() => {
-            console.log('[VFO Unlock] Unlocking all VFOs after rehydration to fix stuck locked states');
-            store.dispatch(unlockAllVFOs());
-        }, 0);
-    }
-
-    return result;
 };
 
 // Persist configuration for VFO slice
@@ -239,7 +223,7 @@ export const store = configureStore({
                 warnAfter: 256,
                 ignoredActions: ["persist/PERSIST", "persist/REHYDRATE"],
             },
-        }).concat(backendSyncMiddleware, vfoUnlockMiddleware),
+        }).concat(backendSyncMiddleware),
 });
 
 //export default store;

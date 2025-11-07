@@ -71,6 +71,16 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 if tx_reply.get("success") and tx_reply.get("data"):
                     transmitter_mode = tx_reply["data"].get("mode")
 
+        # Check if we should auto-activate VFO (only when transitioning to tracking)
+        rig_state = tracking_state.get("rig_state")
+
+        # Clear initialized sessions when not tracking - do this BEFORE checking observed_freq
+        # so that when tracking stops and restarts, VFOs get re-initialized properly
+        if rig_state != "tracking":
+            _vfo_initialized_sessions.clear()
+            # Return early - no need to process tracking updates when not tracking
+            return
+
         # This is an SDR - get doppler-corrected frequency
         observed_freq = rig_data.get("observed_freq")
         doppler_shift = rig_data.get("doppler_shift", 0)
@@ -87,28 +97,6 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
 
         # Create a VFO manager instance to emit updates
         vfo_manager = VFOManager()
-
-        # Check if we should auto-activate VFO (only when transitioning to tracking)
-        rig_state = tracking_state.get("rig_state")
-
-        # Clear initialized sessions when not tracking and unlock VFOs
-        if rig_state != "tracking":
-            _vfo_initialized_sessions.clear()
-            # Unlock all VFOs that were locked by tracking
-            for session_id, vfo_id in sessions_with_vfos.items():
-                try:
-                    vfo_number = int(vfo_id)
-                    vfo_manager.update_vfo_state(
-                        session_id=session_id,
-                        vfo_id=vfo_number,
-                        locked=False,
-                    )
-                    await vfo_manager.emit_vfo_states(sockio, session_id)
-                    logger.debug(f"Unlocked VFO {vfo_id} for session {session_id}")
-                except Exception as e:
-                    logger.error(f"Error unlocking VFO for session {session_id}: {e}")
-            # Return early - no need to process tracking updates when not tracking
-            return
 
         # Update and emit VFO states for each session
         for session_id, vfo_id in sessions_with_vfos.items():
