@@ -71,6 +71,13 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 if tx_reply.get("success") and tx_reply.get("data"):
                     transmitter_mode = tx_reply["data"].get("mode")
 
+        # This is an SDR - get doppler-corrected frequency
+        observed_freq = rig_data.get("observed_freq")
+        doppler_shift = rig_data.get("doppler_shift", 0)
+
+        if not observed_freq:
+            return
+
         # Get all sessions tracking this SDR with a VFO selected
         sessions_with_vfos = session_tracker.get_sessions_with_vfo_for_rig(rig_id)
 
@@ -101,13 +108,6 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 except Exception as e:
                     logger.error(f"Error unlocking VFO for session {session_id}: {e}")
             # Return early - no need to process tracking updates when not tracking
-            return
-
-        # This is an SDR - get doppler-corrected frequency
-        observed_freq = rig_data.get("observed_freq")
-        doppler_shift = rig_data.get("doppler_shift", 0)
-
-        if not observed_freq:
             return
 
         # Update and emit VFO states for each session

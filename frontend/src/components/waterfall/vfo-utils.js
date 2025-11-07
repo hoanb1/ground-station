@@ -22,12 +22,12 @@
  */
 
 export const canvasDrawingUtils = {
-    drawVFOArea: (ctx, leftEdgeX, rightEdgeX, height, color, opacity, topPadding = 0) => {
+    drawVFOArea: (ctx, leftEdgeX, rightEdgeX, height, color, opacity) => {
         ctx.fillStyle = `${color}${opacity}`;
         ctx.fillRect(leftEdgeX, 0, rightEdgeX - leftEdgeX, height);
     },
 
-    drawVFOLine: (ctx, x, height, color, opacity, lineWidth, topPadding = 0) => {
+    drawVFOLine: (ctx, x, height, color, opacity, lineWidth) => {
         ctx.beginPath();
         ctx.strokeStyle = `${color}${opacity}`;
         ctx.lineWidth = lineWidth;
@@ -36,7 +36,7 @@ export const canvasDrawingUtils = {
         ctx.stroke();
     },
 
-    drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth, topPadding = 0) => {
+    drawVFOEdges: (ctx, mode, leftEdgeX, rightEdgeX, height, color, opacity, lineWidth) => {
         ctx.beginPath();
         ctx.strokeStyle = `${color}${opacity}`;
         ctx.lineWidth = lineWidth;
@@ -88,24 +88,20 @@ export const canvasDrawingUtils = {
         // Draw lock icon on the left if locked
         if (locked) {
             const lockIconX = centerX - (labelWidth / 2) + 6;
-            // Label starts at y=3, has height 20, so goes to y=23
-            // Position shackle so its top (center - radius - lineWidth/2) is well within bounds
-            const shackleCenterY = 11; // This puts top at ~11 - 3.5 - 1 = 6.5, safely below y=3
-            const lockBodyY = 12; // Moved up 2px to touch the shackle
+            const lockIconY = 11;
 
-            // Draw lock shackle (arc) - larger and more visible
+            // Draw lock shackle (arc) - rotated 180 degrees (downward)
             ctx.strokeStyle = '#ffffff';
             ctx.lineWidth = 2;
             ctx.lineCap = 'round';
             ctx.beginPath();
-            // Draw semicircle rotated 180 degrees - from 0 to PI going downward
-            ctx.arc(lockIconX + 4, shackleCenterY, 3.5, 0, Math.PI, true);
+            ctx.arc(lockIconX + 4, lockIconY, 3.5, 0, Math.PI, true);
             ctx.stroke();
 
-            // Draw lock body (rectangle) - positioned to overlap with shackle bottom
+            // Draw lock body (rectangle) - 1px taller, added to top
             ctx.fillStyle = '#ffffff';
             ctx.beginPath();
-            ctx.roundRect(lockIconX - 0.5, lockBodyY, 9, 6, 1);
+            ctx.roundRect(lockIconX - 0.5, lockIconY + 1, 9, 7, 1);
             ctx.fill();
         }
 

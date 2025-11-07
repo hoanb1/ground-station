@@ -32,7 +32,6 @@ const BookmarkCanvas = ({
                             sampleRate,
                             containerWidth,
                             height,
-                            topPadding = 0,
                             onBookmarkClick = null
                         }) => {
     const dispatch = useDispatch();
@@ -220,7 +219,7 @@ const BookmarkCanvas = ({
                 ctx.strokeStyle = bookmark.color || theme.palette.warning.main;
                 ctx.lineWidth = isInactiveTransmitter ? 0.5 : 0.8;
 
-                // Draw a subtle dashed vertical line from top to bottom
+                // Draw a subtle dashed vertical line
                 ctx.setLineDash([2, 4]);
                 ctx.globalAlpha = isInactiveTransmitter ? 0.4 : 0.9;
                 ctx.moveTo(x, 0);
@@ -262,7 +261,7 @@ const BookmarkCanvas = ({
                     // Calculate label vertical position based on index
                     // Use visibleBookmarkIndex to ensure proper alternating heights (3 rows)
                     const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
-                    const labelY = baseY + labelOffset + 33; // Moved down 5px from 28
+                    const labelY = baseY + labelOffset + 35; // Moved down 5px from 30
 
                     // Check if this is an inactive transmitter
                     const isInactive = bookmark.metadata?.type === 'transmitter' && !bookmark.metadata?.active;
@@ -271,7 +270,6 @@ const BookmarkCanvas = ({
                     ctx.font = `${fontSize} Arial`;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);
@@ -304,7 +302,7 @@ const BookmarkCanvas = ({
                     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                     ctx.globalAlpha = isInactive ? 0.6 : 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
-                    ctx.fillText(bookmark.label, x, labelY + textHeight / 2 + 1);
+                    ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
                     ctx.globalAlpha = 1.0;
 
                     // Increment the visible bookmark index only for non-doppler bookmarks
@@ -326,11 +324,10 @@ const BookmarkCanvas = ({
                     ctx.font = '11px Arial';
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.textAlign = 'center';
-                    ctx.textBaseline = 'middle';
 
                     // Calculate label vertical position based on doppler index (alternating heights - 3 rows)
                     const dopplerLabelOffset = (dopplerIndex % 3) * verticalSpacing;
-                    const dopplerLabelY = 48 - padding - textHeight + dopplerLabelOffset; // Moved down 5px from 43
+                    const dopplerLabelY = 50 - padding - textHeight + dopplerLabelOffset; // Moved down 5px from 45
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);
@@ -363,7 +360,7 @@ const BookmarkCanvas = ({
                     ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
                     ctx.globalAlpha = 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
-                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight / 2 + 1);
+                    ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight - padding);
                 }
 
                 // Reset shadow
