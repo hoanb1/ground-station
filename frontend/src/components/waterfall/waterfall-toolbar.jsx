@@ -9,6 +9,7 @@ import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import ErrorIcon from '@mui/icons-material/Error';
 import CameraAltIcon from '@mui/icons-material/CameraAlt';
+import LockIcon from '@mui/icons-material/Lock';
 import {
     VFO1Icon,
     VFO2Icon,
@@ -56,6 +57,7 @@ const WaterfallToolbar = ({
     const [menuAnchorEl, setMenuAnchorEl] = React.useState(null);
     const menuOpen = Boolean(menuAnchorEl);
     const autoScalePreset = useSelector((state) => state.waterfall.autoScalePreset);
+    const vfoMarkers = useSelector((state) => state.vfo.vfoMarkers);
 
     const handleMenuClick = (event) => {
         setMenuAnchorEl(event.currentTarget);
@@ -254,85 +256,141 @@ const WaterfallToolbar = ({
                     <CameraAltIcon/>
                 </IconButton>
 
-                <IconButton
-                    sx={{
-                        borderRadius: 0,
-                        width: 40,
-                        fontSize: '1.25rem',
-                        fontFamily: 'Monospace',
-                        fontWeight: 'bold',
-                        color: vfoColors[0],
-                        backgroundColor: vfoActive[1] ? 'action.selected' : 'transparent',
-                        '&:hover': {
-                            backgroundColor: vfoActive[1] ? 'action.hover' : undefined,
-                        },
-                    }}
-                    onClick={() => toggleVfo(1)}
-                    color={vfoActive[1] ? 'warning' : 'primary'}
-                    title={t('toolbar.toggle_vfo', { number: 1 })}
-                >
-                    <VFO1Icon/>
-                </IconButton>
+                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <IconButton
+                        sx={{
+                            borderRadius: 0,
+                            width: 40,
+                            fontSize: '1.25rem',
+                            fontFamily: 'Monospace',
+                            fontWeight: 'bold',
+                            color: vfoColors[0],
+                            backgroundColor: vfoActive[1] ? 'action.selected' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: vfoActive[1] ? 'action.hover' : undefined,
+                            },
+                        }}
+                        onClick={() => toggleVfo(1)}
+                        color={vfoActive[1] ? 'warning' : 'primary'}
+                        title={t('toolbar.toggle_vfo', { number: 1 })}
+                    >
+                        <VFO1Icon/>
+                    </IconButton>
+                    {vfoMarkers[1]?.locked && (
+                        <LockIcon
+                            sx={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                fontSize: '0.75rem',
+                                pointerEvents: 'none',
+                                color: 'warning.main',
+                            }}
+                        />
+                    )}
+                </Box>
 
-                <IconButton
-                    sx={{
-                        borderRadius: 0,
-                        width: 40,
-                        fontSize: '1.25rem',
-                        fontFamily: 'Monospace',
-                        fontWeight: 'bold',
-                        color: vfoColors[1],
-                        backgroundColor: vfoActive[2] ? 'action.selected' : 'transparent',
-                        '&:hover': {
-                            backgroundColor: vfoActive[2] ? 'action.hover' : undefined,
-                        },
-                    }}
-                    onClick={() => toggleVfo(2)}
-                    color={vfoActive[2] ? 'warning' : 'primary'}
-                    title={t('toolbar.toggle_vfo', { number: 2 })}
-                >
-                    <VFO2Icon/>
-                </IconButton>
+                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <IconButton
+                        sx={{
+                            borderRadius: 0,
+                            width: 40,
+                            fontSize: '1.25rem',
+                            fontFamily: 'Monospace',
+                            fontWeight: 'bold',
+                            color: vfoColors[1],
+                            backgroundColor: vfoActive[2] ? 'action.selected' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: vfoActive[2] ? 'action.hover' : undefined,
+                            },
+                        }}
+                        onClick={() => toggleVfo(2)}
+                        color={vfoActive[2] ? 'warning' : 'primary'}
+                        title={t('toolbar.toggle_vfo', { number: 2 })}
+                    >
+                        <VFO2Icon/>
+                    </IconButton>
+                    {vfoMarkers[2]?.locked && (
+                        <LockIcon
+                            sx={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                fontSize: '0.75rem',
+                                pointerEvents: 'none',
+                                color: 'warning.main',
+                            }}
+                        />
+                    )}
+                </Box>
 
-                <IconButton
-                    sx={{
-                        borderRadius: 0,
-                        width: 40,
-                        fontSize: '1.25rem',
-                        fontFamily: 'Monospace',
-                        fontWeight: 'bold',
-                        color: vfoColors[2],
-                        backgroundColor: vfoActive[3] ? 'action.selected' : 'transparent',
-                        '&:hover': {
-                            backgroundColor: vfoActive[3] ? 'action.hover' : undefined,
-                        },
-                    }}
-                    onClick={() => toggleVfo(3)}
-                    color={vfoActive[3] ? 'warning' : 'primary'}
-                    title={t('toolbar.toggle_vfo', { number: 3 })}
-                >
-                    <VFO3Icon/>
-                </IconButton>
+                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <IconButton
+                        sx={{
+                            borderRadius: 0,
+                            width: 40,
+                            fontSize: '1.25rem',
+                            fontFamily: 'Monospace',
+                            fontWeight: 'bold',
+                            color: vfoColors[2],
+                            backgroundColor: vfoActive[3] ? 'action.selected' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: vfoActive[3] ? 'action.hover' : undefined,
+                            },
+                        }}
+                        onClick={() => toggleVfo(3)}
+                        color={vfoActive[3] ? 'warning' : 'primary'}
+                        title={t('toolbar.toggle_vfo', { number: 3 })}
+                    >
+                        <VFO3Icon/>
+                    </IconButton>
+                    {vfoMarkers[3]?.locked && (
+                        <LockIcon
+                            sx={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                fontSize: '0.75rem',
+                                pointerEvents: 'none',
+                                color: 'warning.main',
+                            }}
+                        />
+                    )}
+                </Box>
 
-                <IconButton
-                    sx={{
-                        borderRadius: 0,
-                        width: 40,
-                        fontSize: '1.25rem',
-                        fontFamily: 'Monospace',
-                        fontWeight: 'bold',
-                        color: vfoColors[3],
-                        backgroundColor: vfoActive[4] ? 'action.selected' : 'transparent',
-                        '&:hover': {
-                            backgroundColor: vfoActive[4] ? 'action.hover' : undefined,
-                        },
-                    }}
-                    onClick={() => toggleVfo(4)}
-                    color={vfoActive[4] ? 'warning' : 'primary'}
-                    title={t('toolbar.toggle_vfo', { number: 4 })}
-                >
-                    <VFO4Icon/>
-                </IconButton>
+                <Box sx={{ position: 'relative', display: 'inline-flex' }}>
+                    <IconButton
+                        sx={{
+                            borderRadius: 0,
+                            width: 40,
+                            fontSize: '1.25rem',
+                            fontFamily: 'Monospace',
+                            fontWeight: 'bold',
+                            color: vfoColors[3],
+                            backgroundColor: vfoActive[4] ? 'action.selected' : 'transparent',
+                            '&:hover': {
+                                backgroundColor: vfoActive[4] ? 'action.hover' : undefined,
+                            },
+                        }}
+                        onClick={() => toggleVfo(4)}
+                        color={vfoActive[4] ? 'warning' : 'primary'}
+                        title={t('toolbar.toggle_vfo', { number: 4 })}
+                    >
+                        <VFO4Icon/>
+                    </IconButton>
+                    {vfoMarkers[4]?.locked && (
+                        <LockIcon
+                            sx={{
+                                position: 'absolute',
+                                top: 2,
+                                right: 2,
+                                fontSize: '0.75rem',
+                                pointerEvents: 'none',
+                                color: 'warning.main',
+                            }}
+                        />
+                    )}
+                </Box>
 
                 {fftDataOverflow && (
                     <IconButton

@@ -15,9 +15,11 @@ import {
     Stack,
     ToggleButtonGroup,
     ToggleButton,
+    Alert,
 } from "@mui/material";
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
+import LockIcon from '@mui/icons-material/Lock';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
 import {SquelchIcon} from "../common/dataurl-icons.jsx";
@@ -119,15 +121,34 @@ const VfoAccordion = ({
                     }}
                 >
                     {[0, 1, 2, 3].map((index) => (
-                        <Tab key={index} label={t('vfo.vfo_number', { number: index + 1 })} sx={{
-                            minWidth: '25%',
-                            backgroundColor: `${vfoColors[index]}40`, // 40 = ~25% opacity in hex
-                            '&.Mui-selected': {
-                                fontWeight: 'bold',
-                                borderBottom: 'none',
-                                color: 'text.primary',
-                            },
-                        }}/>
+                        <Tab
+                            key={index}
+                            label={
+                                <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
+                                    {t('vfo.vfo_number', { number: index + 1 })}
+                                    {vfoMarkers[index + 1]?.locked && (
+                                        <LockIcon
+                                            sx={{
+                                                position: 'absolute',
+                                                top: -4,
+                                                right: -8,
+                                                fontSize: '0.75rem',
+                                                pointerEvents: 'none',
+                                            }}
+                                        />
+                                    )}
+                                </Box>
+                            }
+                            sx={{
+                                minWidth: '25%',
+                                backgroundColor: `${vfoColors[index]}40`, // 40 = ~25% opacity in hex
+                                '&.Mui-selected': {
+                                    fontWeight: 'bold',
+                                    borderBottom: 'none',
+                                    color: 'text.primary',
+                                },
+                            }}
+                        />
                     ))}
 
                 </Tabs>
@@ -156,6 +177,24 @@ const VfoAccordion = ({
                                 sx={{mt: 0, ml: 0}}
                             />
                         </Box>
+
+                        {vfoMarkers[vfoIndex]?.locked && (
+                            <Alert
+                                severity="info"
+                                icon={<LockIcon fontSize="small" />}
+                                sx={{
+                                    mt: 1,
+                                    mb: 1,
+                                    py: 0.5,
+                                    fontSize: '0.875rem',
+                                    '& .MuiAlert-icon': {
+                                        fontSize: '1rem'
+                                    }
+                                }}
+                            >
+                                {t('vfo.locked_by_tracking')}
+                            </Alert>
+                        )}
 
                         <Box sx={{
                             mt: 2,

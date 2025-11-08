@@ -72,6 +72,7 @@
     "vfo_number": "VFO {{number}}",
     "active": "Active",
     "listen": "Listen",
+    "locked_by_tracking": "This VFO is locked by the satellite tracking process",
     "step_size": "Step Size",
     "modulation": "Modulation",
     "bandwidth": "Bandwidth",
