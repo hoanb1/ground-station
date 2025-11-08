@@ -16,13 +16,13 @@
 """VFO updates for satellite tracking with doppler correction."""
 
 import logging
-from typing import Set
+
+import crud
+from db import AsyncSessionLocal
+from session.tracker import session_tracker
+from vfos.state import VFOManager
 
 logger = logging.getLogger("vfo-state")
-
-
-# Track which sessions have had their VFO initialized for the current tracking session
-_vfo_initialized_sessions: Set[str] = set()
 
 
 async def handle_vfo_updates_for_tracking(sockio, tracking_data):
@@ -36,13 +36,8 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
         sockio: Socket.IO server instance for emitting updates
         tracking_data: Dictionary containing rig_data and tracking_state
     """
-    global _vfo_initialized_sessions
 
     try:
-        import crud
-        from db import AsyncSessionLocal
-        from session.tracker import session_tracker
-        from vfos.state import VFOManager
 
         rig_data = tracking_data.get("rig_data", {})
         tracking_state = tracking_data.get("tracking_state", {})
@@ -74,10 +69,31 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
         # Check if we should auto-activate VFO (only when transitioning to tracking)
         rig_state = tracking_state.get("rig_state")
 
-        # Clear initialized sessions when not tracking - do this BEFORE checking observed_freq
-        # so that when tracking stops and restarts, VFOs get re-initialized properly
+        # When tracking stops, unlock all VFOs for sessions tracking this rig
         if rig_state != "tracking":
-            _vfo_initialized_sessions.clear()
+            # Get all sessions tracking this SDR with a VFO selected
+            sessions_with_vfos = session_tracker.get_sessions_with_vfo_for_rig(rig_id)
+
+            if sessions_with_vfos:
+                vfo_manager = VFOManager()
+                for session_id, vfo_id in sessions_with_vfos.items():
+                    try:
+                        # Unlock all VFOs (1-4) for this session
+                        for vfo_num in range(1, 5):
+                            vfo_manager.update_vfo_state(
+                                session_id=session_id,
+                                vfo_id=vfo_num,
+                                locked=False,
+                            )
+                        await vfo_manager.emit_vfo_states(sockio, session_id)
+                        logger.debug(
+                            f"Unlocked all VFOs for session {session_id} (tracking stopped)"
+                        )
+                    except Exception as e:
+                        logger.error(f"Error unlocking VFOs for session {session_id}: {e}")
+
+            # Clear initialization state so when tracking restarts, VFOs get re-initialized
+            session_tracker.clear_vfo_initialization_state()
             # Return early - no need to process tracking updates when not tracking
             return
 
@@ -124,13 +140,13 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 final_freq = observed_freq
 
                 # Check if this session's VFO has been initialized for this tracking session
-                session_vfo_key = f"{session_id}:{vfo_number}"
                 is_first_tracking_update = (
-                    rig_state == "tracking" and session_vfo_key not in _vfo_initialized_sessions
+                    rig_state == "tracking"
+                    and not session_tracker.is_vfo_initialized(session_id, vfo_number)
                 )
 
                 if is_first_tracking_update:
-                    _vfo_initialized_sessions.add(session_vfo_key)
+                    session_tracker.mark_vfo_initialized(session_id, vfo_number)
 
                 # Update VFO state
                 # Only set active=True and modulation on first tracking update for this session

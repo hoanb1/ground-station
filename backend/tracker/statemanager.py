@@ -134,7 +134,7 @@ class StateManager:
 
         # Update rig state in database
         async with AsyncSessionLocal() as dbsession:
-            await crud.tracking_state.set_tracking_state(
+            tracking_state_reply = await crud.tracking_state.set_tracking_state(
                 dbsession,
                 {
                     DictKeys.NAME: TrackingStateNames.SATELLITE_TRACKING,
@@ -152,6 +152,17 @@ class StateManager:
         # Update local state
         self.tracker.rig_data["tracking"] = False
         self.tracker.rig_data["stopped"] = True
+
+        # Send updated rig_data and tracking_state to trigger VFO unlock
+        self.tracker.queue_out.put(
+            {
+                DictKeys.EVENT: SocketEvents.SATELLITE_TRACKING,
+                DictKeys.DATA: {
+                    DictKeys.RIG_DATA: self.tracker.rig_data.copy(),
+                    DictKeys.TRACKING_STATE: tracking_state_reply["data"]["value"],
+                },
+            }
+        )
 
     async def handle_rotator_id_change(self, old, new):
         """Handle rotator ID changes."""

@@ -59,6 +59,11 @@ class SessionTracker:
         # Map session_id -> rig_id (which rig this session is tracking)
         self._session_rig_map: Dict[str, str] = {}
 
+        # Track which session+VFO combos have been initialized for the current tracking session
+        # Format: "session_id:vfo_number" -> True
+        # Cleared when tracking stops to allow re-initialization on next tracking start
+        self._vfo_initialized: Dict[str, bool] = {}
+
         logger.info("SessionTracker initialized")
 
     def register_session_streaming(self, session_id: str, sdr_id: str) -> None:
@@ -195,6 +200,42 @@ class SessionTracker:
         all_sessions.update(self._session_vfo_map.keys())
         all_sessions.update(self._session_rig_map.keys())
         return all_sessions
+
+    def mark_vfo_initialized(self, session_id: str, vfo_number: int) -> None:
+        """
+        Mark a VFO as initialized for the current tracking session.
+
+        Args:
+            session_id: Socket.IO session ID
+            vfo_number: VFO number (1-4)
+        """
+        key = f"{session_id}:{vfo_number}"
+        self._vfo_initialized[key] = True
+        logger.debug(f"Marked VFO {vfo_number} as initialized for session {session_id}")
+
+    def is_vfo_initialized(self, session_id: str, vfo_number: int) -> bool:
+        """
+        Check if a VFO has been initialized for the current tracking session.
+
+        Args:
+            session_id: Socket.IO session ID
+            vfo_number: VFO number (1-4)
+
+        Returns:
+            True if initialized, False otherwise
+        """
+        key = f"{session_id}:{vfo_number}"
+        return self._vfo_initialized.get(key, False)
+
+    def clear_vfo_initialization_state(self) -> None:
+        """
+        Clear all VFO initialization state.
+
+        Called when tracking stops to allow VFOs to be re-initialized
+        on the next tracking session start.
+        """
+        self._vfo_initialized.clear()
+        logger.debug("Cleared all VFO initialization state")
 
 
 # Global singleton instance

@@ -18,6 +18,9 @@
 import asyncio
 import logging
 
+from tracker.runner import queue_from_tracker
+from vfos.updates import handle_vfo_updates_for_tracking
+
 logger = logging.getLogger(__name__)
 
 
@@ -33,9 +36,6 @@ async def handle_tracker_messages(sockio):
     """
     while True:
         try:
-            from tracker.runner import queue_from_tracker
-            from vfos.updates import handle_vfo_updates_for_tracking
-
             if queue_from_tracker is not None and not queue_from_tracker.empty():
                 message = queue_from_tracker.get_nowait()
                 event = message.get("event")
