@@ -169,7 +169,8 @@ class TestTrackingStateCRUD:
         """Test retrieving non-existent tracking state."""
         result = await get_tracking_state(db_session, "nonexistent")
 
-        assert result["success"] is False
+        assert result["success"] is True
+        assert result["data"] is None
         assert "not found" in result["error"]
 
     async def test_get_tracking_state_missing_name(self, db_session):
