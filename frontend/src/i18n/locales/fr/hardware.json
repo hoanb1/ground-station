@@ -26,7 +26,8 @@
     "error_editing": "Erreur lors de la modification de la radio",
     "error_deleting": "Erreur lors de la suppression de la/des radio(s)",
     "rx": "RX",
-    "normal": "Normal"
+    "normal": "Normal",
+    "no_rigs": "Aucun émetteur-récepteur configuré. Cliquez sur 'Ajouter' pour configurer un émetteur-récepteur."
   },
   "rotator": {
     "title": "Configuration du rotateur d'antenne",
@@ -49,7 +50,8 @@
     "confirm_deletion": "Confirmer la suppression",
     "confirm_delete_message": "Êtes-vous sûr de vouloir supprimer le(s) élément(s) sélectionné(s) ?",
     "saved_success": "Rotateur enregistré avec succès",
-    "deleted_success": "Rotateur(s) supprimé(s) avec succès"
+    "deleted_success": "Rotateur(s) supprimé(s) avec succès",
+    "no_rotators": "Aucun rotateur d'antenne configuré. Cliquez sur 'Ajouter' pour configurer un rotateur."
   },
   "camera": {
     "title": "Configuration d'intégration des caméras",
@@ -104,6 +106,7 @@
     "servers_subtitle": "Les instances de serveur SoapySDR suivantes ont été découvertes sur le réseau local à l'aide de la découverte de services mDNS/Zeroconf. Ces serveurs annoncent leur disponibilité pour les connexions SDR distantes.",
     "probing_local": "Recherche d'appareils SoapySDR locaux...",
     "select_local_device": "Sélectionner un appareil local",
-    "no_devices_found": "Aucun appareil SoapySDR local trouvé"
+    "no_devices_found": "Aucun appareil SoapySDR local trouvé",
+    "no_sdrs": "Aucun dispositif SDR configuré. Cliquez sur 'Ajouter' pour configurer un SDR."
   }
 }

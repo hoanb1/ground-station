@@ -114,17 +114,29 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
                             onChange={handleOnGroupChange}
                         >
                             <ListSubheader>{t('satellite_selector.user_groups')}</ListSubheader>
-                            {satGroups.map((group, index) => {
-                                if (group.type === "user") {
-                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                                }
-                            })}
+                            {satGroups.filter(group => group.type === "user").length === 0 ? (
+                                <MenuItem disabled value="">
+                                    {t('satellite_selector.none_defined')}
+                                </MenuItem>
+                            ) : (
+                                satGroups.map((group, index) => {
+                                    if (group.type === "user") {
+                                        return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    }
+                                })
+                            )}
                             <ListSubheader>{t('satellite_selector.tle_groups')}</ListSubheader>
-                            {satGroups.map((group, index) => {
-                                if (group.type === "system") {
-                                    return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                                }
-                            })}
+                            {satGroups.filter(group => group.type === "system").length === 0 ? (
+                                <MenuItem disabled value="">
+                                    {t('satellite_selector.none_defined')}
+                                </MenuItem>
+                            ) : (
+                                satGroups.map((group, index) => {
+                                    if (group.type === "system") {
+                                        return <MenuItem disabled={group.satellite_ids.length>SATELLITE_NUMBER_LIMIT} value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                                    }
+                                })
+                            )}
                         </Select>
                     </FormControl>
                 </Grid>

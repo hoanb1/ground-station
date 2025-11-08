@@ -393,10 +393,13 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
         dispatch(getTrackingStateFromBackend({socket}))
             .unwrap()
             .then((response) => {
-                const noradId = response['value']['norad_id'];
-                const groupId = response['value']['group_id'];
-                dispatch(setSatelliteId(noradId));
-                dispatch(setSatGroupId(groupId))
+                // Handle null/undefined response for first-time users
+                if (response && response['value']) {
+                    const noradId = response['value']['norad_id'];
+                    const groupId = response['value']['group_id'];
+                    dispatch(setSatelliteId(noradId));
+                    dispatch(setSatGroupId(groupId))
+                }
             })
             .catch((error) => {
                 toast.error(`${t('errors.failed_get_tracking_state')}: ${error}`);

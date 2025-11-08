@@ -45,11 +45,22 @@ async def emit_tracker_data(dbsession, sio, logger):
         tracking_state_reply = await crud.tracking_state.get_tracking_state(
             dbsession, name="satellite-tracking"
         )
-        norad_id = tracking_state_reply["data"]["value"].get("norad_id", None)
+
+        # Check if tracking state exists (not None for first-time users)
+        if not tracking_state_reply.get("success") or tracking_state_reply.get("data") is None:
+            logger.debug("No tracking state found, skipping tracker data emission")
+            return
+
+        tracking_value = tracking_state_reply["data"].get("value")
+        if tracking_value is None:
+            logger.debug("Tracking state has no value, skipping tracker data emission")
+            return
+
+        norad_id = tracking_value.get("norad_id", None)
         satellite_data = await compiled_satellite_data(dbsession, norad_id)
         data = {
             "satellite_data": satellite_data,
-            "tracking_state": tracking_state_reply["data"]["value"],
+            "tracking_state": tracking_value,
         }
         await sio.emit("satellite-tracking", data)
 
@@ -74,8 +85,19 @@ async def emit_ui_tracker_values(dbsession, sio, logger):
         tracking_state_reply = await crud.tracking_state.get_tracking_state(
             dbsession, name="satellite-tracking"
         )
-        group_id = tracking_state_reply["data"]["value"].get("group_id", None)
-        norad_id = tracking_state_reply["data"]["value"].get("norad_id", None)
+
+        # Check if tracking state exists (not None for first-time users)
+        if not tracking_state_reply.get("success") or tracking_state_reply.get("data") is None:
+            logger.debug("No tracking state found, skipping UI tracker values emission")
+            return
+
+        tracking_value = tracking_state_reply["data"].get("value")
+        if tracking_value is None:
+            logger.debug("Tracking state has no value, skipping UI tracker values emission")
+            return
+
+        group_id = tracking_value.get("group_id", None)
+        norad_id = tracking_value.get("norad_id", None)
         ui_tracker_state = await get_ui_tracker_state(group_id, norad_id)
         data = ui_tracker_state["data"]
         await sio.emit("ui-tracker-state", data)

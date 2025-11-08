@@ -23,7 +23,9 @@
     "decayed": "Verglüht",
     "launched": "Gestartet",
     "deployed": "Eingesetzt",
-    "updated": "Aktualisiert"
+    "updated": "Aktualisiert",
+    "no_satellites": "Keine Satelliten geladen. Bitte wählen Sie eine Satellitengruppe aus dem Dropdown-Menü oben aus.",
+    "none_defined": "Keine definiert"
   },
   "tle_sources": {
     "title": "TLE-Datenquellen",
@@ -73,7 +75,8 @@
     "confirm": "BESTÄTIGEN",
     "deleted_success": "Gruppe(n) erfolgreich gelöscht",
     "failed_delete": "Fehler beim Löschen der Gruppe(n)",
-    "error_message": "Eine Aktion ist fehlgeschlagen. Überprüfen Sie die Konsole oder Protokolle."
+    "error_message": "Eine Aktion ist fehlgeschlagen. Überprüfen Sie die Konsole oder Protokolle.",
+    "no_groups": "Keine Satellitengruppen konfiguriert. Klicken Sie auf 'Hinzufügen', um eine Gruppe zu erstellen."
   },
   "satellite_info": {
     "title": "Satelliteninformationen",

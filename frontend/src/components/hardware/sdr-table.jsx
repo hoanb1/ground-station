@@ -607,12 +607,14 @@ export default function SDRsPage() {
                 <Box sx={{width: '100%'}}>
                     <DataGrid
                         loading={loading}
-                        rows={sdrs.map(row => ({
-                            ...row,
-                            host: row.host || '-',
-                            port: row.port || '-',
-                            serial: row.serial || '-'
-                        }))}
+                        rows={sdrs
+                            .filter(row => row.type !== 'sigmfplayback')
+                            .map(row => ({
+                                ...row,
+                                host: row.host || '-',
+                                port: row.port || '-',
+                                serial: row.serial || '-'
+                            }))}
                         columns={columns}
                         checkboxSelection
                         disableSelectionOnClick
@@ -631,6 +633,9 @@ export default function SDRsPage() {
                         onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                         rowsPerPageOptions={[5, 10, 25]}
                         getRowId={(row) => row.id}
+                        localeText={{
+                            noRowsLabel: t('sdr.no_sdrs')
+                        }}
                         sx={{
                             border: 0,
                             marginTop: 2,
@@ -641,6 +646,11 @@ export default function SDRsPage() {
                                 {
                                     outline: 'none',
                                 },
+                            '& .MuiDataGrid-overlay': {
+                                fontSize: '0.875rem',
+                                fontStyle: 'italic',
+                                color: 'text.secondary',
+                            },
                         }}
                     />
                     <Stack direction="row" spacing={2} style={{marginTop: 15}}>

@@ -36,7 +36,7 @@ import {
 } from './target-slice.jsx';
 import { useTranslation } from 'react-i18next';
 
-const SATELLITE_NUMBER_LIMIT = 50;
+const SATELLITE_NUMBER_LIMIT = 150;
 
 const GroupDropdown = React.memo(function GroupDropdown() {
     const { socket } = useSocket();
@@ -84,19 +84,25 @@ const GroupDropdown = React.memo(function GroupDropdown() {
                 size={"small"}
             >
                 <ListSubheader>{t('group_dropdown.user_groups')}</ListSubheader>
-                {satGroups.map((group, index) => {
-                    if (group.type === "user") {
-                        return (
-                            <MenuItem
-                                disabled={group.satellite_ids.length > SATELLITE_NUMBER_LIMIT}
-                                value={group.id}
-                                key={index}
-                            >
-                                {group.name} ({group.satellite_ids.length})
-                            </MenuItem>
-                        );
-                    }
-                })}
+                {satGroups.filter(group => group.type === "user").length === 0 ? (
+                    <MenuItem disabled value="">
+                        {t('group_dropdown.none_created')}
+                    </MenuItem>
+                ) : (
+                    satGroups.map((group, index) => {
+                        if (group.type === "user") {
+                            return (
+                                <MenuItem
+                                    disabled={group.satellite_ids.length > SATELLITE_NUMBER_LIMIT}
+                                    value={group.id}
+                                    key={index}
+                                >
+                                    {group.name} ({group.satellite_ids.length})
+                                </MenuItem>
+                            );
+                        }
+                    })
+                )}
                 <ListSubheader>{t('group_dropdown.tle_groups')}</ListSubheader>
                 {satGroups.map((group, index) => {
                     if (group.type === "system") {

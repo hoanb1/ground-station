@@ -129,7 +129,7 @@ async def get_tracking_state(session: AsyncSession, name: str) -> dict:
 
         if not tracking_state:
             return {
-                "success": False,
+                "success": True,
                 "data": None,
                 "error": f"Tracking state with name '{name}' not found.",
             }

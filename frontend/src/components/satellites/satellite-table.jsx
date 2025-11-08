@@ -263,17 +263,29 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                 <Select disabled={loading} value={satGroupId} id="grouped-select" label="Grouping" variant={"filled"}
                         onChange={handleOnGroupChange}>
                     <ListSubheader>{t('satellite_database.user_groups')}</ListSubheader>
-                    {satellitesGroups.map((group, index) => {
-                        if (group.type === "user") {
-                            return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                        }
-                    })}
+                    {satellitesGroups.filter(group => group.type === "user").length === 0 ? (
+                        <MenuItem disabled value="">
+                            {t('satellite_database.none_defined')}
+                        </MenuItem>
+                    ) : (
+                        satellitesGroups.map((group, index) => {
+                            if (group.type === "user") {
+                                return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                            }
+                        })
+                    )}
                     <ListSubheader>{t('satellite_database.builtin_groups')}</ListSubheader>
-                    {satellitesGroups.map((group, index) => {
-                        if (group.type === "system") {
-                            return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
-                        }
-                    })}
+                    {satellitesGroups.filter(group => group.type === "system").length === 0 ? (
+                        <MenuItem disabled value="">
+                            {t('satellite_database.none_defined')}
+                        </MenuItem>
+                    ) : (
+                        satellitesGroups.map((group, index) => {
+                            if (group.type === "system") {
+                                return <MenuItem value={group.id} key={index}>{group.name} ({group.satellite_ids.length})</MenuItem>;
+                            }
+                        })
+                    )}
                 </Select>
             </FormControl>
             <div>
@@ -295,6 +307,9 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                     }}
                     slots={{
                         pagination: CustomPagination,
+                    }}
+                    localeText={{
+                        noRowsLabel: t('satellite_database.no_satellites')
                     }}
                     sx={{
                         border: 0,
@@ -322,7 +337,12 @@ const SatelliteTable = React.memo(function SatelliteTable() {
                         },
                         [`& .MuiDataGrid-row`]: {
                             cursor: 'pointer',
-                        }
+                        },
+                        '& .MuiDataGrid-overlay': {
+                            fontSize: '0.875rem',
+                            fontStyle: 'italic',
+                            color: 'text.secondary',
+                        },
                     }}
                 />
             </div>

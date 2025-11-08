@@ -58,7 +58,7 @@ async def fetch_all_preferences(session: AsyncSession) -> dict:
         "theme": "auto",
         "stadia_maps_api_key": "",
         "openweather_api_key": "",
-        "toast_position": "top-right",
+        "toast_position": "bottom-right",
     }
 
     try:

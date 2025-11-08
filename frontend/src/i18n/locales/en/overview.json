@@ -19,7 +19,8 @@
     "status_inactive": "Inactive",
     "status_reentered": "Re-entered",
     "invalid_date": "Invalid date",
-    "na": "N/A"
+    "na": "N/A",
+    "no_group_selected": "Please select a satellite group to view satellites"
   },
   "passes_table": {
     "title": "Passes for the next {{hours}} hours",
@@ -46,13 +47,15 @@
     "group_label": "Group",
     "user_groups": "User defined satellite groups",
     "tle_groups": "TLE sourced satellite groups",
-    "failed_load_groups": "Failed to load satellite groups"
+    "failed_load_groups": "Failed to load satellite groups",
+    "none_defined": "None defined"
   },
   "satellite_info": {
     "title": "Satellite Monitor",
     "loading": "Loading satellite data...",
     "no_satellite": "No satellite selected",
     "select_satellite": "Select a satellite from the list or map to view details",
+    "no_satellite_selected": "Please select a satellite to view details",
     "position_data": "POSITION DATA",
     "orbital_data": "ORBITAL DATA",
     "communication": "COMMUNICATION",

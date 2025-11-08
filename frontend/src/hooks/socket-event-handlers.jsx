@@ -22,6 +22,7 @@ import { useDispatch } from 'react-redux';
 import { toast } from '../utils/toast-with-timestamp.jsx';
 import CableIcon from '@mui/icons-material/Cable';
 import { useTranslation } from 'react-i18next';
+import { fetchPreferences } from '../components/settings/preferences-slice.jsx';
 
 // Toast message component with title and body
 const ToastMessage = ({ title, body }) => (
@@ -61,6 +62,9 @@ export const useSocketEventHandlers = (socket) => {
         // Connection event
         socket.on('connect', async () => {
             console.log('Socket connected with ID:', socket.id, socket);
+
+            // Load preferences first to ensure toast position is correct
+            await store.dispatch(fetchPreferences({socket}));
 
             toast.success(
                 <ToastMessage

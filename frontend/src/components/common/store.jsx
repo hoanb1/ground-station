@@ -113,7 +113,7 @@ const synchronizePersistConfig = {
 const preferencesPersistConfig = {
     key: 'preferences',
     storage,
-    whitelist: ['preferences']
+    whitelist: ['']
 };
 
 // Persist configuration for the target satellite tracking slice

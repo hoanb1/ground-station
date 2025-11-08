@@ -484,6 +484,7 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
     const gridEditable = useSelector(state => state.overviewSatTrack.gridEditable);
     const loadingSatellites = useSelector(state => state.overviewSatTrack.loadingSatellites);
     const selectedSatelliteId = useSelector(state => state.targetSatTrack?.satelliteData?.details?.norad_id);
+    const selectedSatGroupId = useSelector(state => state.overviewSatTrack.selectedSatGroupId);
 
     const minHeight = 200;
 
@@ -536,13 +537,28 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
                     height: containerHeight - 25,
                     minHeight,
                 }}>
-                    <MemoizedStyledDataGrid
-                        apiRef={apiRef}
-                        satellites={satelliteRows}
-                        onRowClick={handleOnRowClick}
-                        selectedSatelliteId={selectedSatelliteId}
-                        loadingSatellites={loadingSatellites}
-                    />
+                    {!selectedSatGroupId ? (
+                        <Box
+                            sx={{
+                                display: 'flex',
+                                alignItems: 'center',
+                                justifyContent: 'center',
+                                height: '100%',
+                            }}
+                        >
+                            <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
+                                {t('satellites_table.no_group_selected')}
+                            </Typography>
+                        </Box>
+                    ) : (
+                        <MemoizedStyledDataGrid
+                            apiRef={apiRef}
+                            satellites={satelliteRows}
+                            onRowClick={handleOnRowClick}
+                            selectedSatelliteId={selectedSatelliteId}
+                            loadingSatellites={loadingSatellites}
+                        />
+                    )}
                 </div>
             </div>
         </>

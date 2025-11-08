@@ -68,42 +68,42 @@ const MainLayout = React.memo(function MainLayout() {
 
     // Default layout if none in localStorage
     const defaultLayouts = {
-        "lg": [{"w": 10, "h": 25, "x": 0, "y": 0, "i": "waterfall", "moved": false, "static": false}, {
-            "w": 2,
-            "h": 12,
-            "x": 10,
-            "y": 13,
+        "lg": [{
+            "w": 10,
+            "h": 25,
+            "x": 0,
+            "y": 0,
+            "i": "waterfall",
+            "moved": false,
+            "static": false
+        }, {"w": 2, "h": 25, "x": 10, "y": 0, "i": "settings", "moved": false, "static": false}],
+        "md": [{"w": 10, "h": 22, "x": 0, "y": 0, "i": "waterfall", "moved": false, "static": false}, {
+            "w": 10,
+            "h": 13,
+            "x": 0,
+            "y": 22,
             "i": "settings",
             "moved": false,
             "static": false
-        }, {"w": 2, "h": 13, "x": 10, "y": 0, "i": "rig-control", "moved": false, "static": false}],
-        "md": [{"w": 10, "h": 22, "x": 0, "y": 13, "i": "waterfall", "moved": false, "static": false}, {
+        }],
+        "sm": [{"w": 6, "h": 22, "x": 0, "y": 0, "i": "waterfall", "moved": false, "static": false}, {
             "w": 6,
-            "h": 13,
+            "h": 14,
             "x": 0,
-            "y": 0,
+            "y": 22,
             "i": "settings",
             "moved": false,
             "static": false
-        }, {"w": 4, "h": 13, "x": 6, "y": 0, "i": "rig-control", "moved": false, "static": false}],
-        "sm": [{"w": 6, "h": 22, "x": 0, "y": 13, "i": "waterfall", "moved": false, "static": false}, {
-            "w": 3,
-            "h": 13,
-            "x": 0,
-            "y": 0,
-            "i": "settings",
-            "moved": false,
-            "static": false
-        }, {"w": 3, "h": 13, "x": 3, "y": 0, "i": "rig-control", "moved": false, "static": false}],
-        "xs": [{"w": 2, "h": 22, "x": 0, "y": 22, "i": "waterfall", "moved": false, "static": false}, {
+        }],
+        "xs": [{"w": 2, "h": 22, "x": 0, "y": 0, "i": "waterfall", "moved": false, "static": false}, {
             "w": 2,
             "h": 13,
             "x": 0,
-            "y": 9,
+            "y": 22,
             "i": "settings",
             "moved": false,
             "static": false
-        }, {"w": 2, "h": 9, "x": 0, "y": 0, "i": "rig-control", "moved": false, "static": false}],
+        }],
         "xxs": [{"w": 2, "h": 22, "x": 0, "y": 13, "i": "waterfall", "moved": false, "static": false}, {
             "w": 2,
             "h": 13,

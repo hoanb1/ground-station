@@ -164,7 +164,19 @@ const OverviewSatelliteInfoCard = () => {
                 </Box>
             </TitleBar>
 
-            {loading ? (
+            {!selectedSatelliteId ? (
+                <Box sx={{
+                    flex: 1,
+                    display: 'flex',
+                    justifyContent: 'center',
+                    alignItems: 'center',
+                    px: '20px',
+                }}>
+                    <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic', textAlign: 'center' }}>
+                        {t('satellite_info.no_satellite_selected')}
+                    </Typography>
+                </Box>
+            ) : loading ? (
                 <Box sx={{
                     flex: 1,
                     display: 'flex',

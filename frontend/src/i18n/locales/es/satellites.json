@@ -23,7 +23,9 @@
     "decayed": "Caído",
     "launched": "Lanzado",
     "deployed": "Desplegado",
-    "updated": "Actualizado"
+    "updated": "Actualizado",
+    "no_satellites": "No se han cargado satélites. Por favor, seleccione un grupo de satélites del menú desplegable arriba.",
+    "none_defined": "Ninguno definido"
   },
   "tle_sources": {
     "title": "Fuentes de datos TLE",
@@ -73,7 +75,8 @@
     "confirm": "CONFIRMAR",
     "deleted_success": "Grupo(s) eliminado(s) exitosamente",
     "failed_delete": "Error al eliminar grupo(s)",
-    "error_message": "Alguna acción falló. Verifica la consola o los registros."
+    "error_message": "Alguna acción falló. Verifica la consola o los registros.",
+    "no_groups": "No hay grupos de satélites configurados. Haga clic en 'Agregar' para crear un grupo."
   },
   "satellite_info": {
     "title": "Información del satélite",

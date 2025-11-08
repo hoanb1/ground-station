@@ -20,7 +20,8 @@
     "distance_peak": "Distance au pic",
     "max_el": "Élévation max",
     "geo_stat": "GEO Stat",
-    "geo_sync": "GEO Sync"
+    "geo_sync": "GEO Sync",
+    "no_satellite_selected": "Veuillez sélectionner un satellite pour voir les passages"
   },
   "rig_control": {
     "title": "Contrôle de la radio",
@@ -91,7 +92,8 @@
   "group_dropdown": {
     "label": "Groupe",
     "user_groups": "Groupes de satellites définis par l'utilisateur",
-    "tle_groups": "Groupes sources TLE"
+    "tle_groups": "Groupes sources TLE",
+    "none_created": "Aucun créé"
   },
   "rig_control_labels": {
     "rig_label": "Radio",

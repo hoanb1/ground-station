@@ -289,7 +289,10 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({satel
             apiRef={apiRef}
             fullWidth={true}
             loading={passesLoading}
-            localeText={dataGridLocale.components.MuiDataGrid.defaultProps.localeText}
+            localeText={{
+                ...dataGridLocale.components.MuiDataGrid.defaultProps.localeText,
+                noRowsLabel: t('next_passes.no_satellite_selected')
+            }}
             sx={{
                 border: 0,
                 marginTop: 0,
@@ -300,6 +303,11 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({satel
                     {
                         outline: 'none',
                     },
+                '& .MuiDataGrid-overlay': {
+                    fontSize: '0.875rem',
+                    fontStyle: 'italic',
+                    color: 'text.secondary',
+                },
             }}
             getRowClassName={(param) => {
                 if (param.row) {

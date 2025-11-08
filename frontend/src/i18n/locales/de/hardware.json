@@ -26,7 +26,8 @@
     "error_editing": "Fehler beim Bearbeiten des Funkgeräts",
     "error_deleting": "Fehler beim Löschen des/der Funkgerät(e)",
     "rx": "RX",
-    "normal": "Normal"
+    "normal": "Normal",
+    "no_rigs": "Keine Funkgeräte konfiguriert. Klicken Sie auf 'Hinzufügen', um ein Funkgerät zu konfigurieren."
   },
   "rotator": {
     "title": "Antennen-Rotor-Steuerung Einrichten",
@@ -49,7 +50,8 @@
     "confirm_deletion": "Löschen Bestätigen",
     "confirm_delete_message": "Sind Sie sicher, dass Sie das/die ausgewählte(n) Element(e) löschen möchten?",
     "saved_success": "Rotor erfolgreich gespeichert",
-    "deleted_success": "Rotor(en) erfolgreich gelöscht"
+    "deleted_success": "Rotor(en) erfolgreich gelöscht",
+    "no_rotators": "Keine Antennenrotoren konfiguriert. Klicken Sie auf 'Hinzufügen', um einen Rotor zu konfigurieren."
   },
   "camera": {
     "title": "Kamera-Integration Einrichten",
@@ -104,6 +106,7 @@
     "servers_subtitle": "Die folgenden SoapySDR-Server-Instanzen wurden im lokalen Netzwerk mittels mDNS/Zeroconf-Service-Discovery erkannt. Diese Server geben ihre Verfügbarkeit für Remote-SDR-Verbindungen bekannt.",
     "probing_local": "Suche nach lokalen SoapySDR-Geräten...",
     "select_local_device": "Lokales Gerät Auswählen",
-    "no_devices_found": "Keine lokalen SoapySDR-Geräte gefunden"
+    "no_devices_found": "Keine lokalen SoapySDR-Geräte gefunden",
+    "no_sdrs": "Keine SDR-Geräte konfiguriert. Klicken Sie auf 'Hinzufügen', um ein SDR zu konfigurieren."
   }
 }

@@ -23,7 +23,9 @@
     "decayed": "Vergaan",
     "launched": "Gelanceerd",
     "deployed": "Ontplooid",
-    "updated": "Bijgewerkt"
+    "updated": "Bijgewerkt",
+    "no_satellites": "Geen satellieten geladen. Selecteer een satellietgroep uit het vervolgkeuzemenu hierboven.",
+    "none_defined": "Geen gedefinieerd"
   },
   "tle_sources": {
     "title": "TLE-Gegevensbronnen",
@@ -73,7 +75,8 @@
     "confirm": "BEVESTIGEN",
     "deleted_success": "Groep(en) succesvol verwijderd",
     "failed_delete": "Verwijderen van groep(en) mislukt",
-    "error_message": "Sommige actie is mislukt. Controleer console of logs."
+    "error_message": "Sommige actie is mislukt. Controleer console of logs.",
+    "no_groups": "Geen satellietgroepen geconfigureerd. Klik op 'Toevoegen' om een groep te maken."
   },
   "satellite_info": {
     "title": "Satellietinformatie",

@@ -26,7 +26,8 @@
     "error_editing": "Errore nella modifica del rig",
     "error_deleting": "Errore nell'eliminazione dei rig",
     "rx": "RX",
-    "normal": "Normale"
+    "normal": "Normale",
+    "no_rigs": "Nessun ricetrasmettitore configurato. Fare clic su 'Aggiungi' per configurare un ricetrasmettitore."
   },
   "rotator": {
     "title": "Configurazione Controllo Rotatore Antenna",
@@ -49,7 +50,8 @@
     "confirm_deletion": "Conferma Eliminazione",
     "confirm_delete_message": "Sei sicuro di voler eliminare gli elementi selezionati?",
     "saved_success": "Rotatore salvato con successo",
-    "deleted_success": "Rotatore/i eliminato/i con successo"
+    "deleted_success": "Rotatore/i eliminato/i con successo",
+    "no_rotators": "Nessun rotatore d'antenna configurato. Fare clic su 'Aggiungi' per configurare un rotatore."
   },
   "camera": {
     "title": "Configurazione Integrazione Telecamera",
@@ -104,6 +106,7 @@
     "servers_subtitle": "Le seguenti istanze server SoapySDR sono state scoperte sulla rete locale utilizzando la scoperta servizi mDNS/Zeroconf. Questi server stanno pubblicizzando la loro disponibilità per connessioni SDR remote.",
     "probing_local": "Ricerca dispositivi SoapySDR locali...",
     "select_local_device": "Seleziona Dispositivo Locale",
-    "no_devices_found": "Nessun dispositivo SoapySDR locale trovato"
+    "no_devices_found": "Nessun dispositivo SoapySDR locale trovato",
+    "no_sdrs": "Nessun dispositivo SDR configurato. Fare clic su 'Aggiungi' per configurare un SDR."
   }
 }

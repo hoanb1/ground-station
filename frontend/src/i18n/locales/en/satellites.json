@@ -11,6 +11,7 @@
     "select_group": "Select one of the satellite groups",
     "user_groups": "User defined satellite groups",
     "builtin_groups": "Build-in satellite groups",
+    "none_defined": "None defined",
     "loaded_success": "Successfully loaded {{count}} satellites",
     "failed_load": "Failed to load satellites",
     "no_data": "No data",
@@ -23,7 +24,8 @@
     "decayed": "Decayed",
     "launched": "Launched",
     "deployed": "Deployed",
-    "updated": "Updated"
+    "updated": "Updated",
+    "no_satellites": "No satellites loaded. Please select a satellite group from the dropdown above."
   },
   "tle_sources": {
     "title": "TLE Data Sources",
@@ -73,7 +75,8 @@
     "confirm": "Confirm",
     "deleted_success": "Group(s) deleted successfully",
     "failed_delete": "Failed to delete group(s)",
-    "error_message": "Some action failed. Check console or logs."
+    "error_message": "Some action failed. Check console or logs.",
+    "no_groups": "No satellite groups configured. Click 'Add' to create a group."
   },
   "satellite_info": {
     "title": "Satellite Information",

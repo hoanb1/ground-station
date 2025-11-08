@@ -512,6 +512,11 @@ const MemoizedStyledDataGrid = React.memo(function MemoizedStyledDataGrid({passe
                     {
                         outline: 'none',
                     },
+                '& .MuiDataGrid-overlay': {
+                    fontSize: '0.875rem',
+                    fontStyle: 'italic',
+                    color: 'text.secondary',
+                },
             }}
             density={"compact"}
             rows={passes}

@@ -145,6 +145,9 @@ export default function AntennaRotatorTable() {
                         onPageSizeChange={(newPageSize) => setPageSize(newPageSize)}
                         rowsPerPageOptions={[5, 10, 25]}
                         getRowId={(row) => row.id}
+                        localeText={{
+                            noRowsLabel: t('rotator.no_rotators')
+                        }}
                         sx={{
                             border: 0,
                             marginTop: 2,
@@ -155,6 +158,11 @@ export default function AntennaRotatorTable() {
                                 {
                                     outline: 'none',
                                 },
+                            '& .MuiDataGrid-overlay': {
+                                fontSize: '0.875rem',
+                                fontStyle: 'italic',
+                                color: 'text.secondary',
+                            },
                         }}
                     />
                     <Stack direction="row" spacing={2} style={{marginTop: 15}}>

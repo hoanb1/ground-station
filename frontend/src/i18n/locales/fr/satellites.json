@@ -23,7 +23,9 @@
     "decayed": "Désorbité",
     "launched": "Lancé",
     "deployed": "Déployé",
-    "updated": "Mis à jour"
+    "updated": "Mis à jour",
+    "no_satellites": "Aucun satellite chargé. Veuillez sélectionner un groupe de satellites dans le menu déroulant ci-dessus.",
+    "none_defined": "Aucun défini"
   },
   "tle_sources": {
     "title": "Sources de données TLE",
@@ -73,7 +75,8 @@
     "confirm": "CONFIRMER",
     "deleted_success": "Groupe(s) supprimé(s) avec succès",
     "failed_delete": "Échec de la suppression du ou des groupe(s)",
-    "error_message": "Une action a échoué. Consultez la console ou les journaux."
+    "error_message": "Une action a échoué. Consultez la console ou les journaux.",
+    "no_groups": "Aucun groupe de satellites configuré. Cliquez sur 'Ajouter' pour créer un groupe."
   },
   "satellite_info": {
     "title": "Informations sur le satellite",

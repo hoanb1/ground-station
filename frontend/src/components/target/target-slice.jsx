@@ -663,9 +663,12 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(getTrackingStateFromBackend.fulfilled, (state, action) => {
                 state.loading = false;
-                state.trackingState = action.payload['value'];
-                state.selectedRadioRig = action.payload['value']['rig_id'];
-                state.selectedRotator = action.payload['value']['rotator_id'];
+                // Handle null/undefined payload for first-time users
+                if (action.payload && action.payload['value']) {
+                    state.trackingState = action.payload['value'];
+                    state.selectedRadioRig = action.payload['value']['rig_id'];
+                    state.selectedRotator = action.payload['value']['rotator_id'];
+                }
                 // Don't sync selectedRigVFO from backend - it's session-specific
                 state.error = null;
             })
@@ -691,19 +694,22 @@ const targetSatTrackSlice = createSlice({
             })
             .addCase(getTargetMapSettings.fulfilled, (state, action) => {
                 state.loading = false;
-                state.tileLayerID = action.payload['tileLayerID'];
-                state.showPastOrbitPath = action.payload['showPastOrbitPath'];
-                state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
-                state.showSatelliteCoverage = action.payload['showSatelliteCoverage'];
-                state.showSunIcon = action.payload['showSunIcon'];
-                state.showMoonIcon = action.payload['showMoonIcon'];
-                state.showTerminatorLine = action.payload['showTerminatorLine'];
-                state.showTooltip = action.payload['showTooltip'];
-                state.showGrid = action.payload['showGrid'];
-                state.pastOrbitLineColor = action.payload['pastOrbitLineColor'];
-                state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
-                state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
-                state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
+                // Handle null/undefined payload for first-time users
+                if (action.payload) {
+                    state.tileLayerID = action.payload['tileLayerID'];
+                    state.showPastOrbitPath = action.payload['showPastOrbitPath'];
+                    state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
+                    state.showSatelliteCoverage = action.payload['showSatelliteCoverage'];
+                    state.showSunIcon = action.payload['showSunIcon'];
+                    state.showMoonIcon = action.payload['showMoonIcon'];
+                    state.showTerminatorLine = action.payload['showTerminatorLine'];
+                    state.showTooltip = action.payload['showTooltip'];
+                    state.showGrid = action.payload['showGrid'];
+                    state.pastOrbitLineColor = action.payload['pastOrbitLineColor'];
+                    state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
+                    state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
+                    state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
+                }
             })
             .addCase(getTargetMapSettings.rejected, (state, action) => {
                 state.loading = false;

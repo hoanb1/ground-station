@@ -26,7 +26,8 @@
     "error_editing": "Fout bij bewerken rig",
     "error_deleting": "Fout bij verwijderen rig(s)",
     "rx": "RX",
-    "normal": "Normaal"
+    "normal": "Normaal",
+    "no_rigs": "Geen radio-ontvangers geconfigureerd. Klik op 'Toevoegen' om een ontvanger te configureren."
   },
   "rotator": {
     "title": "Antenne Rotator Configuratie",
@@ -49,7 +50,8 @@
     "confirm_deletion": "Verwijdering Bevestigen",
     "confirm_delete_message": "Weet u zeker dat u de geselecteerde item(s) wilt verwijderen?",
     "saved_success": "Rotator succesvol opgeslagen",
-    "deleted_success": "Rotator(s) succesvol verwijderd"
+    "deleted_success": "Rotator(s) succesvol verwijderd",
+    "no_rotators": "Geen antenne-rotators geconfigureerd. Klik op 'Toevoegen' om een rotator te configureren."
   },
   "camera": {
     "title": "Camera Integratie Configuratie",
@@ -104,6 +106,7 @@
     "servers_subtitle": "De volgende SoapySDR server-instanties zijn ontdekt op het lokale netwerk met behulp van mDNS/Zeroconf service discovery. Deze servers adverteren hun beschikbaarheid voor externe SDR-verbindingen.",
     "probing_local": "Zoeken naar lokale SoapySDR-apparaten...",
     "select_local_device": "Selecteer Lokaal Apparaat",
-    "no_devices_found": "Geen lokale SoapySDR-apparaten gevonden"
+    "no_devices_found": "Geen lokale SoapySDR-apparaten gevonden",
+    "no_sdrs": "Geen SDR-apparaten geconfigureerd. Klik op 'Toevoegen' om een SDR te configureren."
   }
 }

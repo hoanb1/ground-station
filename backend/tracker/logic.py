@@ -152,6 +152,9 @@ class SatelliteTracker:
             if should_stop:
                 break
 
+            # Initialize to None at the start of each iteration
+            initial_tracking_state = None
+
             try:
                 self.start_loop_date = datetime.now(timezone.utc)
                 self.events = []
@@ -163,15 +166,24 @@ class SatelliteTracker:
                     tracking_state_reply = await crud.tracking_state.get_tracking_state(
                         dbsession, name=TrackingStateNames.SATELLITE_TRACKING
                     )
-                    initial_tracking_state = (
-                        tracking_state_reply["data"]["value"].copy()
-                        if tracking_state_reply.get("success")
-                        else None
-                    )
 
-                    if tracking_state_reply["success"] is False:
+                    # Handle missing or empty tracking state (first-time users)
+                    if not tracking_state_reply.get("success"):
                         logger.error(f"Error in satellite tracking task: {tracking_state_reply}")
                         continue
+
+                    if tracking_state_reply.get("data") is None:
+                        logger.debug(
+                            f"No tracking state was found in the db: {tracking_state_reply}"
+                        )
+                        continue
+
+                    tracking_data = tracking_state_reply.get("data")
+                    if tracking_data is None or tracking_data.get("value") is None:
+                        logger.debug("Tracking state has no value, skipping iteration")
+                        continue
+
+                    initial_tracking_state = tracking_data["value"].copy()
 
                     assert (
                         tracking_state_reply.get("success", False) is True

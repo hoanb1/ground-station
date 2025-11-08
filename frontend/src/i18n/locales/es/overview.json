@@ -19,7 +19,8 @@
     "status_inactive": "Inactivo",
     "status_reentered": "Reentrado",
     "invalid_date": "Fecha inválida",
-    "na": "N/D"
+    "na": "N/D",
+    "no_group_selected": "Por favor, seleccione un grupo de satélites para ver satélites"
   },
   "passes_table": {
     "title": "Pases para las próximas {{hours}} horas",
@@ -46,7 +47,8 @@
     "group_label": "Grupo",
     "user_groups": "Grupos de satélites definidos por el usuario",
     "tle_groups": "Grupos de satélites de origen TLE",
-    "failed_load_groups": "Error al cargar grupos de satélites"
+    "failed_load_groups": "Error al cargar grupos de satélites",
+    "none_defined": "Ninguno definido"
   },
   "satellite_info": {
     "title": "Monitor de Satélite",
@@ -69,7 +71,8 @@
     "unknown": "Desconocido",
     "currently_targeted": "ACTUALMENTE OBJETIVO",
     "set_as_target": "ESTABLECER COMO OBJETIVO",
-    "failed_tracking": "Error al iniciar el seguimiento con el rotador"
+    "failed_tracking": "Error al iniciar el seguimiento con el rotador",
+    "no_satellite_selected": "Por favor, seleccione un satélite para ver detalles"
   },
   "weather": {
     "title": "Clima",

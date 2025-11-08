@@ -176,7 +176,7 @@ const overviewSlice = createSlice({
         showSunIcon: true,
         showMoonIcon: true,
         showTerminatorLine: true,
-        showTooltip: true,
+        showTooltip: false,
         showGrid: true,
         gridEditable: false,
         loadingSatellites: true,
@@ -362,19 +362,22 @@ const overviewSlice = createSlice({
             })
             .addCase(getOverviewMapSettings.fulfilled, (state, action) => {
                 state.loading = false;
-                state.tileLayerID = action.payload['tileLayerID'];
-                state.showPastOrbitPath = action.payload['showPastOrbitPath'];
-                state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
-                state.showSatelliteCoverage = action.payload['showSatelliteCoverage'];
-                state.showSunIcon = action.payload['showSunIcon'];
-                state.showMoonIcon = action.payload['showMoonIcon'];
-                state.showTerminatorLine = action.payload['showTerminatorLine'];
-                state.showTooltip = action.payload['showTooltip'];
-                state.showGrid = action.payload['showGrid'];
-                state.pastOrbitLineColor = action.payload['pastOrbitLineColor'];
-                state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
-                state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
-                state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
+                // Handle null/undefined payload for first-time users
+                if (action.payload) {
+                    state.tileLayerID = action.payload['tileLayerID'];
+                    state.showPastOrbitPath = action.payload['showPastOrbitPath'];
+                    state.showFutureOrbitPath = action.payload['showFutureOrbitPath'];
+                    state.showSatelliteCoverage = action.payload['showSatelliteCoverage'];
+                    state.showSunIcon = action.payload['showSunIcon'];
+                    state.showMoonIcon = action.payload['showMoonIcon'];
+                    state.showTerminatorLine = action.payload['showTerminatorLine'];
+                    state.showTooltip = action.payload['showTooltip'];
+                    state.showGrid = action.payload['showGrid'];
+                    state.pastOrbitLineColor = action.payload['pastOrbitLineColor'];
+                    state.futureOrbitLineColor = action.payload['futureOrbitLineColor'];
+                    state.satelliteCoverageColor = action.payload['satelliteCoverageColor'];
+                    state.orbitProjectionDuration = action.payload['orbitProjectionDuration'];
+                }
             })
             .addCase(getOverviewMapSettings.rejected, (state, action) => {
                 state.loading = false;

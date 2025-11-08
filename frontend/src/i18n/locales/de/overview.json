@@ -19,7 +19,8 @@
     "status_inactive": "Inaktiv",
     "status_reentered": "Wieder eingetreten",
     "invalid_date": "Ungültiges Datum",
-    "na": "N/V"
+    "na": "N/V",
+    "no_group_selected": "Bitte wählen Sie eine Satellitengruppe aus, um Satelliten anzuzeigen"
   },
   "passes_table": {
     "title": "Überflüge für die nächsten {{hours}} Stunden",
@@ -46,7 +47,8 @@
     "group_label": "Gruppe",
     "user_groups": "Benutzerdefinierte Satellitengruppen",
     "tle_groups": "TLE-basierte Satellitengruppen",
-    "failed_load_groups": "Fehler beim Laden der Satellitengruppen"
+    "failed_load_groups": "Fehler beim Laden der Satellitengruppen",
+    "none_defined": "Keine definiert"
   },
   "satellite_info": {
     "title": "Satellitenmonitor",
@@ -69,7 +71,8 @@
     "unknown": "Unbekannt",
     "currently_targeted": "AKTUELL VERFOLGT",
     "set_as_target": "ALS ZIEL FESTLEGEN",
-    "failed_tracking": "Fehler beim Starten der Verfolgung mit dem Rotator"
+    "failed_tracking": "Fehler beim Starten der Verfolgung mit dem Rotator",
+    "no_satellite_selected": "Bitte wählen Sie einen Satelliten aus, um Details anzuzeigen"
   },
   "weather": {
     "title": "Wetter",

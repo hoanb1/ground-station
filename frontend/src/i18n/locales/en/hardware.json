@@ -26,7 +26,8 @@
     "error_editing": "Error editing rig",
     "error_deleting": "Error deleting rig(s)",
     "rx": "RX",
-    "normal": "Normal"
+    "normal": "Normal",
+    "no_rigs": "No radio rigs configured. Click 'Add' to configure a rig."
   },
   "rotator": {
     "title": "Antenna Rotator Control Setup",
@@ -49,7 +50,8 @@
     "confirm_deletion": "Confirm Deletion",
     "confirm_delete_message": "Are you sure you want to delete the selected item(s)?",
     "saved_success": "Rotator saved successfully",
-    "deleted_success": "Rotator(s) deleted successfully"
+    "deleted_success": "Rotator(s) deleted successfully",
+    "no_rotators": "No antenna rotators configured. Click 'Add' to configure a rotator."
   },
   "camera": {
     "title": "Camera Integration Setup",
@@ -104,6 +106,7 @@
     "servers_subtitle": "The following SoapySDR server instances were discovered on the local network using mDNS/Zeroconf service discovery. These servers are advertising their availability for remote SDR connections.",
     "probing_local": "Probing for local SoapySDR devices...",
     "select_local_device": "Select Local Device",
-    "no_devices_found": "No local SoapySDR devices found"
+    "no_devices_found": "No local SoapySDR devices found",
+    "no_sdrs": "No SDR devices configured. Click 'Add' to configure an SDR."
   }
 }

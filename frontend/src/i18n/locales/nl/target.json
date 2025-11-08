@@ -20,7 +20,8 @@
     "distance_peak": "Afstand op hoogtepunt",
     "max_el": "Max El",
     "geo_stat": "GEO Stat",
-    "geo_sync": "GEO Sync"
+    "geo_sync": "GEO Sync",
+    "no_satellite_selected": "Selecteer een satelliet om passages te bekijken"
   },
   "rig_control": {
     "title": "Radio rig controle",
@@ -91,7 +92,8 @@
   "group_dropdown": {
     "label": "Groep",
     "user_groups": "Gebruikergedefinieerde satellietgroepen",
-    "tle_groups": "TLE brongroepen"
+    "tle_groups": "TLE brongroepen",
+    "none_created": "Geen gemaakt"
   },
   "rig_control_labels": {
     "rig_label": "Radio rig",

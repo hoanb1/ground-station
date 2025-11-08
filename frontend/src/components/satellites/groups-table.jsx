@@ -230,11 +230,19 @@ const GroupsTable = () => {
                     dispatch(setSelected(ids));
                 }}
                 selectionModel={selected}
+                localeText={{
+                    noRowsLabel: t('groups.no_groups')
+                }}
                 sx={{
                     border: 0,
                     marginTop: 2,
                     [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
                         outline: 'none',
+                    },
+                    '& .MuiDataGrid-overlay': {
+                        fontSize: '0.875rem',
+                        fontStyle: 'italic',
+                        color: 'text.secondary',
                     },
                 }}
             />

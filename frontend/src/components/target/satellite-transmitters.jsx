@@ -261,13 +261,15 @@ const TargetSatelliteTransmittersIsland = () => {
                         </Box>
                     </Section>
                 ) : (
-                    <Box sx={{ textAlign: 'center', py: 4 }}>
-                        <RadioIcon sx={{ fontSize: 48, color: 'text.secondary', mb: 2 }} />
-                        <Typography variant="h6" sx={{ color: 'text.secondary', mb: 1 }}>
+                    <Box sx={{
+                        display: 'flex',
+                        justifyContent: 'center',
+                        alignItems: 'center',
+                        height: '100%',
+                        py: 4
+                    }}>
+                        <Typography variant="body2" sx={{ color: 'text.secondary', fontStyle: 'italic' }}>
                             {t('satellite_transmitters.messages.no_transmitters')}
-                        </Typography>
-                        <Typography variant="body2" sx={{ color: 'text.secondary' }}>
-                            {t('satellite_transmitters.messages.no_transmitters_desc')}
                         </Typography>
                     </Box>
                 )}

@@ -19,7 +19,8 @@
     "status_inactive": "Inactief",
     "status_reentered": "Teruggekeerd",
     "invalid_date": "Ongeldige datum",
-    "na": "N.v.t."
+    "na": "N.v.t.",
+    "no_group_selected": "Selecteer een satellietgroep om satellieten te bekijken"
   },
   "passes_table": {
     "title": "Overvluchten voor de komende {{hours}} uur",
@@ -46,7 +47,8 @@
     "group_label": "Groep",
     "user_groups": "Gebruiker gedefinieerde satelliet groepen",
     "tle_groups": "TLE bron satelliet groepen",
-    "failed_load_groups": "Laden van satelliet groepen mislukt"
+    "failed_load_groups": "Laden van satelliet groepen mislukt",
+    "none_defined": "Geen gedefinieerd"
   },
   "satellite_info": {
     "title": "Satelliet Monitor",
@@ -69,7 +71,8 @@
     "unknown": "Onbekend",
     "currently_targeted": "MOMENTEEL GEVOLGD",
     "set_as_target": "INSTELLEN ALS DOEL",
-    "failed_tracking": "Volgen met de rotator starten mislukt"
+    "failed_tracking": "Volgen met de rotator starten mislukt",
+    "no_satellite_selected": "Selecteer een satelliet om details te bekijken"
   },
   "weather": {
     "title": "Weer",

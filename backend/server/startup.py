@@ -19,6 +19,7 @@ from db import engine  # Explicit import for type checker
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.soapysdrbrowser import discover_soapy_servers
 from server import shutdown
+from server.firsttime import first_time_initialization, run_initial_sync
 from server.scheduler import start_scheduler, stop_scheduler
 from server.version import get_full_version_info
 from tracker.messages import handle_tracker_messages
@@ -64,7 +65,7 @@ async def lifespan(fastapiapp: FastAPI):
 
     # Schedule initial sync if needed
     if _needs_initial_sync:
-        asyncio.create_task(run_initial_sync())
+        asyncio.create_task(run_initial_sync(sio))
 
     # Start the background task scheduler
     start_scheduler(sio)
@@ -205,75 +206,3 @@ async def init_db():
         _needs_initial_sync = True
 
     logger.info("Database initialized.")
-
-
-async def first_time_initialization():
-    """Function called on first server start to populate database with default data."""
-    import random
-    import string
-
-    from db import AsyncSessionLocal
-    from db.models import Locations, TLESources
-
-    logger.info("Filling in initial data like TLE sources and default location...")
-    async with AsyncSessionLocal() as session:
-        try:
-            # Generate random identifiers for the TLE sources
-            def generate_identifier(length=16):
-                """Generate a random identifier similar to what the CRUD does."""
-                return "".join(random.choices(string.ascii_lowercase + string.digits, k=length))
-
-            logger.info("FIRSTTIME - Populating database with default data...")
-            # Add default TLE sources
-            cubesat_source = TLESources(
-                name="Cubesats",
-                identifier=generate_identifier(),
-                url="http://www.celestrak.com/NORAD/elements/cubesat.txt",
-                format="3le",
-            )
-            session.add(cubesat_source)
-
-            amateur_source = TLESources(
-                name="Amateur",
-                identifier=generate_identifier(),
-                url="http://celestrak.org/NORAD/elements/gp.php?GROUP=amateur&FORMAT=tle",
-                format="3le",
-            )
-            session.add(amateur_source)
-
-            # Add a default location at coordinates 0,0
-            default_location = Locations(
-                name="Default Location",
-                lat=0.0,
-                lon=0.0,
-                alt=0,
-            )
-            session.add(default_location)
-
-            await session.commit()
-            logger.info(
-                "Initial data populated successfully with default TLE sources "
-                "(Cubesats and Amateur) and default location at coordinates (0.0, 0.0)."
-            )
-
-        except Exception as e:
-            logger.error(f"Error populating initial data: {e}")
-            await session.rollback()
-            raise
-
-
-async def run_initial_sync():
-    """Run the initial satellite data synchronization after delay."""
-    from db import AsyncSessionLocal
-    from tlesync.logic import synchronize_satellite_data  # noqa: F401
-
-    try:
-        logger.info("Waiting 5 seconds before starting initial synchronization...")
-        await asyncio.sleep(5)
-        logger.info("Starting initial satellite data synchronization...")
-        async with AsyncSessionLocal() as sync_session:
-            await synchronize_satellite_data(sync_session, logger, sio)
-        logger.info("Initial satellite data synchronization completed successfully")
-    except Exception as e:
-        logger.error(f"Error during initial satellite synchronization: {e}")
-        logger.exception(e)

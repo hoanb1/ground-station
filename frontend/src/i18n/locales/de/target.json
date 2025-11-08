@@ -20,7 +20,8 @@
     "distance_peak": "Entfernung am Höchstpunkt",
     "max_el": "Max. Elevation",
     "geo_stat": "GEO Stat",
-    "geo_sync": "GEO Sync"
+    "geo_sync": "GEO Sync",
+    "no_satellite_selected": "Bitte wählen Sie einen Satelliten aus, um Überflüge anzuzeigen"
   },
   "rig_control": {
     "title": "Funkgerätesteuerung",
@@ -91,7 +92,8 @@
   "group_dropdown": {
     "label": "Gruppe",
     "user_groups": "Benutzerdefinierte Satellitengruppen",
-    "tle_groups": "TLE-Quellengruppen"
+    "tle_groups": "TLE-Quellengruppen",
+    "none_created": "Keine erstellt"
   },
   "rig_control_labels": {
     "rig_label": "Funkgerät",
