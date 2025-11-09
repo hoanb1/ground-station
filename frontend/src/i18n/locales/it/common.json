@@ -74,7 +74,8 @@
       "month_ago": "{{count}} mese fa",
       "months_ago": "{{count}} mesi fa",
       "year_ago": "{{count}} anno fa",
-      "years_ago": "{{count}} anni fa"
+      "years_ago": "{{count}} anni fa",
+      "never": "Mai"
     }
   },
   "satellite_status": {

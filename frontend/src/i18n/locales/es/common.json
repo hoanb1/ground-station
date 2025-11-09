@@ -74,7 +74,8 @@
       "month_ago": "hace {{count}} mes",
       "months_ago": "hace {{count}} meses",
       "year_ago": "hace {{count}} año",
-      "years_ago": "hace {{count}} años"
+      "years_ago": "hace {{count}} años",
+      "never": "Nunca"
     }
   },
   "satellite_status": {

@@ -116,20 +116,18 @@ const SyncCardHeader = ({ syncState, onSynchronize }) => {
                     {t('synchronize.header.button')}
                 </Button>
 
-                {syncState?.last_update && (
-                    <Typography
-                        variant="caption"
-                        sx={{
-                            fontFamily: 'monospace',
-                            color: 'text.disabled',
-                            fontSize: '0.65rem',
-                            mt: 0.5,
-                            textAlign: { xs: 'left', sm: 'center' },
-                        }}
-                    >
-                        {t('synchronize.header.last_update', { date: humanizeDate(syncState.last_update) })}
-                    </Typography>
-                )}
+                <Typography
+                    variant="caption"
+                    sx={{
+                        fontFamily: 'monospace',
+                        color: 'text.disabled',
+                        fontSize: '0.65rem',
+                        mt: 0.5,
+                        textAlign: { xs: 'left', sm: 'center' },
+                    }}
+                >
+                    {t('synchronize.header.last_update', { date: humanizeDate(syncState.last_update) })}
+                </Typography>
             </Box>
         </Box>
     );

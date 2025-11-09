@@ -58,7 +58,7 @@ const SatellitePassTimelineComponent = ({
     return timezonePref ? timezonePref.value : 'UTC';
   }, (prev, next) => prev === next); // Use equality check
 
-  const { timelineData, currentTimePosition, timeLabels, startTime, endTime, sunData } = useMemo(() => {
+  const { timelineData, timeLabels, startTime, endTime, sunData } = useMemo(() => {
     const now = new Date();
     const startTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
     const endTime = new Date(startTime.getTime() + timeWindowHours * 60 * 60 * 1000);
@@ -151,12 +151,10 @@ const SatellitePassTimelineComponent = ({
     }
 
     if (!satellitePasses || satellitePasses.length === 0) {
-      return { timelineData: [], currentTimePosition: 0, timeLabels: [], startTime, endTime, sunData };
+      return { timelineData: [], timeLabels: [], startTime, endTime, sunData };
     }
 
-    // Calculate current time position (0-100%)
     const totalDuration = endTime.getTime() - startTime.getTime();
-    const currentPosition = ((now.getTime() - startTime.getTime()) / totalDuration) * 100;
 
     // Generate time labels with dynamic interval based on zoom level
     let labelInterval;
@@ -226,7 +224,6 @@ const SatellitePassTimelineComponent = ({
 
     return {
       timelineData: passes,
-      currentTimePosition: currentPosition,
       timeLabels: labels,
       startTime,
       endTime,
@@ -476,7 +473,7 @@ const SatellitePassTimelineComponent = ({
 
           {/* Current time marker - only show when satellite passes exist */}
           {satellitePasses && satellitePasses.length > 0 && (
-            <CurrentTimeMarker position={currentTimePosition} />
+            <CurrentTimeMarker startTime={startTime} endTime={endTime} />
           )}
 
           {/* Hover indicator */}

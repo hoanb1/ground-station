@@ -74,7 +74,8 @@
       "month_ago": "πριν από {{count}} μήνα",
       "months_ago": "πριν από {{count}} μήνες",
       "year_ago": "πριν από {{count}} έτος",
-      "years_ago": "πριν από {{count}} έτη"
+      "years_ago": "πριν από {{count}} έτη",
+      "never": "Ποτέ"
     }
   },
   "satellite_status": {

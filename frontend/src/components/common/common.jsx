@@ -253,33 +253,35 @@ export function stringAvatar(name) {
 }
 
 export const humanizeDate = (isoString) => {
+    if (!isoString) return i18n.t('common:humanize.date.never');
+
     const now = new Date();
     const pastDate = new Date(isoString);
     const diffInSeconds = Math.floor((now - pastDate) / 1000);
 
     const years = Math.floor(diffInSeconds / (365 * 24 * 60 * 60));
-    if (years >= 2) return i18n.t('common:humanize.date.years_ago', { count: years });
-    if (years >= 1) return i18n.t('common:humanize.date.year_ago', { count: years });
+    if (years >= 2) return i18n.t('common:humanize.date.years_ago', {count: years});
+    if (years >= 1) return i18n.t('common:humanize.date.year_ago', {count: years});
 
     const months = Math.floor(diffInSeconds / (30 * 24 * 60 * 60));
-    if (months >= 2) return i18n.t('common:humanize.date.months_ago', { count: months });
-    if (months >= 1) return i18n.t('common:humanize.date.month_ago', { count: months });
+    if (months >= 2) return i18n.t('common:humanize.date.months_ago', {count: months});
+    if (months >= 1) return i18n.t('common:humanize.date.month_ago', {count: months});
 
     const weeks = Math.floor(diffInSeconds / (7 * 24 * 60 * 60));
-    if (weeks >= 2) return i18n.t('common:humanize.date.weeks_ago', { count: weeks });
-    if (weeks >= 1) return i18n.t('common:humanize.date.week_ago', { count: weeks });
+    if (weeks >= 2) return i18n.t('common:humanize.date.weeks_ago', {count: weeks});
+    if (weeks >= 1) return i18n.t('common:humanize.date.week_ago', {count: weeks});
 
     const days = Math.floor(diffInSeconds / (24 * 60 * 60));
-    if (days >= 2) return i18n.t('common:humanize.date.days_ago', { count: days });
-    if (days >= 1) return i18n.t('common:humanize.date.day_ago', { count: days });
+    if (days >= 2) return i18n.t('common:humanize.date.days_ago', {count: days});
+    if (days >= 1) return i18n.t('common:humanize.date.day_ago', {count: days});
 
     const hours = Math.floor(diffInSeconds / (60 * 60));
-    if (hours >= 2) return i18n.t('common:humanize.date.hours_ago', { count: hours });
-    if (hours >= 1) return i18n.t('common:humanize.date.hour_ago', { count: hours });
+    if (hours >= 2) return i18n.t('common:humanize.date.hours_ago', {count: hours});
+    if (hours >= 1) return i18n.t('common:humanize.date.hour_ago', {count: hours});
 
     const minutes = Math.floor(diffInSeconds / 60);
-    if (minutes >= 2) return i18n.t('common:humanize.date.minutes_ago', { count: minutes });
-    if (minutes >= 1) return i18n.t('common:humanize.date.minute_ago', { count: minutes });
+    if (minutes >= 2) return i18n.t('common:humanize.date.minutes_ago', {count: minutes});
+    if (minutes >= 1) return i18n.t('common:humanize.date.minute_ago', {count: minutes});
 
     return i18n.t('common:humanize.date.just_now');
 };

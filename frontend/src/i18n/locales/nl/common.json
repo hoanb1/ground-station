@@ -74,7 +74,8 @@
       "month_ago": "{{count}} maand geleden",
       "months_ago": "{{count}} maanden geleden",
       "year_ago": "{{count}} jaar geleden",
-      "years_ago": "{{count}} jaar geleden"
+      "years_ago": "{{count}} jaar geleden",
+      "never": "Nooit"
     }
   },
   "satellite_status": {
