@@ -988,6 +988,7 @@ export const SatellitePassTimeline = ({
                 left: '50%',
                 transform: 'translate(-50%, -50%)',
                 textAlign: 'center',
+                pointerEvents: 'none',
               }}
             >
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
