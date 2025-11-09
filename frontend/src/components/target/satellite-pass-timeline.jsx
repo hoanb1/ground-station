@@ -41,6 +41,7 @@ const TimelineContainer = styled(Box)(({ theme }) => ({
   display: 'flex',
   flexDirection: 'column',
   backgroundColor: theme.palette.background.paper,
+  overflow: 'hidden',
 }));
 
 const TimelineContent = styled(Box)(({ theme }) => ({
@@ -55,7 +56,7 @@ const TimelineCanvas = styled(Box)(({ theme }) => ({
   flex: 1,
   backgroundColor: theme.palette.mode === 'dark' ? '#1a1a1a' : '#f5f5f5',
   borderRadius: theme.shape.borderRadius,
-  overflow: 'visible',
+  overflow: 'hidden',
   padding: '0 4px',
 }));
 
@@ -933,6 +934,9 @@ export const SatellitePassTimeline = ({
             const isSunrise = event.type === 'sunrise';
             const color = isSunrise ? theme.palette.warning.main : theme.palette.info.main;
 
+            // Always center labels on their vertical lines
+            const labelTransform = 'translateX(-50%)';
+
             return (
               <React.Fragment key={`sun-${index}`}>
                 {/* Vertical line */}
@@ -955,7 +959,7 @@ export const SatellitePassTimeline = ({
                     position: 'absolute',
                     left: leftPosition,
                     top: `${Y_AXIS_TOP_MARGIN - 18}px`,
-                    transform: 'translateX(-50%)',
+                    transform: labelTransform,
                     fontSize: '0.65rem',
                     fontWeight: 'bold',
                     color: color,
@@ -966,6 +970,8 @@ export const SatellitePassTimeline = ({
                     whiteSpace: 'nowrap',
                     pointerEvents: 'none',
                     zIndex: 3,
+                    minWidth: '60px',
+                    textAlign: 'center',
                   }}
                 >
                   {isSunrise ? '☀ Sunrise' : '☾ Sunset'}
@@ -1022,9 +1028,9 @@ export const SatellitePassTimeline = ({
             const isNearLeftEdge = hoverPosition.x < 15;
             let labelTransform = 'translateX(-50%)';
             if (isNearRightEdge) {
-              labelTransform = 'translateX(-100%)';
+              labelTransform = 'translateX(calc(-100% + 1px))'; // Touch left side of line
             } else if (isNearLeftEdge) {
-              labelTransform = 'translateX(0)';
+              labelTransform = 'translateX(-1px)'; // Touch right side of line
             }
 
             return (
