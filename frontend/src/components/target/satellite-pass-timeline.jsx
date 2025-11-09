@@ -727,31 +727,31 @@ export const SatellitePassTimeline = ({
 
       const newStartTime = new Date(panStartTime + timeShift);
       setTimeWindowStart(newStartTime.getTime());
-    } else if (e.touches.length === 2 && lastTouchDistance !== null) {
+    } else if (e.touches.length === 2 && lastTouchDistance !== null && touchStartTime !== null) {
       // Two touches - pinch zoom
       const touch1 = e.touches[0];
       const touch2 = e.touches[1];
       const rect = e.currentTarget.getBoundingClientRect();
 
-      const distance = Math.hypot(
+      const currentDistance = Math.hypot(
         touch2.clientX - touch1.clientX,
         touch2.clientY - touch1.clientY
       );
 
-      // Calculate zoom based on pinch distance change
-      const zoomFactor = lastTouchDistance / distance;
-      const newTimeWindowHours = Math.max(0.5, Math.min(initialTimeWindowHours, timeWindowHours * zoomFactor));
+      // Calculate zoom based on pinch distance change from original
+      const zoomRatio = currentDistance / lastTouchDistance;
+      const newTimeWindowHours = Math.max(0.5, Math.min(initialTimeWindowHours, initialTimeWindowHours / zoomRatio));
 
       // Calculate center point between two touches
       const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
       const xAdjusted = centerX - Y_AXIS_WIDTH;
       const availableWidth = rect.width - Y_AXIS_WIDTH;
-      const percentage = (xAdjusted / availableWidth) * 100;
+      const percentage = Math.max(0, Math.min(100, (xAdjusted / availableWidth) * 100));
 
-      // Calculate time at center point
-      const currentStartTime = touchStartTime ? new Date(touchStartTime) : new Date();
-      const totalMs = timeWindowHours * 60 * 60 * 1000;
-      const timeAtCenter = new Date(currentStartTime.getTime() + (percentage / 100) * totalMs);
+      // Calculate time at center point using the ORIGINAL start time
+      const originalStartTime = new Date(touchStartTime);
+      const originalTotalMs = initialTimeWindowHours * 60 * 60 * 1000;
+      const timeAtCenter = new Date(originalStartTime.getTime() + (percentage / 100) * originalTotalMs);
 
       // Calculate new start time to keep center point at the same time
       const newTotalMs = newTimeWindowHours * 60 * 60 * 1000;
@@ -759,7 +759,6 @@ export const SatellitePassTimeline = ({
 
       setTimeWindowHours(newTimeWindowHours);
       setTimeWindowStart(newStartTime.getTime());
-      setLastTouchDistance(distance);
     }
   };
 
