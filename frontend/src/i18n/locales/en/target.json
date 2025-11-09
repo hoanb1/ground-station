@@ -26,6 +26,22 @@
   "pass_timeline": {
     "title": "Pass Timeline for {{name}} - Next {{hours}} hours"
   },
+  "timeline": {
+    "zoomIn": "Zoom In",
+    "zoomOut": "Zoom Out",
+    "resetZoom": "Reset Zoom",
+    "sunrise": "Sunrise",
+    "sunset": "Sunset",
+    "now": "NOW",
+    "noPassesAvailable": "No satellite passes available",
+    "noPassesForSelected": "No passes for the selected {{hours}} hours",
+    "active": "ACTIVE",
+    "start": "Start",
+    "end": "End",
+    "duration": "Duration",
+    "maxElevation": "Max Elevation",
+    "minDistance": "Min Distance"
+  },
   "rig_control": {
     "title": "Radio rig control",
     "connected": "Connected",

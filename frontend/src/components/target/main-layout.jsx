@@ -204,6 +204,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
     const satelliteTransmitters = useSelector(satelliteTransmittersSelector);
 
     const {location} = useSelector(state => state.location);
+    const satelliteName = useSelector((state) => state.targetSatTrack.satelliteData?.details?.name || null);
     const [currentPastSatellitesPaths, setCurrentPastSatellitesPaths] = useState([]);
     const [currentFutureSatellitesPaths, setCurrentFutureSatellitesPaths] = useState([]);
     const [currentSatellitesPosition, setCurrentSatellitesPosition] = useState([]);
@@ -433,7 +434,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             <TargetSatelliteTransmittersIsland/>
         </StyledIslandParentScrollbar>,
         <StyledIslandParentNoScrollbar key="timeline">
-            <SatellitePassTimeline timeWindowHours={24}/>
+            <SatellitePassTimeline timeWindowHours={24} satelliteName={satelliteName}/>
         </StyledIslandParentNoScrollbar>,
         // <StyledIslandParentScrollbar key="video">
         //     <CameraView/>

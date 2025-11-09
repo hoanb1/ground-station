@@ -119,6 +119,25 @@
   "satellite_map": {
     "title": "Zielverfolgung"
   },
+  "pass_timeline": {
+    "title": "Überflugzeitleiste für {{name}} - Nächste {{hours}} Stunden"
+  },
+  "timeline": {
+    "zoomIn": "Vergrößern",
+    "zoomOut": "Verkleinern",
+    "resetZoom": "Zoom zurücksetzen",
+    "sunrise": "Sonnenaufgang",
+    "sunset": "Sonnenuntergang",
+    "now": "JETZT",
+    "noPassesAvailable": "Keine Satellitenüberflüge verfügbar",
+    "noPassesForSelected": "Keine Überflüge für die ausgewählten {{hours}} Stunden",
+    "active": "AKTIV",
+    "start": "Start",
+    "end": "Ende",
+    "duration": "Dauer",
+    "maxElevation": "Max. Elevation",
+    "minDistance": "Min. Entfernung"
+  },
   "satellite_transmitters": {
     "title": "Sender",
     "count": "Anzahl",

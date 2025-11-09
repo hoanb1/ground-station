@@ -1,5 +1,6 @@
 import React from 'react';
 import { Box, Typography, useTheme } from '@mui/material';
+import { useTranslation } from 'react-i18next';
 import { Y_AXIS_WIDTH, X_AXIS_HEIGHT, Y_AXIS_TOP_MARGIN, elevationToYPercent } from './timeline-constants.jsx';
 
 /**
@@ -112,6 +113,10 @@ export const PassCurve = ({ pass, startTime, endTime }) => {
  */
 export const CurrentTimeMarker = ({ position }) => {
   const theme = useTheme();
+  const { t } = useTranslation('target');
+
+  // Don't render if position is negative (past the left edge)
+  if (position < 0) return null;
 
   // Calculate position accounting for Y-axis
   const leftPosition = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${position / 100})`;
@@ -187,7 +192,7 @@ export const CurrentTimeMarker = ({ position }) => {
               zIndex: 20,
             }}
           >
-            NOW
+            {t('timeline.now')}
           </Box>
         </>
       )}
@@ -199,6 +204,8 @@ export const CurrentTimeMarker = ({ position }) => {
  * PassTooltipContent component - Renders tooltip content for a satellite pass
  */
 export const PassTooltipContent = ({ pass, isCurrent, timezone = 'UTC' }) => {
+  const { t } = useTranslation('target');
+
   const formatTime = (isoString) => {
     const date = new Date(isoString);
     return date.toLocaleTimeString('en-US', {
@@ -219,22 +226,22 @@ export const PassTooltipContent = ({ pass, isCurrent, timezone = 'UTC' }) => {
   return (
     <Box sx={{ p: 1 }}>
       <Typography variant="subtitle2" sx={{ fontWeight: 'bold', mb: 1 }}>
-        {pass.name} {isCurrent ? '(ACTIVE)' : ''}
+        {pass.name} {isCurrent ? `(${t('timeline.active')})` : ''}
       </Typography>
       <Typography variant="body2">
-        Start: {formatTime(pass.event_start)}
+        {t('timeline.start')}: {formatTime(pass.event_start)}
       </Typography>
       <Typography variant="body2">
-        End: {formatTime(pass.event_end)}
+        {t('timeline.end')}: {formatTime(pass.event_end)}
       </Typography>
       <Typography variant="body2">
-        Duration: {formatDuration(pass.duration)}
+        {t('timeline.duration')}: {formatDuration(pass.duration)}
       </Typography>
       <Typography variant="body2" sx={{ mt: 1 }}>
-        Max Elevation: {pass.peak_altitude.toFixed(1)}°
+        {t('timeline.maxElevation')}: {pass.peak_altitude.toFixed(1)}°
       </Typography>
       <Typography variant="body2">
-        Min Distance: {pass.distance_at_peak.toFixed(0)} km
+        {t('timeline.minDistance')}: {pass.distance_at_peak.toFixed(0)} km
       </Typography>
     </Box>
   );

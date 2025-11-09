@@ -119,6 +119,25 @@
   "satellite_map": {
     "title": "Doel volgen"
   },
+  "pass_timeline": {
+    "title": "Passage Tijdlijn voor {{name}} - Volgende {{hours}} uur"
+  },
+  "timeline": {
+    "zoomIn": "Inzoomen",
+    "zoomOut": "Uitzoomen",
+    "resetZoom": "Zoom herstellen",
+    "sunrise": "Zonsopgang",
+    "sunset": "Zonsondergang",
+    "now": "NU",
+    "noPassesAvailable": "Geen satellietpassages beschikbaar",
+    "noPassesForSelected": "Geen passages voor de geselecteerde {{hours}} uur",
+    "active": "ACTIEF",
+    "start": "Start",
+    "end": "Einde",
+    "duration": "Duur",
+    "maxElevation": "Max. Elevatie",
+    "minDistance": "Min. Afstand"
+  },
   "satellite_transmitters": {
     "title": "Zenders",
     "count": "Aantal",

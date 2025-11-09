@@ -18,7 +18,8 @@ const SatellitePassTimelineComponent = ({
   timeWindowHours: initialTimeWindowHours = 8,
   pastOffsetHours = 2, // Hours to offset into the past on initial render
   showSunShading = true,
-  showSunMarkers = true
+  showSunMarkers = true,
+  satelliteName = null
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
@@ -49,12 +50,6 @@ const SatellitePassTimelineComponent = ({
   const satellitePasses = useSelector((state) => state.targetSatTrack.satellitePasses);
   const activePass = useSelector((state) => state.targetSatTrack.activePass);
   const gridEditable = useSelector((state) => state.targetSatTrack.gridEditable);
-  // TEMPORARILY DISABLED to isolate re-render issue
-  // const satelliteName = useSelector(
-  //   (state) => state.targetSatTrack.satelliteData?.details?.name || 'Satellite',
-  //   (prev, next) => prev === next
-  // );
-  const satelliteName = 'Satellite'; // Hardcoded to test if selector is causing re-renders
   const groundStationLocation = useSelector((state) => state.location.location);
 
   // Get timezone from preferences - memoized selector to avoid re-renders
@@ -277,10 +272,10 @@ const SatellitePassTimelineComponent = ({
       <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
           <Box>
-            {t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
+            {satelliteName && t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
           </Box>
           <Box sx={{ display: 'flex', gap: 0.5 }}>
-            <Tooltip title="Zoom In">
+            <Tooltip title={t('timeline.zoomIn')}>
               <IconButton
                 size="small"
                 onClick={handleZoomIn}
@@ -290,7 +285,7 @@ const SatellitePassTimelineComponent = ({
                 <ZoomInIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Zoom Out">
+            <Tooltip title={t('timeline.zoomOut')}>
               <IconButton
                 size="small"
                 onClick={handleZoomOut}
@@ -300,7 +295,7 @@ const SatellitePassTimelineComponent = ({
                 <ZoomOutIcon fontSize="small" />
               </IconButton>
             </Tooltip>
-            <Tooltip title="Reset Zoom">
+            <Tooltip title={t('timeline.resetZoom')}>
               <IconButton
                 size="small"
                 onClick={handleResetZoom}
@@ -394,7 +389,7 @@ const SatellitePassTimelineComponent = ({
             const position = ((event.time - startTime.getTime()) / totalDuration) * 100;
             const leftPosition = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${position / 100})`;
             const isSunrise = event.type === 'sunrise';
-            const color = isSunrise ? theme.palette.warning.main : theme.palette.info.main;
+            const color = isSunrise ? '#6b5110' : '#2a5070'; // Very muted dark gold for sunrise, very muted dark steel blue for sunset
 
             // Always center labels on their vertical lines
             const labelTransform = 'translateX(-50%)';
@@ -410,7 +405,7 @@ const SatellitePassTimelineComponent = ({
                     bottom: `${X_AXIS_HEIGHT}px`,
                     width: '2px',
                     backgroundColor: color,
-                    opacity: 0.6,
+                    opacity: 0.8,
                     pointerEvents: 'none',
                     zIndex: 3,
                   }}
@@ -434,9 +429,10 @@ const SatellitePassTimelineComponent = ({
                     zIndex: 3,
                     minWidth: '60px',
                     textAlign: 'center',
+                    opacity: 0.8,
                   }}
                 >
-                  {isSunrise ? '☀ Sunrise' : '☾ Sunset'}
+                  {isSunrise ? `☀ ${t('timeline.sunrise')}` : `☾ ${t('timeline.sunset')}`}
                 </Box>
               </React.Fragment>
             );
@@ -456,8 +452,8 @@ const SatellitePassTimelineComponent = ({
             >
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                 {!satellitePasses || satellitePasses.length === 0
-                  ? 'No satellite passes available'
-                  : `No passes in the next ${timeWindowHours.toFixed(1)} hours`}
+                  ? t('timeline.noPassesAvailable')
+                  : t('timeline.noPassesForSelected', { hours: timeWindowHours.toFixed(1) })}
               </Typography>
             </Box>
           )}

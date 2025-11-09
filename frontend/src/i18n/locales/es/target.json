@@ -119,6 +119,25 @@
   "satellite_map": {
     "title": "Seguimiento del objetivo"
   },
+  "pass_timeline": {
+    "title": "Línea de tiempo de pasadas para {{name}} - Próximas {{hours}} horas"
+  },
+  "timeline": {
+    "zoomIn": "Acercar",
+    "zoomOut": "Alejar",
+    "resetZoom": "Restablecer zoom",
+    "sunrise": "Amanecer",
+    "sunset": "Atardecer",
+    "now": "AHORA",
+    "noPassesAvailable": "No hay pasadas de satélite disponibles",
+    "noPassesForSelected": "No hay pasadas para las {{hours}} horas seleccionadas",
+    "active": "ACTIVA",
+    "start": "Inicio",
+    "end": "Fin",
+    "duration": "Duración",
+    "maxElevation": "Elevación máx.",
+    "minDistance": "Distancia mín."
+  },
   "satellite_transmitters": {
     "title": "Transmisores",
     "count": "Cantidad",

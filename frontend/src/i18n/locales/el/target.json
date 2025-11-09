@@ -119,6 +119,25 @@
   "satellite_map": {
     "title": "Παρακολούθηση στόχου"
   },
+  "pass_timeline": {
+    "title": "Χρονοδιάγραμμα Διελεύσεων για {{name}} - Επόμενες {{hours}} ώρες"
+  },
+  "timeline": {
+    "zoomIn": "Μεγέθυνση",
+    "zoomOut": "Σμίκρυνση",
+    "resetZoom": "Επαναφορά Μεγέθυνσης",
+    "sunrise": "Ανατολή",
+    "sunset": "Δύση",
+    "now": "ΤΩΡΑ",
+    "noPassesAvailable": "Δεν υπάρχουν διαθέσιμες διελεύσεις δορυφόρου",
+    "noPassesForSelected": "Δεν υπάρχουν διελεύσεις για τις επιλεγμένες {{hours}} ώρες",
+    "active": "ΕΝΕΡΓΗ",
+    "start": "Έναρξη",
+    "end": "Λήξη",
+    "duration": "Διάρκεια",
+    "maxElevation": "Μέγιστο Ύψος",
+    "minDistance": "Ελάχιστη Απόσταση"
+  },
   "satellite_transmitters": {
     "title": "Πομποδέκτες",
     "count": "Πλήθος",
