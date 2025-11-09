@@ -1,13 +1,39 @@
 import React, { useMemo, useState } from 'react';
 import { useSelector } from 'react-redux';
-import { Box, Paper, Typography, Tooltip, useTheme } from '@mui/material';
+import { Box, Paper, Typography, Tooltip, useTheme, IconButton } from '@mui/material';
 import { styled } from '@mui/material/styles';
 import { TitleBar, getClassNamesBasedOnGridEditing } from '../common/common.jsx';
 import { useTranslation } from 'react-i18next';
+import ZoomInIcon from '@mui/icons-material/ZoomIn';
+import ZoomOutIcon from '@mui/icons-material/ZoomOut';
+import RestartAltIcon from '@mui/icons-material/RestartAlt';
 
 // Constants
 const Y_AXIS_WIDTH = 25; // Width of elevation axis in pixels
 const X_AXIS_HEIGHT = 30; // Height of time axis in pixels
+const Y_AXIS_TOP_MARGIN = 20; // Top margin to prevent 90° label clipping
+const ZOOM_FACTOR = 1.3; // Zoom step multiplier (higher = bigger steps)
+
+/**
+ * UNIFIED COORDINATE SYSTEM:
+ *
+ * The chart area (excluding axes) uses this coordinate system:
+ * - X-axis (Time): 0% = left edge (start time), 100% = right edge (end time)
+ * - Y-axis (Elevation): 0% = top (90°), 100% = bottom (0°)
+ *
+ * Conversion formulas:
+ * - Time to X%: ((time - startTime) / totalDuration) * 100
+ * - Elevation to Y%: ((90 - elevation) / 90) * 100
+ *
+ * Chart boundaries in DOM:
+ * - Left: Y_AXIS_WIDTH px
+ * - Right: 100% of container
+ * - Top: Y_AXIS_TOP_MARGIN px
+ * - Bottom: Container height - X_AXIS_HEIGHT px
+ */
+
+// Helper function: Convert elevation degrees to Y percentage (0% = top/90°, 100% = bottom/0°)
+const elevationToYPercent = (elevation) => ((90 - elevation) / 90) * 100;
 
 const TimelineContainer = styled(Box)(({ theme }) => ({
   height: '100%',
@@ -39,40 +65,42 @@ const TimelineAxis = styled(Box)(({ theme }) => ({
   right: 0,
   height: `${X_AXIS_HEIGHT}px`,
   display: 'flex',
-  justifyContent: 'space-between',
   alignItems: 'center',
-  padding: '0 8px',
   borderTop: `1px solid ${theme.palette.divider}`,
   backgroundColor: theme.palette.background.default,
+  overflow: 'hidden',
 }));
 
 const ElevationAxis = styled(Box)(({ theme }) => ({
   position: 'absolute',
   left: 0,
-  top: 0,
+  top: `${Y_AXIS_TOP_MARGIN}px`,
   bottom: `${X_AXIS_HEIGHT}px`,
   width: `${Y_AXIS_WIDTH}px`,
-  display: 'flex',
-  flexDirection: 'column',
-  justifyContent: 'space-between',
-  padding: '4px 0',
   borderRight: `1px solid ${theme.palette.divider}`,
   borderBottom: 'none',
   backgroundColor: theme.palette.background.default,
 }));
 
 const ElevationLabel = styled(Typography)(({ theme }) => ({
+  position: 'absolute',
   fontSize: '0.65rem',
   color: theme.palette.text.secondary,
   userSelect: 'none',
   textAlign: 'right',
   paddingRight: '4px',
+  width: '100%',
+  transform: 'translateY(-50%)', // Center the label on its position
+  zIndex: 2, // Ensure labels appear above corner boxes
 }));
 
 const TimeLabel = styled(Typography)(({ theme }) => ({
+  position: 'absolute',
   fontSize: '0.7rem',
   color: theme.palette.text.secondary,
   userSelect: 'none',
+  transform: 'translateX(-50%)',
+  whiteSpace: 'nowrap',
 }));
 
 const PassCurve = ({ pass, startTime, endTime }) => {
@@ -88,12 +116,6 @@ const PassCurve = ({ pass, startTime, endTime }) => {
     return theme.palette.grey[500];
   };
 
-  // SVG viewBox coordinates
-  // Top of canvas (90°) = Y: 0
-  // Bottom of canvas (0°) = Y: 100
-  const bottomY = 100;
-  const heightRange = 100;
-
   const pathData = [];
 
   // Use actual elevation curve if available
@@ -108,11 +130,12 @@ const PassCurve = ({ pass, startTime, endTime }) => {
         return;
       }
 
-      // Calculate X position (0-100% of timeline)
+      // Use UNIFIED COORDINATE SYSTEM
+      // X: Time to percentage (0% = start, 100% = end)
       const x = ((pointTime - startTime.getTime()) / totalDuration) * 100;
 
-      // Calculate Y position (0° = Y:100 bottom, 90° = Y:0 top)
-      const y = bottomY - (point.elevation / 90) * heightRange;
+      // Y: Elevation to percentage (0% = 90° top, 100% = 0° bottom)
+      const y = elevationToYPercent(point.elevation);
 
       pathData.push(`${x},${y}`);
     });
@@ -124,7 +147,8 @@ const PassCurve = ({ pass, startTime, endTime }) => {
       const x = pass.left + (pass.width * t);
       const elevationRatio = 4 * t * (1 - t);
       const elevationAtPoint = pass.peak_altitude * elevationRatio;
-      const y = bottomY - (elevationAtPoint / 90) * heightRange;
+      // Use UNIFIED COORDINATE SYSTEM
+      const y = elevationToYPercent(elevationAtPoint);
       pathData.push(`${x},${y}`);
     }
   }
@@ -143,17 +167,18 @@ const PassCurve = ({ pass, startTime, endTime }) => {
   const firstX = pathData[0].split(',')[0];
   const lastX = pathData[pathData.length - 1].split(',')[0];
 
-  // Close the path to baseline (bottom at Y=100)
+  // Close the path to baseline (bottom at Y=100 using UNIFIED COORDINATE SYSTEM)
+  const bottomY = 100; // 0° elevation = 100% from top
   const fillPath = `${pathString} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
 
   return (
     <svg
       style={{
         position: 'absolute',
-        top: 0,
+            top: `${Y_AXIS_TOP_MARGIN}px`,
         left: `${Y_AXIS_WIDTH}px`,
         width: `calc(100% - ${Y_AXIS_WIDTH}px)`,
-        height: `calc(100% - ${X_AXIS_HEIGHT}px)`, // Don't overlap time axis
+        height: `calc(100% - ${X_AXIS_HEIGHT + Y_AXIS_TOP_MARGIN}px)`, // Account for top margin and time axis
         pointerEvents: 'none',
       }}
       viewBox="0 0 100 100"
@@ -186,52 +211,93 @@ const CurrentTimeMarker = ({ position }) => {
   // Calculate position accounting for Y-axis
   const leftPosition = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${position / 100})`;
 
+  // Only show label on right if there's enough space (position < 80%)
+  const showLabelOnRight = position < 80;
+  const labelVerticalPosition = -8; // pixels from top of chart area (raised for better visibility)
+
   return (
-    <Box
-      sx={{
-        position: 'absolute',
-        left: leftPosition,
-        top: 0,
-        bottom: `${X_AXIS_HEIGHT}px`,
-        width: '2px',
-        backgroundColor: theme.palette.error.main,
-        zIndex: 20,
-        boxShadow: `0 0 8px ${theme.palette.error.main}40`,
-        '&::before': {
-          content: '""',
+    <>
+      {/* Vertical NOW line - from horizontal line to bottom */}
+      <Box
+        sx={{
           position: 'absolute',
-          top: '0px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          width: '0',
-          height: '0',
-          borderLeft: '6px solid transparent',
-          borderRight: '6px solid transparent',
-          borderTop: `8px solid ${theme.palette.error.main}`,
-        },
-        '&::after': {
-          content: '"NOW"',
-          position: 'absolute',
-          top: '12px',
-          left: '50%',
-          transform: 'translateX(-50%)',
-          fontSize: '0.65rem',
-          fontWeight: 'bold',
-          color: theme.palette.error.main,
-          backgroundColor: theme.palette.background.paper,
-          padding: '2px 4px',
-          borderRadius: '2px',
-          whiteSpace: 'nowrap',
-        },
-      }}
-    />
+          left: leftPosition,
+          top: showLabelOnRight ? `${Y_AXIS_TOP_MARGIN + labelVerticalPosition}px` : `${Y_AXIS_TOP_MARGIN}px`,
+          bottom: `${X_AXIS_HEIGHT}px`,
+          width: '1px',
+          backgroundColor: theme.palette.error.main,
+          zIndex: 20,
+          boxShadow: `0 0 8px ${theme.palette.error.main}40`,
+        }}
+      />
+
+      {/* Arrow at top - only show when no label */}
+      {!showLabelOnRight && (
+        <Box
+          sx={{
+            position: 'absolute',
+            left: leftPosition,
+            top: `${Y_AXIS_TOP_MARGIN}px`,
+            transform: 'translateX(-50%)',
+            width: '0',
+            height: '0',
+            borderLeft: '6px solid transparent',
+            borderRight: '6px solid transparent',
+            borderTop: `8px solid ${theme.palette.error.main}`,
+            zIndex: 20,
+          }}
+        />
+      )}
+
+      {showLabelOnRight && (
+        <>
+          {/* Horizontal line to label (on right side) */}
+          <Box
+            sx={{
+              position: 'absolute',
+              left: leftPosition,
+              top: `${Y_AXIS_TOP_MARGIN + labelVerticalPosition}px`,
+              width: '30px',
+              height: '1px',
+              backgroundColor: theme.palette.error.main,
+              zIndex: 20,
+            }}
+          />
+
+          {/* NOW label */}
+          <Box
+            sx={{
+              position: 'absolute',
+              left: `calc(${leftPosition} + 30px)`,
+              top: `${Y_AXIS_TOP_MARGIN + labelVerticalPosition}px`,
+              transform: 'translateY(-50%)',
+              fontSize: '0.65rem',
+              fontWeight: 'bold',
+              color: theme.palette.error.main,
+              backgroundColor: theme.palette.background.paper,
+              padding: '2px 6px',
+              borderRadius: '2px',
+              border: `1px solid ${theme.palette.error.main}`,
+              whiteSpace: 'nowrap',
+              zIndex: 20,
+            }}
+          >
+            NOW
+          </Box>
+        </>
+      )}
+    </>
   );
 };
 
-const PassTooltipContent = ({ pass, isCurrent }) => {
+const PassTooltipContent = ({ pass, isCurrent, timezone = 'UTC' }) => {
   const formatTime = (isoString) => {
     const date = new Date(isoString);
-    return date.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' });
+    return date.toLocaleTimeString('en-US', {
+      hour: '2-digit',
+      minute: '2-digit',
+      timeZone: timezone
+    });
   };
 
   const formatDuration = (durationStr) => {
@@ -266,13 +332,33 @@ const PassTooltipContent = ({ pass, isCurrent }) => {
   );
 };
 
-export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
+export const SatellitePassTimeline = ({
+  timeWindowHours: initialTimeWindowHours = 8,
+  pastOffsetHours = 2 // Hours to offset into the past on initial render
+}) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
+
+  // Zoom state: time window configuration
+  const [timeWindowHours, setTimeWindowHours] = useState(initialTimeWindowHours);
+  // Initialize with past offset: start time = now - pastOffsetHours
+  const [timeWindowStart, setTimeWindowStart] = useState(() => {
+    const now = new Date();
+    return now.getTime() - (pastOffsetHours * 60 * 60 * 1000);
+  });
 
   // Mouse hover state
   const [hoverPosition, setHoverPosition] = useState(null);
   const [hoverTime, setHoverTime] = useState(null);
+
+  // Pan state
+  const [isPanning, setIsPanning] = useState(false);
+  const [panStartX, setPanStartX] = useState(null);
+  const [panStartTime, setPanStartTime] = useState(null);
+
+  // Touch state
+  const [lastTouchDistance, setLastTouchDistance] = useState(null);
+  const [touchStartTime, setTouchStartTime] = useState(null);
 
   // Get satellite passes from Redux store
   const satellitePasses = useSelector((state) => state.targetSatTrack.satellitePasses);
@@ -280,24 +366,59 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
   const gridEditable = useSelector((state) => state.targetSatTrack.gridEditable);
   const satelliteData = useSelector((state) => state.targetSatTrack.satelliteData);
 
+  // Get timezone from preferences
+  const timezone = useSelector((state) => {
+    const timezonePref = state.preferences.preferences.find((pref) => pref.name === 'timezone');
+    return timezonePref ? timezonePref.value : 'UTC';
+  });
+
   const { timelineData, currentTimePosition, timeLabels, startTime, endTime } = useMemo(() => {
     if (!satellitePasses || satellitePasses.length === 0) {
       return { timelineData: [], currentTimePosition: 0, timeLabels: [], startTime: new Date(), endTime: new Date() };
     }
 
     const now = new Date();
-    const startTime = new Date(now);
-    const endTime = new Date(now.getTime() + timeWindowHours * 60 * 60 * 1000);
+    const startTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
+    const endTime = new Date(startTime.getTime() + timeWindowHours * 60 * 60 * 1000);
 
     // Calculate current time position (0-100%)
     const totalDuration = endTime.getTime() - startTime.getTime();
     const currentPosition = ((now.getTime() - startTime.getTime()) / totalDuration) * 100;
 
-    // Generate time labels (every 2 hours)
+    // Generate time labels with dynamic interval based on zoom level
+    let labelInterval;
+    if (timeWindowHours <= 0.5) {
+      labelInterval = 0.05; // 3 minutes
+    } else if (timeWindowHours <= 1) {
+      labelInterval = 0.1; // 6 minutes
+    } else if (timeWindowHours <= 2) {
+      labelInterval = 0.167; // 10 minutes
+    } else if (timeWindowHours <= 4) {
+      labelInterval = 0.25; // 15 minutes
+    } else if (timeWindowHours <= 8) {
+      labelInterval = 0.5; // 30 minutes
+    } else if (timeWindowHours <= 16) {
+      labelInterval = 1; // 1 hour
+    } else if (timeWindowHours <= 24) {
+      labelInterval = 2; // 2 hours
+    } else if (timeWindowHours <= 48) {
+      labelInterval = 4; // 4 hours
+    } else {
+      labelInterval = 6; // 6 hours
+    }
+
     const labels = [];
-    for (let i = 0; i <= timeWindowHours; i += 2) {
+    for (let i = 0; i <= timeWindowHours; i += labelInterval) {
       const time = new Date(startTime.getTime() + i * 60 * 60 * 1000);
-      labels.push(time.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' }));
+      const position = (i / timeWindowHours) * 100; // Position as percentage
+      labels.push({
+        text: time.toLocaleTimeString('en-US', {
+          hour: '2-digit',
+          minute: '2-digit',
+          timeZone: timezone
+        }),
+        position: position
+      });
     }
 
     // Process passes
@@ -337,7 +458,7 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
       startTime,
       endTime,
     };
-  }, [satellitePasses, activePass, timeWindowHours]);
+  }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone]);
 
   const satelliteName = satelliteData?.details?.name || 'Satellite';
 
@@ -353,11 +474,24 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
     const percentage = (xAdjusted / availableWidth) * 100;
     const yPercentage = (y / rect.height) * 100;
 
+    // Handle panning
+    if (isPanning && panStartX !== null && panStartTime !== null) {
+      const deltaX = x - panStartX;
+      const deltaPercentage = (deltaX / availableWidth) * 100;
+
+      // Calculate time shift
+      const totalMs = timeWindowHours * 60 * 60 * 1000;
+      const timeShift = -(deltaPercentage / 100) * totalMs;
+
+      const newStartTime = new Date(panStartTime + timeShift);
+      setTimeWindowStart(newStartTime.getTime());
+      // Don't return here, continue to update crosshair
+    }
+
     // Calculate time at this position
-    const now = new Date();
-    const startTime = new Date(now);
+    const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
     const totalMs = timeWindowHours * 60 * 60 * 1000;
-    const timeAtPosition = new Date(startTime.getTime() + (percentage / 100) * totalMs);
+    const timeAtPosition = new Date(currentStartTime.getTime() + (percentage / 100) * totalMs);
 
     // Find which pass (if any) we're hovering over and calculate actual elevation
     let actualElevation = null;
@@ -398,6 +532,163 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
   const handleMouseLeave = () => {
     setHoverPosition(null);
     setHoverTime(null);
+    setIsPanning(false);
+  };
+
+  // Handle mouse down for panning
+  const handleMouseDown = (e) => {
+    // Enable panning always - can pan to past and future
+    setIsPanning(true);
+    setPanStartX(e.clientX - e.currentTarget.getBoundingClientRect().left);
+    const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
+    setPanStartTime(currentStartTime.getTime());
+    e.currentTarget.style.cursor = 'grabbing';
+  };
+
+  // Handle mouse up for panning
+  const handleMouseUp = (e) => {
+    if (isPanning) {
+      setIsPanning(false);
+      e.currentTarget.style.cursor = 'grab';
+    }
+  };
+
+  // Handle mouse wheel for zoom (with Shift key)
+  const handleWheel = (e) => {
+    if (!e.shiftKey) return;
+
+    e.preventDefault();
+
+    // Get mouse position to calculate time at cursor
+    const rect = e.currentTarget.getBoundingClientRect();
+    const x = e.clientX - rect.left;
+    const xAdjusted = x - Y_AXIS_WIDTH;
+    const availableWidth = rect.width - Y_AXIS_WIDTH;
+    const percentage = (xAdjusted / availableWidth) * 100;
+
+    // Calculate time at mouse position
+    const now = new Date();
+    const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
+    const totalMs = timeWindowHours * 60 * 60 * 1000;
+    const timeAtMouse = new Date(currentStartTime.getTime() + (percentage / 100) * totalMs);
+
+    // Zoom factor: wheel down = zoom out, wheel up = zoom in
+    const zoomFactor = e.deltaY > 0 ? ZOOM_FACTOR : (1 / ZOOM_FACTOR);
+    const newTimeWindowHours = Math.max(0.5, Math.min(initialTimeWindowHours, timeWindowHours * zoomFactor));
+
+    // Calculate new start time to keep mouse position at the same time
+    // timeAtMouse should remain at the same percentage after zoom
+    const newTotalMs = newTimeWindowHours * 60 * 60 * 1000;
+    const newStartTime = new Date(timeAtMouse.getTime() - (percentage / 100) * newTotalMs);
+
+    setTimeWindowHours(newTimeWindowHours);
+    setTimeWindowStart(newStartTime.getTime());
+  };
+
+  // Handle touch start
+  const handleTouchStart = (e) => {
+    if (e.touches.length === 1) {
+      // Single touch - start panning
+      const touch = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+
+      setIsPanning(true);
+      setPanStartX(x);
+      const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
+      setPanStartTime(currentStartTime.getTime());
+      setTouchStartTime(currentStartTime.getTime());
+    } else if (e.touches.length === 2) {
+      // Two touches - start pinch zoom
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+
+      setLastTouchDistance(distance);
+      setIsPanning(false);
+
+      // Store current time window start for pinch zoom
+      const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
+      setTouchStartTime(currentStartTime.getTime());
+    }
+  };
+
+  // Handle touch move
+  const handleTouchMove = (e) => {
+    e.preventDefault();
+
+    if (e.touches.length === 1 && isPanning && panStartX !== null && panStartTime !== null) {
+      // Single touch - panning
+      const touch = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+      const deltaX = x - panStartX;
+      const availableWidth = rect.width - Y_AXIS_WIDTH;
+      const deltaPercentage = (deltaX / availableWidth) * 100;
+
+      const totalMs = timeWindowHours * 60 * 60 * 1000;
+      const timeShift = -(deltaPercentage / 100) * totalMs;
+
+      const newStartTime = new Date(panStartTime + timeShift);
+      setTimeWindowStart(newStartTime.getTime());
+    } else if (e.touches.length === 2 && lastTouchDistance !== null) {
+      // Two touches - pinch zoom
+      const touch1 = e.touches[0];
+      const touch2 = e.touches[1];
+      const rect = e.currentTarget.getBoundingClientRect();
+
+      const distance = Math.hypot(
+        touch2.clientX - touch1.clientX,
+        touch2.clientY - touch1.clientY
+      );
+
+      // Calculate zoom based on pinch distance change
+      const zoomFactor = lastTouchDistance / distance;
+      const newTimeWindowHours = Math.max(0.5, Math.min(initialTimeWindowHours, timeWindowHours * zoomFactor));
+
+      // Calculate center point between two touches
+      const centerX = (touch1.clientX + touch2.clientX) / 2 - rect.left;
+      const xAdjusted = centerX - Y_AXIS_WIDTH;
+      const availableWidth = rect.width - Y_AXIS_WIDTH;
+      const percentage = (xAdjusted / availableWidth) * 100;
+
+      // Calculate time at center point
+      const currentStartTime = touchStartTime ? new Date(touchStartTime) : new Date();
+      const totalMs = timeWindowHours * 60 * 60 * 1000;
+      const timeAtCenter = new Date(currentStartTime.getTime() + (percentage / 100) * totalMs);
+
+      // Calculate new start time to keep center point at the same time
+      const newTotalMs = newTimeWindowHours * 60 * 60 * 1000;
+      const newStartTime = new Date(timeAtCenter.getTime() - (percentage / 100) * newTotalMs);
+
+      setTimeWindowHours(newTimeWindowHours);
+      setTimeWindowStart(newStartTime.getTime());
+      setLastTouchDistance(distance);
+    }
+  };
+
+  // Handle touch end
+  const handleTouchEnd = (e) => {
+    if (e.touches.length === 0) {
+      setIsPanning(false);
+      setLastTouchDistance(null);
+      setPanStartX(null);
+      setPanStartTime(null);
+    } else if (e.touches.length === 1) {
+      // Went from 2 touches to 1, restart panning
+      setLastTouchDistance(null);
+      const touch = e.touches[0];
+      const rect = e.currentTarget.getBoundingClientRect();
+      const x = touch.clientX - rect.left;
+
+      setIsPanning(true);
+      setPanStartX(x);
+      const currentStartTime = timeWindowStart ? new Date(timeWindowStart) : new Date();
+      setPanStartTime(currentStartTime.getTime());
+    }
   };
 
   const formatHoverTime = (date) => {
@@ -405,20 +696,120 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
     return date.toLocaleTimeString('en-US', {
       hour: '2-digit',
       minute: '2-digit',
-      second: '2-digit'
+      second: '2-digit',
+      timeZone: timezone
     });
+  };
+
+  // Zoom controls
+  const handleZoomIn = () => {
+    const newTimeWindowHours = Math.max(0.5, timeWindowHours / ZOOM_FACTOR);
+    setTimeWindowHours(newTimeWindowHours);
+  };
+
+  const handleZoomOut = () => {
+    const newTimeWindowHours = Math.min(initialTimeWindowHours, timeWindowHours * ZOOM_FACTOR);
+    setTimeWindowHours(newTimeWindowHours);
+  };
+
+  const handleResetZoom = () => {
+    setTimeWindowHours(initialTimeWindowHours);
+    setTimeWindowStart(null);
   };
 
   return (
     <TimelineContainer>
       <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-        {t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours })}
+        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
+          <Box>
+            {t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
+          </Box>
+          <Box sx={{ display: 'flex', gap: 0.5 }}>
+            <Tooltip title="Zoom In">
+              <IconButton
+                size="small"
+                onClick={handleZoomIn}
+                disabled={timeWindowHours <= 0.5}
+                sx={{ padding: '2px' }}
+              >
+                <ZoomInIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Zoom Out">
+              <IconButton
+                size="small"
+                onClick={handleZoomOut}
+                disabled={timeWindowHours >= initialTimeWindowHours}
+                sx={{ padding: '2px' }}
+              >
+                <ZoomOutIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+            <Tooltip title="Reset Zoom">
+              <IconButton
+                size="small"
+                onClick={handleResetZoom}
+                disabled={timeWindowHours === initialTimeWindowHours && timeWindowStart === null}
+                sx={{ padding: '2px' }}
+              >
+                <RestartAltIcon fontSize="small" />
+              </IconButton>
+            </Tooltip>
+          </Box>
+        </Box>
       </TitleBar>
       <TimelineContent>
         <TimelineCanvas
           onMouseMove={handleMouseMove}
           onMouseLeave={handleMouseLeave}
+          onMouseDown={handleMouseDown}
+          onMouseUp={handleMouseUp}
+          onWheel={handleWheel}
+          onTouchStart={handleTouchStart}
+          onTouchMove={handleTouchMove}
+          onTouchEnd={handleTouchEnd}
+          sx={{
+            cursor: isPanning ? 'grabbing' : 'grab',
+            touchAction: 'none', // Prevent default touch behavior
+          }}
         >
+          {/* Container for grid lines - matches chart area only */}
+          <Box
+            sx={{
+              position: 'absolute',
+              left: `${Y_AXIS_WIDTH}px`,
+              right: 0,
+              top: `${Y_AXIS_TOP_MARGIN}px`,
+              bottom: `${X_AXIS_HEIGHT}px`,
+              pointerEvents: 'none',
+              zIndex: 1,
+            }}
+          >
+            {/* Horizontal grid lines at degree positions - using UNIFIED COORDINATE SYSTEM */}
+            {[75, 60, 45, 30, 15].map((degree, index) => {
+              // Use UNIFIED COORDINATE SYSTEM: elevationToYPercent
+              const yPercent = elevationToYPercent(degree);
+              // Increasing brightness from 0.1 to 0.3
+              const opacity = 0.1 + (index * 0.05);
+
+              return (
+                <Box
+                  key={degree}
+                  sx={{
+                    position: 'absolute',
+                    left: 0,
+                    right: 0,
+                    top: `${yPercent}%`,
+                    height: '0px',
+                    borderTop: `1px solid ${theme.palette.grey[500]}`,
+                    opacity: opacity,
+                    pointerEvents: 'none',
+                  }}
+                />
+              );
+            })}
+          </Box>
+
           {/* No data message */}
           {(!satellitePasses || satellitePasses.length === 0 || timelineData.length === 0) && (
             <Box
@@ -433,7 +824,7 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
               <Typography variant="body2" color="text.secondary" sx={{ fontStyle: 'italic' }}>
                 {!satellitePasses || satellitePasses.length === 0
                   ? 'No satellite passes available'
-                  : `No passes in the next ${timeWindowHours} hours`}
+                  : `No passes in the next ${timeWindowHours.toFixed(1)} hours`}
               </Typography>
             </Box>
           )}
@@ -454,8 +845,10 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
             </Box>
           ))}
 
-          {/* Current time marker */}
-          <CurrentTimeMarker position={currentTimePosition} />
+          {/* Current time marker - only show when satellite passes exist */}
+          {satellitePasses && satellitePasses.length > 0 && (
+            <CurrentTimeMarker position={currentTimePosition} />
+          )}
 
           {/* Hover indicator */}
           {hoverPosition !== null && (() => {
@@ -467,11 +860,11 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
                   sx={{
                     position: 'absolute',
                     left: hoverLeft,
-                    top: 0,
+                    top: `${Y_AXIS_TOP_MARGIN}px`,
                     bottom: `${X_AXIS_HEIGHT}px`,
                     width: '1px',
-                    backgroundColor: theme.palette.text.secondary,
-                    opacity: 0.5,
+                    borderLeft: `1px dashed ${theme.palette.text.secondary}`,
+                    opacity: 0.7,
                     pointerEvents: 'none',
                     zIndex: 15,
                   }}
@@ -484,8 +877,8 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
                     left: `${Y_AXIS_WIDTH}px`,
                     right: 0,
                     height: '1px',
-                    backgroundColor: theme.palette.text.secondary,
-                    opacity: 0.5,
+                    borderTop: `1px dashed ${theme.palette.text.secondary}`,
+                    opacity: 0.7,
                     pointerEvents: 'none',
                     zIndex: 15,
                   }}
@@ -540,14 +933,33 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
             );
           })()}
 
-          {/* Elevation axis (Y-axis on left) */}
+          {/* Elevation axis (Y-axis on left) - using UNIFIED COORDINATE SYSTEM */}
           <ElevationAxis>
-            {[90, 75, 60, 45, 30, 15, 0].map((degree) => (
-              <ElevationLabel key={degree}>{degree}°</ElevationLabel>
-            ))}
+            {[90, 75, 60, 45, 30, 15, 0].map((degree) => {
+              // Use UNIFIED COORDINATE SYSTEM for positioning
+              const yPercent = elevationToYPercent(degree);
+              return (
+                <ElevationLabel key={degree} sx={{ top: `${yPercent}%` }}>
+                  {degree}°
+                </ElevationLabel>
+              );
+            })}
           </ElevationAxis>
 
-          {/* Corner box (fills gap between axes) */}
+          {/* Top corner box (fills gap at top of Y-axis) */}
+          <Box
+            sx={{
+              position: 'absolute',
+              left: 0,
+              top: 0,
+              width: `${Y_AXIS_WIDTH}px`,
+              height: `${Y_AXIS_TOP_MARGIN}px`,
+              backgroundColor: theme.palette.background.default,
+              borderRight: `1px solid ${theme.palette.divider}`,
+            }}
+          />
+
+          {/* Bottom corner box (fills gap between axes) */}
           <Box
             sx={{
               position: 'absolute',
@@ -556,15 +968,16 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
               width: `${Y_AXIS_WIDTH}px`,
               height: `${X_AXIS_HEIGHT}px`,
               backgroundColor: theme.palette.background.default,
-              borderTop: `1px solid ${theme.palette.divider}`,
               borderRight: `1px solid ${theme.palette.divider}`,
             }}
           />
 
           {/* Time axis */}
-          <TimelineAxis sx={{ left: `${Y_AXIS_WIDTH}px` }}>
+          <TimelineAxis sx={{ left: `${Y_AXIS_WIDTH}px`, width: `calc(100% - ${Y_AXIS_WIDTH}px)` }}>
             {timeLabels.map((label, index) => (
-              <TimeLabel key={index}>{label}</TimeLabel>
+              <TimeLabel key={index} sx={{ left: `${label.position}%` }}>
+                {label.text}
+              </TimeLabel>
             ))}
           </TimelineAxis>
         </TimelineCanvas>
