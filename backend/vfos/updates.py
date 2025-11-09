@@ -129,7 +129,16 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                 # Normalize digital modes to FM for VFO demodulation
                 # Digital modes (FSK/AFSK/PSK/BPSK/QPSK/GMSK) are transmitted over FM carriers
                 mode_normalized = transmitter_mode.lower() if transmitter_mode else None
-                if mode_normalized in ["fsk", "afsk", "psk", "bpsk", "qpsk", "gmsk", "fmn"]:
+                if mode_normalized in [
+                    "fsk",
+                    "afsk",
+                    "psk",
+                    "bpsk",
+                    "qpsk",
+                    "gmsk",
+                    "gmsk usp",
+                    "fmn",
+                ]:
                     mode_normalized = "fm"
                     logger.debug(
                         f"Digital mode {transmitter_mode} mapped to FM for VFO demodulation"
