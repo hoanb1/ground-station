@@ -17,7 +17,7 @@
 
 import json
 import logging
-from typing import Union
+from typing import Dict, Union
 
 import numpy as np
 from skyfield.api import EarthSatellite, Loader, Topos
@@ -28,12 +28,12 @@ logger = logging.getLogger("passes-worker")
 
 
 def calculate_next_events(
-    satellite_data: Union[dict, list],
-    home_location: dict[str, float],
+    satellite_data: Union[Dict, list],
+    home_location: Dict[str, float],
     hours: float = 6.0,
     above_el=0,
     step_minutes=1,
-) -> dict:
+) -> Dict:
     """
     This function calculates upcoming satellite observation events based on satellite data, observation location,
     duration, and elevation threshold. It primarily uses Skyfield's efficient find_events method.
@@ -53,7 +53,7 @@ def calculate_next_events(
     :rtype: dict
     """
 
-    reply: dict[str, Union[bool, None, list, None, dict, str]] = {
+    reply: Dict[str, Union[bool, None, list, None, Dict, str]] = {
         "success": None,
         "data": None,
         "parameters": None,
@@ -343,7 +343,7 @@ def calculate_next_events(
                 # For a simple pass report, find start/end indices of each pass
                 passes = []
                 in_pass = False
-                pass_start_index = None
+                pass_start_index: int = 0
 
                 for i in range(len(above_threshold)):
                     if above_threshold[i] and not in_pass:
@@ -373,7 +373,7 @@ def calculate_next_events(
                     pass_distances = distances[start_i : end_i + 1]
 
                     # Find the index of maximum elevation within this pass
-                    peak_i = np.argmax(pass_altitudes)
+                    peak_i = int(np.argmax(pass_altitudes))
                     peak_time = t_points[start_i + peak_i]
 
                     duration = end_time.utc_datetime() - start_time.utc_datetime()
@@ -549,7 +549,6 @@ def backtrack_rise_time(satellite, observer, t0, above_el, backtrack_hours=6.0):
     when it's already visible at start time.
     """
     # Create a timescale that goes backward from t0
-    ts = t0.ts
     t_start = t0 - (backtrack_hours / 24.0)
 
     # Use find_events to find any rise events in the past

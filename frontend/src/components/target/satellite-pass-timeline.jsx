@@ -5,6 +5,10 @@ import { styled } from '@mui/material/styles';
 import { TitleBar, getClassNamesBasedOnGridEditing } from '../common/common.jsx';
 import { useTranslation } from 'react-i18next';
 
+// Constants
+const Y_AXIS_WIDTH = 25; // Width of elevation axis in pixels
+const X_AXIS_HEIGHT = 30; // Height of time axis in pixels
+
 const TimelineContainer = styled(Box)(({ theme }) => ({
   height: '100%',
   display: 'flex',
@@ -13,7 +17,6 @@ const TimelineContainer = styled(Box)(({ theme }) => ({
 }));
 
 const TimelineContent = styled(Box)(({ theme }) => ({
-  padding: theme.spacing(2),
   flex: 1,
   overflow: 'auto',
   display: 'flex',
@@ -34,7 +37,7 @@ const TimelineAxis = styled(Box)(({ theme }) => ({
   bottom: 0,
   left: 0,
   right: 0,
-  height: '30px',
+  height: `${X_AXIS_HEIGHT}px`,
   display: 'flex',
   justifyContent: 'space-between',
   alignItems: 'center',
@@ -47,13 +50,14 @@ const ElevationAxis = styled(Box)(({ theme }) => ({
   position: 'absolute',
   left: 0,
   top: 0,
-  bottom: '30px',
-  width: '40px',
+  bottom: `${X_AXIS_HEIGHT}px`,
+  width: `${Y_AXIS_WIDTH}px`,
   display: 'flex',
   flexDirection: 'column',
   justifyContent: 'space-between',
   padding: '4px 0',
   borderRight: `1px solid ${theme.palette.divider}`,
+  borderBottom: 'none',
   backgroundColor: theme.palette.background.default,
 }));
 
@@ -71,7 +75,7 @@ const TimeLabel = styled(Typography)(({ theme }) => ({
   userSelect: 'none',
 }));
 
-const PassCurve = ({ pass }) => {
+const PassCurve = ({ pass, startTime, endTime }) => {
   const theme = useTheme();
 
   // Color based on peak altitude
@@ -84,30 +88,49 @@ const PassCurve = ({ pass }) => {
     return theme.palette.grey[500];
   };
 
-  // Create canvas-based curve using absolute pixel heights
-  const points = 100;
-  const pathData = [];
-
   // SVG viewBox coordinates
   // Top of canvas (90°) = Y: 0
   // Bottom of canvas (0°) = Y: 100
-  const topY = 0;
   const bottomY = 100;
-  const heightRange = bottomY - topY;
+  const heightRange = 100;
 
-  for (let i = 0; i <= points; i++) {
-    const t = i / points;
-    const x = pass.left + (pass.width * t);
+  const pathData = [];
 
-    // Parabolic curve for elevation (peaks in the middle)
-    const elevationRatio = 4 * t * (1 - t); // Peaks at t=0.5
-    const elevationAtPoint = pass.peak_altitude * elevationRatio;
+  // Use actual elevation curve if available
+  if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+    const totalDuration = endTime.getTime() - startTime.getTime();
 
-    // Map elevation to Y coordinate (inverted: high elevation = low Y)
-    // 0° -> Y=100 (bottom), 90° -> Y=0 (top)
-    const y = bottomY - (elevationAtPoint / 90) * heightRange;
+    pass.elevation_curve.forEach((point) => {
+      const pointTime = new Date(point.time).getTime();
 
-    pathData.push(`${x},${y}`);
+      // Skip points outside the visible time window
+      if (pointTime < startTime.getTime() || pointTime > endTime.getTime()) {
+        return;
+      }
+
+      // Calculate X position (0-100% of timeline)
+      const x = ((pointTime - startTime.getTime()) / totalDuration) * 100;
+
+      // Calculate Y position (0° = Y:100 bottom, 90° = Y:0 top)
+      const y = bottomY - (point.elevation / 90) * heightRange;
+
+      pathData.push(`${x},${y}`);
+    });
+  } else {
+    // Fallback to parabolic curve if no elevation_curve data
+    const points = 100;
+    for (let i = 0; i <= points; i++) {
+      const t = i / points;
+      const x = pass.left + (pass.width * t);
+      const elevationRatio = 4 * t * (1 - t);
+      const elevationAtPoint = pass.peak_altitude * elevationRatio;
+      const y = bottomY - (elevationAtPoint / 90) * heightRange;
+      pathData.push(`${x},${y}`);
+    }
+  }
+
+  if (pathData.length === 0) {
+    return null;
   }
 
   // Create SVG path from points
@@ -116,17 +139,21 @@ const PassCurve = ({ pass }) => {
     return i === 0 ? `M ${x} ${y}` : `L ${x} ${y}`;
   }).join(' ');
 
+  // Get first and last X coordinates for closing the path
+  const firstX = pathData[0].split(',')[0];
+  const lastX = pathData[pathData.length - 1].split(',')[0];
+
   // Close the path to baseline (bottom at Y=100)
-  const fillPath = `${pathString} L ${pass.left + pass.width} ${bottomY} L ${pass.left} ${bottomY} Z`;
+  const fillPath = `${pathString} L ${lastX} ${bottomY} L ${firstX} ${bottomY} Z`;
 
   return (
     <svg
       style={{
         position: 'absolute',
         top: 0,
-        left: '40px',
-        width: 'calc(100% - 40px)',
-        height: 'calc(100% - 30px)', // Don't overlap time axis
+        left: `${Y_AXIS_WIDTH}px`,
+        width: `calc(100% - ${Y_AXIS_WIDTH}px)`,
+        height: `calc(100% - ${X_AXIS_HEIGHT}px)`, // Don't overlap time axis
         pointerEvents: 'none',
       }}
       viewBox="0 0 100 100"
@@ -156,8 +183,8 @@ const PassCurve = ({ pass }) => {
 const CurrentTimeMarker = ({ position }) => {
   const theme = useTheme();
 
-  // Calculate position accounting for 40px Y-axis
-  const leftPosition = `calc(40px + (100% - 40px) * ${position / 100})`;
+  // Calculate position accounting for Y-axis
+  const leftPosition = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${position / 100})`;
 
   return (
     <Box
@@ -165,7 +192,7 @@ const CurrentTimeMarker = ({ position }) => {
         position: 'absolute',
         left: leftPosition,
         top: 0,
-        bottom: '30px',
+        bottom: `${X_AXIS_HEIGHT}px`,
         width: '2px',
         backgroundColor: theme.palette.error.main,
         zIndex: 20,
@@ -253,9 +280,9 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
   const gridEditable = useSelector((state) => state.targetSatTrack.gridEditable);
   const satelliteData = useSelector((state) => state.targetSatTrack.satelliteData);
 
-  const { timelineData, currentTimePosition, timeLabels } = useMemo(() => {
+  const { timelineData, currentTimePosition, timeLabels, startTime, endTime } = useMemo(() => {
     if (!satellitePasses || satellitePasses.length === 0) {
-      return { timelineData: [], currentTimePosition: 0, timeLabels: [] };
+      return { timelineData: [], currentTimePosition: 0, timeLabels: [], startTime: new Date(), endTime: new Date() };
     }
 
     const now = new Date();
@@ -307,6 +334,8 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
       timelineData: passes,
       currentTimePosition: currentPosition,
       timeLabels: labels,
+      startTime,
+      endTime,
     };
   }, [satellitePasses, activePass, timeWindowHours]);
 
@@ -318,9 +347,9 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
     const x = e.clientX - rect.left;
     const y = e.clientY - rect.top;
 
-    // Adjust for 40px Y-axis on left
-    const xAdjusted = x - 40;
-    const availableWidth = rect.width - 40;
+    // Adjust for Y-axis on left
+    const xAdjusted = x - Y_AXIS_WIDTH;
+    const availableWidth = rect.width - Y_AXIS_WIDTH;
     const percentage = (xAdjusted / availableWidth) * 100;
     const yPercentage = (y / rect.height) * 100;
 
@@ -335,13 +364,29 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
     for (const pass of timelineData) {
       if (percentage >= pass.left && percentage <= (pass.left + pass.width)) {
         // We're within this pass's time range
-        // Calculate position within the pass (0 to 1)
-        const positionInPass = (percentage - pass.left) / pass.width;
 
-        // Use parabolic curve formula to get elevation at this point
-        // Same formula as in PassCurve component
-        const elevationRatio = 4 * positionInPass * (1 - positionInPass);
-        actualElevation = pass.peak_altitude * elevationRatio;
+        // If we have elevation_curve data, interpolate from actual data
+        if (pass.elevation_curve && pass.elevation_curve.length > 0) {
+          // Find the two closest points in the elevation curve
+          for (let i = 0; i < pass.elevation_curve.length - 1; i++) {
+            const point1 = pass.elevation_curve[i];
+            const point2 = pass.elevation_curve[i + 1];
+            const time1 = new Date(point1.time).getTime();
+            const time2 = new Date(point2.time).getTime();
+
+            if (timeAtPosition.getTime() >= time1 && timeAtPosition.getTime() <= time2) {
+              // Linear interpolation between the two points
+              const t = (timeAtPosition.getTime() - time1) / (time2 - time1);
+              actualElevation = point1.elevation + t * (point2.elevation - point1.elevation);
+              break;
+            }
+          }
+        } else {
+          // Fallback to parabolic curve formula
+          const positionInPass = (percentage - pass.left) / pass.width;
+          const elevationRatio = 4 * positionInPass * (1 - positionInPass);
+          actualElevation = pass.peak_altitude * elevationRatio;
+        }
         break;
       }
     }
@@ -405,7 +450,7 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
                 height: '100%',
               }}
             >
-              <PassCurve pass={pass} />
+              <PassCurve pass={pass} startTime={startTime} endTime={endTime} />
             </Box>
           ))}
 
@@ -414,7 +459,7 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
 
           {/* Hover indicator */}
           {hoverPosition !== null && (() => {
-            const hoverLeft = `calc(40px + (100% - 40px) * ${hoverPosition.x / 100})`;
+            const hoverLeft = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${hoverPosition.x / 100})`;
             return (
               <>
                 {/* Vertical line */}
@@ -423,7 +468,7 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
                     position: 'absolute',
                     left: hoverLeft,
                     top: 0,
-                    bottom: '30px',
+                    bottom: `${X_AXIS_HEIGHT}px`,
                     width: '1px',
                     backgroundColor: theme.palette.text.secondary,
                     opacity: 0.5,
@@ -436,7 +481,7 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
                   sx={{
                     position: 'absolute',
                     top: `${hoverPosition.y}%`,
-                    left: '40px',
+                    left: `${Y_AXIS_WIDTH}px`,
                     right: 0,
                     height: '1px',
                     backgroundColor: theme.palette.text.secondary,
@@ -502,8 +547,22 @@ export const SatellitePassTimeline = ({ timeWindowHours = 8 }) => {
             ))}
           </ElevationAxis>
 
+          {/* Corner box (fills gap between axes) */}
+          <Box
+            sx={{
+              position: 'absolute',
+              left: 0,
+              bottom: 0,
+              width: `${Y_AXIS_WIDTH}px`,
+              height: `${X_AXIS_HEIGHT}px`,
+              backgroundColor: theme.palette.background.default,
+              borderTop: `1px solid ${theme.palette.divider}`,
+              borderRight: `1px solid ${theme.palette.divider}`,
+            }}
+          />
+
           {/* Time axis */}
-          <TimelineAxis sx={{ left: '40px' }}>
+          <TimelineAxis sx={{ left: `${Y_AXIS_WIDTH}px` }}>
             {timeLabels.map((label, index) => (
               <TimeLabel key={index}>{label}</TimeLabel>
             ))}

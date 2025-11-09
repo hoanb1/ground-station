@@ -4,8 +4,12 @@ import json
 import logging
 import multiprocessing
 import time
+from datetime import datetime
 from multiprocessing import Manager
-from typing import Union
+from typing import Dict, Union
+
+import numpy as np
+from skyfield.api import EarthSatellite, Loader, Topos
 
 import crud
 from common.common import ModelEncoder
@@ -58,6 +62,83 @@ def _named_worker_init():
 
     # Set multiprocessing process name
     multiprocessing.current_process().name = "Ground Station - SatellitePassWorker"
+
+
+def _calculate_elevation_curve(satellite_data, home_location, event_start, event_end):
+    """
+    Calculate elevation curve for a single satellite pass with adaptive sampling.
+
+    :param satellite_data: Dictionary containing satellite TLE data
+    :param home_location: Dictionary with 'lat' and 'lon' keys
+    :param event_start: ISO format start time string
+    :param event_end: ISO format end time string
+    :return: List of dictionaries with 'time' and 'elevation' keys
+    """
+    try:
+        # Initialize Skyfield
+        skyfieldloader = Loader("/tmp/skyfield-data")
+        ts = skyfieldloader.timescale()
+
+        # Create satellite and observer objects
+        satellite = EarthSatellite(
+            satellite_data["tle1"],
+            satellite_data["tle2"],
+            name=f"satellite_{satellite_data['norad_id']}",
+        )
+        observer = Topos(
+            latitude_degrees=float(home_location["lat"]),
+            longitude_degrees=float(home_location["lon"]),
+        )
+
+        # Parse times
+        start_dt = datetime.fromisoformat(event_start.replace("Z", "+00:00"))
+        end_dt = datetime.fromisoformat(event_end.replace("Z", "+00:00"))
+
+        # Calculate pass duration in seconds
+        duration_seconds = (end_dt - start_dt).total_seconds()
+
+        # Adaptive sampling: aim for ~120 points per pass, but adjust based on duration
+        # For short passes (< 30 min), sample every 30 seconds
+        # For long passes (> 2 hours), sample every 2 minutes to keep point count reasonable
+        if duration_seconds < 1800:  # Less than 30 minutes
+            sample_interval = 30  # 30 seconds
+        elif duration_seconds < 7200:  # Less than 2 hours
+            sample_interval = 60  # 1 minute
+        else:  # 2 hours or more
+            sample_interval = 120  # 2 minutes
+
+        # Calculate number of samples
+        num_samples = max(int(duration_seconds / sample_interval), 2)
+
+        # Create time array
+        t_start = ts.from_datetime(start_dt)
+        t_end = ts.from_datetime(end_dt)
+        time_offsets = np.linspace(0, (t_end.tt - t_start.tt), num_samples)
+        t_points = t_start + time_offsets
+
+        # Calculate elevation at each time point
+        difference = satellite - observer
+        elevation_curve = []
+
+        for t in t_points:
+            topocentric = difference.at(t)
+            alt, az, distance = topocentric.altaz()
+
+            elevation_curve.append(
+                {
+                    "time": t.utc_iso(),
+                    "elevation": round(float(alt.degrees), 2),
+                    "azimuth": round(float(az.degrees), 2),
+                    "distance": round(float(distance.km), 2),
+                }
+            )
+
+        return elevation_curve
+
+    except Exception as e:
+        logger.error(f"Error calculating elevation curve: {e}")
+        logger.exception(e)
+        return []
 
 
 def run_events_calculation(
@@ -176,7 +257,7 @@ async def fetch_next_events_for_group(
 
     assert group_id, f"Group id is required ({group_id}, {type(group_id)})"
 
-    reply: dict[str, Union[bool, None, list, dict]] = {
+    reply: Dict[str, Union[bool, None, list, Dict]] = {
         "success": None,
         "data": None,
         "parameters": None,
@@ -271,7 +352,8 @@ async def fetch_next_events_for_satellite(
     """
     This function fetches the next satellite events for a specified satellite within a specified
     time frame. This function calculates the satellite events over a defined number
-    of hours, altitude threshold, and minute step interval.
+    of hours, altitude threshold, and minute step interval. Each event includes an elevation
+    curve with adaptive sampling (30s for short passes, up to 2min for long passes).
 
     :param norad_id: The NORAD ID of the satellite for which events are being fetched
     :type norad_id: int
@@ -284,13 +366,13 @@ async def fetch_next_events_for_satellite(
         Defaults to 1.
     :type step_minutes: int
     :return: A dictionary containing the success status, input parameters for the request,
-        and the list of satellite events.
+        and the list of satellite events with elevation curves.
     :rtype: dict
     """
 
     assert norad_id, f"NORAD ID is required ({norad_id}, {type(norad_id)})"
 
-    reply: dict[str, Union[bool, None, list, dict]] = {
+    reply: Dict[str, Union[bool, None, list, Dict]] = {
         "success": None,
         "data": None,
         "parameters": None,
@@ -326,9 +408,18 @@ async def fetch_next_events_for_satellite(
 
             if result.get("success", False):
                 events_for_satellite = result.get("data", [])
+                home_location = {"lat": homelat, "lon": homelon}
+
                 for event in events_for_satellite:
                     event["name"] = satellite["name"]
                     event["id"] = f"{event['id']}_{satellite['norad_id']}_{event['event_start']}"
+
+                    # Calculate elevation curve for this pass
+                    elevation_curve = _calculate_elevation_curve(
+                        satellite, home_location, event["event_start"], event["event_end"]
+                    )
+                    event["elevation_curve"] = elevation_curve
+
                     events.append(event)
 
                 reply["success"] = True
