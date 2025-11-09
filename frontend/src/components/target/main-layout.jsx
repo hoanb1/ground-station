@@ -56,7 +56,7 @@ import {
 import ControllerTabs from "../common/controller.jsx";
 import TargetSatelliteMapContainer from './satellite-map.jsx';
 import TargetSatelliteTransmittersIsland from "./satellite-transmitters.jsx";
-import SatellitePassTimeline from "./satellite-pass-timeline.jsx";
+import SatellitePassTimeline from "./timeline-main.jsx";
 
 
 // global leaflet map object
