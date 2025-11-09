@@ -153,25 +153,21 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                {t('satellite_selector.title')}
-            </TitleBar>
             <Grid container spacing={0} columns={12}>
                 <Grid size={12}>
-                    <Grid size={12} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
+                    <Grid size={12} style={{padding: '0rem 0rem 0rem 0rem'}}>
                         <SatelliteSearchAutocomplete onSatelliteSelect={handleSatelliteSelect} />
                     </Grid>
                 </Grid>
-                <Divider orientation="vertical" flexItem sx={{margin: '0.5rem 0'}}/>
                 <Grid size={12}>
                     <Grid container spacing={1} columns={12}>
                         <Grid size={8}>
-                            <Grid size={12} style={{padding: '0rem 0rem 0.0rem 0.5rem'}}>
+                            <Grid size={12} style={{padding: '0rem 0rem 0rem 0rem'}}>
                                 <GroupDropdown />
                             </Grid>
                             <Grid
                                 size={12}
-                                style={{ padding: '0rem 0rem 0.5rem 0.5rem' }}
+                                style={{ padding: '0rem 0rem 0rem 0rem' }}
                             >
                                 <SatelliteList/>
                             </Grid>
@@ -185,9 +181,9 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
                                 justifyContent: 'center',
                                 height: '100%',
                                 paddingTop: '0.5rem',
-                                paddingBottom: '0.5rem',
+                                paddingBottom: '0rem',
                                 paddingLeft: '0rem',
-                                paddingRight: '0.5rem',
+                                paddingRight: '0rem',
                             }}
                         >
                             <Button
