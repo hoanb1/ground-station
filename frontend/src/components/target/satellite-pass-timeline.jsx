@@ -7,6 +7,7 @@ import { useTranslation } from 'react-i18next';
 import ZoomInIcon from '@mui/icons-material/ZoomIn';
 import ZoomOutIcon from '@mui/icons-material/ZoomOut';
 import RestartAltIcon from '@mui/icons-material/RestartAlt';
+import SunCalc from 'suncalc';
 
 // Constants
 const Y_AXIS_WIDTH = 25; // Width of elevation axis in pixels
@@ -334,7 +335,9 @@ const PassTooltipContent = ({ pass, isCurrent, timezone = 'UTC' }) => {
 
 export const SatellitePassTimeline = ({
   timeWindowHours: initialTimeWindowHours = 8,
-  pastOffsetHours = 2 // Hours to offset into the past on initial render
+  pastOffsetHours = 2, // Hours to offset into the past on initial render
+  showSunShading = true,
+  showSunMarkers = true
 }) => {
   const theme = useTheme();
   const { t } = useTranslation('target');
@@ -365,6 +368,7 @@ export const SatellitePassTimeline = ({
   const activePass = useSelector((state) => state.targetSatTrack.activePass);
   const gridEditable = useSelector((state) => state.targetSatTrack.gridEditable);
   const satelliteData = useSelector((state) => state.targetSatTrack.satelliteData);
+  const groundStationLocation = useSelector((state) => state.location.location);
 
   // Get timezone from preferences
   const timezone = useSelector((state) => {
@@ -372,14 +376,101 @@ export const SatellitePassTimeline = ({
     return timezonePref ? timezonePref.value : 'UTC';
   });
 
-  const { timelineData, currentTimePosition, timeLabels, startTime, endTime } = useMemo(() => {
-    if (!satellitePasses || satellitePasses.length === 0) {
-      return { timelineData: [], currentTimePosition: 0, timeLabels: [], startTime: new Date(), endTime: new Date() };
-    }
-
+  const { timelineData, currentTimePosition, timeLabels, startTime, endTime, sunData } = useMemo(() => {
     const now = new Date();
     const startTime = timeWindowStart ? new Date(timeWindowStart) : new Date(now);
     const endTime = new Date(startTime.getTime() + timeWindowHours * 60 * 60 * 1000);
+
+    // Calculate sun times for the timeline window
+    let sunData = { nightPeriods: [], sunEvents: [] };
+    if (groundStationLocation && (showSunShading || showSunMarkers)) {
+      const { lat, lon } = groundStationLocation;
+
+      const nightPeriods = [];
+      const sunEvents = [];
+
+      // Calculate for each day in the timeline window
+      // Start from 1 day before to catch night periods that started before the window
+      const startDate = new Date(startTime);
+      startDate.setDate(startDate.getDate() - 1);
+      startDate.setHours(0, 0, 0, 0);
+
+      const endDate = new Date(endTime);
+      endDate.setDate(endDate.getDate() + 1);
+      endDate.setHours(23, 59, 59, 999);
+
+      let currentDate = new Date(startDate);
+      while (currentDate <= endDate) {
+        // SunCalc returns times in local timezone
+        const sunTimes = SunCalc.getTimes(currentDate, lat, lon);
+        const sunrise = sunTimes.sunrise;
+        const sunset = sunTimes.sunset;
+
+        // Check if sunrise is valid and within window
+        if (sunrise && !isNaN(sunrise.getTime()) && sunrise >= startTime && sunrise <= endTime) {
+          sunEvents.push({ time: sunrise.getTime(), type: 'sunrise' });
+        }
+
+        // Check if sunset is valid and within window
+        if (sunset && !isNaN(sunset.getTime()) && sunset >= startTime && sunset <= endTime) {
+          sunEvents.push({ time: sunset.getTime(), type: 'sunset' });
+        }
+
+        // Move to next day
+        currentDate.setDate(currentDate.getDate() + 1);
+      }
+
+      // Sort events by time
+      sunEvents.sort((a, b) => a.time - b.time);
+
+      // Build night periods from events
+      // Start by checking if we're in night at the start of the timeline
+      const firstDayTimes = SunCalc.getTimes(new Date(startTime), lat, lon);
+      const isNightAtStart = startTime < firstDayTimes.sunrise || startTime > firstDayTimes.sunset;
+
+      if (isNightAtStart) {
+        // Find first sunrise
+        const firstSunrise = sunEvents.find(e => e.type === 'sunrise');
+        if (firstSunrise) {
+          nightPeriods.push({
+            start: startTime.getTime(),
+            end: firstSunrise.time
+          });
+        } else {
+          // Entire window is night
+          nightPeriods.push({
+            start: startTime.getTime(),
+            end: endTime.getTime()
+          });
+        }
+      }
+
+      // Create night periods between sunset and sunrise events
+      for (let i = 0; i < sunEvents.length; i++) {
+        if (sunEvents[i].type === 'sunset') {
+          // Find next sunrise
+          const nextSunrise = sunEvents.slice(i + 1).find(e => e.type === 'sunrise');
+          if (nextSunrise) {
+            nightPeriods.push({
+              start: sunEvents[i].time,
+              end: nextSunrise.time
+            });
+          } else {
+            // No more sunrises, night until end of timeline
+            nightPeriods.push({
+              start: sunEvents[i].time,
+              end: endTime.getTime()
+            });
+          }
+        }
+      }
+
+      sunData = { nightPeriods, sunEvents };
+    }
+
+    if (!satellitePasses || satellitePasses.length === 0) {
+      return { timelineData: [], currentTimePosition: 0, timeLabels: [], startTime, endTime, sunData };
+    }
 
     // Calculate current time position (0-100%)
     const totalDuration = endTime.getTime() - startTime.getTime();
@@ -457,8 +548,9 @@ export const SatellitePassTimeline = ({
       timeLabels: labels,
       startTime,
       endTime,
+      sunData,
     };
-  }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone]);
+  }, [satellitePasses, activePass, timeWindowHours, timeWindowStart, timezone, groundStationLocation, showSunShading, showSunMarkers]);
 
   const satelliteName = satelliteData?.details?.name || 'Satellite';
 
@@ -810,6 +902,78 @@ export const SatellitePassTimeline = ({
             })}
           </Box>
 
+          {/* Sun shading - night periods */}
+          {showSunShading && sunData.nightPeriods.map((period, index) => {
+            const totalDuration = endTime.getTime() - startTime.getTime();
+            const leftPercent = ((period.start - startTime.getTime()) / totalDuration) * 100;
+            const widthPercent = ((period.end - period.start) / totalDuration) * 100;
+
+            return (
+              <Box
+                key={`night-${index}`}
+                sx={{
+                  position: 'absolute',
+                  left: `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${leftPercent / 100})`,
+                  width: `calc((100% - ${Y_AXIS_WIDTH}px) * ${widthPercent / 100})`,
+                  top: 0,
+                  bottom: `${X_AXIS_HEIGHT}px`,
+                  backgroundColor: theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.3)' : 'rgba(0, 0, 0, 0.15)',
+                  pointerEvents: 'none',
+                  zIndex: 2,
+                }}
+              />
+            );
+          })}
+
+          {/* Sun event markers - sunrise/sunset lines */}
+          {showSunMarkers && sunData.sunEvents.map((event, index) => {
+            const totalDuration = endTime.getTime() - startTime.getTime();
+            const position = ((event.time - startTime.getTime()) / totalDuration) * 100;
+            const leftPosition = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${position / 100})`;
+            const isSunrise = event.type === 'sunrise';
+            const color = isSunrise ? theme.palette.warning.main : theme.palette.info.main;
+
+            return (
+              <React.Fragment key={`sun-${index}`}>
+                {/* Vertical line */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    left: leftPosition,
+                    top: `${Y_AXIS_TOP_MARGIN}px`,
+                    bottom: `${X_AXIS_HEIGHT}px`,
+                    width: '2px',
+                    backgroundColor: color,
+                    opacity: 0.6,
+                    pointerEvents: 'none',
+                    zIndex: 3,
+                  }}
+                />
+                {/* Label at top */}
+                <Box
+                  sx={{
+                    position: 'absolute',
+                    left: leftPosition,
+                    top: `${Y_AXIS_TOP_MARGIN - 18}px`,
+                    transform: 'translateX(-50%)',
+                    fontSize: '0.65rem',
+                    fontWeight: 'bold',
+                    color: color,
+                    backgroundColor: theme.palette.background.paper,
+                    padding: '2px 4px',
+                    borderRadius: '2px',
+                    border: `1px solid ${color}`,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                    zIndex: 3,
+                  }}
+                >
+                  {isSunrise ? '☀ Sunrise' : '☾ Sunset'}
+                </Box>
+              </React.Fragment>
+            );
+          })}
+
           {/* No data message */}
           {(!satellitePasses || satellitePasses.length === 0 || timelineData.length === 0) && (
             <Box
@@ -853,6 +1017,16 @@ export const SatellitePassTimeline = ({
           {/* Hover indicator */}
           {hoverPosition !== null && (() => {
             const hoverLeft = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${hoverPosition.x / 100})`;
+            // Adjust label position to prevent overflow at edges
+            const isNearRightEdge = hoverPosition.x > 85;
+            const isNearLeftEdge = hoverPosition.x < 15;
+            let labelTransform = 'translateX(-50%)';
+            if (isNearRightEdge) {
+              labelTransform = 'translateX(-100%)';
+            } else if (isNearLeftEdge) {
+              labelTransform = 'translateX(0)';
+            }
+
             return (
               <>
                 {/* Vertical line */}
@@ -889,22 +1063,22 @@ export const SatellitePassTimeline = ({
                     position: 'absolute',
                     left: hoverLeft,
                     top: '5px',
-                  transform: 'translateX(-50%)',
-                  backgroundColor: theme.palette.background.paper,
-                  border: `1px solid ${theme.palette.divider}`,
-                  borderRadius: '4px',
-                  padding: '4px 8px',
-                  fontSize: '0.75rem',
-                  fontWeight: 'bold',
-                  color: theme.palette.text.primary,
-                  whiteSpace: 'nowrap',
-                  pointerEvents: 'none',
-                  zIndex: 25,
-                  boxShadow: theme.shadows[2],
-                }}
-              >
-                {formatHoverTime(hoverTime)}
-              </Box>
+                    transform: labelTransform,
+                    backgroundColor: theme.palette.background.paper,
+                    border: `1px solid ${theme.palette.divider}`,
+                    borderRadius: '4px',
+                    padding: '4px 8px',
+                    fontSize: '0.75rem',
+                    fontWeight: 'bold',
+                    color: theme.palette.text.primary,
+                    whiteSpace: 'nowrap',
+                    pointerEvents: 'none',
+                    zIndex: 25,
+                    boxShadow: theme.shadows[2],
+                  }}
+                >
+                  {formatHoverTime(hoverTime)}
+                </Box>
               {/* Elevation tooltip */}
               {hoverPosition.elevation !== null && (
                 <Box
