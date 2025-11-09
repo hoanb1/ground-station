@@ -31,10 +31,10 @@ import {
     StyledIslandParentNoScrollbar,
     StyledIslandParentScrollbar,
 } from "../common/common.jsx";
-import { toast } from "../../utils/toast-with-timestamp.jsx";
+import {toast} from "../../utils/toast-with-timestamp.jsx";
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
-import { useTranslation } from 'react-i18next';
+import {useTranslation} from 'react-i18next';
 import {
     setSatGroupId,
     setMapZoomLevel,
@@ -169,7 +169,7 @@ const MapSlider = function ({handleSliderChange}) {
 const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
     const {socket} = useSocket();
     const dispatch = useDispatch();
-    const { t } = useTranslation('target');
+    const {t} = useTranslation('target');
     const {
         groupId,
         satelliteId: noradId,
@@ -236,7 +236,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "w": 12,
             "h": 7,
             "x": 0,
-            "y": 19,
+            "y": 25,
             "i": "passes",
             "minH": 6,
             "moved": false,
@@ -251,25 +251,14 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 3,
-            "h": 13,
-            "x": 9,
-            "y": 6,
-            "i": "transmitters",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
+        }, {"w": 3, "h": 13, "x": 9, "y": 6, "i": "transmitters", "moved": false, "static": false}, {
             "w": 12,
-            "h": 7,
+            "h": 6,
             "x": 0,
-            "y": 26,
+            "y": 19,
             "i": "timeline",
-            "minH": 5,
             "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+            "static": false
         }],
         "md": [{
             "w": 10,
@@ -293,7 +282,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "w": 10,
             "h": 9,
             "x": 0,
-            "y": 38,
+            "y": 44,
             "i": "passes",
             "minH": 6,
             "moved": false,
@@ -308,25 +297,14 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 5,
-            "h": 15,
-            "x": 5,
-            "y": 23,
-            "i": "transmitters",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
+        }, {"w": 5, "h": 15, "x": 5, "y": 23, "i": "transmitters", "moved": false, "static": false}, {
             "w": 10,
-            "h": 7,
+            "h": 6,
             "x": 0,
-            "y": 47,
+            "y": 38,
             "i": "timeline",
-            "minH": 5,
             "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+            "static": false
         }],
         "sm": [{
             "w": 6,
@@ -341,7 +319,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "w": 3,
             "h": 15,
             "x": 0,
-            "y": 30,
+            "y": 36,
             "i": "info",
             "moved": false,
             "static": false,
@@ -350,7 +328,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "w": 6,
             "h": 9,
             "x": 0,
-            "y": 21,
+            "y": 27,
             "i": "passes",
             "minH": 6,
             "moved": false,
@@ -365,25 +343,14 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 3,
-            "h": 15,
-            "x": 3,
-            "y": 30,
-            "i": "transmitters",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
+        }, {"w": 3, "h": 15, "x": 3, "y": 36, "i": "transmitters", "moved": false, "static": false}, {
             "w": 6,
-            "h": 7,
+            "h": 6,
             "x": 0,
-            "y": 45,
+            "y": 21,
             "i": "timeline",
-            "minH": 5,
             "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+            "static": false
         }],
         "xs": [{
             "w": 2,
@@ -398,7 +365,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "w": 2,
             "h": 12,
             "x": 0,
-            "y": 30,
+            "y": 36,
             "i": "info",
             "moved": false,
             "static": false,
@@ -407,7 +374,7 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "w": 2,
             "h": 9,
             "x": 0,
-            "y": 21,
+            "y": 27,
             "i": "passes",
             "minH": 6,
             "moved": false,
@@ -422,25 +389,14 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
+        }, {"w": 2, "h": 16, "x": 0, "y": 48, "i": "transmitters", "moved": false, "static": false}, {
             "w": 2,
-            "h": 16,
+            "h": 6,
             "x": 0,
-            "y": 42,
-            "i": "transmitters",
-            "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {
-            "w": 2,
-            "h": 7,
-            "x": 0,
-            "y": 58,
+            "y": 21,
             "i": "timeline",
-            "minH": 5,
             "moved": false,
-            "static": false,
-            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+            "static": false
         }]
     };
 

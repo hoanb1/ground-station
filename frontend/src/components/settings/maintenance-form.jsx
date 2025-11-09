@@ -467,6 +467,68 @@ const MaintenanceForm = () => {
                                         Grid Layout Storage
                                     </Typography>
                                 </Grid>
+
+                                <Grid size={10}>
+                                    Clear Overview Grid Layout
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets the widget layout on the Overview page
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={() => localStorage.setItem(overviewGridLayoutName, null)}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
+
+                                <Grid size={10}>
+                                    Clear Target Grid Layout
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets the widget layout on the Target page
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={() => localStorage.setItem(targetGridLayoutName, null)}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
+
+                                <Grid size={10}>
+                                    Clear Waterfall Grid Layout
+                                    <Typography variant="body2" color="text.secondary">
+                                        Resets the widget layout on the Waterfall page
+                                    </Typography>
+                                </Grid>
+                                <Grid size={6}>
+                                    <Button
+                                        variant="outlined"
+                                        color="warning"
+                                        onClick={() => localStorage.setItem(waterfallGridLayoutName, null)}
+                                        fullWidth
+                                        size="small"
+                                    >
+                                        Clear
+                                    </Button>
+                                </Grid>
+
+                                <Grid size={16}>
+                                    <Alert severity="info" sx={{ mt: 1 }}>
+                                        <AlertTitle>Clear All Grid Layouts</AlertTitle>
+                                        Use the button below to reset all three grid layouts at once
+                                    </Alert>
+                                </Grid>
+
                                 <Grid size={10}>
                                     {t('maintenance.clear_layout')}
                                 </Grid>
