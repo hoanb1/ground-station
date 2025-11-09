@@ -23,6 +23,9 @@
     "geo_sync": "GEO Sync",
     "no_satellite_selected": "Please select a satellite to view passes"
   },
+  "pass_timeline": {
+    "title": "Pass Timeline for {{name}} - Next {{hours}} hours"
+  },
   "rig_control": {
     "title": "Radio rig control",
     "connected": "Connected",

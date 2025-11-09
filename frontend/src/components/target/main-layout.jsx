@@ -56,6 +56,7 @@ import {
 import ControllerTabs from "../common/controller.jsx";
 import TargetSatelliteMapContainer from './satellite-map.jsx';
 import TargetSatelliteTransmittersIsland from "./satellite-transmitters.jsx";
+import SatellitePassTimeline from "./satellite-pass-timeline.jsx";
 
 
 // global leaflet map object
@@ -250,7 +251,26 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 3, "h": 13, "x": 9, "y": 6, "i": "transmitters", "moved": false, "static": false}],
+        }, {
+            "w": 3,
+            "h": 13,
+            "x": 9,
+            "y": 6,
+            "i": "transmitters",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 12,
+            "h": 7,
+            "x": 0,
+            "y": 26,
+            "i": "timeline",
+            "minH": 5,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
         "md": [{
             "w": 10,
             "h": 17,
@@ -288,7 +308,26 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 5, "h": 15, "x": 5, "y": 23, "i": "transmitters", "moved": false, "static": false}],
+        }, {
+            "w": 5,
+            "h": 15,
+            "x": 5,
+            "y": 23,
+            "i": "transmitters",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 10,
+            "h": 7,
+            "x": 0,
+            "y": 47,
+            "i": "timeline",
+            "minH": 5,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
         "sm": [{
             "w": 6,
             "h": 15,
@@ -326,7 +365,26 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 3, "h": 15, "x": 3, "y": 30, "i": "transmitters", "moved": false, "static": false}],
+        }, {
+            "w": 3,
+            "h": 15,
+            "x": 3,
+            "y": 30,
+            "i": "transmitters",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 6,
+            "h": 7,
+            "x": 0,
+            "y": 45,
+            "i": "timeline",
+            "minH": 5,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }],
         "xs": [{
             "w": 2,
             "h": 15,
@@ -364,7 +422,26 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 2, "h": 16, "x": 0, "y": 42, "i": "transmitters", "moved": false, "static": false}]
+        }, {
+            "w": 2,
+            "h": 16,
+            "x": 0,
+            "y": 42,
+            "i": "transmitters",
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }, {
+            "w": 2,
+            "h": 7,
+            "x": 0,
+            "y": 58,
+            "i": "timeline",
+            "minH": 5,
+            "moved": false,
+            "static": false,
+            "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
+        }]
     };
 
     // globalize the callback
@@ -426,6 +503,9 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
         <StyledIslandParentScrollbar key="transmitters">
             <TargetSatelliteTransmittersIsland/>
         </StyledIslandParentScrollbar>,
+        <StyledIslandParentNoScrollbar key="timeline">
+            <SatellitePassTimeline timeWindowHours={24}/>
+        </StyledIslandParentNoScrollbar>,
         // <StyledIslandParentScrollbar key="video">
         //     <CameraView/>
         // </StyledIslandParentScrollbar>,
