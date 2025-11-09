@@ -252,19 +252,19 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "static": false
         }],
         "md": [{
-            "w": 10,
-            "h": 17,
-            "x": 0,
+            "w": 4,
+            "h": 15,
+            "x": 6,
             "y": 0,
             "i": "map",
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
         }, {
-            "w": 5,
+            "w": 3,
             "h": 15,
             "x": 0,
-            "y": 17,
+            "y": 0,
             "i": "info",
             "moved": false,
             "static": false,
@@ -273,17 +273,17 @@ const TargetSatelliteLayout = React.memo(function TargetSatelliteLayout() {
             "w": 10,
             "h": 9,
             "x": 0,
-            "y": 38,
+            "y": 21,
             "i": "passes",
             "minH": 6,
             "moved": false,
             "static": false,
             "resizeHandles": ["se", "ne", "nw", "sw", "s", "e", "w"]
-        }, {"w": 5, "h": 15, "x": 5, "y": 17, "i": "transmitters", "moved": false, "static": false}, {
+        }, {"w": 3, "h": 15, "x": 3, "y": 0, "i": "transmitters", "moved": false, "static": false}, {
             "w": 10,
             "h": 6,
             "x": 0,
-            "y": 32,
+            "y": 15,
             "i": "timeline",
             "moved": false,
             "static": false
