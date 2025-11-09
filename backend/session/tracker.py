@@ -227,15 +227,32 @@ class SessionTracker:
         key = f"{session_id}:{vfo_number}"
         return self._vfo_initialized.get(key, False)
 
-    def clear_vfo_initialization_state(self) -> None:
+    def clear_vfo_initialization_state(self, rig_id: Optional[str] = None) -> None:
         """
-        Clear all VFO initialization state.
+        Clear VFO initialization state.
 
         Called when tracking stops to allow VFOs to be re-initialized
         on the next tracking session start.
+
+        Args:
+            rig_id: Optional rig ID to clear state for only sessions tracking that rig.
+                   If None, clears state for all sessions.
         """
-        self._vfo_initialized.clear()
-        logger.debug("Cleared all VFO initialization state")
+        if rig_id:
+            # Only clear for sessions tracking this specific rig
+            sessions_tracking_rig = [
+                session_id for session_id, rid in self._session_rig_map.items() if rid == rig_id
+            ]
+            for session_id in sessions_tracking_rig:
+                keys_to_remove = [
+                    key for key in self._vfo_initialized.keys() if key.startswith(f"{session_id}:")
+                ]
+                for key in keys_to_remove:
+                    del self._vfo_initialized[key]
+            logger.debug(f"Cleared VFO initialization state for rig {rig_id}")
+        else:
+            self._vfo_initialized.clear()
+            logger.debug("Cleared all VFO initialization state")
 
 
 # Global singleton instance

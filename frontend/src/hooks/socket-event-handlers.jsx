@@ -47,6 +47,7 @@ import { initializeAppData } from '../services/data-sync.js';
 import { setIsRecording, setRecordingDuration, setRecordingStartTime } from '../components/waterfall/waterfall-slice.jsx';
 import { updateAllVFOStates, setVFOProperty } from '../components/waterfall/vfo-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
+import { setConnected, setConnecting, setReConnectAttempt } from '../components/dashboard/dashboard-slice.jsx';
 
 /**
  * Custom hook to handle all socket event listeners
@@ -62,6 +63,10 @@ export const useSocketEventHandlers = (socket) => {
         // Connection event
         socket.on('connect', async () => {
             console.log('Socket connected with ID:', socket.id, socket);
+
+            // Update connection state
+            dispatch(setConnecting(false));
+            dispatch(setConnected(true));
 
             // Load preferences first to ensure toast position is correct
             await store.dispatch(fetchPreferences({socket}));
@@ -80,6 +85,7 @@ export const useSocketEventHandlers = (socket) => {
 
         // Reconnection attempt event
         socket.on("reconnect_attempt", (attempt) => {
+            dispatch(setReConnectAttempt(attempt));
             toast.info(
                 <ToastMessage
                     title={t('notifications.connection.reconnecting_to_backend')}
@@ -106,6 +112,10 @@ export const useSocketEventHandlers = (socket) => {
 
         // Disconnect event
         socket.on('disconnect', () => {
+            // Update connection state
+            dispatch(setConnecting(true));
+            dispatch(setConnected(false));
+
             toast.error(
                 <ToastMessage
                     title={t('notifications.connection.lost_connection')}

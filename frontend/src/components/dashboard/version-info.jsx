@@ -9,17 +9,19 @@ const VersionInfo = ({ minimal = false }) => {
     const dispatch = useDispatch();
     const { t } = useTranslation('dashboard');
     const { data, loading, error } = useSelector((state) => state.version);
+    const hasFetchedRef = React.useRef(false);
 
     // Determine environment
     const environment = import.meta.env.MODE || 'unknown';
     const envColor = environment === 'production' ? 'error' : 'success';
 
     useEffect(() => {
-        // Fetch version info when component mounts if not already loaded
-        if (!data && !loading) {
+        // Fetch version info only once when component mounts
+        if (!hasFetchedRef.current) {
+            hasFetchedRef.current = true;
             dispatch(fetchVersionInfo());
         }
-    }, [dispatch, data, loading]);
+    }, [dispatch]);
 
     if (minimal) {
         return (

@@ -74,7 +74,9 @@ function ConnectionOverlay() {
 
     const status = getConnectionStatus();
 
-    if (!status) return null;
+    if (!status) {
+        return null;
+    }
 
     return (
         <Backdrop

@@ -92,8 +92,8 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                     except Exception as e:
                         logger.error(f"Error unlocking VFOs for session {session_id}: {e}")
 
-            # Clear initialization state so when tracking restarts, VFOs get re-initialized
-            session_tracker.clear_vfo_initialization_state()
+            # Clear initialization state for this rig so when tracking restarts, VFOs get re-initialized
+            session_tracker.clear_vfo_initialization_state(rig_id)
             # Return early - no need to process tracking updates when not tracking
             return
 

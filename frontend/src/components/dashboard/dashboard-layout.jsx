@@ -49,13 +49,7 @@ import CheckIcon from '@mui/icons-material/Check';
 import {useSocket} from "../common/socket.jsx";
 import {useDispatch, useSelector} from "react-redux";
 import { useTranslation } from 'react-i18next';
-import {
-    setIsEditing,
-    setConnecting,
-    setConnected,
-    setReConnectAttempt,
-    setConnectionError,
-} from "./dashboard-slice.jsx";
+import { setIsEditing } from "./dashboard-slice.jsx";
 import WakeLockStatus from "./wake-lock-icon.jsx";
 import ConnectionStatus from "./connection-popover.jsx";
 import Tooltip from "@mui/material/Tooltip";
@@ -390,49 +384,6 @@ export default function Layout() {
 
     useEffect(() => {
         if (socket) {
-            socket.on("connect", () => {
-                // Fired upon a successful connection
-                dispatch(setConnecting(false));
-                dispatch(setConnected(true));
-            });
-
-            socket.on("error", (error) => {
-                // Fired upon a connection error
-                console.error('Socket error', error);
-                dispatch(setConnectionError(error));
-            });
-
-            socket.on("disconnect", () => {
-                dispatch(setConnecting(true));
-                dispatch(setConnected(false));
-            });
-
-            socket.on('reconnect_attempt', (attemptNumber) => {
-                // Fired upon an attempt to reconnect
-                console.log(`Reconnection attempt #${attemptNumber}`);
-                dispatch(setReConnectAttempt(attemptNumber));
-            });
-
-            // Track reconnection errors with delay info
-            socket.on('reconnect_error', (error) => {
-                // Fired upon a reconnection attempt error
-                console.log('Reconnection failed:', error);
-            });
-
-            // Track successful reconnection
-            socket.on('reconnect', (attemptNumber) => {
-                // Fired upon a successful reconnection
-                console.log(`Reconnected after ${attemptNumber} attempts`);
-                dispatch(setConnecting(false));
-                dispatch(setConnected(true));
-            });
-
-            // Track reconnection failure (when max attempts reached)
-            socket.on('reconnect_failed', () => {
-                // Fired when couldn't reconnect within reconnectionAttempts
-                console.log('Reconnection failed - max attempts reached');
-            });
-
             socket.on("audio-data", (data) => {
                 playAudioSamples(data);
             });
@@ -440,17 +391,10 @@ export default function Layout() {
 
         return () => {
             if (socket) {
-                socket.off("connect");
-                socket.off("disconnect");
-                socket.off("error");
                 socket.off("audio-data");
-                socket.off('reconnect_attempt');
-                socket.off('reconnect_error');
-                socket.off('reconnect');
-                socket.off('reconnect_failed');
             }
         };
-    }, [socket]);
+    }, [socket, playAudioSamples]);
 
     return (
         <DashboardLayout

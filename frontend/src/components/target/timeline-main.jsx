@@ -273,34 +273,40 @@ const SatellitePassTimelineComponent = ({
           </Box>
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Tooltip title={t('timeline.zoomIn')}>
-              <IconButton
-                size="small"
-                onClick={handleZoomIn}
-                disabled={timeWindowHours <= 0.5}
-                sx={{ padding: '2px' }}
-              >
-                <ZoomInIcon fontSize="small" />
-              </IconButton>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleZoomIn}
+                  disabled={timeWindowHours <= 0.5}
+                  sx={{ padding: '2px' }}
+                >
+                  <ZoomInIcon fontSize="small" />
+                </IconButton>
+              </span>
             </Tooltip>
             <Tooltip title={t('timeline.zoomOut')}>
-              <IconButton
-                size="small"
-                onClick={handleZoomOut}
-                disabled={timeWindowHours >= initialTimeWindowHours}
-                sx={{ padding: '2px' }}
-              >
-                <ZoomOutIcon fontSize="small" />
-              </IconButton>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleZoomOut}
+                  disabled={timeWindowHours >= initialTimeWindowHours}
+                  sx={{ padding: '2px' }}
+                >
+                  <ZoomOutIcon fontSize="small" />
+                </IconButton>
+              </span>
             </Tooltip>
             <Tooltip title={t('timeline.resetZoom')}>
-              <IconButton
-                size="small"
-                onClick={handleResetZoom}
-                disabled={timeWindowHours === initialTimeWindowHours && timeWindowStart === null}
-                sx={{ padding: '2px' }}
-              >
-                <RestartAltIcon fontSize="small" />
-              </IconButton>
+              <span>
+                <IconButton
+                  size="small"
+                  onClick={handleResetZoom}
+                  disabled={timeWindowHours === initialTimeWindowHours && timeWindowStart === null}
+                  sx={{ padding: '2px' }}
+                >
+                  <RestartAltIcon fontSize="small" />
+                </IconButton>
+              </span>
             </Tooltip>
           </Box>
         </Box>

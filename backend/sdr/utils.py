@@ -21,6 +21,7 @@ from typing import Any, Dict, Optional, Union
 
 from crud import hardware
 from sdr.sdrprocessmanager import sdr_process_manager
+from session.tracker import session_tracker
 from workers.common import window_functions
 
 logger = logging.getLogger("waterfall-process")
@@ -80,10 +81,8 @@ async def cleanup_sdr_session(sid):
             # Stop or leave the SDR process
             await sdr_process_manager.stop_sdr_process(sdr_id, sid)
 
-        # Unregister session from SessionTracker
-        from session.tracker import session_tracker
-
-        session_tracker.unregister_session_streaming(sid)
+        # Clear all session data from SessionTracker
+        session_tracker.clear_session(sid)
 
         # Remove client from active clients
         del active_sdr_clients[sid]
