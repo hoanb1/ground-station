@@ -336,9 +336,15 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         // If a transmitter was selected, then set the SDR center frequency
         dispatch(setSelectedTransmitterId(event.target.value));
         const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
-        const newFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
-        dispatch(setCenterFrequency(newFrequency));
-        sendSDRConfigToBackend({centerFrequency: newFrequency});
+        const targetFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
+
+        // Calculate offset to avoid DC spike at center
+        // Offset by 25% of sample rate to move target signal away from center
+        const offsetHz = sampleRate * 0.25;
+        const newCenterFrequency = targetFrequency + offsetHz;
+
+        dispatch(setCenterFrequency(newCenterFrequency));
+        sendSDRConfigToBackend({centerFrequency: newCenterFrequency});
     }
 
     function handleOffsetModeChange(event) {
