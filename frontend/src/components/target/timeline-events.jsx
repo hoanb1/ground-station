@@ -267,10 +267,13 @@ export const useTimelineEvents = ({
     setTimeWindowHours(newTimeWindowHours);
   };
 
-  const handleResetZoom = () => {
+  const handleResetZoom = useCallback(() => {
     setTimeWindowHours(initialTimeWindowHours);
-    setTimeWindowStart(null);
-  };
+    // Set start time to 2 hours in the past
+    const now = new Date();
+    const pastOffsetHours = 2;
+    setTimeWindowStart(now.getTime() - (pastOffsetHours * 60 * 60 * 1000));
+  }, [initialTimeWindowHours, setTimeWindowHours, setTimeWindowStart]);
 
   return {
     handleMouseMove,
