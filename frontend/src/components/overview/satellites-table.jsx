@@ -526,8 +526,22 @@ const SatelliteDetailsTable = React.memo(function SatelliteDetailsTable() {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
-                {t('satellites_table.title')} ({t('satellites_table.satellites_count', { count: selectedSatellites?.length || 0 })})
+            <TitleBar
+                className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+                sx={{
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
+                    backdropFilter: 'blur(10px)'
+                }}
+            >
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                            {t('satellites_table.title')} ({t('satellites_table.satellites_count', { count: selectedSatellites?.length || 0 })})
+                        </Typography>
+                    </Box>
+                </Box>
             </TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{

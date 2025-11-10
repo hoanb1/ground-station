@@ -29,7 +29,7 @@ import {
     useMapEvents,
 } from 'react-leaflet';
 import L from 'leaflet';
-import {Box, Fab, useTheme} from '@mui/material';
+import {Box, Fab, useTheme, Typography} from '@mui/material';
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
 import FilterCenterFocusIcon from '@mui/icons-material/FilterCenterFocus';
@@ -46,7 +46,7 @@ import {
 import {getTileLayerById} from '../common/tile-layers.jsx';
 import {homeIcon, satelliteIcon2, moonIcon, sunIcon} from '../common/dataurl-icons.jsx';
 import {
-    MapTitleBar,
+    TitleBar,
     MapStatusBar,
     InternationalDateLinePolyline,
     MapArrowControls,
@@ -328,7 +328,7 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
                 // Crosshairs for tracking satellite - always shown when the satellite is being tracked
                 if (trackingSatelliteId === noradId) {
-                    const crosshairColor = theme.palette.secondary.main;
+                    const crosshairColor = theme.palette.error.main;
 
                     // Create a custom square icon using DivIcon for pixel-perfect square
                     const squareIcon = L.divIcon({
@@ -563,9 +563,23 @@ const SatelliteMapContainer = ({handleSetTrackingOnBackend}) => {
 
     return (
         <>
-            <MapTitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ['window-title-bar'])}>
-                {t('title')}
-            </MapTitleBar>
+            <TitleBar
+                className={getClassNamesBasedOnGridEditing(gridEditable, ['window-title-bar'])}
+                sx={{
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
+                    backdropFilter: 'blur(10px)'
+                }}
+            >
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                            {t('title')}
+                        </Typography>
+                    </Box>
+                </Box>
+            </TitleBar>
             <MapContainer
                 fullscreenControl={true}
                 center={[0, 0]}

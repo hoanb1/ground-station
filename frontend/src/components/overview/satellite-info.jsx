@@ -148,7 +148,7 @@ const OverviewSatelliteInfoCard = () => {
                 sx={{
                     bgcolor: "background.default",
                     borderBottom: "1px solid",
-                    borderColor: "divider",
+                    borderColor: "border.main",
                     backdropFilter: 'blur(10px)'
                 }}
             >

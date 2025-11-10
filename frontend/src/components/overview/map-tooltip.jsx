@@ -13,12 +13,12 @@ import { useTranslation } from 'react-i18next';
 // Styled tooltip specifically for tracked satellites
 const TrackedSatelliteTooltip = styled(LeafletTooltip)(({ theme }) => ({
     color: theme.palette.text.primary,
-    backgroundColor: theme.palette.secondary.dark,
+    backgroundColor: theme.palette.error.dark,
     borderRadius: theme.shape.borderRadius,
-    borderColor: theme.palette.secondary.main,
+    borderColor: theme.palette.error.main,
     zIndex: 1000,
     '&::before': {
-        borderBottomColor: `${theme.palette.secondary.main} !important`,
+        borderBottomColor: `${theme.palette.error.main} !important`,
     },
 }));
 

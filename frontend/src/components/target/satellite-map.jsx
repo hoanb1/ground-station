@@ -26,7 +26,7 @@ import {
     Polygon,
     useMapEvents,
 } from 'react-leaflet';
-import {Box, Fab, Slider} from "@mui/material";
+import {Box, Fab, Slider, Typography} from "@mui/material";
 import {SatelliteAlt} from '@mui/icons-material';
 import HomeIcon from '@mui/icons-material/Home';
 import FullscreenIcon from '@mui/icons-material/Fullscreen';
@@ -58,7 +58,7 @@ import {
 import {getTileLayerById} from "../common/tile-layers.jsx";
 import {homeIcon, sunIcon, moonIcon, satelliteIcon2} from '../common/dataurl-icons.jsx';
 import {
-    MapTitleBar,
+    TitleBar,
     MapStatusBar,
     InternationalDateLinePolyline,
     MapArrowControls,
@@ -462,11 +462,23 @@ const TargetSatelliteMapContainer = ({}) => {
 
     return (
         <>
-            <MapTitleBar
+            <TitleBar
                 className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+                sx={{
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
+                    backdropFilter: 'blur(10px)'
+                }}
             >
-                {t('satellite_map.title')}
-            </MapTitleBar>
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                            {t('satellite_map.title')}
+                        </Typography>
+                    </Box>
+                </Box>
+            </TitleBar>
             <MapContainer
                 center={satellitePosition?.lat && satellitePosition?.lon ? [satellitePosition.lat, satellitePosition.lon] : [0, 0]}
                 zoom={mapZoomLevel}

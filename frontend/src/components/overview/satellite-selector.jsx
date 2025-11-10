@@ -19,10 +19,13 @@
 
 
 import {
+    Box,
     FormControl,
     InputLabel,
-    ListSubheader, MenuItem,
+    ListSubheader,
+    MenuItem,
     Select,
+    Typography,
 } from "@mui/material";
 import { useTheme, styled } from '@mui/material/styles';
 import React, {useEffect, useState} from "react";
@@ -97,7 +100,23 @@ const OverviewSatelliteGroupSelector = React.memo(function OverviewSatelliteGrou
 
     return (
         <ThemedSettingsDiv>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable,  ["window-title-bar"])}>{t('satellite_selector.title')}</TitleBar>
+            <TitleBar
+                className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+                sx={{
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
+                    backdropFilter: 'blur(10px)'
+                }}
+            >
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                            {t('satellite_selector.title')}
+                        </Typography>
+                    </Box>
+                </Box>
+            </TitleBar>
             <Grid container spacing={{ xs: 1, md: 1 }} columns={{ xs: 12, sm: 12, md: 12 }}>
                 <Grid size={{ xs: 12, sm: 12, md: 12  }} style={{padding: '0.5rem 0.5rem 0rem 0.5rem'}}>
                     <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} disabled={passesLoading}

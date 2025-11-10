@@ -266,10 +266,20 @@ const SatellitePassTimelineComponent = ({
 
   return (
     <TimelineContainer>
-      <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>
+      <TitleBar
+        className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+        sx={{
+          bgcolor: 'background.default',
+          borderBottom: '1px solid',
+          borderColor: 'border.main',
+          backdropFilter: 'blur(10px)'
+        }}
+      >
         <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%', height: '100%' }}>
-          <Box>
-            {satelliteName && t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
+          <Box sx={{display: 'flex', alignItems: 'center'}}>
+            <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+              {satelliteName && t('pass_timeline.title', { name: satelliteName, hours: timeWindowHours.toFixed(1) })}
+            </Typography>
           </Box>
           <Box sx={{ display: 'flex', gap: 0.5 }}>
             <Tooltip title={t('timeline.zoomIn')}>

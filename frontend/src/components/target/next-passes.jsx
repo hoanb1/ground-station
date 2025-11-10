@@ -29,6 +29,7 @@ import {
 import {DataGrid, gridClasses, useGridApiRef} from "@mui/x-data-grid";
 import { useDispatch, useSelector } from 'react-redux';
 import {darken, lighten, styled} from "@mui/material/styles";
+import {Box, Typography} from '@mui/material';
 import ProgressFormatter from "../overview/progressbar-widget.jsx";
 import { useTranslation } from 'react-i18next';
 import { enUS, elGR } from '@mui/x-data-grid/locales';
@@ -381,7 +382,23 @@ const NextPassesIsland = React.memo(function NextPassesIsland() {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>{t('next_passes.title', { name: satelliteData['details']['name'], hours: nextPassesHours })}</TitleBar>
+            <TitleBar
+                className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+                sx={{
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
+                    backdropFilter: 'blur(10px)'
+                }}
+            >
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                            {t('next_passes.title', { name: satelliteData['details']['name'], hours: nextPassesHours })}
+                        </Typography>
+                    </Box>
+                </Box>
+            </TitleBar>
             <div style={{ position: 'relative', display: 'block', height: '100%' }} ref={containerRef}>
                 <div style={{
                     padding:'0rem 0rem 0rem 0rem',
