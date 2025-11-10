@@ -110,10 +110,33 @@ const synchronizePersistConfig = {
 };
 
 // Persist configuration for the 'preferences' slice
+// Custom state reconciler to only persist/restore theme preference
+const preferencesStateReconciler = (inboundState, originalState) => {
+    if (!inboundState || !inboundState.preferences) {
+        return originalState;
+    }
+
+    // Find the persisted theme preference
+    const persistedTheme = inboundState.preferences.find(pref => pref.name === 'theme');
+
+    if (!persistedTheme) {
+        return originalState;
+    }
+
+    // Merge: use original state but update theme value from localStorage
+    return {
+        ...originalState,
+        preferences: originalState.preferences.map(pref =>
+            pref.name === 'theme' ? { ...pref, value: persistedTheme.value } : pref
+        )
+    };
+};
+
 const preferencesPersistConfig = {
     key: 'preferences',
     storage,
-    whitelist: ['']
+    stateReconciler: preferencesStateReconciler,
+    whitelist: ['preferences']
 };
 
 // Persist configuration for the target satellite tracking slice

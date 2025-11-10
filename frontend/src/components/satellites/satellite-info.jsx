@@ -737,25 +737,25 @@ const SatelliteInfo = () => {
                                             overflow: 'hidden',
                                             textOverflow: 'ellipsis',
                                             borderBottom: '1px solid',
-                                        borderColor: 'border.main',
+                                            borderColor: (theme) => theme.palette.border.main,
                                         },
                                         '& .MuiDataGrid-row': {
                                             '&:nth-of-type(odd)': {
-                                                backgroundColor: 'overlay.light',
+                                                backgroundColor: (theme) => theme.palette.overlay.light,
                                             },
                                             '&:hover': {
-                                                backgroundColor: 'overlay.medium',
+                                                backgroundColor: (theme) => theme.palette.overlay.medium,
                                             },
                                         },
                                         '& .MuiDataGrid-footerContainer': {
-                                            backgroundColor: 'background.default',
-                                            color: 'text.primary',
+                                            backgroundColor: (theme) => theme.palette.background.default,
+                                            color: (theme) => theme.palette.text.primary,
                                         },
                                         '& .MuiDataGrid-selectedRowCount': {
-                                            color: 'text.primary',
+                                            color: (theme) => theme.palette.text.primary,
                                         },
                                         '& .MuiDataGrid-cellContent': {
-                                            color: 'text.primary',
+                                            color: (theme) => theme.palette.text.primary,
                                         },
                                     }}
                                 />
