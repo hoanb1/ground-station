@@ -386,14 +386,6 @@ const LocationPage = () => {
                                             Ground Station 1
                                         </Typography>
                                     </Box>
-                                    <Box>
-                                        <Typography variant="body2" color="text.secondary">
-                                            {t('location.horizon_mask')}
-                                        </Typography>
-                                        <Typography variant="body1" sx={{ fontFamily: 'monospace', fontWeight: 500 }}>
-                                            10 °
-                                        </Typography>
-                                    </Box>
                                 </Box>
                             </Grid>
 
