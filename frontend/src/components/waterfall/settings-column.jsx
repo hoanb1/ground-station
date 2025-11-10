@@ -416,8 +416,10 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     };
 
     const handleTranscriptionToggle = (vfoNumber, enabled) => {
-        const model = getPreferenceValue('debabel_model') || 'small.en';
-        const language = getPreferenceValue('debabel_language') || 'en';
+        // Use VFO's existing values, fallback to preferences only if not set
+        const currentVfo = vfoMarkers[vfoNumber];
+        const model = currentVfo?.transcriptionModel || getPreferenceValue('debabel_model') || 'small';
+        const language = currentVfo?.transcriptionLanguage || getPreferenceValue('debabel_language') || 'en';
 
         socket.emit('data_submission', 'toggle-transcription', {
             vfoNumber,
@@ -426,13 +428,11 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
             language
         }, (response) => {
             if (response.success) {
-                // Update VFO state in Redux
+                // Update VFO state in Redux - only update enabled flag, preserve model/language
                 dispatch(setVFOProperty({
                     vfoNumber,
                     updates: {
-                        transcriptionEnabled: enabled,
-                        transcriptionModel: model,
-                        transcriptionLanguage: language
+                        transcriptionEnabled: enabled
                     }
                 }));
                 toast.success(t(`vfo.transcription_${enabled ? 'enabled' : 'disabled'}`,

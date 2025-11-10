@@ -77,6 +77,11 @@
     "custom": "Benutzerdefiniert",
     "squelch": "Squelch",
     "volume": "Lautstärke",
+    "transcribe": "Transkribieren",
+    "configure_debabel": "(DeBabel in Einstellungen konfigurieren)",
+    "transcription_settings": "Transkriptionseinstellungen",
+    "whisper_model": "Modell",
+    "language": "Sprache",
     "modes": {
       "none": "Keine",
       "am": "AM",

@@ -5,10 +5,15 @@
 # real-time speech-to-text conversion. It runs as a background thread that:
 #
 # 1. Consumes audio chunks from the transcription queue (fed by AudioBroadcaster)
-# 2. Buffers audio into appropriate chunks for transcription (3-5 seconds)
+# 2. Buffers audio into 3-5 second chunks for transcription
 # 3. Connects to DeBabel via WebSocket
-# 4. Sends audio with optional per-VFO settings (model, language)
-# 5. Receives transcriptions and emits them to frontend via Socket.IO
+# 4. Sends audio chunks immediately without waiting for transcription results
+# 5. Receives transcriptions asynchronously and emits them to frontend via Socket.IO
+#
+# Architecture: Asynchronous send/receive pattern
+# - Audio chunks are sent immediately to DeBabel (every 3-5 seconds)
+# - DeBabel queues and processes chunks independently
+# - Transcription results arrive asynchronously with stats (queue depth, confidence, processing time)
 #
 # Transcription is per-VFO controllable - each VFO can enable/disable transcription
 # independently with custom model and language settings.
@@ -69,15 +74,12 @@ class TranscriptionConsumer(threading.Thread):
         self.vfo_manager = VFOManager()
         self.running = True
 
-        # Per-session audio buffers
-        # {session_id: {"buffer": [], "model": "small.en", "language": "en"}}
+        # Per-session audio buffers (no pending flag - we send immediately)
+        # {session_id: {"buffer": [], "model": "small", "language": "en"}}
         self.session_buffers: Dict[str, dict] = {}
 
-        # Buffer settings (in seconds)
-        self.min_buffer_duration = (
-            5.0  # Minimum 5 seconds before sending (better context for accuracy)
-        )
-        self.max_buffer_duration = 8.0  # Maximum 8 seconds (prevent queue buildup)
+        # Buffer settings (in seconds) - hardcoded 3-5 second chunks
+        self.chunk_duration = 4.0  # Send audio every 4 seconds
         self.sample_rate = 44100
 
         # WebSocket connection
@@ -129,7 +131,13 @@ class TranscriptionConsumer(threading.Thread):
 
                 # Check if transcription is enabled for this VFO
                 vfo_state = self.vfo_manager.get_selected_vfo(session_id)
-                if vfo_state is None or not getattr(vfo_state, "transcription_enabled", False):
+                if vfo_state is None:
+                    logger.debug(f"No VFO state for session {session_id}")
+                    self.transcription_queue.task_done()
+                    continue
+
+                transcription_enabled = getattr(vfo_state, "transcription_enabled", False)
+                if not transcription_enabled:
                     self.transcription_queue.task_done()
                     continue
 
@@ -137,7 +145,7 @@ class TranscriptionConsumer(threading.Thread):
                 if session_id not in self.session_buffers:
                     self.session_buffers[session_id] = {
                         "buffer": [],
-                        "model": getattr(vfo_state, "transcription_model", "small.en"),
+                        "model": getattr(vfo_state, "transcription_model", "small"),
                         "language": getattr(vfo_state, "transcription_language", "en"),
                     }
 
@@ -145,20 +153,28 @@ class TranscriptionConsumer(threading.Thread):
                 self.session_buffers[session_id]["buffer"].append(audio_chunk)
 
                 # Calculate buffered duration
+                # Note: For stereo audio, samples are interleaved [L, R, L, R, ...]
+                # So we need to divide by 2 to get actual frames
                 total_samples = sum(
                     len(chunk) for chunk in self.session_buffers[session_id]["buffer"]
                 )
-                duration = total_samples / self.sample_rate
+                # Check if this is stereo by looking at VFO modulation
+                is_stereo = vfo_state.modulation and vfo_state.modulation.upper() == "FM_STEREO"
+                frames = total_samples / 2 if is_stereo else total_samples
+                duration = frames / self.sample_rate
 
-                # Send to DeBabel when buffer is full enough
-                if duration >= self.min_buffer_duration:
+                # Send to DeBabel immediately when buffer reaches chunk duration
+                # No need to wait for response - DeBabel will queue and process asynchronously
+                if duration >= self.chunk_duration:
+                    logger.info(
+                        f"Chunk ready: {duration:.1f}s accumulated, sending to DeBabel immediately..."
+                    )
                     self._send_for_transcription(session_id)
 
                 self.transcription_queue.task_done()
 
             except queue.Empty:
-                # Check for any buffers that have been waiting too long
-                self._flush_old_buffers()
+                # Continue - no need to flush buffers, we send immediately at chunk_duration
                 continue
 
             except Exception as e:
@@ -182,67 +198,82 @@ class TranscriptionConsumer(threading.Thread):
         # Concatenate all audio chunks
         audio_array = np.concatenate(buffer_data["buffer"])
 
+        # Get current VFO state to check if stereo and get settings
+        vfo_state = self.vfo_manager.get_selected_vfo(session_id)
+        is_stereo = (
+            vfo_state and vfo_state.modulation and vfo_state.modulation.upper() == "FM_STEREO"
+        )
+
+        # Convert stereo to mono if needed (Whisper expects mono audio)
+        if is_stereo:
+            # Audio is interleaved [L, R, L, R, ...], convert to mono by averaging
+            left_channel = audio_array[0::2]
+            right_channel = audio_array[1::2]
+            audio_array = (left_channel + right_channel) / 2.0
+            logger.debug(f"Converted stereo to mono: {len(audio_array)} samples")
+
         # Normalize audio to use full dynamic range without clipping
         max_val = np.abs(audio_array).max()
         if max_val > 0:
             # Normalize to 0.8 to leave headroom
             audio_array = audio_array * (0.8 / max_val)
 
-        # Clear buffer
+        # Clear buffer (no pending flag - send immediately)
         buffer_data["buffer"] = []
 
-        # Send to DeBabel asynchronously
+        # Get current transcription settings
+        current_model = getattr(vfo_state, "transcription_model", "small")
+        current_language = getattr(vfo_state, "transcription_language", "en")
+
+        # Send to DeBabel asynchronously with current settings
         asyncio.run_coroutine_threadsafe(
             self._transcribe_audio(
                 session_id=session_id,
                 audio_data=audio_array,
-                model=buffer_data["model"],
-                language=buffer_data["language"],
+                model=current_model,
+                language=current_language,
             ),
             self.loop,
         )
 
-    def _flush_old_buffers(self):
-        """Flush any buffers that have been waiting too long"""
-        for session_id in list(self.session_buffers.keys()):
-            buffer_data = self.session_buffers[session_id]
-            if buffer_data["buffer"]:
-                total_samples = sum(len(chunk) for chunk in buffer_data["buffer"])
-                duration = total_samples / self.sample_rate
-
-                if duration >= self.max_buffer_duration:
-                    logger.debug(f"Flushing buffer for session {session_id} ({duration:.1f}s)")
-                    self._send_for_transcription(session_id)
-
     async def _receiver_loop(self):
-        """Background task to receive transcription results from DeBabel"""
+        """Background task to receive transcription results from DeBabel (async)"""
         while self.running and self.ws_connected:
             try:
                 if not self.ws_connection:
                     await asyncio.sleep(0.1)
                     continue
 
-                # Receive transcription result
+                # Receive transcription result asynchronously
                 response = await asyncio.wait_for(self.ws_connection.recv(), timeout=1.0)
                 result = json.loads(response)
 
                 session_id = result.get("client_id", "unknown")
 
-                # Emit transcription to frontend
+                # Emit transcription to frontend with stats
                 if result.get("text"):
-                    await self.sio.emit(
-                        "transcription-data",
-                        {
-                            "text": result["text"],
-                            "start": result.get("start", 0),
-                            "end": result.get("end", 0),
-                            "confidence": result.get("confidence", 0),
-                            "language": result.get("language", "unknown"),
-                            "session_id": session_id,
-                        },
-                        room=session_id,
-                    )
-                    logger.info(f"[{session_id}] Transcription: {result['text']}")
+                    transcription_data = {
+                        "text": result["text"],
+                        "start": result.get("start", 0),
+                        "end": result.get("end", 0),
+                        "confidence": result.get("confidence", 0),
+                        "language": result.get("language", "unknown"),
+                        "session_id": session_id,
+                    }
+
+                    # Add stats if provided by DeBabel
+                    if "stats" in result:
+                        transcription_data["stats"] = result["stats"]
+                        logger.info(
+                            f"[{session_id}] Transcription: {result['text']} "
+                            f"(queue: {result['stats'].get('queue_depth', 'N/A')}, "
+                            f"processing: {result['stats'].get('processing_time_ms', 'N/A')}ms)"
+                        )
+                    else:
+                        logger.info(f"[{session_id}] Transcription: {result['text']}")
+
+                    await self.sio.emit("transcription-data", transcription_data, room=session_id)
+
                 elif result.get("info") == "no_speech_detected":
                     logger.debug(f"[{session_id}] No speech detected")
 
@@ -286,8 +317,8 @@ class TranscriptionConsumer(threading.Thread):
                     max_size=10 * 1024 * 1024,  # 10MB max message
                     open_timeout=30,  # 30 seconds to connect (GPU model loading)
                     close_timeout=10,  # 10 seconds to close
-                    ping_interval=None,  # Disable ping (causes issues during processing)
-                    ping_timeout=None,  # Disable ping timeout
+                    ping_interval=60,  # Match server: ping every 60 seconds
+                    ping_timeout=60,  # Match server: wait 60 seconds for pong
                 )
                 self.ws_connected = True
                 logger.info("Connected to DeBabel")
@@ -304,11 +335,11 @@ class TranscriptionConsumer(threading.Thread):
                 "language": language,
             }
 
-            # Send audio (don't wait for response - receiver task handles that)
+            # Send audio immediately (don't wait for response - receiver task handles async results)
             if self.ws_connection:
                 await self.ws_connection.send(json.dumps(message))
             logger.debug(
-                f"Sent {len(audio_data)/self.sample_rate:.1f}s audio to DeBabel (session: {session_id})"
+                f"Sent {len(audio_data)/self.sample_rate:.1f}s audio to DeBabel immediately (session: {session_id})"
             )
 
         except websockets.exceptions.WebSocketException as e:

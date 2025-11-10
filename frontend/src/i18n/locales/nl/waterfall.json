@@ -77,6 +77,11 @@
     "custom": "Aangepast",
     "squelch": "Squelch",
     "volume": "Volume",
+    "transcribe": "Transcriberen",
+    "configure_debabel": "(Configureer DeBabel in Instellingen)",
+    "transcription_settings": "Transcriptie-instellingen",
+    "whisper_model": "Model",
+    "language": "Taal",
     "modes": {
       "none": "Geen",
       "am": "AM",

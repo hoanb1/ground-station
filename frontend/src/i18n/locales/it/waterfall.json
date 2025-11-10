@@ -77,6 +77,11 @@
     "custom": "Personalizzato",
     "squelch": "Squelch",
     "volume": "Volume",
+    "transcribe": "Trascrivi",
+    "configure_debabel": "(Configura DeBabel nelle Impostazioni)",
+    "transcription_settings": "Impostazioni Trascrizione",
+    "whisper_model": "Modello",
+    "language": "Lingua",
     "modes": {
       "none": "Nessuna",
       "am": "AM",

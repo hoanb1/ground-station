@@ -77,6 +77,11 @@
     "custom": "Προσαρμοσμένο",
     "squelch": "Squelch",
     "volume": "Ενταση",
+    "transcribe": "Μεταγραφή",
+    "configure_debabel": "(Διαμόρφωση DeBabel στις Ρυθμίσεις)",
+    "transcription_settings": "Ρυθμίσεις Μεταγραφής",
+    "whisper_model": "Μοντέλο",
+    "language": "Γλώσσα",
     "modes": {
       "none": "Κανένας",
       "am": "AM",
