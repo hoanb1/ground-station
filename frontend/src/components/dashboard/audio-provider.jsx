@@ -117,14 +117,30 @@ export const AudioProvider = ({ children }) => {
         try {
             const { samples, sample_rate, channels } = processedData;
 
+            // Calculate number of frames (samples per channel)
+            const numFrames = channels === 2 ? samples.length / 2 : samples.length;
+
             const audioBuffer = audioContextRef.current.createBuffer(
                 channels,
-                samples.length,
+                numFrames,
                 sample_rate
             );
 
-            const channelData = audioBuffer.getChannelData(0);
-            channelData.set(samples);
+            if (channels === 1) {
+                // Mono: copy samples directly
+                const channelData = audioBuffer.getChannelData(0);
+                channelData.set(samples);
+            } else if (channels === 2) {
+                // Stereo: de-interleave L and R channels
+                // Input format: [L0, R0, L1, R1, L2, R2, ...]
+                const leftChannel = audioBuffer.getChannelData(0);
+                const rightChannel = audioBuffer.getChannelData(1);
+
+                for (let i = 0; i < numFrames; i++) {
+                    leftChannel[i] = samples[i * 2];     // Even indices = left
+                    rightChannel[i] = samples[i * 2 + 1]; // Odd indices = right
+                }
+            }
 
             const source = audioContextRef.current.createBufferSource();
             source.buffer = audioBuffer;

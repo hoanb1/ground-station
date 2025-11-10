@@ -81,6 +81,7 @@
       "none": "Κανένας",
       "am": "AM",
       "fm": "FM",
+      "fm_stereo": "FM Στερεοφωνικό",
       "lsb": "LSB",
       "usb": "USB",
       "cw": "CW"

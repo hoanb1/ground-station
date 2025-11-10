@@ -32,7 +32,8 @@ const BANDWIDTHS = {
     "10000": "10 kHz",
     "12500": "12.5 kHz",
     "15000": "15 kHz",
-    "20000": "20 kHz"
+    "20000": "20 kHz",
+    "200000": "200 kHz"
 };
 
 const VfoAccordion = ({
@@ -370,12 +371,10 @@ const VfoAccordion = ({
                                     flexWrap: 'wrap',
                                     gap: 0.5,
                                     '& .MuiToggleButton-root': {
-                                        width: '50px',
                                         height: '28px',
                                         minWidth: '50px',
-                                        maxWidth: '50px',
-                                        padding: '4px 6px',
-                                        fontSize: '0.8rem',
+                                        padding: '4px 8px',
+                                        fontSize: '0.75rem',
                                         border: '1px solid',
                                         borderColor: 'rgba(255, 255, 255, 0.23)',
                                         borderRadius: '4px',
@@ -411,6 +410,7 @@ const VfoAccordion = ({
                                 <ToggleButton value="NONE">{t('vfo.modes.none')}</ToggleButton>
                                 <ToggleButton value="AM">{t('vfo.modes.am')}</ToggleButton>
                                 <ToggleButton value="FM">{t('vfo.modes.fm')}</ToggleButton>
+                                <ToggleButton value="FM_STEREO">{t('vfo.modes.fm_stereo', 'FM Stereo')}</ToggleButton>
                                 <ToggleButton value="LSB">{t('vfo.modes.lsb')}</ToggleButton>
                                 <ToggleButton value="USB">{t('vfo.modes.usb')}</ToggleButton>
                                 <ToggleButton value="CW">{t('vfo.modes.cw')}</ToggleButton>

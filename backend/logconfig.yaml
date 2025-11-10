@@ -215,6 +215,12 @@ loggers:
       - default
     propagate: no
 
+  fm-stereo-demodulator:
+    level: WARN
+    handlers:
+      - default
+    propagate: no
+
   sdr-manager:
     level: INFO
     handlers:

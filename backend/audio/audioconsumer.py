@@ -102,6 +102,13 @@ class WebAudioConsumer(threading.Thread):
                     # Convert to a list for JSON serialization
                     audio_data = processed_audio.tolist()
 
+                    # Detect if audio is stereo (interleaved L/R) or mono
+                    # Stereo demodulators produce interleaved samples: [L0, R0, L1, R1, ...]
+                    # Mono demodulators produce: [M0, M1, M2, ...]
+                    # We detect stereo by checking if modulation is FM_STEREO
+                    is_stereo = vfo_state.modulation.upper() == "FM_STEREO"
+                    channels = 2 if is_stereo else 1
+
                     # Schedule the emit() in the main event loop ONLY for the originating session
                     # Use fire-and-forget to avoid blocking the audio consumer thread
                     asyncio.run_coroutine_threadsafe(
@@ -110,9 +117,11 @@ class WebAudioConsumer(threading.Thread):
                             {
                                 "samples": audio_data,
                                 "sample_rate": 44100,
-                                "channels": 1,  # Mono audio
+                                "channels": channels,  # Mono (1) or Stereo (2)
                                 "format": "float32",  # Specify format
-                                "length": len(audio_data),  # Number of samples
+                                "length": len(
+                                    audio_data
+                                ),  # Number of samples (including both L and R for stereo)
                                 "vfo": vfo_data,
                                 "session_id": originating_session_id,
                             },

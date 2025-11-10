@@ -143,6 +143,9 @@ async def handle_vfo_updates_for_tracking(sockio, tracking_data):
                     logger.debug(
                         f"Digital mode {transmitter_mode} mapped to FM for VFO demodulation"
                     )
+                # Keep FM_STEREO as-is if explicitly specified
+                elif mode_normalized == "fm_stereo":
+                    mode_normalized = "fm_stereo"
 
                 # Use the doppler-corrected frequency directly
                 # The VFO visualization handles bandwidth positioning based on mode

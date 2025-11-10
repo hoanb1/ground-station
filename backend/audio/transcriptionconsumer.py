@@ -75,9 +75,9 @@ class TranscriptionConsumer(threading.Thread):
 
         # Buffer settings (in seconds)
         self.min_buffer_duration = (
-            3.0  # Minimum 3 seconds before sending (better context for accuracy)
+            5.0  # Minimum 5 seconds before sending (better context for accuracy)
         )
-        self.max_buffer_duration = 5.0  # Maximum 5 seconds (prevent queue buildup)
+        self.max_buffer_duration = 8.0  # Maximum 8 seconds (prevent queue buildup)
         self.sample_rate = 44100
 
         # WebSocket connection

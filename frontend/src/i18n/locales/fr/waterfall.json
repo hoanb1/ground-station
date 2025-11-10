@@ -81,6 +81,7 @@
       "none": "Aucun",
       "am": "AM",
       "fm": "FM",
+      "fm_stereo": "FM Stéréo",
       "lsb": "LSB",
       "usb": "USB",
       "cw": "CW"

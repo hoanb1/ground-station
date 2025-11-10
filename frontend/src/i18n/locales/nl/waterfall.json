@@ -81,6 +81,7 @@
       "none": "Geen",
       "am": "AM",
       "fm": "FM",
+      "fm_stereo": "FM Stereo",
       "lsb": "LSB",
       "usb": "USB",
       "cw": "CW"
