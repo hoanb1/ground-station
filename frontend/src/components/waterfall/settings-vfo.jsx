@@ -24,7 +24,7 @@ import {
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import LockIcon from '@mui/icons-material/Lock';
-import TranscribeIcon from '@mui/icons-material/Transcribe';
+// import TranscribeIcon from '@mui/icons-material/Transcribe';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
 import {SquelchIcon} from "../common/dataurl-icons.jsx";
@@ -52,8 +52,8 @@ const VfoAccordion = ({
                           onVFOPropertyChange,
                           selectedVFO,
                           onVFOListenChange,
-                          onTranscriptionToggle,
-                          debabelConfigured,
+                          // onTranscriptionToggle,
+                          // debabelConfigured,
                       }) => {
     const { t } = useTranslation('waterfall');
     const squelchSliderRef = React.useRef(null);
@@ -186,6 +186,8 @@ const VfoAccordion = ({
                                     sx={{mt: 0, ml: 0}}
                                 />
                             </Box>
+                            {/* Transcription Section - Commented Out */}
+                            {/*
                             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
                                 <FormControlLabel
                                     control={
@@ -209,8 +211,10 @@ const VfoAccordion = ({
                                     </Typography>
                                 )}
                             </Box>
+                            */}
 
                             {/* Transcription Settings - show when transcription is enabled */}
+                            {/*
                             {vfoMarkers[vfoIndex]?.transcriptionEnabled && debabelConfigured && (
                                 <Box sx={{
                                     mt: 1.5,
@@ -269,6 +273,7 @@ const VfoAccordion = ({
                                     </Box>
                                 </Box>
                             )}
+                            */}
                         </Box>
 
                         {vfoMarkers[vfoIndex]?.locked && (
