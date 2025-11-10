@@ -28,14 +28,13 @@ export const PassCurve = ({ pass, startTime, endTime }) => {
     pass.elevation_curve.forEach((point) => {
       const pointTime = new Date(point.time).getTime();
 
-      // Skip points outside the visible time window
-      if (pointTime < startTime.getTime() || pointTime > endTime.getTime()) {
-        return;
-      }
+      // Include points outside the visible window but clamp their X position
+      // This allows the curve to extend beyond visible bounds naturally
+      const clampedPointTime = Math.max(startTime.getTime(), Math.min(pointTime, endTime.getTime()));
 
       // Use UNIFIED COORDINATE SYSTEM
       // X: Time to percentage (0% = start, 100% = end)
-      const x = ((pointTime - startTime.getTime()) / totalDuration) * 100;
+      const x = ((clampedPointTime - startTime.getTime()) / totalDuration) * 100;
 
       // Y: Elevation to percentage (0% = 90° top, 100% = 0° bottom)
       const y = elevationToYPercent(point.elevation);

@@ -90,28 +90,33 @@ def _calculate_elevation_curve(satellite_data, home_location, event_start, event
             longitude_degrees=float(home_location["lon"]),
         )
 
-        # Parse times
+        # Parse times and extend start time by 2 hours before
         start_dt = datetime.fromisoformat(event_start.replace("Z", "+00:00"))
         end_dt = datetime.fromisoformat(event_end.replace("Z", "+00:00"))
 
-        # Calculate pass duration in seconds
-        duration_seconds = (end_dt - start_dt).total_seconds()
+        # Extend start time by 2 hours before the actual pass start
+        from datetime import timedelta
+
+        extended_start_dt = start_dt - timedelta(hours=2)
+
+        # Calculate total duration including the 2 hours before
+        total_duration_seconds = (end_dt - extended_start_dt).total_seconds()
 
         # Adaptive sampling: aim for ~120 points per pass, but adjust based on duration
         # For short passes (< 30 min), sample every 30 seconds
         # For long passes (> 2 hours), sample every 2 minutes to keep point count reasonable
-        if duration_seconds < 1800:  # Less than 30 minutes
+        if total_duration_seconds < 1800:  # Less than 30 minutes
             sample_interval = 30  # 30 seconds
-        elif duration_seconds < 7200:  # Less than 2 hours
+        elif total_duration_seconds < 7200:  # Less than 2 hours
             sample_interval = 60  # 1 minute
         else:  # 2 hours or more
             sample_interval = 120  # 2 minutes
 
         # Calculate number of samples
-        num_samples = max(int(duration_seconds / sample_interval), 2)
+        num_samples = max(int(total_duration_seconds / sample_interval), 2)
 
-        # Create time array
-        t_start = ts.from_datetime(start_dt)
+        # Create time array starting from 2 hours before the pass
+        t_start = ts.from_datetime(extended_start_dt)
         t_end = ts.from_datetime(end_dt)
         time_offsets = np.linspace(0, (t_end.tt - t_start.tt), num_samples)
         t_points = t_start + time_offsets
