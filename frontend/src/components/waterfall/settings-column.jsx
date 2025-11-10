@@ -19,6 +19,7 @@
 
 
 import React, {useImperativeHandle, forwardRef, useCallback, useEffect, useState, useRef} from 'react';
+import {Box, Typography} from '@mui/material';
 import {
     getClassNamesBasedOnGridEditing,
     TitleBar
@@ -648,7 +649,23 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
 
     return (
         <>
-            <TitleBar className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}>{t('title')}</TitleBar>
+            <TitleBar
+                className={getClassNamesBasedOnGridEditing(gridEditable, ["window-title-bar"])}
+                sx={{
+                    bgcolor: 'background.default',
+                    borderBottom: '1px solid',
+                    borderColor: 'border.main',
+                    backdropFilter: 'blur(10px)'
+                }}
+            >
+                <Box sx={{display: 'flex', alignItems: 'center', justifyContent: 'space-between', width: '100%'}}>
+                    <Box sx={{display: 'flex', alignItems: 'center'}}>
+                        <Typography variant="subtitle2" sx={{fontWeight: 'bold'}}>
+                            {t('title')}
+                        </Typography>
+                    </Box>
+                </Box>
+            </TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
 
                 <VfoAccordion
