@@ -16,7 +16,7 @@ const TrackedSatelliteTooltip = styled(LeafletTooltip)(({ theme }) => ({
     backgroundColor: theme.palette.secondary.dark,
     borderRadius: theme.shape.borderRadius,
     borderColor: theme.palette.secondary.main,
-    zIndex: 300,
+    zIndex: 1000,
     '&::before': {
         borderBottomColor: `${theme.palette.secondary.main} !important`,
     },
