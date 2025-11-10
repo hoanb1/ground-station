@@ -40,40 +40,27 @@ const TargetSatelliteTransmittersIsland = () => {
     const { t } = useTranslation('target');
     const { satelliteData, gridEditable } = useSelector((state) => state.targetSatTrack);
 
-    // Frequency spectrum bar visualization
-    const FrequencyBar = ({ frequency, band }) => {
-        const bandColors = {
-            'VHF': '#4fc3f7',
-            'UHF': '#81c784',
-            'L': '#ffb74d',
-            'S': '#ba68c8',
-            'C': '#f06292',
-            'X': '#ff8a65',
-            'Ku': '#9575cd',
-            'Ka': '#4db6ac'
-        };
-        const color = bandColors[band] || '#757575';
-
+    // Frequency band badge
+    const BandBadge = ({ band }) => {
         return (
-            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                <Box sx={{
-                    width: 36,
-                    height: 3,
-                    bgcolor: 'rgba(255,255,255,0.1)',
-                    borderRadius: 1,
-                    position: 'relative',
-                    overflow: 'hidden'
+            <Box sx={{
+                px: 0.75,
+                py: 0.25,
+                bgcolor: getBandColor(band),
+                borderRadius: 0.5,
+                display: 'inline-flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                minWidth: 32
+            }}>
+                <Typography variant="caption" sx={{
+                    color: '#ffffff',
+                    fontSize: '0.65rem',
+                    fontWeight: 700,
+                    letterSpacing: '0.3px'
                 }}>
-                    <Box sx={{
-                        position: 'absolute',
-                        left: 0,
-                        top: 0,
-                        height: '100%',
-                        width: '65%',
-                        bgcolor: color,
-                        borderRadius: 1
-                    }} />
-                </Box>
+                    {band}
+                </Typography>
             </Box>
         );
     };
@@ -97,24 +84,14 @@ const TargetSatelliteTransmittersIsland = () => {
             }}>
                 <Box sx={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', mb: 0.75 }}>
                     <Box sx={{ flex: 1 }}>
-                        <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', display: 'block', mb: 0.25, fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-                            {transmitter.description}
-                        </Typography>
-                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                            <FrequencyBar frequency={transmitter.downlink_low} band={band} />
-                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', fontFamily: 'monospace' }}>
-                                {band}
+                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.75, mb: 0.25 }}>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.7rem', textTransform: 'uppercase', letterSpacing: '0.5px' }}>
+                                {transmitter.description}
                             </Typography>
+                            <BandBadge band={band} />
                         </Box>
                     </Box>
                     <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
-                        <Box sx={{
-                            width: 6,
-                            height: 6,
-                            borderRadius: '50%',
-                            bgcolor: transmitter.alive ? 'success.main' : 'error.main',
-                            boxShadow: (theme) => transmitter.alive ? `0 0 6px ${theme.palette.success.main}` : 'none'
-                        }} />
                         <Chip
                             label={transmitter.status}
                             size="small"
@@ -134,28 +111,38 @@ const TargetSatelliteTransmittersIsland = () => {
                                 {transmitter.downlink_low ? `${(transmitter.downlink_low / 1e6).toFixed(3)}` : t('satellite_info.values.na')}
                                 {transmitter.downlink_low && <Typography component="span" sx={{ ml: 0.25, fontSize: '0.6rem', color: 'text.secondary' }}>MHz</Typography>}
                             </Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'primary.light', fontFamily: 'monospace', fontSize: '0.65rem', mt: 0.25 }}>
+                                {transmitter.downlink_high ? `${(transmitter.downlink_high / 1e6).toFixed(3)} MHz` : 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'warning.light', fontSize: '0.6rem', fontFamily: 'monospace', mt: 0.25 }}>
+                                {transmitter.downlink_drift ? `Δ ${transmitter.downlink_drift > 0 ? '+' : ''}${(transmitter.downlink_drift / 1e3).toFixed(1)} kHz` : 'Δ N/A'}
+                            </Typography>
                         </Box>
                     </Grid>
-                    {transmitter.uplink_low && (
-                        <Grid size={4}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
-                                    Uplink
-                                </Typography>
-                                <Typography variant="caption" sx={{ fontWeight: 700, color: 'secondary.main', fontFamily: 'monospace', fontSize: '0.7rem' }}>
-                                    {`${(transmitter.uplink_low / 1e6).toFixed(3)}`}
-                                    <Typography component="span" sx={{ ml: 0.25, fontSize: '0.6rem', color: 'text.secondary' }}>MHz</Typography>
-                                </Typography>
-                            </Box>
-                        </Grid>
-                    )}
-                    <Grid size={transmitter.uplink_low ? 4 : 4}>
+                    <Grid size={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
+                                Uplink
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'secondary.main', fontFamily: 'monospace', fontSize: '0.7rem' }}>
+                                {transmitter.uplink_low ? `${(transmitter.uplink_low / 1e6).toFixed(3)}` : t('satellite_info.values.na')}
+                                {transmitter.uplink_low && <Typography component="span" sx={{ ml: 0.25, fontSize: '0.6rem', color: 'text.secondary' }}>MHz</Typography>}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'secondary.light', fontFamily: 'monospace', fontSize: '0.65rem', mt: 0.25 }}>
+                                {transmitter.uplink_high ? `${(transmitter.uplink_high / 1e6).toFixed(3)} MHz` : 'N/A'}
+                            </Typography>
+                            <Typography variant="caption" sx={{ color: 'warning.light', fontSize: '0.6rem', fontFamily: 'monospace', mt: 0.25 }}>
+                                {transmitter.uplink_drift ? `Δ ${transmitter.uplink_drift > 0 ? '+' : ''}${(transmitter.uplink_drift / 1e3).toFixed(1)} kHz` : 'Δ N/A'}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid size={4}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
                                 {t('satellite_transmitters.labels.mode')}
                             </Typography>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: 'secondary.main', fontSize: '0.7rem' }}>
-                                {transmitter.mode}
+                                {transmitter.mode || t('satellite_info.values.na')}
                                 {transmitter.uplink_mode && transmitter.uplink_mode !== transmitter.mode && (
                                     <Typography component="span" sx={{ ml: 0.25, fontSize: '0.6rem', color: 'text.secondary' }}>
                                         / {transmitter.uplink_mode}
@@ -164,38 +151,34 @@ const TargetSatelliteTransmittersIsland = () => {
                             </Typography>
                         </Box>
                     </Grid>
-                    {transmitter.baud !== null && transmitter.baud !== 0 && (
-                        <Grid size={4}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
-                                    {t('satellite_transmitters.labels.baud')}
-                                </Typography>
-                                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontFamily: 'monospace', fontSize: '0.7rem' }}>
-                                    {transmitter.baud}
-                                    <Typography component="span" sx={{ ml: 0.25, fontSize: '0.6rem', color: 'text.secondary' }}>bps</Typography>
-                                </Typography>
-                            </Box>
-                        </Grid>
-                    )}
-                    {transmitter.service && transmitter.service !== 'Unknown' && (
-                        <Grid size={transmitter.baud ? 4 : 4}>
-                            <Box sx={{ display: 'flex', flexDirection: 'column' }}>
-                                <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
-                                    Service
-                                </Typography>
-                                <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.7rem' }}>
-                                    {transmitter.service}
-                                </Typography>
-                            </Box>
-                        </Grid>
-                    )}
+                    <Grid size={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
+                                {t('satellite_transmitters.labels.baud')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontFamily: 'monospace', fontSize: '0.7rem' }}>
+                                {transmitter.baud !== null && transmitter.baud !== 0 ? `${transmitter.baud}` : t('satellite_info.values.na')}
+                                {transmitter.baud !== null && transmitter.baud !== 0 && <Typography component="span" sx={{ ml: 0.25, fontSize: '0.6rem', color: 'text.secondary' }}>bps</Typography>}
+                            </Typography>
+                        </Box>
+                    </Grid>
+                    <Grid size={4}>
+                        <Box sx={{ display: 'flex', flexDirection: 'column' }}>
+                            <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
+                                Service
+                            </Typography>
+                            <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.7rem' }}>
+                                {transmitter.service || t('satellite_info.values.na')}
+                            </Typography>
+                        </Box>
+                    </Grid>
                     <Grid size={4}>
                         <Box sx={{ display: 'flex', flexDirection: 'column' }}>
                             <Typography variant="caption" sx={{ color: 'text.secondary', fontSize: '0.6rem', textTransform: 'uppercase' }}>
                                 Type
                             </Typography>
                             <Typography variant="caption" sx={{ fontWeight: 700, color: 'text.primary', fontSize: '0.7rem' }}>
-                                {transmitter.type}
+                                {transmitter.type || t('satellite_info.values.na')}
                             </Typography>
                         </Box>
                     </Grid>

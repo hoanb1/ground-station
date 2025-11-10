@@ -363,29 +363,48 @@ const SatelliteInfoPopover = () => {
                                 </Box>
                                 <Grid2 container spacing={1}>
                                     <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                            <strong>{t('target_popover.latitude')}</strong> <NumericValue color="info.light">{satelliteData.position.lat?.toFixed(4)}°</NumericValue>
+                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
+                                            <strong>{t('target_popover.latitude')}</strong>
                                         </Typography>
-                                    </Grid2>
-                                    <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                            <strong>{t('target_popover.longitude')}</strong> <NumericValue color="info.light">{satelliteData.position.lon?.toFixed(4)}°</NumericValue>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color="info.light">{satelliteData.position.lat?.toFixed(4)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
                                         <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
-                                            <strong>{t('target_popover.altitude')}</strong> <NumericValue
-                                            color="success.light">{(satelliteData.position.alt / 1000)?.toFixed(2)} km</NumericValue>
+                                            <strong>{t('target_popover.longitude')}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color="info.light">{satelliteData.position.lon?.toFixed(4)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                            <strong>{t('target_popover.velocity')}</strong> <NumericValue color="warning.light">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
+                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
+                                            <strong>{t('target_popover.altitude')}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color="success.light">{(satelliteData.position.alt / 1000)?.toFixed(2)} km</NumericValue>
                                         </Typography>
                                     </Grid2>
                                     <Grid2 size={6}>
-                                        <Typography variant="body2" component="div" sx={{ color: 'text.secondary' }}>
-                                            <strong>{t('target_popover.azimuth')}</strong> <NumericValue color="secondary.light">{satelliteData.position.az?.toFixed(2)}°</NumericValue>
+                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
+                                            <strong>{t('target_popover.velocity')}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color="warning.light">{satelliteData.position.vel?.toFixed(2)} km/s</NumericValue>
+                                        </Typography>
+                                    </Grid2>
+                                    <Grid2 size={6}>
+                                        <Typography variant="body2" component="div" sx={{color: 'text.secondary'}}>
+                                            <strong>{t('target_popover.azimuth')}</strong>
+                                        </Typography>
+                                        <Typography variant="body2" component="div">
+                                            <NumericValue
+                                                color="secondary.light">{satelliteData.position.az?.toFixed(2)}°</NumericValue>
                                         </Typography>
                                     </Grid2>
                                 </Grid2>

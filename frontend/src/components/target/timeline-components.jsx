@@ -14,9 +14,9 @@ export const PassCurve = ({ pass, startTime, endTime }) => {
     if (pass.isCurrent) {
       return theme.palette.success.main;
     }
-    if (pass.peak_altitude > 40) return theme.palette.info.main;
-    if (pass.peak_altitude > 20) return theme.palette.info.light;
-    return theme.palette.grey[500];
+    if (pass.peak_altitude < 10) return theme.palette.error.main; // Red for below 10°
+    if (pass.peak_altitude <= 45) return theme.palette.grey[500]; // Grey/white for 10-45°
+    return theme.palette.success.main; // Green for above 45°
   };
 
   const pathData = [];
@@ -117,9 +117,8 @@ export const CurrentTimeMarker = ({ startTime, endTime }) => {
   const { t } = useTranslation('target');
 
   const markerRef = useRef(null);
-  const arrowRef = useRef(null);
-  const horizontalLineRef = useRef(null);
   const labelRef = useRef(null);
+  const bottomLabelRef = useRef(null);
   const animationFrameRef = useRef(null);
 
   useEffect(() => {
@@ -133,49 +132,29 @@ export const CurrentTimeMarker = ({ startTime, endTime }) => {
       // Don't render if position is negative (past the left edge)
       if (position < 0) {
         markerRef.current.style.display = 'none';
+        if (labelRef.current) labelRef.current.style.display = 'none';
+        if (bottomLabelRef.current) bottomLabelRef.current.style.display = 'none';
         animationFrameRef.current = requestAnimationFrame(updateMarkerPosition);
         return;
       }
 
       markerRef.current.style.display = 'block';
+      if (labelRef.current) labelRef.current.style.display = 'block';
+      if (bottomLabelRef.current) bottomLabelRef.current.style.display = 'block';
 
       // Calculate the translateX value to move the marker
       // Base position is Y_AXIS_WIDTH, then add percentage of remaining width
       const translateX = `calc(${Y_AXIS_WIDTH}px + (100% - ${Y_AXIS_WIDTH}px) * ${position / 100})`;
 
-      // Update all elements with transform for GPU acceleration
+      // Update all elements
       if (markerRef.current) {
         markerRef.current.style.left = translateX;
       }
-      if (arrowRef.current) {
-        arrowRef.current.style.left = translateX;
-      }
-      if (horizontalLineRef.current) {
-        horizontalLineRef.current.style.left = translateX;
-      }
       if (labelRef.current) {
-        labelRef.current.style.left = `calc(${translateX} + 30px)`;
+        labelRef.current.style.left = translateX;
       }
-
-      // Determine if we should show label on right (position < 80%)
-      const showLabelOnRight = position < 80;
-
-      // Toggle visibility of arrow vs label elements
-      if (arrowRef.current) {
-        arrowRef.current.style.display = showLabelOnRight ? 'none' : 'block';
-      }
-      if (horizontalLineRef.current) {
-        horizontalLineRef.current.style.display = showLabelOnRight ? 'block' : 'none';
-      }
-      if (labelRef.current) {
-        labelRef.current.style.display = showLabelOnRight ? 'block' : 'none';
-      }
-
-      // Adjust vertical line top position based on label visibility
-      if (markerRef.current) {
-        markerRef.current.style.top = showLabelOnRight
-          ? `${Y_AXIS_TOP_MARGIN - 8}px`
-          : `${Y_AXIS_TOP_MARGIN}px`;
+      if (bottomLabelRef.current) {
+        bottomLabelRef.current.style.left = translateX;
       }
 
       // Continue animation
@@ -193,67 +172,32 @@ export const CurrentTimeMarker = ({ startTime, endTime }) => {
     };
   }, [startTime, endTime]);
 
-  const labelVerticalPosition = -8; // pixels from top of chart area (raised for better visibility)
-
   return (
     <>
-      {/* Vertical NOW line - from horizontal line to bottom */}
+      {/* Vertical NOW line */}
       <Box
         ref={markerRef}
         sx={{
           position: 'absolute',
           left: 0, // Will be set by JS
-          top: `${Y_AXIS_TOP_MARGIN}px`, // Will be adjusted by JS
+          top: `${Y_AXIS_TOP_MARGIN}px`,
           bottom: `${X_AXIS_HEIGHT}px`,
           width: '1px',
           backgroundColor: theme.palette.error.main,
           zIndex: 20,
           boxShadow: `0 0 8px ${theme.palette.error.main}40`,
-          willChange: 'left, top', // Hint for GPU acceleration
+          willChange: 'left',
         }}
       />
 
-      {/* Arrow at top - only show when no label */}
-      <Box
-        ref={arrowRef}
-        sx={{
-          position: 'absolute',
-          left: 0, // Will be set by JS
-          top: `${Y_AXIS_TOP_MARGIN}px`,
-          transform: 'translateX(-50%)',
-          width: '0',
-          height: '0',
-          borderLeft: '6px solid transparent',
-          borderRight: '6px solid transparent',
-          borderTop: `8px solid ${theme.palette.error.main}`,
-          zIndex: 20,
-          willChange: 'left', // Hint for GPU acceleration
-        }}
-      />
-
-      {/* Horizontal line to label (on right side) */}
-      <Box
-        ref={horizontalLineRef}
-        sx={{
-          position: 'absolute',
-          left: 0, // Will be set by JS
-          top: `${Y_AXIS_TOP_MARGIN + labelVerticalPosition}px`,
-          width: '30px',
-          height: '1px',
-          backgroundColor: theme.palette.error.main,
-          zIndex: 20,
-          willChange: 'left', // Hint for GPU acceleration
-        }}
-      />
-
-      {/* NOW label */}
+      {/* NOW label at top, centered on line */}
       <Box
         ref={labelRef}
         sx={{
           position: 'absolute',
           left: 0, // Will be set by JS
-          top: `${Y_AXIS_TOP_MARGIN + labelVerticalPosition}px`,
-          transform: 'translateY(-50%)',
+          top: `${Y_AXIS_TOP_MARGIN + 3}px`,
+          transform: 'translate(-50%, -100%)',
           fontSize: '0.65rem',
           fontWeight: 'bold',
           color: theme.palette.error.main,
@@ -263,11 +207,30 @@ export const CurrentTimeMarker = ({ startTime, endTime }) => {
           border: `1px solid ${theme.palette.error.main}`,
           whiteSpace: 'nowrap',
           zIndex: 20,
-          willChange: 'left', // Hint for GPU acceleration
+          willChange: 'left',
         }}
       >
         {t('timeline.now')}
       </Box>
+
+      {/* Arrow at bottom pointing down */}
+      <Box
+        ref={bottomLabelRef}
+        sx={{
+          position: 'absolute',
+          left: 0, // Will be set by JS
+          bottom: `${X_AXIS_HEIGHT}px`,
+          transform: 'translateX(-50%)',
+          width: '0',
+          height: '0',
+          borderLeft: '6px solid transparent',
+          borderRight: '6px solid transparent',
+          borderTop: `8px solid ${theme.palette.error.main}`,
+          zIndex: 20,
+          filter: `drop-shadow(0 0 4px ${theme.palette.error.main}80)`,
+          willChange: 'left',
+        }}
+      />
     </>
   );
 };
