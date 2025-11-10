@@ -20,6 +20,7 @@ import {
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import LockIcon from '@mui/icons-material/Lock';
+import TranscribeIcon from '@mui/icons-material/Transcribe';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
 import {SquelchIcon} from "../common/dataurl-icons.jsx";
@@ -46,6 +47,8 @@ const VfoAccordion = ({
                           onVFOPropertyChange,
                           selectedVFO,
                           onVFOListenChange,
+                          onTranscriptionToggle,
+                          debabelConfigured,
                       }) => {
     const { t } = useTranslation('waterfall');
     const squelchSliderRef = React.useRef(null);
@@ -154,28 +157,53 @@ const VfoAccordion = ({
                 </Tabs>
                 {[1, 2, 3, 4].map((vfoIndex) => (
                     <Box key={vfoIndex} hidden={(selectedVFOTab + 1) !== vfoIndex}>
-                        <Box sx={{ display: 'flex', gap: 1 }}>
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={vfoActive[vfoIndex] || false}
-                                        onChange={(e) => onVFOActiveChange(vfoIndex, e.target.checked)}
-                                    />
-                                }
-                                label={t('vfo.active')}
-                                sx={{mt: 0, ml: 0}}
-                            />
-                            <FormControlLabel
-                                control={
-                                    <Switch
-                                        checked={selectedVFO === vfoIndex}
-                                        onChange={(e) => onVFOListenChange(vfoIndex, e.target.checked)}
-                                        disabled={!vfoActive[vfoIndex]}
-                                    />
-                                }
-                                label={t('vfo.listen')}
-                                sx={{mt: 0, ml: 0}}
-                            />
+                        <Box sx={{ display: 'flex', gap: 1, flexDirection: 'column' }}>
+                            <Box sx={{ display: 'flex', gap: 1 }}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={vfoActive[vfoIndex] || false}
+                                            onChange={(e) => onVFOActiveChange(vfoIndex, e.target.checked)}
+                                        />
+                                    }
+                                    label={t('vfo.active')}
+                                    sx={{mt: 0, ml: 0}}
+                                />
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={selectedVFO === vfoIndex}
+                                            onChange={(e) => onVFOListenChange(vfoIndex, e.target.checked)}
+                                            disabled={!vfoActive[vfoIndex]}
+                                        />
+                                    }
+                                    label={t('vfo.listen')}
+                                    sx={{mt: 0, ml: 0}}
+                                />
+                            </Box>
+                            <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                                <FormControlLabel
+                                    control={
+                                        <Switch
+                                            checked={vfoMarkers[vfoIndex]?.transcriptionEnabled || false}
+                                            onChange={(e) => onTranscriptionToggle && onTranscriptionToggle(vfoIndex, e.target.checked)}
+                                            disabled={!vfoActive[vfoIndex] || !debabelConfigured}
+                                        />
+                                    }
+                                    label={
+                                        <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                            <TranscribeIcon fontSize="small" />
+                                            {t('vfo.transcribe', 'Transcribe')}
+                                        </Box>
+                                    }
+                                    sx={{mt: 0, ml: 0}}
+                                />
+                                {!debabelConfigured && (
+                                    <Typography variant="caption" color="text.secondary" sx={{ fontSize: '0.7rem' }}>
+                                        {t('vfo.configure_debabel', '(Configure DeBabel in Settings)')}
+                                    </Typography>
+                                )}
+                            </Box>
                         </Box>
 
                         {vfoMarkers[vfoIndex]?.locked && (

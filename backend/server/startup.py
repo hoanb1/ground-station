@@ -11,7 +11,9 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 
+from audio.audiobroadcaster import AudioBroadcaster
 from audio.audioconsumer import WebAudioConsumer
+from audio.transcriptionconsumer import TranscriptionConsumer
 from common.arguments import arguments
 from common.logger import logger
 from db import *  # noqa: F401,F403
@@ -36,10 +38,12 @@ background_tasks: Set[asyncio.Task] = set()
 # Module-level variable to track if initial sync is needed
 _needs_initial_sync: bool = False
 
-# Queues for the sound streams
-# Keep small (5-10 chunks) to minimize tuning lag
+# Audio distribution system
+# Demodulators write to audio_queue, AudioBroadcaster distributes to multiple consumers
+# Keep input queue small (5-10 chunks) to minimize tuning lag
 # At 1024 samples/chunk @ 44.1kHz = 23ms/chunk, 10 chunks = 230ms latency
 audio_queue: queue.Queue = queue.Queue(maxsize=10)
+audio_broadcaster: AudioBroadcaster = AudioBroadcaster(audio_queue)
 
 
 async def run_discover_soapy():
@@ -55,8 +59,25 @@ async def lifespan(fastapiapp: FastAPI):
     logger.info("FastAPI lifespan startup...")
     start_tracker_process()
     event_loop = asyncio.get_event_loop()
-    shutdown.audio_consumer = WebAudioConsumer(audio_queue, sio, event_loop)
+
+    # Start audio broadcaster
+    audio_broadcaster.start()
+    shutdown.audio_broadcaster = audio_broadcaster
+
+    # Subscribe consumers to broadcaster
+    playback_queue = audio_broadcaster.subscribe("playback", maxsize=10)
+    shutdown.audio_consumer = WebAudioConsumer(playback_queue, sio, event_loop)
     shutdown.audio_consumer.start()
+
+    # Start transcription consumer (will be used when DeBabel URL is configured)
+    transcription_queue = audio_broadcaster.subscribe("transcription", maxsize=50)
+    # DeBabel URL will be fetched from preferences on first use
+    shutdown.transcription_consumer = TranscriptionConsumer(
+        transcription_queue, sio, event_loop, debabel_url=""
+    )
+    shutdown.transcription_consumer.start()
+    logger.info("Transcription consumer started (will connect when DeBabel URL is configured)")
+
     asyncio.create_task(handle_tracker_messages(sio))
     if arguments.runonce_soapy_discovery:
         await discover_soapy_servers()

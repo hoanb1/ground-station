@@ -17,6 +17,8 @@
 
 from typing import Any, Dict, Optional, Union
 
+from crud.preferences import fetch_all_preferences
+from db import AsyncSessionLocal
 from handlers.entities.sdr import handle_vfo_demodulator_state
 from vfos.state import VFOManager
 
@@ -52,6 +54,9 @@ async def update_vfo_parameters(
         selected=data.get("selected"),
         volume=data.get("volume"),
         squelch=data.get("squelch"),
+        transcription_enabled=data.get("transcriptionEnabled"),
+        transcription_model=data.get("transcriptionModel"),
+        transcription_language=data.get("transcriptionLanguage"),
     )
 
     # Start/stop demodulator based on VFO state (after update)
@@ -63,10 +68,86 @@ async def update_vfo_parameters(
     return {"success": True, "data": {}}
 
 
+async def toggle_transcription(
+    sio: Any, data: Optional[Dict], logger: Any, sid: str
+) -> Dict[str, Union[bool, dict, str]]:
+    """
+    Toggle transcription for a specific VFO.
+
+    Args:
+        sio: Socket.IO server instance
+        data: {vfoNumber: int, enabled: bool, model?: str, language?: str}
+        logger: Logger instance
+        sid: Socket.IO session ID
+
+    Returns:
+        Dictionary with success status and updated VFO state
+    """
+    logger.debug(f"Toggling transcription, data: {data}")
+
+    if not data or "vfoNumber" not in data:
+        return {"success": False, "error": "vfoNumber is required"}
+
+    vfo_number = data.get("vfoNumber")
+    enabled = data.get("enabled", False)
+
+    # Fetch DeBabel URL from preferences and update transcription consumer
+    if enabled:
+        try:
+            async with AsyncSessionLocal() as dbsession:
+                prefs_result = await fetch_all_preferences(dbsession)
+                if prefs_result["success"]:
+                    preferences = prefs_result["data"]
+                    debabel_url = next(
+                        (p["value"] for p in preferences if p["name"] == "debabel_url"), ""
+                    )
+                    if debabel_url:
+                        from server.shutdown import transcription_consumer
+
+                        if transcription_consumer:
+                            transcription_consumer.update_debabel_url(debabel_url)
+                            logger.debug(
+                                f"Updated transcription consumer with DeBabel URL: {debabel_url}"
+                            )
+                    else:
+                        logger.warning("DeBabel URL not configured in preferences")
+                        return {"success": False, "error": "DeBabel URL not configured"}
+        except Exception as e:
+            logger.error(f"Error fetching DeBabel URL: {e}")
+            return {"success": False, "error": f"Failed to fetch DeBabel configuration: {str(e)}"}
+
+    vfomanager = VFOManager()
+    vfomanager.update_vfo_state(
+        session_id=sid,
+        vfo_id=vfo_number,
+        transcription_enabled=enabled,
+        transcription_model=data.get("model"),
+        transcription_language=data.get("language"),
+    )
+
+    # Get updated state
+    vfo_state = vfomanager.get_vfo_state(sid, vfo_number)
+
+    logger.info(
+        f"Transcription {'enabled' if enabled else 'disabled'} for VFO {vfo_number} (session: {sid})"
+    )
+
+    return {
+        "success": True,
+        "data": {
+            "vfoNumber": vfo_number,
+            "transcriptionEnabled": vfo_state.transcription_enabled if vfo_state else False,
+            "transcriptionModel": vfo_state.transcription_model if vfo_state else "small.en",
+            "transcriptionLanguage": vfo_state.transcription_language if vfo_state else "en",
+        },
+    }
+
+
 def register_handlers(registry):
     """Register VFO handlers with the command registry."""
     registry.register_batch(
         {
             "update-vfo-parameters": (update_vfo_parameters, "data_submission"),
+            "toggle-transcription": (toggle_transcription, "data_submission"),
         }
     )

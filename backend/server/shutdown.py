@@ -2,12 +2,16 @@ import asyncio
 import os
 from typing import Optional
 
+from audio.audiobroadcaster import AudioBroadcaster
 from audio.audioconsumer import WebAudioConsumer
+from audio.transcriptionconsumer import TranscriptionConsumer
 from common.logger import logger
 from sdr.utils import cleanup_sdr_session
 
 # Globals used by audio threads
 audio_consumer: Optional[WebAudioConsumer] = None
+audio_broadcaster: Optional[AudioBroadcaster] = None
+transcription_consumer: Optional[TranscriptionConsumer] = None
 
 
 def cleanup_everything():
@@ -50,6 +54,10 @@ def cleanup_everything():
     try:
         if audio_consumer:
             audio_consumer.stop()
+        if transcription_consumer:
+            transcription_consumer.stop()
+        if audio_broadcaster:
+            audio_broadcaster.stop()
     except Exception as e:  # pragma: no cover
         logger.warning(f"Error stopping audio: {e}")
 

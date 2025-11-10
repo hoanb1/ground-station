@@ -87,6 +87,21 @@ const preferencesSlice = createSlice({
                 id: null,
                 name: 'toast_position',
                 value: 'top-right',
+            },
+            {
+                id: null,
+                name: 'debabel_url',
+                value: '',
+            },
+            {
+                id: null,
+                name: 'debabel_model',
+                value: 'small.en',
+            },
+            {
+                id: null,
+                name: 'debabel_language',
+                value: 'en',
             }
         ],
         status: 'idle',

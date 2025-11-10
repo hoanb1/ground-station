@@ -59,6 +59,9 @@ async def fetch_all_preferences(session: AsyncSession) -> dict:
         "stadia_maps_api_key": "",
         "openweather_api_key": "",
         "toast_position": "bottom-right",
+        "debabel_url": "",  # DeBabel WebSocket URL (e.g., ws://localhost:8765)
+        "debabel_model": "small.en",  # Default Whisper model
+        "debabel_language": "auto",  # Default transcription language (auto-detect)
     }
 
     try:

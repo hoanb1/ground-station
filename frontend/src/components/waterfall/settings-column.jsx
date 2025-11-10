@@ -152,6 +152,19 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         sdrs
     } = useSelector((state) => state.sdrs);
 
+    const {
+        preferences
+    } = useSelector((state) => state.preferences);
+
+    // Helper function to get preference value
+    const getPreferenceValue = useCallback((name) => {
+        const preference = preferences.find((pref) => pref.name === name);
+        return preference ? preference.value : '';
+    }, [preferences]);
+
+    // Check if DeBabel is configured
+    const debabelConfigured = !!getPreferenceValue('debabel_url');
+
     const [localCenterFrequency, setLocalCenterFrequency] = useState(centerFrequency);
     const [localDbRange, setLocalDbRange] = useState(dbRange);
     const [localFFTSize, setLocalFFTSize] = useState(fftSize);
@@ -402,6 +415,34 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         }
     };
 
+    const handleTranscriptionToggle = (vfoNumber, enabled) => {
+        const model = getPreferenceValue('debabel_model') || 'small.en';
+        const language = getPreferenceValue('debabel_language') || 'en';
+
+        socket.emit('data_submission', 'toggle-transcription', {
+            vfoNumber,
+            enabled,
+            model,
+            language
+        }, (response) => {
+            if (response.success) {
+                // Update VFO state in Redux
+                dispatch(setVFOProperty({
+                    vfoNumber,
+                    updates: {
+                        transcriptionEnabled: enabled,
+                        transcriptionModel: model,
+                        transcriptionLanguage: language
+                    }
+                }));
+                toast.success(t(`vfo.transcription_${enabled ? 'enabled' : 'disabled'}`,
+                    `Transcription ${enabled ? 'enabled' : 'disabled'} for VFO ${vfoNumber}`));
+            } else {
+                toast.error(t('vfo.transcription_error', `Failed to toggle transcription: ${response.error}`));
+            }
+        });
+    };
+
     const handleVFOTabChange = (newValue) => {
         dispatch(setSelectedVFOTab(newValue));
         // Also select the corresponding VFO on the canvas
@@ -593,6 +634,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                     onVFOPropertyChange={handleVFOPropertyChange}
                     selectedVFO={selectedVFO}
                     onVFOListenChange={handleVFOListenChange}
+                    onTranscriptionToggle={handleTranscriptionToggle}
+                    debabelConfigured={debabelConfigured}
                 />
 
                 <FrequencyControlAccordion

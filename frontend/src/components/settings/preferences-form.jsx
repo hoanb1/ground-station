@@ -278,6 +278,102 @@ const PreferencesForm = () => {
                         </FormControl>
                     </Grid>
 
+                    {/* DeBabel Transcription Service */}
+                    <Grid size={16} sx={{ mt: 2 }}>
+                        <Typography variant="subtitle1" fontWeight={500} sx={{ mb: 1 }}>
+                            {t('preferences.debabel_configuration', 'DeBabel Transcription')}
+                        </Typography>
+                        <Divider sx={{ mb: 2 }} />
+                    </Grid>
+
+                    {/* DeBabel URL */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>{t('preferences.debabel_url', 'DeBabel URL')}</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                            disabled={isLoading}
+                            size="small"
+                        >
+                            <TextField
+                                style={{fontFamily: 'monospace'}}
+                                fullWidth
+                                id="debabel-url"
+                                variant="filled"
+                                type="text"
+                                size="small"
+                                disabled={isLoading}
+                                label={t('preferences.debabel_url', 'DeBabel URL')}
+                                placeholder="ws://localhost:8765"
+                                value={getPreferenceValue('debabel_url')}
+                                onChange={handleChange('debabel_url')}
+                                helperText={t('preferences.debabel_url_help', 'WebSocket URL for DeBabel service (e.g., ws://server:8765)')}
+                            />
+                        </FormControl>
+                    </Grid>
+
+                    {/* DeBabel Model */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>{t('preferences.debabel_model', 'Default Model')}</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                            disabled={isLoading}
+                            size="small"
+                        >
+                            <InputLabel htmlFor={"debabel-model-selector"}>{t('preferences.debabel_model', 'Default Model')}</InputLabel>
+                            <Select
+                                id={'debabel-model-selector'}
+                                value={getPreferenceValue('debabel_model')}
+                                onChange={handleChange('debabel_model')}
+                                label={t('preferences.debabel_model', 'Default Model')}
+                                variant={'filled'}>
+                                <MenuItem value="tiny.en">Tiny (fastest, least accurate)</MenuItem>
+                                <MenuItem value="base.en">Base (fast, decent accuracy)</MenuItem>
+                                <MenuItem value="small.en">Small (recommended)</MenuItem>
+                                <MenuItem value="small">Small Multilingual</MenuItem>
+                                <MenuItem value="medium.en">Medium (slower, more accurate)</MenuItem>
+                                <MenuItem value="medium">Medium Multilingual</MenuItem>
+                                <MenuItem value="large-v3">Large (best accuracy, slowest)</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
+                    {/* DeBabel Language */}
+                    <Grid size={8} sx={{ display: 'flex', alignItems: 'center' }}>
+                        <Typography>{t('preferences.debabel_language', 'Default Language')}</Typography>
+                    </Grid>
+                    <Grid size={8}>
+                        <FormControl sx={{ minWidth: 200, marginTop: 1, marginBottom: 1 }} fullWidth variant={"filled"}
+                            disabled={isLoading}
+                            size="small"
+                        >
+                            <InputLabel htmlFor={"debabel-language-selector"}>{t('preferences.debabel_language', 'Default Language')}</InputLabel>
+                            <Select
+                                id={'debabel-language-selector'}
+                                value={getPreferenceValue('debabel_language')}
+                                onChange={handleChange('debabel_language')}
+                                label={t('preferences.debabel_language', 'Default Language')}
+                                variant={'filled'}>
+                                <MenuItem value="auto">Auto-detect</MenuItem>
+                                <MenuItem value="en">English</MenuItem>
+                                <MenuItem value="es">Español</MenuItem>
+                                <MenuItem value="fr">Français</MenuItem>
+                                <MenuItem value="de">Deutsch</MenuItem>
+                                <MenuItem value="it">Italiano</MenuItem>
+                                <MenuItem value="pt">Português</MenuItem>
+                                <MenuItem value="nl">Nederlands</MenuItem>
+                                <MenuItem value="el">Ελληνικά</MenuItem>
+                                <MenuItem value="ru">Русский</MenuItem>
+                                <MenuItem value="zh">中文</MenuItem>
+                                <MenuItem value="ja">日本語</MenuItem>
+                                <MenuItem value="ko">한국어</MenuItem>
+                                <MenuItem value="ar">العربية</MenuItem>
+                                <MenuItem value="hi">हिन्दी</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Grid>
+
                 </Grid>
 
                 <Box sx={{ mt: 4, display: 'flex', justifyContent: 'flex-start' }}>

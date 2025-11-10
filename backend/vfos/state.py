@@ -20,6 +20,9 @@ class VFOState:
     volume: int = 50
     squelch: int = -150
     locked: bool = False
+    transcription_enabled: bool = False  # Enable/disable transcription for this VFO
+    transcription_model: str = "small.en"  # Whisper model to use
+    transcription_language: str = "en"  # Language code for transcription
 
 
 class VFOManager:
@@ -60,6 +63,9 @@ class VFOManager:
         volume: Optional[int] = None,
         squelch: Optional[int] = None,
         locked: Optional[bool] = None,
+        transcription_enabled: Optional[bool] = None,
+        transcription_model: Optional[str] = None,
+        transcription_language: Optional[str] = None,
     ) -> None:
 
         assert session_id is not None, "session_id is required"
@@ -114,6 +120,16 @@ class VFOManager:
         # check locked
         if locked is not None:
             vfo_state.locked = locked
+
+        # check transcription settings
+        if transcription_enabled is not None:
+            vfo_state.transcription_enabled = transcription_enabled
+
+        if transcription_model is not None:
+            vfo_state.transcription_model = transcription_model
+
+        if transcription_language is not None:
+            vfo_state.transcription_language = transcription_language
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 
