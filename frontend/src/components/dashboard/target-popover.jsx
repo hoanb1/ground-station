@@ -338,7 +338,7 @@ const SatelliteInfoPopover = () => {
                         <>
                             {/* Position Information */}
                             <Box sx={{ mb: 2 }}>
-                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 1 }}>
+                                <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', mb: 0 }}>
                                     <Typography variant="subtitle2" sx={{ color: 'info.light', fontWeight: 'bold' }}>
                                         {t('target_popover.sections.current_position')}
                                     </Typography>
@@ -396,7 +396,7 @@ const SatelliteInfoPopover = () => {
                     ) : null}
 
                     {/* Satellite Selector */}
-                    <Box sx={{ mb: 2 }}>
+                    <Box sx={{ mb: 0 }}>
                         <SatSelectorIsland
                             initialNoradId={satelliteData.details.norad_id}
                             initialGroupId={trackingState.group_id}

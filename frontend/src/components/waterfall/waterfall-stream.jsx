@@ -158,10 +158,9 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
 
     const startStreaming = useCallback(() => {
         if (!isStreaming) {
-            // For sigmfplayback, we should not send configure-sdr if there's no recording path
-            // This prevents overwriting the session with empty recording_path
-            if (selectedSDRId === "sigmf-playback" && !playbackRecordingPath) {
-                toast.error('Please select a recording first');
+            // Toolbar play button should only handle real SDRs, not SigmfPlayback
+            if (selectedSDRId === "sigmf-playback") {
+                toast.error('Use the playback controls to play recordings');
                 return;
             }
 
@@ -182,7 +181,6 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
                 offsetFrequency: selectedOffsetValue,
                 soapyAgc,
                 fftAveraging,
-                recordingPath: playbackRecordingPath,
             }, (response) => {
                 if (response['success']) {
                     socket.emit('sdr_data', 'start-streaming', { selectedSDRId });
@@ -195,7 +193,7 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
                 }
             });
         }
-    }, [isStreaming, dispatch, socket, selectedSDRId, centerFrequency, sampleRate, gain, fftSize, biasT, tunerAgc, rtlAgc, fftWindow, selectedAntenna, selectedOffsetValue, soapyAgc, fftAveraging, playbackRecordingPath, workerRef, targetFPSRef]);
+    }, [isStreaming, dispatch, socket, selectedSDRId, centerFrequency, sampleRate, gain, fftSize, biasT, tunerAgc, rtlAgc, fftWindow, selectedAntenna, selectedOffsetValue, soapyAgc, fftAveraging, workerRef, targetFPSRef]);
 
     const stopStreaming = useCallback(async () => {
         if (isStreaming) {
@@ -231,9 +229,10 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
     const playButtonEnabledOrNot = useCallback(() => {
         const isStreamingActive = isStreaming;
         const noSDRSelected = selectedSDRId === 'none';
+        const isSigmfPlayback = selectedSDRId === 'sigmf-playback';
         const isLoadingParameters = gettingSDRParameters;
         const missingRequiredParameters = !sampleRate || gain === null || gain === undefined || sampleRate === 'none' || gain === 'none' || selectedAntenna === 'none';
-        return isStreamingActive || noSDRSelected || isLoadingParameters || missingRequiredParameters;
+        return isStreamingActive || noSDRSelected || isSigmfPlayback || isLoadingParameters || missingRequiredParameters;
     }, [isStreaming, selectedSDRId, gettingSDRParameters, sampleRate, gain, selectedAntenna]);
 
     return { startStreaming, stopStreaming, playButtonEnabledOrNot };

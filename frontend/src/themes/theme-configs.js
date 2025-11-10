@@ -276,6 +276,43 @@ export const themeConfigs = {
             polling: '#ff9800',
         },
     },
+
+    'stalker': {
+        mode: 'dark',
+        primary: { main: '#7fb800' }, // Radioactive green
+        secondary: { main: '#b85d00' }, // Rusty orange
+        success: { main: '#6fb300' }, // Anomaly green
+        warning: { main: '#d4a017' }, // Geiger yellow
+        error: { main: '#8b2500' }, // Blood rust
+        info: { main: '#4d6b7a' }, // Cold steel blue
+        background: {
+            default: '#0a0d0a', // The Zone darkness
+            paper: '#1a1d1a', // Grimy concrete
+            elevated: '#252b25', // Rusted metal
+        },
+        border: {
+            main: '#3a4a3a', // Weathered steel
+            light: '#4a5a4a',
+            dark: '#2a3a2a',
+        },
+        overlay: {
+            light: 'rgba(127, 184, 0, 0.08)', // Radioactive glow
+            medium: 'rgba(127, 184, 0, 0.15)',
+            dark: 'rgba(0, 0, 0, 0.75)', // Heavy shadows
+        },
+        status: {
+            connected: '#6fb300', // Detector green
+            connecting: '#d4a017', // Warning yellow
+            disconnected: '#8b2500', // Danger red
+            polling: '#b85d00', // Artifact orange
+        },
+        // S.T.A.L.K.E.R. themed custom properties
+        radiation: {
+            low: '#6fb300',
+            medium: '#d4a017',
+            high: '#ff4500',
+        },
+    },
 };
 
 /**

@@ -604,16 +604,45 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     };
 
     const handlePlaybackPlay = () => {
-        // Start streaming if not already streaming
+        // Playback accordion play button handles full configuration and start
         if (!isStreaming && selectedSDRId === 'sigmf-playback' && playbackRecordingPath) {
-            socket.emit('sdr_data', 'start-streaming', { selectedSDRId });
+            // First configure the SDR with playback recording
+            socket.emit('sdr_data', 'configure-sdr', {
+                selectedSDRId: 'sigmf-playback',
+                centerFrequency,
+                sampleRate,
+                gain,
+                fftSize,
+                biasT,
+                tunerAgc,
+                rtlAgc,
+                fftWindow,
+                antenna: selectedAntenna,
+                offsetFrequency: selectedOffsetValue,
+                soapyAgc,
+                fftAveraging,
+                recordingPath: playbackRecordingPath,
+            }, (response) => {
+                if (response['success']) {
+                    // Then start streaming
+                    socket.emit('sdr_data', 'start-streaming', { selectedSDRId: 'sigmf-playback' });
+                    dispatch(setPlaybackStartTime(new Date().toISOString()));
+                } else {
+                    toast.error('Failed to configure playback: ' + (response['message'] || 'Unknown error'));
+                }
+            });
+        } else if (!playbackRecordingPath) {
+            toast.error('Please select a recording first');
+        } else if (selectedSDRId !== 'sigmf-playback') {
+            toast.error('Please select SigMF Playback SDR first');
         }
     };
 
     const handlePlaybackStop = () => {
-        // Stop playback completely by stopping streaming
-        if (isStreaming) {
-            socket.emit('sdr_data', 'stop-streaming', { selectedSDRId });
+        // Playback accordion stop button only stops playback streaming
+        if (isStreaming && selectedSDRId === 'sigmf-playback') {
+            socket.emit('sdr_data', 'stop-streaming', { selectedSDRId: 'sigmf-playback' });
+            dispatch(resetPlaybackStartTime());
         }
     };
 

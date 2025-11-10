@@ -194,9 +194,13 @@ const SatSelectorIsland = React.memo(function SatSelectorIsland({initialNoradId,
                                 onClick={handleTrackingStop}
                                 sx={{
                                     width: '100%',
-                                    fontSize: '0.9rem',
+                                    fontSize: '0.8rem',
                                     minHeight: '60px',
                                     height: 105,
+                                    whiteSpace: 'normal',
+                                    wordBreak: 'break-word',
+                                    lineHeight: 1.2,
+                                    padding: '8px',
                                 }}
                             >
                                 {t('satellite_selector.stop_tracking')}
