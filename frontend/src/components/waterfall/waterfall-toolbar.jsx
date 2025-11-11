@@ -276,7 +276,7 @@ const WaterfallToolbar = ({
                     >
                         <VFO1Icon/>
                     </IconButton>
-                    {vfoMarkers[1]?.locked && (
+                    {vfoMarkers[1]?.lockedTransmitterId && (
                         <LockIcon
                             sx={{
                                 position: 'absolute',
@@ -310,7 +310,7 @@ const WaterfallToolbar = ({
                     >
                         <VFO2Icon/>
                     </IconButton>
-                    {vfoMarkers[2]?.locked && (
+                    {vfoMarkers[2]?.lockedTransmitterId && (
                         <LockIcon
                             sx={{
                                 position: 'absolute',
@@ -344,7 +344,7 @@ const WaterfallToolbar = ({
                     >
                         <VFO3Icon/>
                     </IconButton>
-                    {vfoMarkers[3]?.locked && (
+                    {vfoMarkers[3]?.lockedTransmitterId && (
                         <LockIcon
                             sx={{
                                 position: 'absolute',
@@ -378,7 +378,7 @@ const WaterfallToolbar = ({
                     >
                         <VFO4Icon/>
                     </IconButton>
-                    {vfoMarkers[4]?.locked && (
+                    {vfoMarkers[4]?.lockedTransmitterId && (
                         <LockIcon
                             sx={{
                                 position: 'absolute',

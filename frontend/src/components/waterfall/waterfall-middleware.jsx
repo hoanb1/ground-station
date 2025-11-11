@@ -232,7 +232,6 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                             }));
 
                             const offsetStr = offset !== 0 ? ` (offset: ${offset >= 0 ? '+' : ''}${(offset / 1e3).toFixed(1)} kHz)` : '';
-                            console.log(`VFO ${vfoNum} tracking transmitter "${transmitter.description}" at ${(finalFrequency / 1e6).toFixed(6)} MHz${offsetStr}${skipSync ? ' (local only - not selected)' : ' (synced to backend)'}`);
                         }
                     }
                 }
