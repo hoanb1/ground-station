@@ -220,15 +220,19 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
 
                         // Check if frequency has changed (to avoid unnecessary updates)
                         if (vfo.frequency !== finalFrequency) {
-                            // Update VFO frequency to match transmitter's doppler-corrected frequency + offset
+                            // Only send backend updates for the selected VFO (actively playing audio)
+                            // This avoids restarting demodulators for inactive locked VFOs
+                            const selectedVFO = state.vfo.selectedVFO;
+                            const skipSync = vfoNum !== selectedVFO;
+
                             store.dispatch(setVFOProperty({
                                 vfoNumber: vfoNum,
                                 updates: { frequency: finalFrequency },
-                                skipBackendSync: false  // Send to backend for demodulation
+                                skipBackendSync: skipSync
                             }));
 
                             const offsetStr = offset !== 0 ? ` (offset: ${offset >= 0 ? '+' : ''}${(offset / 1e3).toFixed(1)} kHz)` : '';
-                            console.log(`VFO ${vfoNum} tracking transmitter "${transmitter.description}" at ${(finalFrequency / 1e6).toFixed(6)} MHz${offsetStr}`);
+                            console.log(`VFO ${vfoNum} tracking transmitter "${transmitter.description}" at ${(finalFrequency / 1e6).toFixed(6)} MHz${offsetStr}${skipSync ? ' (local only - not selected)' : ' (synced to backend)'}`);
                         }
                     }
                 }
