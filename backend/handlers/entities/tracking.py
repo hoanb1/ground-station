@@ -172,38 +172,9 @@ async def set_tracking_state(
 
             # Unlock VFOs when tracking stops for this SDR
             if rig_state == "stopped" and rig_id and rig_id != "none":
-                logger.info(
-                    f"Tracking stopped, attempting to unlock VFOs for current session {sid}"
-                )
-                try:
-                    from vfos.state import VFOManager
-
-                    # Check if this is an SDR (not a hardware rig)
-                    sdr_reply = await crud.hardware.fetch_sdr(dbsession, sdr_id=rig_id)
-
-                    if sdr_reply.get("success") and sdr_reply.get("data"):
-                        # This is an SDR - unlock VFOs for the current session
-                        logger.info(
-                            f"Tracking stopped for SDR {rig_id}, unlocking VFOs for session {sid}"
-                        )
-                        vfo_manager = VFOManager()
-
-                        try:
-                            # Unlock all VFOs (1-4) for this session
-                            for vfo_num in range(1, 5):
-                                vfo_manager.update_vfo_state(
-                                    session_id=sid,
-                                    vfo_id=vfo_num,
-                                    locked=False,
-                                )
-                            await vfo_manager.emit_vfo_states(sio, sid)
-                            logger.info(f"Unlocked all VFOs for session {sid}")
-                        except Exception as e:
-                            logger.error(f"Error unlocking VFOs for session {sid}: {e}")
-                    else:
-                        logger.debug(f"Rig {rig_id} is not an SDR, skipping VFO unlock")
-                except Exception as e:
-                    logger.error(f"Error unlocking VFOs when tracking stopped: {e}")
+                # Note: VFO locking state (lockedTransmitterId) is UI-only and managed by the frontend
+                # No backend action needed when tracking stops
+                logger.info(f"Tracking stopped for session {sid}")
 
         # Emit so that any open browsers are also informed of any change
         await emit_tracker_data(dbsession, sio, logger)

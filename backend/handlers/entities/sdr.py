@@ -21,6 +21,7 @@ from handlers.entities.filebrowser import emit_file_browser_state
 from sdr.sdrprocessmanager import sdr_process_manager
 from sdr.utils import active_sdr_clients, add_sdr_session, cleanup_sdr_session, get_sdr_session
 from server.startup import audio_queue
+from session.tracker import session_tracker
 
 
 async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
@@ -456,7 +457,7 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
 
 def handle_vfo_demodulator_state(vfo_state, session_id, logger):
     """
-    Start or stop demodulator based on VFO active state.
+    Start or stop demodulator based on VFO active AND selected state.
 
     Args:
         vfo_state: VFO state object
@@ -467,16 +468,23 @@ def handle_vfo_demodulator_state(vfo_state, session_id, logger):
         return
 
     # Get SDR ID from SessionTracker
-    from session.tracker import session_tracker
-
     sdr_id = session_tracker.get_session_sdr(session_id)
     if not sdr_id:
         return
 
-    if vfo_state.active:
-        # VFO is active, start appropriate demodulator
-        start_demodulator_for_mode(vfo_state.modulation, sdr_id, session_id, logger)
+    # Only manage demodulator for the SELECTED VFO
+    # If this VFO is not selected, don't touch the demodulator at all
+    if not vfo_state.selected:
+        return
+
+    demod_key = session_id
+    # BOTH active AND selected must be true to start demodulator
+    should_start = vfo_state.active and vfo_state.selected
+
+    if should_start:
+        # Start appropriate demodulator
+        start_demodulator_for_mode(vfo_state.modulation, sdr_id, demod_key, logger)
     else:
-        # VFO is inactive, stop demodulator
-        sdr_process_manager.stop_demodulator(sdr_id, session_id)
-        logger.info(f"Stopped demodulator for session {session_id}")
+        # Stop demodulator
+        sdr_process_manager.stop_demodulator(sdr_id, demod_key)
+        logger.info(f"Stopped demodulator for session {demod_key}")

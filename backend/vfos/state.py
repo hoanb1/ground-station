@@ -109,9 +109,11 @@ class VFOManager:
 
         # check if selected
         if selected is not None:
-            # since a VFO is now selected set the other VFOs to not selected for this session
-            for _vfo_id in session_vfos:
-                session_vfos[_vfo_id].selected = False
+            # Only deselect other VFOs if this VFO is being selected (not deselected)
+            if selected:
+                # since a VFO is now selected set the other VFOs to not selected for this session
+                for _vfo_id in session_vfos:
+                    session_vfos[_vfo_id].selected = False
 
             vfo_state.selected = selected
 

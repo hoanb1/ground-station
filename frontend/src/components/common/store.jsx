@@ -40,7 +40,7 @@ import vfoReducer from '../waterfall/vfo-slice.jsx';
 import sdrsReducer from '../hardware/sdr-slice.jsx';
 import versionReducer from "../dashboard/version-slice.jsx";
 import fileBrowserReducer from '../filebrowser/filebrowser-slice.jsx';
-import backendSyncMiddleware from '../waterfall/waterfall-middleware.jsx';
+import backendSyncMiddleware from '../waterfall/vfo-middleware.jsx';
 
 
 // Persist configuration for waterfall slice

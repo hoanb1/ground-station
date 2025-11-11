@@ -6,14 +6,14 @@ import sys
 import threading
 
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-import uvicorn
+import uvicorn  # noqa: E402
 
-from common.arguments import arguments
-from common.logger import get_logger_config, logger
-from handlers.socket import register_socketio_handlers
-from server.shutdown import cleanup_everything, signal_handler
-from server.startup import app, init_db, sio, socket_app
-from video.webrtc import register_webrtc_routes
+from common.arguments import arguments  # noqa: E402
+from common.logger import get_logger_config, logger  # noqa: E402
+from handlers.socket import register_socketio_handlers  # noqa: E402
+from server.shutdown import cleanup_everything, signal_handler  # noqa: E402
+from server.startup import app, init_db, sio, socket_app  # noqa: E402
+from video.webrtc import register_webrtc_routes  # noqa: E402
 
 
 # Set process and thread names

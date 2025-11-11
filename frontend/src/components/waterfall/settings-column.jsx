@@ -447,9 +447,8 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
 
     const handleVFOTabChange = (newValue) => {
         dispatch(setSelectedVFOTab(newValue));
-        // Also select the corresponding VFO on the canvas
-        const vfoNumber = newValue + 1; // Convert tab index (0-3) to VFO number (1-4)
-        dispatch(setSelectedVFO(vfoNumber));
+        // Note: Tab change is only for viewing/editing settings, not for audio selection
+        // Audio selection is controlled by clicking on the VFO marker on the waterfall
     };
 
     // Sync VFO tab selection when a VFO is selected on the canvas
