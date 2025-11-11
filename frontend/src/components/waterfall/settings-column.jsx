@@ -452,14 +452,13 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     };
 
     // Sync VFO tab selection when a VFO is selected on the canvas
+    // Only sync when selectedVFO changes (not when tab changes manually)
     useEffect(() => {
         if (selectedVFO !== null && selectedVFO >= 1 && selectedVFO <= maxVFOMarkers) {
             const tabIndex = selectedVFO - 1; // Convert VFO number (1-4) to tab index (0-3)
-            if (selectedVFOTab !== tabIndex) {
-                dispatch(setSelectedVFOTab(tabIndex));
-            }
+            dispatch(setSelectedVFOTab(tabIndex));
         }
-    }, [selectedVFO, maxVFOMarkers, selectedVFOTab, dispatch]);
+    }, [selectedVFO, maxVFOMarkers, dispatch]);
 
     // Recording timer
     useEffect(() => {
