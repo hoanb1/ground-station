@@ -19,7 +19,7 @@
 
 
 
-import React, { useEffect } from 'react';
+import React, { useEffect, useState } from 'react';
 import { useSelector, useDispatch } from 'react-redux';
 import { updatePreferences, setPreference } from './preferences-slice.jsx';
 import { tz } from 'moment-timezone';
@@ -28,8 +28,10 @@ import { useTranslation } from 'react-i18next';
 import {
     Alert,
     AlertTitle,
+    Backdrop,
     Box,
     Button,
+    CircularProgress,
     Divider,
     FormControl,
     InputLabel,
@@ -49,6 +51,19 @@ const PreferencesForm = () => {
     const { preferences, status } = useSelector((state) => state.preferences);
     const isLoading = status === 'loading';
     const { t, i18n } = useTranslation('settings');
+    const [themeChanged, setThemeChanged] = useState(false);
+    const [originalTheme, setOriginalTheme] = useState('');
+    const [localThemeValue, setLocalThemeValue] = useState('');
+    const [reloading, setReloading] = useState(false);
+
+    // Track the original theme value on mount
+    useEffect(() => {
+        const themeValue = getPreferenceValue('theme');
+        if (themeValue && !originalTheme) {
+            setOriginalTheme(themeValue);
+            setLocalThemeValue(themeValue);
+        }
+    }, [preferences]);
 
     const getPreferenceValue = (name) => {
         const preference = preferences.find((pref) => pref.name === name);
@@ -88,6 +103,19 @@ const PreferencesForm = () => {
 
     const handleChange = (name) => (e) => {
         const value = e.target.value;
+
+        // Special handling for theme - don't dispatch immediately
+        if (name === 'theme') {
+            setLocalThemeValue(value);
+            if (value !== originalTheme) {
+                setThemeChanged(true);
+            } else {
+                setThemeChanged(false);
+            }
+            return;
+        }
+
+        // For all other preferences, dispatch immediately
         dispatch(setPreference({ name, value }));
 
         // If language is changed, update i18n immediately
@@ -98,10 +126,23 @@ const PreferencesForm = () => {
     };
 
     const handleSavePreferences = () => {
+        // If theme was changed, dispatch it now before saving
+        if (themeChanged) {
+            dispatch(setPreference({ name: 'theme', value: localThemeValue }));
+        }
+
         dispatch(updatePreferences({ socket }))
             .unwrap()
             .then(() => {
                 toast.success(t('preferences.save_success'));
+
+                // If theme was changed, reload the page after 1 second
+                if (themeChanged) {
+                    setReloading(true);
+                    setTimeout(() => {
+                        window.location.reload();
+                    }, 1000);
+                }
             })
             .catch(() => {
                 toast.error(t('preferences.save_error'));
@@ -109,11 +150,29 @@ const PreferencesForm = () => {
     };
 
     return (
-        <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
-            <Alert severity="info">
-                <AlertTitle>{t('preferences.title')}</AlertTitle>
-                {t('preferences.subtitle')}
-            </Alert>
+        <>
+            <Backdrop
+                sx={{
+                    color: '#fff',
+                    zIndex: (theme) => theme.zIndex.drawer + 1,
+                    backdropFilter: 'blur(4px)',
+                    display: 'flex',
+                    flexDirection: 'column',
+                    gap: 2
+                }}
+                open={reloading}
+            >
+                <CircularProgress color="inherit" />
+                <Typography variant="h6">
+                    {t('preferences.reloading', 'Reloading...')}
+                </Typography>
+            </Backdrop>
+
+            <Paper elevation={3} sx={{ padding: 2, marginTop: 0 }}>
+                <Alert severity="info">
+                    <AlertTitle>{t('preferences.title')}</AlertTitle>
+                    {t('preferences.subtitle')}
+                </Alert>
 
             <Box component="form" sx={{ mt: 2 }}>
                 <Grid container spacing={3} columns={16}>
@@ -185,7 +244,7 @@ const PreferencesForm = () => {
                             <InputLabel htmlFor={"theme-selector"}>{t('preferences.theme')}</InputLabel>
                             <Select
                                 id={'theme-selector'}
-                                value={getPreferenceValue('theme')}
+                                value={localThemeValue || getPreferenceValue('theme')}
                                 onChange={handleChange('theme')}
                                 label={t('preferences.theme')}
                              variant={'filled'}>
@@ -196,6 +255,11 @@ const PreferencesForm = () => {
                                 ))}
                             </Select>
                         </FormControl>
+                        {themeChanged && (
+                            <Alert severity="info" sx={{ mt: 1, py: 0.5 }}>
+                                {t('preferences.theme_reload_required', 'Theme will be applied after saving and reloading')}
+                            </Alert>
+                        )}
                     </Grid>
 
                     {/* Toast Notification Position */}
@@ -388,6 +452,7 @@ const PreferencesForm = () => {
                 </Box>
             </Box>
         </Paper>
+        </>
     );
 };
 
