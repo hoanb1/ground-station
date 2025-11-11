@@ -112,11 +112,21 @@ const FftAccordion = ({
                                 onChange={(e) => onColorMapChange(e.target.value)}
                                 label={t('fft.color_map')}
                                 variant={'filled'}>
-                                {colorMaps.map(map => (
-                                    <MenuItem key={map} value={map}>
-                                        {map.charAt(0).toUpperCase() + map.slice(1)}
-                                    </MenuItem>
-                                ))}
+                                {colorMaps.map(map => {
+                                    let displayName;
+                                    if (map === 'stalker') {
+                                        displayName = 'S.T.A.L.K.E.R.';
+                                    } else if (map === 'greyscale-inverted') {
+                                        displayName = 'Greyscale-Inverted';
+                                    } else {
+                                        displayName = map.charAt(0).toUpperCase() + map.slice(1);
+                                    }
+                                    return (
+                                        <MenuItem key={map} value={map}>
+                                            {displayName}
+                                        </MenuItem>
+                                    );
+                                })}
                             </Select>
                         </FormControl>
                     </Box>

@@ -147,9 +147,16 @@ export function setupTheme(themeName = 'dark') {
             },
             MuiAppBar: {
                 styleOverrides: {
-                    root: {
-                        backgroundColor: isDark ? "#071318" : "#1976d2",
-                    },
+                    root: ({ theme }) => ({
+                        backgroundColor: isDark
+                            ? theme.palette.background.elevated
+                            : theme.palette.primary.main,
+                        borderBottom: `1px solid ${theme.palette.border.main}`,
+                        boxShadow: isDark
+                            ? '0 2px 4px rgba(0, 0, 0, 0.5)'
+                            : '0 2px 8px rgba(0, 0, 0, 0.15)',
+                        backdropFilter: 'blur(8px)',
+                    }),
                 },
             },
             MuiSelect: {

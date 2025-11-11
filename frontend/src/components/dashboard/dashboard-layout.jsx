@@ -34,7 +34,8 @@ import {
     ListItemIcon,
     ListItemText,
     MenuItem,
-    MenuList
+    MenuList,
+    useTheme
 } from "@mui/material";
 import {Account, AccountPopoverFooter, AccountPreview, SignOutButton} from "@toolpad/core";
 import {GroundStationLogoGreenBlue} from "../common/dataurl-icons.jsx";
@@ -63,6 +64,7 @@ import SatelliteSyncPopover from "./tlesync-popover.jsx";
 
 
 function DashboardEditor() {
+    const theme = useTheme();
     const dispatch = useDispatch();
     const { t } = useTranslation('dashboard');
     const {isEditing} = useSelector(state => state.dashboard);
@@ -103,7 +105,11 @@ function DashboardEditor() {
                     <IconButton size="small" onClick={handleEditClick} sx={{
                         width: 40,
                     }}>
-                        <BorderColorIcon color="primary"/>
+                        <BorderColorIcon sx={{
+                            color: theme.palette.mode === 'dark'
+                                ? theme.palette.primary.main
+                                : theme.palette.common.white
+                        }}/>
                     </IconButton>
                 </Tooltip>
             )}

@@ -299,7 +299,7 @@ const BookmarkCanvas = ({
 
                     // Draw the text
                     ctx.shadowBlur = 2;
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                    ctx.shadowColor = theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
                     ctx.globalAlpha = isInactive ? 0.6 : 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.warning.main;
                     ctx.fillText(bookmark.label, x, labelY + textHeight - padding);
@@ -357,7 +357,7 @@ const BookmarkCanvas = ({
 
                     // Draw the text
                     ctx.shadowBlur = 2;
-                    ctx.shadowColor = 'rgba(0, 0, 0, 0.8)';
+                    ctx.shadowColor = theme.palette.mode === 'dark' ? 'rgba(0, 0, 0, 0.8)' : 'rgba(255, 255, 255, 0.8)';
                     ctx.globalAlpha = 1.0;
                     ctx.fillStyle = bookmark.color || theme.palette.info.main;
                     ctx.fillText(bookmark.label, x, dopplerLabelY + textHeight - padding);

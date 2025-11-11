@@ -59,11 +59,17 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
         case 'greyscale':
             color = greyscaleColorMap(normalizedValue);
             break;
+        case 'greyscale-inverted':
+            color = greyscaleInvertedColorMap(normalizedValue);
+            break;
         case 'iceberg':
             color = icebergColorMap(normalizedValue);
             break;
         case 'heat':
             color = heatColorMap(normalizedValue);
+            break;
+        case 'stalker':
+            color = stalkerColorMap(normalizedValue);
             break;
         default:
             color = cosmicColorMap(normalizedValue);
@@ -132,6 +138,17 @@ function cosmicColorMap(normalizedValue) {
 function greyscaleColorMap(normalizedValue) {
     const curvedValue = Math.pow(normalizedValue, 2.0);
     const intensity = Math.floor(curvedValue * 255);
+    return { r: intensity, g: intensity, b: intensity };
+}
+
+/**
+ * Greyscale inverted color map - white to black (negative)
+ * @param {number} normalizedValue - Value between 0 and 1
+ * @returns {Object} RGB color {r, g, b}
+ */
+function greyscaleInvertedColorMap(normalizedValue) {
+    const curvedValue = Math.pow(normalizedValue, 2.0);
+    const intensity = Math.floor((1 - curvedValue) * 255);
     return { r: intensity, g: intensity, b: intensity };
 }
 
@@ -239,4 +256,58 @@ function heatColorMap(normalizedValue) {
         };
     }
     return heatRGB;
+}
+
+/**
+ * STALKER color map - dark grimy tones to radioactive green
+ * Inspired by The Zone's atmosphere: dark shadows, rusty metals, and radioactive anomalies
+ * @param {number} normalizedValue - Value between 0 and 1
+ * @returns {Object} RGB color {r, g, b}
+ */
+function stalkerColorMap(normalizedValue) {
+    let stalkerRGB;
+    const stalkerCurvedValue = Math.pow(normalizedValue, 1.6);
+
+    if (stalkerCurvedValue < 0.2) {
+        // The Zone darkness - very dark grimy black to dark rust
+        const factor = stalkerCurvedValue / 0.2;
+        stalkerRGB = {
+            r: Math.floor(10 + factor * 30),  // 10 -> 40
+            g: Math.floor(13 + factor * 22),  // 13 -> 35
+            b: Math.floor(10 + factor * 15)   // 10 -> 25
+        };
+    } else if (stalkerCurvedValue < 0.4) {
+        // Dark rust to weathered metal - #282317 to #3a4a3a
+        const factor = (stalkerCurvedValue - 0.2) / 0.2;
+        stalkerRGB = {
+            r: Math.floor(40 + factor * 18),  // 40 -> 58
+            g: Math.floor(35 + factor * 39),  // 35 -> 74
+            b: Math.floor(25 + factor * 33)   // 25 -> 58
+        };
+    } else if (stalkerCurvedValue < 0.6) {
+        // Weathered metal to detector warning - #3a4a3a to #8b5a00
+        const factor = (stalkerCurvedValue - 0.4) / 0.2;
+        stalkerRGB = {
+            r: Math.floor(58 + factor * 81),  // 58 -> 139
+            g: Math.floor(74 + factor * 16),  // 74 -> 90
+            b: Math.floor(58 - factor * 58)   // 58 -> 0
+        };
+    } else if (stalkerCurvedValue < 0.8) {
+        // Detector warning to radiation glow - #8b5a00 to #7fb800
+        const factor = (stalkerCurvedValue - 0.6) / 0.2;
+        stalkerRGB = {
+            r: Math.floor(139 - factor * 12), // 139 -> 127
+            g: Math.floor(90 + factor * 94),  // 90 -> 184
+            b: Math.floor(0)                  // 0 -> 0
+        };
+    } else {
+        // Radioactive anomaly - #7fb800 to #b3ff00 (bright radioactive green)
+        const factor = (stalkerCurvedValue - 0.8) / 0.2;
+        stalkerRGB = {
+            r: Math.floor(127 + factor * 52), // 127 -> 179
+            g: Math.floor(184 + factor * 71), // 184 -> 255
+            b: Math.floor(0)                  // 0 -> 0
+        };
+    }
+    return stalkerRGB;
 }
