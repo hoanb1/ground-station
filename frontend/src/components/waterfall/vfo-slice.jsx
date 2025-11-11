@@ -46,10 +46,10 @@ const initialState = {
         4: false,
     },
     vfoMarkers: {
-        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
-        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
-        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
-        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, locked: false, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
+        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
+        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
+        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
+        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en'},
     },
     maxVFOMarkers: 4,
     selectedVFO: null,
@@ -120,7 +120,7 @@ export const vfoSlice = createSlice({
                     state.vfoMarkers[vfoNum].mode = vfoState.modulation;
                     state.vfoMarkers[vfoNum].volume = vfoState.volume;
                     state.vfoMarkers[vfoNum].squelch = vfoState.squelch;
-                    state.vfoMarkers[vfoNum].locked = vfoState.locked;
+                    // Note: lockedTransmitterId is UI-only, not synced from backend
 
                     // Update transcription fields if present
                     if (vfoState.transcription_enabled !== undefined) {

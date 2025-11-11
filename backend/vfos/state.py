@@ -19,7 +19,6 @@ class VFOState:
     selected: bool = False
     volume: int = 50
     squelch: int = -150
-    locked: bool = False
     transcription_enabled: bool = False  # Enable/disable transcription for this VFO
     transcription_model: str = "small.en"  # Whisper model to use
     transcription_language: str = "en"  # Language code for transcription
@@ -62,7 +61,6 @@ class VFOManager:
         selected: Optional[bool] = None,
         volume: Optional[int] = None,
         squelch: Optional[int] = None,
-        locked: Optional[bool] = None,
         transcription_enabled: Optional[bool] = None,
         transcription_model: Optional[str] = None,
         transcription_language: Optional[str] = None,
@@ -116,10 +114,6 @@ class VFOManager:
                 session_vfos[_vfo_id].selected = False
 
             vfo_state.selected = selected
-
-        # check locked
-        if locked is not None:
-            vfo_state.locked = locked
 
         # check transcription settings
         if transcription_enabled is not None:

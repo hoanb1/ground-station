@@ -24,11 +24,13 @@ import {
 import VolumeDown from '@mui/icons-material/VolumeDown';
 import VolumeUp from '@mui/icons-material/VolumeUp';
 import LockIcon from '@mui/icons-material/Lock';
+import LockOpenIcon from '@mui/icons-material/LockOpen';
 // import TranscribeIcon from '@mui/icons-material/Transcribe';
 import LCDFrequencyDisplay from "../common/lcd-frequency-display.jsx";
 import RotaryEncoder from "./rotator-encoder.jsx";
 import {SquelchIcon} from "../common/dataurl-icons.jsx";
 import { useTranslation } from 'react-i18next';
+import { useSelector } from 'react-redux';
 
 const BANDWIDTHS = {
     "3300": "3.3 kHz",
@@ -58,6 +60,9 @@ const VfoAccordion = ({
     const { t } = useTranslation('waterfall');
     const squelchSliderRef = React.useRef(null);
     const volumeSliderRef = React.useRef(null);
+
+    // Get doppler-corrected transmitters from Redux state
+    const transmitters = useSelector(state => state.targetSatTrack.rigData.transmitters || []);
 
     React.useEffect(() => {
         const handleWheel = (e, vfoIndex, property, min, max, current) => {
@@ -134,7 +139,7 @@ const VfoAccordion = ({
                             label={
                                 <Box sx={{ position: 'relative', width: '100%', height: '100%' }}>
                                     {t('vfo.vfo_number', { number: index + 1 })}
-                                    {vfoMarkers[index + 1]?.locked && (
+                                    {vfoMarkers[index + 1]?.lockedTransmitterId && (
                                         <LockIcon
                                             sx={{
                                                 position: 'absolute',
@@ -186,6 +191,52 @@ const VfoAccordion = ({
                                     sx={{mt: 0, ml: 0}}
                                 />
                             </Box>
+                            {/* Lock to Transmitter Dropdown */}
+                            <Box sx={{ mt: 2 }}>
+                                <FormControl fullWidth size="small" disabled={!vfoActive[vfoIndex]}>
+                                    <InputLabel id={`vfo-${vfoIndex}-lock-transmitter-label`}>
+                                        {vfoMarkers[vfoIndex]?.lockedTransmitterId ? (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <LockIcon fontSize="small" />
+                                                {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
+                                            </Box>
+                                        ) : (
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
+                                                <LockOpenIcon fontSize="small" />
+                                                {t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
+                                            </Box>
+                                        )}
+                                    </InputLabel>
+                                    <Select
+                                        labelId={`vfo-${vfoIndex}-lock-transmitter-label`}
+                                        value={vfoMarkers[vfoIndex]?.lockedTransmitterId || 'none'}
+                                        label={t('vfo.lock_to_transmitter', 'Lock to Transmitter')}
+                                        onChange={(e) => {
+                                            const transmitterId = e.target.value === 'none' ? null : e.target.value;
+                                            onVFOPropertyChange(vfoIndex, { lockedTransmitterId: transmitterId });
+                                        }}
+                                        sx={{ fontSize: '0.875rem' }}
+                                    >
+                                        <MenuItem value="none" sx={{ fontSize: '0.875rem' }}>
+                                            <Box sx={{ display: 'flex', alignItems: 'center', gap: 1 }}>
+                                                <LockOpenIcon fontSize="small" />
+                                                {t('vfo.none', 'None')}
+                                            </Box>
+                                        </MenuItem>
+                                        {transmitters.map((tx) => (
+                                            <MenuItem key={tx.id} value={tx.id} sx={{ fontSize: '0.875rem' }}>
+                                                <Box>
+                                                    <Box sx={{ fontWeight: 600 }}>{tx.description}</Box>
+                                                    <Box sx={{ fontSize: '0.75rem', color: 'text.secondary' }}>
+                                                        {(tx.observed_freq / 1e6).toFixed(6)} MHz ({tx.mode})
+                                                    </Box>
+                                                </Box>
+                                            </MenuItem>
+                                        ))}
+                                    </Select>
+                                </FormControl>
+                            </Box>
+
                             {/* Transcription Section - Commented Out */}
                             {/*
                             <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
@@ -276,7 +327,7 @@ const VfoAccordion = ({
                             */}
                         </Box>
 
-                        {vfoMarkers[vfoIndex]?.locked && (
+                        {vfoMarkers[vfoIndex]?.lockedTransmitterId && (
                             <Alert
                                 severity="info"
                                 icon={<LockIcon fontSize="small" />}
@@ -290,7 +341,7 @@ const VfoAccordion = ({
                                     }
                                 }}
                             >
-                                {t('vfo.locked_by_tracking')}
+                                {t('vfo.locked_to_transmitter_info', 'Tracking doppler-corrected frequency')}
                             </Alert>
                         )}
 

@@ -14,6 +14,7 @@ const RotaryEncoder = ({
     const theme = useTheme();
     const dispatch = useDispatch();
     const { vfoMarkers, vfoActive } = useSelector(state => state.vfo);
+    const transmitters = useSelector(state => state.targetSatTrack.rigData.transmitters || []);
 
     const [isDragging, setIsDragging] = useState(false);
     const [rotation, setRotation] = useState(0);
@@ -28,6 +29,14 @@ const RotaryEncoder = ({
     const isVFOActive = vfoNumber && vfoActive[vfoNumber];
     const stepSize = currentVFO?.stepSize || 1000; // Default 1kHz step
     const currentFrequency = currentVFO?.frequency || 0;
+    const isLocked = currentVFO?.lockedTransmitterId !== null;
+    const currentOffset = currentVFO?.frequencyOffset || 0;
+
+    // Get the locked transmitter if VFO is locked
+    const lockedTransmitter = isLocked
+        ? transmitters.find(tx => tx.id === currentVFO.lockedTransmitterId)
+        : null;
+    const correctedFrequency = lockedTransmitter?.observed_freq || 0;
 
     // Format frequency for display
     const formatFrequency = (freq) => {
@@ -38,6 +47,11 @@ const RotaryEncoder = ({
         } else {
             return `${freq} Hz`;
         }
+    };
+
+    // Format offset for display (always in Hz)
+    const formatOffset = (offset) => {
+        return `${offset >= 0 ? '+' : ''}${offset} Hz`;
     };
 
     // Calculate angle from center point
@@ -90,17 +104,28 @@ const RotaryEncoder = ({
             const steps = Math.round(rotationAccumulator.current / threshold);
             const frequencyChange = steps * stepSize * sensitivity;
 
-            const newFrequency = Math.round(currentFrequency + frequencyChange);
+            if (isLocked) {
+                // When locked, adjust the frequency offset instead of absolute frequency
+                const newOffset = Math.round(currentOffset + frequencyChange);
 
-            dispatch(setVFOProperty({
-                vfoNumber: vfoNumber,
-                updates: { frequency: newFrequency }
-            }));
+                dispatch(setVFOProperty({
+                    vfoNumber: vfoNumber,
+                    updates: { frequencyOffset: newOffset }
+                }));
+            } else {
+                // When unlocked, adjust absolute frequency as before
+                const newFrequency = Math.round(currentFrequency + frequencyChange);
+
+                dispatch(setVFOProperty({
+                    vfoNumber: vfoNumber,
+                    updates: { frequency: newFrequency }
+                }));
+            }
 
             // Reset accumulator after applying change
             rotationAccumulator.current = 0;
         }
-    }, [currentVFO, vfoNumber, isVFOActive, stepSize, sensitivity, currentFrequency, dispatch]);
+    }, [currentVFO, vfoNumber, isVFOActive, stepSize, sensitivity, currentFrequency, currentOffset, isLocked, dispatch]);
 
     // Mouse event handlers
     const handleMouseDown = useCallback((e) => {
@@ -242,6 +267,40 @@ const RotaryEncoder = ({
                     <Typography variant="h6" sx={{ fontFamily: 'monospace', color: currentVFO.color }}>
                         {formatFrequency(currentFrequency)}
                     </Typography>
+                    {isLocked && lockedTransmitter && (
+                        <Box sx={{ mt: 0.5 }}>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: theme.palette.warning.main,
+                                    fontWeight: 600,
+                                    display: 'block'
+                                }}
+                            >
+                                🔒 OFFSET MODE
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: theme.palette.text.secondary,
+                                    fontSize: '0.7rem'
+                                }}
+                            >
+                                Corrected: {formatFrequency(correctedFrequency)}
+                            </Typography>
+                            <Typography
+                                variant="caption"
+                                sx={{
+                                    color: currentOffset >= 0 ? theme.palette.success.main : theme.palette.error.main,
+                                    fontWeight: 600,
+                                    display: 'block',
+                                    fontSize: '0.75rem'
+                                }}
+                            >
+                                Offset: {formatOffset(currentOffset)}
+                            </Typography>
+                        </Box>
+                    )}
                 </Box>
             )}
 
@@ -274,9 +333,50 @@ const RotaryEncoder = ({
                         cy={size / 2}
                         r={size * 0.48}
                         fill={isDisabled ? theme.palette.background.default : theme.palette.background.paper}
-                        stroke={isDisabled ? theme.palette.border.dark : theme.palette.border.main}
-                        strokeWidth="2"
+                        stroke={isDisabled ? theme.palette.border.dark : (isLocked ? theme.palette.warning.main : theme.palette.border.main)}
+                        strokeWidth={isLocked ? "3" : "2"}
                     />
+
+                    {/* Offset mode indicator ring */}
+                    {isLocked && !isDisabled && (
+                        <circle
+                            cx={size / 2}
+                            cy={size / 2}
+                            r={size * 0.46}
+                            fill="none"
+                            stroke={theme.palette.warning.main}
+                            strokeWidth="1"
+                            strokeDasharray="4,4"
+                            opacity="0.6"
+                        />
+                    )}
+
+                    {/* Offset value overlay - centered on dial */}
+                    {isLocked && !isDisabled && (
+                        <g>
+                            <text
+                                x={size / 2}
+                                y={size / 2 - 5}
+                                textAnchor="middle"
+                                fontSize={size * 0.08}
+                                fontWeight="bold"
+                                fill={currentOffset >= 0 ? theme.palette.success.main : theme.palette.error.main}
+                                fontFamily="monospace"
+                            >
+                                {formatOffset(currentOffset)}
+                            </text>
+                            <text
+                                x={size / 2}
+                                y={size / 2 + 10}
+                                textAnchor="middle"
+                                fontSize={size * 0.06}
+                                fill={theme.palette.warning.main}
+                                fontFamily="sans-serif"
+                            >
+                                OFFSET
+                            </text>
+                        </g>
+                    )}
 
                     {/* Larger thumb pit indicator - moved closer to edge */}
                     <g transform={`rotate(${rotation}  ${size / 2} ${size / 2})`}>
@@ -286,8 +386,8 @@ const RotaryEncoder = ({
                             cy={size * 0.25}
                             r={size * 0.12}
                             fill={isDisabled ? theme.palette.background.default : theme.palette.background.elevated}
-                            stroke={isDisabled ? theme.palette.border.dark : theme.palette.border.light}
-                            strokeWidth="1"
+                            stroke={isDisabled ? theme.palette.border.dark : (isLocked ? theme.palette.warning.main : theme.palette.border.light)}
+                            strokeWidth={isLocked ? "2" : "1"}
                             style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                         />
                         {/* Inner shadow effect for the pit */}

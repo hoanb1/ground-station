@@ -242,19 +242,8 @@ export const useSocketEventHandlers = (socket) => {
             }
         });
 
-        // VFO states update
-        socket.on("vfo-states", (vfoStates) => {
-            store.dispatch(updateAllVFOStates(vfoStates));
-        });
-
-        // VFO frequency-only update (during tracking to avoid overwriting user's bandwidth changes)
-        socket.on("vfo-frequency-update", (data) => {
-            store.dispatch(setVFOProperty({
-                vfoNumber: data.vfo_id,
-                updates: { frequency: data.frequency },
-                skipBackendSync: true  // Don't send this back to backend
-            }));
-        });
+        // VFO states are now managed entirely in the UI
+        // Backend no longer sends vfo-states or vfo-frequency-update events
 
         // Satellite tracking events
         socket.on("satellite-tracking", (message) => {
