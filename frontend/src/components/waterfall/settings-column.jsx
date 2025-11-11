@@ -19,7 +19,8 @@
 
 
 import React, {useImperativeHandle, forwardRef, useCallback, useEffect, useState, useRef} from 'react';
-import {Box, Typography} from '@mui/material';
+import {Box, Typography, IconButton} from '@mui/material';
+import {UnfoldMore, UnfoldLess} from '@mui/icons-material';
 import {
     getClassNamesBasedOnGridEditing,
     TitleBar
@@ -647,6 +648,19 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
         }
     };
 
+    const handleToggleAllAccordions = () => {
+        const allPanels = ['vfo', 'freqControl', 'sdr', 'fft', 'recording', 'playback'];
+        const allExpanded = allPanels.every(panel => expandedPanels.includes(panel));
+
+        if (allExpanded) {
+            // Collapse all
+            dispatch(setExpandedPanels([]));
+        } else {
+            // Expand all
+            dispatch(setExpandedPanels(allPanels));
+        }
+    };
+
     return (
         <>
             <TitleBar
@@ -664,6 +678,14 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
                             {t('title')}
                         </Typography>
                     </Box>
+                    <IconButton
+                        size="small"
+                        onClick={handleToggleAllAccordions}
+                        sx={{ p: 0, minWidth: 0, width: 20, height: 20 }}
+                        title={expandedPanels.length === 6 ? "Collapse All" : "Expand All"}
+                    >
+                        {expandedPanels.length === 6 ? <UnfoldLess sx={{ fontSize: 16 }} /> : <UnfoldMore sx={{ fontSize: 16 }} />}
+                    </IconButton>
                 </Box>
             </TitleBar>
             <div style={{overflowY: 'auto', height: '100%', paddingBottom: '29px'}}>
