@@ -1,7 +1,7 @@
 
 import React, { useState, useRef, useCallback, useEffect } from 'react';
 import { useDispatch, useSelector } from 'react-redux';
-import { Box, Typography, Paper } from '@mui/material';
+import { Box, Typography, Paper, useTheme } from '@mui/material';
 import { setVFOProperty } from './vfo-slice.jsx';
 
 const RotaryEncoder = ({
@@ -11,6 +11,7 @@ const RotaryEncoder = ({
                            showFrequency = false,
                            style = {}
                        }) => {
+    const theme = useTheme();
     const dispatch = useDispatch();
     const { vfoMarkers, vfoActive } = useSelector(state => state.vfo);
 
@@ -228,14 +229,14 @@ const RotaryEncoder = ({
                 display: 'flex',
                 flexDirection: 'column',
                 alignItems: 'center',
-                color: '#fff',
+                color: theme.palette.text.primary,
                 opacity: isDisabled ? 0.5 : 1,
                 ...style
             }}
         >
             {showFrequency && currentVFO && (
                 <Box sx={{ mb: 1, textAlign: 'center' }}>
-                    <Typography variant="caption" sx={{ color: '#aaa' }}>
+                    <Typography variant="caption" sx={{ color: theme.palette.text.secondary }}>
                         VFO {vfoNumber} - Step: {stepSize >= 1000 ? `${stepSize/1000}kHz` : `${stepSize}Hz`}
                     </Typography>
                     <Typography variant="h6" sx={{ fontFamily: 'monospace', color: currentVFO.color }}>
@@ -272,8 +273,8 @@ const RotaryEncoder = ({
                         cx={size / 2}
                         cy={size / 2}
                         r={size * 0.48}
-                        fill={isDisabled ? "#0a0a0a" : "#1a1a1a"}
-                        stroke={isDisabled ? "#222" : "#333"}
+                        fill={isDisabled ? theme.palette.background.default : theme.palette.background.paper}
+                        stroke={isDisabled ? theme.palette.border.dark : theme.palette.border.main}
                         strokeWidth="2"
                     />
 
@@ -284,8 +285,8 @@ const RotaryEncoder = ({
                             cx={size / 2}
                             cy={size * 0.25}
                             r={size * 0.12}
-                            fill={isDisabled ? '#0a0a0a' : '#111'}
-                            stroke={isDisabled ? '#333' : '#555'}
+                            fill={isDisabled ? theme.palette.background.default : theme.palette.background.elevated}
+                            stroke={isDisabled ? theme.palette.border.dark : theme.palette.border.light}
                             strokeWidth="1"
                             style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                         />
@@ -294,7 +295,7 @@ const RotaryEncoder = ({
                             cx={size / 2}
                             cy={size * 0.25}
                             r={size * 0.08}
-                            fill={isDisabled ? '#050505' : '#080808'}
+                            fill={theme.palette.background.default}
                             style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                         />
                         {/* Innermost darker area */}
@@ -302,7 +303,7 @@ const RotaryEncoder = ({
                             cx={size / 2}
                             cy={size * 0.25}
                             r={size * 0.06}
-                            fill={isDisabled ? '#030303' : '#060606'}
+                            fill={theme.palette.overlay.dark}
                             style={{ cursor: isDisabled ? 'not-allowed' : 'pointer' }}
                         />
                     </g>
@@ -318,10 +319,10 @@ const RotaryEncoder = ({
                         height: '92%',
                         borderRadius: '50%',
                         background: `
-                            radial-gradient(circle at center, 
-                                rgba(255,255,255,${isDisabled ? '0.05' : '0.1'}) 0%, 
-                                rgba(255,255,255,${isDisabled ? '0.02' : '0.05'}) 40%, 
-                                rgba(0,0,0,0.3) 100%
+                            radial-gradient(circle at center,
+                                ${theme.palette.overlay.medium} 0%,
+                                ${theme.palette.overlay.light} 40%,
+                                ${theme.palette.overlay.dark} 100%
                             )
                         `,
                         pointerEvents: 'none'
@@ -330,7 +331,7 @@ const RotaryEncoder = ({
             </Box>
 
             {!currentVFO && (
-                <Typography variant="caption" sx={{ mt: 1, color: '#777', textAlign: 'center' }}>
+                <Typography variant="caption" sx={{ mt: 1, color: theme.palette.text.disabled, textAlign: 'center' }}>
                     VFO {vfoNumber} not configured
                 </Typography>
             )}
