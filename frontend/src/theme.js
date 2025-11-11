@@ -162,9 +162,9 @@ export function setupTheme(themeName = 'dark') {
             MuiToolbar: {
                 styleOverrides: {
                     root: {
-                        minHeight: '54px',
+                        minHeight: '52px',
                         '@media (min-width: 600px)': {
-                            minHeight: '54px',
+                            minHeight: '52px',
                         },
                     },
                 },
