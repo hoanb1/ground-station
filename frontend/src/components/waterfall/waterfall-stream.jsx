@@ -72,46 +72,13 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
     }, [workerRef]);
 
     useEffect(() => {
+        // Note: sdr-config-error, sdr-error, sdr-config, and sdr-status are now handled
+        // in the parent-level socket event handler (hooks/socket-event-handlers.jsx)
+        // to ensure messages are always received even when this component unmounts
+
         socket.on('disconnect', () => {
             cancelAnimations();
             dispatch(setIsStreaming(false));
-        });
-
-        socket.on('sdr-config-error', (error) => {
-            dispatch(setErrorMessage(error.message));
-            dispatch(setErrorDialogOpen(true));
-            dispatch(setStartStreamingLoading(false));
-            toast.error(`Failed to configure SDR: ${error.message}`);
-        });
-
-        socket.on('sdr-error', (error) => {
-            cancelAnimations();
-            dispatch(setErrorMessage(error.message));
-            dispatch(setErrorDialogOpen(true));
-            dispatch(setStartStreamingLoading(false));
-        });
-
-        socket.on('sdr-config', (data) => {
-            dispatch(setCenterFrequency(data['center_freq']));
-            dispatch(setSampleRate(data['sample_rate']));
-            dispatch(setGain(data['gain']));
-            dispatch(setFFTSize(data['fft_size']));
-            dispatch(setFFTWindow(data['fft_window']));
-            dispatch(setBiasT(data['bias_t']));
-            dispatch(setTunerAgc(data['tuner_agc']));
-            dispatch(setRtlAgc(data['rtl_agc']));
-            dispatch(setFFTAveraging(data['fft_averaging']));
-        });
-
-        socket.on('sdr-status', (data) => {
-            if (data['streaming'] === true) {
-                dispatch(setIsStreaming(true));
-                dispatch(setStartStreamingLoading(false));
-            } else if (data['streaming'] === false) {
-                cancelAnimations();
-                dispatch(setIsStreaming(false));
-                dispatch(setStartStreamingLoading(false));
-            }
         });
 
         socket.on('sdr-fft-data', (binaryData) => {
@@ -148,13 +115,16 @@ const useWaterfallStream = ({ workerRef, targetFPSRef }) => {
 
         return () => {
             cancelAnimations();
-            socket.off('sdr-config-error');
-            socket.off('sdr-error');
             socket.off('sdr-fft-data');
-            socket.off('sdr-status');
-            socket.off('sdr-config');
         };
     }, [socket, cancelAnimations, dispatch, workerRef]);
+
+    // Effect to handle cleanup when streaming stops (from parent handler or local stop)
+    useEffect(() => {
+        if (!isStreaming) {
+            cancelAnimations();
+        }
+    }, [isStreaming, cancelAnimations]);
 
     const startStreaming = useCallback(() => {
         if (!isStreaming) {

@@ -44,7 +44,24 @@ import { setSyncState } from '../components/satellites/synchronize-slice.jsx';
 import { setSatelliteData, setUITrackerValues } from '../components/target/target-slice.jsx';
 import { setSynchronizing } from '../components/satellites/synchronize-slice.jsx';
 import { initializeAppData } from '../services/data-sync.js';
-import { setIsRecording, setRecordingDuration, setRecordingStartTime } from '../components/waterfall/waterfall-slice.jsx';
+import {
+    setIsRecording,
+    setRecordingDuration,
+    setRecordingStartTime,
+    setCenterFrequency,
+    setSampleRate,
+    setGain,
+    setFFTSize,
+    setFFTWindow,
+    setBiasT,
+    setTunerAgc,
+    setRtlAgc,
+    setFFTAveraging,
+    setIsStreaming,
+    setErrorMessage,
+    setErrorDialogOpen,
+    setStartStreamingLoading,
+} from '../components/waterfall/waterfall-slice.jsx';
 import { updateAllVFOStates, setVFOProperty } from '../components/waterfall/vfo-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
 import { setConnected, setConnecting, setReConnectAttempt } from '../components/dashboard/dashboard-slice.jsx';
@@ -245,6 +262,47 @@ export const useSocketEventHandlers = (socket) => {
         // VFO states are now managed entirely in the UI
         // Backend no longer sends vfo-states or vfo-frequency-update events
 
+        // SDR configuration error events
+        socket.on('sdr-config-error', (error) => {
+            store.dispatch(setErrorMessage(error.message));
+            store.dispatch(setErrorDialogOpen(true));
+            store.dispatch(setStartStreamingLoading(false));
+            toast.error(`Failed to configure SDR: ${error.message}`);
+        });
+
+        // SDR error events
+        socket.on('sdr-error', (error) => {
+            store.dispatch(setErrorMessage(error.message));
+            store.dispatch(setErrorDialogOpen(true));
+            store.dispatch(setStartStreamingLoading(false));
+            // Stop streaming on error - waterfall component will handle animation cleanup
+            store.dispatch(setIsStreaming(false));
+        });
+
+        // SDR configuration updates
+        socket.on('sdr-config', (data) => {
+            store.dispatch(setCenterFrequency(data['center_freq']));
+            store.dispatch(setSampleRate(data['sample_rate']));
+            store.dispatch(setGain(data['gain']));
+            store.dispatch(setFFTSize(data['fft_size']));
+            store.dispatch(setFFTWindow(data['fft_window']));
+            store.dispatch(setBiasT(data['bias_t']));
+            store.dispatch(setTunerAgc(data['tuner_agc']));
+            store.dispatch(setRtlAgc(data['rtl_agc']));
+            store.dispatch(setFFTAveraging(data['fft_averaging']));
+        });
+
+        // SDR streaming status
+        socket.on('sdr-status', (data) => {
+            if (data['streaming'] === true) {
+                store.dispatch(setIsStreaming(true));
+                store.dispatch(setStartStreamingLoading(false));
+            } else if (data['streaming'] === false) {
+                store.dispatch(setIsStreaming(false));
+                store.dispatch(setStartStreamingLoading(false));
+            }
+        });
+
         // Satellite tracking events
         socket.on("satellite-tracking", (message) => {
             store.dispatch(setSatelliteData(message));
@@ -400,6 +458,10 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("recording_state");
             socket.off("vfo-states");
             socket.off("vfo-frequency-update");
+            socket.off("sdr-config-error");
+            socket.off("sdr-error");
+            socket.off("sdr-config");
+            socket.off("sdr-status");
         };
     }, [socket, dispatch, t]);
 };
