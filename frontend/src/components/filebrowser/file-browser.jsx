@@ -59,16 +59,25 @@ import CameraAltIcon from '@mui/icons-material/CameraAlt';
 import RadioIcon from '@mui/icons-material/Radio';
 import StorageIcon from '@mui/icons-material/Storage';
 import SatelliteAltIcon from '@mui/icons-material/SatelliteAlt';
+import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
+import CheckBoxIcon from '@mui/icons-material/CheckBox';
+import SelectAllIcon from '@mui/icons-material/SelectAll';
+import DeselectIcon from '@mui/icons-material/Deselect';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
     handleFileChange,
     deleteRecording,
     deleteSnapshot,
+    deleteBatch,
     setSortBy,
     toggleSortOrder,
     toggleFilter,
     setPage,
+    toggleItemSelection,
+    selectAllItems,
+    clearSelection,
+    toggleSelectionMode,
 } from './filebrowser-slice.jsx';
 import { toast } from 'react-toastify';
 import { useTranslation } from 'react-i18next';
@@ -172,12 +181,15 @@ export default function FileBrowser() {
         sortOrder,
         filters,
         diskUsage,
+        selectedItems,
+        selectionMode,
     } = useSelector((state) => state.filebrowser);
 
     const [selectedItem, setSelectedItem] = useState(null);
     const [detailsOpen, setDetailsOpen] = useState(false);
     const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
     const [itemToDelete, setItemToDelete] = useState(null);
+    const [batchDeleteDialogOpen, setBatchDeleteDialogOpen] = useState(false);
 
     // Fetch data when filters change (not pagination/sorting - those are handled in UI)
     useEffect(() => {
@@ -200,6 +212,7 @@ export default function FileBrowser() {
             switch (state.action) {
                 case 'delete-recording':
                 case 'delete-snapshot':
+                case 'delete-batch':
                 case 'recording-started':
                 case 'recording-stopped':
                 case 'snapshot-saved':
@@ -209,6 +222,16 @@ export default function FileBrowser() {
                         showRecordings: filters.showRecordings,
                         showSnapshots: filters.showSnapshots,
                     }));
+
+                    // Show toast for batch delete
+                    if (state.action === 'delete-batch') {
+                        if (state.success_count > 0) {
+                            toast.success(state.message);
+                        }
+                        if (state.failed_count > 0) {
+                            toast.warning(t('toast.batch_delete_partial', 'Some items could not be deleted'));
+                        }
+                    }
                     break;
             }
         };
@@ -359,6 +382,55 @@ export default function FileBrowser() {
         }
     };
 
+    const handleToggleSelection = (item) => {
+        const key = item.type === 'recording' ? item.name : item.filename;
+        dispatch(toggleItemSelection(key));
+    };
+
+    const handleSelectAll = () => {
+        const allKeys = displayItems.map(item =>
+            item.type === 'recording' ? item.name : item.filename
+        );
+        dispatch(selectAllItems(allKeys));
+    };
+
+    const handleClearSelection = () => {
+        dispatch(clearSelection());
+    };
+
+    const handleToggleSelectionMode = () => {
+        dispatch(toggleSelectionMode());
+    };
+
+    const handleBatchDelete = () => {
+        if (selectedItems.length > 0) {
+            setBatchDeleteDialogOpen(true);
+        }
+    };
+
+    const confirmBatchDelete = async () => {
+        if (selectedItems.length > 0 && socket) {
+            try {
+                // Build items array from selected keys
+                const itemsToDelete = files
+                    .filter(f => {
+                        const key = f.type === 'recording' ? f.name : f.filename;
+                        return selectedItems.includes(key);
+                    })
+                    .map(f => ({
+                        type: f.type,
+                        name: f.type === 'recording' ? f.name : undefined,
+                        filename: f.type === 'snapshot' ? f.filename : undefined,
+                    }));
+
+                await dispatch(deleteBatch({ socket, items: itemsToDelete })).unwrap();
+                setBatchDeleteDialogOpen(false);
+            } catch (error) {
+                toast.error(t('toast.batch_delete_failed', 'Failed to delete items: {{error}}', { error }));
+            }
+        }
+    };
+
     const isLoading = filesLoading;
     const hasError = filesError;
 
@@ -444,6 +516,15 @@ export default function FileBrowser() {
                         {sortOrder === 'asc' ? t('sort_order.ascending', 'Ascending') : t('sort_order.descending', 'Descending')}
                     </Button>
                     <Button
+                        variant={selectionMode ? "contained" : "outlined"}
+                        size="small"
+                        startIcon={selectionMode ? <CheckBoxIcon /> : <CheckBoxOutlineBlankIcon />}
+                        onClick={handleToggleSelectionMode}
+                        sx={{ flex: { xs: 1, sm: 'initial' } }}
+                    >
+                        {selectionMode ? t('selection.exit', 'Exit Select') : t('selection.select', 'Select')}
+                    </Button>
+                    <Button
                         variant="outlined"
                         size="small"
                         startIcon={<RefreshIcon />}
@@ -454,6 +535,75 @@ export default function FileBrowser() {
                     </Button>
                 </Box>
             </Box>
+
+            {/* Bulk Action Toolbar */}
+            {selectionMode && (
+                <Box sx={{
+                    mb: 2,
+                    p: 2,
+                    backgroundColor: 'primary.main',
+                    color: 'primary.contrastText',
+                    borderRadius: 1,
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'space-between',
+                    flexWrap: 'wrap',
+                    gap: 2
+                }}>
+                    <Typography variant="body1" sx={{ fontWeight: 600 }}>
+                        {selectedItems.length === 0
+                            ? t('selection.no_items', 'No items selected')
+                            : t('selection.count', '{{count}} item(s) selected', { count: selectedItems.length })
+                        }
+                    </Typography>
+                    <Box sx={{ display: 'flex', gap: 1, flexWrap: 'wrap' }}>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<SelectAllIcon />}
+                            onClick={handleSelectAll}
+                            disabled={selectedItems.length === displayItems.length}
+                            sx={{
+                                color: 'primary.contrastText',
+                                borderColor: 'primary.contrastText',
+                                '&:hover': {
+                                    borderColor: 'primary.contrastText',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
+                        >
+                            {t('selection.select_all', 'Select All')}
+                        </Button>
+                        <Button
+                            variant="outlined"
+                            size="small"
+                            startIcon={<DeselectIcon />}
+                            onClick={handleClearSelection}
+                            disabled={selectedItems.length === 0}
+                            sx={{
+                                color: 'primary.contrastText',
+                                borderColor: 'primary.contrastText',
+                                '&:hover': {
+                                    borderColor: 'primary.contrastText',
+                                    backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                }
+                            }}
+                        >
+                            {t('selection.clear', 'Clear')}
+                        </Button>
+                        <Button
+                            variant="contained"
+                            size="small"
+                            color="error"
+                            startIcon={<DeleteIcon />}
+                            onClick={handleBatchDelete}
+                            disabled={selectedItems.length === 0}
+                        >
+                            {t('selection.delete', 'Delete Selected')}
+                        </Button>
+                    </Box>
+                </Box>
+            )}
 
             {/* Storage Information */}
             {diskUsage && diskUsage.total > 0 && (
@@ -516,17 +666,21 @@ export default function FileBrowser() {
                     {displayItems.map((item) => {
                         const isRecording = item.type === 'recording';
                         const key = isRecording ? item.name : item.filename;
+                        const isSelected = selectedItems.includes(key);
 
                         return (
                             <Grid item xs={12} sm={6} md={4} lg={3} key={key}>
                                 <Card
                                     sx={{
                                         cursor: 'pointer',
+                                        position: 'relative',
+                                        border: selectionMode && isSelected ? 2 : 0,
+                                        borderColor: 'primary.main',
                                         '&:hover': {
                                             boxShadow: 4,
                                         },
                                     }}
-                                    onClick={() => handleShowDetails(item)}
+                                    onClick={() => selectionMode ? handleToggleSelection(item) : handleShowDetails(item)}
                                 >
                                     {item.image ? (
                                         <Box sx={{ position: 'relative' }}>
@@ -539,37 +693,63 @@ export default function FileBrowser() {
                                                     objectFit: 'cover',
                                                 }}
                                             />
-                                            {/* Type icon overlay (top-left) */}
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 8,
-                                                    left: 8,
-                                                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                                                    borderRadius: '50%',
-                                                    width: 32,
-                                                    height: 32,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                }}
-                                            >
-                                                {isRecording ? (
-                                                    <FiberManualRecordIcon
-                                                        sx={{
-                                                            color: item.recording_in_progress ? 'error.main' : 'error.main',
-                                                            fontSize: 20,
-                                                            animation: item.recording_in_progress ? 'pulse 2s infinite' : 'none',
-                                                            '@keyframes pulse': {
-                                                                '0%, 100%': { opacity: 1 },
-                                                                '50%': { opacity: 0.4 },
-                                                            },
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                                                )}
-                                            </Box>
+                                            {/* Selection checkbox overlay (top-left when in selection mode) */}
+                                            {selectionMode && (
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 8,
+                                                        left: 8,
+                                                        backgroundColor: isSelected ? 'primary.main' : 'rgba(255, 255, 255, 0.9)',
+                                                        borderRadius: 1,
+                                                        width: 32,
+                                                        height: 32,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        zIndex: 10,
+                                                    }}
+                                                >
+                                                    {isSelected ? (
+                                                        <CheckBoxIcon sx={{ color: 'primary.contrastText', fontSize: 24 }} />
+                                                    ) : (
+                                                        <CheckBoxOutlineBlankIcon sx={{ color: 'text.secondary', fontSize: 24 }} />
+                                                    )}
+                                                </Box>
+                                            )}
+                                            {/* Type icon overlay (top-left) - hidden in selection mode */}
+                                            {!selectionMode && (
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 8,
+                                                        left: 8,
+                                                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                                        borderRadius: '50%',
+                                                        width: 32,
+                                                        height: 32,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                >
+                                                    {isRecording ? (
+                                                        <FiberManualRecordIcon
+                                                            sx={{
+                                                                color: item.recording_in_progress ? 'error.main' : 'error.main',
+                                                                fontSize: 20,
+                                                                animation: item.recording_in_progress ? 'pulse 2s infinite' : 'none',
+                                                                '@keyframes pulse': {
+                                                                    '0%, 100%': { opacity: 1 },
+                                                                    '50%': { opacity: 0.4 },
+                                                                },
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                                    )}
+                                                </Box>
+                                            )}
                                             {/* Recording in progress badge (top-right) */}
                                             {isRecording && item.recording_in_progress && (
                                                 <Box
@@ -664,6 +844,30 @@ export default function FileBrowser() {
                                                 position: 'relative',
                                             }}
                                         >
+                                            {/* Selection checkbox overlay (top-left when in selection mode) */}
+                                            {selectionMode && (
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 8,
+                                                        left: 8,
+                                                        backgroundColor: isSelected ? 'primary.main' : 'rgba(255, 255, 255, 0.9)',
+                                                        borderRadius: 1,
+                                                        width: 32,
+                                                        height: 32,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                        zIndex: 10,
+                                                    }}
+                                                >
+                                                    {isSelected ? (
+                                                        <CheckBoxIcon sx={{ color: 'primary.contrastText', fontSize: 24 }} />
+                                                    ) : (
+                                                        <CheckBoxOutlineBlankIcon sx={{ color: 'text.secondary', fontSize: 24 }} />
+                                                    )}
+                                                </Box>
+                                            )}
                                             {isRecording && item.recording_in_progress ? (
                                                 <>
                                                     <RadioIcon
@@ -709,37 +913,39 @@ export default function FileBrowser() {
                                                     </Typography>
                                                 </>
                                             )}
-                                            {/* Type icon overlay (top-left) */}
-                                            <Box
-                                                sx={{
-                                                    position: 'absolute',
-                                                    top: 8,
-                                                    left: 8,
-                                                    backgroundColor: 'rgba(0, 0, 0, 0.6)',
-                                                    borderRadius: '50%',
-                                                    width: 32,
-                                                    height: 32,
-                                                    display: 'flex',
-                                                    alignItems: 'center',
-                                                    justifyContent: 'center',
-                                                }}
-                                            >
-                                                {isRecording ? (
-                                                    <FiberManualRecordIcon
-                                                        sx={{
-                                                            color: item.recording_in_progress ? 'error.main' : 'error.main',
-                                                            fontSize: 20,
-                                                            animation: item.recording_in_progress ? 'pulse 2s infinite' : 'none',
-                                                            '@keyframes pulse': {
-                                                                '0%, 100%': { opacity: 1 },
-                                                                '50%': { opacity: 0.4 },
-                                                            },
-                                                        }}
-                                                    />
-                                                ) : (
-                                                    <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
-                                                )}
-                                            </Box>
+                                            {/* Type icon overlay (top-left) - hidden in selection mode */}
+                                            {!selectionMode && (
+                                                <Box
+                                                    sx={{
+                                                        position: 'absolute',
+                                                        top: 8,
+                                                        left: 8,
+                                                        backgroundColor: 'rgba(0, 0, 0, 0.6)',
+                                                        borderRadius: '50%',
+                                                        width: 32,
+                                                        height: 32,
+                                                        display: 'flex',
+                                                        alignItems: 'center',
+                                                        justifyContent: 'center',
+                                                    }}
+                                                >
+                                                    {isRecording ? (
+                                                        <FiberManualRecordIcon
+                                                            sx={{
+                                                                color: item.recording_in_progress ? 'error.main' : 'error.main',
+                                                                fontSize: 20,
+                                                                animation: item.recording_in_progress ? 'pulse 2s infinite' : 'none',
+                                                                '@keyframes pulse': {
+                                                                    '0%, 100%': { opacity: 1 },
+                                                                    '50%': { opacity: 0.4 },
+                                                                },
+                                                            }}
+                                                        />
+                                                    ) : (
+                                                        <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
+                                                    )}
+                                                </Box>
+                                            )}
                                             {/* Recording badge (top-right) */}
                                             {isRecording && item.recording_in_progress && (
                                                 <Box
@@ -1027,6 +1233,31 @@ export default function FileBrowser() {
                 <DialogActions>
                     <Button onClick={() => setDeleteDialogOpen(false)}>{t('delete_dialog.cancel', 'Cancel')}</Button>
                     <Button onClick={confirmDelete} color="error" variant="contained">
+                        {t('delete_dialog.delete', 'Delete')}
+                    </Button>
+                </DialogActions>
+            </Dialog>
+
+            {/* Batch Delete Confirmation Dialog */}
+            <Dialog
+                open={batchDeleteDialogOpen}
+                onClose={() => setBatchDeleteDialogOpen(false)}
+            >
+                <DialogTitle>{t('batch_delete_dialog.title', 'Delete Multiple Items')}</DialogTitle>
+                <DialogContent>
+                    <Alert severity="warning" sx={{ mb: 2 }}>
+                        {t('delete_dialog.warning', 'This action cannot be undone!')}
+                    </Alert>
+                    <Typography>
+                        {t('batch_delete_dialog.confirm', 'Are you sure you want to delete {{count}} item(s)?', { count: selectedItems.length })}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mt: 1 }}>
+                        {t('batch_delete_dialog.message', 'This will permanently delete all selected recordings and snapshots.')}
+                    </Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setBatchDeleteDialogOpen(false)}>{t('delete_dialog.cancel', 'Cancel')}</Button>
+                    <Button onClick={confirmBatchDelete} color="error" variant="contained">
                         {t('delete_dialog.delete', 'Delete')}
                     </Button>
                 </DialogActions>

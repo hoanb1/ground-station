@@ -72,6 +72,22 @@ export const deleteSnapshot = createAsyncThunk(
     }
 );
 
+// Async thunk to delete multiple items (batch delete)
+export const deleteBatch = createAsyncThunk(
+    'filebrowser/deleteBatch',
+    async ({ socket, items }, { rejectWithValue }) => {
+        try {
+            // Emit request without callback - response will come via 'file_browser_state' event
+            socket.emit('file_browser', 'delete-batch', { items });
+
+            // Return the items for optimistic updates if needed
+            return { items, pending: true };
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to delete items');
+        }
+    }
+);
+
 const initialState = {
     // All files (recordings and snapshots)
     files: [],
@@ -91,6 +107,9 @@ const initialState = {
         used: 0,
         available: 0,
     },
+    // Multi-select state
+    selectedItems: [], // Array of item keys (recording names or snapshot filenames)
+    selectionMode: false, // Toggle for selection mode
 };
 
 const fileBrowserSlice = createSlice({
@@ -122,6 +141,29 @@ const fileBrowserSlice = createSlice({
         handleFileChange: (state, action) => {
             // This is called when backend emits file change events
             // The actual refetch is handled in component useEffect
+        },
+        // Multi-select actions
+        toggleItemSelection: (state, action) => {
+            const key = action.payload;
+            const index = state.selectedItems.indexOf(key);
+            if (index >= 0) {
+                state.selectedItems.splice(index, 1);
+            } else {
+                state.selectedItems.push(key);
+            }
+        },
+        selectAllItems: (state, action) => {
+            // Payload contains all current displayable item keys
+            state.selectedItems = action.payload;
+        },
+        clearSelection: (state) => {
+            state.selectedItems = [];
+        },
+        toggleSelectionMode: (state) => {
+            state.selectionMode = !state.selectionMode;
+            if (!state.selectionMode) {
+                state.selectedItems = [];
+            }
         },
     },
     extraReducers: (builder) => {
@@ -163,6 +205,25 @@ const fileBrowserSlice = createSlice({
             // Update total count
             state.total = Math.max(0, state.total - 1);
         });
+
+        // Delete batch - optimistic update
+        builder.addCase(deleteBatch.fulfilled, (state, action) => {
+            const itemsToDelete = action.payload.items;
+            // Remove all items in the batch
+            state.files = state.files.filter(f => {
+                const key = f.type === 'recording' ? f.name : f.filename;
+                return !itemsToDelete.find(item =>
+                    item.type === f.type && (
+                        (item.type === 'recording' && item.name === key) ||
+                        (item.type === 'snapshot' && item.filename === key)
+                    )
+                );
+            });
+            // Update total count
+            state.total = Math.max(0, state.total - itemsToDelete.length);
+            // Clear selection after batch delete
+            state.selectedItems = [];
+        });
     },
 });
 
@@ -173,6 +234,10 @@ export const {
     setFilter,
     toggleFilter,
     handleFileChange,
+    toggleItemSelection,
+    selectAllItems,
+    clearSelection,
+    toggleSelectionMode,
 } = fileBrowserSlice.actions;
 
 export default fileBrowserSlice.reducer;

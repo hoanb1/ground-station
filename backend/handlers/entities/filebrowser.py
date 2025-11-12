@@ -24,7 +24,7 @@ import json
 import shutil
 from datetime import datetime, timezone
 from pathlib import Path
-from typing import Any, Dict, Tuple, Union
+from typing import Any, Dict, List, Tuple, Union
 
 
 def get_disk_usage(path: Path) -> Dict[str, Union[int, str]]:
@@ -138,6 +138,80 @@ async def emit_file_browser_error(sio, error_message, action, logger):
         logger.error(f"Emitted file_browser_error for action '{action}': {error_message}")
     except Exception as e:
         logger.error(f"Error emitting file_browser_error: {str(e)}")
+
+
+def delete_recording_files(recordings_dir: Path, recording_name: str, logger) -> List[str]:
+    """
+    Delete all files associated with a recording.
+
+    Args:
+        recordings_dir: Path to recordings directory
+        recording_name: Name of the recording (without extension)
+        logger: Logger instance
+
+    Returns:
+        List of deleted file names
+    """
+    data_file = recordings_dir / f"{recording_name}.sigmf-data"
+    meta_file = recordings_dir / f"{recording_name}.sigmf-meta"
+    snapshot_file = recordings_dir / f"{recording_name}.png"
+
+    deleted_files = []
+
+    # Delete data file
+    if data_file.exists():
+        data_file.unlink()
+        deleted_files.append(data_file.name)
+
+    # Delete metadata file
+    if meta_file.exists():
+        meta_file.unlink()
+        deleted_files.append(meta_file.name)
+
+    # Delete snapshot file if it exists
+    if snapshot_file.exists():
+        snapshot_file.unlink()
+        deleted_files.append(snapshot_file.name)
+
+    if deleted_files:
+        logger.info(f"Deleted recording '{recording_name}': {', '.join(deleted_files)}")
+
+    return deleted_files
+
+
+def delete_snapshot_file(snapshots_dir: Path, snapshot_filename: str, logger) -> bool:
+    """
+    Delete a snapshot file.
+
+    Args:
+        snapshots_dir: Path to snapshots directory
+        snapshot_filename: Name of the snapshot file
+        logger: Logger instance
+
+    Returns:
+        True if file was deleted, False if file did not exist
+    """
+    snapshot_file = snapshots_dir / snapshot_filename
+
+    if not snapshot_file.exists():
+        return False
+
+    snapshot_file.unlink()
+    logger.info(f"Deleted snapshot: {snapshot_filename}")
+    return True
+
+
+def validate_filename(filename: str) -> bool:
+    """
+    Validate that a filename is safe (no directory traversal attempts).
+
+    Args:
+        filename: Filename to validate
+
+    Returns:
+        True if filename is safe, False otherwise
+    """
+    return ".." not in filename and "/" not in filename and "\\" not in filename
 
 
 async def filebrowser_request_routing(sio, cmd, data, logger, sid):
@@ -390,40 +464,25 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             recording_name = data.get("name")
 
             if not recording_name:
-                return {"success": False, "error": "Recording name not provided"}
+                await emit_file_browser_error(
+                    sio, "Recording name not provided", "delete-recording", logger
+                )
+                return
 
             # Validate recording name (security check)
-            if ".." in recording_name or "/" in recording_name or "\\" in recording_name:
-                return {"success": False, "error": "Invalid recording name"}
+            if not validate_filename(recording_name):
+                await emit_file_browser_error(
+                    sio, "Invalid recording name", "delete-recording", logger
+                )
+                return
 
-            data_file = recordings_dir / f"{recording_name}.sigmf-data"
-            meta_file = recordings_dir / f"{recording_name}.sigmf-meta"
-            snapshot_file = recordings_dir / f"{recording_name}.png"
-
-            deleted_files = []
-
-            # Delete data file
-            if data_file.exists():
-                data_file.unlink()
-                deleted_files.append(data_file.name)
-
-            # Delete metadata file
-            if meta_file.exists():
-                meta_file.unlink()
-                deleted_files.append(meta_file.name)
-
-            # Delete snapshot file if it exists
-            if snapshot_file.exists():
-                snapshot_file.unlink()
-                deleted_files.append(snapshot_file.name)
+            deleted_files = delete_recording_files(recordings_dir, recording_name, logger)
 
             if not deleted_files:
                 await emit_file_browser_error(
                     sio, "Recording not found", "delete-recording", logger
                 )
                 return
-
-            logger.info(f"Deleted recording: {recording_name}")
 
             # Emit state update with delete action
             await emit_file_browser_state(
@@ -479,22 +538,29 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
             snapshot_filename = data.get("filename")
 
             if not snapshot_filename:
-                return {"success": False, "error": "Snapshot filename not provided"}
+                await emit_file_browser_error(
+                    sio, "Snapshot filename not provided", "delete-snapshot", logger
+                )
+                return
 
             # Validate filename (security check)
-            if ".." in snapshot_filename or "/" in snapshot_filename or "\\" in snapshot_filename:
-                return {"success": False, "error": "Invalid snapshot filename"}
+            if not validate_filename(snapshot_filename):
+                await emit_file_browser_error(
+                    sio, "Invalid snapshot filename", "delete-snapshot", logger
+                )
+                return
 
             if not snapshot_filename.endswith(".png"):
-                return {"success": False, "error": "Only PNG files can be deleted"}
+                await emit_file_browser_error(
+                    sio, "Only PNG files can be deleted", "delete-snapshot", logger
+                )
+                return
 
-            snapshot_file = snapshots_dir / snapshot_filename
+            deleted = delete_snapshot_file(snapshots_dir, snapshot_filename, logger)
 
-            if not snapshot_file.exists():
-                return {"success": False, "error": "Snapshot not found"}
-
-            snapshot_file.unlink()
-            logger.info(f"Deleted snapshot: {snapshot_filename}")
+            if not deleted:
+                await emit_file_browser_error(sio, "Snapshot not found", "delete-snapshot", logger)
+                return
 
             # Emit state update with delete action
             await emit_file_browser_state(
@@ -503,6 +569,126 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "action": "delete-snapshot",
                     "filename": snapshot_filename,
                     "message": f"Deleted snapshot: {snapshot_filename}",
+                },
+                logger,
+            )
+
+        elif cmd == "delete-batch":
+            logger.info(f"Batch delete: {data}")
+            items = data.get("items", [])
+
+            if not items or not isinstance(items, list):
+                await emit_file_browser_error(
+                    sio, "No items provided for batch delete", "delete-batch", logger
+                )
+                return
+
+            deleted_recordings = []
+            deleted_snapshots = []
+            failed_items = []
+            total_files_deleted = []
+
+            # Process each item
+            for item in items:
+                item_type = item.get("type")
+
+                if item_type == "recording":
+                    recording_name = item.get("name")
+                    if not recording_name:
+                        failed_items.append({"type": "recording", "error": "Missing name"})
+                        continue
+
+                    # Validate recording name
+                    if not validate_filename(recording_name):
+                        failed_items.append(
+                            {
+                                "type": "recording",
+                                "name": recording_name,
+                                "error": "Invalid filename",
+                            }
+                        )
+                        continue
+
+                    # Delete recording
+                    deleted_files = delete_recording_files(recordings_dir, recording_name, logger)
+                    if deleted_files:
+                        deleted_recordings.append(recording_name)
+                        total_files_deleted.extend(deleted_files)
+                    else:
+                        failed_items.append(
+                            {"type": "recording", "name": recording_name, "error": "Not found"}
+                        )
+
+                elif item_type == "snapshot":
+                    snapshot_filename = item.get("filename")
+                    if not snapshot_filename:
+                        failed_items.append({"type": "snapshot", "error": "Missing filename"})
+                        continue
+
+                    # Validate filename
+                    if not validate_filename(snapshot_filename):
+                        failed_items.append(
+                            {
+                                "type": "snapshot",
+                                "filename": snapshot_filename,
+                                "error": "Invalid filename",
+                            }
+                        )
+                        continue
+
+                    if not snapshot_filename.endswith(".png"):
+                        failed_items.append(
+                            {
+                                "type": "snapshot",
+                                "filename": snapshot_filename,
+                                "error": "Not a PNG file",
+                            }
+                        )
+                        continue
+
+                    # Delete snapshot
+                    deleted = delete_snapshot_file(snapshots_dir, snapshot_filename, logger)
+                    if deleted:
+                        deleted_snapshots.append(snapshot_filename)
+                        total_files_deleted.append(snapshot_filename)
+                    else:
+                        failed_items.append(
+                            {
+                                "type": "snapshot",
+                                "filename": snapshot_filename,
+                                "error": "Not found",
+                            }
+                        )
+                else:
+                    failed_items.append({"type": item_type, "error": "Unknown type"})
+
+            # Build summary message
+            success_count = len(deleted_recordings) + len(deleted_snapshots)
+            message_parts = []
+            if deleted_recordings:
+                message_parts.append(f"{len(deleted_recordings)} recording(s)")
+            if deleted_snapshots:
+                message_parts.append(f"{len(deleted_snapshots)} snapshot(s)")
+
+            message = f"Deleted {', '.join(message_parts)}" if message_parts else "No items deleted"
+
+            if failed_items:
+                message += f" ({len(failed_items)} failed)"
+
+            logger.info(f"Batch delete completed: {message}")
+
+            # Emit state update with batch delete action
+            await emit_file_browser_state(
+                sio,
+                {
+                    "action": "delete-batch",
+                    "deleted_recordings": deleted_recordings,
+                    "deleted_snapshots": deleted_snapshots,
+                    "deleted_files": total_files_deleted,
+                    "failed_items": failed_items,
+                    "success_count": success_count,
+                    "failed_count": len(failed_items),
+                    "message": message,
                 },
                 logger,
             )
