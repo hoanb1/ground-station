@@ -193,7 +193,8 @@ const VfoAccordion = ({
                             </Box>
                             {/* Lock to Transmitter Dropdown */}
                             <Box sx={{ mt: 2 }}>
-                                <FormControl fullWidth size="small" disabled={!vfoActive[vfoIndex]}>
+                                <FormControl fullWidth size="small" disabled={!vfoActive[vfoIndex]}
+                                             variant="filled">
                                     <InputLabel id={`vfo-${vfoIndex}-lock-transmitter-label`}>
                                         {vfoMarkers[vfoIndex]?.lockedTransmitterId ? (
                                             <Box sx={{ display: 'flex', alignItems: 'center', gap: 0.5 }}>
@@ -208,6 +209,7 @@ const VfoAccordion = ({
                                         )}
                                     </InputLabel>
                                     <Select
+                                        variant={'filled'}
                                         labelId={`vfo-${vfoIndex}-lock-transmitter-label`}
                                         value={vfoMarkers[vfoIndex]?.lockedTransmitterId || 'none'}
                                         label={t('vfo.lock_to_transmitter', 'Lock to Transmitter')}

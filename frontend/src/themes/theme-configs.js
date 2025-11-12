@@ -153,68 +153,6 @@ export const themeConfigs = {
         },
     },
 
-    'ocean-blue': {
-        mode: 'dark',
-        primary: { main: '#00bcd4' }, // Cyan
-        secondary: { main: '#448aff' }, // Blue
-        success: { main: '#26c6da' }, // Light cyan
-        warning: { main: '#ffa726' }, // Orange
-        error: { main: '#ef5350' }, // Red
-        info: { main: '#42a5f5' }, // Light blue
-        background: {
-            default: '#0a1929', // Deep ocean blue
-            paper: '#132f4c', // Navy blue
-            elevated: '#1e4976', // Medium blue
-        },
-        border: {
-            main: '#2d5a7b',
-            light: '#3d6a8b',
-            dark: '#1d4a6b',
-        },
-        overlay: {
-            light: 'rgba(0, 188, 212, 0.08)',
-            medium: 'rgba(0, 188, 212, 0.15)',
-            dark: 'rgba(0, 0, 0, 0.6)',
-        },
-        status: {
-            connected: '#26c6da',
-            connecting: '#ffa726',
-            disconnected: '#ef5350',
-            polling: '#ff9800',
-        },
-    },
-
-    'forest-green': {
-        mode: 'dark',
-        primary: { main: '#66bb6a' }, // Green
-        secondary: { main: '#8bc34a' }, // Light green
-        success: { main: '#81c784' },
-        warning: { main: '#ffb74d' },
-        error: { main: '#e57373' },
-        info: { main: '#4fc3f7' },
-        background: {
-            default: '#0d1f0d', // Very dark green
-            paper: '#1a2e1a', // Dark green
-            elevated: '#2d4a2d', // Medium green
-        },
-        border: {
-            main: '#3d5a3d',
-            light: '#4d6a4d',
-            dark: '#2d4a2d',
-        },
-        overlay: {
-            light: 'rgba(102, 187, 106, 0.08)',
-            medium: 'rgba(102, 187, 106, 0.15)',
-            dark: 'rgba(0, 0, 0, 0.6)',
-        },
-        status: {
-            connected: '#81c784',
-            connecting: '#ffb74d',
-            disconnected: '#e57373',
-            polling: '#ff9800',
-        },
-    },
-
     night: {
         mode: 'dark',
         primary: { main: '#7f77c3' }, // Soft purple
@@ -311,6 +249,48 @@ export const themeConfigs = {
             low: '#6fb300',
             medium: '#d4a017',
             high: '#ff4500',
+        },
+    },
+
+    'terminal': {
+        mode: 'dark',
+        primary: { main: '#00ff41' }, // Matrix green
+        secondary: { main: '#ff00aa' }, // Surveillance pink
+        success: { main: '#00ff41' }, // Access granted
+        warning: { main: '#ffaa00' }, // Warning beacon
+        error: { main: '#ff0040' }, // System breach
+        info: { main: '#00aaff' }, // Data stream
+        background: {
+            default: '#000000', // Terminal void
+            paper: '#0d0d0d', // Command line
+            elevated: '#1a1a1a', // Elevated shell
+        },
+        border: {
+            main: '#00ff41', // Scan line green
+            light: '#33ff66',
+            dark: '#008822',
+        },
+        overlay: {
+            light: 'rgba(0, 255, 65, 0.06)', // Terminal glow
+            medium: 'rgba(0, 255, 65, 0.12)',
+            dark: 'rgba(0, 0, 0, 0.85)', // Deep space
+        },
+        status: {
+            connected: '#00ff41', // Link established
+            connecting: '#ffaa00', // Handshake
+            disconnected: '#ff0040', // Connection lost
+            polling: '#00aaff', // Scanning
+        },
+        // Cyberpunk/hacker themed custom properties
+        terminal: {
+            cursor: '#00ff41',
+            selection: 'rgba(0, 255, 65, 0.3)',
+            prompt: '#00aaff',
+        },
+        surveillance: {
+            active: '#ff00aa',
+            tracking: '#ffaa00',
+            offline: '#444444',
         },
     },
 };

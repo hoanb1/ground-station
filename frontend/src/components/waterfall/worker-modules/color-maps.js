@@ -59,7 +59,7 @@ export const getColorForPower = (powerDb, mapName, [minDb, maxDb]) => {
         case 'greyscale':
             color = greyscaleColorMap(normalizedValue);
             break;
-        case 'greyscale-inverted':
+        case 'light':
             color = greyscaleInvertedColorMap(normalizedValue);
             break;
         case 'iceberg':
@@ -142,7 +142,7 @@ function greyscaleColorMap(normalizedValue) {
 }
 
 /**
- * Greyscale inverted color map - white to black (negative)
+ * Light color map - white to black (inverted greyscale)
  * @param {number} normalizedValue - Value between 0 and 1
  * @returns {Object} RGB color {r, g, b}
  */

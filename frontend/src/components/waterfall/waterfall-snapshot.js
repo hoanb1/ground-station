@@ -41,6 +41,9 @@ export const useWaterfallSnapshot = ({
     frequencyScaleHeight,
     waterFallCanvasHeight,
     waterFallCanvasWidth,
+    waterFallVisualWidth,
+    waterFallScaleX = 1,
+    waterFallPositionX = 0,
 }) => {
     const theme = useTheme();
 
@@ -121,10 +124,10 @@ export const useWaterfallSnapshot = ({
     }, [bandscopeCanvasRef]);
 
     /**
-     * Creates a composite canvas with all waterfall elements at original size
+     * Creates a composite canvas with all waterfall elements, cropped to visible area
      * @param {string} waterfallDataURL - Data URL of the waterfall canvas
      * @param {Object} overlayCanvases - Object containing overlay canvas elements
-     * @returns {Promise<HTMLCanvasElement>} Composite canvas with all elements
+     * @returns {Promise<HTMLCanvasElement>} Composite canvas with visible elements
      */
     const createCompositeCanvas = useCallback(async (waterfallDataURL, overlayCanvases) => {
         const bandscopeCanvas = bandscopeCanvasRef.current;
@@ -134,9 +137,30 @@ export const useWaterfallSnapshot = ({
 
         const leftMarginWidth = dBAxisScopeCanvas ? dBAxisScopeCanvas.width : 0;
         const totalHeight = bandScopeHeight + frequencyScaleHeight + waterFallCanvasHeight;
-        const totalWidth = leftMarginWidth + waterFallCanvasWidth;
 
-        // Create composite canvas
+        // Calculate visible area based on CSS transform
+        // The CSS transform is: translateX(waterFallPositionX) scaleX(waterFallScaleX)
+
+        // Bandscope and waterfall are rendered at full canvas resolution (16384px)
+        // Overlays (bookmark, bandplan, frequency scale) are rendered at visual width (e.g., 1441px)
+
+        // For bandscope and waterfall (canvas-resolution canvases):
+        const baseStretchRatio = waterFallCanvasWidth / waterFallVisualWidth;
+        const visibleCanvasWidth = waterFallCanvasWidth / waterFallScaleX;
+        const visibleOffsetX = (-waterFallPositionX * baseStretchRatio) / waterFallScaleX;
+        const canvasSourceX = Math.max(0, Math.min(waterFallCanvasWidth - visibleCanvasWidth, visibleOffsetX));
+        const canvasSourceWidth = Math.min(visibleCanvasWidth, waterFallCanvasWidth - canvasSourceX);
+
+        // For overlays (visual-resolution canvases):
+        const overlayVisibleWidth = waterFallVisualWidth / waterFallScaleX;
+        const overlayOffsetX = -waterFallPositionX / waterFallScaleX;
+        const overlaySourceX = Math.max(0, Math.min(waterFallVisualWidth - overlayVisibleWidth, overlayOffsetX));
+        const overlaySourceWidth = Math.min(overlayVisibleWidth, waterFallVisualWidth - overlaySourceX);
+
+        // Use canvas source width for total width (bandscope/waterfall are the reference)
+        const totalWidth = leftMarginWidth + canvasSourceWidth;
+
+        // Create composite canvas for visible area
         const compositeCanvas = document.createElement('canvas');
         compositeCanvas.width = totalWidth;
         compositeCanvas.height = totalHeight;
@@ -148,22 +172,34 @@ export const useWaterfallSnapshot = ({
 
         let yOffset = 0;
 
-        // Draw dB axis for bandscope on the left
+        // Draw dB axis for bandscope on the left (full height, not cropped)
         if (dBAxisScopeCanvas) {
             ctx.drawImage(dBAxisScopeCanvas, 0, yOffset, leftMarginWidth, bandScopeHeight);
         }
 
-        // Draw bandscope
-        ctx.drawImage(bandscopeCanvas, leftMarginWidth, yOffset, waterFallCanvasWidth, bandScopeHeight);
+        // Draw bandscope (cropped to visible area) - uses canvas resolution
+        ctx.drawImage(
+            bandscopeCanvas,
+            canvasSourceX, 0, canvasSourceWidth, bandScopeHeight, // source crop
+            leftMarginWidth, yOffset, canvasSourceWidth, bandScopeHeight // destination
+        );
 
-        // Draw bookmark overlay on top of bandscope if available
+        // Draw bookmark overlay on top of bandscope if available (cropped) - uses visual resolution
         if (bookmarkCanvas && bookmarkCanvas.width > 0 && bookmarkCanvas.height > 0) {
-            ctx.drawImage(bookmarkCanvas, leftMarginWidth, yOffset, waterFallCanvasWidth, bandScopeHeight);
+            ctx.drawImage(
+                bookmarkCanvas,
+                overlaySourceX, 0, overlaySourceWidth, bandScopeHeight,
+                leftMarginWidth, yOffset, canvasSourceWidth, bandScopeHeight
+            );
         }
 
-        // Draw bandplan overlay on top of bandscope if available
+        // Draw bandplan overlay on top of bandscope if available (cropped) - uses visual resolution
         if (bandplanCanvas && bandplanCanvas.width > 0 && bandplanCanvas.height > 0) {
-            ctx.drawImage(bandplanCanvas, leftMarginWidth, yOffset, waterFallCanvasWidth, bandScopeHeight);
+            ctx.drawImage(
+                bandplanCanvas,
+                overlaySourceX, 0, overlaySourceWidth, bandScopeHeight,
+                leftMarginWidth, yOffset, canvasSourceWidth, bandScopeHeight
+            );
         }
 
         yOffset += bandScopeHeight;
@@ -173,13 +209,17 @@ export const useWaterfallSnapshot = ({
             ctx.drawImage(frequencyScaleLeftCanvas, 0, yOffset, leftMarginWidth, frequencyScaleHeight);
         }
 
-        // Draw frequency scale if available
+        // Draw frequency scale if available (cropped) - uses visual resolution
         if (frequencyScaleCanvas && frequencyScaleCanvas.width > 0 && frequencyScaleCanvas.height > 0) {
-            ctx.drawImage(frequencyScaleCanvas, leftMarginWidth, yOffset, waterFallCanvasWidth, frequencyScaleHeight);
+            ctx.drawImage(
+                frequencyScaleCanvas,
+                overlaySourceX, 0, overlaySourceWidth, frequencyScaleHeight,
+                leftMarginWidth, yOffset, canvasSourceWidth, frequencyScaleHeight
+            );
         } else {
             // Fill with background if not available
             ctx.fillStyle = theme.palette.background.paper;
-            ctx.fillRect(leftMarginWidth, yOffset, waterFallCanvasWidth, frequencyScaleHeight);
+            ctx.fillRect(leftMarginWidth, yOffset, canvasSourceWidth, frequencyScaleHeight);
         }
         yOffset += frequencyScaleHeight;
 
@@ -188,14 +228,18 @@ export const useWaterfallSnapshot = ({
             ctx.drawImage(waterfallLeftMarginCanvas, 0, yOffset, leftMarginWidth, waterFallCanvasHeight);
         }
 
-        // Draw waterfall from data URL
+        // Draw waterfall from data URL (cropped) - uses canvas resolution
         const waterfallImg = new Image();
         await new Promise((resolve, reject) => {
             waterfallImg.onload = resolve;
             waterfallImg.onerror = reject;
             waterfallImg.src = waterfallDataURL;
         });
-        ctx.drawImage(waterfallImg, leftMarginWidth, yOffset, waterFallCanvasWidth, waterFallCanvasHeight);
+        ctx.drawImage(
+            waterfallImg,
+            canvasSourceX, 0, canvasSourceWidth, waterFallCanvasHeight,
+            leftMarginWidth, yOffset, canvasSourceWidth, waterFallCanvasHeight
+        );
 
         return compositeCanvas;
     }, [
@@ -206,21 +250,31 @@ export const useWaterfallSnapshot = ({
         frequencyScaleHeight,
         waterFallCanvasHeight,
         waterFallCanvasWidth,
+        waterFallScaleX,
+        waterFallPositionX,
         theme
     ]);
 
     /**
      * Scales the composite canvas to target width while keeping left margin at original size
      * Also crops the image to keep only the top 900px
-     * @param {HTMLCanvasElement} compositeCanvas - The composite canvas to scale
-     * @param {number} targetTotalWidth - Target width for the final image (default: 1620)
+     * @param {HTMLCanvasElement} compositeCanvas - The composite canvas to scale (already cropped to visible area)
+     * @param {number} targetTotalWidth - Target width for the final image (default: null = no scaling)
      * @returns {HTMLCanvasElement} Scaled and cropped final canvas
      */
-    const scaleCompositeCanvas = useCallback((compositeCanvas, targetTotalWidth = 1620) => {
+    const scaleCompositeCanvas = useCallback((compositeCanvas, targetTotalWidth = null) => {
         const dBAxisScopeCanvas = dBAxisScopeCanvasRef.current;
         const leftMarginWidth = dBAxisScopeCanvas ? dBAxisScopeCanvas.width : 0;
         const totalHeight = bandScopeHeight + frequencyScaleHeight + waterFallCanvasHeight;
         const croppedHeight = Math.min(900, totalHeight); // Crop to top 900px
+
+        // The composite canvas already contains only the visible area
+        const visibleMainWidth = compositeCanvas.width - leftMarginWidth;
+
+        // If no target width specified, use the composite width (no scaling)
+        if (!targetTotalWidth) {
+            targetTotalWidth = compositeCanvas.width;
+        }
 
         // Step 1: Extract the main area (without left margin) to scale it
         const targetMainWidth = targetTotalWidth - leftMarginWidth; // Reserve space for left margin
@@ -232,7 +286,7 @@ export const useWaterfallSnapshot = ({
         // Draw only the main waterfall area (without left margin) scaled and cropped
         scaledMainCtx.drawImage(
             compositeCanvas,
-            leftMarginWidth, 0, waterFallCanvasWidth, croppedHeight, // source (cropped)
+            leftMarginWidth, 0, visibleMainWidth, croppedHeight, // source (cropped)
             0, 0, targetMainWidth, croppedHeight // destination (scaled)
         );
 
@@ -262,7 +316,6 @@ export const useWaterfallSnapshot = ({
         bandScopeHeight,
         frequencyScaleHeight,
         waterFallCanvasHeight,
-        waterFallCanvasWidth,
         theme
     ]);
 

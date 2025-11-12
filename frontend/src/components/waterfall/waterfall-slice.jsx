@@ -110,7 +110,7 @@ const initialState = {
         'heat',
         'cosmic',
         'greyscale',
-        'greyscale-inverted',
+        'light',
         'stalker',
     ],
     colorMap: 'cosmic',

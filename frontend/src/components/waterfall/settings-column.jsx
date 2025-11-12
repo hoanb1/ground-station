@@ -350,7 +350,17 @@ const WaterfallSettings = forwardRef(function WaterfallSettings(props, ref) {
     function handleTransmitterChange(event) {
         // If a transmitter was selected, then set the SDR center frequency
         dispatch(setSelectedTransmitterId(event.target.value));
+
+        // Handle "none" selection - don't update frequency
+        if (event.target.value === "none") {
+            return;
+        }
+
         const selectedTransmitterMetadata = availableTransmitters.find(t => t.id === event.target.value);
+        if (!selectedTransmitterMetadata) {
+            return;
+        }
+
         const targetFrequency = selectedTransmitterMetadata['downlink_low'] || 0;
 
         // Calculate offset to avoid DC spike at center

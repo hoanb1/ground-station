@@ -194,6 +194,8 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         fftDataOverflow,
         fftDataOverflowLimit,
         showRotatorDottedLines,
+        waterFallScaleX,
+        waterFallPositionX,
     } = useSelector((state) => state.waterfall);
 
     const {
@@ -215,6 +217,9 @@ const MainWaterfallDisplay = React.memo(function MainWaterfallDisplay() {
         frequencyScaleHeight,
         waterFallCanvasHeight,
         waterFallCanvasWidth,
+        waterFallVisualWidth,
+        waterFallScaleX,
+        waterFallPositionX,
     });
 
     // Expose captureSnapshot globally for recording
