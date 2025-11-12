@@ -216,7 +216,7 @@ export default function FileBrowser() {
                 case 'recording-started':
                 case 'recording-stopped':
                 case 'snapshot-saved':
-                    // Refetch files to show updated list
+                    // Refetch files to show updated list using current filter state from Redux
                     dispatch(fetchFiles({
                         socket,
                         showRecordings: filters.showRecordings,
@@ -241,7 +241,7 @@ export default function FileBrowser() {
         return () => {
             socket.off('file_browser_state', handleFileBrowserState);
         };
-    }, [socket, dispatch, page, pageSize, sortBy, sortOrder, filters.showRecordings, filters.showSnapshots]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, t]);
 
     // Legacy: Listen for file change events from backend
     useEffect(() => {
@@ -251,7 +251,7 @@ export default function FileBrowser() {
             console.log('File change event received:', data);
             dispatch(handleFileChange(data));
 
-            // Refresh the unified list
+            // Refresh the unified list using current filter state from Redux
             dispatch(fetchFiles({
                 socket,
                 showRecordings: filters.showRecordings,
@@ -264,7 +264,7 @@ export default function FileBrowser() {
         return () => {
             socket.off('file_change', handleFileChangeEvent);
         };
-    }, [socket, dispatch]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots]);
 
     // Sort, paginate, and format files in the frontend
     const displayItems = useMemo(() => {

@@ -135,6 +135,10 @@ export const useWaterfallSnapshot = ({
         const waterfallLeftMarginCanvas = waterFallLeftMarginCanvasRef.current;
         const { bookmarkCanvas, bandplanCanvas, frequencyScaleCanvas, frequencyScaleLeftCanvas } = overlayCanvases;
 
+        // Get the actual visual container width from the DOM
+        const container = bandscopeCanvas.parentElement;
+        const actualVisualWidth = container ? container.clientWidth : waterFallVisualWidth;
+
         const leftMarginWidth = dBAxisScopeCanvas ? dBAxisScopeCanvas.width : 0;
         const totalHeight = bandScopeHeight + frequencyScaleHeight + waterFallCanvasHeight;
 
@@ -142,20 +146,37 @@ export const useWaterfallSnapshot = ({
         // The CSS transform is: translateX(waterFallPositionX) scaleX(waterFallScaleX)
 
         // Bandscope and waterfall are rendered at full canvas resolution (16384px)
-        // Overlays (bookmark, bandplan, frequency scale) are rendered at visual width (e.g., 1441px)
+        // Overlays (bookmark, bandplan, frequency scale) are rendered at visual width (actual width from canvas)
+        // BUT overlays represent the SAME frequency range, just at lower DPI
 
-        // For bandscope and waterfall (canvas-resolution canvases):
-        const baseStretchRatio = waterFallCanvasWidth / waterFallVisualWidth;
+        // IMPORTANT: Overlays (bookmark, bandplan, frequency scale) dynamically resize their canvas
+        // resolution to match the visible area with high DPI for crisp fonts when zoomed.
+        // This means overlays show ONLY the currently visible portion, already cropped!
+
+        // Get actual overlay canvas width
+        const actualOverlayWidth = bookmarkCanvas?.width || bandplanCanvas?.width || frequencyScaleCanvas?.width || waterFallVisualWidth;
+
+        // Calculate visible area in bandscope/waterfall canvas coordinates
+        // The bandscope (16384px) shows the full frequency range regardless of zoom
+        // We need to crop it to match what's currently visible
+
+        // Convert visual container width to canvas coordinates
+        const visualToCanvasRatio = waterFallCanvasWidth / actualVisualWidth;
+
+        // Calculate visible width in canvas pixels
         const visibleCanvasWidth = waterFallCanvasWidth / waterFallScaleX;
-        const visibleOffsetX = (-waterFallPositionX * baseStretchRatio) / waterFallScaleX;
-        const canvasSourceX = Math.max(0, Math.min(waterFallCanvasWidth - visibleCanvasWidth, visibleOffsetX));
+
+        // Convert the pan offset from visual pixels to canvas pixels
+        const canvasSourceX = Math.max(0, (-waterFallPositionX * visualToCanvasRatio) / waterFallScaleX);
         const canvasSourceWidth = Math.min(visibleCanvasWidth, waterFallCanvasWidth - canvasSourceX);
 
-        // For overlays (visual-resolution canvases):
-        const overlayVisibleWidth = waterFallVisualWidth / waterFallScaleX;
-        const overlayOffsetX = -waterFallPositionX / waterFallScaleX;
-        const overlaySourceX = Math.max(0, Math.min(waterFallVisualWidth - overlayVisibleWidth, overlayOffsetX));
-        const overlaySourceWidth = Math.min(overlayVisibleWidth, waterFallVisualWidth - overlaySourceX);
+        // For overlays: they scale up their resolution to match the zoom level for crisp fonts
+        // But they still show the full frequency range, so we need to crop them
+        // The overlay canvas is scaled by the zoom factor: overlayWidth = visualWidth * scale
+        // So we need to crop proportionally to the bandscope
+        const overlayToCanvasRatio = actualOverlayWidth / waterFallCanvasWidth;
+        const overlaySourceX = canvasSourceX * overlayToCanvasRatio;
+        const overlaySourceWidth = canvasSourceWidth * overlayToCanvasRatio;
 
         // Use canvas source width for total width (bandscope/waterfall are the reference)
         const totalWidth = leftMarginWidth + canvasSourceWidth;
@@ -177,14 +198,14 @@ export const useWaterfallSnapshot = ({
             ctx.drawImage(dBAxisScopeCanvas, 0, yOffset, leftMarginWidth, bandScopeHeight);
         }
 
-        // Draw bandscope (cropped to visible area) - uses canvas resolution
+        // Draw bandscope (cropped to visible area)
         ctx.drawImage(
             bandscopeCanvas,
             canvasSourceX, 0, canvasSourceWidth, bandScopeHeight, // source crop
             leftMarginWidth, yOffset, canvasSourceWidth, bandScopeHeight // destination
         );
 
-        // Draw bookmark overlay on top of bandscope if available (cropped) - uses visual resolution
+        // Draw bookmark overlay - scale from overlay resolution to match bandscope
         if (bookmarkCanvas && bookmarkCanvas.width > 0 && bookmarkCanvas.height > 0) {
             ctx.drawImage(
                 bookmarkCanvas,
@@ -193,7 +214,7 @@ export const useWaterfallSnapshot = ({
             );
         }
 
-        // Draw bandplan overlay on top of bandscope if available (cropped) - uses visual resolution
+        // Draw bandplan overlay - scale from overlay resolution to match bandscope
         if (bandplanCanvas && bandplanCanvas.width > 0 && bandplanCanvas.height > 0) {
             ctx.drawImage(
                 bandplanCanvas,
@@ -209,7 +230,7 @@ export const useWaterfallSnapshot = ({
             ctx.drawImage(frequencyScaleLeftCanvas, 0, yOffset, leftMarginWidth, frequencyScaleHeight);
         }
 
-        // Draw frequency scale if available (cropped) - uses visual resolution
+        // Draw frequency scale - scale from overlay resolution to match bandscope
         if (frequencyScaleCanvas && frequencyScaleCanvas.width > 0 && frequencyScaleCanvas.height > 0) {
             ctx.drawImage(
                 frequencyScaleCanvas,
@@ -228,16 +249,22 @@ export const useWaterfallSnapshot = ({
             ctx.drawImage(waterfallLeftMarginCanvas, 0, yOffset, leftMarginWidth, waterFallCanvasHeight);
         }
 
-        // Draw waterfall from data URL (cropped) - uses canvas resolution
+        // Draw waterfall from data URL
         const waterfallImg = new Image();
         await new Promise((resolve, reject) => {
             waterfallImg.onload = resolve;
             waterfallImg.onerror = reject;
             waterfallImg.src = waterfallDataURL;
         });
+
+        // Waterfall may be at a different resolution than the bandscope canvas
+        const waterfallScale = waterfallImg.width / waterFallCanvasWidth;
+        const waterfallSourceX = canvasSourceX * waterfallScale;
+        const waterfallSourceWidth = canvasSourceWidth * waterfallScale;
+
         ctx.drawImage(
             waterfallImg,
-            canvasSourceX, 0, canvasSourceWidth, waterFallCanvasHeight,
+            waterfallSourceX, 0, waterfallSourceWidth, waterFallCanvasHeight,
             leftMarginWidth, yOffset, canvasSourceWidth, waterFallCanvasHeight
         );
 
@@ -250,6 +277,7 @@ export const useWaterfallSnapshot = ({
         frequencyScaleHeight,
         waterFallCanvasHeight,
         waterFallCanvasWidth,
+        waterFallVisualWidth,
         waterFallScaleX,
         waterFallPositionX,
         theme

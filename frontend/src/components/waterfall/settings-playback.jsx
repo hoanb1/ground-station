@@ -54,6 +54,7 @@ import { useSocket } from '../common/socket.jsx';
 import { fetchFiles, setPage } from '../filebrowser/filebrowser-slice.jsx';
 import { fetchSDRs } from '../hardware/sdr-slice.jsx';
 import RecordingDialog from '../filebrowser/recording-dialog.jsx';
+import { store } from '../common/store.jsx';
 
 function formatBytes(bytes) {
     if (bytes === 0) return '0 Bytes';
@@ -192,32 +193,27 @@ const PlaybackAccordion = ({
     }, [files, sortBy, sortOrder, page]);
 
     // Fetch recordings and SDRs when component mounts or when expanded
+    // NOTE: We don't fetch files here anymore to avoid corrupting global file browser filters
+    // The file browser will fetch with correct filters, and this component just displays recordings
     useEffect(() => {
         if (socket && expanded) {
             // Refresh SDRs to ensure SigMF Playback SDR is available
             dispatch(fetchSDRs({ socket }));
 
-            dispatch(fetchFiles({
-                socket,
-                showRecordings: true,
-                showSnapshots: false,
-            }));
+            // Don't fetch files - rely on file browser or existing Redux state
+            // Fetching with showSnapshots: false would corrupt the file browser's filter state
         }
     }, [socket, dispatch, expanded]);
 
-    // Listen for file browser updates to refresh the list
+    // Listen for file browser updates - but don't refetch to avoid corrupting global filters
+    // The file browser component will handle refreshing with correct filters
     useEffect(() => {
         if (!socket) return;
 
         const handleFileBrowserState = (state) => {
-            // Refetch when recordings are added/removed
-            if (['recording-started', 'recording-stopped', 'snapshot-saved', 'delete-recording'].includes(state.action)) {
-                dispatch(fetchFiles({
-                    socket,
-                    showRecordings: true,
-                    showSnapshots: false,
-                }));
-            }
+            // Don't refetch here - let the file browser component handle it
+            // Refetching with hardcoded filters corrupts the global file browser state
+            // The file browser component already listens to these events and refreshes appropriately
         };
 
         socket.on('file_browser_state', handleFileBrowserState);
@@ -229,10 +225,12 @@ const PlaybackAccordion = ({
 
     const handleRefresh = () => {
         if (socket) {
+            // Refresh with current global filters to avoid corrupting file browser state
+            const currentFilters = store.getState().filebrowser.filters;
             dispatch(fetchFiles({
                 socket,
-                showRecordings: true,
-                showSnapshots: false,
+                showRecordings: currentFilters.showRecordings,
+                showSnapshots: currentFilters.showSnapshots,
             }));
         }
     };
