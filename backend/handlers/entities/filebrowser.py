@@ -201,6 +201,28 @@ def delete_snapshot_file(snapshots_dir: Path, snapshot_filename: str, logger) ->
     return True
 
 
+def delete_decoded_file(decoded_dir: Path, decoded_filename: str, logger) -> bool:
+    """
+    Delete a decoded file.
+
+    Args:
+        decoded_dir: Path to decoded directory
+        decoded_filename: Name of the decoded file
+        logger: Logger instance
+
+    Returns:
+        True if file was deleted, False if file did not exist
+    """
+    decoded_file = decoded_dir / decoded_filename
+
+    if not decoded_file.exists():
+        return False
+
+    decoded_file.unlink()
+    logger.info(f"Deleted decoded file: {decoded_filename}")
+    return True
+
+
 def validate_filename(filename: str) -> bool:
     """
     Validate that a filename is safe (no directory traversal attempts).
@@ -234,15 +256,17 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
     backend_dir = Path(__file__).parent.parent.parent
     recordings_dir = backend_dir / "data" / "recordings"
     snapshots_dir = backend_dir / "data" / "snapshots"
+    decoded_dir = backend_dir / "data" / "decoded"
 
     try:
         if cmd == "list-files":
             # Extract filter parameters only - no pagination
             show_recordings = data.get("showRecordings", True) if data else True
             show_snapshots = data.get("showSnapshots", True) if data else True
+            show_decoded = data.get("showDecoded", True) if data else True
 
             logger.info(
-                f"Listing all files (recordings: {show_recordings}, snapshots: {show_snapshots})"
+                f"Listing all files (recordings: {show_recordings}, snapshots: {show_snapshots}, decoded: {show_decoded})"
             )
 
             processed_items = []
@@ -323,6 +347,47 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                             "width": width,
                             "height": height,
                             "url": f"/snapshots/{png_file.name}",
+                        }
+                    )
+
+            # Gather and process decoded files if filter enabled
+            if show_decoded and decoded_dir.exists():
+                # Support multiple file types in decoded directory
+                decoded_files = []
+                for pattern in ["*.png", "*.jpg", "*.jpeg", "*.json", "*.txt"]:
+                    decoded_files.extend(list(decoded_dir.glob(pattern)))
+
+                for decoded_file in decoded_files:
+                    file_stat = decoded_file.stat()
+
+                    # Get image dimensions if it's an image file
+                    width, height = None, None
+                    if decoded_file.suffix.lower() in [".png", ".jpg", ".jpeg"]:
+                        width, height = get_image_dimensions(str(decoded_file))
+
+                    # Determine decoder type from filename
+                    decoder_type = None
+                    if decoded_file.name.startswith("sstv_"):
+                        decoder_type = "SSTV"
+                    # Add more decoder types as they are implemented
+
+                    processed_items.append(
+                        {
+                            "type": "decoded",
+                            "name": decoded_file.stem,
+                            "filename": decoded_file.name,
+                            "size": file_stat.st_size,
+                            "created": datetime.fromtimestamp(
+                                file_stat.st_ctime, timezone.utc
+                            ).isoformat(),
+                            "modified": datetime.fromtimestamp(
+                                file_stat.st_mtime, timezone.utc
+                            ).isoformat(),
+                            "width": width,
+                            "height": height,
+                            "url": f"/decoded/{decoded_file.name}",
+                            "file_type": decoded_file.suffix.lower(),
+                            "decoder_type": decoder_type,
                         }
                     )
 
@@ -573,6 +638,42 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                 logger,
             )
 
+        elif cmd == "delete-decoded":
+            logger.info(f"Deleting decoded file: {data}")
+            decoded_filename = data.get("filename")
+
+            if not decoded_filename:
+                await emit_file_browser_error(
+                    sio, "Decoded filename not provided", "delete-decoded", logger
+                )
+                return
+
+            # Validate filename (security check)
+            if not validate_filename(decoded_filename):
+                await emit_file_browser_error(
+                    sio, "Invalid decoded filename", "delete-decoded", logger
+                )
+                return
+
+            deleted = delete_decoded_file(decoded_dir, decoded_filename, logger)
+
+            if not deleted:
+                await emit_file_browser_error(
+                    sio, "Decoded file not found", "delete-decoded", logger
+                )
+                return
+
+            # Emit state update with delete action
+            await emit_file_browser_state(
+                sio,
+                {
+                    "action": "delete-decoded",
+                    "filename": decoded_filename,
+                    "message": f"Deleted decoded file: {decoded_filename}",
+                },
+                logger,
+            )
+
         elif cmd == "delete-batch":
             logger.info(f"Batch delete: {data}")
             items = data.get("items", [])
@@ -585,6 +686,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
 
             deleted_recordings = []
             deleted_snapshots = []
+            deleted_decoded = []
             failed_items = []
             total_files_deleted = []
 
@@ -659,16 +761,49 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                                 "error": "Not found",
                             }
                         )
+
+                elif item_type == "decoded":
+                    decoded_filename = item.get("filename")
+                    if not decoded_filename:
+                        failed_items.append({"type": "decoded", "error": "Missing filename"})
+                        continue
+
+                    # Validate filename
+                    if not validate_filename(decoded_filename):
+                        failed_items.append(
+                            {
+                                "type": "decoded",
+                                "filename": decoded_filename,
+                                "error": "Invalid filename",
+                            }
+                        )
+                        continue
+
+                    # Delete decoded file
+                    deleted = delete_decoded_file(decoded_dir, decoded_filename, logger)
+                    if deleted:
+                        deleted_decoded.append(decoded_filename)
+                        total_files_deleted.append(decoded_filename)
+                    else:
+                        failed_items.append(
+                            {
+                                "type": "decoded",
+                                "filename": decoded_filename,
+                                "error": "Not found",
+                            }
+                        )
                 else:
                     failed_items.append({"type": item_type, "error": "Unknown type"})
 
             # Build summary message
-            success_count = len(deleted_recordings) + len(deleted_snapshots)
+            success_count = len(deleted_recordings) + len(deleted_snapshots) + len(deleted_decoded)
             message_parts = []
             if deleted_recordings:
                 message_parts.append(f"{len(deleted_recordings)} recording(s)")
             if deleted_snapshots:
                 message_parts.append(f"{len(deleted_snapshots)} snapshot(s)")
+            if deleted_decoded:
+                message_parts.append(f"{len(deleted_decoded)} decoded file(s)")
 
             message = f"Deleted {', '.join(message_parts)}" if message_parts else "No items deleted"
 
@@ -684,6 +819,7 @@ async def filebrowser_request_routing(sio, cmd, data, logger, sid):
                     "action": "delete-batch",
                     "deleted_recordings": deleted_recordings,
                     "deleted_snapshots": deleted_snapshots,
+                    "deleted_decoded": deleted_decoded,
                     "deleted_files": total_files_deleted,
                     "failed_items": failed_items,
                     "success_count": success_count,

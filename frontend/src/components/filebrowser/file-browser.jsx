@@ -63,12 +63,14 @@ import CheckBoxOutlineBlankIcon from '@mui/icons-material/CheckBoxOutlineBlank';
 import CheckBoxIcon from '@mui/icons-material/CheckBox';
 import SelectAllIcon from '@mui/icons-material/SelectAll';
 import DeselectIcon from '@mui/icons-material/Deselect';
+import DataObjectIcon from '@mui/icons-material/DataObject';
 import { useSocket } from '../common/socket.jsx';
 import {
     fetchFiles,
     handleFileChange,
     deleteRecording,
     deleteSnapshot,
+    deleteDecoded,
     deleteBatch,
     setSortBy,
     toggleSortOrder,
@@ -198,9 +200,10 @@ export default function FileBrowser() {
                 socket,
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
+                showDecoded: filters.showDecoded,
             }));
         }
-    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded]);
 
     // Listen for file browser state updates to trigger refetch (global handler in socket-event-handlers.jsx updates Redux)
     useEffect(() => {
@@ -212,6 +215,7 @@ export default function FileBrowser() {
             switch (state.action) {
                 case 'delete-recording':
                 case 'delete-snapshot':
+                case 'delete-decoded':
                 case 'delete-batch':
                 case 'recording-started':
                 case 'recording-stopped':
@@ -221,6 +225,7 @@ export default function FileBrowser() {
                         socket,
                         showRecordings: filters.showRecordings,
                         showSnapshots: filters.showSnapshots,
+                        showDecoded: filters.showDecoded,
                     }));
 
                     // Show toast for batch delete
@@ -256,6 +261,7 @@ export default function FileBrowser() {
                 socket,
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
+                showDecoded: filters.showDecoded,
             }));
         };
 
@@ -264,7 +270,7 @@ export default function FileBrowser() {
         return () => {
             socket.off('file_change', handleFileChangeEvent);
         };
-    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots]);
+    }, [socket, dispatch, filters.showRecordings, filters.showSnapshots, filters.showDecoded]);
 
     // Sort, paginate, and format files in the frontend
     const displayItems = useMemo(() => {
@@ -331,6 +337,7 @@ export default function FileBrowser() {
                 socket,
                 showRecordings: filters.showRecordings,
                 showSnapshots: filters.showSnapshots,
+                showDecoded: filters.showDecoded,
             }));
         }
     };
@@ -355,8 +362,11 @@ export default function FileBrowser() {
                 if (itemToDelete.type === 'recording') {
                     await dispatch(deleteRecording({ socket, name: itemToDelete.name })).unwrap();
                     // Success toast will be shown by socket event listener
-                } else {
+                } else if (itemToDelete.type === 'snapshot') {
                     await dispatch(deleteSnapshot({ socket, filename: itemToDelete.filename })).unwrap();
+                    // Success toast will be shown by socket event listener
+                } else if (itemToDelete.type === 'decoded') {
+                    await dispatch(deleteDecoded({ socket, filename: itemToDelete.filename })).unwrap();
                     // Success toast will be shown by socket event listener
                 }
 
@@ -420,7 +430,7 @@ export default function FileBrowser() {
                     .map(f => ({
                         type: f.type,
                         name: f.type === 'recording' ? f.name : undefined,
-                        filename: f.type === 'snapshot' ? f.filename : undefined,
+                        filename: (f.type === 'snapshot' || f.type === 'decoded') ? f.filename : undefined,
                     }));
 
                 await dispatch(deleteBatch({ socket, items: itemsToDelete })).unwrap();
@@ -484,6 +494,7 @@ export default function FileBrowser() {
                                 const labels = {
                                     showRecordings: t('filters.recordings', 'Recordings'),
                                     showSnapshots: t('filters.snapshots', 'Snapshots'),
+                                    showDecoded: t('filters.decoded', 'Decoded'),
                                 };
                                 return selected.map(s => labels[s]).join(', ');
                             }}
@@ -496,6 +507,10 @@ export default function FileBrowser() {
                             <MenuItem value="showSnapshots" onClick={() => dispatch(toggleFilter('showSnapshots'))}>
                                 <Checkbox checked={filters.showSnapshots} />
                                 <ListItemText primary={t('filters.snapshots', 'Snapshots')} />
+                            </MenuItem>
+                            <MenuItem value="showDecoded" onClick={() => dispatch(toggleFilter('showDecoded'))}>
+                                <Checkbox checked={filters.showDecoded} />
+                                <ListItemText primary={t('filters.decoded', 'Decoded')} />
                             </MenuItem>
                         </Select>
                     </FormControl>
@@ -617,7 +632,7 @@ export default function FileBrowser() {
                             {formatBytes(diskUsage.available)} available
                             {files.length > 0 && (
                                 <Typography component="span" variant="caption" color="text.disabled" sx={{ ml: 1 }}>
-                                    ({files.filter(f => f.type === 'recording').length}R / {files.filter(f => f.type === 'snapshot').length}S)
+                                    ({files.filter(f => f.type === 'recording').length}R / {files.filter(f => f.type === 'snapshot').length}S / {files.filter(f => f.type === 'decoded').length}D)
                                 </Typography>
                             )}
                         </Typography>
@@ -649,7 +664,7 @@ export default function FileBrowser() {
                         {t('no_files.title', 'No files found')}
                     </Typography>
                     <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {!filters.showRecordings && !filters.showSnapshots
+                        {!filters.showRecordings && !filters.showSnapshots && !filters.showDecoded
                             ? t('no_files.message_filter', 'Enable at least one filter to see files')
                             : t('no_files.message_empty', 'Take snapshots or record IQ data from the waterfall view')}
                     </Typography>
@@ -745,6 +760,8 @@ export default function FileBrowser() {
                                                                 },
                                                             }}
                                                         />
+                                                    ) : item.type === 'decoded' ? (
+                                                        <DataObjectIcon sx={{ color: 'success.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
@@ -941,6 +958,8 @@ export default function FileBrowser() {
                                                                 },
                                                             }}
                                                         />
+                                                    ) : item.type === 'decoded' ? (
+                                                        <DataObjectIcon sx={{ color: 'success.main', fontSize: 20 }} />
                                                     ) : (
                                                         <CameraAltIcon sx={{ color: 'primary.main', fontSize: 20 }} />
                                                     )}
@@ -1046,6 +1065,10 @@ export default function FileBrowser() {
                                                     {item.metadata.description}
                                                 </Typography>
                                             )
+                                        ) : item.type === 'decoded' ? (
+                                            <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
+                                                {item.decoder_type ? `${item.decoder_type} decoded output` : 'Decoded file'}
+                                            </Typography>
                                         ) : (
                                             <Typography variant="caption" color="text.secondary" sx={{ display: 'block', mt: 0.5 }}>
                                                 {t('snapshot.description', 'Ground Station Waterfall Snapshot')}
@@ -1092,6 +1115,15 @@ export default function FileBrowser() {
                                                     size="small"
                                                     variant="outlined"
                                                     color="primary"
+                                                    sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                                />
+                                            )}
+                                            {item.type === 'decoded' && item.decoder_type && (
+                                                <Chip
+                                                    label={item.decoder_type}
+                                                    size="small"
+                                                    variant="outlined"
+                                                    color="success"
                                                     sx={{ height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
                                                 />
                                             )}
@@ -1163,7 +1195,7 @@ export default function FileBrowser() {
             )}
 
             {/* Snapshot Preview Dialog */}
-            {selectedItem?.type === 'snapshot' && (
+            {(selectedItem?.type === 'snapshot' || selectedItem?.type === 'decoded') && (
                 <Dialog
                     open={detailsOpen}
                     onClose={() => setDetailsOpen(false)}
@@ -1174,6 +1206,14 @@ export default function FileBrowser() {
                         <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
                             <Typography variant="h6">{selectedItem?.name}</Typography>
                             <Box>
+                                {selectedItem?.type === 'decoded' && selectedItem?.decoder_type && (
+                                    <Chip
+                                        label={selectedItem.decoder_type}
+                                        size="small"
+                                        color="success"
+                                        sx={{ mr: 1, height: '20px', fontSize: '0.65rem', '& .MuiChip-label': { px: 0.75 } }}
+                                    />
+                                )}
                                 {selectedItem?.width && selectedItem?.height && (
                                     <Chip
                                         label={`${selectedItem.width}×${selectedItem.height}`}
@@ -1188,11 +1228,17 @@ export default function FileBrowser() {
                     <DialogContent>
                         {selectedItem && (
                             <Box sx={{ textAlign: 'center' }}>
-                                <img
-                                    src={selectedItem.url}
-                                    alt={selectedItem.name}
-                                    style={{ maxWidth: '100%', height: 'auto' }}
-                                />
+                                {selectedItem.file_type && ['.png', '.jpg', '.jpeg'].includes(selectedItem.file_type) ? (
+                                    <img
+                                        src={selectedItem.url}
+                                        alt={selectedItem.name}
+                                        style={{ maxWidth: '100%', height: 'auto' }}
+                                    />
+                                ) : (
+                                    <Typography variant="body2" color="text.secondary">
+                                        Preview not available for this file type.
+                                    </Typography>
+                                )}
                                 <Typography variant="body2" color="text.secondary" sx={{ mt: 2 }}>
                                     Created: {formatDate(selectedItem.created)}
                                 </Typography>
@@ -1216,7 +1262,13 @@ export default function FileBrowser() {
                 open={deleteDialogOpen}
                 onClose={() => setDeleteDialogOpen(false)}
             >
-                <DialogTitle>{itemToDelete?.type === 'recording' ? t('delete_dialog.title_recording', 'Delete Recording') : t('delete_dialog.title_snapshot', 'Delete Snapshot')}</DialogTitle>
+                <DialogTitle>
+                    {itemToDelete?.type === 'recording'
+                        ? t('delete_dialog.title_recording', 'Delete Recording')
+                        : itemToDelete?.type === 'decoded'
+                        ? t('delete_dialog.title_decoded', 'Delete Decoded File')
+                        : t('delete_dialog.title_snapshot', 'Delete Snapshot')}
+                </DialogTitle>
                 <DialogContent>
                     <Alert severity="warning" sx={{ mb: 2 }}>
                         {t('delete_dialog.warning', 'This action cannot be undone!')}

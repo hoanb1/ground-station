@@ -131,19 +131,22 @@ sdr_process_manager.set_sio(sio)
 # Mount static directories
 app.mount("/satimages", StaticFiles(directory="satimages"), name="satimages")
 
-# Mount data directories for recordings and snapshots
+# Mount data directories for recordings, snapshots, and decoded data (SSTV, AFSK, RTTY, etc.)
 # Ensure these directories exist before mounting
 backend_dir = os.path.dirname(os.path.abspath(__file__))
 recordings_dir = os.path.join(backend_dir, "..", "data", "recordings")
 snapshots_dir = os.path.join(backend_dir, "..", "data", "snapshots")
+decoded_dir = os.path.join(backend_dir, "..", "data", "decoded")
 
 # Create directories if they don't exist
 os.makedirs(recordings_dir, exist_ok=True)
 os.makedirs(snapshots_dir, exist_ok=True)
+os.makedirs(decoded_dir, exist_ok=True)
 
 # Use html=True to enable directory browsing
 app.mount("/recordings", StaticFiles(directory=recordings_dir, html=True), name="recordings")
 app.mount("/snapshots", StaticFiles(directory=snapshots_dir, html=True), name="snapshots")
+app.mount("/decoded", StaticFiles(directory=decoded_dir, html=True), name="decoded")
 
 
 # Add the version API endpoint BEFORE the catch-all route
@@ -184,6 +187,9 @@ async def init_db():
         os.path.join(backend_dir, "data", "db"),
         os.path.join(backend_dir, "data", "recordings"),
         os.path.join(backend_dir, "data", "snapshots"),
+        os.path.join(
+            backend_dir, "data", "decoded"
+        ),  # For SSTV images, AFSK packets, RTTY text, etc.
     ]
     for directory in data_dirs:
         os.makedirs(directory, exist_ok=True)

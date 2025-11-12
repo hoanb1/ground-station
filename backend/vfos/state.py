@@ -22,6 +22,7 @@ class VFOState:
     transcription_enabled: bool = False  # Enable/disable transcription for this VFO
     transcription_model: str = "small.en"  # Whisper model to use
     transcription_language: str = "en"  # Language code for transcription
+    decoder: str = "none"  # Decoder type: none, sstv, afsk, rtty, psk31
 
 
 class VFOManager:
@@ -64,6 +65,7 @@ class VFOManager:
         transcription_enabled: Optional[bool] = None,
         transcription_model: Optional[str] = None,
         transcription_language: Optional[str] = None,
+        decoder: Optional[str] = None,
     ) -> None:
 
         assert session_id is not None, "session_id is required"
@@ -126,6 +128,10 @@ class VFOManager:
 
         if transcription_language is not None:
             vfo_state.transcription_language = transcription_language
+
+        # check decoder setting
+        if decoder is not None:
+            vfo_state.decoder = decoder
 
         # logger.info(f"vfo states for session {session_id}: {session_vfos}")
 

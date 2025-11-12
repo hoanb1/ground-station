@@ -19,16 +19,16 @@
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
 
-// Unified async thunk to fetch all files (recordings and snapshots)
+// Unified async thunk to fetch all files (recordings, snapshots, and decoded)
 // Note: This now uses pub/sub model - it sends a request and the response comes via socket event
 // Backend returns ALL files, frontend handles sorting and pagination
 export const fetchFiles = createAsyncThunk(
     'filebrowser/fetchFiles',
-    async ({ socket, showRecordings = true, showSnapshots = true }, { rejectWithValue }) => {
+    async ({ socket, showRecordings = true, showSnapshots = true, showDecoded = true }, { rejectWithValue }) => {
         try {
             // Emit request without callback - response will come via 'file_browser_state' event
             // No pagination or sorting params - backend returns all files
-            socket.emit('file_browser', 'list-files', { showRecordings, showSnapshots });
+            socket.emit('file_browser', 'list-files', { showRecordings, showSnapshots, showDecoded });
 
             // Return pending state - actual data will be updated via socket listener
             return { pending: true };
@@ -72,6 +72,23 @@ export const deleteSnapshot = createAsyncThunk(
     }
 );
 
+// Async thunk to delete a decoded file
+// Note: This now uses pub/sub model - response comes via 'file_browser_state' event
+export const deleteDecoded = createAsyncThunk(
+    'filebrowser/deleteDecoded',
+    async ({ socket, filename }, { rejectWithValue }) => {
+        try {
+            // Emit request without callback - response will come via 'file_browser_state' event
+            socket.emit('file_browser', 'delete-decoded', { filename });
+
+            // Return the filename for optimistic updates if needed
+            return { filename, pending: true };
+        } catch (error) {
+            return rejectWithValue(error.message || 'Failed to delete decoded file');
+        }
+    }
+);
+
 // Async thunk to delete multiple items (batch delete)
 export const deleteBatch = createAsyncThunk(
     'filebrowser/deleteBatch',
@@ -89,7 +106,7 @@ export const deleteBatch = createAsyncThunk(
 );
 
 const initialState = {
-    // All files (recordings and snapshots)
+    // All files (recordings, snapshots, and decoded)
     files: [],
     filesLoading: false,
     filesError: null,
@@ -101,6 +118,7 @@ const initialState = {
     filters: {
         showRecordings: true,
         showSnapshots: true,
+        showDecoded: true,
     },
     diskUsage: {
         total: 0,
@@ -108,7 +126,7 @@ const initialState = {
         available: 0,
     },
     // Multi-select state
-    selectedItems: [], // Array of item keys (recording names or snapshot filenames)
+    selectedItems: [], // Array of item keys (recording names or snapshot/decoded filenames)
     selectionMode: false, // Toggle for selection mode
 };
 
@@ -206,6 +224,14 @@ const fileBrowserSlice = createSlice({
             state.total = Math.max(0, state.total - 1);
         });
 
+        // Delete decoded - optimistic update
+        builder.addCase(deleteDecoded.fulfilled, (state, action) => {
+            // Remove from files list
+            state.files = state.files.filter(f => !(f.type === 'decoded' && f.filename === action.payload.filename));
+            // Update total count
+            state.total = Math.max(0, state.total - 1);
+        });
+
         // Delete batch - optimistic update
         builder.addCase(deleteBatch.fulfilled, (state, action) => {
             const itemsToDelete = action.payload.items;
@@ -215,7 +241,8 @@ const fileBrowserSlice = createSlice({
                 return !itemsToDelete.find(item =>
                     item.type === f.type && (
                         (item.type === 'recording' && item.name === key) ||
-                        (item.type === 'snapshot' && item.filename === key)
+                        (item.type === 'snapshot' && item.filename === key) ||
+                        (item.type === 'decoded' && item.filename === key)
                     )
                 );
             });

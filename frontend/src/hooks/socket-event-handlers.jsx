@@ -65,6 +65,13 @@ import {
 import { updateAllVFOStates, setVFOProperty } from '../components/waterfall/vfo-slice.jsx';
 import { fetchFiles } from '../components/filebrowser/filebrowser-slice.jsx';
 import { setConnected, setConnecting, setReConnectAttempt } from '../components/dashboard/dashboard-slice.jsx';
+import {
+    decoderStatusChanged,
+    decoderProgressUpdated,
+    decoderOutputReceived,
+    decoderErrorOccurred
+} from '../components/decoders/decoders-slice.jsx';
+import ImageIcon from '@mui/icons-material/Image';
 
 /**
  * Custom hook to handle all socket event listeners
@@ -444,6 +451,103 @@ export const useSocketEventHandlers = (socket) => {
             }
         });
 
+        // Decoder data events (SSTV, AFSK, RTTY, PSK31, etc.)
+        socket.on('decoder-data', (data) => {
+            console.log('Decoder event received:', data);
+
+            switch (data.type) {
+                case 'decoder-status':
+                    store.dispatch(decoderStatusChanged({
+                        session_id: data.session_id,
+                        status: data.status,
+                        mode: data.mode,
+                        decoder_type: data.decoder_type,
+                        timestamp: data.timestamp
+                    }));
+
+                    // Show toast for status changes (except 'listening')
+                    if (data.status === 'capturing' || data.status === 'processing') {
+                        toast.info(
+                            <ToastMessage
+                                title={t('notifications.decoder.decoding')}
+                                body={`${data.decoder_type.toUpperCase()}: ${data.mode}`}
+                            />,
+                            {
+                                icon: () => <ImageIcon />,
+                            }
+                        );
+                    } else if (data.status === 'completed') {
+                        toast.success(
+                            <ToastMessage
+                                title={t('notifications.decoder.completed')}
+                                body={`${data.decoder_type.toUpperCase()}: ${data.mode}`}
+                            />,
+                            {
+                                icon: () => <ImageIcon />,
+                            }
+                        );
+                    }
+                    break;
+
+                case 'decoder-progress':
+                    store.dispatch(decoderProgressUpdated({
+                        session_id: data.session_id,
+                        progress: data.progress,
+                        timestamp: data.timestamp
+                    }));
+                    break;
+
+                case 'decoder-output':
+                    store.dispatch(decoderOutputReceived(data));
+
+                    // Show success toast with image/file info
+                    const outputType = data.output.format;
+                    const fileName = data.output.filename;
+
+                    toast.success(
+                        <ToastMessage
+                            title={t('notifications.decoder.output_received')}
+                            body={`${data.decoder_type.toUpperCase()}: ${fileName}`}
+                        />,
+                        {
+                            icon: () => <ImageIcon />,
+                            autoClose: 8000,
+                        }
+                    );
+                    break;
+
+                case 'decoder-error':
+                    store.dispatch(decoderErrorOccurred(data));
+
+                    // Show error toast
+                    if (data.error.recoverable) {
+                        toast.warning(
+                            <ToastMessage
+                                title={t('notifications.decoder.error')}
+                                body={data.error.message}
+                            />,
+                            {
+                                icon: () => <ErrorOutlineIcon />,
+                            }
+                        );
+                    } else {
+                        toast.error(
+                            <ToastMessage
+                                title={t('notifications.decoder.error')}
+                                body={data.error.message}
+                            />,
+                            {
+                                icon: () => <ErrorOutlineIcon />,
+                            }
+                        );
+                    }
+                    break;
+
+                default:
+                    console.warn('Unknown decoder event type:', data.type);
+            }
+        });
+
         // Cleanup function
         return () => {
             socket.off('connect');
@@ -462,6 +566,7 @@ export const useSocketEventHandlers = (socket) => {
             socket.off("sdr-error");
             socket.off("sdr-config");
             socket.off("sdr-status");
+            socket.off("decoder-data");
         };
     }, [socket, dispatch, t]);
 };

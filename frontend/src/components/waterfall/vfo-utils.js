@@ -260,7 +260,11 @@ export const calculateVFOFrequencyBounds = (marker, startFreq, freqRange, actual
  * @returns {string} Label text
  */
 export const generateVFOLabelText = (marker, mode, bandwidth, formatFrequency) => {
-    const modeText = ` [${mode}]`;
+    // Show decoder mode if active, otherwise show audio demodulation mode
+    const displayMode = marker.decoder && marker.decoder !== 'none'
+        ? marker.decoder.toUpperCase()
+        : mode;
+    const modeText = ` [${displayMode}]`;
     const bwText = mode === 'USB' || mode === 'LSB' || mode === 'CW' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
     return `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
 };

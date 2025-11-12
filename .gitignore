@@ -91,3 +91,4 @@ venv.bak/
 # Old paths (kept for backwards compatibility during migration)
 /backend/recordings/
 /backend/snapshots/
+/backend/data/decoded/

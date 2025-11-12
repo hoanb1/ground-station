@@ -47,13 +47,26 @@ class FMDemodulator(threading.Thread):
     process the same IQ samples without gaps.
     """
 
-    def __init__(self, iq_queue, audio_queue, session_id):
+    def __init__(
+        self,
+        iq_queue,
+        audio_queue,
+        session_id,
+        internal_mode=False,
+        center_freq=None,
+        bandwidth=None,
+    ):
         super().__init__(daemon=True, name=f"FMDemodulator-{session_id}")
         self.iq_queue = iq_queue
         self.audio_queue = audio_queue
         self.session_id = session_id
         self.running = True
         self.vfo_manager = VFOManager()
+
+        # Internal mode: bypasses VFO checks and uses provided parameters
+        self.internal_mode = internal_mode
+        self.internal_center_freq = center_freq  # Used if internal_mode=True
+        self.internal_bandwidth = bandwidth or 12500  # Default to 12.5 kHz for SSTV
 
         # Audio output parameters
         self.audio_sample_rate = 44100  # 44.1 kHz audio output
@@ -272,18 +285,7 @@ class FMDemodulator(threading.Thread):
 
                 iq_message = self.iq_queue.get(timeout=0.1)
 
-                # Check if there's an active VFO AFTER getting samples
-                vfo_state = self._get_active_vfo()
-                if not vfo_state:
-                    # VFO inactive - discard these samples and continue
-                    continue
-
-                # Check if modulation is FM
-                if vfo_state.modulation.lower() != "fm":
-                    # Wrong modulation - discard these samples and continue
-                    continue
-
-                # Extract samples and metadata
+                # Extract samples and metadata first
                 samples = iq_message.get("samples")
                 sdr_center_freq = iq_message.get("center_freq")
                 sdr_sample_rate = iq_message.get("sample_rate")
@@ -291,25 +293,47 @@ class FMDemodulator(threading.Thread):
                 if samples is None or len(samples) == 0:
                     continue
 
+                # Determine VFO parameters based on mode
+                if self.internal_mode:
+                    # Internal mode: use provided parameters
+                    vfo_center_freq = (
+                        self.internal_center_freq
+                        if self.internal_center_freq is not None
+                        else sdr_center_freq
+                    )
+                    vfo_bandwidth = self.internal_bandwidth
+                else:
+                    # Normal mode: check VFO state
+                    vfo_state = self._get_active_vfo()
+                    if not vfo_state:
+                        # VFO inactive - discard these samples and continue
+                        continue
+
+                    # Check if modulation is FM
+                    if vfo_state.modulation.lower() != "fm":
+                        # Wrong modulation - discard these samples and continue
+                        continue
+
+                    vfo_center_freq = vfo_state.center_freq
+                    vfo_bandwidth = vfo_state.bandwidth
+
                 # Check if we need to reinitialize filters
                 if (
                     self.sdr_sample_rate != sdr_sample_rate
-                    or self.current_bandwidth != vfo_state.bandwidth
+                    or self.current_bandwidth != vfo_bandwidth
                     or self.decimation_filter is None
                 ):
                     self.sdr_sample_rate = sdr_sample_rate
-                    self.current_bandwidth = vfo_state.bandwidth
+                    self.current_bandwidth = vfo_bandwidth
 
                     # Design filters
                     stages, total_decimation = self._design_decimation_filter(
-                        sdr_sample_rate, vfo_state.bandwidth
+                        sdr_sample_rate, vfo_bandwidth
                     )
                     self.decimation_filter = (stages, total_decimation)
 
                     intermediate_rate = sdr_sample_rate / total_decimation
-                    self.audio_filter = self._design_audio_filter(
-                        intermediate_rate, vfo_state.bandwidth
-                    )
+                    self.audio_filter = self._design_audio_filter(intermediate_rate, vfo_bandwidth)
                     self.deemphasis_filter = self._design_deemphasis_filter(intermediate_rate)
 
                     # Initialize filter states for each stage
@@ -327,21 +351,21 @@ class FMDemodulator(threading.Thread):
                     deemph_state = self._resize_filter_state(deemph_state, b_deemph, 0, a_deemph)
 
                     logger.info(
-                        f"Filters initialized: SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
+                        f"Filters initialized (internal_mode={self.internal_mode}): SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
                         f"stages={len(stages)}, total_decimation={total_decimation}, "
                         f"intermediate={intermediate_rate/1e3:.1f} kHz"
                     )
 
                 # Step 1: Frequency translation (tune to VFO frequency)
                 # Skip if VFO frequency is not set (0 or invalid)
-                if vfo_state.center_freq == 0:
+                if vfo_center_freq == 0:
                     logger.debug("VFO frequency not set, skipping frame")
                     continue
 
-                offset_freq = vfo_state.center_freq - sdr_center_freq
+                offset_freq = vfo_center_freq - sdr_center_freq
                 if abs(offset_freq) > sdr_sample_rate / 2:
                     logger.debug(
-                        f"VFO frequency {vfo_state.center_freq} Hz is outside SDR bandwidth "
+                        f"VFO frequency {vfo_center_freq} Hz is outside SDR bandwidth "
                         f"(SDR center: {sdr_center_freq} Hz, rate: {sdr_sample_rate} Hz)"
                     )
                     continue
@@ -427,7 +451,12 @@ class FMDemodulator(threading.Thread):
                     # This allows per-session volume control
 
                     # Apply squelch based on RF signal strength (measured earlier)
-                    squelch_threshold_db = vfo_state.squelch  # e.g., -150 dB
+                    # In internal mode, disable squelch (always open)
+                    if self.internal_mode:
+                        squelch_threshold_db = -200  # Effectively disabled
+                    else:
+                        squelch_threshold_db = vfo_state.squelch  # e.g., -150 dB
+
                     squelch_hysteresis_db = 3  # 3 dB hysteresis to prevent flutter
 
                     # Apply squelch with hysteresis
@@ -456,10 +485,17 @@ class FMDemodulator(threading.Thread):
                     if len(self.audio_buffer) > max_buffer_samples:
                         # Keep only the most recent data
                         self.audio_buffer = self.audio_buffer[-max_buffer_samples:]
-                        logger.warning(
-                            f"Audio buffer overflow ({len(self.audio_buffer)} samples), "
-                            f"dropping old audio to prevent lag buildup"
-                        )
+                        # Only log warning if not in internal mode (used by decoders like SSTV)
+                        if not self.internal_mode:
+                            logger.warning(
+                                f"Audio buffer overflow ({len(self.audio_buffer)} samples), "
+                                f"dropping old audio to prevent lag buildup"
+                            )
+                        else:
+                            logger.debug(
+                                f"Audio buffer overflow ({len(self.audio_buffer)} samples), "
+                                f"dropping old audio (internal mode)"
+                            )
 
                     # Send chunks of target size when buffer is full enough
                     while len(self.audio_buffer) >= self.target_chunk_size:

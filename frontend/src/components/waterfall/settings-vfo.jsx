@@ -476,8 +476,11 @@ const VfoAccordion = ({
                         </Box>
 
                         <Box sx={{ mt: 2 }}>
-                            <Typography variant="body2" sx={{ mb: 1, color: 'text.secondary' }}>
-                                {t('vfo.modulation')}
+                            <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 600 }}>
+                                {t('vfo.audio_demodulation', 'Audio Demodulation')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.disabled', fontSize: '0.7rem' }}>
+                                {t('vfo.audio_demodulation_help', 'How to extract audio from the RF signal')}
                             </Typography>
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.mode || 'none'}
@@ -485,7 +488,12 @@ const VfoAccordion = ({
                                 disabled={!vfoActive[vfoIndex]}
                                 onChange={(event, newValue) => {
                                     if (newValue !== null) {
-                                        onVFOPropertyChange(vfoIndex, { mode: newValue });
+                                        // When selecting an audio demod mode (not NONE), clear decoder
+                                        if (newValue !== 'NONE') {
+                                            onVFOPropertyChange(vfoIndex, { mode: newValue, decoder: 'none' });
+                                        } else {
+                                            onVFOPropertyChange(vfoIndex, { mode: newValue });
+                                        }
                                     }
                                 }}
                                 sx={{
@@ -536,6 +544,93 @@ const VfoAccordion = ({
                                 <ToggleButton value="LSB">{t('vfo.modes.lsb')}</ToggleButton>
                                 <ToggleButton value="USB">{t('vfo.modes.usb')}</ToggleButton>
                                 <ToggleButton value="CW">{t('vfo.modes.cw')}</ToggleButton>
+                            </ToggleButtonGroup>
+                        </Box>
+
+                        <Box sx={{ mt: 2 }}>
+                            <Typography variant="body2" sx={{ mb: 0.5, color: 'text.secondary', fontWeight: 600 }}>
+                                {t('vfo.data_decoders', 'Data Decoders')}
+                            </Typography>
+                            <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.disabled', fontSize: '0.7rem' }}>
+                                {t('vfo.data_decoders_help', 'An internal FM or SSB demodulator will be spun up as needed to decode some modes')}
+                            </Typography>
+                            {/* Show info when decoder is active */}
+                            {vfoMarkers[vfoIndex]?.decoder && vfoMarkers[vfoIndex]?.decoder !== 'none' && (
+                                <Alert severity="info" sx={{ mb: 1, py: 0.5, fontSize: '0.7rem' }}>
+                                    {t('vfo.decoder_active_info', 'Audio demodulation is automatically handled by the decoder')}
+                                </Alert>
+                            )}
+                            <ToggleButtonGroup
+                                value={vfoMarkers[vfoIndex]?.decoder || 'none'}
+                                exclusive
+                                disabled={!vfoActive[vfoIndex]}
+                                onChange={(event, newValue) => {
+                                    if (newValue !== null) {
+                                        // When selecting a decoder (not none), set audio demod to NONE and appropriate bandwidth
+                                        if (newValue !== 'none') {
+                                            const updates = { decoder: newValue, mode: 'NONE' };
+
+                                            // Set bandwidth based on decoder type
+                                            if (newValue === 'sstv') {
+                                                updates.bandwidth = 3300; // 3.3 kHz for SSTV (audio content ~1200-2300 Hz)
+                                            } else if (newValue === 'afsk' || newValue === 'rtty') {
+                                                updates.bandwidth = 3300; // 3.3 kHz for AFSK/RTTY
+                                            } else if (newValue === 'psk31') {
+                                                updates.bandwidth = 3300; // 3.3 kHz for PSK31
+                                            }
+
+                                            onVFOPropertyChange(vfoIndex, updates);
+                                        } else {
+                                            onVFOPropertyChange(vfoIndex, { decoder: newValue });
+                                        }
+                                    }
+                                }}
+                                sx={{
+                                    display: 'flex',
+                                    flexWrap: 'wrap',
+                                    gap: 0.5,
+                                    '& .MuiToggleButton-root': {
+                                        height: '28px',
+                                        minWidth: '50px',
+                                        padding: '4px 8px',
+                                        fontSize: '0.75rem',
+                                        border: '1px solid',
+                                        borderColor: 'rgba(255, 255, 255, 0.23)',
+                                        borderRadius: '4px',
+                                        color: 'text.secondary',
+                                        textAlign: 'center',
+                                        textTransform: 'none',
+                                        backgroundColor: 'rgba(255, 255, 255, 0.05)',
+                                        transition: 'all 0.2s ease-in-out',
+                                        '&.Mui-selected': {
+                                            backgroundColor: 'primary.main',
+                                            color: 'primary.contrastText',
+                                            borderColor: 'primary.main',
+                                            fontWeight: 600,
+                                            boxShadow: '0 0 8px rgba(33, 150, 243, 0.4)',
+                                            '&:hover': {
+                                                backgroundColor: 'primary.dark',
+                                                boxShadow: '0 0 12px rgba(33, 150, 243, 0.6)',
+                                            }
+                                        },
+                                        '&:hover': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.1)',
+                                            borderColor: 'rgba(255, 255, 255, 0.4)',
+                                        },
+                                        '&.Mui-disabled': {
+                                            backgroundColor: 'rgba(255, 255, 255, 0.02)',
+                                            borderColor: 'rgba(255, 255, 255, 0.08)',
+                                            color: 'rgba(255, 255, 255, 0.3)',
+                                            opacity: 0.5,
+                                        }
+                                    }
+                                }}
+                            >
+                                <ToggleButton value="none">{t('vfo.decoders_modes.none', 'None')}</ToggleButton>
+                                <ToggleButton value="sstv">{t('vfo.decoders_modes.sstv', 'SSTV')}</ToggleButton>
+                                <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
+                                <ToggleButton value="rtty">{t('vfo.decoders_modes.rtty', 'RTTY')}</ToggleButton>
+                                <ToggleButton value="psk31">{t('vfo.decoders_modes.psk31', 'PSK31')}</ToggleButton>
                             </ToggleButtonGroup>
                         </Box>
 

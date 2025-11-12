@@ -387,6 +387,7 @@ class SDRProcessManager:
                 "clients": {client_id},
                 "demodulators": {},  # Will store demodulator threads per session
                 "recorders": {},  # Will store recorder threads per session (separate from demodulators)
+                "decoders": {},  # Will store decoder threads per session (SSTV, AFSK, RTTY, etc.)
             }
 
             # Send initial configuration
@@ -432,6 +433,9 @@ class SDRProcessManager:
 
                 # Stop any active recorder for this client
                 self.stop_recorder(sdr_id, client_id)
+
+                # Stop any active decoder for this client
+                self.stop_decoder(sdr_id, client_id)
 
                 self.logger.info(f"Removed client {client_id} from SDR process {sdr_id}")
 
@@ -669,6 +673,24 @@ class SDRProcessManager:
 
                             # Exit the loop
                             break
+
+                        elif data_type in [
+                            "decoder-status",
+                            "decoder-progress",
+                            "decoder-output",
+                            "decoder-error",
+                        ]:
+                            # Decoder messages (SSTV, AFSK, RTTY, PSK31, etc.)
+                            # Send to specific session only
+                            session_id = data.get("session_id")
+                            if session_id:
+                                await self.sio.emit(
+                                    SocketEvents.DECODER_DATA, data, room=session_id
+                                )
+                            else:
+                                self.logger.warning(
+                                    f"Decoder message missing session_id: {data_type}"
+                                )
 
                     except Exception as e:
                         self.logger.error(f"Error processing data from SDR process: {str(e)}")
@@ -958,6 +980,225 @@ class SDRProcessManager:
         if isinstance(recorder_entry, dict):
             return recorder_entry.get("instance")
         return recorder_entry
+
+    def start_decoder(self, sdr_id, session_id, decoder_class, data_queue, **kwargs):
+        """
+        Start a decoder thread for a specific session.
+
+        Decoders consume audio from a demodulator and produce decoded data
+        (e.g., SSTV images, AFSK packets, RTTY text).
+
+        This method automatically creates an internal FM demodulator specifically
+        for the decoder if one doesn't already exist for this session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier (client session ID)
+            decoder_class: The decoder class to instantiate (e.g., SSTVDecoder, AFSKDecoder)
+            data_queue: Queue where decoded data will be placed (same as SDR data_queue)
+            **kwargs: Additional arguments to pass to the decoder constructor
+
+        Returns:
+            bool: True if started successfully, False otherwise
+        """
+        if sdr_id not in self.processes:
+            self.logger.warning(f"No SDR process found for device {sdr_id}")
+            return False
+
+        process_info = self.processes[sdr_id]
+
+        # Check if decoder already exists for this session
+        if session_id in process_info.get("decoders", {}):
+            existing_entry = process_info["decoders"][session_id]
+            existing = (
+                existing_entry.get("instance")
+                if isinstance(existing_entry, dict)
+                else existing_entry
+            )
+            # If same type, just return success (already running)
+            if isinstance(existing, decoder_class):
+                self.logger.debug(
+                    f"{decoder_class.__name__} already running for session {session_id}"
+                )
+                return True
+            else:
+                # Different type, stop the old one first
+                self.logger.info(
+                    f"Switching from {type(existing).__name__} to {decoder_class.__name__} for session {session_id}"
+                )
+                self.stop_decoder(sdr_id, session_id)
+
+        try:
+            # Check if there's an active demodulator for this session
+            # If not, or if it's not in internal mode, create an internal FM demodulator specifically for the decoder
+            demod_entry = process_info.get("demodulators", {}).get(session_id)
+            internal_demod_created = False
+
+            # Check if we need to create/recreate the internal FM demodulator
+            need_internal_demod = False
+            if not demod_entry:
+                need_internal_demod = True
+                self.logger.info(
+                    f"No active demodulator found for session {session_id}. "
+                    f"Creating internal FM demodulator for decoder."
+                )
+            else:
+                # Check if existing demodulator is in internal mode
+                demodulator = (
+                    demod_entry.get("instance") if isinstance(demod_entry, dict) else demod_entry
+                )
+                if not getattr(demodulator, "internal_mode", False):
+                    need_internal_demod = True
+                    self.logger.info(
+                        f"Existing demodulator for session {session_id} is not in internal mode. "
+                        f"Stopping it and creating internal FM demodulator for decoder."
+                    )
+                    # Stop the existing non-internal demodulator
+                    self.stop_demodulator(sdr_id, session_id)
+
+            if need_internal_demod:
+                # Import FMDemodulator here to avoid circular imports
+                from demodulators.fmdemodulator import FMDemodulator
+
+                # Create internal audio queue for the FM demodulator
+                internal_audio_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
+
+                # Get VFO center frequency from kwargs if provided
+                vfo_center_freq = kwargs.get("vfo_center_freq", None)
+
+                # Start internal FM demodulator with internal_mode enabled
+                success = self.start_demodulator(
+                    sdr_id=sdr_id,
+                    session_id=session_id,
+                    demodulator_class=FMDemodulator,
+                    audio_queue=internal_audio_queue,
+                    internal_mode=True,  # Enable internal mode to bypass VFO checks
+                    center_freq=vfo_center_freq,  # Pass VFO frequency
+                    bandwidth=12500,  # Default bandwidth for SSTV
+                )
+
+                if not success:
+                    self.logger.error(
+                        f"Failed to start internal FM demodulator for session {session_id}"
+                    )
+                    return False
+
+                internal_demod_created = True
+                demod_entry = process_info.get("demodulators", {}).get(session_id)
+
+            # Get the demodulator's audio queue
+            if demod_entry is None:
+                self.logger.error(f"No demodulator entry found for session {session_id}")
+                return False
+            demodulator = (
+                demod_entry.get("instance") if isinstance(demod_entry, dict) else demod_entry
+            )
+            if demodulator is None:
+                self.logger.error(f"No demodulator instance found for session {session_id}")
+                return False
+            audio_queue = demodulator.audio_queue
+
+            # Filter out internal parameters before passing to decoder
+            decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
+
+            # Create and start the decoder with the audio queue
+            decoder = decoder_class(audio_queue, data_queue, session_id, **decoder_kwargs)
+            decoder.start()
+
+            # Store reference
+            if "decoders" not in process_info:
+                process_info["decoders"] = {}
+            process_info["decoders"][session_id] = {
+                "instance": decoder,
+                "decoder_type": decoder_class.__name__,
+                "internal_demod": internal_demod_created,  # Track if we created the demod
+            }
+
+            self.logger.info(
+                f"Started {decoder_class.__name__} for session {session_id} on device {sdr_id}"
+            )
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error starting {decoder_class.__name__}: {str(e)}")
+            self.logger.exception(e)
+            return False
+
+    def stop_decoder(self, sdr_id, session_id):
+        """
+        Stop a decoder thread for a specific session.
+
+        If an internal FM demodulator was created for this decoder,
+        it will also be stopped automatically.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+
+        Returns:
+            bool: True if stopped successfully, False otherwise
+        """
+        if sdr_id not in self.processes:
+            return False
+
+        process_info = self.processes[sdr_id]
+        decoders = process_info.get("decoders", {})
+
+        if session_id not in decoders:
+            return False
+
+        try:
+            decoder_entry = decoders[session_id]
+            # Handle both old format (direct instance) and new format (dict with instance)
+            if isinstance(decoder_entry, dict):
+                decoder = decoder_entry["instance"]
+                internal_demod = decoder_entry.get("internal_demod", False)
+            else:
+                decoder = decoder_entry
+                internal_demod = False
+
+            decoder_name = type(decoder).__name__
+            decoder.stop()
+            decoder.join(timeout=2.0)  # Wait up to 2 seconds
+
+            # If we created an internal demodulator for this decoder, stop it too
+            if internal_demod:
+                self.logger.info(f"Stopping internal FM demodulator for session {session_id}")
+                self.stop_demodulator(sdr_id, session_id)
+
+            del decoders[session_id]
+            self.logger.info(f"Stopped {decoder_name} for session {session_id}")
+            return True
+
+        except Exception as e:
+            self.logger.error(f"Error stopping decoder: {str(e)}")
+            return False
+
+    def get_active_decoder(self, sdr_id, session_id):
+        """
+        Get the active decoder for a session.
+
+        Args:
+            sdr_id: Device identifier
+            session_id: Session identifier
+
+        Returns:
+            Decoder instance or None if not found
+        """
+        if sdr_id not in self.processes:
+            return None
+
+        process_info = self.processes[sdr_id]
+        decoders = process_info.get("decoders", {})
+        decoder_entry = decoders.get(session_id)
+
+        if decoder_entry is None:
+            return None
+
+        # Handle both old format (direct instance) and new format (dict with instance)
+        if isinstance(decoder_entry, dict):
+            return decoder_entry.get("instance")
+        return decoder_entry
 
     def flush_all_demodulator_queues(self, sdr_id):
         """

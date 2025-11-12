@@ -19,7 +19,10 @@ from typing import Any, Dict, Optional, Union
 
 from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
+from demodulators.sstvdecoder import SSTVDecoder
 from handlers.entities.sdr import handle_vfo_demodulator_state
+from sdr.sdrprocessmanager import sdr_process_manager
+from session.tracker import session_tracker
 from vfos.state import VFOManager
 
 
@@ -57,6 +60,7 @@ async def update_vfo_parameters(
         transcription_enabled=data.get("transcriptionEnabled"),
         transcription_model=data.get("transcriptionModel"),
         transcription_language=data.get("transcriptionLanguage"),
+        decoder=data.get("decoder"),
     )
 
     # Start/stop demodulator based on VFO state (after update)
@@ -64,6 +68,9 @@ async def update_vfo_parameters(
     if vfo_id > 0:  # Valid VFO (not deselect-all case)
         vfo_state = vfomanager.get_vfo_state(sid, vfo_id)
         handle_vfo_demodulator_state(vfo_state, sid, logger)
+
+        # Handle decoder state changes
+        handle_vfo_decoder_state(vfo_state, sid, logger)
 
     return {"success": True, "data": {}}
 
@@ -141,6 +148,92 @@ async def toggle_transcription(
             "transcriptionLanguage": vfo_state.transcription_language if vfo_state else "en",
         },
     }
+
+
+def handle_vfo_decoder_state(vfo_state, session_id, logger):
+    """
+    Start or stop decoder based on VFO decoder setting.
+
+    Args:
+        vfo_state: VFO state object
+        session_id: Session identifier
+        logger: Logger instance
+    """
+    if not vfo_state:
+        return
+
+    # Get SDR ID from SessionTracker
+    sdr_id = session_tracker.get_session_sdr(session_id)
+    if not sdr_id:
+        logger.warning(f"No SDR found for session {session_id}")
+        return
+
+    # Check if VFO is active
+    if not vfo_state.active:
+        # VFO is not active, stop any decoder
+        sdr_process_manager.stop_decoder(sdr_id, session_id)
+        logger.info(f"Stopped decoder for session {session_id} (VFO inactive)")
+        return
+
+    # Get current decoder state
+    current_decoder = sdr_process_manager.get_active_decoder(sdr_id, session_id)
+    requested_decoder = vfo_state.decoder
+
+    # Map decoder names to classes
+    decoder_map = {
+        "sstv": SSTVDecoder,
+        # Add more decoders as they're implemented:
+        # "afsk": AFSKDecoder,
+        # "rtty": RTTYDecoder,
+        # "psk31": PSK31Decoder,
+    }
+
+    # If decoder is "none" or not in map, stop any running decoder
+    if requested_decoder == "none" or requested_decoder not in decoder_map:
+        if current_decoder:
+            sdr_process_manager.stop_decoder(sdr_id, session_id)
+            logger.info(f"Stopped decoder for session {session_id}")
+        return
+
+    # Check if we need to change decoder
+    decoder_class = decoder_map[requested_decoder]
+
+    if current_decoder and isinstance(current_decoder, decoder_class):
+        # Same decoder already running, do nothing
+        logger.debug(f"Decoder {requested_decoder} already running for session {session_id}")
+        return
+
+    # Stop old decoder if running
+    if current_decoder:
+        sdr_process_manager.stop_decoder(sdr_id, session_id)
+        logger.info(f"Stopped old decoder for session {session_id}")
+
+    # Start new decoder
+    try:
+        process_info = sdr_process_manager.processes.get(sdr_id)
+        if not process_info:
+            logger.error(f"No SDR process found for {sdr_id}")
+            return
+
+        data_queue = process_info["data_queue"]
+
+        success = sdr_process_manager.start_decoder(
+            sdr_id=sdr_id,
+            session_id=session_id,
+            decoder_class=decoder_class,
+            data_queue=data_queue,
+            output_dir="data/decoded",
+            vfo_center_freq=vfo_state.center_freq,  # Pass VFO frequency for internal FM demod
+        )
+
+        if success:
+            logger.info(f"Started {requested_decoder} decoder for session {session_id}")
+        else:
+            logger.error(f"Failed to start {requested_decoder} decoder for session {session_id}")
+
+    except Exception as e:
+        logger.error(f"Error starting decoder: {e}")
+        logger.exception(e)
 
 
 def register_handlers(registry):
