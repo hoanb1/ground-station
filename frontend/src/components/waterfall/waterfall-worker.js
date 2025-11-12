@@ -325,28 +325,14 @@ self.onmessage = function(eventMessage) {
                     const originalWidth = waterfallCanvas.width;
                     const originalHeight = waterfallCanvas.height;
 
-                    // Calculate reasonable output dimensions
-                    // Max width: 2048px (reasonable for web display, good quality)
-                    // Keep original height (don't scale Y axis)
-                    const maxWidth = 2048;
-                    let targetWidth, targetHeight;
+                    // Capture at full resolution for high-quality snapshots
+                    // No downscaling - use original dimensions
+                    const targetWidth = originalWidth;
+                    const targetHeight = originalHeight;
 
-                    // Always keep original height
-                    targetHeight = originalHeight;
-
-                    if (originalWidth > maxWidth) {
-                        targetWidth = maxWidth;
-                    } else {
-                        targetWidth = originalWidth;
-                    }
-
-                    // Create a temporary canvas with target dimensions
-                    const tempCanvas = new OffscreenCanvas(targetWidth, targetHeight);
-                    const tempCtx = tempCanvas.getContext('2d');
-
-                    // Draw the entire waterfall canvas scaled to the temp canvas
-                    // This performs high-quality image scaling
-                    tempCtx.drawImage(waterfallCanvas, 0, 0, originalWidth, originalHeight, 0, 0, targetWidth, targetHeight);
+                    // Use the waterfall canvas directly without scaling
+                    // (no need for temporary canvas if dimensions match)
+                    const tempCanvas = waterfallCanvas;
 
                     // Convert to blob (this works in workers)
                     tempCanvas.convertToBlob({ type: 'image/png' })

@@ -257,7 +257,7 @@ export const useWaterfallSnapshot = ({
             waterfallImg.src = waterfallDataURL;
         });
 
-        // Waterfall may be at a different resolution than the bandscope canvas
+        // Waterfall should now be at full resolution (same as bandscope)
         const waterfallScale = waterfallImg.width / waterFallCanvasWidth;
         const waterfallSourceX = canvasSourceX * waterfallScale;
         const waterfallSourceWidth = canvasSourceWidth * waterfallScale;
