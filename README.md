@@ -294,6 +294,74 @@ The backend now uses modern Python packaging with `pyproject.toml`, which provid
     npm run dev
     ```
 
+### LoRa Decoder Support (GNU Radio + gr-lora_sdr)
+
+The ground station includes a LoRa decoder that uses GNU Radio and gr-lora_sdr for proper LoRa PHY decoding. Due to NumPy 2.x compatibility requirements, GNU Radio must be compiled from source:
+
+**Prerequisites:**
+```bash
+# Install system dependencies
+sudo apt-get install cmake libboost-all-dev libgmp-dev libmpfr-dev \
+    liblog4cpp5-dev libspdlog-dev libfmt-dev libvolk-dev \
+    pybind11-dev python3-pybind11
+```
+
+**Build GNU Radio 3.10 (with NumPy 2.x support):**
+```bash
+cd ~/projects/ground-station/backend
+source venv/bin/activate
+
+# Install Python packages
+pip install packaging pybind11
+
+# Clone and build GNU Radio
+cd /tmp
+git clone --recursive https://github.com/gnuradio/gnuradio.git
+cd gnuradio
+git checkout maint-3.10
+mkdir build && cd build
+
+# Configure to install into venv
+cmake -DCMAKE_BUILD_TYPE=Release \
+      -DENABLE_PYTHON=ON \
+      -DENABLE_GR_QTGUI=OFF \
+      -DENABLE_TESTING=OFF \
+      -DPython3_EXECUTABLE=$VIRTUAL_ENV/bin/python3 \
+      -DPYTHON_EXECUTABLE=$VIRTUAL_ENV/bin/python3 \
+      -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV \
+      ..
+
+# Build and install (takes 15-30 minutes)
+make -j$(nproc)
+make install
+```
+
+**Build gr-lora_sdr:**
+```bash
+cd /tmp
+git clone https://github.com/tapparelj/gr-lora_sdr.git
+cd gr-lora_sdr
+mkdir build && cd build
+
+cmake -DCMAKE_INSTALL_PREFIX=$VIRTUAL_ENV ..
+make -j$(nproc)
+make install
+```
+
+**Configure library paths:**
+```bash
+cd ~/projects/ground-station/backend
+echo 'export LD_LIBRARY_PATH=$VIRTUAL_ENV/lib:$LD_LIBRARY_PATH' >> venv/bin/activate
+source venv/bin/activate
+```
+
+**Verify installation:**
+```bash
+python -c "from gnuradio import gr, lora_sdr; print('LoRa decoder ready!')"
+```
+
+> **Note:** This is only required for development. Docker images include pre-built GNU Radio and gr-lora_sdr.
+
 ### Development Workflow with pyproject.toml
 
 The project's `pyproject.toml` provides comprehensive tooling configuration:

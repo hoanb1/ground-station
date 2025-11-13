@@ -26,19 +26,12 @@ import time
 from enum import Enum
 
 import numpy as np
+from gnuradio import blocks, gr, lora_sdr
 from scipy import signal
 
 from vfos.state import VFOManager
 
-try:
-    from gnuradio import blocks, gr, lora_sdr
-
-    GNURADIO_AVAILABLE = True
-except ImportError:
-    GNURADIO_AVAILABLE = False
-    gr = None
-    blocks = None
-    lora_sdr = None
+GNURADIO_AVAILABLE = True
 
 logger = logging.getLogger("loradecoder")
 
@@ -66,6 +59,8 @@ class LoRaMessageSink(gr.sync_block):
     def handle_msg(self, msg):
         """Handle incoming LoRa message"""
         try:
+            logger.info(f"LoRaMessageSink received message: type={type(msg)}")
+
             # Extract message data
             if gr.pmt.is_pair(msg):
                 # meta = gr.pmt.car(msg)  # Metadata not currently used
@@ -74,20 +69,40 @@ class LoRaMessageSink(gr.sync_block):
                 # Convert PMT to bytes
                 if gr.pmt.is_u8vector(data):
                     payload = bytes(gr.pmt.u8vector_elements(data))
+                    logger.info(f"LoRa packet decoded: {len(payload)} bytes")
                     self.callback(payload)
+                else:
+                    logger.warning(f"Message data is not u8vector: {type(data)}")
+            else:
+                logger.warning(f"Message is not a pair: {msg}")
         except Exception as e:
             logger.error(f"Error handling LoRa message: {e}")
+            import traceback
+
+            traceback.print_exc()
 
 
 class LoRaFlowgraph(gr.top_block):
-    """GNU Radio flowgraph for LoRa decoding"""
+    """GNU Radio flowgraph for LoRa decoding using gr-lora_sdr blocks"""
 
-    def __init__(self, sample_rate, callback, sf=7, bw=125000, cr=1, has_crc=True, impl_head=False):
+    def __init__(
+        self,
+        sample_rate,
+        center_freq,
+        callback,
+        sf=7,
+        bw=125000,
+        cr=1,
+        has_crc=True,
+        impl_head=False,
+        sync_word=None,
+    ):
         """
         Initialize LoRa decoder flowgraph
 
         Args:
             sample_rate: Input sample rate (Hz)
+            center_freq: Center frequency (Hz)
             callback: Function to call when packet is decoded
             sf: Spreading factor (7-12)
             bw: Bandwidth (125000, 250000, or 500000)
@@ -98,40 +113,115 @@ class LoRaFlowgraph(gr.top_block):
         gr.top_block.__init__(self, "LoRa Decoder")
 
         self.sample_rate = sample_rate
+        self.center_freq = center_freq
         self.callback = callback
+        self.soft_decoding = True
 
-        # Create vector source that we'll push samples into
+        # Create vector source - we'll create new flowgraphs for each batch
+        # This is the most reliable approach for batch processing
         self.vector_source = blocks.vector_source_c([], repeat=False)
 
-        # LoRa receiver chain
-        self.lora_receiver = lora_sdr.lora_sdr_receiver(
-            samp_rate=int(sample_rate),
-            bw=int(bw),
+        # Set sync word: [0, 0] for auto-detection, or specific value
+        if sync_word is None:
+            sync_word = [0, 0]  # Auto-detect and print all sync words
+
+        # LoRa receiver chain (as per gr-lora_sdr examples)
+        # 1. Frame synchronization
+        self.frame_sync = lora_sdr.frame_sync(
+            center_freq=int(center_freq),
+            bandwidth=int(bw),
             sf=int(sf),
             impl_head=impl_head,
+            sync_word=sync_word,
+            os_factor=int(sample_rate / bw),  # Oversampling factor
+            preamble_len=8,  # Standard preamble length
+        )
+
+        logger.debug(f"LoRa frame_sync configured with sync_word={sync_word} (0,0=auto-detect)")
+
+        # 2. FFT demodulation
+        self.fft_demod = lora_sdr.fft_demod(
+            soft_decoding=self.soft_decoding,
+            max_log_approx=True,
+        )
+
+        # 3. Gray mapping
+        self.gray_mapping = lora_sdr.gray_mapping(self.soft_decoding)
+
+        # 4. Deinterleaving
+        self.deinterleaver = lora_sdr.deinterleaver(self.soft_decoding)
+
+        # 5. Hamming decoder
+        self.hamming_dec = lora_sdr.hamming_dec(self.soft_decoding)
+
+        # 6. Header decoder
+        self.header_decoder = lora_sdr.header_decoder(
+            impl_head=impl_head,
+            print_header=True,
             cr=int(cr),
-            pay_len=255,
+            pay_len=255,  # Maximum payload
             has_crc=has_crc,
-            print_rx=[True, True],  # Enable debug output
+            ldro=False,  # Low data rate optimization
+        )
+
+        # 7. Dewhitening
+        self.dewhitening = lora_sdr.dewhitening()
+
+        # 8. CRC verification
+        self.crc_verif = lora_sdr.crc_verif(
+            1,  # output_crc_ok (1 = output valid packets only)
+            False,  # print_rx_err
         )
 
         # Message sink to receive decoded packets
         self.msg_sink = LoRaMessageSink(self._on_packet_decoded)
 
-        # Connect blocks
-        self.connect((self.vector_source, 0), (self.lora_receiver, 0))
-        self.msg_port_connect((self.lora_receiver, "frames"), (self.msg_sink, "in"))
+        # Connect the receiver chain
+        self.connect((self.vector_source, 0), (self.frame_sync, 0))
+        self.connect((self.frame_sync, 0), (self.fft_demod, 0))
+        self.connect((self.fft_demod, 0), (self.gray_mapping, 0))
+        self.connect((self.gray_mapping, 0), (self.deinterleaver, 0))
+        self.connect((self.deinterleaver, 0), (self.hamming_dec, 0))
+        self.connect((self.hamming_dec, 0), (self.header_decoder, 0))
+        self.connect((self.header_decoder, 0), (self.dewhitening, 0))
+        self.connect((self.dewhitening, 0), (self.crc_verif, 0))
 
-        logger.info(f"LoRa flowgraph initialized: SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}")
+        # Connect message port from CRC verif to our message sink
+        self.msg_connect((self.crc_verif, "msg"), (self.msg_sink, "in"))
 
-    def push_samples(self, samples):
-        """Push new IQ samples into the flowgraph"""
+        logger.debug(f"LoRa flowgraph initialized: SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}")
+
+    def process_batch(self, samples):
+        """Process a batch of samples (non-blocking)"""
         try:
-            # Convert to list for vector source
-            sample_list = samples.tolist()
-            self.vector_source.set_data(sample_list)
+            # Chunk large sample sets to avoid vector_source limitations
+            # GNU Radio's vector_source has internal buffer limits
+            chunk_size = 8192 * 100  # Process in chunks of ~800k samples
+
+            for i in range(0, len(samples), chunk_size):
+                chunk = samples[i : i + chunk_size]
+
+                # Set the data for this chunk
+                self.vector_source.set_data(chunk.tolist())
+
+                # Start the flowgraph
+                self.start()
+
+                # Wait for processing with very short timeout
+                time.sleep(0.1)  # 100ms per chunk
+
+                # Stop gracefully
+                try:
+                    self.stop()
+                    self.wait()
+                except Exception:
+                    pass
+
         except Exception as e:
-            logger.error(f"Error pushing samples: {e}")
+            logger.error(f"Error processing batch: {e}")
+            import traceback
+
+            traceback.print_exc()
 
     def _on_packet_decoded(self, payload):
         """Called when a LoRa packet is successfully decoded"""
@@ -149,9 +239,10 @@ class LoRaDecoder(threading.Thread):
         session_id,
         output_dir="data/decoded",
         vfo=None,
-        sf=7,
-        bw=125000,
-        cr=1,
+        sf=11,  # Meshtastic LONG_FAST default
+        bw=250000,  # Meshtastic LONG_FAST default
+        cr=1,  # Coding rate 4/5 - will auto-detect
+        sync_word=None,  # Auto-detect by default
     ):
         super().__init__(daemon=True, name=f"LoRaDecoder-{session_id}")
         self.iq_queue = iq_queue
@@ -171,19 +262,18 @@ class LoRaDecoder(threading.Thread):
         self.sf = sf
         self.bw = bw
         self.cr = cr
+        # sync_word: None = auto-detect [0, 0], or specific like [0x12]
+        self.sync_word = sync_word if sync_word is not None else [0, 0]
 
         os.makedirs(self.output_dir, exist_ok=True)
-
-        # Check if GNU Radio is available
-        if not GNURADIO_AVAILABLE:
-            logger.error("GNU Radio is not available! Install gr-lora_sdr to use LoRa decoder.")
-            self.running = False
-            return
 
         # GNU Radio flowgraph (will be initialized when we know sample rate)
         self.flowgraph = None
 
         logger.info(f"LoRa decoder initialized for session {session_id}, VFO {vfo}")
+        logger.info(
+            f"LoRa parameters: SF{sf}, BW{bw/1000:.0f}kHz, CR4/{cr+4}, sync_word={self.sync_word}"
+        )
 
     def _get_vfo_state(self):
         """Get VFO state for this decoder."""
@@ -298,16 +388,16 @@ class LoRaDecoder(threading.Thread):
 
     def run(self):
         """Main thread loop"""
-        if not GNURADIO_AVAILABLE:
-            logger.error("Cannot start LoRa decoder: GNU Radio not available")
-            return
-
         logger.info(f"LoRa decoder started for {self.session_id}")
         self._send_status_update(DecoderStatus.LISTENING)
 
         chunks_received = 0
         samples_buffer = np.array([], dtype=np.complex64)
-        batch_size = 8192  # Process samples in batches
+        # Buffer enough samples for gr-lora_sdr processing
+        # frame_sync needs at least 8200 samples, plus margin for packet length
+        # For SF11/250kHz, a packet can be 200-500ms
+        buffer_duration = 2.0  # seconds - longer buffer for larger SF
+        process_interval = 1.0  # Process every 1 second (more samples per batch)
 
         try:
             while self.running:
@@ -336,26 +426,22 @@ class LoRaDecoder(threading.Thread):
                         self.sdr_sample_rate = sdr_rate
                         self.sdr_center_freq = sdr_center
 
-                        # Calculate decimation factor
-                        decimation = int(self.sdr_sample_rate / vfo_bandwidth)
+                        # Calculate decimation factor for 4x oversampling of LoRa bandwidth
+                        # gr-lora_sdr works best with 4x oversampling
+                        target_sample_rate = self.bw * 4  # 4x oversampling
+                        decimation = int(self.sdr_sample_rate / target_sample_rate)
                         if decimation < 1:
                             decimation = 1
                         self.sample_rate = self.sdr_sample_rate / decimation
+
+                        logger.info(
+                            f"LoRa BW: {self.bw/1e3:.0f}kHz, target rate: {target_sample_rate/1e6:.2f}MS/s (4x oversample)"
+                        )
 
                         # Design decimation filter
                         self.decimation_filter = self._design_decimation_filter(
                             decimation, vfo_bandwidth, self.sdr_sample_rate
                         )
-
-                        # Initialize GNU Radio flowgraph
-                        self.flowgraph = LoRaFlowgraph(
-                            sample_rate=self.sample_rate,
-                            callback=self._on_packet_decoded,
-                            sf=self.sf,
-                            bw=self.bw,
-                            cr=self.cr,
-                        )
-                        self.flowgraph.start()
 
                         logger.info(
                             f"LoRa decoder: SDR rate: {self.sdr_sample_rate/1e6:.2f} MS/s, "
@@ -364,6 +450,14 @@ class LoRaDecoder(threading.Thread):
                         )
                         logger.info(
                             f"VFO center: {vfo_center/1e6:.3f} MHz, SDR center: {sdr_center/1e6:.3f} MHz"
+                        )
+
+                        # Calculate buffer sizes
+                        buffer_samples = int(self.sample_rate * buffer_duration)
+                        process_samples = int(self.sample_rate * process_interval)
+                        logger.info(
+                            f"Will buffer {buffer_samples} samples ({buffer_duration}s) "
+                            f"and process every {process_samples} samples ({process_interval}s)"
                         )
 
                     # Step 1: Frequency translation to VFO center
@@ -381,13 +475,80 @@ class LoRaDecoder(threading.Thread):
                     # Add to buffer
                     samples_buffer = np.concatenate([samples_buffer, decimated])
 
-                    # Process in batches
-                    while len(samples_buffer) >= batch_size and self.flowgraph is not None:
-                        batch = samples_buffer[:batch_size]
-                        samples_buffer = samples_buffer[batch_size:]
+                    # Process when we have enough samples
+                    if len(samples_buffer) >= process_samples:
+                        # Process the buffered samples (only log every 20th time to reduce spam)
+                        if chunks_received % 20 == 0:
+                            logger.debug(
+                                f"Processing {len(samples_buffer)} samples (SF{self.sf}, BW{self.bw/1000:.0f}kHz)"
+                            )
 
-                        # Push samples into GNU Radio flowgraph
-                        self.flowgraph.push_samples(batch)
+                        # Try multiple spreading factors if we haven't decoded anything yet
+                        # This helps with auto-detection
+                        sfs_to_try = [self.sf]  # Start with configured SF
+                        if self.packet_count == 0 and chunks_received % 10 == 0:
+                            # Every 10 chunks (~5s), also try other common SFs
+                            sfs_to_try = [7, 8, 9, 10, 11, 12]
+                            logger.info(f"No packets decoded yet, trying all SFs: {sfs_to_try}")
+
+                        for sf in sfs_to_try:
+                            # Try different coding rates too
+                            crs_to_try = [self.cr]  # Start with configured CR
+                            if self.packet_count == 0 and len(sfs_to_try) > 1:
+                                # Try all common CRs
+                                crs_to_try = [1, 2, 3, 4]  # 4/5, 4/6, 4/7, 4/8
+
+                            for cr in crs_to_try:
+                                # Try both explicit and implicit header modes
+                                impl_head_modes = [False]  # Start with explicit (standard)
+                                if self.packet_count == 0 and len(sfs_to_try) > 1:
+                                    # If trying multiple SFs, also try implicit header
+                                    impl_head_modes = [False, True]
+
+                                for impl_head in impl_head_modes:
+                                    # Create a new flowgraph for this batch
+                                    flowgraph = LoRaFlowgraph(
+                                        sample_rate=self.sample_rate,
+                                        center_freq=vfo_center,
+                                        callback=self._on_packet_decoded,
+                                        sf=sf,
+                                        bw=self.bw,
+                                        cr=cr,
+                                        sync_word=self.sync_word,
+                                        impl_head=impl_head,
+                                    )
+
+                                    # Process batch (blocking)
+                                    flowgraph.process_batch(samples_buffer)
+
+                                    # Cleanup
+                                    del flowgraph
+
+                                    # If we decoded a packet, update our parameters
+                                    if self.packet_count > 0:
+                                        if sf != self.sf or cr != self.cr:
+                                            logger.info(
+                                                f"Found working parameters! SF{sf}, CR4/{cr+4}, impl_head={impl_head}"
+                                            )
+                                            self.sf = sf
+                                            self.cr = cr
+                                        break
+
+                                if self.packet_count > 0:
+                                    break  # Exit impl_head loop
+
+                            if self.packet_count > 0:
+                                break  # Exit SF loop if we decoded something
+
+                        # Keep overlap for packet boundaries (last 0.5s)
+                        if self.sample_rate is not None:
+                            overlap_samples = int(self.sample_rate * 0.5)
+                            if len(samples_buffer) > overlap_samples:
+                                samples_buffer = samples_buffer[-overlap_samples:]
+                            else:
+                                samples_buffer = np.array([], dtype=np.complex64)
+                        else:
+                            samples_buffer = np.array([], dtype=np.complex64)
 
                     chunks_received += 1
                     if chunks_received % 100 == 0:
@@ -404,22 +565,14 @@ class LoRaDecoder(threading.Thread):
             logger.error(f"LoRa decoder error: {e}")
             logger.exception(e)
             self._send_status_update(DecoderStatus.ERROR)
-        finally:
-            if self.flowgraph:
-                self.flowgraph.stop()
-                self.flowgraph.wait()
+        except KeyboardInterrupt:
+            pass
 
         logger.info(f"LoRa decoder stopped for {self.session_id}")
 
     def stop(self):
         """Stop the decoder thread"""
         self.running = False
-        if self.flowgraph:
-            try:
-                self.flowgraph.stop()
-                self.flowgraph.wait()
-            except Exception:
-                pass
 
         # Send final status update
         msg = {
