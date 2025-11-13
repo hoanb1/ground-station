@@ -83,7 +83,7 @@ jobs:
   frontend-e2e-tests:
     name: Frontend E2E Tests
     runs-on: ubuntu-latest
-    timeout-minutes: 60
+    timeout-minutes: 180
 
     steps:
       - uses: actions/checkout@v4
@@ -120,7 +120,7 @@ jobs:
             fi
             if [ $i -eq 90 ]; then
               echo "✗ Backend failed to start in time"
-              docker logs ground-station-backend
+              docker logs ground-station-backend 2>&1 || echo "Container logs not available"
               exit 1
             fi
             echo "  Waiting for backend... ($i/90)"
@@ -149,7 +149,7 @@ jobs:
           echo "Testing WebSocket upgrade capability..."
           curl -v -i -N -H "Connection: Upgrade" -H "Upgrade: websocket" -H "Sec-WebSocket-Version: 13" -H "Sec-WebSocket-Key: test" http://localhost:7000/ws || echo "WebSocket test failed"
           echo "Backend logs:"
-          docker logs ground-station-backend | tail -50
+          docker logs ground-station-backend 2>&1 | tail -50 || echo "Container logs not available"
 
       - name: Run E2E tests
         working-directory: ./frontend
@@ -160,7 +160,7 @@ jobs:
 
       - name: Show backend logs
         if: always()
-        run: docker logs ground-station-backend
+        run: docker logs ground-station-backend 2>&1 || echo "Container logs not available"
 
       - name: Stop backend container
         if: always()

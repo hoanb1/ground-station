@@ -56,6 +56,7 @@ jobs:
   build-amd64:
     needs: extract-version
     runs-on: ubuntu-latest
+    timeout-minutes: 180
     permissions:
       contents: read
       packages: write
