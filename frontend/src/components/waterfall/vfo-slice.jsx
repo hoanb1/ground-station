@@ -19,6 +19,7 @@
  */
 
 import { createSlice, createAsyncThunk } from '@reduxjs/toolkit';
+import { getDefaultVFOConfig, DEMODULATORS } from './vfo-config.js';
 
 export const updateVFOParameters = createAsyncThunk(
     'vfo/updateVFOParameters',
@@ -38,6 +39,19 @@ export const updateVFOParameters = createAsyncThunk(
     }
 );
 
+// Create default VFO state using centralized config
+const createDefaultVFO = (name) => {
+    const defaults = getDefaultVFOConfig();
+    return {
+        name,
+        frequency: null,
+        color: null,
+        lockedTransmitterId: null,
+        frequencyOffset: 0,
+        ...defaults
+    };
+};
+
 const initialState = {
     vfoActive: {
         1: false,
@@ -46,10 +60,10 @@ const initialState = {
         4: false,
     },
     vfoMarkers: {
-        1: {name: "VFO1", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en', decoder: 'none'},
-        2: {name: "VFO2", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en', decoder: 'none'},
-        3: {name: "VFO3", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en', decoder: 'none'},
-        4: {name: "VFO4", bandwidth: 10000, frequency: null, color: null, mode: 'FM', volume: 50, squelch: -150, stepSize: 1000, lockedTransmitterId: null, frequencyOffset: 0, transcriptionEnabled: false, transcriptionModel: 'small.en', transcriptionLanguage: 'en', decoder: 'none'},
+        1: createDefaultVFO("VFO1"),
+        2: createDefaultVFO("VFO2"),
+        3: createDefaultVFO("VFO3"),
+        4: createDefaultVFO("VFO4"),
     },
     maxVFOMarkers: 4,
     selectedVFO: null,

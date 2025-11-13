@@ -47,8 +47,8 @@ export const decodersSlice = createSlice({
         decoderStatusChanged: (state, action) => {
             const { session_id, status, mode, decoder_type, vfo, timestamp, progress } = action.payload;
 
-            if (status === 'idle' || status === 'error') {
-                // Remove from active decoders when idle or error
+            if (status === 'idle' || status === 'error' || status === 'closed') {
+                // Remove from active decoders when idle, error, or closed
                 if (state.active[session_id]) {
                     delete state.active[session_id];
                 }

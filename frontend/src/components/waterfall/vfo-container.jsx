@@ -42,6 +42,12 @@ import {
     useVFOWheelHandler,
     useVFODragState
 } from './vfo-events.jsx';
+import {
+    getEffectiveMode,
+    getBandwidthConfig,
+    canDragLeftEdge,
+    canDragRightEdge
+} from './vfo-config.js';
 
 const VFOMarkersContainer = ({
                                  centerFrequency,
@@ -85,9 +91,7 @@ const VFOMarkersContainer = ({
     // Track the previous VFO active state to detect changes
     const prevVfoActiveRef = useRef({});
 
-    // Configurable bandwidth limits
-    const [minBandwidth] = useState(500); // 500 Hz minimum
-    const [maxBandwidth] = useState(100000); // 100 kHz maximum
+    // Bandwidth limits are now determined dynamically based on mode via vfo-config.js
 
     // Configurable vertical length of resize handles
     const [edgeHandleHeight] = useState(20);
@@ -245,9 +249,8 @@ const VFOMarkersContainer = ({
         startFreq,
         endFreq,
         updateVFOProperty,
-        minBandwidth,
-        maxBandwidth,
-        canvasRef
+        canvasRef,
+        getDecoderInfoForVFO
     });
 
     // End drag operation
@@ -344,29 +347,9 @@ const VFOMarkersContainer = ({
             const marker = vfoMarkers[markerIdx];
             const isSelected = parseInt(markerIdx) === selectedVFO;
 
-            // Check if this VFO has an active decoder and override mode if needed
+            // Get effective mode using centralized config (handles decoder overrides)
             const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
-            let effectiveMode = marker.mode;
-
-            if (decoderInfo) {
-                if (decoderInfo.decoder_type === 'morse') {
-                    // Morse uses SSB/CW demodulation (upper sideband only)
-                    effectiveMode = 'CW';
-                } else if (decoderInfo.decoder_type === 'sstv') {
-                    // SSTV uses FM demodulation (double-sided)
-                    effectiveMode = 'FM';
-                }
-            } else {
-                // No decoder found - if marker has decoder property set, handle it
-                if (marker.decoder) {
-                    // Override mode based on decoder property even if not active yet
-                    if (marker.decoder === 'morse') {
-                        effectiveMode = 'CW';
-                    } else if (marker.decoder === 'sstv') {
-                        effectiveMode = 'FM';
-                    }
-                }
-            }
+            const effectiveMode = getEffectiveMode(marker.mode, marker.decoder, decoderInfo);
 
             // Use the utility function for calculations (with effective mode)
             const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
@@ -386,15 +369,15 @@ const VFOMarkersContainer = ({
             canvasDrawingUtils.drawVFOLine(ctx, centerX, height, marker.color, lineOpacity, isSelected ? 2 : 1.5);
             canvasDrawingUtils.drawVFOEdges(ctx, mode, leftEdgeX, rightEdgeX, height, marker.color, lineOpacity, isSelected ? 1.5 : 1);
 
-            // Draw edge handles based on mode
+            // Draw edge handles based on mode configuration
             const edgeHandleYPosition = edgeHandleYOffset;
             const edgeHandleWidth = isSelected ? 14 : 6;
 
-            if (mode === 'USB' || mode === 'CW' || mode === 'AM' || mode === 'FM') {
+            if (canDragRightEdge(mode)) {
                 canvasDrawingUtils.drawVFOHandle(ctx, rightEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
             }
 
-            if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
+            if (canDragLeftEdge(mode)) {
                 canvasDrawingUtils.drawVFOHandle(ctx, leftEdgeX, edgeHandleYPosition, edgeHandleWidth, edgeHandleHeight, marker.color, lineOpacity);
             }
 
@@ -430,29 +413,9 @@ const VFOMarkersContainer = ({
 
             const marker = vfoMarkers[key];
 
-            // Check if this VFO has an active decoder and override mode if needed
+            // Get effective mode using centralized config (handles decoder overrides)
             const decoderInfo = getDecoderInfoForVFO(parseInt(key));
-            let effectiveMode = marker.mode;
-
-            if (decoderInfo) {
-                if (decoderInfo.decoder_type === 'morse') {
-                    // Morse uses SSB/CW demodulation (upper sideband only)
-                    effectiveMode = 'CW';
-                } else if (decoderInfo.decoder_type === 'sstv') {
-                    // SSTV uses FM demodulation (double-sided)
-                    effectiveMode = 'FM';
-                }
-            } else {
-                // No decoder found - if marker has decoder property set, handle it
-                if (marker.decoder) {
-                    // Override mode based on decoder property even if not active yet
-                    if (marker.decoder === 'morse') {
-                        effectiveMode = 'CW';
-                    } else if (marker.decoder === 'sstv') {
-                        effectiveMode = 'FM';
-                    }
-                }
-            }
+            const effectiveMode = getEffectiveMode(marker.mode, marker.decoder, decoderInfo);
 
             // Use the utility function for calculations (with effective mode)
             const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
@@ -481,19 +444,19 @@ const VFOMarkersContainer = ({
                 }
             }
 
-            // Check edge handles based on mode - update Y range for edge handles
+            // Check edge handles based on mode configuration
             // Use the new position (edgeHandleYPosition) with an appropriate range
             const edgeYMin = edgeHandleYPosition - edgeHandleHeight / 2;
             const edgeYMax = edgeHandleYPosition + edgeHandleHeight / 2;
 
-            if (mode === 'USB' || mode === 'CW' || mode === 'AM' || mode === 'FM') {
+            if (canDragRightEdge(mode)) {
                 // Check right edge with updated Y position
                 if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - rightEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'rightEdge' };
                 }
             }
 
-            if (mode === 'LSB' || mode === 'AM' || mode === 'FM') {
+            if (canDragLeftEdge(mode)) {
                 // Check left edge with updated Y position
                 if (y >= edgeYMin && y <= edgeYMax && Math.abs(canvasX - leftEdgeX) <= edgeHandleWidth) {
                     return { key, element: 'leftEdge' };

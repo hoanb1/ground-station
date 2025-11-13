@@ -19,6 +19,7 @@
 
 import { useCallback, useEffect } from 'react';
 import { calculateBandwidthChange } from './vfo-utils.js';
+import { getEffectiveMode, getBandwidthConfig } from './vfo-config.js';
 
 /**
  * Custom hook for VFO drag operations
@@ -32,9 +33,8 @@ export const useVFODragHandlers = ({
     startFreq,
     endFreq,
     updateVFOProperty,
-    minBandwidth,
-    maxBandwidth,
-    canvasRef
+    canvasRef,
+    getDecoderInfoForVFO
 }) => {
     const handleDragMovement = useCallback((deltaX) => {
         if (!activeMarker) return;
@@ -52,11 +52,22 @@ export const useVFODragHandlers = ({
             const limitedFreq = Math.round(Math.max(startFreq, Math.min(newFrequency, endFreq)));
             updateVFOProperty(parseInt(activeMarker), { frequency: limitedFreq });
         } else {
-            const currentBandwidth = marker.bandwidth || 3000;
-            const limitedBandwidth = calculateBandwidthChange(currentBandwidth, freqDelta, dragMode, minBandwidth, maxBandwidth);
+            // Get effective mode and bandwidth limits for this VFO
+            const decoderInfo = getDecoderInfoForVFO ? getDecoderInfoForVFO(parseInt(activeMarker)) : null;
+            const effectiveMode = getEffectiveMode(marker.mode, marker.decoder, decoderInfo);
+            const bandwidthConfig = getBandwidthConfig(effectiveMode);
+
+            const currentBandwidth = marker.bandwidth || bandwidthConfig.default;
+            const limitedBandwidth = calculateBandwidthChange(
+                currentBandwidth,
+                freqDelta,
+                dragMode,
+                bandwidthConfig.min,
+                bandwidthConfig.max
+            );
             updateVFOProperty(parseInt(activeMarker), { bandwidth: limitedBandwidth });
         }
-    }, [activeMarker, vfoMarkers, actualWidth, freqRange, dragMode, startFreq, endFreq, updateVFOProperty, minBandwidth, maxBandwidth, canvasRef]);
+    }, [activeMarker, vfoMarkers, actualWidth, freqRange, dragMode, startFreq, endFreq, updateVFOProperty, canvasRef, getDecoderInfoForVFO]);
 
     return { handleDragMovement };
 };

@@ -1,5 +1,6 @@
 import { updateVFOParameters, setVFOProperty } from './vfo-slice.jsx';
 import { flushAudioBuffers } from '../dashboard/audio-service.js';
+import { normalizeTransmitterMode } from './vfo-config.js';
 
 // You might want to pass the socket as a parameter or get it differently
 let socketInstance = null;
@@ -7,25 +8,6 @@ let socketInstance = null;
 // Function to set socket (call this when socket is initialized)
 export const setSocketForMiddleware = (socket) => {
     socketInstance = socket;
-};
-
-// Helper function to normalize transmitter modes for VFO demodulation
-const normalizeTransmitterMode = (mode) => {
-    if (!mode) return null;
-
-    const modeNormalized = mode.toLowerCase();
-
-    // Digital modes (FSK/AFSK/PSK/BPSK/QPSK/GMSK) are transmitted over FM carriers
-    if (['fsk', 'afsk', 'psk', 'bpsk', 'qpsk', 'gmsk', 'gmsk usp', 'fmn'].includes(modeNormalized)) {
-        return 'FM';
-    }
-
-    // Keep FM_STEREO as-is if explicitly specified
-    if (modeNormalized === 'fm_stereo') {
-        return 'FM_STEREO';
-    }
-
-    return mode.toUpperCase();
 };
 
 // Helper function to filter out UI-only fields before sending to backend

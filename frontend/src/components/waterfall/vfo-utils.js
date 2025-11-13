@@ -17,6 +17,18 @@
  *
  */
 
+import {
+    getBandwidthType,
+    shouldShowBothEdges,
+    formatBandwidthLabel,
+    shouldShowDecoderStatus,
+    shouldShowDecoderProgress,
+    shouldShowDecoderMode,
+    getTextDisplayConfig,
+    getDemodulatorConfig,
+    getDecoderConfig
+} from './vfo-config.js';
+
 /**
  * Drawing utilities for VFO markers on the waterfall canvas
  */
@@ -42,14 +54,18 @@ export const canvasDrawingUtils = {
         ctx.lineWidth = lineWidth;
         ctx.setLineDash([4, 4]);
 
-        if (mode === 'USB' || mode === 'CW') {
+        const bandwidthType = getBandwidthType(mode);
+
+        if (bandwidthType === 'single-sided-upper') {
+            // USB, CW - only right edge
             ctx.moveTo(rightEdgeX, 0);
             ctx.lineTo(rightEdgeX, height);
-        } else if (mode === 'LSB') {
+        } else if (bandwidthType === 'single-sided-lower') {
+            // LSB - only left edge
             ctx.moveTo(leftEdgeX, 0);
             ctx.lineTo(leftEdgeX, height);
         } else {
-            // Draw both edges for AM, FM, etc.
+            // Double-sided (AM, FM, etc.) - both edges
             ctx.moveTo(leftEdgeX, 0);
             ctx.lineTo(leftEdgeX, height);
             ctx.moveTo(rightEdgeX, 0);
@@ -174,12 +190,15 @@ export const canvasDrawingUtils = {
         // Draw secondary decoder label if decoder is active
         if (decoderInfo) {
             const secondaryLabelTop = labelTop + labelHeight + 2; // 2px gap below primary label
+            const decoderType = decoderInfo.decoder_type;
 
-            // Special handling for morse decoder (static text display)
-            if (decoderInfo.decoder_type === 'morse') {
-                // For morse: "MORSE | <last 30 chars or 'listening'>"
-                const staticPart = 'MORSE | ';
-                const displayText = morseText || 'listening';
+            // Check if this decoder has text output (like morse)
+            const textDisplayConfig = getTextDisplayConfig(decoderType);
+
+            if (textDisplayConfig) {
+                // Text-based decoder display (e.g., morse)
+                const staticPart = `${decoderType.toUpperCase()} | `;
+                const displayText = morseText || textDisplayConfig.placeholder;
                 const fullText = staticPart + displayText;
 
                 ctx.font = '10px Monospace';
@@ -198,12 +217,19 @@ export const canvasDrawingUtils = {
                 ctx.textAlign = 'center';
                 ctx.fillText(fullText, centerX, secondaryLabelTop + 12);
             } else {
-                // Standard decoder label for non-morse decoders
+                // Standard decoder label (status/progress/mode)
                 const parts = [];
-                if (decoderInfo.decoder_type) parts.push(decoderInfo.decoder_type.toUpperCase());
-                if (decoderInfo.status) parts.push(decoderInfo.status);
-                if (decoderInfo.mode) parts.push(decoderInfo.mode);
-                if (decoderInfo.progress !== null && decoderInfo.progress !== undefined) {
+                if (decoderType) parts.push(decoderType.toUpperCase());
+
+                if (shouldShowDecoderStatus(decoderType) && decoderInfo.status) {
+                    parts.push(decoderInfo.status);
+                }
+                if (shouldShowDecoderMode(decoderType) && decoderInfo.mode) {
+                    parts.push(decoderInfo.mode);
+                }
+                if (shouldShowDecoderProgress(decoderType) &&
+                    decoderInfo.progress !== null &&
+                    decoderInfo.progress !== undefined) {
                     parts.push(`${Math.round(decoderInfo.progress)}%`);
                 }
 
@@ -273,21 +299,25 @@ export const calculateBandwidthChange = (currentBandwidth, freqDelta, dragMode, 
  */
 export const calculateVFOFrequencyBounds = (marker, startFreq, freqRange, actualWidth) => {
     const bandwidth = marker.bandwidth || 3000;
-    const mode = marker.mode || 'USB';
+    const mode = marker.mode || 'FM';
+    const bandwidthType = getBandwidthType(mode);
 
     let markerLowFreq, markerHighFreq, leftEdgeX, rightEdgeX;
 
-    if (mode === 'USB' || mode === 'CW') {
+    if (bandwidthType === 'single-sided-upper') {
+        // USB, CW - bandwidth extends above center frequency
         markerLowFreq = marker.frequency;
         markerHighFreq = marker.frequency + bandwidth;
         leftEdgeX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
         rightEdgeX = ((markerHighFreq - startFreq) / freqRange) * actualWidth;
-    } else if (mode === 'LSB') {
+    } else if (bandwidthType === 'single-sided-lower') {
+        // LSB - bandwidth extends below center frequency
         markerLowFreq = marker.frequency - bandwidth;
         markerHighFreq = marker.frequency;
         leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * actualWidth;
         rightEdgeX = ((marker.frequency - startFreq) / freqRange) * actualWidth;
-    } else { // AM, FM, etc.
+    } else {
+        // Double-sided (AM, FM, etc.) - bandwidth divided equally
         markerLowFreq = marker.frequency - bandwidth/2;
         markerHighFreq = marker.frequency + bandwidth/2;
         leftEdgeX = ((markerLowFreq - startFreq) / freqRange) * actualWidth;
@@ -319,11 +349,16 @@ export const calculateVFOFrequencyBounds = (marker, startFreq, freqRange, actual
  */
 export const generateVFOLabelText = (marker, mode, bandwidth, formatFrequency) => {
     // Show decoder mode if active, otherwise show audio demodulation mode
-    const displayMode = marker.decoder && marker.decoder !== 'none'
-        ? marker.decoder.toUpperCase()
-        : mode;
+    let displayMode;
+    if (marker.decoder && marker.decoder !== 'none') {
+        const decoderConfig = getDecoderConfig(marker.decoder);
+        displayMode = decoderConfig.displayName;
+    } else {
+        const demodConfig = getDemodulatorConfig(mode);
+        displayMode = demodConfig ? demodConfig.displayName : mode;
+    }
     const modeText = ` [${displayMode}]`;
-    const bwText = mode === 'USB' || mode === 'LSB' || mode === 'CW' ? `${(bandwidth/1000).toFixed(1)}kHz` : `±${(bandwidth/2000).toFixed(1)}kHz`;
+    const bwText = formatBandwidthLabel(mode, bandwidth);
     return `${marker.name}: ${formatFrequency(marker.frequency)} MHz${modeText} ${bwText}`;
 };
 
