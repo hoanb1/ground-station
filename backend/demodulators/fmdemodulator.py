@@ -55,11 +55,13 @@ class FMDemodulator(threading.Thread):
         internal_mode=False,
         center_freq=None,
         bandwidth=None,
+        vfo_number=None,
     ):
-        super().__init__(daemon=True, name=f"FMDemodulator-{session_id}")
+        super().__init__(daemon=True, name=f"FMDemodulator-{session_id}-VFO{vfo_number or ''}")
         self.iq_queue = iq_queue
         self.audio_queue = audio_queue
         self.session_id = session_id
+        self.vfo_number = vfo_number  # VFO number for multi-VFO mode
         self.running = True
         self.vfo_manager = VFOManager()
 
@@ -93,10 +95,17 @@ class FMDemodulator(threading.Thread):
         self.deemphasis_tau = 75e-6
 
     def _get_active_vfo(self):
-        """Get the currently active and selected VFO for this session."""
-        vfo_state = self.vfo_manager.get_selected_vfo(self.session_id)
-        if vfo_state and vfo_state.active and vfo_state.selected:
-            return vfo_state
+        """Get VFO state for this demodulator's VFO."""
+        if self.vfo_number is not None:
+            # Multi-VFO mode: get specific VFO state
+            vfo_state = self.vfo_manager.get_vfo_state(self.session_id, self.vfo_number)
+            if vfo_state and vfo_state.active:
+                return vfo_state
+        else:
+            # Legacy mode: get selected VFO
+            vfo_state = self.vfo_manager.get_selected_vfo(self.session_id)
+            if vfo_state and vfo_state.active and vfo_state.selected:
+                return vfo_state
         return None
 
     def _resize_filter_state(self, old_state, b_coeffs, initial_value, a_coeffs=None):
@@ -317,6 +326,9 @@ class FMDemodulator(threading.Thread):
                     vfo_center_freq = vfo_state.center_freq
                     vfo_bandwidth = vfo_state.bandwidth
 
+                    # Check if this VFO is selected for audio output
+                    is_selected = vfo_state.selected if vfo_state else False
+
                 # Check if we need to reinitialize filters
                 if (
                     self.sdr_sample_rate != sdr_sample_rate
@@ -503,11 +515,19 @@ class FMDemodulator(threading.Thread):
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
+                        # Only output audio if this VFO is selected (in normal mode)
+                        if not self.internal_mode and not is_selected:
+                            continue
+
                         # Put audio chunk in queue - use put_nowait to avoid blocking
                         # If queue is full, skip this chunk to prevent buffer buildup
                         try:
                             self.audio_queue.put_nowait(
-                                {"session_id": self.session_id, "audio": chunk}
+                                {
+                                    "session_id": self.session_id,
+                                    "audio": chunk,
+                                    "vfo_number": self.vfo_number,  # Tag audio with VFO number
+                                }
                             )
                         except queue.Full:
                             # Queue is full - drop this chunk to prevent lag accumulation

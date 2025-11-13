@@ -52,11 +52,14 @@ class FMStereoDemodulator(threading.Thread):
     process the same IQ samples without gaps.
     """
 
-    def __init__(self, iq_queue, audio_queue, session_id):
-        super().__init__(daemon=True, name=f"FMStereoDemodulator-{session_id}")
+    def __init__(self, iq_queue, audio_queue, session_id, vfo_number=None):
+        super().__init__(
+            daemon=True, name=f"FMStereoDemodulator-{session_id}-VFO{vfo_number or ''}"
+        )
         self.iq_queue = iq_queue
         self.audio_queue = audio_queue
         self.session_id = session_id
+        self.vfo_number = vfo_number  # VFO number for multi-VFO mode
         self.running = True
         self.vfo_manager = VFOManager()
 
@@ -95,10 +98,17 @@ class FMStereoDemodulator(threading.Thread):
         self.pll_freq = 19000.0  # 19 kHz pilot tone
 
     def _get_active_vfo(self):
-        """Get the currently active and selected VFO for this session."""
-        vfo_state = self.vfo_manager.get_selected_vfo(self.session_id)
-        if vfo_state and vfo_state.active and vfo_state.selected:
-            return vfo_state
+        """Get VFO state for this demodulator's VFO."""
+        if self.vfo_number is not None:
+            # Multi-VFO mode: get specific VFO state
+            vfo_state = self.vfo_manager.get_vfo_state(self.session_id, self.vfo_number)
+            if vfo_state and vfo_state.active:
+                return vfo_state
+        else:
+            # Legacy mode: get selected VFO
+            vfo_state = self.vfo_manager.get_selected_vfo(self.session_id)
+            if vfo_state and vfo_state.active and vfo_state.selected:
+                return vfo_state
         return None
 
     def _resize_filter_state(self, old_state, b_coeffs, initial_value, a_coeffs=None):
@@ -444,6 +454,9 @@ class FMStereoDemodulator(threading.Thread):
                     logger.debug(f"Wrong modulation: {vfo_state.modulation}, expecting FM_STEREO")
                     continue
 
+                # Check if this VFO is selected for audio output
+                is_selected = vfo_state.selected if vfo_state else False
+
                 # Extract samples and metadata
                 samples = iq_message.get("samples")
                 sdr_center_freq = iq_message.get("center_freq")
@@ -630,11 +643,19 @@ class FMStereoDemodulator(threading.Thread):
                         chunk = self.audio_buffer[:stereo_chunk_size]
                         self.audio_buffer = self.audio_buffer[stereo_chunk_size:]
 
+                        # Only output audio if this VFO is selected
+                        if not is_selected:
+                            continue
+
                         # Put audio chunk in queue - use put_nowait to avoid blocking
                         # If queue is full, skip this chunk to prevent buffer buildup
                         try:
                             self.audio_queue.put_nowait(
-                                {"session_id": self.session_id, "audio": chunk}
+                                {
+                                    "session_id": self.session_id,
+                                    "audio": chunk,
+                                    "vfo_number": self.vfo_number,  # Tag audio with VFO number
+                                }
                             )
                             logger.debug(f"Queued {len(chunk)} stereo samples")
                         except queue.Full:

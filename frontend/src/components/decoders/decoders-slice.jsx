@@ -45,7 +45,7 @@ export const decodersSlice = createSlice({
     reducers: {
         // Decoder status changed
         decoderStatusChanged: (state, action) => {
-            const { session_id, status, mode, decoder_type, timestamp } = action.payload;
+            const { session_id, status, mode, decoder_type, vfo, timestamp, progress } = action.payload;
 
             if (status === 'idle' || status === 'error') {
                 // Remove from active decoders when idle or error
@@ -58,6 +58,7 @@ export const decodersSlice = createSlice({
                     state.active[session_id] = {
                         decoder_type,
                         session_id,
+                        vfo,
                         started_at: timestamp,
                         progress: null,
                     };
@@ -65,7 +66,13 @@ export const decodersSlice = createSlice({
 
                 state.active[session_id].status = status;
                 state.active[session_id].mode = mode;
+                state.active[session_id].vfo = vfo;
                 state.active[session_id].last_update = timestamp;
+
+                // Update progress if provided in the payload (including null to reset)
+                if (progress !== undefined) {
+                    state.active[session_id].progress = progress;
+                }
             }
         },
 

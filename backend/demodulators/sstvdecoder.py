@@ -1,9 +1,22 @@
-"""
-SSTV Decoder for real-time decoding from audio stream.
-
-Based on reference implementation from: https://github.com/colaclanth/sstv
-Adapted for threaded real-time decoding with audio queue input.
-"""
+# Ground Station - SSTV Decoder
+# Developed by Claude (Anthropic AI) for the Ground Station project
+#
+# This program is free software: you can redistribute it and/or modify
+# it under the terms of the GNU General Public License as published by
+# the Free Software Foundation, either version 3 of the License, or
+# (at your option) any later version.
+#
+# This program is distributed in the hope that it will be useful,
+# but WITHOUT ANY WARRANTY; without even the implied warranty of
+# MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
+# GNU General Public License for more details.
+#
+# You should have received a copy of the GNU General Public License
+# along with this program. If not, see <https://www.gnu.org/licenses/>.
+#
+# Based on reference SSTV decoder implementation from:
+# https://github.com/colaclanth/sstv
+# Adapted for threaded real-time decoding with audio queue input.
 
 import base64
 import io
@@ -168,7 +181,13 @@ class SSTVDecoder(threading.Thread):
     """Real-time SSTV decoder thread"""
 
     def __init__(
-        self, audio_queue, data_queue, session_id, sample_rate=44100, output_dir="data/decoded"
+        self,
+        audio_queue,
+        data_queue,
+        session_id,
+        sample_rate=44100,
+        output_dir="data/decoded",
+        vfo=None,
     ):
         super().__init__(daemon=True, name=f"SSTVDecoder-{session_id}")
         self.audio_queue = audio_queue
@@ -180,8 +199,9 @@ class SSTVDecoder(threading.Thread):
         self.audio_buffer = np.array([], dtype=np.float32)
         self.mode = None
         self.status = DecoderStatus.IDLE
+        self.vfo = vfo
         os.makedirs(self.output_dir, exist_ok=True)
-        logger.info(f"SSTV decoder initialized for session {session_id}")
+        logger.info(f"SSTV decoder initialized for session {session_id}, VFO {vfo}")
 
     def _barycentric_peak_interp(self, bins, x):
         """Interpolate between frequency bins"""
@@ -394,8 +414,12 @@ class SSTVDecoder(threading.Thread):
             "mode": mode_name,
             "decoder_type": "sstv",
             "session_id": self.session_id,
+            "vfo": self.vfo,
             "timestamp": time.time(),
         }
+        # Set progress to null when returning to listening mode
+        if status == DecoderStatus.LISTENING:
+            msg["progress"] = None
         logger.info(f"Sending status update: {status.value} (mode: {mode_name})")
         try:
             self.data_queue.put(msg, block=False)
@@ -408,6 +432,7 @@ class SSTVDecoder(threading.Thread):
             "type": "decoder-vis-detected",
             "decoder_type": "sstv",
             "session_id": self.session_id,
+            "vfo": self.vfo,
             "timestamp": time.time(),
             "vis_code": vis_code,
             "mode": mode_spec["name"],
@@ -430,6 +455,7 @@ class SSTVDecoder(threading.Thread):
             "total_lines": total_lines,
             "mode": mode_name,
             "session_id": self.session_id,
+            "vfo": self.vfo,
             "timestamp": time.time(),
         }
         logger.info(f"Sending progress update: {progress}% (line {current_line}/{total_lines})")
@@ -453,6 +479,7 @@ class SSTVDecoder(threading.Thread):
             "type": "decoder-output",
             "decoder_type": "sstv",
             "session_id": self.session_id,
+            "vfo": self.vfo,
             "timestamp": time.time(),
             "output": {
                 "format": "image/png",
@@ -611,3 +638,19 @@ class SSTVDecoder(threading.Thread):
 
     def stop(self):
         self.running = False
+        # Send final status update indicating decoder is closing
+        msg = {
+            "type": "decoder-status",
+            "status": "closed",
+            "mode": None,
+            "decoder_type": "sstv",
+            "session_id": self.session_id,
+            "vfo": self.vfo,
+            "timestamp": time.time(),
+            "progress": None,
+        }
+        logger.info("Sending final status update: closed")
+        try:
+            self.data_queue.put(msg, block=False)
+        except queue.Full:
+            logger.warning("Data queue full, dropping final status update")

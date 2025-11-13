@@ -69,8 +69,10 @@ async def update_vfo_parameters(
         vfo_state = vfomanager.get_vfo_state(sid, vfo_id)
         handle_vfo_demodulator_state(vfo_state, sid, logger)
 
-        # Handle decoder state changes
-        handle_vfo_decoder_state(vfo_state, sid, logger)
+        # Handle decoder state changes ONLY if decoder field was provided in the update
+        # This prevents VFO updates (like selecting a different VFO) from stopping decoders on other VFOs
+        if "decoder" in data:
+            handle_vfo_decoder_state(vfo_state, sid, logger)
 
     return {"success": True, "data": {}}
 
@@ -152,7 +154,10 @@ async def toggle_transcription(
 
 def handle_vfo_decoder_state(vfo_state, session_id, logger):
     """
-    Start or stop decoder based on VFO decoder setting.
+    Start or stop decoder for a specific VFO based on its decoder setting.
+
+    Note: Currently only ONE decoder can run per session. If a VFO has a decoder,
+    it takes over the session's decoder slot.
 
     Args:
         vfo_state: VFO state object
@@ -168,15 +173,7 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
         logger.warning(f"No SDR found for session {session_id}")
         return
 
-    # Check if VFO is active
-    if not vfo_state.active:
-        # VFO is not active, stop any decoder
-        sdr_process_manager.stop_decoder(sdr_id, session_id)
-        logger.info(f"Stopped decoder for session {session_id} (VFO inactive)")
-        return
-
-    # Get current decoder state
-    current_decoder = sdr_process_manager.get_active_decoder(sdr_id, session_id)
+    vfo_number = vfo_state.vfo_number
     requested_decoder = vfo_state.decoder
 
     # Map decoder names to classes
@@ -188,27 +185,55 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
         # "psk31": PSK31Decoder,
     }
 
-    # If decoder is "none" or not in map, stop any running decoder
-    if requested_decoder == "none" or requested_decoder not in decoder_map:
-        if current_decoder:
+    # Get current decoder state
+    current_decoder = sdr_process_manager.get_active_decoder(sdr_id, session_id)
+    current_decoder_vfo = None
+    if current_decoder:
+        # Check which VFO owns the current decoder
+        process_info = sdr_process_manager.processes.get(sdr_id)
+        if process_info:
+            decoder_entry = process_info.get("decoders", {}).get(session_id)
+            if isinstance(decoder_entry, dict):
+                current_decoder_vfo = decoder_entry.get("vfo_number")
+
+    # Check if VFO is active
+    if not vfo_state.active:
+        # VFO is not active - if this VFO owns the decoder, stop it
+        if current_decoder and current_decoder_vfo == vfo_number:
             sdr_process_manager.stop_decoder(sdr_id, session_id)
-            logger.info(f"Stopped decoder for session {session_id}")
+            logger.info(f"Stopped decoder for session {session_id} VFO {vfo_number} (VFO inactive)")
         return
 
-    # Check if we need to change decoder
+    # If decoder is "none" or not in map, stop decoder only if THIS VFO owns it
+    if requested_decoder == "none" or requested_decoder not in decoder_map:
+        if current_decoder and current_decoder_vfo == vfo_number:
+            sdr_process_manager.stop_decoder(sdr_id, session_id)
+            logger.info(f"Stopped decoder for session {session_id} VFO {vfo_number}")
+        return
+
+    # This VFO wants a decoder
     decoder_class = decoder_map[requested_decoder]
 
-    if current_decoder and isinstance(current_decoder, decoder_class):
-        # Same decoder already running, do nothing
-        logger.debug(f"Decoder {requested_decoder} already running for session {session_id}")
+    # Check if the same decoder is already running for this VFO
+    if (
+        current_decoder
+        and isinstance(current_decoder, decoder_class)
+        and current_decoder_vfo == vfo_number
+    ):
+        # Same decoder already running for this VFO, do nothing
+        logger.debug(
+            f"Decoder {requested_decoder} already running for session {session_id} VFO {vfo_number}"
+        )
         return
 
-    # Stop old decoder if running
+    # If another VFO's decoder is running, we need to stop it first (only one decoder per session)
     if current_decoder:
+        logger.info(
+            f"Stopping decoder from VFO {current_decoder_vfo} to start decoder for VFO {vfo_number}"
+        )
         sdr_process_manager.stop_decoder(sdr_id, session_id)
-        logger.info(f"Stopped old decoder for session {session_id}")
 
-    # Start new decoder
+    # Start new decoder for this VFO
     try:
         process_info = sdr_process_manager.processes.get(sdr_id)
         if not process_info:
@@ -224,12 +249,17 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
             data_queue=data_queue,
             output_dir="data/decoded",
             vfo_center_freq=vfo_state.center_freq,  # Pass VFO frequency for internal FM demod
+            vfo=vfo_state.vfo_number,  # Pass VFO number for status updates
         )
 
         if success:
-            logger.info(f"Started {requested_decoder} decoder for session {session_id}")
+            logger.info(
+                f"Started {requested_decoder} decoder for session {session_id} VFO {vfo_number}"
+            )
         else:
-            logger.error(f"Failed to start {requested_decoder} decoder for session {session_id}")
+            logger.error(
+                f"Failed to start {requested_decoder} decoder for session {session_id} VFO {vfo_number}"
+            )
 
     except Exception as e:
         logger.error(f"Error starting decoder: {e}")

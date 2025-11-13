@@ -393,7 +393,7 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
     return reply
 
 
-def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
+def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None):
     """
     Start the appropriate demodulator based on modulation mode.
 
@@ -402,41 +402,48 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
         sdr_id: SDR device identifier
         session_id: Session identifier
         logger: Logger instance
+        vfo_number: VFO number (1-4) for multi-VFO mode
 
     Returns:
         bool: True if demodulator was started, False otherwise
     """
     mode = mode.lower()
 
+    log_suffix = f" VFO {vfo_number}" if vfo_number else ""
+
     if mode == "fm":
         from demodulators.fmdemodulator import FMDemodulator
 
         result = sdr_process_manager.start_demodulator(
-            sdr_id, session_id, FMDemodulator, audio_queue
+            sdr_id, session_id, FMDemodulator, audio_queue, vfo_number=vfo_number
         )
         if result:
-            logger.debug(f"FM demodulator ensured for session {session_id} on SDR {sdr_id}")
+            logger.debug(
+                f"FM demodulator ensured for session {session_id}{log_suffix} on SDR {sdr_id}"
+            )
         return result
 
     elif mode == "fm_stereo":
         from demodulators.fmstereodemodulator import FMStereoDemodulator
 
         result = sdr_process_manager.start_demodulator(
-            sdr_id, session_id, FMStereoDemodulator, audio_queue
+            sdr_id, session_id, FMStereoDemodulator, audio_queue, vfo_number=vfo_number
         )
         if result:
-            logger.debug(f"FM Stereo demodulator ensured for session {session_id} on SDR {sdr_id}")
+            logger.debug(
+                f"FM Stereo demodulator ensured for session {session_id}{log_suffix} on SDR {sdr_id}"
+            )
         return result
 
     elif mode in ["usb", "lsb", "cw"]:
         from demodulators.ssbdemodulator import SSBDemodulator
 
         result = sdr_process_manager.start_demodulator(
-            sdr_id, session_id, SSBDemodulator, audio_queue, mode=mode
+            sdr_id, session_id, SSBDemodulator, audio_queue, vfo_number=vfo_number, mode=mode
         )
         if result:
             logger.debug(
-                f"SSB demodulator ({mode.upper()}) ensured for session {session_id} on SDR {sdr_id}"
+                f"SSB demodulator ({mode.upper()}) ensured for session {session_id}{log_suffix} on SDR {sdr_id}"
             )
         return result
 
@@ -444,10 +451,12 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
         from demodulators.amdemodulator import AMDemodulator
 
         result = sdr_process_manager.start_demodulator(
-            sdr_id, session_id, AMDemodulator, audio_queue
+            sdr_id, session_id, AMDemodulator, audio_queue, vfo_number=vfo_number
         )
         if result:
-            logger.debug(f"AM demodulator ensured for session {session_id} on SDR {sdr_id}")
+            logger.debug(
+                f"AM demodulator ensured for session {session_id}{log_suffix} on SDR {sdr_id}"
+            )
         return result
 
     else:
@@ -457,7 +466,8 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger):
 
 def handle_vfo_demodulator_state(vfo_state, session_id, logger):
     """
-    Start or stop demodulator based on VFO active AND selected state.
+    Start or stop demodulator for a specific VFO based on its active state.
+    In multi-VFO mode, each active VFO gets its own demodulator.
 
     Args:
         vfo_state: VFO state object
@@ -472,19 +482,15 @@ def handle_vfo_demodulator_state(vfo_state, session_id, logger):
     if not sdr_id:
         return
 
-    # Only manage demodulator for the SELECTED VFO
-    # If this VFO is not selected, don't touch the demodulator at all
-    if not vfo_state.selected:
-        return
+    vfo_number = vfo_state.vfo_number
 
-    demod_key = session_id
-    # BOTH active AND selected must be true to start demodulator
-    should_start = vfo_state.active and vfo_state.selected
-
-    if should_start:
-        # Start appropriate demodulator
-        start_demodulator_for_mode(vfo_state.modulation, sdr_id, demod_key, logger)
+    # Start demodulator if VFO is active, stop if not active
+    if vfo_state.active:
+        # Start appropriate demodulator for this VFO
+        start_demodulator_for_mode(
+            vfo_state.modulation, sdr_id, session_id, logger, vfo_number=vfo_number
+        )
     else:
-        # Stop demodulator
-        sdr_process_manager.stop_demodulator(sdr_id, demod_key)
-        logger.info(f"Stopped demodulator for session {demod_key}")
+        # Stop demodulator for this specific VFO
+        sdr_process_manager.stop_demodulator(sdr_id, session_id, vfo_number)
+        logger.info(f"Stopped demodulator for session {session_id} VFO {vfo_number}")

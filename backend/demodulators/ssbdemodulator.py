@@ -47,11 +47,12 @@ class SSBDemodulator(threading.Thread):
     process the same IQ samples without gaps.
     """
 
-    def __init__(self, iq_queue, audio_queue, session_id, mode="usb"):
-        super().__init__(daemon=True, name=f"SSBDemodulator-{session_id}")
+    def __init__(self, iq_queue, audio_queue, session_id, mode="usb", vfo_number=None, **kwargs):
+        super().__init__(daemon=True, name=f"SSBDemodulator-{session_id}-VFO{vfo_number or ''}")
         self.iq_queue = iq_queue
         self.audio_queue = audio_queue
         self.session_id = session_id
+        self.vfo_number = vfo_number  # VFO number for multi-VFO mode
         self.running = True
         self.vfo_manager = VFOManager()
         self.mode = mode  # "usb" or "lsb"
@@ -77,10 +78,21 @@ class SSBDemodulator(threading.Thread):
         self.audio_filter: Optional[np.ndarray] = None
 
     def _get_active_vfo(self):
-        """Get the currently active and selected VFO for this session."""
-        vfo_state = self.vfo_manager.get_selected_vfo(self.session_id)
-        if vfo_state and vfo_state.active and vfo_state.selected:
-            return vfo_state
+        """
+        Get the VFO state for this demodulator's VFO.
+        In multi-VFO mode, returns this specific VFO's state.
+        In legacy mode (vfo_number=None), returns the selected VFO.
+        """
+        if self.vfo_number is not None:
+            # Multi-VFO mode: get specific VFO state
+            vfo_state = self.vfo_manager.get_vfo_state(self.session_id, self.vfo_number)
+            if vfo_state and vfo_state.active:
+                return vfo_state
+        else:
+            # Legacy mode: get selected VFO
+            vfo_state = self.vfo_manager.get_selected_vfo(self.session_id)
+            if vfo_state and vfo_state.active and vfo_state.selected:
+                return vfo_state
         return None
 
     def _resize_filter_state(self, old_state, b_coeffs, initial_value, a_coeffs=None):
@@ -412,16 +424,28 @@ class SSBDemodulator(threading.Thread):
                         )
 
                     # Send chunks of target size when buffer is full enough
+                    # Only output audio if this VFO is selected (in multi-VFO mode)
+                    is_selected = vfo_state.selected if vfo_state else False
+
                     while len(self.audio_buffer) >= self.target_chunk_size:
                         # Extract a chunk
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
+                        # Only output audio if this VFO is selected
+                        if not is_selected:
+                            # VFO not selected, discard audio (but continue processing to avoid buffer buildup)
+                            continue
+
                         # Put audio chunk in queue - use put_nowait to avoid blocking
                         # If queue is full, skip this chunk to prevent buffer buildup
                         try:
                             self.audio_queue.put_nowait(
-                                {"session_id": self.session_id, "audio": chunk}
+                                {
+                                    "session_id": self.session_id,
+                                    "audio": chunk,
+                                    "vfo_number": self.vfo_number,  # Add VFO number for multi-VFO support
+                                }
                             )
                         except queue.Full:
                             # Queue is full - drop this chunk to prevent lag accumulation

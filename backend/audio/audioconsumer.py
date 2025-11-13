@@ -54,9 +54,10 @@ class WebAudioConsumer(threading.Thread):
                 # Get audio message from queue (now contains session_id and audio data)
                 audio_message = self.audio_queue.get(timeout=1.0)
 
-                # Extract session_id and audio chunk from the message
+                # Extract session_id, audio chunk, and vfo_number from the message
                 originating_session_id = audio_message.get("session_id")
                 audio_chunk = audio_message.get("audio")
+                vfo_number = audio_message.get("vfo_number")  # For multi-VFO support
 
                 if originating_session_id is None or audio_chunk is None:
                     logger.warning("Received malformed audio message, skipping")
@@ -65,16 +66,23 @@ class WebAudioConsumer(threading.Thread):
 
                 # Only process audio for the originating session
                 try:
-                    # Get currently selected VFO state for this session
-                    vfo_state = self.vfo_manager.get_selected_vfo(originating_session_id)
+                    # Get VFO state - use vfo_number if provided (multi-VFO), otherwise get selected VFO
+                    if vfo_number is not None:
+                        vfo_state = self.vfo_manager.get_vfo_state(
+                            originating_session_id, vfo_number
+                        )
+                    else:
+                        # Legacy mode: get selected VFO
+                        vfo_state = self.vfo_manager.get_selected_vfo(originating_session_id)
 
-                    # Check if VFO is neither active nor selected - if so, skip
-                    if vfo_state is None or (not vfo_state.active and not vfo_state.selected):
+                    # Check if VFO exists and is selected
+                    # In multi-VFO mode, only play audio from the selected VFO
+                    if vfo_state is None or not vfo_state.selected:
                         self.audio_queue.task_done()
                         continue
 
                     # Process audio based on VFO settings
-                    if vfo_state.active:
+                    if vfo_state.active and vfo_state.selected:
                         # Convert volume from the 0-100 range to 0.0-1.5 multiplier
                         volume_multiplier = vfo_state.volume / 100.0 * 1.5
                         processed_audio = audio_chunk * volume_multiplier

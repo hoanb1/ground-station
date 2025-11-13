@@ -61,6 +61,10 @@ const VFOMarkersContainer = ({
         vfoActive,
     } = useSelector(state => state.vfo);
 
+    const {
+        active: activeDecoders
+    } = useSelector(state => state.decoders);
+
     const containerRef = useRef(null);
     const canvasRef = useRef(null);
     // Canvas context caching for performance
@@ -102,6 +106,20 @@ const VFOMarkersContainer = ({
     const startFreq = centerFrequency - sampleRate / 2;
     const endFreq = centerFrequency + sampleRate / 2;
     const freqRange = endFreq - startFreq;
+
+    // Helper function to find decoder info for a VFO
+    const getDecoderInfoForVFO = useCallback((vfoNumber) => {
+        // Find decoder sessions matching this VFO number, excluding closed decoders
+        const decoderEntries = Object.values(activeDecoders).filter(
+            decoder => decoder.vfo === vfoNumber && decoder.status !== 'closed'
+        );
+
+        // Return the most recent decoder (if multiple exist)
+        if (decoderEntries.length > 0) {
+            return decoderEntries.sort((a, b) => b.last_update - a.last_update)[0];
+        }
+        return null;
+    }, [activeDecoders]);
 
     // Get or create canvas context with caching
     const getCanvasContext = useCallback(() => {
@@ -262,7 +280,7 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         renderVFOMarkersDirect();
     }, [vfoActive, vfoMarkers, actualWidth, height,
-        centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX]);
+        centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX, activeDecoders]);
 
     // Rendering function with cached context
     const renderVFOMarkersDirect = () => {
@@ -335,8 +353,9 @@ const VFOMarkersContainer = ({
             // Draw frequency label
             const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
             const isLocked = marker.lockedTransmitterId !== null;
+            const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked);
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo);
         });
     };
 

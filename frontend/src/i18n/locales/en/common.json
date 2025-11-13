@@ -54,6 +54,9 @@
       "above_max_azimuth": "Target above maximum azimuth",
       "satellite_changed": "Target satellite changed",
       "satellite_info": "{{name}} (NORAD {{noradId}})"
+    },
+    "decoder": {
+      "output_received": "Decoder output received"
     }
   },
   "humanize": {

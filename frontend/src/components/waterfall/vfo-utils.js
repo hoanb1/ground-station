@@ -67,7 +67,7 @@ export const canvasDrawingUtils = {
         ctx.fill();
     },
 
-    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false) => {
+    drawVFOLabel: (ctx, centerX, labelText, color, opacity, isSelected, locked = false, decoderInfo = null) => {
         ctx.font = 'bold 12px Monospace';
         const textMetrics = ctx.measureText(labelText);
 
@@ -169,6 +169,40 @@ export const canvasDrawingUtils = {
             ctx.moveTo(xCenterX + xSize, xCenterY - xSize);
             ctx.lineTo(xCenterX - xSize, xCenterY + xSize);
             ctx.stroke();
+        }
+
+        // Draw secondary decoder label if decoder is active
+        if (decoderInfo) {
+            const secondaryLabelTop = labelTop + labelHeight + 2; // 2px gap below primary label
+
+            // Build decoder info text with as much info as possible
+            const parts = [];
+            if (decoderInfo.decoder_type) parts.push(decoderInfo.decoder_type.toUpperCase());
+            if (decoderInfo.status) parts.push(decoderInfo.status);
+            if (decoderInfo.mode) parts.push(decoderInfo.mode);
+            if (decoderInfo.progress !== null && decoderInfo.progress !== undefined) {
+                parts.push(`${Math.round(decoderInfo.progress)}%`);
+            }
+
+            const decoderText = parts.join(' | ');
+
+            if (decoderText) {
+                ctx.font = '10px Monospace';
+                const decoderTextMetrics = ctx.measureText(decoderText);
+                const decoderLabelWidth = decoderTextMetrics.width + 8;
+                const decoderLabelHeight = 16;
+
+                // Draw background with same color scheme as primary label
+                ctx.fillStyle = `${color}${opacity}`;
+                ctx.beginPath();
+                ctx.roundRect(centerX - decoderLabelWidth / 2, secondaryLabelTop, decoderLabelWidth, decoderLabelHeight, 2);
+                ctx.fill();
+
+                // Draw text
+                ctx.fillStyle = '#ffffff';
+                ctx.textAlign = 'center';
+                ctx.fillText(decoderText, centerX, secondaryLabelTop + 12);
+            }
         }
     }
 };

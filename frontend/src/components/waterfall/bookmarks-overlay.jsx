@@ -182,6 +182,7 @@ const BookmarkCanvas = ({
         const padding = 4;
         const verticalSpacing = textHeight + padding * 2; // Total height of a label
         const baseY = 16; // Base Y position for the first label
+        const bookmarkLabelOffset = 20; // Vertical offset from base position for bookmark labels
 
         // First, identify all transmitter IDs that have doppler shift bookmarks
         // We'll use this to skip the corresponding transmitter bookmarks
@@ -261,7 +262,7 @@ const BookmarkCanvas = ({
                     // Calculate label vertical position based on index
                     // Use visibleBookmarkIndex to ensure proper alternating heights (3 rows)
                     const labelOffset = (visibleBookmarkIndex % 3) * verticalSpacing;
-                    const labelY = baseY + labelOffset + 35; // Moved down 5px from 30
+                    const labelY = baseY + labelOffset + 35 + bookmarkLabelOffset;
 
                     // Check if this is an inactive transmitter
                     const isInactive = bookmark.metadata?.type === 'transmitter' && !bookmark.metadata?.active;
@@ -327,7 +328,7 @@ const BookmarkCanvas = ({
 
                     // Calculate label vertical position based on doppler index (alternating heights - 3 rows)
                     const dopplerLabelOffset = (dopplerIndex % 3) * verticalSpacing;
-                    const dopplerLabelY = 50 - padding - textHeight + dopplerLabelOffset; // Moved down 5px from 45
+                    const dopplerLabelY = 50 + bookmarkLabelOffset - padding - textHeight + dopplerLabelOffset;
 
                     // Add semi-transparent background
                     const textMetrics = ctx.measureText(bookmark.label);

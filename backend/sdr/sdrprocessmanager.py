@@ -83,6 +83,10 @@ class SDRProcessManager:
     Manager for the SDR worker processes
     """
 
+    # Maximum number of concurrent demodulators per session (one per active VFO)
+    # Set to 10 to allow 4 VFOs + internal demodulators for decoders
+    MAX_CONCURRENT_DEMODULATORS_PER_SESSION = 10
+
     def __init__(self, sio=None):
         self.logger = logging.getLogger("sdr-manager")
         self.sio = sio
@@ -717,6 +721,7 @@ class SDRProcessManager:
         audio_queue,
         storage_key,
         subscription_prefix,
+        vfo_number=None,
         **kwargs,
     ):
         """
@@ -729,6 +734,7 @@ class SDRProcessManager:
             audio_queue: Queue where audio will be placed (None for recorders)
             storage_key: "demodulators" or "recorders"
             subscription_prefix: "demod" or "recorder"
+            vfo_number: VFO number for demodulators (1-4). If None, uses session_id as key
             **kwargs: Additional arguments to pass to the consumer constructor
 
         Returns:
@@ -740,9 +746,33 @@ class SDRProcessManager:
 
         process_info = self.processes[sdr_id]
 
-        # Check if consumer already exists for this session
-        if session_id in process_info.get(storage_key, {}):
-            existing_entry = process_info[storage_key][session_id]
+        # Create storage key based on whether this is VFO-based or session-based
+        # For demodulators with VFO number, store as nested dict: demodulators[session_id][vfo_number]
+        # For recorders or backward compatibility, store as: recorders[session_id]
+        if storage_key == "demodulators" and vfo_number is not None:
+            # Multi-VFO mode: ensure session dict exists
+            if session_id not in process_info.get(storage_key, {}):
+                if storage_key not in process_info:
+                    process_info[storage_key] = {}
+                process_info[storage_key][session_id] = {}
+
+            consumer_key = vfo_number
+            consumer_storage = process_info[storage_key][session_id]
+
+            # Check max demodulators limit
+            if len(consumer_storage) >= self.MAX_CONCURRENT_DEMODULATORS_PER_SESSION:
+                self.logger.warning(
+                    f"Maximum demodulators ({self.MAX_CONCURRENT_DEMODULATORS_PER_SESSION}) reached for session {session_id}"
+                )
+                return False
+        else:
+            # Legacy mode or recorders: use session_id as key
+            consumer_key = session_id
+            consumer_storage = process_info.get(storage_key, {})
+
+        # Check if consumer already exists
+        if consumer_key in consumer_storage:
+            existing_entry = consumer_storage[consumer_key]
             existing = (
                 existing_entry.get("instance")
                 if isinstance(existing_entry, dict)
@@ -750,20 +780,22 @@ class SDRProcessManager:
             )
             # If same type, just return success (already running)
             if isinstance(existing, consumer_class):
-                self.logger.debug(
-                    f"{consumer_class.__name__} already running for session {session_id}"
-                )
+                log_msg = f"{consumer_class.__name__} already running for session {session_id}"
+                if vfo_number is not None:
+                    log_msg += f" VFO {vfo_number}"
+                self.logger.debug(log_msg)
                 return True
             else:
                 # Different type, stop the old one first
-                self.logger.info(
-                    f"Switching from {type(existing).__name__} to {consumer_class.__name__} for session {session_id}"
-                )
+                log_msg = f"Switching from {type(existing).__name__} to {consumer_class.__name__} for session {session_id}"
+                if vfo_number is not None:
+                    log_msg += f" VFO {vfo_number}"
+                self.logger.info(log_msg)
                 # Stop using the appropriate method based on storage key
                 if storage_key == "recorders":
                     self.stop_recorder(sdr_id, session_id)
                 else:
-                    self.stop_demodulator(sdr_id, session_id)
+                    self.stop_demodulator(sdr_id, session_id, vfo_number)
 
         try:
             # Get the IQ broadcaster from the process info
@@ -773,10 +805,17 @@ class SDRProcessManager:
                 return False
 
             # Create a unique subscription key to prevent sharing queues
-            subscription_key = f"{subscription_prefix}:{session_id}"
+            if vfo_number is not None:
+                subscription_key = f"{subscription_prefix}:{session_id}:vfo{vfo_number}"
+            else:
+                subscription_key = f"{subscription_prefix}:{session_id}"
 
             # Subscribe to the broadcaster to get a dedicated queue
             subscriber_queue = broadcaster.subscribe(subscription_key, maxsize=3)
+
+            # Add vfo_number to kwargs for multi-VFO support
+            if vfo_number is not None:
+                kwargs["vfo_number"] = vfo_number
 
             # Create and start the consumer with the subscriber queue
             consumer = consumer_class(subscriber_queue, audio_queue, session_id, **kwargs)
@@ -785,14 +824,28 @@ class SDRProcessManager:
             # Store reference along with subscription key for cleanup
             if storage_key not in process_info:
                 process_info[storage_key] = {}
-            process_info[storage_key][session_id] = {
-                "instance": consumer,
-                "subscription_key": subscription_key,
-            }
 
-            self.logger.info(
+            if storage_key == "demodulators" and vfo_number is not None:
+                # Multi-VFO mode: store in nested dict
+                if session_id not in process_info[storage_key]:
+                    process_info[storage_key][session_id] = {}
+                process_info[storage_key][session_id][vfo_number] = {
+                    "instance": consumer,
+                    "subscription_key": subscription_key,
+                }
+            else:
+                # Legacy mode: store directly
+                process_info[storage_key][session_id] = {
+                    "instance": consumer,
+                    "subscription_key": subscription_key,
+                }
+
+            log_msg = (
                 f"Started {consumer_class.__name__} for session {session_id} on device {sdr_id}"
             )
+            if vfo_number is not None:
+                log_msg += f" VFO {vfo_number}"
+            self.logger.info(log_msg)
             return True
 
         except Exception as e:
@@ -800,22 +853,32 @@ class SDRProcessManager:
             self.logger.exception(e)
             return False
 
-    def start_demodulator(self, sdr_id, session_id, demodulator_class, audio_queue, **kwargs):
+    def start_demodulator(
+        self, sdr_id, session_id, demodulator_class, audio_queue, vfo_number=None, **kwargs
+    ):
         """
-        Start a demodulator thread for a specific session.
+        Start a demodulator thread for a specific session and VFO.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier (client session ID)
             demodulator_class: The demodulator class to instantiate (e.g., FMDemodulator, AMDemodulator, SSBDemodulator)
             audio_queue: Queue where demodulated audio will be placed
+            vfo_number: VFO number (1-4). If None, uses session_id as key for backward compatibility
             **kwargs: Additional arguments to pass to the demodulator constructor
 
         Returns:
             bool: True if started successfully, False otherwise
         """
         return self._start_iq_consumer(
-            sdr_id, session_id, demodulator_class, audio_queue, "demodulators", "demod", **kwargs
+            sdr_id,
+            session_id,
+            demodulator_class,
+            audio_queue,
+            "demodulators",
+            "demod",
+            vfo_number=vfo_number,
+            **kwargs,
         )
 
     def start_recorder(self, sdr_id, session_id, recorder_class, **kwargs):
@@ -835,13 +898,14 @@ class SDRProcessManager:
             sdr_id, session_id, recorder_class, None, "recorders", "recorder", **kwargs
         )
 
-    def stop_demodulator(self, sdr_id, session_id):
+    def stop_demodulator(self, sdr_id, session_id, vfo_number=None):
         """
-        Stop a demodulator thread for a specific session.
+        Stop a demodulator thread for a specific session and optionally a specific VFO.
 
         Args:
             sdr_id: Device identifier
             session_id: Session identifier
+            vfo_number: VFO number (1-4). If None, stops all demodulators for session (legacy mode)
 
         Returns:
             bool: True if stopped successfully, False otherwise
@@ -856,27 +920,81 @@ class SDRProcessManager:
             return False
 
         try:
+            # Check if this is multi-VFO mode (nested dict) or legacy mode
             demod_entry = demodulators[session_id]
-            # Handle both old format (direct instance) and new format (dict with instance + key)
-            if isinstance(demod_entry, dict):
+
+            if isinstance(demod_entry, dict) and vfo_number in demod_entry:
+                # Multi-VFO mode: stop specific VFO
+                vfo_entry = demod_entry[vfo_number]
+                demodulator = vfo_entry["instance"]
+                subscription_key = vfo_entry["subscription_key"]
+
+                demod_name = type(demodulator).__name__
+                demodulator.stop()
+                demodulator.join(timeout=2.0)  # Wait up to 2 seconds
+
+                # Unsubscribe from the broadcaster
+                broadcaster = process_info.get("iq_broadcaster")
+                if broadcaster:
+                    broadcaster.unsubscribe(subscription_key)
+
+                # Remove from storage
+                del demod_entry[vfo_number]
+                self.logger.info(f"Stopped {demod_name} for session {session_id} VFO {vfo_number}")
+
+                # Clean up empty session dict
+                if not demod_entry:
+                    del demodulators[session_id]
+
+                return True
+
+            elif isinstance(demod_entry, dict) and "instance" in demod_entry:
+                # Legacy mode: stop single demodulator
                 demodulator = demod_entry["instance"]
                 subscription_key = demod_entry["subscription_key"]
+
+                demod_name = type(demodulator).__name__
+                demodulator.stop()
+                demodulator.join(timeout=2.0)
+
+                # Unsubscribe from the broadcaster
+                broadcaster = process_info.get("iq_broadcaster")
+                if broadcaster:
+                    broadcaster.unsubscribe(subscription_key)
+
+                del demodulators[session_id]
+                self.logger.info(f"Stopped {demod_name} for session {session_id}")
+                return True
+
+            elif vfo_number is None and isinstance(demod_entry, dict):
+                # Stop all VFOs for this session
+                broadcaster = process_info.get("iq_broadcaster")
+                stopped_count = 0
+
+                for vfo_num in list(demod_entry.keys()):
+                    vfo_entry = demod_entry[vfo_num]
+                    demodulator = vfo_entry["instance"]
+                    subscription_key = vfo_entry["subscription_key"]
+
+                    demod_name = type(demodulator).__name__
+                    demodulator.stop()
+                    demodulator.join(timeout=2.0)
+
+                    if broadcaster:
+                        broadcaster.unsubscribe(subscription_key)
+
+                    stopped_count += 1
+                    self.logger.info(f"Stopped {demod_name} for session {session_id} VFO {vfo_num}")
+
+                del demodulators[session_id]
+                self.logger.info(f"Stopped {stopped_count} demodulator(s) for session {session_id}")
+                return True
+
             else:
-                demodulator = demod_entry
-                subscription_key = session_id  # Fallback for old format
-
-            demod_name = type(demodulator).__name__
-            demodulator.stop()
-            demodulator.join(timeout=2.0)  # Wait up to 2 seconds
-
-            # Unsubscribe from the broadcaster using the correct subscription key
-            broadcaster = process_info.get("iq_broadcaster")
-            if broadcaster:
-                broadcaster.unsubscribe(subscription_key)
-
-            del demodulators[session_id]
-            self.logger.info(f"Stopped {demod_name} for session {session_id}")
-            return True
+                self.logger.warning(
+                    f"No demodulator found for session {session_id} VFO {vfo_number}"
+                )
+                return False
 
         except Exception as e:
             self.logger.error(f"Error stopping demodulator: {str(e)}")
@@ -1036,6 +1154,8 @@ class SDRProcessManager:
 
             # Check if we need to create/recreate the internal FM demodulator
             need_internal_demod = False
+            vfo_number = kwargs.get("vfo")  # Get VFO number if provided
+
             if not demod_entry:
                 need_internal_demod = True
                 self.logger.info(
@@ -1043,18 +1163,38 @@ class SDRProcessManager:
                     f"Creating internal FM demodulator for decoder."
                 )
             else:
-                # Check if existing demodulator is in internal mode
-                demodulator = (
-                    demod_entry.get("instance") if isinstance(demod_entry, dict) else demod_entry
-                )
-                if not getattr(demodulator, "internal_mode", False):
+                # In multi-VFO mode, demod_entry is a nested dict {vfo_number: {instance, subscription_key}}
+                # In legacy mode, demod_entry is {instance, subscription_key}
+                if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
+                    # Multi-VFO mode: check specific VFO's demodulator
+                    vfo_entry = demod_entry[vfo_number]
+                    demodulator = vfo_entry.get("instance")
+                    if not getattr(demodulator, "internal_mode", False):
+                        need_internal_demod = True
+                        self.logger.info(
+                            f"Existing demodulator for session {session_id} VFO {vfo_number} is not in internal mode. "
+                            f"Stopping it and creating internal FM demodulator for decoder."
+                        )
+                        # Stop only the specific VFO's demodulator
+                        self.stop_demodulator(sdr_id, session_id, vfo_number)
+                elif isinstance(demod_entry, dict) and "instance" in demod_entry:
+                    # Legacy mode: single demodulator for session
+                    demodulator = demod_entry.get("instance")
+                    if not getattr(demodulator, "internal_mode", False):
+                        need_internal_demod = True
+                        self.logger.info(
+                            f"Existing demodulator for session {session_id} is not in internal mode. "
+                            f"Stopping it and creating internal FM demodulator for decoder."
+                        )
+                        # Stop the existing non-internal demodulator (legacy mode, no VFO number)
+                        self.stop_demodulator(sdr_id, session_id)
+                elif isinstance(demod_entry, dict) and vfo_number:
+                    # Multi-VFO mode but this VFO doesn't have a demodulator yet
                     need_internal_demod = True
                     self.logger.info(
-                        f"Existing demodulator for session {session_id} is not in internal mode. "
-                        f"Stopping it and creating internal FM demodulator for decoder."
+                        f"No demodulator for VFO {vfo_number} in session {session_id}. "
+                        f"Creating internal FM demodulator for decoder."
                     )
-                    # Stop the existing non-internal demodulator
-                    self.stop_demodulator(sdr_id, session_id)
 
             if need_internal_demod:
                 # Import FMDemodulator here to avoid circular imports
@@ -1067,11 +1207,13 @@ class SDRProcessManager:
                 vfo_center_freq = kwargs.get("vfo_center_freq", None)
 
                 # Start internal FM demodulator with internal_mode enabled
+                # Pass vfo_number if provided to maintain multi-VFO structure
                 success = self.start_demodulator(
                     sdr_id=sdr_id,
                     session_id=session_id,
                     demodulator_class=FMDemodulator,
                     audio_queue=internal_audio_queue,
+                    vfo_number=vfo_number,  # Pass VFO number for multi-VFO mode
                     internal_mode=True,  # Enable internal mode to bypass VFO checks
                     center_freq=vfo_center_freq,  # Pass VFO frequency
                     bandwidth=12500,  # Default bandwidth for SSTV
@@ -1090,15 +1232,25 @@ class SDRProcessManager:
             if demod_entry is None:
                 self.logger.error(f"No demodulator entry found for session {session_id}")
                 return False
-            demodulator = (
-                demod_entry.get("instance") if isinstance(demod_entry, dict) else demod_entry
-            )
+
+            # Handle both multi-VFO and legacy mode
+            if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
+                # Multi-VFO mode: get specific VFO's demodulator
+                vfo_entry = demod_entry[vfo_number]
+                demodulator = vfo_entry.get("instance")
+            elif isinstance(demod_entry, dict) and "instance" in demod_entry:
+                # Legacy mode: single demodulator
+                demodulator = demod_entry.get("instance")
+            else:
+                demodulator = None
+
             if demodulator is None:
                 self.logger.error(f"No demodulator instance found for session {session_id}")
                 return False
             audio_queue = demodulator.audio_queue
 
             # Filter out internal parameters before passing to decoder
+            # vfo_center_freq is used for internal FM demodulator setup, not passed to decoder
             decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
 
             # Create and start the decoder with the audio queue
@@ -1112,6 +1264,7 @@ class SDRProcessManager:
                 "instance": decoder,
                 "decoder_type": decoder_class.__name__,
                 "internal_demod": internal_demod_created,  # Track if we created the demod
+                "vfo_number": vfo_number,  # Store VFO number for multi-VFO cleanup
             }
 
             self.logger.info(
@@ -1153,9 +1306,11 @@ class SDRProcessManager:
             if isinstance(decoder_entry, dict):
                 decoder = decoder_entry["instance"]
                 internal_demod = decoder_entry.get("internal_demod", False)
+                vfo_number = decoder_entry.get("vfo_number")  # Get VFO number if present
             else:
                 decoder = decoder_entry
                 internal_demod = False
+                vfo_number = None
 
             decoder_name = type(decoder).__name__
             decoder.stop()
@@ -1163,8 +1318,14 @@ class SDRProcessManager:
 
             # If we created an internal demodulator for this decoder, stop it too
             if internal_demod:
-                self.logger.info(f"Stopping internal FM demodulator for session {session_id}")
-                self.stop_demodulator(sdr_id, session_id)
+                if vfo_number:
+                    self.logger.info(
+                        f"Stopping internal FM demodulator for session {session_id} VFO {vfo_number}"
+                    )
+                    self.stop_demodulator(sdr_id, session_id, vfo_number)
+                else:
+                    self.logger.info(f"Stopping internal FM demodulator for session {session_id}")
+                    self.stop_demodulator(sdr_id, session_id)
 
             del decoders[session_id]
             self.logger.info(f"Stopped {decoder_name} for session {session_id}")

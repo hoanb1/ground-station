@@ -151,7 +151,7 @@ const initialState = {
     //waterFallVisualWidth: 4096,
     waterFallCanvasHeight: 1200,
     //bandScopeHeight: 125,
-    bandScopeHeight: 140,
+    bandScopeHeight: 160,
     frequencyScaleHeight: 20,
     waterFallScaleX: 1,
     waterFallPositionX: 0,

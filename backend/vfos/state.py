@@ -139,6 +139,13 @@ class VFOManager:
         self._ensure_session_vfos(session_id)
         return self._session_vfo_states[session_id].copy()
 
+    def get_active_vfos(self, session_id: str) -> List[VFOState]:
+        """Returns list of all active VFO states for a session."""
+        self._ensure_session_vfos(session_id)
+        session_vfos = self._session_vfo_states[session_id]
+
+        return [vfo_state for vfo_state in session_vfos.values() if vfo_state.active]
+
     def get_selected_vfo(self, session_id: str) -> Optional[VFOState]:
         """Returns the currently selected VFO state or None if no VFO is selected."""
         self._ensure_session_vfos(session_id)

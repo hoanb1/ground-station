@@ -21,6 +21,7 @@ import { useEffect } from 'react';
 import { useDispatch } from 'react-redux';
 import { toast } from '../utils/toast-with-timestamp.jsx';
 import CableIcon from '@mui/icons-material/Cable';
+import { Box } from '@mui/material';
 import { useTranslation } from 'react-i18next';
 import { fetchPreferences } from '../components/settings/preferences-slice.jsx';
 
@@ -453,8 +454,6 @@ export const useSocketEventHandlers = (socket) => {
 
         // Decoder data events (SSTV, AFSK, RTTY, PSK31, etc.)
         socket.on('decoder-data', (data) => {
-            console.log('Decoder event received:', data);
-
             switch (data.type) {
                 case 'decoder-status':
                     store.dispatch(decoderStatusChanged({
@@ -462,31 +461,10 @@ export const useSocketEventHandlers = (socket) => {
                         status: data.status,
                         mode: data.mode,
                         decoder_type: data.decoder_type,
-                        timestamp: data.timestamp
+                        vfo: data.vfo,
+                        timestamp: data.timestamp,
+                        progress: data.progress
                     }));
-
-                    // Show toast for status changes (except 'listening')
-                    if (data.status === 'capturing' || data.status === 'processing') {
-                        toast.info(
-                            <ToastMessage
-                                title={t('notifications.decoder.decoding')}
-                                body={`${data.decoder_type.toUpperCase()}: ${data.mode}`}
-                            />,
-                            {
-                                icon: () => <ImageIcon />,
-                            }
-                        );
-                    } else if (data.status === 'completed') {
-                        toast.success(
-                            <ToastMessage
-                                title={t('notifications.decoder.completed')}
-                                body={`${data.decoder_type.toUpperCase()}: ${data.mode}`}
-                            />,
-                            {
-                                icon: () => <ImageIcon />,
-                            }
-                        );
-                    }
                     break;
 
                 case 'decoder-progress':
@@ -500,47 +478,41 @@ export const useSocketEventHandlers = (socket) => {
                 case 'decoder-output':
                     store.dispatch(decoderOutputReceived(data));
 
-                    // Show success toast with image/file info
+                    // Show success toast with image preview
                     const outputType = data.output.format;
                     const fileName = data.output.filename;
+                    const imageData = data.output.image_data;
 
                     toast.success(
-                        <ToastMessage
-                            title={t('notifications.decoder.output_received')}
-                            body={`${data.decoder_type.toUpperCase()}: ${fileName}`}
-                        />,
+                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                            <ToastMessage
+                                title={t('notifications.decoder.output_received')}
+                                body={`${data.decoder_type.toUpperCase()}: ${fileName}`}
+                            />
+                            {imageData && (
+                                <Box
+                                    component="img"
+                                    src={`data:${outputType};base64,${imageData}`}
+                                    alt={fileName}
+                                    sx={{
+                                        maxWidth: '100%',
+                                        maxHeight: '200px',
+                                        objectFit: 'contain',
+                                        borderRadius: '4px',
+                                        marginTop: '8px'
+                                    }}
+                                />
+                            )}
+                        </Box>,
                         {
                             icon: () => <ImageIcon />,
-                            autoClose: 8000,
+                            autoClose: 10000,
                         }
                     );
                     break;
 
                 case 'decoder-error':
                     store.dispatch(decoderErrorOccurred(data));
-
-                    // Show error toast
-                    if (data.error.recoverable) {
-                        toast.warning(
-                            <ToastMessage
-                                title={t('notifications.decoder.error')}
-                                body={data.error.message}
-                            />,
-                            {
-                                icon: () => <ErrorOutlineIcon />,
-                            }
-                        );
-                    } else {
-                        toast.error(
-                            <ToastMessage
-                                title={t('notifications.decoder.error')}
-                                body={data.error.message}
-                            />,
-                            {
-                                icon: () => <ErrorOutlineIcon />,
-                            }
-                        );
-                    }
                     break;
 
                 default:
