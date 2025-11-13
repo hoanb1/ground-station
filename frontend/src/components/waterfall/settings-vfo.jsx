@@ -570,12 +570,6 @@ const VfoAccordion = ({
                             <Typography variant="caption" sx={{ mb: 1, display: 'block', color: 'text.disabled', fontSize: '0.7rem' }}>
                                 {t('vfo.data_decoders_help', 'An internal FM or SSB demodulator will be spun up as needed to decode some modes')}
                             </Typography>
-                            {/* Show info when decoder is active */}
-                            {vfoMarkers[vfoIndex]?.decoder && vfoMarkers[vfoIndex]?.decoder !== 'none' && (
-                                <Alert severity="info" sx={{ mb: 1, py: 0.5, fontSize: '0.7rem' }}>
-                                    {t('vfo.decoder_active_info', 'Audio demodulation is automatically handled by the decoder')}
-                                </Alert>
-                            )}
                             <ToggleButtonGroup
                                 value={vfoMarkers[vfoIndex]?.decoder || 'none'}
                                 exclusive
