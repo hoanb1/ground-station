@@ -92,7 +92,7 @@ const VFOMarkersContainer = ({
     const [edgeHandleHeight] = useState(20);
 
     // Configurable Y position offset for resize handles
-    const [edgeHandleYOffset] = useState(50);
+    const [edgeHandleYOffset] = useState(60);
 
     // Configurable mousewheel frequency step (in Hz)
     const [mousewheelFreqStep] = useState(1000); // 100 Hz step
