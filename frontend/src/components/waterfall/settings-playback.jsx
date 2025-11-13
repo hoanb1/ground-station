@@ -193,27 +193,38 @@ const PlaybackAccordion = ({
     }, [files, sortBy, sortOrder, page]);
 
     // Fetch recordings and SDRs when component mounts or when expanded
-    // NOTE: We don't fetch files here anymore to avoid corrupting global file browser filters
-    // The file browser will fetch with correct filters, and this component just displays recordings
     useEffect(() => {
         if (socket && expanded) {
             // Refresh SDRs to ensure SigMF Playback SDR is available
             dispatch(fetchSDRs({ socket }));
 
-            // Don't fetch files - rely on file browser or existing Redux state
-            // Fetching with showSnapshots: false would corrupt the file browser's filter state
+            // Fetch files with current global filters to avoid corrupting file browser state
+            const currentFilters = store.getState().filebrowser.filters;
+            dispatch(fetchFiles({
+                socket,
+                showRecordings: currentFilters.showRecordings,
+                showSnapshots: currentFilters.showSnapshots,
+            }));
         }
     }, [socket, dispatch, expanded]);
 
-    // Listen for file browser updates - but don't refetch to avoid corrupting global filters
-    // The file browser component will handle refreshing with correct filters
+    // Listen for file browser updates and refresh the recordings list
     useEffect(() => {
         if (!socket) return;
 
         const handleFileBrowserState = (state) => {
-            // Don't refetch here - let the file browser component handle it
-            // Refetching with hardcoded filters corrupts the global file browser state
-            // The file browser component already listens to these events and refreshes appropriately
+            // Only refresh on specific actions to avoid infinite loops
+            // Don't refresh on 'list-files' action as that's the response to our fetch
+            const action = state?.action;
+            if (action && action !== 'list-files') {
+                // Refresh files when recording starts/stops/deleted to show changes immediately
+                const currentFilters = store.getState().filebrowser.filters;
+                dispatch(fetchFiles({
+                    socket,
+                    showRecordings: currentFilters.showRecordings,
+                    showSnapshots: currentFilters.showSnapshots,
+                }));
+            }
         };
 
         socket.on('file_browser_state', handleFileBrowserState);
