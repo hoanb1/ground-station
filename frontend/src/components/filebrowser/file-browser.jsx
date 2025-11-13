@@ -1228,7 +1228,7 @@ export default function FileBrowser() {
                     <DialogContent>
                         {selectedItem && (
                             <Box sx={{ textAlign: 'center' }}>
-                                {selectedItem.file_type && ['.png', '.jpg', '.jpeg'].includes(selectedItem.file_type) ? (
+                                {selectedItem.type === 'snapshot' || (selectedItem.file_type && ['.png', '.jpg', '.jpeg'].includes(selectedItem.file_type)) ? (
                                     <img
                                         src={selectedItem.url}
                                         alt={selectedItem.name}
