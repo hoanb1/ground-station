@@ -236,7 +236,16 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
     liblog4cpp5-dev \
     libspdlog-dev \
     libfmt-dev \
+    python3-packaging \
+    pybind11-dev \
+    python3-pybind11 \
     && rm -rf /var/lib/apt/lists/*
+
+# Install Python packages needed for GNU Radio in the venv
+RUN pip install packaging pybind11
+
+# Reinstall numpy in the venv (was installed with --break-system-packages earlier)
+RUN pip install --force-reinstall numpy==2.3.1
 
 # Compile VOLK (Vector-Optimized Library of Kernels) - required by GNU Radio
 WORKDIR /src
@@ -260,6 +269,8 @@ RUN git clone --recursive https://github.com/gnuradio/gnuradio.git && \
           -DENABLE_PYTHON=ON \
           -DENABLE_GR_QTGUI=OFF \
           -DENABLE_TESTING=OFF \
+          -DPython3_EXECUTABLE=/app/venv/bin/python3 \
+          -DPYTHON_EXECUTABLE=/app/venv/bin/python3 \
           .. && \
     make -j`nproc` && \
     sudo make install && \
