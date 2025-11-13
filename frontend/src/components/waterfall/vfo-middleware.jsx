@@ -199,6 +199,46 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
     // Handle satellite tracking data updates - track doppler-corrected frequencies for locked VFOs
     if (action.type === 'targetSatTrack/setSatelliteData') {
         const rigData = action.payload?.rig_data;
+        const satelliteData = action.payload?.satellite_data;
+
+        // OPTION 1: Detect satellite changes and unlock all VFOs
+        // When the target satellite changes, all locked VFOs should be unlocked because:
+        // 1. The transmitter IDs from the old satellite won't exist in the new satellite's transmitter list
+        // 2. Keeping VFOs locked to non-existent transmitters would cause them to stop tracking
+        // 3. Users need to manually re-lock VFOs to transmitters of the new satellite
+        if (satelliteData && satelliteData.details) {
+            const currentNoradId = satelliteData.details.norad_id;
+            const previousNoradId = state.targetSatTrack.satelliteData.details.norad_id;
+
+            // Check if the satellite has changed (different NORAD ID)
+            if (currentNoradId && previousNoradId && currentNoradId !== previousNoradId) {
+                const vfoMarkers = state.vfo.vfoMarkers;
+
+                console.log(`Satellite changed from ${previousNoradId} to ${currentNoradId} - unlocking all VFOs`);
+
+                // Unlock all VFOs that are currently locked to transmitters
+                Object.keys(vfoMarkers).forEach(vfoNumber => {
+                    const vfoNum = parseInt(vfoNumber);
+                    const vfo = vfoMarkers[vfoNum];
+
+                    if (vfo.lockedTransmitterId) {
+                        store.dispatch(setVFOProperty({
+                            vfoNumber: vfoNum,
+                            updates: {
+                                lockedTransmitterId: null,
+                                frequencyOffset: 0
+                            },
+                            skipBackendSync: true  // No need to sync UI-only fields to backend
+                        }));
+
+                        console.log(`VFO ${vfoNum} unlocked due to satellite change`);
+                    }
+                });
+
+                // Early return - don't process frequency tracking for the old satellite's transmitters
+                return result;
+            }
+        }
 
         if (rigData && rigData.transmitters && rigData.transmitters.length > 0) {
             const vfoMarkers = state.vfo.vfoMarkers;
@@ -213,7 +253,24 @@ const backendSyncMiddleware = (store) => (next) => (action) => {
                     // Find the transmitter this VFO is locked to
                     const transmitter = rigData.transmitters.find(tx => tx.id === vfo.lockedTransmitterId);
 
-                    if (transmitter && transmitter.observed_freq) {
+                    // OPTION 3: Defensive validation - unlock VFO if transmitter not found
+                    // This handles edge cases where transmitter data becomes unavailable for reasons other
+                    // than satellite changes (e.g., transmitter disabled, data corruption, etc.)
+                    if (!transmitter) {
+                        store.dispatch(setVFOProperty({
+                            vfoNumber: vfoNum,
+                            updates: {
+                                lockedTransmitterId: null,
+                                frequencyOffset: 0
+                            },
+                            skipBackendSync: true
+                        }));
+
+                        console.warn(`VFO ${vfoNum} unlocked: transmitter ID ${vfo.lockedTransmitterId} not found in current transmitter list`);
+                        return;  // Skip frequency update for this VFO
+                    }
+
+                    if (transmitter.observed_freq) {
                         // Apply frequency offset (can be positive or negative)
                         const offset = vfo.frequencyOffset || 0;
                         const finalFrequency = transmitter.observed_freq + offset;

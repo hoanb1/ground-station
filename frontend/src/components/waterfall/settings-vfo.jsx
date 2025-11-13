@@ -205,6 +205,29 @@ const VfoAccordion = ({
                                     sx={{mt: 0, ml: 0}}
                                 />
                             </Box>
+                            {/* Frequency Display */}
+                            <Box sx={{
+                                mt: 2,
+                                mb: 0,
+                                width: '100%',
+                                typography: 'body1',
+                                fontWeight: 'medium',
+                                alignItems: 'center'
+                            }}>
+                                <Box
+                                    sx={{
+                                        width: '100%',
+                                        fontFamily: "Monospace",
+                                        color: '#2196f3',
+                                        alignItems: 'center',
+                                        textAlign: 'center',
+                                        justifyContent: 'center'
+                                    }}>
+                                    <LCDFrequencyDisplay
+                                        frequency={vfoMarkers[vfoIndex]?.frequency || 0}
+                                        size={"large"}/>
+                                </Box>
+                            </Box>
                             {/* Lock to Transmitter Dropdown */}
                             <Box sx={{ mt: 2 }}>
                                 <FormControl fullWidth size="small" disabled={!vfoActive[vfoIndex]}
@@ -360,27 +383,6 @@ const VfoAccordion = ({
                                 {t('vfo.locked_to_transmitter_info', 'Tracking doppler-corrected frequency')}
                             </Alert>
                         )}
-
-                        <Box sx={{
-                            mt: 2,
-                            mb: 0,
-                            typography: 'body1',
-                            fontWeight: 'medium',
-                            alignItems: 'center'
-                        }}>
-                            <Box
-                                sx={{
-                                    fontFamily: "Monospace",
-                                    color: '#2196f3',
-                                    alignItems: 'center',
-                                    textAlign: 'center',
-                                    justifyContent: 'center'
-                                }}>
-                                <LCDFrequencyDisplay
-                                    frequency={vfoMarkers[vfoIndex]?.frequency || 0}
-                                    size={"large"}/>
-                            </Box>
-                        </Box>
 
                         <Stack
                             spacing={2}

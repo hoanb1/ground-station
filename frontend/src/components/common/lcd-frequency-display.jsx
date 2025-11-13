@@ -28,7 +28,7 @@ const LCDContainer = styled(Box)(({ theme, variant = 'green' }) => {
 
     return {
         pt: '4px',
-        display: 'inline-block',
+        display: 'block',
         background: color.bg,
         border: `1px solid ${color.border}`,
         borderRadius: '3px',
