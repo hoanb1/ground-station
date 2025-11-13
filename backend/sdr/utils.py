@@ -17,20 +17,75 @@
 import asyncio
 import json
 import logging
+import multiprocessing
 from typing import Any, Dict, Optional, Union
 
 from crud import hardware
-from sdr.sdrprocessmanager import sdr_process_manager
 from session.tracker import session_tracker
 from workers.common import window_functions
 
 logger = logging.getLogger("waterfall-process")
+
+# Add setproctitle import for process naming
+try:
+    import setproctitle
+
+    HAS_SETPROCTITLE = True
+except ImportError:
+    HAS_SETPROCTITLE = False
+
+
+def generate_room_name(client_id1, client_id2):
+    """
+    Generate a consistent room name from two client IDs.
+    Sorts the IDs to ensure the same room name regardless of the order they're provided.
+
+    Args:
+        client_id1 (str): First client's socket ID
+        client_id2 (str): Second client's socket ID
+
+    Returns:
+        str: A unique, consistent room name for these two clients
+    """
+    return "_".join(sorted([client_id1, client_id2]))
+
+
+def create_named_worker_process(worker_func, process_name, *args):
+    """
+    Wrapper function to create a named worker process
+
+    Args:
+        worker_func: The actual worker function to run
+        process_name: Name to assign to the process
+        *args: Arguments to pass to the worker function
+    """
+
+    def named_worker(*args):
+        # Set the process title if available
+        if HAS_SETPROCTITLE:
+            setproctitle.setproctitle(process_name)
+
+        # Set the multiprocessing process name
+        multiprocessing.current_process().name = process_name
+
+        # Call the actual worker function
+        worker_func(*args)
+
+    return named_worker
+
 
 # Store active SDR clients and client sessions, keyed by client ID and session ID, respectively.
 active_sdr_clients: Dict[str, Dict[str, Any]] = {}
 
 # Create a cache dictionary to store SDR parameters by SDR ID
 sdr_parameters_cache: Dict[str, Dict] = {}
+
+
+def get_sdr_process_manager():
+    """Lazy import to avoid circular dependency"""
+    from sdr.sdrprocessmanager import sdr_process_manager
+
+    return sdr_process_manager
 
 
 def add_sdr_session(sid: str, sdr_config: Dict):
@@ -79,6 +134,7 @@ async def cleanup_sdr_session(sid):
 
         if sdr_id:
             # Stop or leave the SDR process
+            sdr_process_manager = get_sdr_process_manager()
             await sdr_process_manager.stop_sdr_process(sdr_id, sid)
 
         # Clear all session data from SessionTracker

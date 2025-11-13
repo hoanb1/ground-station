@@ -475,7 +475,7 @@ export const useSocketEventHandlers = (socket) => {
                     }));
                     break;
 
-                case 'decoder-output':
+                case 'decoder-output': {
                     store.dispatch(decoderOutputReceived(data));
 
                     // Show success toast with image preview
@@ -510,6 +510,7 @@ export const useSocketEventHandlers = (socket) => {
                         }
                     );
                     break;
+                }
 
                 case 'decoder-error':
                     store.dispatch(decoderErrorOccurred(data));
