@@ -226,6 +226,63 @@ RUN git clone https://github.com/jketterl/pycsdr.git && \
     cd pycsdr && \
     ./setup.py install install_headers
 
+# Install additional dependencies for GNU Radio
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    libgmp-dev \
+    libmpfr-dev \
+    libqt5widgets5 \
+    libqt5opengl5 \
+    libqwt-qt5-dev \
+    liblog4cpp5-dev \
+    libspdlog-dev \
+    libfmt-dev \
+    && rm -rf /var/lib/apt/lists/*
+
+# Compile VOLK (Vector-Optimized Library of Kernels) - required by GNU Radio
+WORKDIR /src
+RUN git clone --recursive https://github.com/gnuradio/volk.git && \
+    cd volk && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
+
+# Compile GNU Radio 3.10
+WORKDIR /src
+RUN git clone --recursive https://github.com/gnuradio/gnuradio.git && \
+    cd gnuradio && \
+    git checkout maint-3.10 && \
+    mkdir build && \
+    cd build && \
+    cmake -DCMAKE_BUILD_TYPE=Release \
+          -DENABLE_PYTHON=ON \
+          -DENABLE_GR_QTGUI=OFF \
+          -DENABLE_TESTING=OFF \
+          .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
+
+# Copy GNU Radio Python bindings to virtual environment
+RUN cp -r /usr/local/lib/python3.12/site-packages/gnuradio* /app/venv/lib/python3.12/site-packages/ || true
+RUN cp -r /usr/local/lib/python3.12/site-packages/pmt* /app/venv/lib/python3.12/site-packages/ || true
+
+# Compile gr-lora_sdr
+WORKDIR /src
+RUN git clone https://github.com/tapparelj/gr-lora_sdr.git && \
+    cd gr-lora_sdr && \
+    mkdir build && \
+    cd build && \
+    cmake .. && \
+    make -j`nproc` && \
+    sudo make install && \
+    sudo ldconfig
+
+# Copy gr-lora_sdr Python bindings to virtual environment
+RUN cp -r /usr/local/lib/python3.12/site-packages/lora_sdr* /app/venv/lib/python3.12/site-packages/ || true
+
 # Configure library paths and copy Python bindings
 RUN echo "/usr/local/lib" > /etc/ld.so.conf.d/local.conf && \
     ldconfig && \

@@ -19,6 +19,7 @@ from typing import Any, Dict, Optional, Union
 
 from crud.preferences import fetch_all_preferences
 from db import AsyncSessionLocal
+from demodulators.loradecoder import LoRaDecoder
 from demodulators.sstvdecoder import SSTVDecoder
 from handlers.entities.sdr import handle_vfo_demodulator_state
 from sdr.sdrprocessmanager import sdr_process_manager
@@ -179,6 +180,7 @@ def handle_vfo_decoder_state(vfo_state, session_id, logger):
     # Map decoder names to classes
     decoder_map = {
         "sstv": SSTVDecoder,
+        "lora": LoRaDecoder,
         # Add more decoders as they're implemented:
         # "afsk": AFSKDecoder,
         # "rtty": RTTYDecoder,

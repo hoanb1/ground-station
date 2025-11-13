@@ -459,6 +459,11 @@ def start_demodulator_for_mode(mode, sdr_id, session_id, logger, vfo_number=None
             )
         return result
 
+    elif mode == "none":
+        # "none" is valid - used when a decoder handles demodulation internally
+        logger.debug(f"No demodulator needed for session {session_id}{log_suffix} (mode: none)")
+        return True
+
     else:
         logger.warning(f"Unknown modulation mode: {mode}")
         return False

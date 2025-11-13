@@ -84,6 +84,12 @@ class DecoderManager:
                 self.stop_decoder(sdr_id, session_id)
 
         try:
+            # Import LoRaDecoder to check if this is a raw IQ decoder
+            from demodulators.loradecoder import LoRaDecoder
+
+            # Determine if this decoder needs raw IQ (no demodulator) or audio (internal FM demod)
+            needs_raw_iq = decoder_class == LoRaDecoder
+
             # Check if there's an active demodulator for this session
             # If not, or if it's not in internal mode, create an internal FM demodulator specifically for the decoder
             demod_entry = process_info.get("demodulators", {}).get(session_id)
@@ -93,7 +99,12 @@ class DecoderManager:
             need_internal_demod = False
             vfo_number = kwargs.get("vfo")  # Get VFO number if provided
 
-            if not demod_entry:
+            if needs_raw_iq:
+                # Raw IQ decoder (like LoRa) - no demodulator needed
+                self.logger.info(
+                    f"{decoder_class.__name__} receives raw IQ samples directly from SDR"
+                )
+            elif not demod_entry:
                 need_internal_demod = True
                 self.logger.info(
                     f"No active demodulator found for session {session_id}. "
@@ -165,34 +176,62 @@ class DecoderManager:
                 internal_demod_created = True
                 demod_entry = process_info.get("demodulators", {}).get(session_id)
 
-            # Get the demodulator's audio queue
-            if demod_entry is None:
-                self.logger.error(f"No demodulator entry found for session {session_id}")
-                return False
+            # Get the appropriate queue for the decoder
+            if needs_raw_iq:
+                # Raw IQ decoder - subscribe to IQ broadcaster like IQRecorder does
+                broadcaster = process_info.get("iq_broadcaster")
+                if not broadcaster:
+                    self.logger.error(f"No IQ broadcaster found for device {sdr_id}")
+                    return False
 
-            # Handle both multi-VFO and legacy mode
-            if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
-                # Multi-VFO mode: get specific VFO's demodulator
-                vfo_entry = demod_entry[vfo_number]
-                demodulator = vfo_entry.get("instance")
-            elif isinstance(demod_entry, dict) and "instance" in demod_entry:
-                # Legacy mode: single demodulator
-                demodulator = demod_entry.get("instance")
+                # Create a unique subscription key for this decoder
+                subscription_key = f"decoder:{session_id}"
+                if vfo_number:
+                    subscription_key += f":vfo{vfo_number}"
+
+                # Subscribe to the broadcaster to get a dedicated IQ queue
+                iq_queue = broadcaster.subscribe(subscription_key, maxsize=3)
+
+                # Filter out internal parameters before passing to decoder
+                decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
+
+                # Create and start the decoder with the IQ queue
+                decoder = decoder_class(iq_queue, data_queue, session_id, **decoder_kwargs)
+                decoder.start()
+
+                # Store the subscription key for cleanup
+                subscription_key_to_store = subscription_key
             else:
-                demodulator = None
+                # Audio decoder - get audio queue from demodulator
+                if demod_entry is None:
+                    self.logger.error(f"No demodulator entry found for session {session_id}")
+                    return False
 
-            if demodulator is None:
-                self.logger.error(f"No demodulator instance found for session {session_id}")
-                return False
-            audio_queue = demodulator.audio_queue
+                # Handle both multi-VFO and legacy mode
+                if isinstance(demod_entry, dict) and vfo_number and vfo_number in demod_entry:
+                    # Multi-VFO mode: get specific VFO's demodulator
+                    vfo_entry = demod_entry[vfo_number]
+                    demodulator = vfo_entry.get("instance")
+                elif isinstance(demod_entry, dict) and "instance" in demod_entry:
+                    # Legacy mode: single demodulator
+                    demodulator = demod_entry.get("instance")
+                else:
+                    demodulator = None
 
-            # Filter out internal parameters before passing to decoder
-            # vfo_center_freq is used for internal FM demodulator setup, not passed to decoder
-            decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
+                if demodulator is None:
+                    self.logger.error(f"No demodulator instance found for session {session_id}")
+                    return False
+                audio_queue = demodulator.audio_queue
 
-            # Create and start the decoder with the audio queue
-            decoder = decoder_class(audio_queue, data_queue, session_id, **decoder_kwargs)
-            decoder.start()
+                # Filter out internal parameters before passing to decoder
+                # vfo_center_freq is used for internal FM demodulator setup, not passed to decoder
+                decoder_kwargs = {k: v for k, v in kwargs.items() if k != "vfo_center_freq"}
+
+                # Create and start the decoder with the audio queue
+                decoder = decoder_class(audio_queue, data_queue, session_id, **decoder_kwargs)
+                decoder.start()
+
+                subscription_key_to_store = None
 
             # Store reference
             if "decoders" not in process_info:
@@ -202,6 +241,8 @@ class DecoderManager:
                 "decoder_type": decoder_class.__name__,
                 "internal_demod": internal_demod_created,  # Track if we created the demod
                 "vfo_number": vfo_number,  # Store VFO number for multi-VFO cleanup
+                "subscription_key": subscription_key_to_store,  # For raw IQ decoders
+                "needs_raw_iq": needs_raw_iq,  # Track if this is a raw IQ decoder
             }
 
             self.logger.info(
@@ -244,14 +285,25 @@ class DecoderManager:
                 decoder = decoder_entry["instance"]
                 internal_demod = decoder_entry.get("internal_demod", False)
                 vfo_number = decoder_entry.get("vfo_number")  # Get VFO number if present
+                subscription_key = decoder_entry.get("subscription_key")  # For raw IQ decoders
+                needs_raw_iq = decoder_entry.get("needs_raw_iq", False)
             else:
                 decoder = decoder_entry
                 internal_demod = False
                 vfo_number = None
+                subscription_key = None
+                needs_raw_iq = False
 
             decoder_name = type(decoder).__name__
             decoder.stop()
             decoder.join(timeout=2.0)  # Wait up to 2 seconds
+
+            # If this was a raw IQ decoder, unsubscribe from broadcaster
+            if needs_raw_iq and subscription_key:
+                broadcaster = process_info.get("iq_broadcaster")
+                if broadcaster:
+                    broadcaster.unsubscribe(subscription_key)
+                    self.logger.info(f"Unsubscribed {decoder_name} from IQ broadcaster")
 
             # If we created an internal demodulator for this decoder, stop it too
             if internal_demod:
