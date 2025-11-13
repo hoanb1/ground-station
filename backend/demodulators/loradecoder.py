@@ -26,14 +26,21 @@ import time
 from enum import Enum
 
 import numpy as np
-from gnuradio import blocks, gr, lora_sdr
 from scipy import signal
 
 from vfos.state import VFOManager
 
-GNURADIO_AVAILABLE = True
-
 logger = logging.getLogger("loradecoder")
+
+# Try to import GNU Radio and gr-lora_sdr
+GNURADIO_AVAILABLE = False
+try:
+    from gnuradio import blocks, gr, lora_sdr
+
+    GNURADIO_AVAILABLE = True
+except ImportError as e:
+    logger.warning(f"GNU Radio or gr-lora_sdr not available: {e}")
+    logger.warning("LoRa decoder will not be functional")
 
 
 class DecoderStatus(Enum):
@@ -82,7 +89,14 @@ class LoRaMessageSink(gr.sync_block):
             traceback.print_exc()
 
 
-class LoRaFlowgraph(gr.top_block):
+# Define base class conditionally
+if GNURADIO_AVAILABLE and gr is not None:
+    _LoRaFlowgraphBase = gr.top_block
+else:
+    _LoRaFlowgraphBase = object
+
+
+class LoRaFlowgraph(_LoRaFlowgraphBase):  # type: ignore[misc,valid-type]
     """GNU Radio flowgraph for LoRa decoding using gr-lora_sdr blocks"""
 
     def __init__(
@@ -110,7 +124,12 @@ class LoRaFlowgraph(gr.top_block):
             has_crc: Whether packets have CRC
             impl_head: Implicit header mode
         """
-        gr.top_block.__init__(self, "LoRa Decoder")
+        if not GNURADIO_AVAILABLE:
+            raise RuntimeError(
+                "GNU Radio or gr-lora_sdr not available - LoRa decoder cannot be initialized"
+            )
+
+        super().__init__("LoRa Decoder")
 
         self.sample_rate = sample_rate
         self.center_freq = center_freq
@@ -244,6 +263,12 @@ class LoRaDecoder(threading.Thread):
         cr=1,  # Coding rate 4/5 - will auto-detect
         sync_word=None,  # Auto-detect by default
     ):
+        if not GNURADIO_AVAILABLE:
+            logger.error(
+                "GNU Radio or gr-lora_sdr not available - LoRa decoder cannot be initialized"
+            )
+            raise RuntimeError("GNU Radio or gr-lora_sdr not available")
+
         super().__init__(daemon=True, name=f"LoRaDecoder-{session_id}")
         self.iq_queue = iq_queue
         self.data_queue = data_queue
