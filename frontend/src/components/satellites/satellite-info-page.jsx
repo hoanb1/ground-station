@@ -17,31 +17,24 @@
  *
  */
 
-import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, TextField, InputLabel, Tooltip, Stack, IconButton} from "@mui/material";
+import {Box, Typography, Dialog, DialogTitle, DialogContent, DialogActions, IconButton} from "@mui/material";
 import {betterDateTimes, betterStatusValue, renderCountryFlagsCSV} from "../common/common.jsx";
 import Button from "@mui/material/Button";
 import * as React from "react";
 import {useEffect, useState} from "react";
 import Grid from "@mui/material/Grid2";
-import {
-    DataGrid,
-    gridClasses,
-} from "@mui/x-data-grid";
 import {useDispatch, useSelector} from "react-redux";
 import {
-    deleteTransmitter,
     setClickedSatellite,
-    setClickedSatelliteTransmitters,
-    fetchSatellites,
     fetchSatellite,
     deleteSatellite
 } from "./satellite-slice.jsx";
 import {useSocket} from "../common/socket.jsx";
-import TransmitterModal, {DeleteConfirmDialog} from "./transmitter-modal.jsx";
 import { MapContainer, TileLayer, Marker, Popup } from 'react-leaflet';
 import 'leaflet/dist/leaflet.css';
 import L from 'leaflet';
 import SatelliteMapContainer from "./satellite-map.jsx";
+import SatelliteTransmittersTable from "./satellite-transmitters-table.jsx";
 import { useParams, useNavigate } from 'react-router';
 import ArrowBackIcon from '@mui/icons-material/ArrowBack';
 import { toast } from '../../utils/toast-with-timestamp.jsx';
@@ -56,61 +49,12 @@ L.Icon.Default.mergeOptions({
     shadowUrl: 'https://cdnjs.cloudflare.com/ajax/libs/leaflet/1.7.1/images/marker-shadow.png',
 });
 
-// Frequency formatting function
-const formatFrequency = (frequency) => {
-    if (!frequency || frequency === "-" || isNaN(parseFloat(frequency))) {
-        return "-";
-    }
 
-    const freq = parseFloat(frequency);
-
-    if (freq >= 1000000000) {
-        // GHz range
-        const ghz = (freq / 1000000000).toFixed(3);
-        return (
-            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
-                <span>{ghz} GHz</span>
-            </Tooltip>
-        );
-    } else if (freq >= 1000000) {
-        // MHz range
-        const mhz = (freq / 1000000).toFixed(3);
-        return (
-            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
-                <span>{mhz} MHz</span>
-            </Tooltip>
-        );
-    } else if (freq >= 1000) {
-        // kHz range
-        const khz = (freq / 1000).toFixed(3);
-        return (
-            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
-                <span>{khz} kHz</span>
-            </Tooltip>
-        );
-    } else {
-        // Hz range
-        return (
-            <Tooltip title={`${freq.toLocaleString()} Hz`} arrow>
-                <span>{freq} Hz</span>
-            </Tooltip>
-        );
-    }
-};
-
-const paginationModel = {page: 0, pageSize: 10};
-
-const SatelliteInfo = () => {
+const SatelliteInfoPage = () => {
     const { t } = useTranslation('satellites');
     const { noradId } = useParams();
     const navigate = useNavigate();
     const [rows, setRows] = useState([]);
-    const [editModalOpen, setEditModalOpen] = useState(false);
-    const [deleteConfirmOpen, setDeleteConfirmOpen] = useState(false);
-    const [editingTransmitter, setEditingTransmitter] = useState(null);
-    const [deletingTransmitter, setDeletingTransmitter] = useState(null);
-    const [isNewTransmitter, setIsNewTransmitter] = useState(false);
-    const [selected, setSelected] = useState([]);
     const dispatch = useDispatch();
     const {socket} = useSocket();
     const [imageError, setImageError] = useState(false);
@@ -196,111 +140,6 @@ const SatelliteInfo = () => {
     const handleBackClick = () => {
         navigate(-1); // Go back to previous page
     };
-
-    const handleAddClick = () => {
-        setEditingTransmitter(null);
-        setIsNewTransmitter(true);
-        setEditModalOpen(true);
-    };
-
-    const handleEditClick = () => {
-        const singleRowId = selected[0];
-        const transmitter = rows.find(row => row.id === singleRowId);
-        setEditingTransmitter(transmitter);
-        setIsNewTransmitter(false);
-        setEditModalOpen(true);
-    };
-
-    const handleDeleteClick = () => {
-        setDeleteConfirmOpen(true);
-    };
-
-    const handleDeleteConfirm = async () => {
-        try {
-            // Delete all selected transmitters
-            for (const selectedId of selected) {
-                const transmitter = rows.find(row => row.id === selectedId);
-                if (transmitter && transmitter._original?.id) {
-                    await dispatch(deleteTransmitter({
-                        socket,
-                        transmitterId: transmitter._original.id,
-                        satelliteId: clickedSatellite.norad_id,
-                    })).unwrap();
-                }
-            }
-
-            // Refresh the transmitters list
-            const updatedTransmitters = rows.filter(row => !selected.includes(row.id));
-            setRows(updatedTransmitters);
-            setSelected([]);
-
-            console.log('Transmitters deleted successfully');
-        } catch (error) {
-            console.error('Failed to delete transmitters:', error);
-        }
-
-        // Close the dialog regardless of success/failure
-        setDeleteConfirmOpen(false);
-    };
-
-    const handleModalClose = () => {
-        setEditModalOpen(false);
-        setEditingTransmitter(null);
-        setIsNewTransmitter(false);
-    };
-
-    const columns = [
-        {field: "description", headerName: t('satellite_info.transmitters.columns.description'), flex: 1.5, minWidth: 200},
-        {field: "type", headerName: t('satellite_info.transmitters.columns.type'), flex: 1, minWidth: 100},
-        {field: "status", headerName: t('satellite_info.transmitters.columns.status'), flex: 1, minWidth: 100},
-        {field: "alive", headerName: t('satellite_info.transmitters.columns.alive'), flex: 1, minWidth: 100},
-        {
-            field: "uplinkLow",
-            headerName: t('satellite_info.transmitters.columns.uplink_low'),
-            flex: 1.2,
-            minWidth: 150,
-            renderCell: (params) => formatFrequency(params.value)
-        },
-        {
-            field: "uplinkHigh",
-            headerName: t('satellite_info.transmitters.columns.uplink_high'),
-            flex: 1.2,
-            minWidth: 150,
-            renderCell: (params) => formatFrequency(params.value)
-        },
-        {
-            field: "uplinkDrift",
-            headerName: t('satellite_info.transmitters.columns.uplink_drift'),
-            flex: 1.2,
-            minWidth: 150,
-            renderCell: (params) => formatFrequency(params.value)
-        },
-        {
-            field: "downlinkLow",
-            headerName: t('satellite_info.transmitters.columns.downlink_low'),
-            flex: 1.2,
-            minWidth: 150,
-            renderCell: (params) => formatFrequency(params.value)
-        },
-        {
-            field: "downlinkHigh",
-            headerName: t('satellite_info.transmitters.columns.downlink_high'),
-            flex: 1.2,
-            minWidth: 150,
-            renderCell: (params) => formatFrequency(params.value)
-        },
-        {
-            field: "downlinkDrift",
-            headerName: t('satellite_info.transmitters.columns.downlink_drift'),
-            flex: 1.2,
-            minWidth: 150,
-            renderCell: (params) => formatFrequency(params.value)
-        },
-        {field: "mode", headerName: t('satellite_info.transmitters.columns.mode'), flex: 1, minWidth: 120},
-        {field: "uplinkMode", headerName: t('satellite_info.transmitters.columns.uplink_mode'), flex: 1, minWidth: 130},
-        {field: "invert", headerName: t('satellite_info.transmitters.columns.invert'), flex: 0.8, minWidth: 80},
-        {field: "baud", headerName: t('satellite_info.transmitters.columns.baud'), flex: 1, minWidth: 100},
-    ];
 
     function handleImageError() {
         setImageError(true);
@@ -696,110 +535,11 @@ const SatelliteInfo = () => {
                         </Grid>
                     </Grid>
 
-                    {/* Transmitters section with fixed height */}
-                    <Box sx={{flexShrink: 0}}>
-                        <Typography variant="h6" component="h3" sx={{mb: 2}}>
-                            {t('satellite_info.transmitters.title')}
-                        </Typography>
-                        {clickedSatellite['transmitters'] ? (
-                            <Box sx={{width: '100%'}}>
-                                <DataGrid
-                                    rows={rows}
-                                    columns={columns}
-                                    initialState={{pagination: {paginationModel}}}
-                                    pageSizeOptions={[5, 10]}
-                                    checkboxSelection={true}
-                                    onRowSelectionModelChange={(newSelected) => {
-                                        setSelected(newSelected);
-                                    }}
-                                    sx={{
-                                        border: 'none',
-                                        backgroundColor: 'background.paper',
-                                        color: 'text.primary',
-                                        height: '100%',
-                                        [`& .${gridClasses.cell}:focus, & .${gridClasses.cell}:focus-within`]: {
-                                            outline: 'none',
-                                        },
-                                        [`& .${gridClasses.columnHeader}:focus, & .${gridClasses.columnHeader}:focus-within`]:
-                                            {
-                                                outline: 'none',
-                                            },
-                                        '& .MuiDataGrid-columnHeaders': {
-                                            backgroundColor: 'background.elevated',
-                                            color: 'text.primary',
-                                            fontSize: '14px',
-                                            fontWeight: 'bold',
-                                            borderBottom: '1px solid',
-                                        borderColor: 'border.main',
-                                        },
-                                        '& .MuiDataGrid-cell': {
-                                            whiteSpace: 'nowrap',
-                                            overflow: 'hidden',
-                                            textOverflow: 'ellipsis',
-                                            borderBottom: '1px solid',
-                                            borderColor: (theme) => theme.palette.border.main,
-                                        },
-                                        '& .MuiDataGrid-row': {
-                                            '&:nth-of-type(odd)': {
-                                                backgroundColor: (theme) => theme.palette.overlay.light,
-                                            },
-                                            '&:hover': {
-                                                backgroundColor: (theme) => theme.palette.overlay.medium,
-                                            },
-                                        },
-                                        '& .MuiDataGrid-footerContainer': {
-                                            backgroundColor: (theme) => theme.palette.background.default,
-                                            color: (theme) => theme.palette.text.primary,
-                                        },
-                                        '& .MuiDataGrid-selectedRowCount': {
-                                            color: (theme) => theme.palette.text.primary,
-                                        },
-                                        '& .MuiDataGrid-cellContent': {
-                                            color: (theme) => theme.palette.text.primary,
-                                        },
-                                    }}
-                                />
-                                <Stack direction="row" spacing={2} sx={{marginTop: 2}}>
-                                    <Button variant="contained" onClick={handleAddClick}>
-                                        {t('satellite_info.transmitters.add')}
-                                    </Button>
-                                    <Button variant="contained" disabled={selected.length !== 1} onClick={handleEditClick}>
-                                        {t('satellite_info.transmitters.edit')}
-                                    </Button>
-                                    <Button variant="contained" color="error" disabled={selected.length < 1}
-                                            onClick={handleDeleteClick}>
-                                        {t('satellite_info.transmitters.delete')}
-                                    </Button>
-                                    <Dialog open={deleteConfirmOpen} onClose={() => setDeleteConfirmOpen(false)}>
-                                        <DialogTitle>{t('satellite_info.transmitters.delete_confirm_title')}</DialogTitle>
-                                        <DialogContent>{t('satellite_info.transmitters.delete_confirm_message')}</DialogContent>
-                                        <DialogActions>
-                                            <Button onClick={() => setDeleteConfirmOpen(false)}>{t('satellite_info.transmitters.cancel')}</Button>
-                                            <Button
-                                                variant="contained"
-                                                color="error"
-                                                onClick={handleDeleteConfirm}
-                                            >
-                                                {t('satellite_info.transmitters.delete')}
-                                            </Button>
-                                        </DialogActions>
-                                    </Dialog>
-                                </Stack>
-                            </Box>
-                        ) : (
-                            <div style={{textAlign: 'center'}}>
-                                <span>{t('satellite_info.transmitters.no_data')}</span>
-                            </div>
-                        )}
-                    </Box>
-
-                    {/* Edit/Add Transmitter Modal */}
-                    <TransmitterModal
-                        open={editModalOpen}
-                        onClose={handleModalClose}
-                        transmitter={editingTransmitter}
-                        satelliteId={clickedSatellite.norad_id}
-                        isNew={isNewTransmitter}
+                    {/* Transmitters section */}
+                    <SatelliteTransmittersTable
+                        rows={rows}
+                        setRows={setRows}
+                        clickedSatellite={clickedSatellite}
                     />
                 </Box>
             ) : (
@@ -809,4 +549,4 @@ const SatelliteInfo = () => {
     );
 };
 
-export default SatelliteInfo;
+export default SatelliteInfoPage;
