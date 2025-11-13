@@ -344,12 +344,29 @@ const VFOMarkersContainer = ({
             const marker = vfoMarkers[markerIdx];
             const isSelected = parseInt(markerIdx) === selectedVFO;
 
-            // Check if this VFO has an active Morse decoder
+            // Check if this VFO has an active decoder and override mode if needed
             const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
-            const hasMorseDecoder = decoderInfo && decoderInfo.decoder_type === 'morse';
+            let effectiveMode = marker.mode;
 
-            // Override mode to CW if Morse decoder is active (Morse uses SSB/CW demodulation)
-            const effectiveMode = hasMorseDecoder ? 'CW' : marker.mode;
+            if (decoderInfo) {
+                if (decoderInfo.decoder_type === 'morse') {
+                    // Morse uses SSB/CW demodulation (upper sideband only)
+                    effectiveMode = 'CW';
+                } else if (decoderInfo.decoder_type === 'sstv') {
+                    // SSTV uses FM demodulation (double-sided)
+                    effectiveMode = 'FM';
+                }
+            } else {
+                // No decoder found - if marker has decoder property set, handle it
+                if (marker.decoder) {
+                    // Override mode based on decoder property even if not active yet
+                    if (marker.decoder === 'morse') {
+                        effectiveMode = 'CW';
+                    } else if (marker.decoder === 'sstv') {
+                        effectiveMode = 'FM';
+                    }
+                }
+            }
 
             // Use the utility function for calculations (with effective mode)
             const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
@@ -413,12 +430,29 @@ const VFOMarkersContainer = ({
 
             const marker = vfoMarkers[key];
 
-            // Check if this VFO has an active Morse decoder
+            // Check if this VFO has an active decoder and override mode if needed
             const decoderInfo = getDecoderInfoForVFO(parseInt(key));
-            const hasMorseDecoder = decoderInfo && decoderInfo.decoder_type === 'morse';
+            let effectiveMode = marker.mode;
 
-            // Override mode to CW if Morse decoder is active
-            const effectiveMode = hasMorseDecoder ? 'CW' : marker.mode;
+            if (decoderInfo) {
+                if (decoderInfo.decoder_type === 'morse') {
+                    // Morse uses SSB/CW demodulation (upper sideband only)
+                    effectiveMode = 'CW';
+                } else if (decoderInfo.decoder_type === 'sstv') {
+                    // SSTV uses FM demodulation (double-sided)
+                    effectiveMode = 'FM';
+                }
+            } else {
+                // No decoder found - if marker has decoder property set, handle it
+                if (marker.decoder) {
+                    // Override mode based on decoder property even if not active yet
+                    if (marker.decoder === 'morse') {
+                        effectiveMode = 'CW';
+                    } else if (marker.decoder === 'sstv') {
+                        effectiveMode = 'FM';
+                    }
+                }
+            }
 
             // Use the utility function for calculations (with effective mode)
             const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
