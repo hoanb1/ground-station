@@ -62,7 +62,8 @@ const VFOMarkersContainer = ({
     } = useSelector(state => state.vfo);
 
     const {
-        active: activeDecoders
+        active: activeDecoders,
+        outputs: decoderOutputs
     } = useSelector(state => state.decoders);
 
     const containerRef = useRef(null);
@@ -120,6 +121,28 @@ const VFOMarkersContainer = ({
         }
         return null;
     }, [activeDecoders]);
+
+    // Helper function to get morse decoder output text for a VFO
+    const getMorseOutputForVFO = useCallback((vfoNumber) => {
+        // Find decoder info first
+        const decoderInfo = getDecoderInfoForVFO(vfoNumber);
+        if (!decoderInfo || decoderInfo.decoder_type !== 'morse') {
+            return null;
+        }
+
+        // Find the output for this decoder session
+        const output = decoderOutputs?.find(
+            out => out.session_id === decoderInfo.session_id && out.decoder_type === 'morse'
+        );
+
+        if (output && output.output && output.output.text) {
+            // Trim to last 300 chars as requested, then take last 30 for display
+            const fullText = output.output.text.slice(-300);
+            const displayText = fullText.slice(-30);
+            return displayText;
+        }
+        return null;
+    }, [decoderOutputs, getDecoderInfoForVFO]);
 
     // Get or create canvas context with caching
     const getCanvasContext = useCallback(() => {
@@ -280,7 +303,7 @@ const VFOMarkersContainer = ({
     useEffect(() => {
         renderVFOMarkersDirect();
     }, [vfoActive, vfoMarkers, actualWidth, height,
-        centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX, activeDecoders]);
+        centerFrequency, sampleRate, selectedVFO, containerWidth, currentPositionX, activeDecoders, decoderOutputs]);
 
     // Rendering function with cached context
     const renderVFOMarkersDirect = () => {
@@ -321,8 +344,16 @@ const VFOMarkersContainer = ({
             const marker = vfoMarkers[markerIdx];
             const isSelected = parseInt(markerIdx) === selectedVFO;
 
-            // Use the utility function for calculations
-            const bounds = calculateVFOFrequencyBounds(marker, startFreq, freqRange, actualWidth);
+            // Check if this VFO has an active Morse decoder
+            const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
+            const hasMorseDecoder = decoderInfo && decoderInfo.decoder_type === 'morse';
+
+            // Override mode to CW if Morse decoder is active (Morse uses SSB/CW demodulation)
+            const effectiveMode = hasMorseDecoder ? 'CW' : marker.mode;
+
+            // Use the utility function for calculations (with effective mode)
+            const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
+            const bounds = calculateVFOFrequencyBounds(markerWithEffectiveMode, startFreq, freqRange, actualWidth);
 
             // Skip if the marker is outside the visible range
             if (bounds.markerHighFreq < startFreq || bounds.markerLowFreq > endFreq) {
@@ -353,9 +384,11 @@ const VFOMarkersContainer = ({
             // Draw frequency label
             const labelText = generateVFOLabelText(marker, mode, bandwidth, formatFrequency);
             const isLocked = marker.lockedTransmitterId !== null;
-            const decoderInfo = getDecoderInfoForVFO(parseInt(markerIdx));
 
-            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo);
+            // Get morse output text if this VFO has a morse decoder
+            const morseText = getMorseOutputForVFO(parseInt(markerIdx));
+
+            canvasDrawingUtils.drawVFOLabel(ctx, centerX, labelText, marker.color, lineOpacity, isSelected, isLocked, decoderInfo, morseText);
         });
     };
 
@@ -380,8 +413,16 @@ const VFOMarkersContainer = ({
 
             const marker = vfoMarkers[key];
 
-            // Use the utility function for calculations
-            const bounds = calculateVFOFrequencyBounds(marker, startFreq, freqRange, actualWidth);
+            // Check if this VFO has an active Morse decoder
+            const decoderInfo = getDecoderInfoForVFO(parseInt(key));
+            const hasMorseDecoder = decoderInfo && decoderInfo.decoder_type === 'morse';
+
+            // Override mode to CW if Morse decoder is active
+            const effectiveMode = hasMorseDecoder ? 'CW' : marker.mode;
+
+            // Use the utility function for calculations (with effective mode)
+            const markerWithEffectiveMode = { ...marker, mode: effectiveMode };
+            const bounds = calculateVFOFrequencyBounds(markerWithEffectiveMode, startFreq, freqRange, actualWidth);
             const { leftEdgeX, rightEdgeX, centerX, mode, bandwidth } = bounds;
 
             // Check label (y between 0-20px with enlarged touch area) - treat as body drag

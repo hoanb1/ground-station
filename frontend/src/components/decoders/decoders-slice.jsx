@@ -90,19 +90,33 @@ export const decodersSlice = createSlice({
         decoderOutputReceived: (state, action) => {
             const output = action.payload;
 
-            // Add to outputs array (prepend for newest first)
-            state.outputs.unshift({
-                id: `output_${output.timestamp}`,
-                ...output
-            });
+            // Special handling for Morse decoder - keep only latest output per session
+            if (output.decoder_type === 'morse') {
+                // Find and remove any existing Morse output for this session
+                state.outputs = state.outputs.filter(
+                    o => !(o.decoder_type === 'morse' && o.session_id === output.session_id)
+                );
+
+                // Add the new output
+                state.outputs.unshift({
+                    id: `output_${output.session_id}_morse`,
+                    ...output
+                });
+            } else {
+                // Normal handling for other decoders (SSTV, etc.)
+                state.outputs.unshift({
+                    id: `output_${output.timestamp}`,
+                    ...output
+                });
+            }
 
             // Limit to last 100 outputs
             if (state.outputs.length > 100) {
                 state.outputs = state.outputs.slice(0, 100);
             }
 
-            // Auto-select new output if gallery is open
-            if (state.ui.showGallery) {
+            // Auto-select new output if gallery is open (but not for Morse)
+            if (state.ui.showGallery && output.decoder_type !== 'morse') {
                 state.ui.selectedOutput = `output_${output.timestamp}`;
             }
         },

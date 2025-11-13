@@ -591,6 +591,8 @@ const VfoAccordion = ({
                                                 updates.bandwidth = 3300; // 3.3 kHz for SSTV (audio content ~1200-2300 Hz)
                                             } else if (newValue === 'lora') {
                                                 updates.bandwidth = 500000; // 500 kHz for LoRa (auto-detects 125/250/500 kHz signals)
+                                            } else if (newValue === 'morse') {
+                                                updates.bandwidth = 2500; // 2.5 kHz for Morse decoder (narrowband)
                                             } else if (newValue === 'afsk' || newValue === 'rtty') {
                                                 updates.bandwidth = 3300; // 3.3 kHz for AFSK/RTTY
                                             } else if (newValue === 'psk31') {
@@ -646,6 +648,7 @@ const VfoAccordion = ({
                             >
                                 <ToggleButton value="none">{t('vfo.decoders_modes.none', 'None')}</ToggleButton>
                                 <ToggleButton value="sstv">{t('vfo.decoders_modes.sstv', 'SSTV')}</ToggleButton>
+                                <ToggleButton value="morse">{t('vfo.decoders_modes.morse', 'Morse')}</ToggleButton>
                                 <ToggleButton value="lora">{t('vfo.decoders_modes.lora', 'LoRa')}</ToggleButton>
                                 <ToggleButton value="afsk">{t('vfo.decoders_modes.afsk', 'AFSK')}</ToggleButton>
                                 <ToggleButton value="rtty">{t('vfo.decoders_modes.rtty', 'RTTY')}</ToggleButton>

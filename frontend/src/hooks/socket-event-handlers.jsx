@@ -478,18 +478,19 @@ export const useSocketEventHandlers = (socket) => {
                 case 'decoder-output': {
                     store.dispatch(decoderOutputReceived(data));
 
-                    // Show success toast with image preview
-                    const outputType = data.output.format;
-                    const fileName = data.output.filename;
-                    const imageData = data.output.image_data;
+                    // Show toast notification only for SSTV (image output)
+                    // Morse and other text-based decoders are too frequent for toasts
+                    if (data.decoder_type === 'sstv' && data.output.image_data) {
+                        const outputType = data.output.format;
+                        const fileName = data.output.filename;
+                        const imageData = data.output.image_data;
 
-                    toast.success(
-                        <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
-                            <ToastMessage
-                                title={t('notifications.decoder.output_received')}
-                                body={`${data.decoder_type.toUpperCase()}: ${fileName}`}
-                            />
-                            {imageData && (
+                        toast.success(
+                            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 1 }}>
+                                <ToastMessage
+                                    title={t('notifications.decoder.output_received')}
+                                    body={`${data.decoder_type.toUpperCase()}: ${fileName}`}
+                                />
                                 <Box
                                     component="img"
                                     src={`data:${outputType};base64,${imageData}`}
@@ -502,13 +503,13 @@ export const useSocketEventHandlers = (socket) => {
                                         marginTop: '8px'
                                     }}
                                 />
-                            )}
-                        </Box>,
-                        {
-                            icon: () => <ImageIcon />,
-                            autoClose: 10000,
-                        }
-                    );
+                            </Box>,
+                            {
+                                icon: () => <ImageIcon />,
+                                autoClose: 10000,
+                            }
+                        );
+                    }
                     break;
                 }
 

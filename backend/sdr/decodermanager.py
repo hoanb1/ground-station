@@ -84,11 +84,13 @@ class DecoderManager:
                 self.stop_decoder(sdr_id, session_id)
 
         try:
-            # Import LoRaDecoder to check if this is a raw IQ decoder
+            # Import decoder classes to determine demodulator requirements
             from demodulators.loradecoder import LoRaDecoder
+            from demodulators.morsedecoder import MorseDecoder
 
-            # Determine if this decoder needs raw IQ (no demodulator) or audio (internal FM demod)
+            # Determine if this decoder needs raw IQ (no demodulator) or audio (internal demod)
             needs_raw_iq = decoder_class == LoRaDecoder
+            needs_ssb_demod = decoder_class == MorseDecoder  # Morse needs SSB (CW mode), not FM
 
             # Check if there's an active demodulator for this session
             # If not, or if it's not in internal mode, create an internal FM demodulator specifically for the decoder
@@ -145,31 +147,53 @@ class DecoderManager:
                     )
 
             if need_internal_demod:
-                # Import FMDemodulator here to avoid circular imports
+                # Import demodulators here to avoid circular imports
                 from demodulators.fmdemodulator import FMDemodulator
+                from demodulators.ssbdemodulator import SSBDemodulator
 
-                # Create internal audio queue for the FM demodulator
+                # Create internal audio queue for the demodulator
                 internal_audio_queue: multiprocessing.Queue = multiprocessing.Queue(maxsize=10)
 
                 # Get VFO center frequency from kwargs if provided
                 vfo_center_freq = kwargs.get("vfo_center_freq", None)
 
-                # Start internal FM demodulator with internal_mode enabled
+                # Select appropriate demodulator based on decoder type
+                if needs_ssb_demod:
+                    demod_class = SSBDemodulator
+                    demod_mode = "cw"
+                    demod_bandwidth = 2500  # 2.5 kHz bandwidth for Morse/CW
+                    self.logger.info(
+                        "Creating internal SSB demodulator (CW mode) for Morse decoder"
+                    )
+                else:
+                    demod_class = FMDemodulator
+                    demod_mode = None  # FM doesn't use mode parameter
+                    demod_bandwidth = 12500  # 12.5 kHz bandwidth for SSTV
+                    self.logger.info("Creating internal FM demodulator for decoder")
+
+                # Start internal demodulator with internal_mode enabled
                 # Pass vfo_number if provided to maintain multi-VFO structure
-                success = self.demodulator_manager.start_demodulator(
-                    sdr_id=sdr_id,
-                    session_id=session_id,
-                    demodulator_class=FMDemodulator,
-                    audio_queue=internal_audio_queue,
-                    vfo_number=vfo_number,  # Pass VFO number for multi-VFO mode
-                    internal_mode=True,  # Enable internal mode to bypass VFO checks
-                    center_freq=vfo_center_freq,  # Pass VFO frequency
-                    bandwidth=12500,  # Default bandwidth for SSTV
-                )
+                demod_kwargs = {
+                    "sdr_id": sdr_id,
+                    "session_id": session_id,
+                    "demodulator_class": demod_class,
+                    "audio_queue": internal_audio_queue,
+                    "vfo_number": vfo_number,  # Pass VFO number for multi-VFO mode
+                    "internal_mode": True,  # Enable internal mode to bypass VFO checks
+                    "center_freq": vfo_center_freq,  # Pass VFO frequency
+                    "bandwidth": demod_bandwidth,
+                }
+
+                # Add mode parameter only for SSB
+                if demod_mode:
+                    demod_kwargs["mode"] = demod_mode
+
+                success = self.demodulator_manager.start_demodulator(**demod_kwargs)
 
                 if not success:
+                    demod_type = "SSB" if needs_ssb_demod else "FM"
                     self.logger.error(
-                        f"Failed to start internal FM demodulator for session {session_id}"
+                        f"Failed to start internal {demod_type} demodulator for session {session_id}"
                     )
                     return False
 

@@ -92,7 +92,24 @@
       "lsb": "LSB",
       "usb": "USB",
       "cw": "CW"
-    }
+    },
+    "audio_demodulation": "Audio Demodulation",
+    "audio_demodulation_help": "How to extract audio from the RF signal",
+    "data_decoders": "Data Decoders",
+    "data_decoders_help": "An internal FM or SSB demodulator will be spun up as needed to decode some modes",
+    "decoder_active_info": "Audio demodulation is automatically handled by the decoder",
+    "decoders_modes": {
+      "none": "None",
+      "sstv": "SSTV",
+      "morse": "Morse",
+      "lora": "LoRa",
+      "afsk": "AFSK",
+      "rtty": "RTTY",
+      "psk31": "PSK31"
+    },
+    "lock_to_transmitter": "Lock to Transmitter",
+    "none": "None",
+    "locked_to_transmitter_info": "Tracking doppler-corrected frequency"
   },
   "error_dialog": {
     "title": "Error Occurred",

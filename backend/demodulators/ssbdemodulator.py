@@ -47,7 +47,18 @@ class SSBDemodulator(threading.Thread):
     process the same IQ samples without gaps.
     """
 
-    def __init__(self, iq_queue, audio_queue, session_id, mode="usb", vfo_number=None, **kwargs):
+    def __init__(
+        self,
+        iq_queue,
+        audio_queue,
+        session_id,
+        mode="usb",
+        vfo_number=None,
+        internal_mode=False,
+        center_freq=None,
+        bandwidth=None,
+        **kwargs,
+    ):
         super().__init__(daemon=True, name=f"SSBDemodulator-{session_id}-VFO{vfo_number or ''}")
         self.iq_queue = iq_queue
         self.audio_queue = audio_queue
@@ -55,7 +66,12 @@ class SSBDemodulator(threading.Thread):
         self.vfo_number = vfo_number  # VFO number for multi-VFO mode
         self.running = True
         self.vfo_manager = VFOManager()
-        self.mode = mode  # "usb" or "lsb"
+        self.mode = mode  # "usb", "lsb", or "cw"
+
+        # Internal mode: bypasses VFO checks and uses provided parameters
+        self.internal_mode = internal_mode
+        self.internal_center_freq = center_freq  # Used if internal_mode=True
+        self.internal_bandwidth = bandwidth or 2500  # Default to 2.5 kHz for CW/SSB
 
         # Audio output parameters
         self.audio_sample_rate = 44100  # 44.1 kHz audio output
@@ -260,24 +276,7 @@ class SSBDemodulator(threading.Thread):
 
                 iq_message = self.iq_queue.get(timeout=0.1)
 
-                # Check if there's an active VFO AFTER getting samples
-                vfo_state = self._get_active_vfo()
-                if not vfo_state:
-                    # VFO inactive - discard these samples and continue
-                    continue
-
-                # Check if modulation is SSB (USB, LSB, or CW)
-                vfo_modulation = vfo_state.modulation.lower()
-                if vfo_modulation not in ["usb", "lsb", "cw"]:
-                    # Wrong modulation - discard these samples and continue
-                    continue
-
-                # Update mode if VFO changed
-                if vfo_modulation != self.mode.lower():
-                    self.mode = vfo_modulation
-                    logger.info(f"Switched SSB mode to {self.mode.upper()}")
-
-                # Extract samples and metadata
+                # Extract samples and metadata first
                 samples = iq_message.get("samples")
                 sdr_center_freq = iq_message.get("center_freq")
                 sdr_sample_rate = iq_message.get("sample_rate")
@@ -285,27 +284,61 @@ class SSBDemodulator(threading.Thread):
                 if samples is None or len(samples) == 0:
                     continue
 
+                # Determine VFO parameters based on mode
+                if self.internal_mode:
+                    # Internal mode: use provided parameters but still get VFO state for volume/squelch
+                    vfo_state = self._get_active_vfo()
+                    vfo_center_freq = (
+                        self.internal_center_freq
+                        if self.internal_center_freq is not None
+                        else sdr_center_freq
+                    )
+                    vfo_bandwidth = self.internal_bandwidth
+                    # Keep the mode as set during init (e.g., "cw" for CW decoder)
+                    is_selected = True  # Always selected in internal mode
+                else:
+                    # Normal mode: check VFO state
+                    vfo_state = self._get_active_vfo()
+                    if not vfo_state:
+                        # VFO inactive - discard these samples and continue
+                        continue
+
+                    # Check if modulation is SSB (USB, LSB, or CW)
+                    vfo_modulation = vfo_state.modulation.lower()
+                    if vfo_modulation not in ["usb", "lsb", "cw"]:
+                        # Wrong modulation - discard these samples and continue
+                        continue
+
+                    # Update mode if VFO changed
+                    if vfo_modulation != self.mode.lower():
+                        self.mode = vfo_modulation
+                        logger.info(f"Switched SSB mode to {self.mode.upper()}")
+
+                    vfo_center_freq = vfo_state.center_freq
+                    vfo_bandwidth = vfo_state.bandwidth
+
+                    # Check if this VFO is selected for audio output
+                    is_selected = vfo_state.selected if vfo_state else False
+
                 # Check if we need to reinitialize filters
                 if (
                     self.sdr_sample_rate != sdr_sample_rate
-                    or self.current_bandwidth != vfo_state.bandwidth
+                    or self.current_bandwidth != vfo_bandwidth
                     or self.current_mode != self.mode.lower()
                     or self.decimation_filter is None
                 ):
                     self.sdr_sample_rate = sdr_sample_rate
-                    self.current_bandwidth = vfo_state.bandwidth
+                    self.current_bandwidth = vfo_bandwidth
                     self.current_mode = self.mode.lower()
 
                     # Design filters
                     iir_coeffs, decimation = self._design_decimation_filter(
-                        sdr_sample_rate, vfo_state.bandwidth
+                        sdr_sample_rate, vfo_bandwidth
                     )
                     self.decimation_filter = (iir_coeffs, decimation)
 
                     intermediate_rate = sdr_sample_rate / decimation
-                    self.audio_filter = self._design_audio_filter(
-                        intermediate_rate, vfo_state.bandwidth
-                    )
+                    self.audio_filter = self._design_audio_filter(intermediate_rate, vfo_bandwidth)
 
                     # Smooth filter state transitions instead of resetting to None
                     initial_value = samples[0] if len(samples) > 0 else 0
@@ -318,19 +351,19 @@ class SSBDemodulator(threading.Thread):
                     )
 
                     logger.info(
-                        f"Filters initialized: SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
+                        f"Filters initialized (internal_mode={self.internal_mode}): SDR rate={sdr_sample_rate/1e6:.2f} MHz, "
                         f"decimation={decimation}, intermediate={intermediate_rate/1e3:.1f} kHz, mode={self.mode.upper()}"
                     )
 
                 # Step 1: Frequency translation (tune to VFO frequency)
-                if vfo_state.center_freq == 0:
+                if vfo_center_freq == 0:
                     logger.debug("VFO frequency not set, skipping frame")
                     continue
 
-                offset_freq = vfo_state.center_freq - sdr_center_freq
+                offset_freq = vfo_center_freq - sdr_center_freq
                 if abs(offset_freq) > sdr_sample_rate / 2:
                     logger.debug(
-                        f"VFO frequency {vfo_state.center_freq} Hz is outside SDR bandwidth "
+                        f"VFO frequency {vfo_center_freq} Hz is outside SDR bandwidth "
                         f"(SDR center: {sdr_center_freq} Hz, rate: {sdr_sample_rate} Hz)"
                     )
                     continue
@@ -377,9 +410,16 @@ class SSBDemodulator(threading.Thread):
                 if num_output_samples > 0:
                     audio = signal.resample(audio_filtered, num_output_samples)
 
-                    # Apply amplification to boost low audio levels
-                    # Adjust this gain factor if audio is still too quiet or too loud
-                    audio_gain = 3.0  # 3x amplification (adjustable)
+                    # Apply amplification based on VFO volume setting
+                    # Get volume from VFO state if available, otherwise use default
+                    if vfo_state and hasattr(vfo_state, "volume"):
+                        # VFO volume is typically 0-100, normalize to gain factor
+                        # Map 0-100 to 0.0-10.0 gain (with 50 = 3.0x as default)
+                        audio_gain = (vfo_state.volume / 50.0) * 3.0
+                        audio_gain = max(0.1, min(10.0, audio_gain))  # Clamp to reasonable range
+                    else:
+                        audio_gain = 3.0  # Default 3x amplification
+
                     audio = audio * audio_gain
 
                     # Normalize and soft clipping
@@ -388,9 +428,15 @@ class SSBDemodulator(threading.Thread):
                     audio = audio / max_val * 0.5  # Scale to 50% to leave headroom
                     audio = np.clip(audio, -0.95, 0.95)
 
-                    # Apply squelch based on RF signal strength
-                    squelch_threshold_db = vfo_state.squelch
-                    squelch_hysteresis_db = 3  # 3 dB hysteresis
+                    # Apply squelch based on RF signal strength (measured earlier)
+                    # Get squelch from VFO state
+                    if vfo_state and hasattr(vfo_state, "squelch"):
+                        squelch_threshold_db = vfo_state.squelch
+                    else:
+                        # If no VFO state (shouldn't happen), disable squelch
+                        squelch_threshold_db = -200
+
+                    squelch_hysteresis_db = 3  # 3 dB hysteresis to prevent flutter
 
                     # Apply squelch with hysteresis
                     if self.squelch_open:
@@ -418,23 +464,26 @@ class SSBDemodulator(threading.Thread):
                     if len(self.audio_buffer) > max_buffer_samples:
                         # Keep only the most recent data
                         self.audio_buffer = self.audio_buffer[-max_buffer_samples:]
-                        logger.warning(
-                            f"Audio buffer overflow ({len(self.audio_buffer)} samples), "
-                            f"dropping old audio to prevent lag buildup"
-                        )
+                        # Only log warning if not in internal mode (used by decoders like CW)
+                        if not self.internal_mode:
+                            logger.warning(
+                                f"Audio buffer overflow ({len(self.audio_buffer)} samples), "
+                                f"dropping old audio to prevent lag buildup"
+                            )
+                        else:
+                            logger.debug(
+                                f"Audio buffer overflow ({len(self.audio_buffer)} samples), "
+                                f"dropping old audio (internal mode)"
+                            )
 
                     # Send chunks of target size when buffer is full enough
-                    # Only output audio if this VFO is selected (in multi-VFO mode)
-                    is_selected = vfo_state.selected if vfo_state else False
-
                     while len(self.audio_buffer) >= self.target_chunk_size:
                         # Extract a chunk
                         chunk = self.audio_buffer[: self.target_chunk_size]
                         self.audio_buffer = self.audio_buffer[self.target_chunk_size :]
 
-                        # Only output audio if this VFO is selected
-                        if not is_selected:
-                            # VFO not selected, discard audio (but continue processing to avoid buffer buildup)
+                        # Only output audio if this VFO is selected (in normal mode)
+                        if not self.internal_mode and not is_selected:
                             continue
 
                         # Put audio chunk in queue - use put_nowait to avoid blocking
