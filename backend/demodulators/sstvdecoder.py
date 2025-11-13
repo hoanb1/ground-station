@@ -62,6 +62,7 @@ class SSTVMode(Enum):
         "chan_sync": 2,
         "color_mode": "GBR",
         "window_factor": 3.82,
+        "line_time": 0.009 + 3 * (0.0015 + 0.138240),
     }
 
     # Wraase SC2-180 mode (VIS 55) - similar to Scottie
@@ -79,6 +80,7 @@ class SSTVMode(Enum):
         "chan_sync": 2,
         "color_mode": "GBR",
         "window_factor": 3.82,
+        "line_time": 0.009 + 3 * (0.0015 + 0.235),
     }
 
     SCOTTIE_S2 = {
@@ -95,6 +97,7 @@ class SSTVMode(Enum):
         "chan_sync": 2,
         "color_mode": "GBR",
         "window_factor": 3.82,
+        "line_time": 0.009 + 3 * (0.0015 + 0.088064),
     }
 
     SCOTTIE_DX = {
@@ -111,6 +114,7 @@ class SSTVMode(Enum):
         "chan_sync": 2,
         "color_mode": "GBR",
         "window_factor": 3.82,
+        "line_time": 0.009 + 3 * (0.0015 + 0.345600),
     }
 
     MARTIN_M1 = {
@@ -127,6 +131,7 @@ class SSTVMode(Enum):
         "chan_sync": 0,  # Martin syncs on Green
         "color_mode": "GBR",
         "window_factor": 3.82,
+        "line_time": 0.004862 + 0.000572 + 3 * (0.000572 + 0.146432),
     }
 
     MARTIN_M2 = {
@@ -143,6 +148,7 @@ class SSTVMode(Enum):
         "chan_sync": 0,  # Martin syncs on Green
         "color_mode": "GBR",
         "window_factor": 3.82,
+        "line_time": 0.004862 + 0.000572 + 3 * (0.000572 + 0.073216),
     }
 
     ROBOT_36 = {
@@ -153,12 +159,18 @@ class SSTVMode(Enum):
         "sync_pulse": 0.009,
         "sync_porch": 0.003,
         "sep_pulse": 0.004500,
+        "sep_porch": 0.001500,
         "scan_time": 0.088,
+        "half_scan_time": 0.044,
         "pixel_time": 0.088 / 320,
-        "chan_count": 3,
+        "chan_count": 2,
         "chan_sync": 0,  # Robot syncs on first channel (Y)
         "color_mode": "YUV",
-        "window_factor": 3.82,
+        "window_factor": 7.70,
+        # LINE_TIME = CHAN_OFFSETS[1] + HALF_SCAN_TIME
+        # CHAN_OFFSETS[1] = SYNC_PULSE + SYNC_PORCH + CHAN_TIME + SEP_PORCH
+        # CHAN_TIME = SEP_PULSE + SCAN_TIME
+        "line_time": 0.009 + 0.003 + (0.004500 + 0.088) + 0.001500 + 0.044,
     }
 
 
@@ -335,33 +347,56 @@ class SSTVDecoder(threading.Thread):
 
         seq_start = image_start
 
-        # Channel offsets for Scottie
+        # Scottie modes have an initial sync pulse before the image data
+        # We need to align to the END of this first sync pulse
+        if chan_sync == 2:  # Scottie modes
+            seq_start = self._align_sync(image_start, start_of_sync=False)
+            if seq_start is None:
+                logger.error("Could not find first sync pulse after VIS code")
+                seq_start = image_start
+
         sync_pulse = mode["sync_pulse"]
         sync_porch = mode["sync_porch"]
         sep_pulse = mode["sep_pulse"]
         scan_time = mode["scan_time"]
         chan_time = sep_pulse + scan_time
 
-        chan_offsets = [
-            sync_pulse + sync_porch + chan_time,  # Green (0)
-            sync_pulse + sync_porch + 2 * chan_time,  # Blue (1)
-            sync_pulse + sync_porch,  # Red (2)
-        ]
+        # Channel offsets differ between Martin and Scottie modes
+        if chan_sync == 0:  # Martin modes: sync on Green (channel 0)
+            # Martin sequence: [Green, Blue, Red] with sync before Green
+            chan_offsets = [
+                sync_pulse + sync_porch,  # Green (0)
+                sync_pulse + sync_porch + chan_time,  # Blue (1)
+                sync_pulse + sync_porch + 2 * chan_time,  # Red (2)
+            ]
+        else:  # Scottie modes: sync on Red (channel 2)
+            # Scottie sequence: [Green, Blue, Red] with sync before Red
+            chan_offsets = [
+                sync_pulse + sync_porch + chan_time,  # Green (0)
+                sync_pulse + sync_porch + 2 * chan_time,  # Blue (1)
+                sync_pulse + sync_porch,  # Red (2)
+            ]
 
         for line in range(height):
             # Send progress updates every 5 lines
             if line % 5 == 0:
                 self._send_progress_update(line, height, mode["name"])
 
+            # For Scottie modes on line 0, we need to back up to before the Red channel
+            # since sync happens on channel 2 (Red), but Green and Blue come first
+            if chan_sync == 2 and line == 0:
+                # Back up by the offset to the sync channel plus one scan time
+                sync_offset = chan_offsets[chan_sync]
+                seq_start -= round((sync_offset + scan_time) * self.sample_rate)
+
             for chan in range(channels):
                 if chan == chan_sync:
-                    # Skip to next line's sync (except for very first sync)
-                    if line > 0:
-                        line_time = sync_pulse + channels * chan_time
-                        seq_start += round(line_time * self.sample_rate)
+                    # Advance to next line and realign to sync pulse
+                    if line > 0 or chan > 0:
+                        seq_start += round(mode["line_time"] * self.sample_rate)
 
-                    # Always align to sync pulse for every line
-                    seq_start = self._align_sync(seq_start)
+                    # Align to start of sync pulse
+                    seq_start = self._align_sync(seq_start, start_of_sync=True)
                     if seq_start is None:
                         logger.info(f"End of audio at line {line}")
                         return image_data
