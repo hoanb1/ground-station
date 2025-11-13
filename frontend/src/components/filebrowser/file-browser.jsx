@@ -220,6 +220,7 @@ export default function FileBrowser() {
                 case 'recording-started':
                 case 'recording-stopped':
                 case 'snapshot-saved':
+                case 'decoded-saved':
                     // Refetch files to show updated list using current filter state from Redux
                     dispatch(fetchFiles({
                         socket,

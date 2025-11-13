@@ -22,6 +22,7 @@ import numpy as np
 
 from common.constants import DictKeys, QueueMessageTypes, SocketEvents
 from fft.processor import fft_processor_process
+from handlers.entities.filebrowser import emit_file_browser_state
 from sdr.iqbroadcaster import IQBroadcaster
 from sdr.utils import create_named_worker_process
 from workers.rtlsdrworker import rtlsdr_worker_process
@@ -605,6 +606,21 @@ class ProcessLifecycleManager:
                                 await self.sio.emit(
                                     SocketEvents.DECODER_DATA, data, room=session_id
                                 )
+
+                                # If decoder output was saved, emit file browser state update
+                                if data_type == "decoder-output" and "output" in data:
+                                    output = data["output"]
+                                    if "filepath" in output:
+                                        await emit_file_browser_state(
+                                            self.sio,
+                                            {
+                                                "action": "decoded-saved",
+                                                "decoder_type": data.get("decoder_type"),
+                                                "filepath": output["filepath"],
+                                                "filename": output.get("filename"),
+                                            },
+                                            self.logger,
+                                        )
                             else:
                                 self.logger.warning(
                                     f"Decoder message missing session_id: {data_type}"
