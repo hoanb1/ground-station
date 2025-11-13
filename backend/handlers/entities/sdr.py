@@ -66,13 +66,11 @@ async def sdr_data_request_routing(sio, cmd, data, logger, client_id):
                 center_freq = data.get("centerFrequency", 100e6)
 
                 # Validate center frequency against device limits
-                frequency_range = sdr_device.get(
-                    "frequency_range", {"min": float("-inf"), "max": float("inf")}
-                )
-                # Type check: ensure frequency_range is a dict
-                if isinstance(frequency_range, dict):
-                    freq_min = frequency_range.get("min", float("-inf"))
-                    freq_max = frequency_range.get("max", float("inf"))
+                freq_min = sdr_device.get("frequency_min", None)
+                freq_max = sdr_device.get("frequency_max", None)
+
+                # Only validate if both limits are defined and numeric
+                if freq_min is not None and freq_max is not None:
                     if isinstance(freq_min, (int, float)) and isinstance(freq_max, (int, float)):
                         if not (freq_min * 1e6 <= center_freq <= freq_max * 1e6):
                             raise Exception(
