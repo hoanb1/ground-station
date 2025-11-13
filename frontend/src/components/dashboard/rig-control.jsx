@@ -264,12 +264,6 @@ const RigControl = React.memo(function RigControl() {
                             {rigs.map((rig, index) => {
                                 return <MenuItem type={"rig"} value={rig.id} key={index}>{rig.name} ({rig.host}:{rig.port})</MenuItem>;
                             })}
-                            <MenuItem value="" disabled>
-                                <em>{t('rig_control_labels.select_sdr')}</em>
-                            </MenuItem>
-                            {sdrs.filter(sdr => sdr.type !== 'sigmfplayback').map((sdr, index) => {
-                                return <MenuItem type={"sdr"} value={sdr.id} key={index}>{sdr.name} ({sdr.type})</MenuItem>;
-                            })}
                         </Select>
                     </FormControl>
                 </Grid>
@@ -289,13 +283,8 @@ const RigControl = React.memo(function RigControl() {
                             <MenuItem value="none">
                                 {t('rig_control_labels.no_vfo_control')}
                             </MenuItem>
-                            <MenuItem value="" disabled>
-                                <em>{t('rig_control_labels.select_vfo')}</em>
-                            </MenuItem>
                             <MenuItem value="1">VFO 1</MenuItem>
                             <MenuItem value="2">VFO 2</MenuItem>
-                            {determineRadioType(selectedRadioRig) === "sdr" && <MenuItem value="3">VFO 3</MenuItem>}
-                            {determineRadioType(selectedRadioRig) === "sdr" && <MenuItem value="4">VFO 4</MenuItem>}
                         </Select>
                     </FormControl>
                 </Grid>
