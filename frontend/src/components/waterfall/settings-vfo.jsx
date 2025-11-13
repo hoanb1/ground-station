@@ -33,13 +33,27 @@ import { useTranslation } from 'react-i18next';
 import { useSelector } from 'react-redux';
 
 const BANDWIDTHS = {
+    "500": "500 Hz",
+    "1000": "1 kHz",
+    "2100": "2.1 kHz",
+    "2400": "2.4 kHz",
+    "2700": "2.7 kHz",
+    "3000": "3 kHz",
     "3300": "3.3 kHz",
     "5000": "5 kHz",
+    "6000": "6 kHz",
+    "8000": "8 kHz",
     "10000": "10 kHz",
     "12500": "12.5 kHz",
     "15000": "15 kHz",
     "20000": "20 kHz",
-    "200000": "200 kHz"
+    "25000": "25 kHz",
+    "50000": "50 kHz",
+    "100000": "100 kHz",
+    "150000": "150 kHz",
+    "200000": "200 kHz",
+    "250000": "250 kHz",
+    "500000": "500 kHz"
 };
 
 const VfoAccordion = ({
