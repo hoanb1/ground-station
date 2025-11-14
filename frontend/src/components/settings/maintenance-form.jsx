@@ -452,22 +452,17 @@ const MaintenanceForm = () => {
                 {t('maintenance.subtitle')}
             </Alert>
             <Box component="form" sx={{mt: 2}}>
-                <Grid container spacing={3}>
-                    {/* Left Column - Storage & Settings Management */}
+                <Grid container spacing={2}>
+                    {/* Left Column */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
+                        {/* Grid Layout Storage Card */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
                             <Typography variant="h6" gutterBottom>
-                                Storage & Settings Management
+                                Grid Layout Storage
                             </Typography>
                             <Divider sx={{ mb: 2 }} />
 
                             <Grid container spacing={2} columns={16}>
-                                <Grid size={16}>
-                                    <Typography variant="subtitle2" color="text.secondary">
-                                        Grid Layout Storage
-                                    </Typography>
-                                </Grid>
-
                                 <Grid size={10}>
                                     Clear Overview Grid Layout
                                     <Typography variant="body2" color="text.secondary">
@@ -543,14 +538,17 @@ const MaintenanceForm = () => {
                                         {t('maintenance.clear_layout_button')}
                                     </Button>
                                 </Grid>
+                            </Grid>
+                        </Paper>
 
-                                <Grid size={16}>
-                                    <Divider sx={{ my: 2 }} />
-                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                        Redux Persistent Settings
-                                    </Typography>
-                                </Grid>
+                        {/* Redux Persistent Settings Card */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Redux Persistent Settings
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
 
+                            <Grid container spacing={2} columns={16}>
                                 <Grid size={16}>
                                     <Alert severity="warning" sx={{ mb: 2 }}>
                                         <AlertTitle>Clear All Redux Settings</AlertTitle>
@@ -692,11 +690,166 @@ const MaintenanceForm = () => {
                                 </Grid>
                             </Grid>
                         </Paper>
+
+                        {/* Canvas Rendering Debug Information Card */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Canvas Rendering Debug Information
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
+                            <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                                Information about canvas rendering environment for debugging text distortion issues
+                            </Typography>
+
+                            <Grid container spacing={2} columns={16}>
+                                <Grid size={16}>
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
+                                        Display Information
+                                    </Typography>
+                                    <Divider sx={{ mb: 1 }} />
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Device Pixel Ratio
+                                    <Typography variant="body2" color="text.secondary">
+                                        Scale factor between CSS pixels and physical pixels
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="h6" color="primary">
+                                        {window.devicePixelRatio || 'N/A'}
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Window Inner Dimensions
+                                    <Typography variant="body2" color="text.secondary">
+                                        Viewport width and height in CSS pixels
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {window.innerWidth} × {window.innerHeight} px
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Screen Resolution
+                                    <Typography variant="body2" color="text.secondary">
+                                        Physical screen dimensions
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {window.screen.width} × {window.screen.height} px
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Available Screen Space
+                                    <Typography variant="body2" color="text.secondary">
+                                        Screen size minus OS toolbars/taskbar
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {window.screen.availWidth} × {window.screen.availHeight} px
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Color Depth
+                                    <Typography variant="body2" color="text.secondary">
+                                        Bits per pixel for color representation
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {window.screen.colorDepth} bits
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={16}>
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+                                        Browser Information
+                                    </Typography>
+                                    <Divider sx={{ mb: 1 }} />
+                                </Grid>
+
+                                <Grid size={8}>
+                                    User Agent
+                                    <Typography variant="body2" color="text.secondary">
+                                        Browser identification string
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
+                                        {navigator.userAgent}
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Platform
+                                    <Typography variant="body2" color="text.secondary">
+                                        Operating system platform
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {navigator.platform}
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Language
+                                    <Typography variant="body2" color="text.secondary">
+                                        Browser language setting
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {navigator.language}
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={16}>
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+                                        Hardware Information
+                                    </Typography>
+                                    <Divider sx={{ mb: 1 }} />
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Hardware Concurrency
+                                    <Typography variant="body2" color="text.secondary">
+                                        Number of logical processor cores
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {navigator.hardwareConcurrency || 'N/A'} cores
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Max Touch Points
+                                    <Typography variant="body2" color="text.secondary">
+                                        Maximum simultaneous touch points supported
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {navigator.maxTouchPoints || 0}
+                                    </Typography>
+                                </Grid>
+                            </Grid>
+                        </Paper>
                     </Grid>
 
-                    {/* Right Column - Service Control & Browser Features */}
+                    {/* Right Column */}
                     <Grid size={{ xs: 12, md: 6 }}>
-                        <Paper elevation={1} sx={{ p: 2, height: '100%' }}>
+                        {/* Service Control Card */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
                             <Typography variant="h6" gutterBottom>
                                 Service Control
                             </Typography>
@@ -729,31 +882,30 @@ const MaintenanceForm = () => {
                                 </Grid>
 
                                 {restartMessage && (
-                                    <>
-                                        <Grid size={16}>
-                                            <Alert
-                                                severity={restartMessage.includes('Failed') ? "error" : "warning"}
-                                                sx={{ mt: 1 }}
-                                            >
-                                                {restartMessage}
-                                            </Alert>
-                                        </Grid>
-                                    </>
+                                    <Grid size={16}>
+                                        <Alert
+                                            severity={restartMessage.includes('Failed') ? "error" : "warning"}
+                                            sx={{ mt: 1 }}
+                                        >
+                                            {restartMessage}
+                                        </Alert>
+                                    </Grid>
                                 )}
+                            </Grid>
+                        </Paper>
 
-                                <Grid size={16}>
-                                    <Divider sx={{ my: 2 }} />
-                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                        Browser Features & Diagnostics
-                                    </Typography>
-                                </Grid>
+                        {/* Browser Features & Diagnostics Card */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
+                            <Typography variant="h6" gutterBottom>
+                                Browser Features & Diagnostics
+                            </Typography>
+                            <Divider sx={{ mb: 2 }} />
 
-                                <Grid size={16}>
-                                    <Alert severity="info" size="small">
-                                        {t('maintenance.browser_features_subtitle')}
-                                    </Alert>
-                                </Grid>
+                            <Alert severity="info" sx={{ mb: 2 }}>
+                                {t('maintenance.browser_features_subtitle')}
+                            </Alert>
 
+                            <Grid container spacing={2} columns={16}>
                                 <Grid size={12}>
                                     <Typography variant="body2" fontWeight="medium">
                                         {t('maintenance.web_workers')}
@@ -812,7 +964,7 @@ const MaintenanceForm = () => {
                                                 offscreenInWorkerSupported && canvasTransferToWorkerSupported)
                                                 ? 'success'
                                                 : 'warning'
-                                        } sx={{ mt: 1 }} size="small">
+                                        } sx={{ mt: 1 }}>
                                             {(workersSupported && offscreenCanvasSupported && offscreenTransferSupported &&
                                                 offscreenInWorkerSupported && canvasTransferToWorkerSupported)
                                                 ? t('maintenance.all_features_message')
@@ -822,147 +974,23 @@ const MaintenanceForm = () => {
                                 )}
                             </Grid>
                         </Paper>
-                    </Grid>
-                </Grid>
 
-                {/* Canvas Debug Information - Full Width Row with Two Columns */}
-                <Grid container spacing={3} sx={{ mt: 1 }}>
-                    <Grid size={12}>
-                        <Paper elevation={1} sx={{ p: 2 }}>
+                        {/* Socket.IO Connection Information Card */}
+                        <Paper elevation={1} sx={{ p: 2, mb: 2 }}>
                             <Typography variant="h6" gutterBottom>
-                                Canvas Rendering Debug Information
+                                Socket.IO Connection Information
                             </Typography>
                             <Divider sx={{ mb: 2 }} />
                             <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                                Information about canvas rendering environment for debugging text distortion issues
+                                Real-time WebSocket connection status and diagnostics
                             </Typography>
 
                             <Grid container spacing={2} columns={16}>
-                    <Grid size={8}>
-                        Device Pixel Ratio
-                        <Typography variant="body2" color="text.secondary">
-                            Scale factor between CSS pixels and physical pixels
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="h6" color="primary">
-                            {window.devicePixelRatio || 'N/A'}
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        Window Inner Dimensions
-                        <Typography variant="body2" color="text.secondary">
-                            Viewport width and height in CSS pixels
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {window.innerWidth} × {window.innerHeight} px
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        Screen Resolution
-                        <Typography variant="body2" color="text.secondary">
-                            Physical screen dimensions
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {window.screen.width} × {window.screen.height} px
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        Available Screen Space
-                        <Typography variant="body2" color="text.secondary">
-                            Screen size minus OS toolbars/taskbar
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {window.screen.availWidth} × {window.screen.availHeight} px
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        Color Depth
-                        <Typography variant="body2" color="text.secondary">
-                            Bits per pixel for color representation
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {window.screen.colorDepth} bits
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        User Agent
-                        <Typography variant="body2" color="text.secondary">
-                            Browser identification string
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body2" sx={{ wordBreak: 'break-word' }}>
-                            {navigator.userAgent}
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        Platform
-                        <Typography variant="body2" color="text.secondary">
-                            Operating system platform
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {navigator.platform}
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        Hardware Concurrency
-                        <Typography variant="body2" color="text.secondary">
-                            Number of logical processor cores
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {navigator.hardwareConcurrency || 'N/A'} cores
-                        </Typography>
-                    </Grid>
-
-                    <Grid size={8}>
-                        Max Touch Points
-                        <Typography variant="body2" color="text.secondary">
-                            Maximum simultaneous touch points supported
-                        </Typography>
-                    </Grid>
-                    <Grid size={8}>
-                        <Typography variant="body1">
-                            {navigator.maxTouchPoints || 0}
-                        </Typography>
-                    </Grid>
-
-                                <Grid size={8}>
-                                    Language
-                                    <Typography variant="body2" color="text.secondary">
-                                        Browser language setting
-                                    </Typography>
-                                </Grid>
-                                <Grid size={8}>
-                                    <Typography variant="body1">
-                                        {navigator.language}
-                                    </Typography>
-                                </Grid>
-
                                 <Grid size={16}>
-                                    <Divider sx={{ my: 2 }} />
                                     <Typography variant="subtitle2" color="text.secondary" gutterBottom>
-                                        Socket.IO Connection Information
+                                        Connection Status
                                     </Typography>
+                                    <Divider sx={{ mb: 1 }} />
                                 </Grid>
 
                                 <Grid size={8}>
@@ -984,9 +1012,28 @@ const MaintenanceForm = () => {
                                     </Typography>
                                 </Grid>
                                 <Grid size={8}>
-                                    <Typography variant="body1" color={socket?.connected ? 'success.main' : 'error.main'}>
+                                    <Typography variant="body1" fontWeight="bold" color={socket?.connected ? 'success.main' : 'error.main'}>
                                         {socket?.connected ? 'Yes' : 'No'}
                                     </Typography>
+                                </Grid>
+
+                                <Grid size={8}>
+                                    Engine Ready State
+                                    <Typography variant="body2" color="text.secondary">
+                                        Socket engine connection state
+                                    </Typography>
+                                </Grid>
+                                <Grid size={8}>
+                                    <Typography variant="body1">
+                                        {socket?.io?.engine?.readyState || 'N/A'}
+                                    </Typography>
+                                </Grid>
+
+                                <Grid size={16}>
+                                    <Typography variant="subtitle2" color="text.secondary" gutterBottom sx={{ mt: 2 }}>
+                                        Connection Details
+                                    </Typography>
+                                    <Divider sx={{ mb: 1 }} />
                                 </Grid>
 
                                 <Grid size={8}>
@@ -1022,18 +1069,6 @@ const MaintenanceForm = () => {
                                 <Grid size={8}>
                                     <Typography variant="body1">
                                         {socket?.io?._reconnectionAttempts || 0}
-                                    </Typography>
-                                </Grid>
-
-                                <Grid size={8}>
-                                    Engine Ready State
-                                    <Typography variant="body2" color="text.secondary">
-                                        Socket engine connection state
-                                    </Typography>
-                                </Grid>
-                                <Grid size={8}>
-                                    <Typography variant="body1">
-                                        {socket?.io?.engine?.readyState || 'N/A'}
                                     </Typography>
                                 </Grid>
                             </Grid>
